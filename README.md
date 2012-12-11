@@ -28,12 +28,19 @@ individual accounts, or a whole google apps domain.
 ## Usage
 
 ```
-./google_auth_proxy
+Usage of ./google_auth_proxy:
+  -authenticated-emails-file="": authenticate against emails via file (one per line)
   -client-id="": the Google OAuth Client ID: ie: "123456.apps.googleusercontent.com"
-  -client-secret="": the OAuth Client secret
-  -cookie-secret="": the seed for cookie values
-  -redirect-url="": the http base to redirect to. ie: https://internalapp.yourcompany.com/oauth2/callback
-  -htpasswd-file="": additionally lookup basic auth in a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
-  -pass-basic-auth=true: pass basic auth information to upstream
-  -upstream=[]: the http url(s) of the upstream endpoint(s). If multiple, routing is based on URL path
+  -client-secret="": the OAuth Client Secret
+  -cookie-domain="": an optional cookie domain to force cookies to
+  -cookie-secret="": the seed string for secure cookies
+  -google-apps-domain="": authenticate against the given google apps domain
+  -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
+  -http-address="0.0.0.0:4180": <addr>:<port> to listen on for HTTP clients
+  -pass-basic-auth=true: pass HTTP Basic Auth information to upstream
+  -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
+  -upstream=[]: the http url(s) of the upstream endpoint. If multiple, routing is based on path
+  -version=false: print version string
 ```
+
+Unauthenticated requests will be redirected to `/oauth2/sign_in` to start the sign-in process.
