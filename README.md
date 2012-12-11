@@ -44,3 +44,41 @@ Usage of ./google_auth_proxy:
 ```
 
 Unauthenticated requests will be redirected to `/oauth2/sign_in` to start the sign-in process.
+
+
+## Example
+
+To run a proxy on port 4180 authenticating requests for an application running 
+on port 8080 at internal.yourcompany.com you would use
+
+```bash
+./google_auth_proxy \
+   --redirect-url="https://internal.yourcompany.com/oauth2/callback"  \
+   --google-apps-domain="yourcompany.com"  \
+   --upstream=http://127.0.0.1:8080/ \
+   --cookie-secret=... \
+   --client-id=... \
+   --client-secret=...
+```
+
+An example Nginx config to listen on ssl (port 443) and forward requests to port 4180 would be
+
+```
+server {
+    listen 443 default ssl;
+    server_name internal.yourcompany.com;
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/cert.key;
+    add_header Strict-Transport-Security max-age=1209600;
+
+    location / {
+        proxy_pass http://127.0.0.1:4180;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        proxy_connect_timeout 1;
+        proxy_send_timeout 30;
+        proxy_read_timeout 30;
+    }
+}
+```
