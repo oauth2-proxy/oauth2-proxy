@@ -18,16 +18,14 @@ func getTemplates() *template.Template {
 	if err != nil {
 		log.Fatalf("failed parsing template %s", err.Error())
 	}
+	
 	t, err = t.Parse(`{{define "error.html"}}
 <html><head><title>{{.Title}}</title></head>
 <body>
 	<h2>{{.Title}}</h2>
 	<p>{{.Message}}</p>
 	<hr>
-	<form method="GET" action="/oauth2/start">
-	<button type="submit">Sign In w/ Google</button>
-	{{.SignInMessage}}
-	</form>
+	<p><a href="/oauth2/sign_in">Sign In</a></p>
 </body>
 </html>{{end}}`)
 	if err != nil {

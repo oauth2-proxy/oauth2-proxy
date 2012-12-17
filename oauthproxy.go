@@ -100,7 +100,6 @@ func apiRequest(req *http.Request) (*simplejson.Json, error) {
 }
 
 func (p *OauthProxy) redeemCode(code string) (string, error) {
-
 	params := url.Values{}
 	params.Add("redirect_uri", p.redirectUrl.String())
 	params.Add("client_id", p.clientID)
@@ -125,6 +124,7 @@ func (p *OauthProxy) redeemCode(code string) (string, error) {
 	}
 	return access_token, nil
 }
+
 func (p *OauthProxy) getUserInfo(token string) (string, error) {
 	params := url.Values{}
 	params.Add("access_token", token)
@@ -164,29 +164,33 @@ func ClearCookie(rw http.ResponseWriter, req *http.Request, key string) {
 	http.SetCookie(rw, cookie)
 }
 
-func ErrorPage(rw http.ResponseWriter, code int, title string, message string, signinmessage string) {
-	log.Printf("ErrorPage %d %s %s %s", code, title, message, signinmessage)
+func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
+	log.Printf("ErrorPage %d %s %s", code, title, message)
 	rw.WriteHeader(code)
-	t := getTemplates()
-	p := struct {
+	templates := getTemplates()
+	t := struct {
 		Title         string
 		Message       string
-		SignInMessage string
 	}{
 		Title:         fmt.Sprintf("%d %s", code, title),
 		Message:       message,
-		SignInMessage: signinmessage,
 	}
-	t.ExecuteTemplate(rw, "error.html", p)
+	templates.ExecuteTemplate(rw, "error.html", t)
+}
+
+func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
+	// TODO: capture state for which url to redirect to at the end
+	rw.WriteHeader(code)
+	templates := getTemplates()
+	t := struct{ SignInMessage string }{SignInMessage: p.SignInMessage}
+	templates.ExecuteTemplate(rw, "sign_in.html", t)
 }
 
 func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// check if this is a redirect back at the end of oauth
 	if req.URL.Path == signInPath {
 		ClearCookie(rw, req, p.CookieKey)
-		t := getTemplates()
-		p := struct{ SignInMessage string }{SignInMessage: p.SignInMessage}
-		t.ExecuteTemplate(rw, "sign_in.html", p)
+		p.SignInPage(rw, req, 200)
 		return
 	}
 	if req.URL.Path == oauthStartPath {
@@ -197,31 +201,31 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// finish the oauth cycle
 		reqParams, err := url.ParseQuery(req.URL.RawQuery)
 		if err != nil {
-			ErrorPage(rw, 500, "Internal Error", err.Error(), p.SignInMessage)
+			p.ErrorPage(rw, 500, "Internal Error", err.Error())
 			return
 		}
 		errorString, ok := reqParams["error"]
 		if ok && len(errorString) == 1 {
-			ErrorPage(rw, 403, "Permission Denied", errorString[0], p.SignInMessage)
+			p.ErrorPage(rw, 403, "Permission Denied", errorString[0])
 			return
 		}
 		code, ok := reqParams["code"]
 		if !ok || len(code) != 1 {
-			ErrorPage(rw, 500, "Internal Error", "Invalid API response", p.SignInMessage)
+			p.ErrorPage(rw, 500, "Internal Error", "Invalid API response")
 			return
 		}
 
 		token, err := p.redeemCode(code[0])
 		if err != nil {
 			log.Printf("error redeeming code %s", err.Error())
-			ErrorPage(rw, 500, "Internal Error", err.Error(), p.SignInMessage)
+			p.ErrorPage(rw, 500, "Internal Error", err.Error())
 			return
 		}
 		// validate user
 		email, err := p.getUserInfo(token)
 		if err != nil {
 			log.Printf("error redeeming code %s", err.Error())
-			ErrorPage(rw, 500, "Internal Error", err.Error(), p.SignInMessage)
+			p.ErrorPage(rw, 500, "Internal Error", err.Error())
 			return
 		}
 
@@ -246,10 +250,11 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			http.Redirect(rw, req, "/", 302)
 			return
 		} else {
-			ErrorPage(rw, 403, "Permission Denied", "Invalid Account", p.SignInMessage)
+			p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 			return
 		}
 	}
+	
 	cookie, err := req.Cookie(p.CookieKey)
 	var ok bool
 	var email string
@@ -264,9 +269,8 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if !ok {
-		log.Printf("invalid cookie. redirecting to sign in")
-		// TODO: capture state for which url to redirect to at the end
-		http.Redirect(rw, req, "/oauth2/sign_in", 302)
+		log.Printf("invalid cookie")
+		p.SignInPage(rw, req, 403)
 		return
 	}
 
