@@ -1,7 +1,8 @@
 google_auth_proxy
 =================
 
-A reverse proxy that acts as an authentication layer using Google Oauth2 to validate 
+
+A reverse proxy that provides authentication using Google OAuth2 to validate 
 individual accounts, or a whole google apps domain.
 
 
@@ -48,7 +49,7 @@ Unauthenticated requests will be redirected to `/oauth2/sign_in` to start the si
 
 ## Example
 
-To run a proxy on port 4180 authenticating requests for an application running 
+To run google_auth_proxy as a reverse proxy on port 4180 authenticating requests for an application running 
 on port 8080 at internal.yourcompany.com you would use
 
 ```bash
