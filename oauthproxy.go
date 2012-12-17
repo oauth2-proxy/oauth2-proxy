@@ -169,11 +169,11 @@ func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 	rw.WriteHeader(code)
 	templates := getTemplates()
 	t := struct {
-		Title         string
-		Message       string
+		Title   string
+		Message string
 	}{
-		Title:         fmt.Sprintf("%d %s", code, title),
-		Message:       message,
+		Title:   fmt.Sprintf("%d %s", code, title),
+		Message: message,
 	}
 	templates.ExecuteTemplate(rw, "error.html", t)
 }
@@ -254,7 +254,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	
+
 	cookie, err := req.Cookie(p.CookieKey)
 	var ok bool
 	var email string

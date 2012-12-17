@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/csv"
+	"io"
 	"log"
 	"os"
 )
@@ -15,26 +16,30 @@ type HtpasswdFile struct {
 	Users map[string]string
 }
 
-func NewHtpasswdFile(path string) *HtpasswdFile {
+func NewHtpasswdFromFile(path string) (*HtpasswdFile, error) {
 	log.Printf("using htpasswd file %s", path)
 	r, err := os.Open(path)
 	if err != nil {
-		log.Fatalf("failed opening %v, %s", path, err.Error())
+		return nil, err
 	}
-	csv_reader := csv.NewReader(r)
+	return NewHtpasswd(r)
+}
+
+func NewHtpasswd(file io.Reader) (*HtpasswdFile, error) {
+	csv_reader := csv.NewReader(file)
 	csv_reader.Comma = ':'
 	csv_reader.Comment = '#'
 	csv_reader.TrimLeadingSpace = true
 
 	records, err := csv_reader.ReadAll()
 	if err != nil {
-		log.Fatalf("Failed reading file %s", err.Error())
+		return nil, err
 	}
 	h := &HtpasswdFile{Users: make(map[string]string)}
 	for _, record := range records {
 		h.Users[record[0]] = record[1]
 	}
-	return h
+	return h, nil
 }
 
 func (h *HtpasswdFile) Validate(user string, password string) bool {

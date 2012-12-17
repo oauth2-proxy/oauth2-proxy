@@ -18,7 +18,7 @@ func getTemplates() *template.Template {
 	if err != nil {
 		log.Fatalf("failed parsing template %s", err.Error())
 	}
-	
+
 	t, err = t.Parse(`{{define "error.html"}}
 <html><head><title>{{.Title}}</title></head>
 <body>

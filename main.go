@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
-	"fmt"
 )
 
 const VERSION = "0.0.1"
@@ -72,7 +72,10 @@ func main() {
 		oauthproxy.SignInMessage = fmt.Sprintf("using a %s email address", *googleAppsDomain)
 	}
 	if *htpasswdFile != "" {
-		oauthproxy.HtpasswdFile = NewHtpasswdFile(*htpasswdFile)
+		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(*htpasswdFile)
+		if err != nil {
+			log.Fatalf("FATAL: unable to open %s %s", *htpasswdFile, err.Error())
+		}
 	}
 	listener, err := net.Listen("tcp", *httpAddr)
 	if err != nil {

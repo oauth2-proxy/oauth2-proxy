@@ -1,10 +1,10 @@
 package main
 
 import (
-	"os"
-	"log"
 	"encoding/csv"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 )
 
