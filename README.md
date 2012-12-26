@@ -5,6 +5,8 @@ google_auth_proxy
 A reverse proxy that provides authentication using Google OAuth2 to validate 
 individual accounts, or a whole google apps domain.
 
+[![Build Status](https://secure.travis-ci.org/bitly/google_auth_proxy.png?branch=master)](http://travis-ci.org/bitly/google_auth_proxy)
+
 
 ## Structure
 
