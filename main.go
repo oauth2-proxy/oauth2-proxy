@@ -14,7 +14,7 @@ const VERSION = "0.0.1"
 
 var (
 	showVersion             = flag.Bool("version", false, "print version string")
-	httpAddr                = flag.String("http-address", "0.0.0.0:4180", "<addr>:<port> to listen on for HTTP clients")
+	httpAddr                = flag.String("http-address", "127.0.0.1:4180", "<addr>:<port> to listen on for HTTP clients")
 	redirectUrl             = flag.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
 	clientID                = flag.String("client-id", "", "the Google OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	clientSecret            = flag.String("client-secret", "", "the OAuth Client Secret")

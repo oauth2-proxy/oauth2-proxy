@@ -47,7 +47,7 @@ Usage of ./google_auth_proxy:
   -cookie-secret="": the seed string for secure cookies
   -google-apps-domain="": authenticate against the given google apps domain
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
-  -http-address="0.0.0.0:4180": <addr>:<port> to listen on for HTTP clients
+  -http-address="127.0.0.1:4180": <addr>:<port> to listen on for HTTP clients
   -pass-basic-auth=true: pass HTTP Basic Auth information to upstream
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -upstream=[]: the http url(s) of the upstream endpoint. If multiple, routing is based on path
@@ -57,20 +57,12 @@ Usage of ./google_auth_proxy:
 
 ## Example Configuration
 
-To run `google_auth_proxy` as a reverse proxy on port `4180` authenticating requests for an application running 
-on port `8080` at `http://internal.yourcompany.com/` you would use
+This example has a [Nginx](http://nginx.org/) SSL endpoint proxying to `google_auth_proxy` on port `4180`. 
+`google_auth_proxy` then authenticates requests for an upstream application running on port `8080`. The external 
+endpoint for this example would be `https://internal.yourcompany.com/`.
 
-```bash
-./google_auth_proxy \
-   --redirect-url="https://internal.yourcompany.com/oauth2/callback"  \
-   --google-apps-domain="yourcompany.com"  \
-   --upstream=http://127.0.0.1:8080/ \
-   --cookie-secret=... \
-   --client-id=... \
-   --client-secret=...
-```
-
-An example Nginx config to listen on ssl (port 443) and forward requests to port google_auth_proxy on port 4180 would be
+An example Nginx config follows. Note the use of `Strict-Transport-Security` header to pin requests to SSL 
+via [HSTS](http://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security):
 
 ```
 server {
@@ -91,6 +83,20 @@ server {
     }
 }
 ```
+
+The command line to run `google_auth_proxy` would look like this:
+
+```bash
+./google_auth_proxy \
+   --redirect-url="https://internal.yourcompany.com/oauth2/callback"  \
+   --google-apps-domain="yourcompany.com"  \
+   --upstream=http://127.0.0.1:8080/ \
+   --cookie-secret=... \
+   --client-id=... \
+   --client-secret=...
+```
+
+
 
 ## Endpoint Documentation
 
