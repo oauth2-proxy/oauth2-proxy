@@ -150,7 +150,7 @@ func (p *OauthProxy) getUserInfo(token string) (string, error) {
 
 func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 	domain := strings.Split(req.Host, ":")[0]
-	if *cookieDomain != "" {
+	if *cookieDomain != "" && strings.HasSuffix(domain, *cookieDomain) {
 		domain = *cookieDomain
 	}
 	cookie := &http.Cookie{
@@ -165,9 +165,9 @@ func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
-	
+
 	domain := strings.Split(req.Host, ":")[0] // strip the port (if any)
-	if *cookieDomain != "" {
+	if *cookieDomain != "" && strings.HasSuffix(domain, *cookieDomain) {
 		domain = *cookieDomain
 	}
 	cookie := &http.Cookie{
@@ -181,7 +181,6 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 	}
 	http.SetCookie(rw, cookie)
 }
-
 
 func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	log.Printf("ErrorPage %d %s %s", code, title, message)
@@ -202,14 +201,52 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	p.ClearCookie(rw, req)
 	rw.WriteHeader(code)
 	templates := getTemplates()
-	t := struct{ SignInMessage string }{SignInMessage: p.SignInMessage}
+	
+	t := struct{ 
+		SignInMessage string
+		Htpasswd bool
+	}{
+		SignInMessage: p.SignInMessage, 
+		Htpasswd: p.HtpasswdFile != nil,
+	}
 	templates.ExecuteTemplate(rw, "sign_in.html", t)
+}
+
+func (p *OauthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool){
+	if req.Method != "POST" || p.HtpasswdFile == nil{
+		return "", false
+	}
+	user := req.FormValue("username")
+	passwd := req.FormValue("password")
+	if user == "" {
+		return "", false
+	}
+	// check auth
+	if p.HtpasswdFile.Validate(user, passwd) {
+		log.Printf("authenticated %s via manual sign in", user)
+		return user, true
+	}
+	return "", false
 }
 
 func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// check if this is a redirect back at the end of oauth
+	remoteIP := req.Header.Get("X-Real-IP")
+	if remoteIP == "" {
+		remoteIP = req.RemoteAddr
+	}
+	log.Printf("%s %s %s", remoteIP, req.Method, req.URL.Path)
+	
+	var ok bool
+	var user string
 	if req.URL.Path == signInPath {
-		p.SignInPage(rw, req, 200)
+		user, ok = p.ManualSignIn(rw, req)
+		if ok {
+			p.SetCookie(rw, req, user)
+			http.Redirect(rw, req, "/", 302)
+		} else {
+			p.SignInPage(rw, req, 200)
+		}
 		return
 	}
 	if req.URL.Path == oauthStartPath {
@@ -260,20 +297,22 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	cookie, err := req.Cookie(p.CookieKey)
-	var ok bool
-	var email string
-	var user string
-	if err == nil {
-		email, ok = validateCookie(cookie, p.CookieSeed)
-		user = strings.Split(email, "@")[0]
+	if !ok {
+		cookie, err := req.Cookie(p.CookieKey)
+		if err == nil {
+			var email string
+			email, ok = validateCookie(cookie, p.CookieSeed)
+			user = strings.Split(email, "@")[0]
+		}
 	}
 
 	if !ok {
 		user, ok = p.CheckBasicAuth(req)
-		if ok {
-			p.SetCookie(rw, req, user)
-		}
+		// if we want to promote basic auth requests to cookie'd requests, we could do that here
+		// not sure that would be ideal in all circumstances though
+		// if ok {
+		// 	p.SetCookie(rw, req, user)
+		// }
 	}
 
 	if !ok {
@@ -308,6 +347,7 @@ func (p *OauthProxy) CheckBasicAuth(req *http.Request) (string, bool) {
 		return "", false
 	}
 	if p.HtpasswdFile.Validate(pair[0], pair[1]) {
+		log.Printf("authenticated %s via basic auth", pair[0])
 		return pair[0], true
 	}
 	return "", false
