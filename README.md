@@ -23,10 +23,7 @@ individual accounts, or a whole google apps domain.
 ## Installation
 
 1. [Install Go](http://golang.org/doc/install)
-2. install dependencies `$ go get github.com/bitly/go-simplejson`
-3. clone the repository `$ git clone https://github.com/bitly/google_auth_proxy.git`
-4. compile `$ cd google_auth_proxy && go build`
-5. copy the built binary `google_auth_proxy` to `/usr/local/bin` (or wherever you want to run it from)
+2. `$ go get github.com/bitly/google_auth_proxy`. This should put the binary in `$GOROOT/bin`
 
 ## OAuth Configuration
 
