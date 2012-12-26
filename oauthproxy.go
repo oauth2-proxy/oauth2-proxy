@@ -201,19 +201,19 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	p.ClearCookie(rw, req)
 	rw.WriteHeader(code)
 	templates := getTemplates()
-	
-	t := struct{ 
+
+	t := struct {
 		SignInMessage string
-		Htpasswd bool
+		Htpasswd      bool
 	}{
-		SignInMessage: p.SignInMessage, 
-		Htpasswd: p.HtpasswdFile != nil,
+		SignInMessage: p.SignInMessage,
+		Htpasswd:      p.HtpasswdFile != nil,
 	}
 	templates.ExecuteTemplate(rw, "sign_in.html", t)
 }
 
-func (p *OauthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool){
-	if req.Method != "POST" || p.HtpasswdFile == nil{
+func (p *OauthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {
+	if req.Method != "POST" || p.HtpasswdFile == nil {
 		return "", false
 	}
 	user := req.FormValue("username")
@@ -236,7 +236,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		remoteIP = req.RemoteAddr
 	}
 	log.Printf("%s %s %s", remoteIP, req.Method, req.URL.Path)
-	
+
 	var ok bool
 	var user string
 	if req.URL.Path == signInPath {
