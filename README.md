@@ -8,8 +8,7 @@ individual accounts, or a whole google apps domain.
 [![Build Status](https://secure.travis-ci.org/bitly/google_auth_proxy.png?branch=master)](http://travis-ci.org/bitly/google_auth_proxy)
 
 
-## Structure
-
+## Architecture
 
 ```
     _______       ___________________       __________
@@ -18,17 +17,29 @@ individual accounts, or a whole google apps domain.
                           ||
                           \/
                   [google oauth2 api]
-
 ```
 
-## Configuration
-    
-1. visit to Google Api Console https://code.google.com/apis/console/
+
+## Installation
+
+1. [Install Go](http://golang.org/doc/install)
+2. install dependencies `$ go get github.com/bitly/go-simplejson`
+3. clone the repository `$ git clone https://github.com/bitly/google_auth_proxy.git`
+4. compile `$ cd google_auth_proxy && go build`
+5. copy the built binary `google_auth_proxy` to `/usr/local/bin` (or wherever you want to run it from)
+
+## OAuth Configuration
+
+You will need to register an OAuth application with google, and configure it with Redirect URI(s) for the domain you
+intend to run google_auth_proxy on.
+
+1. Visit to Google Api Console https://code.google.com/apis/console/
 2. under "API Access", choose "Create an OAuth 2.0 Client ID"
 3. Edit the application settings, and list the Redirect URI(s) where you will run your application. For example: 
 `https://internalapp.yourcompany.com/oauth2/callback`
+4. Make a note of the Client ID, and Client Secret and specify those values as command line arguments
 
-## Usage
+## Command Line Options
 
 ```
 Usage of ./google_auth_proxy:
@@ -46,13 +57,11 @@ Usage of ./google_auth_proxy:
   -version=false: print version string
 ```
 
-Unauthenticated requests will be redirected to `/oauth2/sign_in` to start the sign-in process.
 
+## Example Configuration
 
-## Example
-
-To run google_auth_proxy as a reverse proxy on port 4180 authenticating requests for an application running 
-on port 8080 at internal.yourcompany.com you would use
+To run `google_auth_proxy` as a reverse proxy on port `4180` authenticating requests for an application running 
+on port `8080` at `http://internal.yourcompany.com/` you would use
 
 ```bash
 ./google_auth_proxy \
@@ -64,7 +73,7 @@ on port 8080 at internal.yourcompany.com you would use
    --client-secret=...
 ```
 
-An example Nginx config to listen on ssl (port 443) and forward requests to port 4180 would be
+An example Nginx config to listen on ssl (port 443) and forward requests to port google_auth_proxy on port 4180 would be
 
 ```
 server {
@@ -86,7 +95,9 @@ server {
 }
 ```
 
-## Documentation
+## Endpoint Documentation
+
+Google auth proxy responds directly to the following endpoints. All other endpoints will be authenticated.
 
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 * /oauth2/start - a URL that will redirect to start the oauth cycle
