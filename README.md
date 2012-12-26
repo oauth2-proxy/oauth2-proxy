@@ -83,3 +83,9 @@ server {
     }
 }
 ```
+
+## Documentation
+
+* /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
+* /oauth2/start - a URL that will redirect to start the oauth cycle
+* /oauth2/callback - the URL used at the end of the oauth cycle

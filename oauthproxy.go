@@ -148,13 +148,13 @@ func (p *OauthProxy) getUserInfo(token string) (string, error) {
 	return email, nil
 }
 
-func ClearCookie(rw http.ResponseWriter, req *http.Request, key string) {
+func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 	domain := strings.Split(req.Host, ":")[0]
 	if *cookieDomain != "" {
 		domain = *cookieDomain
 	}
 	cookie := &http.Cookie{
-		Name:     key,
+		Name:     p.CookieKey,
 		Value:    "",
 		Path:     "/",
 		Domain:   domain,
@@ -163,6 +163,25 @@ func ClearCookie(rw http.ResponseWriter, req *http.Request, key string) {
 	}
 	http.SetCookie(rw, cookie)
 }
+
+func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
+	
+	domain := strings.Split(req.Host, ":")[0] // strip the port (if any)
+	if *cookieDomain != "" {
+		domain = *cookieDomain
+	}
+	cookie := &http.Cookie{
+		Name:     p.CookieKey,
+		Value:    signedCookieValue(p.CookieSeed, p.CookieKey, val),
+		Path:     "/",
+		Domain:   domain,
+		Expires:  time.Now().Add(time.Duration(168) * time.Hour), // 7 days
+		HttpOnly: true,
+		// Secure: req. ... ? set if X-Scheme: https ?
+	}
+	http.SetCookie(rw, cookie)
+}
+
 
 func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	log.Printf("ErrorPage %d %s %s", code, title, message)
@@ -180,6 +199,7 @@ func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 
 func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	// TODO: capture state for which url to redirect to at the end
+	p.ClearCookie(rw, req)
 	rw.WriteHeader(code)
 	templates := getTemplates()
 	t := struct{ SignInMessage string }{SignInMessage: p.SignInMessage}
@@ -189,7 +209,6 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// check if this is a redirect back at the end of oauth
 	if req.URL.Path == signInPath {
-		ClearCookie(rw, req, p.CookieKey)
 		p.SignInPage(rw, req, 200)
 		return
 	}
@@ -232,21 +251,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// set cookie, or deny
 		if p.Validator(email) {
 			log.Printf("authenticating %s completed", email)
-			domain := strings.Split(req.Host, ":")[0]
-			if *cookieDomain != "" {
-				domain = *cookieDomain
-			}
-
-			cookie := &http.Cookie{
-				Name:     p.CookieKey,
-				Value:    signedCookieValue(p.CookieSeed, p.CookieKey, email),
-				Path:     "/",
-				Domain:   domain,
-				Expires:  time.Now().Add(time.Duration(168) * time.Hour), // 7 days
-				HttpOnly: true,
-				// Secure: req. ... ? set if X-Scheme: https ?
-			}
-			http.SetCookie(rw, cookie)
+			p.SetCookie(rw, req, email)
 			http.Redirect(rw, req, "/", 302)
 			return
 		} else {
@@ -266,6 +271,9 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		user, ok = p.CheckBasicAuth(req)
+		if ok {
+			p.SetCookie(rw, req, user)
+		}
 	}
 
 	if !ok {
