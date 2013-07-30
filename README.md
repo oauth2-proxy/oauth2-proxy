@@ -96,7 +96,9 @@ The command line to run `google_auth_proxy` would look like this:
    --client-secret=...
 ```
 
+## Environment variables
 
+The environment variables `google_auth_client_id`, `google_auth_secret` and `google_auth_cookie_secret` can be used in place of the corresponding command-line arguments.
 
 ## Endpoint Documentation
 

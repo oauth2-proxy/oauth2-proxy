@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"net/http"
 	"net/url"
 	"strings"
@@ -32,7 +33,19 @@ func init() {
 }
 
 func main() {
+
 	flag.Parse()
+
+	// Try to use env for secrets if no flag is set
+	if *clientID == "" {
+		*clientID = os.Getenv("google_auth_client_id")
+	}
+	if *clientSecret == "" {
+		*clientSecret = os.Getenv("google_auth_secret")
+	}
+	if *cookieSecret == "" {
+		*cookieSecret = os.Getenv("google_auth_cookie_secret")
+	}
 
 	if *showVersion {
 		fmt.Printf("google_auth_proxy v%s\n", VERSION)
