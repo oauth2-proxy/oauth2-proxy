@@ -8,13 +8,8 @@ import (
 	"strings"
 )
 
-func NewValidator(domain string, usersFile string) func(string) bool {
-
+func NewValidator(domains []string, usersFile string) func(string) bool {
 	validUsers := make(map[string]bool)
-	emailSuffix := ""
-	if domain != "" {
-		emailSuffix = fmt.Sprintf("@%s", domain)
-	}
 
 	if usersFile != "" {
 		r, err := os.Open(usersFile)
@@ -32,9 +27,10 @@ func NewValidator(domain string, usersFile string) func(string) bool {
 	}
 
 	validator := func(email string) bool {
-		var valid bool
-		if emailSuffix != "" {
-			valid = strings.HasSuffix(email, emailSuffix)
+		valid := false
+		for _, domain := range domains {
+			emailSuffix := fmt.Sprintf("@%s", domain)
+			valid = valid || strings.HasSuffix(email, emailSuffix)
 		}
 		if !valid {
 			_, valid = validUsers[email]
