@@ -23,6 +23,8 @@ var (
 	htpasswdFile            = flag.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption")
 	cookieSecret            = flag.String("cookie-secret", "", "the seed string for secure cookies")
 	cookieDomain            = flag.String("cookie-domain", "", "an optional cookie domain to force cookies to")
+	cookieExpire            = flag.Int("cookie-expire", 168 * 60, "expire time for cookie")
+	cookieSecure            = flag.Bool("cookie-secure", false, "HTTPS only cookie")
 	authenticatedEmailsFile = flag.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
 	googleAppsDomains       = StringArray{}
 	upstreams               = StringArray{}
