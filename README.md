@@ -28,13 +28,19 @@ individual accounts, or a whole google apps domain.
 ## OAuth Configuration
 
 You will need to register an OAuth application with google, and configure it with Redirect URI(s) for the domain you
-intend to run google_auth_proxy on.
+intend to run `google_auth_proxy` on.
 
-1. Visit to Google Api Console https://code.google.com/apis/console/
-2. under "API Access", choose "Create an OAuth 2.0 Client ID"
-3. Edit the application settings, and list the Redirect URI(s) where you will run your application. For example: 
-`https://internalapp.yourcompany.com/oauth2/callback`
-4. Make a note of the Client ID, and Client Secret and specify those values as command line arguments
+1. Create a new project: https://console.developers.google.com/project
+2. Under "APIs & Auth", choose "Credentials"
+3. Now, choose "Create new Client ID"
+   * The Application Type should be **Web application**
+   * Enter your domain in the Authorized Javascript Origins `https://internal.yourcompany.com`
+   * Enter the correct Authorized Redirect URL `https://internal.yourcompany.com/oauth2/callback`
+     * NOTE: `google_auth_proxy` will _only_ callback on the path `/oauth2/callback`
+4. Under "APIs & Auth" choose "Consent Screen"
+   * Fill in the necessary fields and Save (this is _required_)
+5. Take note of the **Client ID** and **Client Secret**
+
 
 ## Command Line Options
 
