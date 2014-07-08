@@ -43,6 +43,9 @@ func NewOauthProxy(proxyUrls []*url.URL, clientID string, clientSecret string, v
 	serveMux := http.NewServeMux()
 	for _, u := range proxyUrls {
 		path := u.Path
+		if len(path) == 0 {
+			path = "/"
+		}
 		u.Path = ""
 		log.Printf("mapping %s => %s", path, u)
 		serveMux.Handle(path, httputil.NewSingleHostReverseProxy(u))
