@@ -93,7 +93,7 @@ func apiRequest(req *http.Request) (*simplejson.Json, error) {
 	}
 	if resp.StatusCode != 200 {
 		log.Printf("got response code %d - %s", resp.StatusCode, body)
-		return nil, errors.New("api request returned 200 status code")
+		return nil, errors.New("api request returned non 200 status code")
 	}
 	data, err := simplejson.NewJson(body)
 	if err != nil {
