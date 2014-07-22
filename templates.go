@@ -9,7 +9,11 @@ func getTemplates() *template.Template {
 	t, err := template.New("foo").Parse(`{{define "sign_in.html"}}
 <!DOCTYPE html>
 <html lang="en" charset="utf-8">
-<head><title>Sign In</title></head>
+<head><title>Sign In</title>
+<!-- Optimized mobile viewport -->
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes">
+</head>
 <body>
 	<form method="GET" action="/oauth2/start">
 	<input type="hidden" name="rd" value="{{.Redirect}}">
