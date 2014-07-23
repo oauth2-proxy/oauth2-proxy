@@ -18,7 +18,7 @@ func validateCookie(cookie *http.Cookie, seed string) (string, bool) {
 		return "", false
 	}
 	sig := cookieSignature(seed, cookie.Name, parts[0], parts[1])
-	if parts[2] == sig {
+	if checkHmac(parts[2], sig) {
 		ts, err := strconv.Atoi(parts[1])
 		if err == nil && int64(ts) > time.Now().Add(time.Duration(24)*7*time.Hour*-1).Unix() {
 			// it's a valid cookie. now get the contents
@@ -47,4 +47,15 @@ func cookieSignature(args ...string) string {
 	var b []byte
 	b = h.Sum(b)
 	return base64.URLEncoding.EncodeToString(b)
+}
+
+func checkHmac(input, expected string) bool {
+	inputMAC, err1 := base64.URLEncoding.DecodeString(input)
+	if err1 == nil {
+		expectedMAC, err2 := base64.URLEncoding.DecodeString(expected)
+		if err2 == nil {
+			return hmac.Equal(inputMAC, expectedMAC)
+		}
+	}
+	return false
 }
