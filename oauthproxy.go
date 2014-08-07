@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/bitly/go-simplejson"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/bitly/go-simplejson"
 )
 
 const signInPath = "/oauth2/sign_in"
@@ -27,7 +28,6 @@ type OauthProxy struct {
 	redirectUrl        *url.URL // the url to receive requests at
 	oauthRedemptionUrl *url.URL // endpoint to redeem the code
 	oauthLoginUrl      *url.URL // to redirect the user to
-	oauthUserInfoUrl   *url.URL
 	oauthScope         string
 	clientID           string
 	clientSecret       string
@@ -39,7 +39,6 @@ type OauthProxy struct {
 func NewOauthProxy(proxyUrls []*url.URL, clientID string, clientSecret string, validator func(string) bool) *OauthProxy {
 	login, _ := url.Parse("https://accounts.google.com/o/oauth2/auth")
 	redeem, _ := url.Parse("https://accounts.google.com/o/oauth2/token")
-	info, _ := url.Parse("https://www.googleapis.com/oauth2/v2/userinfo")
 	serveMux := http.NewServeMux()
 	for _, u := range proxyUrls {
 		path := u.Path
@@ -54,10 +53,9 @@ func NewOauthProxy(proxyUrls []*url.URL, clientID string, clientSecret string, v
 
 		clientID:           clientID,
 		clientSecret:       clientSecret,
-		oauthScope:         "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
+		oauthScope:         "profile email",
 		oauthRedemptionUrl: redeem,
 		oauthLoginUrl:      login,
-		oauthUserInfoUrl:   info,
 		serveMux:           serveMux,
 	}
 }
@@ -102,9 +100,9 @@ func apiRequest(req *http.Request) (*simplejson.Json, error) {
 	return data, nil
 }
 
-func (p *OauthProxy) redeemCode(code string) (string, error) {
+func (p *OauthProxy) redeemCode(code string) (string, string, error) {
 	if code == "" {
-		return "", errors.New("missing code")
+		return "", "", errors.New("missing code")
 	}
 	params := url.Values{}
 	params.Add("redirect_uri", p.redirectUrl.String())
@@ -112,46 +110,52 @@ func (p *OauthProxy) redeemCode(code string) (string, error) {
 	params.Add("client_secret", p.clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
-	log.Printf("body is %s", params.Encode())
 	req, err := http.NewRequest("POST", p.oauthRedemptionUrl.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		log.Printf("failed building request %s", err.Error())
-		return "", err
+		return "", "", err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	json, err := apiRequest(req)
 	if err != nil {
-		log.Printf("failed making request %s", err.Error())
-		return "", err
+		log.Printf("failed making request %s", err)
+		return "", "", err
 	}
 	access_token, err := json.Get("access_token").String()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return access_token, nil
+
+	idToken, err := json.Get("id_token").String()
+	if err != nil {
+		return "", "", err
+	}
+
+	// id_token is a base64 encode ID token payload
+	// https://developers.google.com/accounts/docs/OAuth2Login#obtainuserinfo
+	jwt := strings.Split(idToken, ".")
+	b, err := jwtDecodeSegment(jwt[1])
+	if err != nil {
+		return "", "", err
+	}
+	data, err := simplejson.NewJson(b)
+	if err != nil {
+		return "", "", err
+	}
+	email, err := data.Get("email").String()
+	if err != nil {
+		return "", "", err
+	}
+
+	return access_token, email, nil
 }
 
-func (p *OauthProxy) getUserInfo(token string) (string, error) {
-	params := url.Values{}
-	params.Add("access_token", token)
-	endpoint := fmt.Sprintf("%s?%s", p.oauthUserInfoUrl.String(), params.Encode())
-	log.Printf("calling %s", endpoint)
-	req, err := http.NewRequest("GET", endpoint, nil)
-	if err != nil {
-		log.Printf("failed building request %s", err.Error())
-		return "", err
+func jwtDecodeSegment(seg string) ([]byte, error) {
+	if l := len(seg) % 4; l > 0 {
+		seg += strings.Repeat("=", 4-l)
 	}
-	json, err := apiRequest(req)
-	if err != nil {
-		log.Printf("failed making request %s", err.Error())
-		return "", err
-	}
-	email, err := json.Get("email").String()
-	if err != nil {
-		log.Printf("failed getting email from response %s", err.Error())
-		return "", err
-	}
-	return email, nil
+
+	return base64.URLEncoding.DecodeString(seg)
 }
 
 func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
@@ -301,16 +305,9 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		token, err := p.redeemCode(req.Form.Get("code"))
+		_, email, err := p.redeemCode(req.Form.Get("code"))
 		if err != nil {
-			log.Printf("error redeeming code %s", err.Error())
-			p.ErrorPage(rw, 500, "Internal Error", err.Error())
-			return
-		}
-		// validate user
-		email, err := p.getUserInfo(token)
-		if err != nil {
-			log.Printf("error redeeming code %s", err.Error())
+			log.Printf("error redeeming code %s", err)
 			p.ErrorPage(rw, 500, "Internal Error", err.Error())
 			return
 		}

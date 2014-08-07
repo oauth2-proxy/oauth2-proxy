@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
-const VERSION = "0.0.1"
+const VERSION = "0.1.0"
 
 var (
 	showVersion             = flag.Bool("version", false, "print version string")
