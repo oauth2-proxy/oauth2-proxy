@@ -16,6 +16,7 @@ import (
 	"github.com/bitly/go-simplejson"
 )
 
+const pingPath = "/ping"
 const signInPath = "/oauth2/sign_in"
 const oauthStartPath = "/oauth2/start"
 const oauthCallbackPath = "/oauth2/callback"
@@ -192,6 +193,11 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 	http.SetCookie(rw, cookie)
 }
 
+func (p *OauthProxy) PingPage(rw http.ResponseWriter) {
+	rw.WriteHeader(http.StatusOK)
+	fmt.Fprintf(rw, "pong")
+}
+
 func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	log.Printf("ErrorPage %d %s %s", code, title, message)
 	rw.WriteHeader(code)
@@ -266,6 +272,11 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	var ok bool
 	var user string
+
+	if req.URL.Path == pingPath {
+		p.PingPage(rw)
+		return
+	}
 
 	if req.URL.Path == signInPath {
 		redirect, err := p.GetRedirect(req)

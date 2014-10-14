@@ -110,6 +110,7 @@ The environment variables `google_auth_client_id`, `google_auth_secret` and `goo
 
 Google auth proxy responds directly to the following endpoints. All other endpoints will be authenticated.
 
+* /ping - returns an 200 OK response
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 * /oauth2/start - a URL that will redirect to start the oauth cycle
 * /oauth2/callback - the URL used at the end of the oauth cycle
