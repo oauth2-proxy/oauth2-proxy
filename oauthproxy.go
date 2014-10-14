@@ -195,7 +195,7 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 
 func (p *OauthProxy) PingPage(rw http.ResponseWriter) {
 	rw.WriteHeader(http.StatusOK)
-	fmt.Fprintf(rw, "pong")
+	fmt.Fprintf(rw, "OK")
 }
 
 func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
