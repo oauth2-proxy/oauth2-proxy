@@ -50,8 +50,10 @@ Usage of ./google_auth_proxy:
   -client-id="": the Google OAuth Client ID: ie: "123456.apps.googleusercontent.com"
   -client-secret="": the OAuth Client Secret
   -cookie-domain="": an optional cookie domain to force cookies to
+  -cookie-expire=168h: expire timeframe for cookie
+  -cookie-https-only=false: set HTTPS only cookie
   -cookie-secret="": the seed string for secure cookies
-  -google-apps-domain="": authenticate against the given google apps domain
+  -google-apps-domain=[]: authenticate against the given google apps domain (may be given multiple times)
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": <addr>:<port> to listen on for HTTP clients
   -pass-basic-auth=true: pass HTTP Basic Auth information to upstream
@@ -98,6 +100,7 @@ The command line to run `google_auth_proxy` would look like this:
    --google-apps-domain="yourcompany.com"  \
    --upstream=http://127.0.0.1:8080/ \
    --cookie-secret=... \
+   --cookie-secure=true \
    --client-id=... \
    --client-secret=...
 ```
@@ -108,9 +111,9 @@ The environment variables `google_auth_client_id`, `google_auth_secret` and `goo
 
 ## Endpoint Documentation
 
-Google auth proxy responds directly to the following endpoints. All other endpoints will be authenticated.
+Google Auth Proxy responds directly to the following endpoints. All other endpoints will be authenticated.
 
 * /ping - returns an 200 OK response
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
-* /oauth2/start - a URL that will redirect to start the oauth cycle
-* /oauth2/callback - the URL used at the end of the oauth cycle
+* /oauth2/start - a URL that will redirect to start the OAuth cycle
+* /oauth2/callback - the URL used at the end of the OAuth cycle
