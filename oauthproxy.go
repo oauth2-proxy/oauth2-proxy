@@ -272,6 +272,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	var ok bool
 	var user string
+	var email string
 
 	if req.URL.Path == pingPath {
 		p.PingPage(rw)
@@ -343,7 +344,6 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if !ok {
 		cookie, err := req.Cookie(p.CookieKey)
 		if err == nil {
-			var email string
 			email, ok = validateCookie(cookie, p.CookieSeed)
 			user = strings.Split(email, "@")[0]
 		}
@@ -368,6 +368,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if *passBasicAuth {
 		req.SetBasicAuth(user, "")
 		req.Header["X-Forwarded-User"] = []string{user}
+		req.Header["X-Forwarded-Email"] = []string{email}
 	}
 
 	p.serveMux.ServeHTTP(rw, req)
