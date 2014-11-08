@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 const VERSION = "0.1.0"
@@ -23,6 +24,8 @@ var (
 	htpasswdFile            = flag.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption")
 	cookieSecret            = flag.String("cookie-secret", "", "the seed string for secure cookies")
 	cookieDomain            = flag.String("cookie-domain", "", "an optional cookie domain to force cookies to")
+	cookieExpire            = flag.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
+	cookieHttpsOnly         = flag.Bool("cookie-https-only", false, "set HTTPS only cookie")
 	authenticatedEmailsFile = flag.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
 	googleAppsDomains       = StringArray{}
 	upstreams               = StringArray{}

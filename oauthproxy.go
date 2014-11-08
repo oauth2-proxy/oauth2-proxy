@@ -189,9 +189,9 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 		Value:    signedCookieValue(p.CookieSeed, p.CookieKey, val),
 		Path:     "/",
 		Domain:   domain,
-		Expires:  time.Now().Add(time.Duration(168) * time.Hour), // 7 days
 		HttpOnly: true,
-		// Secure: req. ... ? set if X-Scheme: https ?
+		Secure:   *cookieHttpsOnly,
+		Expires:  time.Now().Add(*cookieExpire),
 	}
 	http.SetCookie(rw, cookie)
 }
