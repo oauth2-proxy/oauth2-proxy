@@ -9,26 +9,95 @@ func getTemplates() *template.Template {
 	t, err := template.New("foo").Parse(`{{define "sign_in.html"}}
 <!DOCTYPE html>
 <html lang="en" charset="utf-8">
-<head><title>Sign In</title>
-<!-- Optimized mobile viewport -->
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes">
+<head>
+	<title>Sign In</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+	<style>
+	body {
+		font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+		font-size: 14px;
+		line-height: 1.42857143;
+		color: #333;
+		background: #f0f0f0;
+	}
+	.signin {
+		display:block;
+		margin:20px auto;
+		max-width:400px;
+		background: #fff;
+		border:1px solid #ccc;
+		border-radius: 10px;
+		padding: 20px;
+	}
+	.center {
+		text-align:center;
+	}
+	.btn {
+		color: #fff;
+		background-color: #428bca;
+		border: 1px solid #357ebd;
+		-webkit-border-radius: 4;
+		-moz-border-radius: 4;
+		border-radius: 4px;
+		font-size: 14px;
+		padding: 6px 12px;
+	  	text-decoration: none;
+		cursor: pointer;
+	}
+
+	.btn:hover {
+		background-color: #3071a9;
+		border-color: #285e8e;
+		ext-decoration: none;
+	}
+	label {
+		display: inline-block;
+		max-width: 100%;
+		margin-bottom: 5px;
+		font-weight: 700;
+	}
+	input {
+		display: block;
+		width: 100%;
+		height: 34px;
+		padding: 6px 12px;
+		font-size: 14px;
+		line-height: 1.42857143;
+		color: #555;
+		background-color: #fff;
+		background-image: none;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		-webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
+		box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
+		-webkit-transition: border-color ease-in-out .15s,-webkit-box-shadow ease-in-out .15s;
+		-o-transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+		transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+		margin:0;
+		box-sizing: border-box;
+	}
+	</style>
 </head>
 <body>
+	<div class="signin center">
 	<form method="GET" action="/oauth2/start">
 	<input type="hidden" name="rd" value="{{.Redirect}}">
-	<button type="submit">Sign In w/ Google</button>
-	{{.SignInMessage}}
+	{{ if .SignInMessage }}
+	<p>{{.SignInMessage}}</p>
+	{{ end}}
+	<button type="submit" class="btn">Sign in with a Google Account</button><br/>
 	</form>
+	</div>
+	
 	{{ if .Htpasswd }}
-	<fieldset>
-		<form method="POST" action="/oauth2/sign_in">
+	<div class="signin">
+	<form method="POST" action="/oauth2/sign_in">
 		<input type="hidden" name="rd" value="{{.Redirect}}">
-		<label>Username: <input type="text" name="username" size="10"></label><br/>
-		<label>Password: <input type="password" name="password" size="10"></label><br/>
-		<button type="submit">Sign In</button>
-		</form>
-	</fieldset>
+		<label for="username">Username:</label><input type="text" name="username" id="username" size="10"><br/>
+		<label for="password">Password:</label><input type="password" name="password" id="password" size="10"><br/>
+		<button type="submit" class="btn">Sign In</button>
+	</form>
+	</div>
 	{{ end }}
 </body>
 </html>
@@ -40,7 +109,10 @@ func getTemplates() *template.Template {
 	t, err = t.Parse(`{{define "error.html"}}
 <!DOCTYPE html>
 <html lang="en" charset="utf-8">
-<head><title>{{.Title}}</title></head>
+<head>
+	<title>{{.Title}}</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+</head>
 <body>
 	<h2>{{.Title}}</h2>
 	<p>{{.Message}}</p>
