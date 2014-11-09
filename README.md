@@ -42,28 +42,40 @@ intend to run `google_auth_proxy` on.
 5. Take note of the **Client ID** and **Client Secret**
 
 
-## Command Line Options
+## Configuration
+
+`google_auth_proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
+
+### Config File
+
+An example [google_auth_proxy.cfg](contrib/google_auth_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/google_auth_proxy.cfg`
+
+### Command Line Options
 
 ```
-Usage of ./google_auth_proxy:
+Usage of google_auth_proxy:
   -authenticated-emails-file="": authenticate against emails via file (one per line)
   -client-id="": the Google OAuth Client ID: ie: "123456.apps.googleusercontent.com"
   -client-secret="": the OAuth Client Secret
-  -cookie-domain="": an optional cookie domain to force cookies to
-  -cookie-expire=168h: expire timeframe for cookie
+  -config="": path to config file
+  -cookie-domain="": an optional cookie domain to force cookies to (ie: .yourcompany.com)
+  -cookie-expire=168h0m0s: expire timeframe for cookie
   -cookie-https-only=false: set HTTPS only cookie
   -cookie-secret="": the seed string for secure cookies
-  -google-apps-domain=[]: authenticate against the given google apps domain (may be given multiple times)
+  -google-apps-domain=: authenticate against the given Google apps domain (may be given multiple times)
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": <addr>:<port> to listen on for HTTP clients
-  -pass-basic-auth=true: pass HTTP Basic Auth information to upstream
+  -pass-basic-auth=true: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
-  -upstream=[]: the http url(s) of the upstream endpoint. If multiple, routing is based on path
+  -upstream=: the http url(s) of the upstream endpoint. If multiple, routing is based on path
   -version=false: print version string
 ```
 
+### Environment variables
 
-## Example Configuration
+The environment variables `google_auth_client_id`, `google_auth_secret` and `google_auth_cookie_secret` can be used in place of the corresponding command-line arguments.
+
+### Example Nginx Configuration
 
 This example has a [Nginx](http://nginx.org/) SSL endpoint proxying to `google_auth_proxy` on port `4180`. 
 `google_auth_proxy` then authenticates requests for an upstream application running on port `8080`. The external 
@@ -105,13 +117,10 @@ The command line to run `google_auth_proxy` would look like this:
    --client-secret=...
 ```
 
-## Environment variables
-
-The environment variables `google_auth_client_id`, `google_auth_secret` and `google_auth_cookie_secret` can be used in place of the corresponding command-line arguments.
 
 ## Endpoint Documentation
 
-Google Auth Proxy responds directly to the following endpoints. All other endpoints will be authenticated.
+Google Auth Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated.
 
 * /ping - returns an 200 OK response
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
