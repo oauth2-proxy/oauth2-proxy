@@ -6,49 +6,63 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/mreiferson/go-options"
 )
-
-const VERSION = "0.1.0"
-
-var (
-	showVersion             = flag.Bool("version", false, "print version string")
-	httpAddr                = flag.String("http-address", "127.0.0.1:4180", "<addr>:<port> to listen on for HTTP clients")
-	redirectUrl             = flag.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
-	clientID                = flag.String("client-id", "", "the Google OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
-	clientSecret            = flag.String("client-secret", "", "the OAuth Client Secret")
-	passBasicAuth           = flag.Bool("pass-basic-auth", true, "pass HTTP Basic Auth information to upstream")
-	htpasswdFile            = flag.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption")
-	cookieSecret            = flag.String("cookie-secret", "", "the seed string for secure cookies")
-	cookieDomain            = flag.String("cookie-domain", "", "an optional cookie domain to force cookies to")
-	cookieExpire            = flag.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
-	cookieHttpsOnly         = flag.Bool("cookie-https-only", false, "set HTTPS only cookie")
-	authenticatedEmailsFile = flag.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
-	googleAppsDomains       = StringArray{}
-	upstreams               = StringArray{}
-)
-
-func init() {
-	flag.Var(&googleAppsDomains, "google-apps-domain", "authenticate against the given google apps domain (may be given multiple times)")
-	flag.Var(&upstreams, "upstream", "the http url(s) of the upstream endpoint. If multiple, routing is based on path")
-}
 
 func main() {
+	flagSet := flag.NewFlagSet("google_auth_proxy", flag.ExitOnError)
 
-	flag.Parse()
+	googleAppsDomains := StringArray{}
+	upstreams := StringArray{}
+
+	config := flagSet.String("config", "", "path to config file")
+	showVersion := flagSet.Bool("version", false, "print version string")
+
+	flagSet.String("http-address", "127.0.0.1:4180", "<addr>:<port> to listen on for HTTP clients")
+	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
+	flagSet.Var(&upstreams, "upstream", "the http url(s) of the upstream endpoint. If multiple, routing is based on path")
+	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
+
+	flagSet.Var(&googleAppsDomains, "google-apps-domain", "authenticate against the given Google apps domain (may be given multiple times)")
+	flagSet.String("client-id", "", "the Google OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
+	flagSet.String("client-secret", "", "the OAuth Client Secret")
+	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
+	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption")
+
+	flagSet.String("cookie-secret", "", "the seed string for secure cookies")
+	flagSet.String("cookie-domain", "", "an optional cookie domain to force cookies to (ie: .yourcompany.com)")
+	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
+	flagSet.Bool("cookie-https-only", false, "set HTTPS only cookie")
+
+	flagSet.Parse(os.Args[1:])
+
+	opts := NewOptions()
+
+	var cfg map[string]interface{}
+	if *config != "" {
+		_, err := toml.DecodeFile(*config, &cfg)
+		if err != nil {
+			log.Fatalf("ERROR: failed to load config file %s - %s", *config, err)
+		}
+	}
+
+	options.Resolve(opts, flagSet, cfg)
 
 	// Try to use env for secrets if no flag is set
-	if *clientID == "" {
-		*clientID = os.Getenv("google_auth_client_id")
+	// TODO: better parsing of these values
+	if opts.ClientID == "" {
+		opts.ClientID = os.Getenv("google_auth_client_id")
 	}
-	if *clientSecret == "" {
-		*clientSecret = os.Getenv("google_auth_secret")
+	if opts.ClientSecret == "" {
+		opts.ClientSecret = os.Getenv("google_auth_secret")
 	}
-	if *cookieSecret == "" {
-		*cookieSecret = os.Getenv("google_auth_cookie_secret")
+	if opts.CookieSecret == "" {
+		opts.CookieSecret = os.Getenv("google_auth_cookie_secret")
 	}
 
 	if *showVersion {
@@ -56,59 +70,41 @@ func main() {
 		return
 	}
 
-	if len(upstreams) < 1 {
-		log.Fatal("missing --upstream")
-	}
-	if *cookieSecret == "" {
-		log.Fatal("missing --cookie-secret")
-	}
-	if *clientID == "" {
-		log.Fatal("missing --client-id")
-	}
-	if *clientSecret == "" {
-		log.Fatal("missing --client-secret")
-	}
-
-	var upstreamUrls []*url.URL
-	for _, u := range upstreams {
-		upstreamUrl, err := url.Parse(u)
-		if err != nil {
-			log.Fatalf("error parsing --upstream %s", err.Error())
-		}
-		upstreamUrls = append(upstreamUrls, upstreamUrl)
-	}
-	redirectUrl, err := url.Parse(*redirectUrl)
+	err := opts.Validate()
 	if err != nil {
-		log.Fatalf("error parsing --redirect-url %s", err.Error())
+		log.Printf("%s", err)
+		os.Exit(1)
 	}
 
-	validator := NewValidator(googleAppsDomains, *authenticatedEmailsFile)
-	oauthproxy := NewOauthProxy(upstreamUrls, *clientID, *clientSecret, validator)
-	oauthproxy.SetRedirectUrl(redirectUrl)
-	if len(googleAppsDomains) != 0 && *authenticatedEmailsFile == "" {
-		if len(googleAppsDomains) > 1 {
-			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(googleAppsDomains, ", "))
+	validator := NewValidator(opts.GoogleAppsDomains, opts.AuthenticatedEmailsFile)
+	oauthproxy := NewOauthProxy(opts, validator)
+
+	if len(opts.GoogleAppsDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
+		if len(opts.GoogleAppsDomains) > 1 {
+			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.GoogleAppsDomains, ", "))
 		} else {
-			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using %v", googleAppsDomains[0])
+			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using %v", opts.GoogleAppsDomains[0])
 		}
 	}
-	if *htpasswdFile != "" {
-		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(*htpasswdFile)
+
+	if opts.HtpasswdFile != "" {
+		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(opts.HtpasswdFile)
 		if err != nil {
-			log.Fatalf("FATAL: unable to open %s %s", *htpasswdFile, err.Error())
+			log.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
 		}
 	}
-	listener, err := net.Listen("tcp", *httpAddr)
+
+	listener, err := net.Listen("tcp", opts.HttpAddress)
 	if err != nil {
-		log.Fatalf("FATAL: listen (%s) failed - %s", *httpAddr, err.Error())
+		log.Fatalf("FATAL: listen (%s) failed - %s", opts.HttpAddress, err)
 	}
-	log.Printf("listening on %s", *httpAddr)
+	log.Printf("listening on %s", opts.HttpAddress)
 
 	server := &http.Server{Handler: oauthproxy}
 	err = server.Serve(listener)
 	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		log.Printf("ERROR: http.Serve() - %s", err.Error())
+		log.Printf("ERROR: http.Serve() - %s", err)
 	}
 
-	log.Printf("HTTP: closing %s", listener.Addr().String())
+	log.Printf("HTTP: closing %s", listener.Addr())
 }

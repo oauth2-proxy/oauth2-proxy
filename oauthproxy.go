@@ -22,9 +22,12 @@ const oauthStartPath = "/oauth2/start"
 const oauthCallbackPath = "/oauth2/callback"
 
 type OauthProxy struct {
-	CookieSeed string
-	CookieKey  string
-	Validator  func(string) bool
+	CookieSeed      string
+	CookieKey       string
+	CookieDomain    string
+	CookieHttpsOnly bool
+	CookieExpire    time.Duration
+	Validator       func(string) bool
 
 	redirectUrl        *url.URL // the url to receive requests at
 	oauthRedemptionUrl *url.URL // endpoint to redeem the code
@@ -35,38 +38,39 @@ type OauthProxy struct {
 	SignInMessage      string
 	HtpasswdFile       *HtpasswdFile
 	serveMux           *http.ServeMux
+	PassBasicAuth      bool
 }
 
-func NewOauthProxy(proxyUrls []*url.URL, clientID string, clientSecret string, validator func(string) bool) *OauthProxy {
+func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	login, _ := url.Parse("https://accounts.google.com/o/oauth2/auth")
 	redeem, _ := url.Parse("https://accounts.google.com/o/oauth2/token")
 	serveMux := http.NewServeMux()
-	for _, u := range proxyUrls {
+	for _, u := range opts.proxyUrls {
 		path := u.Path
-		if len(path) == 0 {
-			path = "/"
-		}
 		u.Path = ""
-		log.Printf("mapping %s => %s", path, u)
+		log.Printf("mapping path %q => upstream %q", path, u)
 		serveMux.Handle(path, httputil.NewSingleHostReverseProxy(u))
 	}
-	return &OauthProxy{
-		CookieKey:  "_oauthproxy",
-		CookieSeed: *cookieSecret,
-		Validator:  validator,
+	redirectUrl := opts.redirectUrl
+	redirectUrl.Path = oauthCallbackPath
 
-		clientID:           clientID,
-		clientSecret:       clientSecret,
+	return &OauthProxy{
+		CookieKey:       "_oauthproxy",
+		CookieSeed:      opts.CookieSecret,
+		CookieDomain:    opts.CookieDomain,
+		CookieHttpsOnly: opts.CookieHttpsOnly,
+		CookieExpire:    opts.CookieExpire,
+		Validator:       validator,
+
+		clientID:           opts.ClientID,
+		clientSecret:       opts.ClientSecret,
 		oauthScope:         "profile email",
 		oauthRedemptionUrl: redeem,
 		oauthLoginUrl:      login,
 		serveMux:           serveMux,
+		redirectUrl:        redirectUrl,
+		PassBasicAuth:      opts.PassBasicAuth,
 	}
-}
-
-func (p *OauthProxy) SetRedirectUrl(redirectUrl *url.URL) {
-	redirectUrl.Path = oauthCallbackPath
-	p.redirectUrl = redirectUrl
 }
 
 func (p *OauthProxy) GetLoginURL(redirectUrl string) string {
@@ -164,8 +168,8 @@ func jwtDecodeSegment(seg string) ([]byte, error) {
 
 func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 	domain := strings.Split(req.Host, ":")[0]
-	if *cookieDomain != "" && strings.HasSuffix(domain, *cookieDomain) {
-		domain = *cookieDomain
+	if p.CookieDomain != "" && strings.HasSuffix(domain, p.CookieDomain) {
+		domain = p.CookieDomain
 	}
 	cookie := &http.Cookie{
 		Name:     p.CookieKey,
@@ -181,8 +185,8 @@ func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
 
 	domain := strings.Split(req.Host, ":")[0] // strip the port (if any)
-	if *cookieDomain != "" && strings.HasSuffix(domain, *cookieDomain) {
-		domain = *cookieDomain
+	if p.CookieDomain != "" && strings.HasSuffix(domain, p.CookieDomain) {
+		domain = p.CookieDomain
 	}
 	cookie := &http.Cookie{
 		Name:     p.CookieKey,
@@ -190,8 +194,8 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 		Path:     "/",
 		Domain:   domain,
 		HttpOnly: true,
-		Secure:   *cookieHttpsOnly,
-		Expires:  time.Now().Add(*cookieExpire),
+		Secure:   p.CookieHttpsOnly,
+		Expires:  time.Now().Add(p.CookieExpire),
 	}
 	http.SetCookie(rw, cookie)
 }
@@ -267,11 +271,11 @@ func (p *OauthProxy) GetRedirect(req *http.Request) (string, error) {
 
 func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// check if this is a redirect back at the end of oauth
-	remoteIP := req.Header.Get("X-Real-IP")
-	if remoteIP == "" {
-		remoteIP = req.RemoteAddr
+	remoteAddr := req.RemoteAddr
+	if req.Header.Get("X-Real-IP") != "" {
+		remoteAddr += fmt.Sprintf(" (%q)", req.Header.Get("X-Real-IP"))
 	}
-	log.Printf("%s %s %s", remoteIP, req.Method, req.URL.Path)
+	log.Printf("%s %s %s", remoteAddr, req.Method, req.URL.RequestURI())
 
 	var ok bool
 	var user string
@@ -322,7 +326,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 		_, email, err := p.redeemCode(req.Form.Get("code"))
 		if err != nil {
-			log.Printf("error redeeming code %s", err)
+			log.Printf("%s error redeeming code %s", remoteAddr, err)
 			p.ErrorPage(rw, 500, "Internal Error", err.Error())
 			return
 		}
@@ -334,7 +338,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 		// set cookie, or deny
 		if p.Validator(email) {
-			log.Printf("authenticating %s completed", email)
+			log.Printf("%s authenticating %s completed", remoteAddr, email)
 			p.SetCookie(rw, req, email)
 			http.Redirect(rw, req, redirect, 302)
 			return
@@ -362,13 +366,13 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if !ok {
-		log.Printf("invalid cookie")
+		log.Printf("%s - invalid cookie session", remoteAddr)
 		p.SignInPage(rw, req, 403)
 		return
 	}
 
 	// At this point, the user is authenticated. proxy normally
-	if *passBasicAuth {
+	if p.PassBasicAuth {
 		req.SetBasicAuth(user, "")
 		req.Header["X-Forwarded-User"] = []string{user}
 		req.Header["X-Forwarded-Email"] = []string{email}

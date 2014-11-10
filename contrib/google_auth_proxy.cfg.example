@@ -1,0 +1,44 @@
+## Google Auth Proxy Config File
+## https://github.com/bitly/google_auth_proxy
+
+## <addr>:<port> to listen on for HTTP clients
+# http_address = "127.0.0.1:4180"
+
+## the OAuth Redirect URL.
+# redirect_url = "https://internalapp.yourcompany.com/oauth2/callback"
+
+## the http url(s) of the upstream endpoint. If multiple, routing is based on path
+# upstreams = [
+#     "http://127.0.0.1:8080/"
+# ]
+
+## pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
+# pass_basic_auth = true
+
+## Google Apps Domains to allow authentication for
+# google_apps_domains = [
+#     "yourcompany.com"
+# ]
+
+
+## The Google OAuth Client ID, Secret
+# client_id = "123456.apps.googleusercontent.com"
+# client_secret = ""
+
+## Authenticated Email Addresses File (one email per line)
+# authenticated_emails_file = ""
+
+## Htpasswd File (optional)
+## Additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
+## enabling exposes a username/login signin form
+# htpasswd_file = ""
+
+
+## Cookie Settings
+## Secret - the seed string for secure cookies
+## Domain - optional cookie domain to force cookies to (ie: .yourcompany.com)
+## Expire - expire timeframe for cookie
+# cookie_secret = ""
+# cookie_domain = ""
+# cookie_expire = "168h"
+# cookie_https_only = false
