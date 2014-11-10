@@ -73,7 +73,7 @@ Usage of google_auth_proxy:
 
 ### Environment variables
 
-The environment variables `google_auth_client_id`, `google_auth_secret` and `google_auth_cookie_secret` can be used in place of the corresponding command-line arguments.
+The environment variables `GOOGLE_AUTH_PROXY_CLIENT_ID`, `GOOGLE_AUTH_PROXY_CLIENT_SECRET`, `GOOGLE_AUTH_PROXY_COOKIE_SECRET`, `GOOGLE_AUTH_PROXY_COOKIE_DOMAIN` and `GOOGLE_AUTH_PROXY_COOKIE_EXPIRE` can be used in place of the corresponding command-line arguments.
 
 ### Example Nginx Configuration
 

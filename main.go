@@ -35,11 +35,16 @@ func main() {
 	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption")
 
 	flagSet.String("cookie-secret", "", "the seed string for secure cookies")
-	flagSet.String("cookie-domain", "", "an optional cookie domain to force cookies to (ie: .yourcompany.com)")
+	flagSet.String("cookie-domain", "", "an optional cookie domain to force cookies to (ie: .yourcompany.com)*")
 	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
 	flagSet.Bool("cookie-https-only", false, "set HTTPS only cookie")
 
 	flagSet.Parse(os.Args[1:])
+
+	if *showVersion {
+		fmt.Printf("google_auth_proxy v%s\n", VERSION)
+		return
+	}
 
 	opts := NewOptions()
 
@@ -50,25 +55,8 @@ func main() {
 			log.Fatalf("ERROR: failed to load config file %s - %s", *config, err)
 		}
 	}
-
+	LoadOptionsFromEnv(opts, cfg)
 	options.Resolve(opts, flagSet, cfg)
-
-	// Try to use env for secrets if no flag is set
-	// TODO: better parsing of these values
-	if opts.ClientID == "" {
-		opts.ClientID = os.Getenv("google_auth_client_id")
-	}
-	if opts.ClientSecret == "" {
-		opts.ClientSecret = os.Getenv("google_auth_secret")
-	}
-	if opts.CookieSecret == "" {
-		opts.CookieSecret = os.Getenv("google_auth_cookie_secret")
-	}
-
-	if *showVersion {
-		fmt.Printf("google_auth_proxy v%s\n", VERSION)
-		return
-	}
 
 	err := opts.Validate()
 	if err != nil {
@@ -88,6 +76,7 @@ func main() {
 	}
 
 	if opts.HtpasswdFile != "" {
+		log.Printf("using htpasswd file %s", opts.HtpasswdFile)
 		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(opts.HtpasswdFile)
 		if err != nil {
 			log.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
