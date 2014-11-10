@@ -76,6 +76,23 @@ func getTemplates() *template.Template {
 		margin:0;
 		box-sizing: border-box;
 	}
+	footer {
+		display:block;
+		font-size:10px;
+		color:#aaa;
+		text-align:center;
+		margin-bottom:10px;
+	}
+	footer a {
+		display:inline-block;
+		height:25px;
+		line-height:25px;
+		color:#aaa;
+		text-decoration:underline;
+	}
+	footer a:hover {
+		color:#aaa;
+	}
 	</style>
 </head>
 <body>
@@ -99,6 +116,9 @@ func getTemplates() *template.Template {
 	</form>
 	</div>
 	{{ end }}
+	<footer>
+	Secured with <a href="https://github.com/bitly/google_auth_proxy#google_auth_proxy">Google Auth Proxy</a> version {{.Version}}
+	</footer>
 </body>
 </html>
 {{end}}`)

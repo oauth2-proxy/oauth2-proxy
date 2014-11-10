@@ -229,10 +229,12 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		SignInMessage string
 		Htpasswd      bool
 		Redirect      string
+		Version       string
 	}{
 		SignInMessage: p.SignInMessage,
 		Htpasswd:      p.HtpasswdFile != nil,
 		Redirect:      req.URL.RequestURI(),
+		Version:       VERSION,
 	}
 	templates.ExecuteTemplate(rw, "sign_in.html", t)
 }
