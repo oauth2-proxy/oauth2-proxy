@@ -11,13 +11,13 @@ import (
 type Options struct {
 	HttpAddress             string        `flag:"http-address" cfg:"http_address"`
 	RedirectUrl             string        `flag:"redirect-url" cfg:"redirect_url"`
-	ClientID                string        `flag:"client-id" cfg:"client_id"`
-	ClientSecret            string        `flag:"client-secret" cfg:"client_secret"`
+	ClientID                string        `flag:"client-id" cfg:"client_id" env:"GOOGLE_AUTH_PROXY_CLIENT_ID"`
+	ClientSecret            string        `flag:"client-secret" cfg:"client_secret" env:"GOOGLE_AUTH_PROXY_CLIENT_SECRET"`
 	PassBasicAuth           bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
 	HtpasswdFile            string        `flag:"htpasswd-file" cfg:"htpasswd_file"`
-	CookieSecret            string        `flag:"cookie-secret" cfg:"cookie_secret"`
-	CookieDomain            string        `flag:"cookie-domain" cfg:"cookie_domain"`
-	CookieExpire            time.Duration `flag:"cookie-expire" cfg:"cookie_expire"`
+	CookieSecret            string        `flag:"cookie-secret" cfg:"cookie_secret" env:"GOOGLE_AUTH_PROXY_COOKIE_SECRET"`
+	CookieDomain            string        `flag:"cookie-domain" cfg:"cookie_domain" env:"GOOGLE_AUTH_PROXY_COOKIE_DOMAIN"`
+	CookieExpire            time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"GOOGLE_AUTH_PROXY_COOKIE_EXPIRE"`
 	CookieHttpsOnly         bool          `flag:"cookie-https-only" cfg:"cookie_https_only"`
 	AuthenticatedEmailsFile string        `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	GoogleAppsDomains       []string      `flag:"google-apps-domain" cfg:"google_apps_domains"`
@@ -34,28 +34,28 @@ func NewOptions() *Options {
 
 func (o *Options) Validate() error {
 	if len(o.Upstreams) < 1 {
-		return errors.New("missing -upstream")
+		return errors.New("missing setting: upstream")
 	}
 	if o.CookieSecret == "" {
-		errors.New("missing -cookie-secret")
+		errors.New("missing setting: cookie-secret")
 	}
 	if o.ClientID == "" {
-		return errors.New("missing -client-id")
+		return errors.New("missing setting: client-id")
 	}
 	if o.ClientSecret == "" {
-		return errors.New("missing -client-secret")
+		return errors.New("missing setting: client-secret")
 	}
 
 	redirectUrl, err := url.Parse(o.RedirectUrl)
 	if err != nil {
-		return fmt.Errorf("error parsing -redirect-url=%q %s", o.RedirectUrl, err)
+		return fmt.Errorf("error parsing redirect-url=%q %s", o.RedirectUrl, err)
 	}
 	o.redirectUrl = redirectUrl
 
 	for _, u := range o.Upstreams {
 		upstreamUrl, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("error parsing -upstream=%q %s", upstreamUrl, err)
+			return fmt.Errorf("error parsing upstream=%q %s", upstreamUrl, err)
 		}
 		if upstreamUrl.Path == "" {
 			upstreamUrl.Path = "/"

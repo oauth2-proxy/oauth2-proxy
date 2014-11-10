@@ -12,9 +12,10 @@ func NewValidator(domains []string, usersFile string) func(string) bool {
 	validUsers := make(map[string]bool)
 
 	if usersFile != "" {
+		log.Printf("using authenticated emails file %s", usersFile)
 		r, err := os.Open(usersFile)
 		if err != nil {
-			log.Fatalf("failed opening -authenticated-emails-file=%v, %s", usersFile, err.Error())
+			log.Fatalf("failed opening authenticated-emails-file=%q, %s", usersFile, err)
 		}
 		csv_reader := csv.NewReader(r)
 		csv_reader.Comma = ','

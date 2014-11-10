@@ -17,7 +17,6 @@ type HtpasswdFile struct {
 }
 
 func NewHtpasswdFromFile(path string) (*HtpasswdFile, error) {
-	log.Printf("using htpasswd file %s", path)
 	r, err := os.Open(path)
 	if err != nil {
 		return nil, err

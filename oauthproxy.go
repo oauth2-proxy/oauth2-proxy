@@ -54,6 +54,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	redirectUrl := opts.redirectUrl
 	redirectUrl.Path = oauthCallbackPath
 
+	log.Printf("OauthProxy configured for %s", opts.ClientID)
 	return &OauthProxy{
 		CookieKey:       "_oauthproxy",
 		CookieSeed:      opts.CookieSecret,
