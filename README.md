@@ -8,6 +8,8 @@ individual accounts, or a whole google apps domain.
 [![Build Status](https://secure.travis-ci.org/bitly/google_auth_proxy.png?branch=master)](http://travis-ci.org/bitly/google_auth_proxy)
 
 
+![sign_in_page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
+
 ## Architecture
 
 ```
@@ -22,8 +24,10 @@ individual accounts, or a whole google apps domain.
 
 ## Installation
 
-1. [Install Go](http://golang.org/doc/install)
-2. `$ go get github.com/bitly/google_auth_proxy`. This should put the binary in `$GOROOT/bin`
+1. Download [Prebuilt Binary](https://github.com/bitly/google_auth_proxy/releases) or build from `master` with `$ go get github.com/bitly/google_auth_proxy` which should put the binary in `$GOROOT/bin`
+2. Register an OAuth Application with Google
+3. Configure Google Auth Proxy using config file, command line options, or environment variables
+4. Deploy behind a SSL endpoint (example provided for Nginx)
 
 ## OAuth Configuration
 
