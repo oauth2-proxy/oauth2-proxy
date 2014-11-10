@@ -41,4 +41,4 @@
 # cookie_secret = ""
 # cookie_domain = ""
 # cookie_expire = "168h"
-# cookie_https_only = false
+# cookie_https_only = true
