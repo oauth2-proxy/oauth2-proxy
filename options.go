@@ -29,7 +29,12 @@ type Options struct {
 }
 
 func NewOptions() *Options {
-	return &Options{}
+	return &Options{
+		HttpAddress:     "127.0.0.1:4180",
+		CookieHttpsOnly: true,
+		PassBasicAuth:   true,
+		CookieExpire:    time.Duration(168) * time.Hour,
+	}
 }
 
 func (o *Options) Validate() error {

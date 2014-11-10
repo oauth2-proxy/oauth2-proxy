@@ -55,6 +55,11 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	redirectUrl.Path = oauthCallbackPath
 
 	log.Printf("OauthProxy configured for %s", opts.ClientID)
+	domain := opts.CookieDomain
+	if domain == "" {
+		domain = "<default>"
+	}
+	log.Printf("Cookie settings: https_only: %v expiry: %s domain:%s", opts.CookieHttpsOnly, opts.CookieExpire, domain)
 	return &OauthProxy{
 		CookieKey:       "_oauthproxy",
 		CookieSeed:      opts.CookieSecret,
