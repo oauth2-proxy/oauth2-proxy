@@ -48,14 +48,14 @@ func main() {
 
 	opts := NewOptions()
 
-	var cfg map[string]interface{}
+	cfg := make(EnvOptions)
 	if *config != "" {
 		_, err := toml.DecodeFile(*config, &cfg)
 		if err != nil {
 			log.Fatalf("ERROR: failed to load config file %s - %s", *config, err)
 		}
 	}
-	LoadOptionsFromEnv(opts, cfg)
+	cfg.LoadEnvForStruct(opts)
 	options.Resolve(opts, flagSet, cfg)
 
 	err := opts.Validate()
