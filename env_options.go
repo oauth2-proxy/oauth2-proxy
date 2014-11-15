@@ -6,7 +6,9 @@ import (
 	"strings"
 )
 
-func LoadOptionsFromEnv(options interface{}, cfg map[string]interface{}) {
+type EnvOptions map[string]interface{}
+
+func (cfg EnvOptions) LoadEnvForStruct(options interface{}) {
 	val := reflect.ValueOf(options).Elem()
 	typ := val.Type()
 	for i := 0; i < typ.NumField(); i++ {
