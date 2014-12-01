@@ -47,7 +47,13 @@ type OauthProxy struct {
 }
 
 func NewReverseProxy(target *url.URL) (proxy *httputil.ReverseProxy) {
-    return httputil.NewSingleHostReverseProxy(target)
+    proxy = httputil.NewSingleHostReverseProxy(target)
+    director := proxy.Director
+    proxy.Director = func(req *http.Request) {
+        director(req)
+        req.Host = target.Host
+    }
+    return proxy
 }
 
 func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
