@@ -8,5 +8,4 @@ import (
 func TestTemplatesCompile(t *testing.T) {
 	templates := getTemplates()
 	assert.NotEqual(t, templates, nil)
-
 }
