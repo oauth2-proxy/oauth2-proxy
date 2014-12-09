@@ -29,16 +29,17 @@ type OauthProxy struct {
 	CookieExpire    time.Duration
 	Validator       func(string) bool
 
-	redirectUrl        *url.URL // the url to receive requests at
-	oauthRedemptionUrl *url.URL // endpoint to redeem the code
-	oauthLoginUrl      *url.URL // to redirect the user to
-	oauthScope         string
-	clientID           string
-	clientSecret       string
-	SignInMessage      string
-	HtpasswdFile       *HtpasswdFile
-	serveMux           *http.ServeMux
-	PassBasicAuth      bool
+	redirectUrl         *url.URL // the url to receive requests at
+	oauthRedemptionUrl  *url.URL // endpoint to redeem the code
+	oauthLoginUrl       *url.URL // to redirect the user to
+	oauthScope          string
+	clientID            string
+	clientSecret        string
+	SignInMessage       string
+	HtpasswdFile        *HtpasswdFile
+	DisplayHtpasswdForm bool
+	serveMux            *http.ServeMux
+	PassBasicAuth       bool
 }
 
 func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
@@ -112,6 +113,10 @@ func apiRequest(req *http.Request) (*simplejson.Json, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+func (p *OauthProxy) displayCustomLoginForm() bool {
+	return p.HtpasswdFile != nil && p.DisplayHtpasswdForm
 }
 
 func (p *OauthProxy) redeemCode(code string) (string, string, error) {
@@ -232,12 +237,12 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	t := struct {
 		SignInMessage string
-		Htpasswd      bool
+		CustomLogin   bool
 		Redirect      string
 		Version       string
 	}{
 		SignInMessage: p.SignInMessage,
-		Htpasswd:      p.HtpasswdFile != nil,
+		CustomLogin:   p.displayCustomLoginForm(),
 		Redirect:      req.URL.RequestURI(),
 		Version:       VERSION,
 	}

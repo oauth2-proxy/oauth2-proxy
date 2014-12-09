@@ -105,8 +105,8 @@ func getTemplates() *template.Template {
 	<button type="submit" class="btn">Sign in with a Google Account</button><br/>
 	</form>
 	</div>
-	
-	{{ if .Htpasswd }}
+
+	{{ if .CustomLogin }}
 	<div class="signin">
 	<form method="POST" action="/oauth2/sign_in">
 		<input type="hidden" name="rd" value="{{.Redirect}}">

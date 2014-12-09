@@ -15,6 +15,7 @@ type Options struct {
 	ClientSecret            string        `flag:"client-secret" cfg:"client_secret" env:"GOOGLE_AUTH_PROXY_CLIENT_SECRET"`
 	PassBasicAuth           bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
 	HtpasswdFile            string        `flag:"htpasswd-file" cfg:"htpasswd_file"`
+	DisplayHtpasswdForm     bool          `flag:"display-htpasswd-form" cfg:"display_htpasswd_form"`
 	CookieSecret            string        `flag:"cookie-secret" cfg:"cookie_secret" env:"GOOGLE_AUTH_PROXY_COOKIE_SECRET"`
 	CookieDomain            string        `flag:"cookie-domain" cfg:"cookie_domain" env:"GOOGLE_AUTH_PROXY_COOKIE_DOMAIN"`
 	CookieExpire            time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"GOOGLE_AUTH_PROXY_COOKIE_EXPIRE"`
@@ -30,10 +31,11 @@ type Options struct {
 
 func NewOptions() *Options {
 	return &Options{
-		HttpAddress:     "127.0.0.1:4180",
-		CookieHttpsOnly: true,
-		PassBasicAuth:   true,
-		CookieExpire:    time.Duration(168) * time.Hour,
+		HttpAddress:         "127.0.0.1:4180",
+		DisplayHtpasswdForm: true,
+		CookieHttpsOnly:     true,
+		PassBasicAuth:       true,
+		CookieExpire:        time.Duration(168) * time.Hour,
 	}
 }
 
