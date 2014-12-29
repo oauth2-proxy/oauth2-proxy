@@ -116,7 +116,7 @@ The command line to run `google_auth_proxy` would look like this:
    --google-apps-domain="yourcompany.com"  \
    --upstream=http://127.0.0.1:8080/ \
    --cookie-secret=... \
-   --cookie-secure=true \
+   --cookie-https-only=true \
    --client-id=... \
    --client-secret=...
 ```
