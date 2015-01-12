@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"regexp"
 
 	"github.com/bitly/go-simplejson"
 )
@@ -40,6 +41,8 @@ type OauthProxy struct {
 	DisplayHtpasswdForm bool
 	serveMux            *http.ServeMux
 	PassBasicAuth       bool
+	skipAuthRegex       []string
+	compiledRegex       []*regexp.Regexp
 }
 
 func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
@@ -52,6 +55,10 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		log.Printf("mapping path %q => upstream %q", path, u)
 		serveMux.Handle(path, httputil.NewSingleHostReverseProxy(u))
 	}
+	for _, u := range opts.CompiledRegex {
+		log.Printf("compiled skip-auth-regex => %q", u)
+	}
+
 	redirectUrl := opts.redirectUrl
 	redirectUrl.Path = oauthCallbackPath
 
@@ -76,6 +83,8 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		oauthLoginUrl:      login,
 		serveMux:           serveMux,
 		redirectUrl:        redirectUrl,
+		skipAuthRegex:      opts.SkipAuthRegex,
+		compiledRegex:      opts.CompiledRegex, 
 		PassBasicAuth:      opts.PassBasicAuth,
 	}
 }
@@ -297,6 +306,15 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == pingPath {
 		p.PingPage(rw)
 		return
+	}
+
+	for _, u := range p.compiledRegex {
+		match := u.MatchString(req.URL.Path)
+		if match {
+			p.serveMux.ServeHTTP(rw, req)
+			return
+		}
+
 	}
 
 	if req.URL.Path == signInPath {
