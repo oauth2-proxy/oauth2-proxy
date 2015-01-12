@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"time"
+	"regexp"
 )
 
 // Configuration Options that can be set by Command Line Flag, or Config File
@@ -23,10 +24,12 @@ type Options struct {
 	AuthenticatedEmailsFile string        `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	GoogleAppsDomains       []string      `flag:"google-apps-domain" cfg:"google_apps_domains"`
 	Upstreams               []string      `flag:"upstream" cfg:"upstreams"`
+	SkipAuthRegex           []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 
 	// internal values that are set after config validation
 	redirectUrl *url.URL
 	proxyUrls   []*url.URL
+	CompiledRegex []*regexp.Regexp
 }
 
 func NewOptions() *Options {
@@ -68,6 +71,14 @@ func (o *Options) Validate() error {
 			upstreamUrl.Path = "/"
 		}
 		o.proxyUrls = append(o.proxyUrls, upstreamUrl)
+	}
+
+	for _, u := range o.SkipAuthRegex {
+		CompiledRegex, err := regexp.Compile(u)
+		if err != nil {
+			return fmt.Errorf("error compiling regex=%q %s", u, err)
+		}
+		o.CompiledRegex = append(o.CompiledRegex, CompiledRegex)
 	}
 
 	return nil
