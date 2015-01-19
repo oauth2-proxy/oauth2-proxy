@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 	"regexp"
+	"time"
 )
 
 // Configuration Options that can be set by Command Line Flag, or Config File
@@ -27,8 +27,8 @@ type Options struct {
 	SkipAuthRegex           []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 
 	// internal values that are set after config validation
-	redirectUrl *url.URL
-	proxyUrls   []*url.URL
+	redirectUrl   *url.URL
+	proxyUrls     []*url.URL
 	CompiledRegex []*regexp.Regexp
 }
 
