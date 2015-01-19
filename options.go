@@ -21,6 +21,7 @@ type Options struct {
 	CookieDomain            string        `flag:"cookie-domain" cfg:"cookie_domain" env:"GOOGLE_AUTH_PROXY_COOKIE_DOMAIN"`
 	CookieExpire            time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"GOOGLE_AUTH_PROXY_COOKIE_EXPIRE"`
 	CookieHttpsOnly         bool          `flag:"cookie-https-only" cfg:"cookie_https_only"`
+	CookieHttpOnly          bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
 	AuthenticatedEmailsFile string        `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	GoogleAppsDomains       []string      `flag:"google-apps-domain" cfg:"google_apps_domains"`
 	Upstreams               []string      `flag:"upstream" cfg:"upstreams"`
@@ -37,6 +38,7 @@ func NewOptions() *Options {
 		HttpAddress:         "127.0.0.1:4180",
 		DisplayHtpasswdForm: true,
 		CookieHttpsOnly:     true,
+		CookieHttpOnly:      true,
 		PassBasicAuth:       true,
 		CookieExpire:        time.Duration(168) * time.Hour,
 	}
