@@ -42,3 +42,4 @@
 # cookie_domain = ""
 # cookie_expire = "168h"
 # cookie_https_only = true
+# cookie_httponly = true

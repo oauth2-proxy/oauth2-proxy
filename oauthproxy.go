@@ -27,6 +27,7 @@ type OauthProxy struct {
 	CookieKey       string
 	CookieDomain    string
 	CookieHttpsOnly bool
+	CookieHttpOnly  bool
 	CookieExpire    time.Duration
 	Validator       func(string) bool
 
@@ -67,12 +68,13 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	if domain == "" {
 		domain = "<default>"
 	}
-	log.Printf("Cookie settings: https_only: %v expiry: %s domain:%s", opts.CookieHttpsOnly, opts.CookieExpire, domain)
+	log.Printf("Cookie settings: https_only: %v httponly: %v expiry: %s domain:%s", opts.CookieHttpsOnly, opts.CookieHttpOnly, opts.CookieExpire, domain)
 	return &OauthProxy{
 		CookieKey:       "_oauthproxy",
 		CookieSeed:      opts.CookieSecret,
 		CookieDomain:    opts.CookieDomain,
 		CookieHttpsOnly: opts.CookieHttpsOnly,
+		CookieHttpOnly:  opts.CookieHttpOnly,
 		CookieExpire:    opts.CookieExpire,
 		Validator:       validator,
 
@@ -197,7 +199,7 @@ func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 		Path:     "/",
 		Domain:   domain,
 		Expires:  time.Now().Add(time.Duration(1) * time.Hour * -1),
-		HttpOnly: true,
+		HttpOnly: p.CookieHttpOnly,
 	}
 	http.SetCookie(rw, cookie)
 }
@@ -213,7 +215,7 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 		Value:    signedCookieValue(p.CookieSeed, p.CookieKey, val),
 		Path:     "/",
 		Domain:   domain,
-		HttpOnly: true,
+		HttpOnly: p.CookieHttpOnly,
 		Secure:   p.CookieHttpsOnly,
 		Expires:  time.Now().Add(p.CookieExpire),
 	}
