@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 
 	"github.com/bitly/go-simplejson"
 )
@@ -86,7 +86,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		serveMux:           serveMux,
 		redirectUrl:        redirectUrl,
 		skipAuthRegex:      opts.SkipAuthRegex,
-		compiledRegex:      opts.CompiledRegex, 
+		compiledRegex:      opts.CompiledRegex,
 		PassBasicAuth:      opts.PassBasicAuth,
 	}
 }
