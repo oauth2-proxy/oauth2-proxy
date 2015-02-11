@@ -62,15 +62,18 @@ Usage of google_auth_proxy:
   -client-id="": the Google OAuth Client ID: ie: "123456.apps.googleusercontent.com"
   -client-secret="": the OAuth Client Secret
   -config="": path to config file
-  -cookie-domain="": an optional cookie domain to force cookies to (ie: .yourcompany.com)
+  -cookie-domain="": an optional cookie domain to force cookies to (ie: .yourcompany.com)*
   -cookie-expire=168h0m0s: expire timeframe for cookie
-  -cookie-https-only=false: set HTTPS only cookie
+  -cookie-httponly=true: set HttpOnly cookie
+  -cookie-https-only=true: set HTTPS only cookie
   -cookie-secret="": the seed string for secure cookies
+  -display-htpasswd-form=true: display username / password login form if an htpasswd file is provided
   -google-apps-domain=: authenticate against the given Google apps domain (may be given multiple times)
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
-  -http-address="127.0.0.1:4180": <addr>:<port> to listen on for HTTP clients
+  -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
   -pass-basic-auth=true: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
+  -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
   -upstream=: the http url(s) of the upstream endpoint. If multiple, routing is based on path
   -version=false: print version string
 ```
