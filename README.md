@@ -72,6 +72,7 @@ Usage of google_auth_proxy:
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
   -pass-basic-auth=true: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
+  -pass-host-header=true: pass the request Host Header to upstream
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
   -upstream=: the http url(s) of the upstream endpoint. If multiple, routing is based on path

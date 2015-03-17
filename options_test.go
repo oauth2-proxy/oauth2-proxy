@@ -1,14 +1,14 @@
 package main
 
 import (
+	"net/url"
 	"strings"
 	"testing"
-	"net/url"
 
 	"github.com/bmizerany/assert"
 )
 
-func testOptions() (*Options) {
+func testOptions() *Options {
 	o := NewOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
 	o.CookieSecret = "foobar"
@@ -17,7 +17,7 @@ func testOptions() (*Options) {
 	return o
 }
 
-func errorMsg(msgs []string)(string) {
+func errorMsg(msgs []string) string {
 	result := make([]string, 0)
 	result = append(result, "Invalid configuration:")
 	result = append(result, msgs...)
