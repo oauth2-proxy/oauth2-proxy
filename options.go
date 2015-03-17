@@ -1,10 +1,10 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -45,29 +45,33 @@ func NewOptions() *Options {
 }
 
 func (o *Options) Validate() error {
+	msgs := make([]string, 0)
 	if len(o.Upstreams) < 1 {
-		return errors.New("missing setting: upstream")
+		msgs = append(msgs, "missing setting: upstream")
 	}
 	if o.CookieSecret == "" {
-		errors.New("missing setting: cookie-secret")
+		msgs = append(msgs, "missing setting: cookie-secret")
 	}
 	if o.ClientID == "" {
-		return errors.New("missing setting: client-id")
+		msgs = append(msgs, "missing setting: client-id")
 	}
 	if o.ClientSecret == "" {
-		return errors.New("missing setting: client-secret")
+		msgs = append(msgs, "missing setting: client-secret")
 	}
 
 	redirectUrl, err := url.Parse(o.RedirectUrl)
 	if err != nil {
-		return fmt.Errorf("error parsing redirect-url=%q %s", o.RedirectUrl, err)
+		msgs = append(msgs, fmt.Sprintf(
+			"error parsing redirect-url=%q %s", o.RedirectUrl, err))
 	}
 	o.redirectUrl = redirectUrl
 
 	for _, u := range o.Upstreams {
 		upstreamUrl, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("error parsing upstream=%q %s", upstreamUrl, err)
+			msgs = append(msgs, fmt.Sprintf(
+				"error parsing upstream=%q %s",
+				upstreamUrl, err))
 		}
 		if upstreamUrl.Path == "" {
 			upstreamUrl.Path = "/"
@@ -78,10 +82,15 @@ func (o *Options) Validate() error {
 	for _, u := range o.SkipAuthRegex {
 		CompiledRegex, err := regexp.Compile(u)
 		if err != nil {
-			return fmt.Errorf("error compiling regex=%q %s", u, err)
+			msgs = append(msgs, fmt.Sprintf(
+				"error compiling regex=%q %s", u, err))
 		}
 		o.CompiledRegex = append(o.CompiledRegex, CompiledRegex)
 	}
 
+	if len(msgs) != 0 {
+		return fmt.Errorf("Invalid configuration:\n  %s",
+			strings.Join(msgs, "\n  "))
+	}
 	return nil
 }
