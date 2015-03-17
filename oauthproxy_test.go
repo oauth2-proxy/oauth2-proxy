@@ -35,3 +35,30 @@ func TestNewReverseProxy(t *testing.T) {
 		t.Errorf("got body %q; expected %q", g, e)
 	}
 }
+
+func TestEncodedSlashes(t *testing.T) {
+	var seen string
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		seen = r.RequestURI
+	}))
+	defer backend.Close()
+
+	b, _ := url.Parse(backend.URL)
+	proxyHandler := NewReverseProxy(b)
+	setProxyDirector(proxyHandler)
+	frontend := httptest.NewServer(proxyHandler)
+	defer frontend.Close()
+
+	f, _ := url.Parse(frontend.URL)
+	encodedPath := "/a%2Fb/"
+	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: f.Host, Opaque: encodedPath}}
+	_, err := http.DefaultClient.Do(getReq)
+	if err != nil {
+		t.Fatalf("err %s", err)
+	}
+	expected := backend.URL + encodedPath
+	if seen != expected {
+		t.Errorf("got bad request %q expected %q", seen, expected)
+	}
+}
