@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -44,6 +45,7 @@ type OauthProxy struct {
 	PassBasicAuth       bool
 	skipAuthRegex       []string
 	compiledRegex       []*regexp.Regexp
+	templates           *template.Template
 }
 
 func NewReverseProxy(target *url.URL) (proxy *httputil.ReverseProxy) {
@@ -103,6 +105,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		skipAuthRegex:      opts.SkipAuthRegex,
 		compiledRegex:      opts.CompiledRegex,
 		PassBasicAuth:      opts.PassBasicAuth,
+		templates:          loadTemplates(opts.CustomTemplatesDir),
 	}
 }
 
@@ -245,7 +248,6 @@ func (p *OauthProxy) PingPage(rw http.ResponseWriter) {
 func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	log.Printf("ErrorPage %d %s %s", code, title, message)
 	rw.WriteHeader(code)
-	templates := getTemplates()
 	t := struct {
 		Title   string
 		Message string
@@ -253,13 +255,12 @@ func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 		Title:   fmt.Sprintf("%d %s", code, title),
 		Message: message,
 	}
-	templates.ExecuteTemplate(rw, "error.html", t)
+	p.templates.ExecuteTemplate(rw, "error.html", t)
 }
 
 func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	p.ClearCookie(rw, req)
 	rw.WriteHeader(code)
-	templates := getTemplates()
 
 	t := struct {
 		SignInMessage string
@@ -272,7 +273,7 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		Redirect:      req.URL.RequestURI(),
 		Version:       VERSION,
 	}
-	templates.ExecuteTemplate(rw, "sign_in.html", t)
+	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
 }
 
 func (p *OauthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {

@@ -19,6 +19,7 @@ type Options struct {
 	GoogleAppsDomains       []string `flag:"google-apps-domain" cfg:"google_apps_domains"`
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	DisplayHtpasswdForm     bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form"`
+	CustomTemplatesDir      string   `flag:"custom-templates-dir" cfg:"custom_templates_dir"`
 
 	CookieSecret    string        `flag:"cookie-secret" cfg:"cookie_secret" env:"GOOGLE_AUTH_PROXY_COOKIE_SECRET"`
 	CookieDomain    string        `flag:"cookie-domain" cfg:"cookie_domain" env:"GOOGLE_AUTH_PROXY_COOKIE_DOMAIN"`

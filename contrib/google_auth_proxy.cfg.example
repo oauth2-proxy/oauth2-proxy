@@ -36,6 +36,10 @@
 ## enabling exposes a username/login signin form
 # htpasswd_file = ""
 
+## Templates
+## optional directory with custom sign_in.html and error.html
+# custom_templates_dir = ""
+
 
 ## Cookie Settings
 ## Secret - the seed string for secure cookies
