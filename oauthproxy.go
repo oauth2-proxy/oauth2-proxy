@@ -98,7 +98,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	if domain == "" {
 		domain = "<default>"
 	}
-	log.Printf("Cookie settings: https_only: %v httponly: %v expiry: %s domain:%s", opts.CookieHttpsOnly, opts.CookieHttpOnly, opts.CookieExpire, domain)
+	log.Printf("Cookie settings: https_only (SSL required): %v httponly: %v expiry: %s domain:%s", opts.CookieHttpsOnly, opts.CookieHttpOnly, opts.CookieExpire, domain)
 	return &OauthProxy{
 		CookieKey:       "_oauthproxy",
 		CookieSeed:      opts.CookieSecret,
@@ -122,15 +122,33 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	}
 }
 
-func (p *OauthProxy) GetLoginURL(redirectUrl string) string {
+func (p *OauthProxy) GetRedirectUrl(host string) string {
+	// default to the request Host if not set
+	if p.redirectUrl.Host != "" {
+		return p.redirectUrl.String()
+	}
+	var u url.URL
+	u = *p.redirectUrl
+	if u.Scheme == "" {
+		if p.CookieHttpsOnly {
+			u.Scheme = "https"
+		} else {
+			u.Scheme = "http"
+		}
+	}
+	u.Host = host
+	return u.String()
+}
+
+func (p *OauthProxy) GetLoginURL(host, redirect string) string {
 	params := url.Values{}
-	params.Add("redirect_uri", p.redirectUrl.String())
+	params.Add("redirect_uri", p.GetRedirectUrl(host))
 	params.Add("approval_prompt", "force")
 	params.Add("scope", p.oauthScope)
 	params.Add("client_id", p.clientID)
 	params.Add("response_type", "code")
-	if strings.HasPrefix(redirectUrl, "/") {
-		params.Add("state", redirectUrl)
+	if strings.HasPrefix(redirect, "/") {
+		params.Add("state", redirect)
 	}
 	return fmt.Sprintf("%s?%s", p.oauthLoginUrl, params.Encode())
 }
@@ -161,12 +179,12 @@ func (p *OauthProxy) displayCustomLoginForm() bool {
 	return p.HtpasswdFile != nil && p.DisplayHtpasswdForm
 }
 
-func (p *OauthProxy) redeemCode(code string) (string, string, error) {
+func (p *OauthProxy) redeemCode(host, code string) (string, string, error) {
 	if code == "" {
 		return "", "", errors.New("missing code")
 	}
 	params := url.Values{}
-	params.Add("redirect_uri", p.redirectUrl.String())
+	params.Add("redirect_uri", p.GetRedirectUrl(host))
 	params.Add("client_id", p.clientID)
 	params.Add("client_secret", p.clientSecret)
 	params.Add("code", code)
@@ -370,7 +388,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, 500, "Internal Error", err.Error())
 			return
 		}
-		http.Redirect(rw, req, p.GetLoginURL(redirect), 302)
+		http.Redirect(rw, req, p.GetLoginURL(req.Host, redirect), 302)
 		return
 	}
 	if req.URL.Path == oauthCallbackPath {
@@ -386,7 +404,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		_, email, err := p.redeemCode(req.Form.Get("code"))
+		_, email, err := p.redeemCode(req.Host, req.Form.Get("code"))
 		if err != nil {
 			log.Printf("%s error redeeming code %s", remoteAddr, err)
 			p.ErrorPage(rw, 500, "Internal Error", err.Error())

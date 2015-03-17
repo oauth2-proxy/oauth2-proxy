@@ -117,7 +117,6 @@ The command line to run `google_auth_proxy` would look like this:
 
 ```bash
 ./google_auth_proxy \
-   --redirect-url="https://internal.yourcompany.com/oauth2/callback"  \
    --google-apps-domain="yourcompany.com"  \
    --upstream=http://127.0.0.1:8080/ \
    --cookie-secret=... \
@@ -134,4 +133,4 @@ Google Auth Proxy responds directly to the following endpoints. All other endpoi
 * /ping - returns an 200 OK response
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 * /oauth2/start - a URL that will redirect to start the OAuth cycle
-* /oauth2/callback - the URL used at the end of the OAuth cycle
+* /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this ass the callback url.

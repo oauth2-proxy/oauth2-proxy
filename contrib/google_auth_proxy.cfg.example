@@ -5,6 +5,7 @@
 # http_address = "127.0.0.1:4180"
 
 ## the OAuth Redirect URL.
+# defaults to the "https://" + requested host header + "/oauth2/callback"
 # redirect_url = "https://internalapp.yourcompany.com/oauth2/callback"
 
 ## the http url(s) of the upstream endpoint. If multiple, routing is based on path

@@ -24,7 +24,7 @@ type Options struct {
 	CookieSecret    string        `flag:"cookie-secret" cfg:"cookie_secret" env:"GOOGLE_AUTH_PROXY_COOKIE_SECRET"`
 	CookieDomain    string        `flag:"cookie-domain" cfg:"cookie_domain" env:"GOOGLE_AUTH_PROXY_COOKIE_DOMAIN"`
 	CookieExpire    time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"GOOGLE_AUTH_PROXY_COOKIE_EXPIRE"`
-	CookieHttpsOnly bool          `flag:"cookie-https-only" cfg:"cookie_https_only"`
+	CookieHttpsOnly bool          `flag:"cookie-https-only" cfg:"cookie_https_only"` // set secure cookie flag
 	CookieHttpOnly  bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
 
 	Upstreams      []string `flag:"upstream" cfg:"upstreams"`
