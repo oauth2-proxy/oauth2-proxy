@@ -12,7 +12,7 @@ import (
 func TestNewReverseProxy(t *testing.T) {
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-        hostname, _, _ := net.SplitHostPort(r.Host)
+		hostname, _, _ := net.SplitHostPort(r.Host)
 		w.Write([]byte(hostname))
 	}))
 	defer backend.Close()
@@ -24,6 +24,7 @@ func TestNewReverseProxy(t *testing.T) {
 	proxyURL, _ := url.Parse(backendURL.Scheme + "://" + backendHost + "/")
 
 	proxyHandler := NewReverseProxy(proxyURL)
+	setProxyUpstreamHostHeader(proxyHandler, proxyURL)
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
