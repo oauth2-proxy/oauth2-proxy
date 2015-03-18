@@ -75,6 +75,7 @@ Usage of google_auth_proxy:
   -pass-host-header=true: pass the request Host Header to upstream
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
+  -custom templates-dir="": path to custom html templates
   -upstream=: the http url(s) of the upstream endpoint. If multiple, routing is based on path
   -version=false: print version string
 ```

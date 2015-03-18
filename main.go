@@ -38,6 +38,7 @@ func main() {
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
 	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption")
 	flagSet.Bool("display-htpasswd-form", true, "display username / password login form if an htpasswd file is provided")
+	flagSet.String("custom-templates-dir", "", "path to custom html templates")
 
 	flagSet.String("cookie-secret", "", "the seed string for secure cookies")
 	flagSet.String("cookie-domain", "", "an optional cookie domain to force cookies to (ie: .yourcompany.com)*")
