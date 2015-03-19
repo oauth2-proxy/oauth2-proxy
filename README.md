@@ -135,3 +135,11 @@ Google Auth Proxy responds directly to the following endpoints. All other endpoi
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 * /oauth2/start - a URL that will redirect to start the OAuth cycle
 * /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this ass the callback url.
+
+## Logging Format
+
+Google Auth Proxy logs requests to stdout in a format similar to Apache Combined Log.
+
+```
+<REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
+````

@@ -47,6 +47,8 @@ func main() {
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 
+	flagSet.Bool("request-logging", true, "Log requests to stdout")
+
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
@@ -112,7 +114,7 @@ func main() {
 	}
 	log.Printf("listening on %s", listenAddr)
 
-	server := &http.Server{Handler: oauthproxy}
+	server := &http.Server{Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging)}
 	err = server.Serve(listener)
 	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 		log.Printf("ERROR: http.Serve() - %s", err)
