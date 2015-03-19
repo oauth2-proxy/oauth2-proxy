@@ -55,7 +55,18 @@ func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
 	director := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		director(req)
-		req.Host = target.Host
+		// use RequestURI so that we aren't unescaping encoded slashes in the request path
+		req.URL.Opaque = fmt.Sprintf("//%s%s", target.Host, req.RequestURI)
+		req.URL.RawQuery = ""
+	}
+}
+func setProxyDirector(proxy *httputil.ReverseProxy) {
+	director := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		director(req)
+		// use RequestURI so that we aren't unescaping encoded slashes in the request path
+		req.URL.Opaque = fmt.Sprintf("//%s%s", req.URL.Host, req.RequestURI)
+		req.URL.RawQuery = ""
 	}
 }
 
@@ -70,6 +81,8 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		proxy := NewReverseProxy(u)
 		if !opts.PassHostHeader {
 			setProxyUpstreamHostHeader(proxy, u)
+		} else {
+			setProxyDirector(proxy)
 		}
 		serveMux.Handle(path, proxy)
 	}
