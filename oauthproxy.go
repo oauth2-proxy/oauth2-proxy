@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -244,8 +245,14 @@ func jwtDecodeSegment(seg string) ([]byte, error) {
 }
 
 func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
-	domain := strings.Split(req.Host, ":")[0]
-	if p.CookieDomain != "" && strings.HasSuffix(domain, p.CookieDomain) {
+	domain := req.Host
+	if h, _, err := net.SplitHostPort(domain); err == nil {
+		domain = h
+	}
+	if p.CookieDomain != "" {
+		if !strings.HasSuffix(domain, p.CookieDomain) {
+			log.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, p.CookieDomain)
+		}
 		domain = p.CookieDomain
 	}
 	cookie := &http.Cookie{
@@ -253,16 +260,23 @@ func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 		Value:    "",
 		Path:     "/",
 		Domain:   domain,
-		Expires:  time.Now().Add(time.Duration(1) * time.Hour * -1),
 		HttpOnly: p.CookieHttpOnly,
+		Secure:   p.CookieSecure,
+		Expires:  time.Now().Add(time.Duration(1) * time.Hour * -1),
 	}
 	http.SetCookie(rw, cookie)
 }
 
 func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
 
-	domain := strings.Split(req.Host, ":")[0] // strip the port (if any)
-	if p.CookieDomain != "" && strings.HasSuffix(domain, p.CookieDomain) {
+	domain := req.Host
+	if h, _, err := net.SplitHostPort(domain); err == nil {
+		domain = h
+	}
+	if p.CookieDomain != "" {
+		if !strings.HasSuffix(domain, p.CookieDomain) {
+			log.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, p.CookieDomain)
+		}
 		domain = p.CookieDomain
 	}
 	cookie := &http.Cookie{
@@ -444,11 +458,6 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		user, ok = p.CheckBasicAuth(req)
-		// if we want to promote basic auth requests to cookie'd requests, we could do that here
-		// not sure that would be ideal in all circumstances though
-		// if ok {
-		// 	p.SetCookie(rw, req, user)
-		// }
 	}
 
 	if !ok {
