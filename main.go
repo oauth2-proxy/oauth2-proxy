@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -52,7 +53,7 @@ func main() {
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("google_auth_proxy v%s\n", VERSION)
+		fmt.Printf("google_auth_proxy v%s (built with %s)\n", VERSION, runtime.Version())
 		return
 	}
 
