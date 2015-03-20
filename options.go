@@ -33,6 +33,8 @@ type Options struct {
 	PassBasicAuth  bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
 	PassHostHeader bool     `flag:"pass-host-header" cfg:"pass_host_header"`
 
+	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
+
 	// internal values that are set after config validation
 	redirectUrl   *url.URL
 	proxyUrls     []*url.URL
@@ -49,6 +51,7 @@ func NewOptions() *Options {
 		CookieExpire:        time.Duration(168) * time.Hour,
 		PassBasicAuth:       true,
 		PassHostHeader:      true,
+		RequestLogging:      true,
 	}
 }
 

@@ -42,11 +42,21 @@ type OauthProxy struct {
 	SignInMessage       string
 	HtpasswdFile        *HtpasswdFile
 	DisplayHtpasswdForm bool
-	serveMux            *http.ServeMux
+	serveMux            http.Handler
 	PassBasicAuth       bool
 	skipAuthRegex       []string
 	compiledRegex       []*regexp.Regexp
 	templates           *template.Template
+}
+
+type UpstreamProxy struct {
+	upstream string
+	handler  http.Handler
+}
+
+func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("GAP-Upstream-Address", u.upstream)
+	u.handler.ServeHTTP(w, r)
 }
 
 func NewReverseProxy(target *url.URL) (proxy *httputil.ReverseProxy) {
@@ -85,7 +95,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		} else {
 			setProxyDirector(proxy)
 		}
-		serveMux.Handle(path, proxy)
+		serveMux.Handle(path, &UpstreamProxy{u.Host, proxy})
 	}
 	for _, u := range opts.CompiledRegex {
 		log.Printf("compiled skip-auth-regex => %q", u)
@@ -338,7 +348,7 @@ func (p *OauthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (st
 	}
 	// check auth
 	if p.HtpasswdFile.Validate(user, passwd) {
-		log.Printf("authenticated %s via manual sign in", user)
+		log.Printf("authenticated %q via HtpasswdFile", user)
 		return user, true
 	}
 	return "", false
@@ -366,7 +376,6 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.Header.Get("X-Real-IP") != "" {
 		remoteAddr += fmt.Sprintf(" (%q)", req.Header.Get("X-Real-IP"))
 	}
-	log.Printf("%s %s %s", remoteAddr, req.Method, req.URL.RequestURI())
 
 	var ok bool
 	var user string
@@ -461,7 +470,6 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if !ok {
-		log.Printf("%s - invalid cookie session", remoteAddr)
 		p.SignInPage(rw, req, 403)
 		return
 	}
@@ -471,6 +479,11 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		req.SetBasicAuth(user, "")
 		req.Header["X-Forwarded-User"] = []string{user}
 		req.Header["X-Forwarded-Email"] = []string{email}
+	}
+	if email == "" {
+		rw.Header().Set("GAP-Auth", user)
+	} else {
+		rw.Header().Set("GAP-Auth", email)
 	}
 
 	p.serveMux.ServeHTTP(rw, req)
@@ -493,7 +506,7 @@ func (p *OauthProxy) CheckBasicAuth(req *http.Request) (string, bool) {
 		return "", false
 	}
 	if p.HtpasswdFile.Validate(pair[0], pair[1]) {
-		log.Printf("authenticated %s via basic auth", pair[0])
+		log.Printf("authenticated %q via basic auth", pair[0])
 		return pair[0], true
 	}
 	return "", false
