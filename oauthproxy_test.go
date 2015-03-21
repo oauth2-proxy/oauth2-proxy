@@ -51,14 +51,13 @@ func TestEncodedSlashes(t *testing.T) {
 	defer frontend.Close()
 
 	f, _ := url.Parse(frontend.URL)
-	encodedPath := "/a%2Fb/"
+	encodedPath := "/a%2Fb/?c=1"
 	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: f.Host, Opaque: encodedPath}}
 	_, err := http.DefaultClient.Do(getReq)
 	if err != nil {
 		t.Fatalf("err %s", err)
 	}
-	expected := backend.URL + encodedPath
-	if seen != expected {
-		t.Errorf("got bad request %q expected %q", seen, expected)
+	if seen != encodedPath {
+		t.Errorf("got bad request %q expected %q", seen, encodedPath)
 	}
 }
