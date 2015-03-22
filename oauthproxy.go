@@ -67,7 +67,8 @@ func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
 	proxy.Director = func(req *http.Request) {
 		director(req)
 		// use RequestURI so that we aren't unescaping encoded slashes in the request path
-		req.URL.Opaque = fmt.Sprintf("//%s%s", target.Host, req.RequestURI)
+		req.Host = target.Host
+		req.URL.Opaque = req.RequestURI
 		req.URL.RawQuery = ""
 	}
 }
@@ -76,7 +77,7 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 	proxy.Director = func(req *http.Request) {
 		director(req)
 		// use RequestURI so that we aren't unescaping encoded slashes in the request path
-		req.URL.Opaque = fmt.Sprintf("//%s%s", req.URL.Host, req.RequestURI)
+		req.URL.Opaque = req.RequestURI
 		req.URL.RawQuery = ""
 	}
 }
