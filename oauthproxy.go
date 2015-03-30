@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/18F/google_auth_proxy/api"
 	"github.com/bitly/go-simplejson"
+	"github.com/bitly/google_auth_proxy/api"
 )
 
 const pingPath = "/ping"
