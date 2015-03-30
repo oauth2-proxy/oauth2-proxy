@@ -90,3 +90,15 @@ func TestCompiledRegexError(t *testing.T) {
 			"unexpected ): `barquux)`"})
 	assert.Equal(t, expected, err.Error())
 }
+
+func TestDefaultProviderApiSettings(t *testing.T) {
+	o := testOptions()
+	assert.Equal(t, nil, o.Validate())
+	p := o.provider.Data()
+	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth",
+		p.LoginUrl.String())
+	assert.Equal(t, "https://accounts.google.com/o/oauth2/token",
+		p.RedeemUrl.String())
+	assert.Equal(t, "", p.ProfileUrl.String())
+	assert.Equal(t, "profile email", p.Scope)
+}

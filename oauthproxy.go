@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitly/go-simplejson"
 	"github.com/bitly/google_auth_proxy/api"
+	"github.com/bitly/google_auth_proxy/providers"
 )
 
 const pingPath = "/ping"
@@ -34,6 +34,7 @@ type OauthProxy struct {
 	Validator      func(string) bool
 
 	redirectUrl         *url.URL // the url to receive requests at
+	provider            providers.Provider
 	oauthRedemptionUrl  *url.URL // endpoint to redeem the code
 	oauthLoginUrl       *url.URL // to redirect the user to
 	oauthScope          string
@@ -83,8 +84,6 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 }
 
 func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
-	login, _ := url.Parse("https://accounts.google.com/o/oauth2/auth")
-	redeem, _ := url.Parse("https://accounts.google.com/o/oauth2/token")
 	serveMux := http.NewServeMux()
 	for _, u := range opts.proxyUrls {
 		path := u.Path
@@ -128,9 +127,10 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 
 		clientID:           opts.ClientID,
 		clientSecret:       opts.ClientSecret,
-		oauthScope:         "profile email",
-		oauthRedemptionUrl: redeem,
-		oauthLoginUrl:      login,
+		oauthScope:         opts.provider.Data().Scope,
+		provider:           opts.provider,
+		oauthRedemptionUrl: opts.provider.Data().RedeemUrl,
+		oauthLoginUrl:      opts.provider.Data().LoginUrl,
 		serveMux:           serveMux,
 		redirectUrl:        redirectUrl,
 		skipAuthRegex:      opts.SkipAuthRegex,
@@ -201,36 +201,12 @@ func (p *OauthProxy) redeemCode(host, code string) (string, string, error) {
 		return "", "", err
 	}
 
-	idToken, err := json.Get("id_token").String()
-	if err != nil {
-		return "", "", err
-	}
-
-	// id_token is a base64 encode ID token payload
-	// https://developers.google.com/accounts/docs/OAuth2Login#obtainuserinfo
-	jwt := strings.Split(idToken, ".")
-	b, err := jwtDecodeSegment(jwt[1])
-	if err != nil {
-		return "", "", err
-	}
-	data, err := simplejson.NewJson(b)
-	if err != nil {
-		return "", "", err
-	}
-	email, err := data.Get("email").String()
+	email, err := p.provider.GetEmailAddress(json, access_token)
 	if err != nil {
 		return "", "", err
 	}
 
 	return access_token, email, nil
-}
-
-func jwtDecodeSegment(seg string) ([]byte, error) {
-	if l := len(seg) % 4; l > 0 {
-		seg += strings.Repeat("=", 4-l)
-	}
-
-	return base64.URLEncoding.DecodeString(seg)
 }
 
 func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
