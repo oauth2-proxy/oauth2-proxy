@@ -5,10 +5,11 @@ import (
 )
 
 type ProviderData struct {
-	LoginUrl   *url.URL
-	RedeemUrl  *url.URL
-	ProfileUrl *url.URL
-	Scope      string
+	ProviderName string
+	LoginUrl     *url.URL
+	RedeemUrl    *url.URL
+	ProfileUrl   *url.URL
+	Scope        string
 }
 
 func (p *ProviderData) Data() *ProviderData { return p }
