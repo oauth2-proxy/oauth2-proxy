@@ -2,8 +2,8 @@ google_auth_proxy
 =================
 
 
-A reverse proxy that provides authentication using Google OAuth2 to validate 
-individual accounts, or a whole google apps domain.
+A reverse proxy that provides authentication using Google and other OAuth2
+providers to validate individual accounts, or a whole google apps domain.
 
 [![Build Status](https://secure.travis-ci.org/bitly/google_auth_proxy.png?branch=master)](http://travis-ci.org/bitly/google_auth_proxy)
 
@@ -31,8 +31,10 @@ individual accounts, or a whole google apps domain.
 
 ## OAuth Configuration
 
-You will need to register an OAuth application with google, and configure it with Redirect URI(s) for the domain you
-intend to run `google_auth_proxy` on.
+You will need to register an OAuth application with Google (or [another
+provider](#providers)), and configure it with Redirect URI(s) for the domain
+you intend to run `google_auth_proxy` on. For Google, the registration steps
+are:
 
 1. Create a new project: https://console.developers.google.com/project
 2. Under "APIs & Auth", choose "Credentials"
@@ -73,9 +75,15 @@ Usage of google_auth_proxy:
   -google-apps-domain=: authenticate against the given Google apps domain (may be given multiple times)
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
+  -login-url="": Authentication endpoint
   -pass-basic-auth=true: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
   -pass-host-header=true: pass the request Host Header to upstream
+  -profile-url="": Profile access endpoint
+  -provider="": Oauth provider (defaults to Google)
+  -redeem-url="": Token redemption endpoint
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
+  -request-logging=true: Log requests to stdout
+  -scope="": Oauth scope specification
   -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
   -upstream=: the http url(s) of the upstream endpoint. If multiple, routing is based on path
   -version=false: print version string
@@ -142,4 +150,19 @@ Google Auth Proxy logs requests to stdout in a format similar to Apache Combined
 
 ```
 <REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
-````
+```
+
+## <a name="providers"></a>Providers other than Google
+
+Other providers besides Google can be specified by the `providers` flag/config
+directive. Right now this includes:
+
+* `myusa` - The [MyUSA](https://alpha.my.usa.gov) authentication service
+  ([GitHub](https://github.com/18F/myusa))
+
+## Adding a new Provider
+
+Follow the examples in the [`providers` package](providers/) to define a new
+`Provider` instance. Add a new `case` to
+[`providers.New()`](providers/providers.go) to allow the auth proxy to use the
+new `Provider`.
