@@ -13,6 +13,7 @@ type GoogleProvider struct {
 }
 
 func NewGoogleProvider(p *ProviderData) *GoogleProvider {
+	p.ProviderName = "Google"
 	if p.LoginUrl.String() == "" {
 		p.LoginUrl = &url.URL{Scheme: "https",
 			Host: "accounts.google.com",

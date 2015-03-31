@@ -279,11 +279,13 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	rw.WriteHeader(code)
 
 	t := struct {
+		ProviderName  string
 		SignInMessage string
 		CustomLogin   bool
 		Redirect      string
 		Version       string
 	}{
+		ProviderName:  p.provider.Data().ProviderName,
 		SignInMessage: p.SignInMessage,
 		CustomLogin:   p.displayCustomLoginForm(),
 		Redirect:      req.URL.RequestURI(),

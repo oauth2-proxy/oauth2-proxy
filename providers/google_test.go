@@ -11,15 +11,17 @@ import (
 func newGoogleProvider() *GoogleProvider {
 	return NewGoogleProvider(
 		&ProviderData{
-			LoginUrl:   &url.URL{},
-			RedeemUrl:  &url.URL{},
-			ProfileUrl: &url.URL{},
-			Scope:      ""})
+			ProviderName: "",
+			LoginUrl:     &url.URL{},
+			RedeemUrl:    &url.URL{},
+			ProfileUrl:   &url.URL{},
+			Scope:        ""})
 }
 
 func TestGoogleProviderDefaults(t *testing.T) {
 	p := newGoogleProvider()
 	assert.NotEqual(t, nil, p)
+	assert.Equal(t, "Google", p.Data().ProviderName)
 	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth",
 		p.Data().LoginUrl.String())
 	assert.Equal(t, "https://accounts.google.com/o/oauth2/token",
@@ -45,6 +47,7 @@ func TestGoogleProviderOverrides(t *testing.T) {
 				Path:   "/oauth/profile"},
 			Scope: "profile"})
 	assert.NotEqual(t, nil, p)
+	assert.Equal(t, "Google", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/oauth/auth",
 		p.Data().LoginUrl.String())
 	assert.Equal(t, "https://example.com/oauth/token",
