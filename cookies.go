@@ -1,10 +1,14 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -58,4 +62,38 @@ func checkHmac(input, expected string) bool {
 		}
 	}
 	return false
+}
+
+func encodeAccessToken(aes_cipher cipher.Block, access_token string) (string, error) {
+	ciphertext := make([]byte, aes.BlockSize+len(access_token))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return "", fmt.Errorf("failed to create access code initialization vector")
+	}
+
+	stream := cipher.NewCFBEncrypter(aes_cipher, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], []byte(access_token))
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func decodeAccessToken(aes_cipher cipher.Block, encoded_access_token string) (string, error) {
+	encrypted_access_token, err := base64.StdEncoding.DecodeString(
+		encoded_access_token)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to decode access token")
+	}
+
+	if len(encrypted_access_token) < aes.BlockSize {
+		return "", fmt.Errorf("encrypted access token should be "+
+			"at least %d bytes, but is only %d bytes",
+			aes.BlockSize, len(encrypted_access_token))
+	}
+
+	iv := encrypted_access_token[:aes.BlockSize]
+	encrypted_access_token = encrypted_access_token[aes.BlockSize:]
+	stream := cipher.NewCFBDecrypter(aes_cipher, iv)
+	stream.XORKeyStream(encrypted_access_token, encrypted_access_token)
+
+	return string(encrypted_access_token), nil
 }
