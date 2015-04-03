@@ -18,8 +18,7 @@ func TestNewReverseProxy(t *testing.T) {
 	defer backend.Close()
 
 	backendURL, _ := url.Parse(backend.URL)
-	backendHostname := "upstream.127.0.0.1.xip.io"
-	_, backendPort, _ := net.SplitHostPort(backendURL.Host)
+	backendHostname, backendPort, _ := net.SplitHostPort(backendURL.Host)
 	backendHost := net.JoinHostPort(backendHostname, backendPort)
 	proxyURL, _ := url.Parse(backendURL.Scheme + "://" + backendHost + "/")
 
