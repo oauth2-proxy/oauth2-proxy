@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -45,6 +47,8 @@ type OauthProxy struct {
 	DisplayHtpasswdForm bool
 	serveMux            http.Handler
 	PassBasicAuth       bool
+	PassAccessToken     bool
+	AesCipher           cipher.Block
 	skipAuthRegex       []string
 	compiledRegex       []*regexp.Regexp
 	templates           *template.Template
@@ -116,6 +120,29 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 
 	log.Printf("Cookie settings: secure (https):%v httponly:%v expiry:%s domain:%s", opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain)
 
+	var aes_cipher cipher.Block
+
+	if opts.PassAccessToken == true {
+		valid_cookie_secret_size := false
+		for _, i := range []int{16, 24, 32} {
+			if len(opts.CookieSecret) == i {
+				valid_cookie_secret_size = true
+			}
+		}
+		if valid_cookie_secret_size == false {
+			log.Fatal("cookie_secret must be 16, 24, or 32 bytes " +
+				"to create an AES cipher when " +
+				"pass_access_token == true")
+		}
+
+		var err error
+		aes_cipher, err = aes.NewCipher([]byte(opts.CookieSecret))
+		if err != nil {
+			log.Fatal("error creating AES cipher with "+
+				"pass_access_token == true: %s", err)
+		}
+	}
+
 	return &OauthProxy{
 		CookieKey:      "_oauthproxy",
 		CookieSeed:     opts.CookieSecret,
@@ -136,6 +163,8 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		skipAuthRegex:      opts.SkipAuthRegex,
 		compiledRegex:      opts.CompiledRegex,
 		PassBasicAuth:      opts.PassBasicAuth,
+		PassAccessToken:    opts.PassAccessToken,
+		AesCipher:          aes_cipher,
 		templates:          loadTemplates(opts.CustomTemplatesDir),
 	}
 }
@@ -337,6 +366,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var ok bool
 	var user string
 	var email string
+	var access_token string
 
 	if req.URL.Path == pingPath {
 		p.PingPage(rw)
@@ -390,7 +420,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		_, email, err := p.redeemCode(req.Host, req.Form.Get("code"))
+		access_token, email, err = p.redeemCode(req.Host, req.Form.Get("code"))
 		if err != nil {
 			log.Printf("%s error redeeming code %s", remoteAddr, err)
 			p.ErrorPage(rw, 500, "Internal Error", err.Error())
@@ -405,7 +435,20 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// set cookie, or deny
 		if p.Validator(email) {
 			log.Printf("%s authenticating %s completed", remoteAddr, email)
-			p.SetCookie(rw, req, email)
+			encoded_token := ""
+			if p.PassAccessToken {
+				encoded_token, err = encodeAccessToken(p.AesCipher, access_token)
+				if err != nil {
+					log.Printf("error encoding access token: %s", err)
+				}
+			}
+			access_token = ""
+
+			if encoded_token != "" {
+				p.SetCookie(rw, req, email+"|"+encoded_token)
+			} else {
+				p.SetCookie(rw, req, email)
+			}
 			http.Redirect(rw, req, redirect, 302)
 			return
 		} else {
@@ -417,7 +460,16 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if !ok {
 		cookie, err := req.Cookie(p.CookieKey)
 		if err == nil {
-			email, ok = validateCookie(cookie, p.CookieSeed)
+			var value string
+			value, ok = validateCookie(cookie, p.CookieSeed)
+			components := strings.Split(value, "|")
+			email = components[0]
+			if len(components) == 2 {
+				access_token, err = decodeAccessToken(p.AesCipher, components[1])
+				if err != nil {
+					log.Printf("error decoding access token: %s", err)
+				}
+			}
 			user = strings.Split(email, "@")[0]
 		}
 	}
@@ -436,6 +488,9 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		req.SetBasicAuth(user, "")
 		req.Header["X-Forwarded-User"] = []string{user}
 		req.Header["X-Forwarded-Email"] = []string{email}
+	}
+	if access_token != "" {
+		req.Header["X-Forwarded-Access-Token"] = []string{access_token}
 	}
 	if email == "" {
 		rw.Header().Set("GAP-Auth", user)
