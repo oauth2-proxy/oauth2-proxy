@@ -97,3 +97,34 @@ func decodeAccessToken(aes_cipher cipher.Block, encoded_access_token string) (st
 
 	return string(encrypted_access_token), nil
 }
+
+func buildCookieValue(email string, aes_cipher cipher.Block,
+	access_token string) (string, error) {
+	if aes_cipher == nil {
+		return email, nil
+	}
+
+	encoded_token, err := encodeAccessToken(aes_cipher, access_token)
+	if err != nil {
+		return email, fmt.Errorf(
+			"error encoding access token for %s: %s", email, err)
+	}
+	return email + "|" + encoded_token, nil
+}
+
+func parseCookieValue(value string, aes_cipher cipher.Block) (email, user,
+	access_token string, err error) {
+	components := strings.Split(value, "|")
+	email = components[0]
+	user = strings.Split(email, "@")[0]
+
+	if aes_cipher != nil && len(components) == 2 {
+		access_token, err = decodeAccessToken(aes_cipher, components[1])
+		if err != nil {
+			err = fmt.Errorf(
+				"error decoding access token for %s: %s",
+				email, err)
+		}
+	}
+	return email, user, access_token, err
+}

@@ -425,20 +425,12 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// set cookie, or deny
 		if p.Validator(email) {
 			log.Printf("%s authenticating %s completed", remoteAddr, email)
-			encoded_token := ""
-			if p.AesCipher != nil {
-				encoded_token, err = encodeAccessToken(p.AesCipher, access_token)
-				if err != nil {
-					log.Printf("error encoding access token: %s", err)
-				}
+			value, err := buildCookieValue(
+				email, p.AesCipher, access_token)
+			if err != nil {
+				log.Printf(err.Error())
 			}
-			access_token = ""
-
-			if encoded_token != "" {
-				p.SetCookie(rw, req, email+"|"+encoded_token)
-			} else {
-				p.SetCookie(rw, req, email)
-			}
+			p.SetCookie(rw, req, value)
 			http.Redirect(rw, req, redirect, 302)
 			return
 		} else {
@@ -452,15 +444,13 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if err == nil {
 			var value string
 			value, ok = validateCookie(cookie, p.CookieSeed)
-			components := strings.Split(value, "|")
-			email = components[0]
-			if len(components) == 2 {
-				access_token, err = decodeAccessToken(p.AesCipher, components[1])
+			if ok {
+				email, user, access_token, err = parseCookieValue(
+					value, p.AesCipher)
 				if err != nil {
-					log.Printf("error decoding access token: %s", err)
+					log.Printf(err.Error())
 				}
 			}
-			user = strings.Split(email, "@")[0]
 		}
 	}
 
