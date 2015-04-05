@@ -24,3 +24,6 @@ _testmain.go
 *.exe
 dist
 .godeps
+
+# Editor swap/temp files
+.*.swp
