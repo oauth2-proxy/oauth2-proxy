@@ -47,7 +47,6 @@ type OauthProxy struct {
 	DisplayHtpasswdForm bool
 	serveMux            http.Handler
 	PassBasicAuth       bool
-	PassAccessToken     bool
 	AesCipher           cipher.Block
 	skipAuthRegex       []string
 	compiledRegex       []*regexp.Regexp
@@ -121,20 +120,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	log.Printf("Cookie settings: secure (https):%v httponly:%v expiry:%s domain:%s", opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain)
 
 	var aes_cipher cipher.Block
-
-	if opts.PassAccessToken == true {
-		valid_cookie_secret_size := false
-		for _, i := range []int{16, 24, 32} {
-			if len(opts.CookieSecret) == i {
-				valid_cookie_secret_size = true
-			}
-		}
-		if valid_cookie_secret_size == false {
-			log.Fatal("cookie_secret must be 16, 24, or 32 bytes " +
-				"to create an AES cipher when " +
-				"pass_access_token == true")
-		}
-
+	if opts.PassAccessToken {
 		var err error
 		aes_cipher, err = aes.NewCipher([]byte(opts.CookieSecret))
 		if err != nil {
@@ -163,7 +149,6 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		skipAuthRegex:      opts.SkipAuthRegex,
 		compiledRegex:      opts.CompiledRegex,
 		PassBasicAuth:      opts.PassBasicAuth,
-		PassAccessToken:    opts.PassAccessToken,
 		AesCipher:          aes_cipher,
 		templates:          loadTemplates(opts.CustomTemplatesDir),
 	}
@@ -441,7 +426,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if p.Validator(email) {
 			log.Printf("%s authenticating %s completed", remoteAddr, email)
 			encoded_token := ""
-			if p.PassAccessToken {
+			if p.AesCipher != nil {
 				encoded_token, err = encodeAccessToken(p.AesCipher, access_token)
 				if err != nil {
 					log.Printf("error encoding access token: %s", err)
