@@ -307,6 +307,11 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	p.ClearCookie(rw, req)
 	rw.WriteHeader(code)
 
+	redirect_url := req.URL.RequestURI()
+	if redirect_url == signInPath {
+		redirect_url = "/"
+	}
+
 	t := struct {
 		ProviderName  string
 		SignInMessage string
@@ -317,7 +322,7 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		ProviderName:  p.provider.Data().ProviderName,
 		SignInMessage: p.SignInMessage,
 		CustomLogin:   p.displayCustomLoginForm(),
-		Redirect:      req.URL.RequestURI(),
+		Redirect:      redirect_url,
 		Version:       VERSION,
 	}
 	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
