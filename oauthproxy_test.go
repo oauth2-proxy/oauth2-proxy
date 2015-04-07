@@ -152,24 +152,25 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 	return t
 }
 
-func Close(t *PassAccessTokenTest) {
-	t.provider_server.Close()
+func (pat_test *PassAccessTokenTest) Close() {
+	pat_test.provider_server.Close()
 }
 
-func getCallbackEndpoint(pac_test *PassAccessTokenTest) (http_code int, cookie string) {
+func (pat_test *PassAccessTokenTest) getCallbackEndpoint() (http_code int,
+	cookie string) {
 	rw := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "/oauth2/callback?code=callback_code",
 		strings.NewReader(""))
 	if err != nil {
 		return 0, ""
 	}
-	pac_test.proxy.ServeHTTP(rw, req)
+	pat_test.proxy.ServeHTTP(rw, req)
 	return rw.Code, rw.HeaderMap["Set-Cookie"][0]
 }
 
-func getRootEndpoint(pac_test *PassAccessTokenTest, cookie string) (http_code int,
-	access_token string) {
-	cookie_key := pac_test.proxy.CookieKey
+func (pat_test *PassAccessTokenTest) getRootEndpoint(
+	cookie string) (http_code int, access_token string) {
+	cookie_key := pat_test.proxy.CookieKey
 	var value string
 	key_prefix := cookie_key + "="
 
@@ -198,43 +199,43 @@ func getRootEndpoint(pac_test *PassAccessTokenTest, cookie string) (http_code in
 	})
 
 	rw := httptest.NewRecorder()
-	pac_test.proxy.ServeHTTP(rw, req)
+	pat_test.proxy.ServeHTTP(rw, req)
 	return rw.Code, rw.Body.String()
 }
 
 func TestForwardAccessTokenUpstream(t *testing.T) {
-	pac_test := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	pat_test := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
 	})
-	defer Close(pac_test)
+	defer pat_test.Close()
 
 	// A successful validation will redirect and set the auth cookie.
-	code, cookie := getCallbackEndpoint(pac_test)
+	code, cookie := pat_test.getCallbackEndpoint()
 	assert.Equal(t, 302, code)
 	assert.NotEqual(t, nil, cookie)
 
 	// Now we make a regular request; the access_token from the cookie is
 	// forwarded as the "X-Forwarded-Access-Token" header. The token is
 	// read by the test provider server and written in the response body.
-	code, payload := getRootEndpoint(pac_test, cookie)
+	code, payload := pat_test.getRootEndpoint(cookie)
 	assert.Equal(t, 200, code)
 	assert.Equal(t, "my_auth_token", payload)
 }
 
 func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
-	pac_test := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	pat_test := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: false,
 	})
-	defer Close(pac_test)
+	defer pat_test.Close()
 
 	// A successful validation will redirect and set the auth cookie.
-	code, cookie := getCallbackEndpoint(pac_test)
+	code, cookie := pat_test.getCallbackEndpoint()
 	assert.Equal(t, 302, code)
 	assert.NotEqual(t, nil, cookie)
 
 	// Now we make a regular request, but the access token header should
 	// not be present.
-	code, payload := getRootEndpoint(pac_test, cookie)
+	code, payload := pat_test.getRootEndpoint(cookie)
 	assert.Equal(t, 200, code)
 	assert.Equal(t, "No access token found.", payload)
 }

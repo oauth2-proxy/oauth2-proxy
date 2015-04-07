@@ -117,6 +117,23 @@ func (o *Options) Validate() error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
+	if o.PassAccessToken {
+		valid_cookie_secret_size := false
+		for _, i := range []int{16, 24, 32} {
+			if len(o.CookieSecret) == i {
+				valid_cookie_secret_size = true
+			}
+		}
+		if valid_cookie_secret_size == false {
+			msgs = append(msgs, fmt.Sprintf(
+				"cookie_secret must be 16, 24, or 32 bytes "+
+					"to create an AES cipher when "+
+					"pass_access_token == true, "+
+					"but is %d bytes",
+				len(o.CookieSecret)))
+		}
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
