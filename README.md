@@ -33,8 +33,9 @@ providers to validate individual accounts, or a whole google apps domain.
 
 You will need to register an OAuth application with Google (or [another
 provider](#providers)), and configure it with Redirect URI(s) for the domain
-you intend to run `google_auth_proxy` on. For Google, the registration steps
-are:
+you intend to run `google_auth_proxy` on.
+
+For Google, the registration steps are:
 
 1. Create a new project: https://console.developers.google.com/project
 2. Under "APIs & Auth", choose "Credentials"
@@ -47,6 +48,14 @@ are:
    * Fill in the necessary fields and Save (this is _required_)
 5. Take note of the **Client ID** and **Client Secret**
 
+For LinkedIn, the registration steps are:
+
+1. Create a new project: https://www.linkedin.com/secure/developer
+2. In the OAuth User Agreement section:
+   * In default scope, select r_basicprofile and r_emailaddress.
+   * In "OAuth 2.0 Redirect URLs", enter `https://internal.yourcompany.com/oauth2/callback`
+3. Fill in the remaining required fields and Save.
+4. Take note of the **Consumer Key / API Key** and **Consumer Secret / Secret Key**
 
 ## Configuration
 
@@ -160,6 +169,7 @@ directive. Right now this includes:
 
 * `myusa` - The [MyUSA](https://alpha.my.usa.gov) authentication service
   ([GitHub](https://github.com/18F/myusa))
+* `linkedin` - The [LinkedIn](https://developer.linkedin.com/docs/signin-with-linkedin) Sign In service.
 
 ## Adding a new Provider
 
