@@ -23,11 +23,16 @@ func NewValidator(domains []string, usersFile string) func(string) bool {
 		csv_reader.TrimLeadingSpace = true
 		records, err := csv_reader.ReadAll()
 		for _, r := range records {
-			validUsers[r[0]] = true
+			validUsers[strings.ToLower(r[0])] = true
 		}
 	}
 
+	for i, domain := range domains {
+		domains[i] = strings.ToLower(domain)
+	}
+
 	validator := func(email string) bool {
+		email = strings.ToLower(email)
 		valid := false
 		for _, domain := range domains {
 			emailSuffix := fmt.Sprintf("@%s", domain)
