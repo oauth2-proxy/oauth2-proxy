@@ -223,7 +223,7 @@ func (p *OauthProxy) redeemCode(host, code string) (string, string, error) {
 	return access_token, email, nil
 }
 
-func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
+func (p *OauthProxy) MakeCookie(req *http.Request, value string, expiration time.Duration) *http.Cookie {
 	domain := req.Host
 	if h, _, err := net.SplitHostPort(domain); err == nil {
 		domain = h
@@ -234,40 +234,28 @@ func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 		}
 		domain = p.CookieDomain
 	}
-	cookie := &http.Cookie{
+
+	if value != "" {
+		value = signedCookieValue(p.CookieSeed, p.CookieKey, value)
+	}
+
+	return &http.Cookie{
 		Name:     p.CookieKey,
-		Value:    "",
+		Value:    value,
 		Path:     "/",
 		Domain:   domain,
 		HttpOnly: p.CookieHttpOnly,
 		Secure:   p.CookieSecure,
-		Expires:  time.Now().Add(time.Duration(1) * time.Hour * -1),
+		Expires:  time.Now().Add(expiration),
 	}
-	http.SetCookie(rw, cookie)
+}
+
+func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
+	http.SetCookie(rw, p.MakeCookie(req, "", time.Duration(1)*time.Hour*-1))
 }
 
 func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
-
-	domain := req.Host
-	if h, _, err := net.SplitHostPort(domain); err == nil {
-		domain = h
-	}
-	if p.CookieDomain != "" {
-		if !strings.HasSuffix(domain, p.CookieDomain) {
-			log.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, p.CookieDomain)
-		}
-		domain = p.CookieDomain
-	}
-	cookie := &http.Cookie{
-		Name:     p.CookieKey,
-		Value:    signedCookieValue(p.CookieSeed, p.CookieKey, val),
-		Path:     "/",
-		Domain:   domain,
-		HttpOnly: p.CookieHttpOnly,
-		Secure:   p.CookieSecure,
-		Expires:  time.Now().Add(p.CookieExpire),
-	}
-	http.SetCookie(rw, cookie)
+	http.SetCookie(rw, p.MakeCookie(req, val, p.CookieExpire))
 }
 
 func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (email, user, access_token string, ok bool) {
