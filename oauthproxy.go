@@ -266,10 +266,10 @@ func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (e
 		if ok {
 			email, user, access_token, err = parseCookieValue(
 				value, p.AesCipher)
-			if err != nil {
-				log.Printf(err.Error())
-			}
 		}
+	}
+	if err != nil {
+		log.Printf(err.Error())
 	}
 	return
 }
