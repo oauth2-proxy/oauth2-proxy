@@ -305,3 +305,56 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 		t.Fatal(`expected redirect to "/", but was "` + match[1] + `"`)
 	}
 }
+
+type ProcessCookieTest struct {
+	opts  *Options
+	proxy *OauthProxy
+	rw    *httptest.ResponseRecorder
+	req   *http.Request
+}
+
+func NewProcessCookieTest() *ProcessCookieTest {
+	var pc_test ProcessCookieTest
+
+	pc_test.opts = NewOptions()
+	pc_test.opts.Upstreams = append(pc_test.opts.Upstreams, "unused")
+	pc_test.opts.CookieSecret = "foobar"
+	pc_test.opts.ClientID = "bazquux"
+	pc_test.opts.ClientSecret = "xyzzyplugh"
+	pc_test.opts.Validate()
+
+	pc_test.proxy = NewOauthProxy(pc_test.opts, func(email string) bool {
+		return true
+	})
+
+	pc_test.rw = httptest.NewRecorder()
+	pc_test.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
+	return &pc_test
+}
+
+func (p *ProcessCookieTest) MakeCookie(value string) *http.Cookie {
+	return p.proxy.MakeCookie(p.req, value, p.opts.CookieExpire)
+}
+
+func (p *ProcessCookieTest) AddCookie(value string) {
+	p.req.AddCookie(p.MakeCookie(value))
+}
+
+func (p *ProcessCookieTest) ProcessCookie() (email, user, access_token string, ok bool) {
+	return p.proxy.ProcessCookie(p.rw, p.req)
+}
+
+func TestProcessCookie(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.AddCookie("michael.bland@gsa.gov")
+	email, user, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland", user)
+}
+
+func TestProcessCookieError(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, false, ok)
+}
