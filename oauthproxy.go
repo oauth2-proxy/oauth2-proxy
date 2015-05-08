@@ -270,6 +270,22 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 	http.SetCookie(rw, cookie)
 }
 
+func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (email, user, access_token string, ok bool) {
+	cookie, err := req.Cookie(p.CookieKey)
+	if err == nil {
+		var value string
+		value, ok = validateCookie(cookie, p.CookieSeed)
+		if ok {
+			email, user, access_token, err = parseCookieValue(
+				value, p.AesCipher)
+			if err != nil {
+				log.Printf(err.Error())
+			}
+		}
+	}
+	return
+}
+
 func (p *OauthProxy) PingPage(rw http.ResponseWriter) {
 	rw.WriteHeader(http.StatusOK)
 	fmt.Fprintf(rw, "OK")
@@ -440,18 +456,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if !ok {
-		cookie, err := req.Cookie(p.CookieKey)
-		if err == nil {
-			var value string
-			value, ok = validateCookie(cookie, p.CookieSeed)
-			if ok {
-				email, user, access_token, err = parseCookieValue(
-					value, p.AesCipher)
-				if err != nil {
-					log.Printf(err.Error())
-				}
-			}
-		}
+		email, user, access_token, ok = p.ProcessCookie(rw, req)
 	}
 
 	if !ok {
