@@ -353,8 +353,31 @@ func TestProcessCookie(t *testing.T) {
 	assert.Equal(t, "michael.bland", user)
 }
 
-func TestProcessCookieError(t *testing.T) {
+func TestProcessCookieNoCookieError(t *testing.T) {
 	pc_test := NewProcessCookieTest()
 	_, _, _, ok := pc_test.ProcessCookie()
 	assert.Equal(t, false, ok)
+}
+
+func TestProcessCookieRefreshNotSet(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov")
+	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
+	pc_test.req.AddCookie(cookie)
+
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, true, ok)
+	assert.Equal(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}
+
+func TestProcessCookieRefresh(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov")
+	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
+	pc_test.req.AddCookie(cookie)
+
+	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, true, ok)
+	assert.NotEqual(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
 }

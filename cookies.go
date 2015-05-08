@@ -15,11 +15,11 @@ import (
 	"time"
 )
 
-func validateCookie(cookie *http.Cookie, seed string) (string, bool) {
+func validateCookie(cookie *http.Cookie, seed string) (string, time.Time, bool) {
 	// value, timestamp, sig
 	parts := strings.Split(cookie.Value, "|")
 	if len(parts) != 3 {
-		return "", false
+		return "", time.Unix(0, 0), false
 	}
 	sig := cookieSignature(seed, cookie.Name, parts[0], parts[1])
 	if checkHmac(parts[2], sig) {
@@ -28,11 +28,11 @@ func validateCookie(cookie *http.Cookie, seed string) (string, bool) {
 			// it's a valid cookie. now get the contents
 			rawValue, err := base64.URLEncoding.DecodeString(parts[0])
 			if err == nil {
-				return string(rawValue), true
+				return string(rawValue), time.Unix(int64(ts), 0), true
 			}
 		}
 	}
-	return "", false
+	return "", time.Unix(0, 0), false
 }
 
 func signedCookieValue(seed string, key string, value string) string {

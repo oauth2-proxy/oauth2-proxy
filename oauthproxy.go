@@ -33,6 +33,7 @@ type OauthProxy struct {
 	CookieSecure   bool
 	CookieHttpOnly bool
 	CookieExpire   time.Duration
+	CookieRefresh  time.Duration
 	Validator      func(string) bool
 
 	redirectUrl         *url.URL // the url to receive requests at
@@ -136,6 +137,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		CookieSecure:   opts.CookieSecure,
 		CookieHttpOnly: opts.CookieHttpOnly,
 		CookieExpire:   opts.CookieExpire,
+		CookieRefresh:  opts.CookieRefresh,
 		Validator:      validator,
 
 		clientID:           opts.ClientID,
@@ -259,10 +261,11 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 }
 
 func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (email, user, access_token string, ok bool) {
+	var value string
+	var timestamp time.Time
 	cookie, err := req.Cookie(p.CookieKey)
 	if err == nil {
-		var value string
-		value, ok = validateCookie(cookie, p.CookieSeed)
+		value, timestamp, ok = validateCookie(cookie, p.CookieSeed)
 		if ok {
 			email, user, access_token, err = parseCookieValue(
 				value, p.AesCipher)
@@ -270,6 +273,11 @@ func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (e
 	}
 	if err != nil {
 		log.Printf(err.Error())
+	} else if p.CookieRefresh != time.Duration(0) {
+		refresh_threshold := time.Now().Add(p.CookieRefresh)
+		if refresh_threshold.Unix() > timestamp.Unix() {
+			p.SetCookie(rw, req, value)
+		}
 	}
 	return
 }
