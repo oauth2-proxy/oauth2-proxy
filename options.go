@@ -39,11 +39,12 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider   string `flag:"provider" cfg:"provider"`
-	LoginUrl   string `flag:"login-url" cfg:"login_url"`
-	RedeemUrl  string `flag:"redeem-url" cfg:"redeem_url"`
-	ProfileUrl string `flag:"profile-url" cfg:"profile_url"`
-	Scope      string `flag:"scope" cfg:"scope"`
+	Provider    string `flag:"provider" cfg:"provider"`
+	LoginUrl    string `flag:"login-url" cfg:"login_url"`
+	RedeemUrl   string `flag:"redeem-url" cfg:"redeem_url"`
+	ProfileUrl  string `flag:"profile-url" cfg:"profile_url"`
+	ValidateUrl string `flag:"validate-url" cfg:"validate_url"`
+	Scope       string `flag:"scope" cfg:"scope"`
 
 	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
 
@@ -148,6 +149,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 	p.LoginUrl, msgs = parseUrl(o.LoginUrl, "login", msgs)
 	p.RedeemUrl, msgs = parseUrl(o.RedeemUrl, "redeem", msgs)
 	p.ProfileUrl, msgs = parseUrl(o.ProfileUrl, "profile", msgs)
+	p.ValidateUrl, msgs = parseUrl(o.ValidateUrl, "validate", msgs)
 	o.provider = providers.New(o.Provider, p)
 	return msgs
 }

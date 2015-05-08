@@ -15,6 +15,7 @@ func newGoogleProvider() *GoogleProvider {
 			LoginUrl:     &url.URL{},
 			RedeemUrl:    &url.URL{},
 			ProfileUrl:   &url.URL{},
+			ValidateUrl:  &url.URL{},
 			Scope:        ""})
 }
 
@@ -26,6 +27,8 @@ func TestGoogleProviderDefaults(t *testing.T) {
 		p.Data().LoginUrl.String())
 	assert.Equal(t, "https://accounts.google.com/o/oauth2/token",
 		p.Data().RedeemUrl.String())
+	assert.Equal(t, "https://www.googleapis.com/oauth2/v1/tokeninfo",
+		p.Data().ValidateUrl.String())
 	assert.Equal(t, "", p.Data().ProfileUrl.String())
 	assert.Equal(t, "profile email", p.Data().Scope)
 }
@@ -45,6 +48,10 @@ func TestGoogleProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/profile"},
+			ValidateUrl: &url.URL{
+				Scheme: "https",
+				Host:   "example.com",
+				Path:   "/oauth/tokeninfo"},
 			Scope: "profile"})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Google", p.Data().ProviderName)
@@ -54,6 +61,8 @@ func TestGoogleProviderOverrides(t *testing.T) {
 		p.Data().RedeemUrl.String())
 	assert.Equal(t, "https://example.com/oauth/profile",
 		p.Data().ProfileUrl.String())
+	assert.Equal(t, "https://example.com/oauth/tokeninfo",
+		p.Data().ValidateUrl.String())
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 

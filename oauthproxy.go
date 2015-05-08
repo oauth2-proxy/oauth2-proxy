@@ -40,6 +40,7 @@ type OauthProxy struct {
 	provider            providers.Provider
 	oauthRedemptionUrl  *url.URL // endpoint to redeem the code
 	oauthLoginUrl       *url.URL // to redirect the user to
+	oauthValidateUrl    *url.URL // to validate the access token
 	oauthScope          string
 	clientID            string
 	clientSecret        string
@@ -146,6 +147,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		provider:           opts.provider,
 		oauthRedemptionUrl: opts.provider.Data().RedeemUrl,
 		oauthLoginUrl:      opts.provider.Data().LoginUrl,
+		oauthValidateUrl:   opts.provider.Data().ValidateUrl,
 		serveMux:           serveMux,
 		redirectUrl:        redirectUrl,
 		skipAuthRegex:      opts.SkipAuthRegex,

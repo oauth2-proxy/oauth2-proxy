@@ -9,6 +9,7 @@ type ProviderData struct {
 	LoginUrl     *url.URL
 	RedeemUrl    *url.URL
 	ProfileUrl   *url.URL
+	ValidateUrl  *url.URL
 	Scope        string
 }
 

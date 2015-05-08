@@ -56,6 +56,7 @@ func main() {
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
+	flagSet.String("validate-url", "", "Access token validation endpoint")
 	flagSet.String("scope", "", "Oauth scope specification")
 
 	flagSet.Parse(os.Args[1:])

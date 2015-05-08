@@ -21,11 +21,13 @@ func testMyUsaProvider(hostname string) *MyUsaProvider {
 			LoginUrl:     &url.URL{},
 			RedeemUrl:    &url.URL{},
 			ProfileUrl:   &url.URL{},
+			ValidateUrl:  &url.URL{},
 			Scope:        ""})
 	if hostname != "" {
 		updateUrl(p.Data().LoginUrl, hostname)
 		updateUrl(p.Data().RedeemUrl, hostname)
 		updateUrl(p.Data().ProfileUrl, hostname)
+		updateUrl(p.Data().ValidateUrl, hostname)
 	}
 	return p
 }
@@ -56,6 +58,8 @@ func TestMyUsaProviderDefaults(t *testing.T) {
 		p.Data().RedeemUrl.String())
 	assert.Equal(t, "https://alpha.my.usa.gov/api/v1/profile",
 		p.Data().ProfileUrl.String())
+	assert.Equal(t, "https://alpha.my.usa.gov/api/v1/tokeninfo",
+		p.Data().ValidateUrl.String())
 	assert.Equal(t, "profile.email", p.Data().Scope)
 }
 
@@ -74,6 +78,10 @@ func TestMyUsaProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/profile"},
+			ValidateUrl: &url.URL{
+				Scheme: "https",
+				Host:   "example.com",
+				Path:   "/oauth/tokeninfo"},
 			Scope: "profile"})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "MyUSA", p.Data().ProviderName)
@@ -83,6 +91,8 @@ func TestMyUsaProviderOverrides(t *testing.T) {
 		p.Data().RedeemUrl.String())
 	assert.Equal(t, "https://example.com/oauth/profile",
 		p.Data().ProfileUrl.String())
+	assert.Equal(t, "https://example.com/oauth/tokeninfo",
+		p.Data().ValidateUrl.String())
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 

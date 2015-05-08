@@ -24,6 +24,11 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 			Host: "accounts.google.com",
 			Path: "/o/oauth2/token"}
 	}
+	if p.ValidateUrl.String() == "" {
+		p.ValidateUrl = &url.URL{Scheme: "https",
+			Host: "www.googleapis.com",
+			Path: "/oauth2/v1/tokeninfo"}
+	}
 	if p.Scope == "" {
 		p.Scope = "profile email"
 	}
