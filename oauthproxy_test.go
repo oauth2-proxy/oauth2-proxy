@@ -306,6 +306,90 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 	}
 }
 
+type ValidateTokenTest struct {
+	opts          *Options
+	proxy         *OauthProxy
+	backend       *httptest.Server
+	response_code int
+}
+
+func NewValidateTokenTest() *ValidateTokenTest {
+	var vt_test ValidateTokenTest
+
+	vt_test.opts = NewOptions()
+	vt_test.opts.Upstreams = append(vt_test.opts.Upstreams, "unused")
+	vt_test.opts.CookieSecret = "foobar"
+	vt_test.opts.ClientID = "bazquux"
+	vt_test.opts.ClientSecret = "xyzzyplugh"
+	vt_test.opts.Validate()
+
+	vt_test.backend = httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/oauth/tokeninfo":
+				w.WriteHeader(vt_test.response_code)
+				w.Write([]byte("only code matters; contents disregarded"))
+			default:
+				w.WriteHeader(500)
+				w.Write([]byte("unknown URL"))
+			}
+		}))
+	backend_url, _ := url.Parse(vt_test.backend.URL)
+	vt_test.opts.provider.Data().ValidateUrl = &url.URL{
+		Scheme: "http",
+		Host:   backend_url.Host,
+		Path:   "/oauth/tokeninfo",
+	}
+	vt_test.response_code = 200
+
+	vt_test.proxy = NewOauthProxy(vt_test.opts, func(email string) bool {
+		return true
+	})
+	return &vt_test
+}
+
+func (vt_test *ValidateTokenTest) Close() {
+	vt_test.backend.Close()
+}
+
+func TestValidateTokenEmptyToken(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	defer vt_test.Close()
+
+	assert.Equal(t, false, vt_test.proxy.ValidateToken(""))
+}
+
+func TestValidateTokenEmptyValidateUrl(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	defer vt_test.Close()
+
+	vt_test.proxy.oauthValidateUrl = nil
+	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
+}
+
+func TestValidateTokenRequestNetworkFailure(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	// Close immediately to simulate a network failure
+	vt_test.Close()
+
+	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
+}
+
+func TestValidateTokenExpiredToken(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	defer vt_test.Close()
+
+	vt_test.response_code = 401
+	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
+}
+
+func TestValidateTokenValidToken(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	defer vt_test.Close()
+
+	assert.Equal(t, true, vt_test.proxy.ValidateToken("foobar"))
+}
+
 type ProcessCookieTest struct {
 	opts  *Options
 	proxy *OauthProxy
