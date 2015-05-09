@@ -46,12 +46,17 @@
 
 
 ## Cookie Settings
-## Secret - the seed string for secure cookies
+## Secret - the seed string for secure cookies; should be 16, 24, or 32 bytes
+##          for use with an AES cipher when cookie_refresh or pass_access_code
+##          is set
 ## Domain - optional cookie domain to force cookies to (ie: .yourcompany.com)
 ## Expire - expire timeframe for cookie
+## Refresh - refresh the cookie when less than this much time remains before
+##           expiration; should be less than cookie_expire; set to 0 to disable
 # cookie_secret = ""
 # cookie_domain = ""
 # cookie_expire = "168h"
+# cookie_refresh = "144h"
 # cookie_secure = true
 # cookie_httponly = true
-
+# pass_access_code = true

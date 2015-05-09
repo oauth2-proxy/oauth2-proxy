@@ -45,7 +45,7 @@ func main() {
 	flagSet.String("cookie-secret", "", "the seed string for secure cookies")
 	flagSet.String("cookie-domain", "", "an optional cookie domain to force cookies to (ie: .yourcompany.com)*")
 	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
-	flagSet.Duration("cookie-refresh", time.Duration(24)*time.Hour, "refresh the cookie when this much time remains before expiration")
+	flagSet.Duration("cookie-refresh", time.Duration(0)*time.Hour, "refresh the cookie when this much time remains before expiration")
 	flagSet.Bool("cookie-https-only", true, "set secure (HTTPS) cookies (deprecated. use --cookie-secure setting)")
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
