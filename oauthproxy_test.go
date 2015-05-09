@@ -407,14 +407,19 @@ func NewProcessCookieTest() *ProcessCookieTest {
 	pc_test.opts.CookieSecret = "foobar"
 	pc_test.opts.ClientID = "bazquux"
 	pc_test.opts.ClientSecret = "xyzzyplugh"
-	pc_test.opts.PassAccessToken = true
 	pc_test.opts.CookieSecret = "0123456789abcdef"
+	// First, set the CookieRefresh option so proxy.AesCipher is created,
+	// needed to encrypt the access_token.
+	pc_test.opts.CookieRefresh = time.Duration(24) * time.Hour
 	pc_test.opts.Validate()
 
 	pc_test.proxy = NewOauthProxy(pc_test.opts, func(email string) bool {
 		return true
 	})
 
+	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
+	// access_token validation.
+	pc_test.proxy.CookieRefresh = time.Duration(0)
 	pc_test.rw = httptest.NewRecorder()
 	pc_test.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
 	return &pc_test

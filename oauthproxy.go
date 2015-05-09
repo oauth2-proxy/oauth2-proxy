@@ -49,6 +49,7 @@ type OauthProxy struct {
 	DisplayHtpasswdForm bool
 	serveMux            http.Handler
 	PassBasicAuth       bool
+	PassAccessToken     bool
 	AesCipher           cipher.Block
 	skipAuthRegex       []string
 	compiledRegex       []*regexp.Regexp
@@ -122,7 +123,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	log.Printf("Cookie settings: secure (https):%v httponly:%v expiry:%s domain:%s", opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain)
 
 	var aes_cipher cipher.Block
-	if opts.PassAccessToken {
+	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
 		var err error
 		aes_cipher, err = aes.NewCipher([]byte(opts.CookieSecret))
 		if err != nil {
@@ -153,6 +154,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		skipAuthRegex:      opts.SkipAuthRegex,
 		compiledRegex:      opts.CompiledRegex,
 		PassBasicAuth:      opts.PassBasicAuth,
+		PassAccessToken:    opts.PassAccessToken,
 		AesCipher:          aes_cipher,
 		templates:          loadTemplates(opts.CustomTemplatesDir),
 	}
@@ -496,7 +498,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		req.Header["X-Forwarded-User"] = []string{user}
 		req.Header["X-Forwarded-Email"] = []string{email}
 	}
-	if access_token != "" {
+	if p.PassAccessToken {
 		req.Header["X-Forwarded-Access-Token"] = []string{access_token}
 	}
 	if email == "" {
