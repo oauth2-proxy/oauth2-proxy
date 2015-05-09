@@ -474,6 +474,17 @@ func TestProcessCookieNoCookieError(t *testing.T) {
 	assert.Equal(t, false, ok)
 }
 
+func TestProcessCookieFailIfParsingCookieValueFails(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	value, _ := buildCookieValue("michael.bland@gsa.gov",
+		pc_test.proxy.AesCipher, "my_access_token")
+	pc_test.req.AddCookie(pc_test.proxy.MakeCookie(
+		pc_test.req, value+"some bogus bytes",
+		pc_test.opts.CookieExpire))
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, false, ok)
+}
+
 func TestProcessCookieRefreshNotSet(t *testing.T) {
 	pc_test := NewProcessCookieTest()
 	pc_test.InstantiateBackend()

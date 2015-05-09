@@ -298,6 +298,7 @@ func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (e
 	}
 	if err != nil {
 		log.Printf(err.Error())
+		ok = false
 	} else if p.CookieRefresh != time.Duration(0) {
 		refresh_threshold := time.Now().Add(p.CookieRefresh)
 		if refresh_threshold.Unix() > timestamp.Unix() {
