@@ -391,10 +391,12 @@ func TestValidateTokenValidToken(t *testing.T) {
 }
 
 type ProcessCookieTest struct {
-	opts  *Options
-	proxy *OauthProxy
-	rw    *httptest.ResponseRecorder
-	req   *http.Request
+	opts          *Options
+	proxy         *OauthProxy
+	rw            *httptest.ResponseRecorder
+	req           *http.Request
+	backend       *httptest.Server
+	response_code int
 }
 
 func NewProcessCookieTest() *ProcessCookieTest {
@@ -405,6 +407,8 @@ func NewProcessCookieTest() *ProcessCookieTest {
 	pc_test.opts.CookieSecret = "foobar"
 	pc_test.opts.ClientID = "bazquux"
 	pc_test.opts.ClientSecret = "xyzzyplugh"
+	pc_test.opts.PassAccessToken = true
+	pc_test.opts.CookieSecret = "0123456789abcdef"
 	pc_test.opts.Validate()
 
 	pc_test.proxy = NewOauthProxy(pc_test.opts, func(email string) bool {
@@ -416,12 +420,32 @@ func NewProcessCookieTest() *ProcessCookieTest {
 	return &pc_test
 }
 
-func (p *ProcessCookieTest) MakeCookie(value string) *http.Cookie {
-	return p.proxy.MakeCookie(p.req, value, p.opts.CookieExpire)
+func (p *ProcessCookieTest) InstantiateBackend() {
+	p.backend = httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(p.response_code)
+		}))
+	backend_url, _ := url.Parse(p.backend.URL)
+	p.proxy.oauthValidateUrl = &url.URL{
+		Scheme: "http",
+		Host:   backend_url.Host,
+		Path:   "/oauth/tokeninfo",
+	}
+	p.response_code = 200
 }
 
-func (p *ProcessCookieTest) AddCookie(value string) {
-	p.req.AddCookie(p.MakeCookie(value))
+func (p *ProcessCookieTest) Close() {
+	p.backend.Close()
+}
+
+func (p *ProcessCookieTest) MakeCookie(value, access_token string) *http.Cookie {
+	cookie_value, _ := buildCookieValue(
+		value, p.proxy.AesCipher, access_token)
+	return p.proxy.MakeCookie(p.req, cookie_value, p.opts.CookieExpire)
+}
+
+func (p *ProcessCookieTest) AddCookie(value, access_token string) {
+	p.req.AddCookie(p.MakeCookie(value, access_token))
 }
 
 func (p *ProcessCookieTest) ProcessCookie() (email, user, access_token string, ok bool) {
@@ -430,11 +454,13 @@ func (p *ProcessCookieTest) ProcessCookie() (email, user, access_token string, o
 
 func TestProcessCookie(t *testing.T) {
 	pc_test := NewProcessCookieTest()
-	pc_test.AddCookie("michael.bland@gsa.gov")
-	email, user, _, ok := pc_test.ProcessCookie()
+
+	pc_test.AddCookie("michael.bland@gsa.gov", "my_access_token")
+	email, user, access_token, ok := pc_test.ProcessCookie()
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 	assert.Equal(t, "michael.bland", user)
+	assert.Equal(t, "my_access_token", access_token)
 }
 
 func TestProcessCookieNoCookieError(t *testing.T) {
@@ -445,7 +471,10 @@ func TestProcessCookieNoCookieError(t *testing.T) {
 
 func TestProcessCookieRefreshNotSet(t *testing.T) {
 	pc_test := NewProcessCookieTest()
-	cookie := pc_test.MakeCookie("michael.bland@gsa.gov")
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "")
 	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
 	pc_test.req.AddCookie(cookie)
 
@@ -456,7 +485,10 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 
 func TestProcessCookieRefresh(t *testing.T) {
 	pc_test := NewProcessCookieTest()
-	cookie := pc_test.MakeCookie("michael.bland@gsa.gov")
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
 	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
 	pc_test.req.AddCookie(cookie)
 
@@ -464,4 +496,20 @@ func TestProcessCookieRefresh(t *testing.T) {
 	_, _, _, ok := pc_test.ProcessCookie()
 	assert.Equal(t, true, ok)
 	assert.NotEqual(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}
+
+func TestProcessCookieFailIfRefreshSetAndTokenNoLongerValid(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+	pc_test.response_code = 401
+
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
+	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
+	pc_test.req.AddCookie(cookie)
+
+	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, false, ok)
+	assert.Equal(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
 }

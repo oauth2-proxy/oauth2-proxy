@@ -299,7 +299,10 @@ func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (e
 	} else if p.CookieRefresh != time.Duration(0) {
 		refresh_threshold := time.Now().Add(p.CookieRefresh)
 		if refresh_threshold.Unix() > timestamp.Unix() {
-			p.SetCookie(rw, req, value)
+			ok = p.ValidateToken(access_token)
+			if ok {
+				p.SetCookie(rw, req, value)
+			}
 		}
 	}
 	return
