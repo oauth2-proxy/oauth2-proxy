@@ -128,7 +128,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		aes_cipher, err = aes.NewCipher([]byte(opts.CookieSecret))
 		if err != nil {
 			log.Fatal("error creating AES cipher with "+
-				"pass_access_token == true: %s", err)
+				"cookie-secret ", opts.CookieSecret, ": ", err)
 		}
 	}
 

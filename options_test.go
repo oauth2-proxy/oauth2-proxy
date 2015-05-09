@@ -112,6 +112,10 @@ func TestPassAccessTokenRequiresSpecificCookieSecretLengths(t *testing.T) {
 	o.CookieSecret = "cookie of invalid length-"
 	assert.NotEqual(t, nil, o.Validate())
 
+	o.PassAccessToken = false
+	o.CookieRefresh = time.Duration(24) * time.Hour
+	assert.NotEqual(t, nil, o.Validate())
+
 	o.CookieSecret = "16 bytes AES-128"
 	assert.Equal(t, nil, o.Validate())
 
