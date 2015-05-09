@@ -137,6 +137,14 @@ func (o *Options) Validate() error {
 		}
 	}
 
+	if o.CookieRefresh >= o.CookieExpire {
+		msgs = append(msgs, fmt.Sprintf(
+			"cookie_refresh (%s) must be less than "+
+				"cookie_expire (%s)",
+			o.CookieRefresh.String(),
+			o.CookieExpire.String()))
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
