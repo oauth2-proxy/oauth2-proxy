@@ -7,23 +7,117 @@ import (
 	"testing"
 )
 
-func TestValidatorComparisonsAreCaseInsensitive(t *testing.T) {
-	auth_email_file, err := ioutil.TempFile("", "test_auth_emails_")
+type ValidatorTest struct {
+	auth_email_file *os.File
+}
+
+func NewValidatorTest(t *testing.T) *ValidatorTest {
+	vt := &ValidatorTest{}
+	var err error
+	vt.auth_email_file, err = ioutil.TempFile("", "test_auth_emails_")
 	if err != nil {
 		t.Fatal("failed to create temp file: " + err.Error())
 	}
-	defer os.Remove(auth_email_file.Name())
+	return vt
+}
 
-	auth_email_file.WriteString(
-		strings.Join([]string{"Foo.Bar@Example.Com"}, "\n"))
-	err = auth_email_file.Close()
-	if err != nil {
-		t.Fatal("failed to close temp file " + auth_email_file.Name() +
-			": " + err.Error())
+func (vt *ValidatorTest) TearDown() {
+	os.Remove(vt.auth_email_file.Name())
+}
+
+// This will close vt.auth_email_file.
+func (vt *ValidatorTest) WriteEmails(t *testing.T, emails []string) {
+	defer vt.auth_email_file.Close()
+	vt.auth_email_file.WriteString(strings.Join(emails, "\n"))
+	if err := vt.auth_email_file.Close(); err != nil {
+		t.Fatal("failed to close temp file " +
+			vt.auth_email_file.Name() + ": " + err.Error())
 	}
+}
 
+func TestValidatorEmpty(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	vt.WriteEmails(t, []string(nil))
+	domains := []string(nil)
+	validator := NewValidator(domains, vt.auth_email_file.Name())
+
+	if validator("foo.bar@example.com") {
+		t.Error("nothing should validate when the email and " +
+			"domain lists are empty")
+	}
+}
+
+func TestValidatorSingleEmail(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	vt.WriteEmails(t, []string{"foo.bar@example.com"})
+	domains := []string(nil)
+	validator := NewValidator(domains, vt.auth_email_file.Name())
+
+	if !validator("foo.bar@example.com") {
+		t.Error("email should validate")
+	}
+	if validator("baz.quux@example.com") {
+		t.Error("email from same domain but not in list " +
+			"should not validate when domain list is empty")
+	}
+}
+
+func TestValidatorSingleDomain(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	vt.WriteEmails(t, []string(nil))
+	domains := []string{"example.com"}
+	validator := NewValidator(domains, vt.auth_email_file.Name())
+
+	if !validator("foo.bar@example.com") {
+		t.Error("email should validate")
+	}
+	if !validator("baz.quux@example.com") {
+		t.Error("email from same domain should validate")
+	}
+}
+
+func TestValidatorMultipleEmailsMultipleDomains(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	vt.WriteEmails(t, []string{
+		"xyzzy@example.com",
+		"plugh@example.com",
+	})
+	domains := []string{"example0.com", "example1.com"}
+	validator := NewValidator(domains, vt.auth_email_file.Name())
+
+	if !validator("foo.bar@example0.com") {
+		t.Error("email from first domain should validate")
+	}
+	if !validator("baz.quux@example1.com") {
+		t.Error("email from second domain should validate")
+	}
+	if !validator("xyzzy@example.com") {
+		t.Error("first email in list should validate")
+	}
+	if !validator("plugh@example.com") {
+		t.Error("second email in list should validate")
+	}
+	if validator("xyzzy.plugh@example.com") {
+		t.Error("email not in list that matches no domains " +
+			"should not validate")
+	}
+}
+
+func TestValidatorComparisonsAreCaseInsensitive(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	vt.WriteEmails(t, []string{"Foo.Bar@Example.Com"})
 	domains := []string{"Frobozz.Com"}
-	validator := NewValidator(domains, auth_email_file.Name())
+	validator := NewValidator(domains, vt.auth_email_file.Name())
 
 	if !validator("foo.bar@example.com") {
 		t.Error("loaded email addresses are not lower-cased")

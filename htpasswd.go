@@ -21,6 +21,7 @@ func NewHtpasswdFromFile(path string) (*HtpasswdFile, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer r.Close()
 	return NewHtpasswd(r)
 }
 

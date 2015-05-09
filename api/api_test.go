@@ -40,8 +40,8 @@ func TestRequestFailure(t *testing.T) {
 	resp, err := Request(req)
 	assert.Equal(t, (*simplejson.Json)(nil), resp)
 	assert.NotEqual(t, nil, err)
-	if !strings.HasSuffix(err.Error(), "connection refused") {
-		t.Error("expected error when a connection fails")
+	if !strings.Contains(err.Error(), "refused") {
+		t.Error("expected error when a connection fails: ", err)
 	}
 }
 
