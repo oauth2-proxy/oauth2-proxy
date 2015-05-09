@@ -397,6 +397,7 @@ type ProcessCookieTest struct {
 	req           *http.Request
 	backend       *httptest.Server
 	response_code int
+	validate_user bool
 }
 
 func NewProcessCookieTest() *ProcessCookieTest {
@@ -414,7 +415,7 @@ func NewProcessCookieTest() *ProcessCookieTest {
 	pc_test.opts.Validate()
 
 	pc_test.proxy = NewOauthProxy(pc_test.opts, func(email string) bool {
-		return true
+		return pc_test.validate_user
 	})
 
 	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
@@ -422,6 +423,7 @@ func NewProcessCookieTest() *ProcessCookieTest {
 	pc_test.proxy.CookieRefresh = time.Duration(0)
 	pc_test.rw = httptest.NewRecorder()
 	pc_test.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
+	pc_test.validate_user = true
 	return &pc_test
 }
 
@@ -519,6 +521,22 @@ func TestProcessCookieFailIfRefreshSetAndTokenNoLongerValid(t *testing.T) {
 	pc_test.InstantiateBackend()
 	defer pc_test.Close()
 	pc_test.response_code = 401
+
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
+	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
+	pc_test.req.AddCookie(cookie)
+
+	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, false, ok)
+	assert.Equal(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}
+
+func TestProcessCookieFailIfRefreshSetAndUserNoLongerValid(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+	pc_test.validate_user = false
 
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
 	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
