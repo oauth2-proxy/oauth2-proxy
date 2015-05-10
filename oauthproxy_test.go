@@ -492,8 +492,8 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 	pc_test.InstantiateBackend()
 	defer pc_test.Close()
 
+	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "")
-	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
 	pc_test.req.AddCookie(cookie)
 
 	_, _, _, ok := pc_test.ProcessCookie()
@@ -506,8 +506,8 @@ func TestProcessCookieRefresh(t *testing.T) {
 	pc_test.InstantiateBackend()
 	defer pc_test.Close()
 
+	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
-	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
 	pc_test.req.AddCookie(cookie)
 
 	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
@@ -516,14 +516,29 @@ func TestProcessCookieRefresh(t *testing.T) {
 	assert.NotEqual(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
 }
 
+func TestProcessCookieRefreshThresholdNotCrossed(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+
+	pc_test.proxy.CookieExpire = time.Duration(25) * time.Hour
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
+	pc_test.req.AddCookie(cookie)
+
+	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, true, ok)
+	assert.Equal(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}
+
 func TestProcessCookieFailIfRefreshSetAndTokenNoLongerValid(t *testing.T) {
 	pc_test := NewProcessCookieTest()
 	pc_test.InstantiateBackend()
 	defer pc_test.Close()
 	pc_test.response_code = 401
 
+	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
-	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
 	pc_test.req.AddCookie(cookie)
 
 	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
@@ -538,8 +553,8 @@ func TestProcessCookieFailIfRefreshSetAndUserNoLongerValid(t *testing.T) {
 	defer pc_test.Close()
 	pc_test.validate_user = false
 
+	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
-	cookie.Expires = time.Now().Add(time.Duration(23) * time.Hour)
 	pc_test.req.AddCookie(cookie)
 
 	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
