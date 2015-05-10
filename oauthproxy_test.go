@@ -67,6 +67,22 @@ func TestEncodedSlashes(t *testing.T) {
 	}
 }
 
+func TestRobotsTxt(t *testing.T) {
+	opts := NewOptions()
+	opts.Upstreams = append(opts.Upstreams, "unused")
+	opts.ClientID = "bazquux"
+	opts.ClientSecret = "foobar"
+	opts.CookieSecret = "xyzzyplugh"
+	opts.Validate()
+
+	proxy := NewOauthProxy(opts, func(string) bool { return true })
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/robots.txt", nil)
+	proxy.ServeHTTP(rw, req)
+	assert.Equal(t, 200, rw.Code)
+	assert.Equal(t, "User-agent: *\nDisallow: /", rw.Body.String())
+}
+
 type TestProvider struct {
 	*providers.ProviderData
 	EmailAddress string
