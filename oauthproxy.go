@@ -21,6 +21,7 @@ import (
 	"github.com/bitly/google_auth_proxy/providers"
 )
 
+const robotsPath = "/robots.txt"
 const pingPath = "/ping"
 const signInPath = "/oauth2/sign_in"
 const oauthStartPath = "/oauth2/start"
@@ -270,6 +271,11 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 	http.SetCookie(rw, cookie)
 }
 
+func (p *OauthProxy) RobotsTxt(rw http.ResponseWriter) {
+	rw.WriteHeader(http.StatusOK)
+	fmt.Fprintf(rw, "User-agent: *\nDisallow: /")
+}
+
 func (p *OauthProxy) PingPage(rw http.ResponseWriter) {
 	rw.WriteHeader(http.StatusOK)
 	fmt.Fprintf(rw, "OK")
@@ -357,6 +363,11 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var user string
 	var email string
 	var access_token string
+
+	if req.URL.Path == robotsPath {
+		p.RobotsTxt(rw)
+		return
+	}
 
 	if req.URL.Path == pingPath {
 		p.PingPage(rw)

@@ -149,6 +149,7 @@ The command line to run `google_auth_proxy` would look like this:
 
 Google Auth Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated.
 
+* /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
 * /ping - returns an 200 OK response
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 * /oauth2/start - a URL that will redirect to start the OAuth cycle
