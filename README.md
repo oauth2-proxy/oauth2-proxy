@@ -77,7 +77,7 @@ Usage of google_auth_proxy:
   -cookie-expire=168h0m0s: expire timeframe for cookie
   -cookie-httponly=true: set HttpOnly cookie flag
   -cookie-https-only=true: set secure (HTTPS) cookies (deprecated. use --cookie-secure setting)
-  -cookie-refresh=144h0m0s: refresh the cookie when this much time remains before expiration
+  -cookie-refresh=0: refresh the cookie when less than this much time remains before expiration; 0 to disable
   -cookie-secret="": the seed string for secure cookies
   -cookie-secure=true: set secure (HTTPS) cookie flag
   -custom-templates-dir="": path to custom html templates
