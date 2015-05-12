@@ -77,6 +77,7 @@ Usage of google_auth_proxy:
   -cookie-expire=168h0m0s: expire timeframe for cookie
   -cookie-httponly=true: set HttpOnly cookie flag
   -cookie-https-only=true: set secure (HTTPS) cookies (deprecated. use --cookie-secure setting)
+  -cookie-refresh=0: refresh the cookie when less than this much time remains before expiration; 0 to disable
   -cookie-secret="": the seed string for secure cookies
   -cookie-secure=true: set secure (HTTPS) cookie flag
   -custom-templates-dir="": path to custom html templates
@@ -96,6 +97,7 @@ Usage of google_auth_proxy:
   -scope="": Oauth scope specification
   -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
   -upstream=: the http url(s) of the upstream endpoint. If multiple, routing is based on path
+  -validate-url="": Access token validation endpoint
   -version=false: print version string
 ```
 

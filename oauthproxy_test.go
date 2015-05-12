@@ -321,3 +321,260 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 		t.Fatal(`expected redirect to "/", but was "` + match[1] + `"`)
 	}
 }
+
+type ValidateTokenTest struct {
+	opts          *Options
+	proxy         *OauthProxy
+	backend       *httptest.Server
+	response_code int
+}
+
+func NewValidateTokenTest() *ValidateTokenTest {
+	var vt_test ValidateTokenTest
+
+	vt_test.opts = NewOptions()
+	vt_test.opts.Upstreams = append(vt_test.opts.Upstreams, "unused")
+	vt_test.opts.CookieSecret = "foobar"
+	vt_test.opts.ClientID = "bazquux"
+	vt_test.opts.ClientSecret = "xyzzyplugh"
+	vt_test.opts.Validate()
+
+	vt_test.backend = httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/oauth/tokeninfo":
+				w.WriteHeader(vt_test.response_code)
+				w.Write([]byte("only code matters; contents disregarded"))
+			default:
+				w.WriteHeader(500)
+				w.Write([]byte("unknown URL"))
+			}
+		}))
+	backend_url, _ := url.Parse(vt_test.backend.URL)
+	vt_test.opts.provider.Data().ValidateUrl = &url.URL{
+		Scheme: "http",
+		Host:   backend_url.Host,
+		Path:   "/oauth/tokeninfo",
+	}
+	vt_test.response_code = 200
+
+	vt_test.proxy = NewOauthProxy(vt_test.opts, func(email string) bool {
+		return true
+	})
+	return &vt_test
+}
+
+func (vt_test *ValidateTokenTest) Close() {
+	vt_test.backend.Close()
+}
+
+func TestValidateTokenEmptyToken(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	defer vt_test.Close()
+
+	assert.Equal(t, false, vt_test.proxy.ValidateToken(""))
+}
+
+func TestValidateTokenEmptyValidateUrl(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	defer vt_test.Close()
+
+	vt_test.proxy.oauthValidateUrl = nil
+	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
+}
+
+func TestValidateTokenRequestNetworkFailure(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	// Close immediately to simulate a network failure
+	vt_test.Close()
+
+	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
+}
+
+func TestValidateTokenExpiredToken(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	defer vt_test.Close()
+
+	vt_test.response_code = 401
+	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
+}
+
+func TestValidateTokenValidToken(t *testing.T) {
+	vt_test := NewValidateTokenTest()
+	defer vt_test.Close()
+
+	assert.Equal(t, true, vt_test.proxy.ValidateToken("foobar"))
+}
+
+type ProcessCookieTest struct {
+	opts          *Options
+	proxy         *OauthProxy
+	rw            *httptest.ResponseRecorder
+	req           *http.Request
+	backend       *httptest.Server
+	response_code int
+	validate_user bool
+}
+
+func NewProcessCookieTest() *ProcessCookieTest {
+	var pc_test ProcessCookieTest
+
+	pc_test.opts = NewOptions()
+	pc_test.opts.Upstreams = append(pc_test.opts.Upstreams, "unused")
+	pc_test.opts.CookieSecret = "foobar"
+	pc_test.opts.ClientID = "bazquux"
+	pc_test.opts.ClientSecret = "xyzzyplugh"
+	pc_test.opts.CookieSecret = "0123456789abcdef"
+	// First, set the CookieRefresh option so proxy.AesCipher is created,
+	// needed to encrypt the access_token.
+	pc_test.opts.CookieRefresh = time.Duration(24) * time.Hour
+	pc_test.opts.Validate()
+
+	pc_test.proxy = NewOauthProxy(pc_test.opts, func(email string) bool {
+		return pc_test.validate_user
+	})
+
+	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
+	// access_token validation.
+	pc_test.proxy.CookieRefresh = time.Duration(0)
+	pc_test.rw = httptest.NewRecorder()
+	pc_test.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
+	pc_test.validate_user = true
+	return &pc_test
+}
+
+func (p *ProcessCookieTest) InstantiateBackend() {
+	p.backend = httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(p.response_code)
+		}))
+	backend_url, _ := url.Parse(p.backend.URL)
+	p.proxy.oauthValidateUrl = &url.URL{
+		Scheme: "http",
+		Host:   backend_url.Host,
+		Path:   "/oauth/tokeninfo",
+	}
+	p.response_code = 200
+}
+
+func (p *ProcessCookieTest) Close() {
+	p.backend.Close()
+}
+
+func (p *ProcessCookieTest) MakeCookie(value, access_token string) *http.Cookie {
+	cookie_value, _ := buildCookieValue(
+		value, p.proxy.AesCipher, access_token)
+	return p.proxy.MakeCookie(p.req, cookie_value, p.opts.CookieExpire)
+}
+
+func (p *ProcessCookieTest) AddCookie(value, access_token string) {
+	p.req.AddCookie(p.MakeCookie(value, access_token))
+}
+
+func (p *ProcessCookieTest) ProcessCookie() (email, user, access_token string, ok bool) {
+	return p.proxy.ProcessCookie(p.rw, p.req)
+}
+
+func TestProcessCookie(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+
+	pc_test.AddCookie("michael.bland@gsa.gov", "my_access_token")
+	email, user, access_token, ok := pc_test.ProcessCookie()
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland", user)
+	assert.Equal(t, "my_access_token", access_token)
+}
+
+func TestProcessCookieNoCookieError(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, false, ok)
+}
+
+func TestProcessCookieFailIfParsingCookieValueFails(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	value, _ := buildCookieValue("michael.bland@gsa.gov",
+		pc_test.proxy.AesCipher, "my_access_token")
+	pc_test.req.AddCookie(pc_test.proxy.MakeCookie(
+		pc_test.req, value+"some bogus bytes",
+		pc_test.opts.CookieExpire))
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, false, ok)
+}
+
+func TestProcessCookieRefreshNotSet(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+
+	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "")
+	pc_test.req.AddCookie(cookie)
+
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, true, ok)
+	assert.Equal(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}
+
+func TestProcessCookieRefresh(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+
+	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
+	pc_test.req.AddCookie(cookie)
+
+	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, true, ok)
+	assert.NotEqual(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}
+
+func TestProcessCookieRefreshThresholdNotCrossed(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+
+	pc_test.proxy.CookieExpire = time.Duration(25) * time.Hour
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
+	pc_test.req.AddCookie(cookie)
+
+	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, true, ok)
+	assert.Equal(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}
+
+func TestProcessCookieFailIfRefreshSetAndTokenNoLongerValid(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+	pc_test.response_code = 401
+
+	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
+	pc_test.req.AddCookie(cookie)
+
+	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, false, ok)
+	assert.Equal(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}
+
+func TestProcessCookieFailIfRefreshSetAndUserNoLongerValid(t *testing.T) {
+	pc_test := NewProcessCookieTest()
+	pc_test.InstantiateBackend()
+	defer pc_test.Close()
+	pc_test.validate_user = false
+
+	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
+	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
+	pc_test.req.AddCookie(cookie)
+
+	pc_test.proxy.CookieRefresh = time.Duration(24) * time.Hour
+	_, _, _, ok := pc_test.ProcessCookie()
+	assert.Equal(t, false, ok)
+	assert.Equal(t, []string(nil), pc_test.rw.HeaderMap["Set-Cookie"])
+}

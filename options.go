@@ -26,6 +26,7 @@ type Options struct {
 	CookieSecret    string        `flag:"cookie-secret" cfg:"cookie_secret" env:"GOOGLE_AUTH_PROXY_COOKIE_SECRET"`
 	CookieDomain    string        `flag:"cookie-domain" cfg:"cookie_domain" env:"GOOGLE_AUTH_PROXY_COOKIE_DOMAIN"`
 	CookieExpire    time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"GOOGLE_AUTH_PROXY_COOKIE_EXPIRE"`
+	CookieRefresh   time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"GOOGLE_AUTH_PROXY_COOKIE_REFRESH"`
 	CookieHttpsOnly bool          `flag:"cookie-https-only" cfg:"cookie_https_only"` // deprecated use cookie-secure
 	CookieSecure    bool          `flag:"cookie-secure" cfg:"cookie_secure"`
 	CookieHttpOnly  bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
@@ -38,11 +39,12 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider   string `flag:"provider" cfg:"provider"`
-	LoginUrl   string `flag:"login-url" cfg:"login_url"`
-	RedeemUrl  string `flag:"redeem-url" cfg:"redeem_url"`
-	ProfileUrl string `flag:"profile-url" cfg:"profile_url"`
-	Scope      string `flag:"scope" cfg:"scope"`
+	Provider    string `flag:"provider" cfg:"provider"`
+	LoginUrl    string `flag:"login-url" cfg:"login_url"`
+	RedeemUrl   string `flag:"redeem-url" cfg:"redeem_url"`
+	ProfileUrl  string `flag:"profile-url" cfg:"profile_url"`
+	ValidateUrl string `flag:"validate-url" cfg:"validate_url"`
+	Scope       string `flag:"scope" cfg:"scope"`
 
 	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
 
@@ -61,6 +63,7 @@ func NewOptions() *Options {
 		CookieSecure:        true,
 		CookieHttpOnly:      true,
 		CookieExpire:        time.Duration(168) * time.Hour,
+		CookieRefresh:       time.Duration(0),
 		PassBasicAuth:       true,
 		PassAccessToken:     false,
 		PassHostHeader:      true,
@@ -117,7 +120,7 @@ func (o *Options) Validate() error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
-	if o.PassAccessToken {
+	if o.PassAccessToken || (o.CookieRefresh != time.Duration(0)) {
 		valid_cookie_secret_size := false
 		for _, i := range []int{16, 24, 32} {
 			if len(o.CookieSecret) == i {
@@ -128,10 +131,18 @@ func (o *Options) Validate() error {
 			msgs = append(msgs, fmt.Sprintf(
 				"cookie_secret must be 16, 24, or 32 bytes "+
 					"to create an AES cipher when "+
-					"pass_access_token == true, "+
-					"but is %d bytes",
+					"pass_access_token == true or "+
+					"cookie_refresh != 0, but is %d bytes",
 				len(o.CookieSecret)))
 		}
+	}
+
+	if o.CookieRefresh >= o.CookieExpire {
+		msgs = append(msgs, fmt.Sprintf(
+			"cookie_refresh (%s) must be less than "+
+				"cookie_expire (%s)",
+			o.CookieRefresh.String(),
+			o.CookieExpire.String()))
 	}
 
 	if len(msgs) != 0 {
@@ -146,6 +157,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 	p.LoginUrl, msgs = parseUrl(o.LoginUrl, "login", msgs)
 	p.RedeemUrl, msgs = parseUrl(o.RedeemUrl, "redeem", msgs)
 	p.ProfileUrl, msgs = parseUrl(o.ProfileUrl, "profile", msgs)
+	p.ValidateUrl, msgs = parseUrl(o.ValidateUrl, "validate", msgs)
 	o.provider = providers.New(o.Provider, p)
 	return msgs
 }

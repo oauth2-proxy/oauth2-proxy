@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmizerany/assert"
 )
@@ -112,6 +113,10 @@ func TestPassAccessTokenRequiresSpecificCookieSecretLengths(t *testing.T) {
 	o.CookieSecret = "cookie of invalid length-"
 	assert.NotEqual(t, nil, o.Validate())
 
+	o.PassAccessToken = false
+	o.CookieRefresh = time.Duration(24) * time.Hour
+	assert.NotEqual(t, nil, o.Validate())
+
 	o.CookieSecret = "16 bytes AES-128"
 	assert.Equal(t, nil, o.Validate())
 
@@ -119,5 +124,17 @@ func TestPassAccessTokenRequiresSpecificCookieSecretLengths(t *testing.T) {
 	assert.Equal(t, nil, o.Validate())
 
 	o.CookieSecret = "32 byte secret for AES-256------"
+	assert.Equal(t, nil, o.Validate())
+}
+
+func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
+	o := testOptions()
+	assert.Equal(t, nil, o.Validate())
+
+	o.CookieSecret = "0123456789abcdef"
+	o.CookieRefresh = o.CookieExpire
+	assert.NotEqual(t, nil, o.Validate())
+
+	o.CookieRefresh -= time.Duration(1)
 	assert.Equal(t, nil, o.Validate())
 }

@@ -32,6 +32,11 @@ func NewMyUsaProvider(p *ProviderData) *MyUsaProvider {
 			Host: myUsaHost,
 			Path: "/api/v1/profile"}
 	}
+	if p.ValidateUrl.String() == "" {
+		p.ValidateUrl = &url.URL{Scheme: "https",
+			Host: myUsaHost,
+			Path: "/api/v1/tokeninfo"}
+	}
 	if p.Scope == "" {
 		p.Scope = "profile.email"
 	}
