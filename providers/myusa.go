@@ -58,3 +58,7 @@ func (p *MyUsaProvider) GetEmailAddress(auth_response *simplejson.Json,
 	}
 	return json.Get("email").String()
 }
+
+func (p *MyUsaProvider) ValidateToken(access_token string) bool {
+	return validateToken(p, access_token, nil)
+}

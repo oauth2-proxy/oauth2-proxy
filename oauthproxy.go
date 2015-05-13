@@ -265,27 +265,6 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 	http.SetCookie(rw, p.MakeCookie(req, val, p.CookieExpire))
 }
 
-func (p *OauthProxy) ValidateToken(access_token string) bool {
-	if access_token == "" || p.oauthValidateUrl == nil {
-		return false
-	}
-
-	req, err := http.NewRequest("GET",
-		p.oauthValidateUrl.String()+"?access_token="+access_token, nil)
-	if err != nil {
-		log.Printf("failed building token validation request: %s", err)
-		return false
-	}
-
-	httpclient := &http.Client{}
-	resp, err := httpclient.Do(req)
-	if err != nil {
-		log.Printf("token validation request failed: %s", err)
-		return false
-	}
-	return resp.StatusCode == 200
-}
-
 func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (email, user, access_token string, ok bool) {
 	var value string
 	var timestamp time.Time
@@ -304,7 +283,7 @@ func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (e
 		expires := timestamp.Add(p.CookieExpire)
 		refresh_threshold := time.Now().Add(p.CookieRefresh)
 		if refresh_threshold.Unix() > expires.Unix() {
-			ok = p.Validator(email) && p.ValidateToken(access_token)
+			ok = p.Validator(email) && p.provider.ValidateToken(access_token)
 			if ok {
 				p.SetCookie(rw, req, value)
 			}

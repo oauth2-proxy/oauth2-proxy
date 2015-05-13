@@ -66,3 +66,7 @@ func jwtDecodeSegment(seg string) ([]byte, error) {
 
 	return base64.URLEncoding.DecodeString(seg)
 }
+
+func (p *GoogleProvider) ValidateToken(access_token string) bool {
+	return validateToken(p, access_token, nil)
+}

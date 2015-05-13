@@ -86,11 +86,16 @@ func TestRobotsTxt(t *testing.T) {
 type TestProvider struct {
 	*providers.ProviderData
 	EmailAddress string
+	ValidToken   bool
 }
 
 func (tp *TestProvider) GetEmailAddress(unused_auth_response *simplejson.Json,
 	unused_access_token string) (string, error) {
 	return tp.EmailAddress, nil
+}
+
+func (tp *TestProvider) ValidateToken(access_token string) bool {
+	return tp.ValidToken
 }
 
 type PassAccessTokenTest struct {
@@ -322,101 +327,21 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 	}
 }
 
-type ValidateTokenTest struct {
-	opts          *Options
-	proxy         *OauthProxy
-	backend       *httptest.Server
-	response_code int
-}
-
-func NewValidateTokenTest() *ValidateTokenTest {
-	var vt_test ValidateTokenTest
-
-	vt_test.opts = NewOptions()
-	vt_test.opts.Upstreams = append(vt_test.opts.Upstreams, "unused")
-	vt_test.opts.CookieSecret = "foobar"
-	vt_test.opts.ClientID = "bazquux"
-	vt_test.opts.ClientSecret = "xyzzyplugh"
-	vt_test.opts.Validate()
-
-	vt_test.backend = httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			switch r.URL.Path {
-			case "/oauth/tokeninfo":
-				w.WriteHeader(vt_test.response_code)
-				w.Write([]byte("only code matters; contents disregarded"))
-			default:
-				w.WriteHeader(500)
-				w.Write([]byte("unknown URL"))
-			}
-		}))
-	backend_url, _ := url.Parse(vt_test.backend.URL)
-	vt_test.opts.provider.Data().ValidateUrl = &url.URL{
-		Scheme: "http",
-		Host:   backend_url.Host,
-		Path:   "/oauth/tokeninfo",
-	}
-	vt_test.response_code = 200
-
-	vt_test.proxy = NewOauthProxy(vt_test.opts, func(email string) bool {
-		return true
-	})
-	return &vt_test
-}
-
-func (vt_test *ValidateTokenTest) Close() {
-	vt_test.backend.Close()
-}
-
-func TestValidateTokenEmptyToken(t *testing.T) {
-	vt_test := NewValidateTokenTest()
-	defer vt_test.Close()
-
-	assert.Equal(t, false, vt_test.proxy.ValidateToken(""))
-}
-
-func TestValidateTokenEmptyValidateUrl(t *testing.T) {
-	vt_test := NewValidateTokenTest()
-	defer vt_test.Close()
-
-	vt_test.proxy.oauthValidateUrl = nil
-	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
-}
-
-func TestValidateTokenRequestNetworkFailure(t *testing.T) {
-	vt_test := NewValidateTokenTest()
-	// Close immediately to simulate a network failure
-	vt_test.Close()
-
-	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
-}
-
-func TestValidateTokenExpiredToken(t *testing.T) {
-	vt_test := NewValidateTokenTest()
-	defer vt_test.Close()
-
-	vt_test.response_code = 401
-	assert.Equal(t, false, vt_test.proxy.ValidateToken("foobar"))
-}
-
-func TestValidateTokenValidToken(t *testing.T) {
-	vt_test := NewValidateTokenTest()
-	defer vt_test.Close()
-
-	assert.Equal(t, true, vt_test.proxy.ValidateToken("foobar"))
-}
-
 type ProcessCookieTest struct {
 	opts          *Options
 	proxy         *OauthProxy
 	rw            *httptest.ResponseRecorder
 	req           *http.Request
-	backend       *httptest.Server
+	provider      TestProvider
 	response_code int
 	validate_user bool
 }
 
-func NewProcessCookieTest() *ProcessCookieTest {
+type ProcessCookieTestOpts struct {
+	provider_validate_cookie_response bool
+}
+
+func NewProcessCookieTest(opts ProcessCookieTestOpts) *ProcessCookieTest {
 	var pc_test ProcessCookieTest
 
 	pc_test.opts = NewOptions()
@@ -433,6 +358,9 @@ func NewProcessCookieTest() *ProcessCookieTest {
 	pc_test.proxy = NewOauthProxy(pc_test.opts, func(email string) bool {
 		return pc_test.validate_user
 	})
+	pc_test.proxy.provider = &TestProvider{
+		ValidToken: opts.provider_validate_cookie_response,
+	}
 
 	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
 	// access_token validation.
@@ -443,22 +371,10 @@ func NewProcessCookieTest() *ProcessCookieTest {
 	return &pc_test
 }
 
-func (p *ProcessCookieTest) InstantiateBackend() {
-	p.backend = httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(p.response_code)
-		}))
-	backend_url, _ := url.Parse(p.backend.URL)
-	p.proxy.oauthValidateUrl = &url.URL{
-		Scheme: "http",
-		Host:   backend_url.Host,
-		Path:   "/oauth/tokeninfo",
-	}
-	p.response_code = 200
-}
-
-func (p *ProcessCookieTest) Close() {
-	p.backend.Close()
+func NewProcessCookieTestWithDefaults() *ProcessCookieTest {
+	return NewProcessCookieTest(ProcessCookieTestOpts{
+		provider_validate_cookie_response: true,
+	})
 }
 
 func (p *ProcessCookieTest) MakeCookie(value, access_token string) *http.Cookie {
@@ -476,7 +392,7 @@ func (p *ProcessCookieTest) ProcessCookie() (email, user, access_token string, o
 }
 
 func TestProcessCookie(t *testing.T) {
-	pc_test := NewProcessCookieTest()
+	pc_test := NewProcessCookieTestWithDefaults()
 
 	pc_test.AddCookie("michael.bland@gsa.gov", "my_access_token")
 	email, user, access_token, ok := pc_test.ProcessCookie()
@@ -487,13 +403,13 @@ func TestProcessCookie(t *testing.T) {
 }
 
 func TestProcessCookieNoCookieError(t *testing.T) {
-	pc_test := NewProcessCookieTest()
+	pc_test := NewProcessCookieTestWithDefaults()
 	_, _, _, ok := pc_test.ProcessCookie()
 	assert.Equal(t, false, ok)
 }
 
 func TestProcessCookieFailIfParsingCookieValueFails(t *testing.T) {
-	pc_test := NewProcessCookieTest()
+	pc_test := NewProcessCookieTestWithDefaults()
 	value, _ := buildCookieValue("michael.bland@gsa.gov",
 		pc_test.proxy.AesCipher, "my_access_token")
 	pc_test.req.AddCookie(pc_test.proxy.MakeCookie(
@@ -504,10 +420,7 @@ func TestProcessCookieFailIfParsingCookieValueFails(t *testing.T) {
 }
 
 func TestProcessCookieRefreshNotSet(t *testing.T) {
-	pc_test := NewProcessCookieTest()
-	pc_test.InstantiateBackend()
-	defer pc_test.Close()
-
+	pc_test := NewProcessCookieTestWithDefaults()
 	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "")
 	pc_test.req.AddCookie(cookie)
@@ -518,10 +431,7 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 }
 
 func TestProcessCookieRefresh(t *testing.T) {
-	pc_test := NewProcessCookieTest()
-	pc_test.InstantiateBackend()
-	defer pc_test.Close()
-
+	pc_test := NewProcessCookieTestWithDefaults()
 	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
 	pc_test.req.AddCookie(cookie)
@@ -533,10 +443,7 @@ func TestProcessCookieRefresh(t *testing.T) {
 }
 
 func TestProcessCookieRefreshThresholdNotCrossed(t *testing.T) {
-	pc_test := NewProcessCookieTest()
-	pc_test.InstantiateBackend()
-	defer pc_test.Close()
-
+	pc_test := NewProcessCookieTestWithDefaults()
 	pc_test.proxy.CookieExpire = time.Duration(25) * time.Hour
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
 	pc_test.req.AddCookie(cookie)
@@ -548,11 +455,9 @@ func TestProcessCookieRefreshThresholdNotCrossed(t *testing.T) {
 }
 
 func TestProcessCookieFailIfRefreshSetAndTokenNoLongerValid(t *testing.T) {
-	pc_test := NewProcessCookieTest()
-	pc_test.InstantiateBackend()
-	defer pc_test.Close()
-	pc_test.response_code = 401
-
+	pc_test := NewProcessCookieTest(ProcessCookieTestOpts{
+		provider_validate_cookie_response: false,
+	})
 	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour
 	cookie := pc_test.MakeCookie("michael.bland@gsa.gov", "my_access_token")
 	pc_test.req.AddCookie(cookie)
@@ -564,9 +469,7 @@ func TestProcessCookieFailIfRefreshSetAndTokenNoLongerValid(t *testing.T) {
 }
 
 func TestProcessCookieFailIfRefreshSetAndUserNoLongerValid(t *testing.T) {
-	pc_test := NewProcessCookieTest()
-	pc_test.InstantiateBackend()
-	defer pc_test.Close()
+	pc_test := NewProcessCookieTestWithDefaults()
 	pc_test.validate_user = false
 
 	pc_test.proxy.CookieExpire = time.Duration(23) * time.Hour

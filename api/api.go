@@ -30,3 +30,20 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 	}
 	return data, nil
 }
+
+func RequestUnparsedResponse(url string, header http.Header) (
+	response *http.Response, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, errors.New("failed building request for " +
+			url + ": " + err.Error())
+	}
+	req.Header = header
+
+	httpclient := &http.Client{}
+	if response, err = httpclient.Do(req); err != nil {
+		return nil, errors.New("request failed for " +
+			url + ": " + err.Error())
+	}
+	return
+}

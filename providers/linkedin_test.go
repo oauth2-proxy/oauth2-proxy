@@ -16,6 +16,7 @@ func testLinkedInProvider(hostname string) *LinkedInProvider {
 			LoginUrl:     &url.URL{},
 			RedeemUrl:    &url.URL{},
 			ProfileUrl:   &url.URL{},
+			ValidateUrl:  &url.URL{},
 			Scope:        ""})
 	if hostname != "" {
 		updateUrl(p.Data().LoginUrl, hostname)
@@ -52,6 +53,8 @@ func TestLinkedInProviderDefaults(t *testing.T) {
 		p.Data().RedeemUrl.String())
 	assert.Equal(t, "https://www.linkedin.com/v1/people/~/email-address",
 		p.Data().ProfileUrl.String())
+	assert.Equal(t, "https://www.linkedin.com/v1/people/~/email-address",
+		p.Data().ValidateUrl.String())
 	assert.Equal(t, "r_emailaddress r_basicprofile", p.Data().Scope)
 }
 
@@ -70,6 +73,10 @@ func TestLinkedInProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/profile"},
+			ValidateUrl: &url.URL{
+				Scheme: "https",
+				Host:   "example.com",
+				Path:   "/oauth/tokeninfo"},
 			Scope: "profile"})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "LinkedIn", p.Data().ProviderName)
@@ -79,6 +86,8 @@ func TestLinkedInProviderOverrides(t *testing.T) {
 		p.Data().RedeemUrl.String())
 	assert.Equal(t, "https://example.com/oauth/profile",
 		p.Data().ProfileUrl.String())
+	assert.Equal(t, "https://example.com/oauth/tokeninfo",
+		p.Data().ValidateUrl.String())
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
