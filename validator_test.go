@@ -10,6 +10,7 @@ import (
 type ValidatorTest struct {
 	auth_email_file *os.File
 	done            chan bool
+	update_seen     bool
 }
 
 func NewValidatorTest(t *testing.T) *ValidatorTest {
@@ -31,7 +32,12 @@ func (vt *ValidatorTest) TearDown() {
 func (vt *ValidatorTest) NewValidator(domains []string,
 	updated chan<- bool) func(string) bool {
 	return newValidatorImpl(domains, vt.auth_email_file.Name(),
-		vt.done, func() { updated <- true })
+		vt.done, func() {
+			if vt.update_seen == false {
+				updated <- true
+				vt.update_seen = true
+			}
+		})
 }
 
 // This will close vt.auth_email_file.
