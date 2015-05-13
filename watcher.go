@@ -30,7 +30,7 @@ func WaitForReplacement(event fsnotify.Event, watcher *fsnotify.Watcher) {
 	}
 }
 
-func WatchForUpdates(filename string, action func()) bool {
+func WatchForUpdates(filename string, done <-chan bool, action func()) bool {
 	filename = filepath.Clean(filename)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -40,6 +40,10 @@ func WatchForUpdates(filename string, action func()) bool {
 		defer watcher.Close()
 		for {
 			select {
+			case _ = <-done:
+				log.Printf("Shutting down watcher for: %s",
+					filename)
+				return
 			case event := <-watcher.Events:
 				// On Arch Linux, it appears Chmod events precede Remove events,
 				// which causes a race between action() and the coming Remove event.

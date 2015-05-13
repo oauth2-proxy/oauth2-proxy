@@ -51,8 +51,7 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 	})
 	domains := []string(nil)
 	updated := make(chan bool)
-	validator := newValidatorImpl(domains, vt.auth_email_file.Name(),
-		func() { updated <- true })
+	validator := vt.NewValidator(domains, updated)
 
 	if !validator("xyzzy@example.com") {
 		t.Error("first email in list should validate")
@@ -89,8 +88,7 @@ func TestValidatorOverwriteEmailListViaRenameAndReplace(t *testing.T) {
 	vt.WriteEmails(t, []string{"xyzzy@example.com"})
 	domains := []string(nil)
 	updated := make(chan bool)
-	validator := newValidatorImpl(domains, vt.auth_email_file.Name(),
-		func() { updated <- true })
+	validator := vt.NewValidator(domains, updated)
 
 	if !validator("xyzzy@example.com") {
 		t.Error("email in list should validate")

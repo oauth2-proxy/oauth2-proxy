@@ -15,13 +15,13 @@ type UserMap struct {
 	m         unsafe.Pointer
 }
 
-func NewUserMap(usersFile string, onUpdate func()) *UserMap {
+func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	um := &UserMap{usersFile: usersFile}
 	m := make(map[string]bool)
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m))
 	if usersFile != "" {
 		log.Printf("using authenticated emails file %s", usersFile)
-		started := WatchForUpdates(usersFile, func() {
+		started := WatchForUpdates(usersFile, done, func() {
 			um.LoadAuthenticatedEmailsFile()
 			onUpdate()
 		})
@@ -62,8 +62,8 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 }
 
 func newValidatorImpl(domains []string, usersFile string,
-	onUpdate func()) func(string) bool {
-	validUsers := NewUserMap(usersFile, onUpdate)
+	done <-chan bool, onUpdate func()) func(string) bool {
+	validUsers := NewUserMap(usersFile, done, onUpdate)
 
 	for i, domain := range domains {
 		domains[i] = fmt.Sprintf("@%s", strings.ToLower(domain))
@@ -85,5 +85,5 @@ func newValidatorImpl(domains []string, usersFile string,
 }
 
 func NewValidator(domains []string, usersFile string) func(string) bool {
-	return newValidatorImpl(domains, usersFile, func() {})
+	return newValidatorImpl(domains, usersFile, nil, func() {})
 }
