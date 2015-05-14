@@ -12,17 +12,18 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
-func WaitForReplacement(event fsnotify.Event, watcher *fsnotify.Watcher) {
+func WaitForReplacement(filename string, op fsnotify.Op,
+	watcher *fsnotify.Watcher) {
 	const sleep_interval = 50 * time.Millisecond
 
 	// Avoid a race when fsnofity.Remove is preceded by fsnotify.Chmod.
-	if event.Op&fsnotify.Chmod != 0 {
+	if op&fsnotify.Chmod != 0 {
 		time.Sleep(sleep_interval)
 	}
 	for {
-		if _, err := os.Stat(event.Name); err == nil {
-			if err := watcher.Add(event.Name); err == nil {
-				log.Printf("watching resumed for %s", event.Name)
+		if _, err := os.Stat(filename); err == nil {
+			if err := watcher.Add(filename); err == nil {
+				log.Printf("watching resumed for %s", filename)
 				return
 			}
 		}
@@ -52,7 +53,8 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) bool {
 				// can't be opened.
 				if event.Op&(fsnotify.Remove|fsnotify.Rename|fsnotify.Chmod) != 0 {
 					log.Printf("watching interrupted on event: %s", event)
-					WaitForReplacement(event, watcher)
+					watcher.Remove(filename)
+					WaitForReplacement(filename, event.Op, watcher)
 				}
 				log.Printf("reloading after event: %s", event)
 				action()
