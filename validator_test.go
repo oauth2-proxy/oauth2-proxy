@@ -9,6 +9,8 @@ import (
 
 type ValidatorTest struct {
 	auth_email_file *os.File
+	done            chan bool
+	update_seen     bool
 }
 
 func NewValidatorTest(t *testing.T) *ValidatorTest {
@@ -18,11 +20,24 @@ func NewValidatorTest(t *testing.T) *ValidatorTest {
 	if err != nil {
 		t.Fatal("failed to create temp file: " + err.Error())
 	}
+	vt.done = make(chan bool)
 	return vt
 }
 
 func (vt *ValidatorTest) TearDown() {
+	vt.done <- true
 	os.Remove(vt.auth_email_file.Name())
+}
+
+func (vt *ValidatorTest) NewValidator(domains []string,
+	updated chan<- bool) func(string) bool {
+	return newValidatorImpl(domains, vt.auth_email_file.Name(),
+		vt.done, func() {
+			if vt.update_seen == false {
+				updated <- true
+				vt.update_seen = true
+			}
+		})
 }
 
 // This will close vt.auth_email_file.
@@ -41,7 +56,7 @@ func TestValidatorEmpty(t *testing.T) {
 
 	vt.WriteEmails(t, []string(nil))
 	domains := []string(nil)
-	validator := NewValidator(domains, vt.auth_email_file.Name())
+	validator := vt.NewValidator(domains, nil)
 
 	if validator("foo.bar@example.com") {
 		t.Error("nothing should validate when the email and " +
@@ -55,7 +70,7 @@ func TestValidatorSingleEmail(t *testing.T) {
 
 	vt.WriteEmails(t, []string{"foo.bar@example.com"})
 	domains := []string(nil)
-	validator := NewValidator(domains, vt.auth_email_file.Name())
+	validator := vt.NewValidator(domains, nil)
 
 	if !validator("foo.bar@example.com") {
 		t.Error("email should validate")
@@ -72,7 +87,7 @@ func TestValidatorSingleDomain(t *testing.T) {
 
 	vt.WriteEmails(t, []string(nil))
 	domains := []string{"example.com"}
-	validator := NewValidator(domains, vt.auth_email_file.Name())
+	validator := vt.NewValidator(domains, nil)
 
 	if !validator("foo.bar@example.com") {
 		t.Error("email should validate")
@@ -91,7 +106,7 @@ func TestValidatorMultipleEmailsMultipleDomains(t *testing.T) {
 		"plugh@example.com",
 	})
 	domains := []string{"example0.com", "example1.com"}
-	validator := NewValidator(domains, vt.auth_email_file.Name())
+	validator := vt.NewValidator(domains, nil)
 
 	if !validator("foo.bar@example0.com") {
 		t.Error("email from first domain should validate")
@@ -117,7 +132,7 @@ func TestValidatorComparisonsAreCaseInsensitive(t *testing.T) {
 
 	vt.WriteEmails(t, []string{"Foo.Bar@Example.Com"})
 	domains := []string{"Frobozz.Com"}
-	validator := NewValidator(domains, vt.auth_email_file.Name())
+	validator := vt.NewValidator(domains, nil)
 
 	if !validator("foo.bar@example.com") {
 		t.Error("loaded email addresses are not lower-cased")
