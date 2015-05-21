@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/google_auth_proxy/api"
+	"github.com/bitly/oauth2_proxy/api"
 )
 
 type LinkedInProvider struct {

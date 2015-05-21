@@ -18,7 +18,7 @@ import (
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	flagSet := flag.NewFlagSet("google_auth_proxy", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
 
 	googleAppsDomains := StringArray{}
 	upstreams := StringArray{}
@@ -38,7 +38,7 @@ func main() {
 	flagSet.Var(&googleAppsDomains, "google-apps-domain", "authenticate against the given Google apps domain (may be given multiple times)")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
-	flagSet.String("client-id", "", "the Google OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
+	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
 	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption")
@@ -65,7 +65,7 @@ func main() {
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("google_auth_proxy v%s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("oauth2_proxy v%s (built with %s)\n", VERSION, runtime.Version())
 		return
 	}
 
