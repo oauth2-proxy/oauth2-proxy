@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
@@ -17,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitly/google_auth_proxy/api"
 	"github.com/bitly/google_auth_proxy/providers"
 )
 
@@ -39,7 +37,6 @@ type OauthProxy struct {
 
 	redirectUrl         *url.URL // the url to receive requests at
 	provider            providers.Provider
-	oauthRedemptionUrl  *url.URL // endpoint to redeem the code
 	oauthLoginUrl       *url.URL // to redirect the user to
 	oauthValidateUrl    *url.URL // to validate the access token
 	oauthScope          string
@@ -143,21 +140,20 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		CookieRefresh:  opts.CookieRefresh,
 		Validator:      validator,
 
-		clientID:           opts.ClientID,
-		clientSecret:       opts.ClientSecret,
-		oauthScope:         opts.provider.Data().Scope,
-		provider:           opts.provider,
-		oauthRedemptionUrl: opts.provider.Data().RedeemUrl,
-		oauthLoginUrl:      opts.provider.Data().LoginUrl,
-		oauthValidateUrl:   opts.provider.Data().ValidateUrl,
-		serveMux:           serveMux,
-		redirectUrl:        redirectUrl,
-		skipAuthRegex:      opts.SkipAuthRegex,
-		compiledRegex:      opts.CompiledRegex,
-		PassBasicAuth:      opts.PassBasicAuth,
-		PassAccessToken:    opts.PassAccessToken,
-		AesCipher:          aes_cipher,
-		templates:          loadTemplates(opts.CustomTemplatesDir),
+		clientID:         opts.ClientID,
+		clientSecret:     opts.ClientSecret,
+		oauthScope:       opts.provider.Data().Scope,
+		provider:         opts.provider,
+		oauthLoginUrl:    opts.provider.Data().LoginUrl,
+		oauthValidateUrl: opts.provider.Data().ValidateUrl,
+		serveMux:         serveMux,
+		redirectUrl:      redirectUrl,
+		skipAuthRegex:    opts.SkipAuthRegex,
+		compiledRegex:    opts.CompiledRegex,
+		PassBasicAuth:    opts.PassBasicAuth,
+		PassAccessToken:  opts.PassAccessToken,
+		AesCipher:        aes_cipher,
+		templates:        loadTemplates(opts.CustomTemplatesDir),
 	}
 }
 
@@ -200,29 +196,13 @@ func (p *OauthProxy) redeemCode(host, code string) (string, string, error) {
 	if code == "" {
 		return "", "", errors.New("missing code")
 	}
-	params := url.Values{}
-	params.Add("redirect_uri", p.GetRedirectUrl(host))
-	params.Add("client_id", p.clientID)
-	params.Add("client_secret", p.clientSecret)
-	params.Add("code", code)
-	params.Add("grant_type", "authorization_code")
-	req, err := http.NewRequest("POST", p.oauthRedemptionUrl.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		log.Printf("failed building request %s", err.Error())
-		return "", "", err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	json, err := api.Request(req)
-	if err != nil {
-		log.Printf("failed making request %s", err)
-		return "", "", err
-	}
-	access_token, err := json.Get("access_token").String()
+	redirectUri := p.GetRedirectUrl(host)
+	body, access_token, err := p.provider.Redeem(redirectUri, code)
 	if err != nil {
 		return "", "", err
 	}
 
-	email, err := p.provider.GetEmailAddress(json, access_token)
+	email, err := p.provider.GetEmailAddress(body, access_token)
 	if err != nil {
 		return "", "", err
 	}

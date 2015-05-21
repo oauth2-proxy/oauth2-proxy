@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/go-simplejson"
 	"github.com/bitly/google_auth_proxy/api"
 )
 
@@ -50,8 +49,7 @@ func getLinkedInHeader(access_token string) http.Header {
 	return header
 }
 
-func (p *LinkedInProvider) GetEmailAddress(unused_auth_response *simplejson.Json,
-	access_token string) (string, error) {
+func (p *LinkedInProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
 	if access_token == "" {
 		return "", errors.New("missing access token")
 	}

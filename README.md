@@ -101,6 +101,8 @@ Usage of google_auth_proxy:
   -version=false: print version string
 ```
 
+See below for provider specific options
+
 ### Environment variables
 
 The environment variables `GOOGLE_AUTH_PROXY_CLIENT_ID`, `GOOGLE_AUTH_PROXY_CLIENT_SECRET`, `GOOGLE_AUTH_PROXY_COOKIE_SECRET`, `GOOGLE_AUTH_PROXY_COOKIE_DOMAIN` and `GOOGLE_AUTH_PROXY_COOKIE_EXPIRE` can be used in place of the corresponding command-line arguments.
@@ -173,6 +175,10 @@ directive. Right now this includes:
 * `myusa` - The [MyUSA](https://alpha.my.usa.gov) authentication service
   ([GitHub](https://github.com/18F/myusa))
 * `linkedin` - The [LinkedIn](https://developer.linkedin.com/docs/signin-with-linkedin) Sign In service.
+* `github` - Via [Github][https://github.com/settings/developers] OAuth App. Also supports restricting via org and team.
+
+    -github-org="": restrict logins to members of this organisation
+    -github-team="": restrict logins to members of this team
 
 ## Adding a new Provider
 

@@ -17,6 +17,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	flagSet := flag.NewFlagSet("google_auth_proxy", flag.ExitOnError)
 
 	googleAppsDomains := StringArray{}
@@ -35,6 +36,8 @@ func main() {
 	flagSet.Var(&skipAuthRegex, "skip-auth-regex", "bypass authentication for requests path's that match (may be given multiple times)")
 
 	flagSet.Var(&googleAppsDomains, "google-apps-domain", "authenticate against the given Google apps domain (may be given multiple times)")
+	flagSet.String("github-org", "", "restrict logins to members of this organisation")
+	flagSet.String("github-team", "", "restrict logins to members of this team")
 	flagSet.String("client-id", "", "the Google OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")

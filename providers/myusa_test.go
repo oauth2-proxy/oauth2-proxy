@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"github.com/bitly/go-simplejson"
 	"github.com/bmizerany/assert"
 	"net/http"
 	"net/http/httptest"
@@ -102,10 +101,8 @@ func TestMyUsaProviderGetEmailAddress(t *testing.T) {
 
 	b_url, _ := url.Parse(b.URL)
 	p := testMyUsaProvider(b_url.Host)
-	unused_auth_response := simplejson.New()
 
-	email, err := p.GetEmailAddress(unused_auth_response,
-		"imaginary_access_token")
+	email, err := p.GetEmailAddress([]byte{}, "imaginary_access_token")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -118,13 +115,11 @@ func TestMyUsaProviderGetEmailAddressFailedRequest(t *testing.T) {
 
 	b_url, _ := url.Parse(b.URL)
 	p := testMyUsaProvider(b_url.Host)
-	unused_auth_response := simplejson.New()
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
-	email, err := p.GetEmailAddress(unused_auth_response,
-		"unexpected_access_token")
+	email, err := p.GetEmailAddress([]byte{}, "unexpected_access_token")
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -135,10 +130,8 @@ func TestMyUsaProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 
 	b_url, _ := url.Parse(b.URL)
 	p := testMyUsaProvider(b_url.Host)
-	unused_auth_response := simplejson.New()
 
-	email, err := p.GetEmailAddress(unused_auth_response,
-		"imaginary_access_token")
+	email, err := p.GetEmailAddress([]byte{}, "imaginary_access_token")
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }

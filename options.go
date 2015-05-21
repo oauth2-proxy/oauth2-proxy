@@ -19,6 +19,8 @@ type Options struct {
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	GoogleAppsDomains       []string `flag:"google-apps-domain" cfg:"google_apps_domains"`
+	GitHubOrg               string   `flag:"github-org" cfg:"github_org"`
+	GitHubTeam              string   `flag:"github-team" cfg:"github_team"`
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	DisplayHtpasswdForm     bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form"`
 	CustomTemplatesDir      string   `flag:"custom-templates-dir" cfg:"custom_templates_dir"`
@@ -153,11 +155,16 @@ func (o *Options) Validate() error {
 }
 
 func parseProviderInfo(o *Options, msgs []string) []string {
-	p := &providers.ProviderData{Scope: o.Scope}
+	p := &providers.ProviderData{Scope: o.Scope, ClientID: o.ClientID, ClientSecret: o.ClientSecret}
 	p.LoginUrl, msgs = parseUrl(o.LoginUrl, "login", msgs)
 	p.RedeemUrl, msgs = parseUrl(o.RedeemUrl, "redeem", msgs)
 	p.ProfileUrl, msgs = parseUrl(o.ProfileUrl, "profile", msgs)
 	p.ValidateUrl, msgs = parseUrl(o.ValidateUrl, "validate", msgs)
+
 	o.provider = providers.New(o.Provider, p)
+	switch p := o.provider.(type) {
+	case *providers.GitHubProvider:
+		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
+	}
 	return msgs
 }
