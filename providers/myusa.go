@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/go-simplejson"
 	"github.com/bitly/google_auth_proxy/api"
 )
 
@@ -43,8 +42,7 @@ func NewMyUsaProvider(p *ProviderData) *MyUsaProvider {
 	return &MyUsaProvider{ProviderData: p}
 }
 
-func (p *MyUsaProvider) GetEmailAddress(auth_response *simplejson.Json,
-	access_token string) (string, error) {
+func (p *MyUsaProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
 	req, err := http.NewRequest("GET",
 		p.ProfileUrl.String()+"?access_token="+access_token, nil)
 	if err != nil {

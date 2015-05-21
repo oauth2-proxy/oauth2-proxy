@@ -2,10 +2,10 @@ package providers
 
 import (
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"net/url"
 	"strings"
-
-	"github.com/bitly/go-simplejson"
 )
 
 type GoogleProvider struct {
@@ -35,28 +35,34 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	return &GoogleProvider{ProviderData: p}
 }
 
-func (s *GoogleProvider) GetEmailAddress(auth_response *simplejson.Json,
-	unused_access_token string) (string, error) {
-	idToken, err := auth_response.Get("id_token").String()
-	if err != nil {
+func (s *GoogleProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
+	var response struct {
+		IdToken string `json:"id_token"`
+	}
+
+	if err := json.Unmarshal(body, &response); err != nil {
 		return "", err
 	}
+
 	// id_token is a base64 encode ID token payload
 	// https://developers.google.com/accounts/docs/OAuth2Login#obtainuserinfo
-	jwt := strings.Split(idToken, ".")
+	jwt := strings.Split(response.IdToken, ".")
 	b, err := jwtDecodeSegment(jwt[1])
 	if err != nil {
 		return "", err
 	}
-	data, err := simplejson.NewJson(b)
+
+	var email struct {
+		Email string `json:"email"`
+	}
+	err = json.Unmarshal(b, &email)
 	if err != nil {
 		return "", err
 	}
-	email, err := data.Get("email").String()
-	if err != nil {
-		return "", err
+	if email.Email == "" {
+		return "", errors.New("missing email")
 	}
-	return email, nil
+	return email.Email, nil
 }
 
 func jwtDecodeSegment(seg string) ([]byte, error) {

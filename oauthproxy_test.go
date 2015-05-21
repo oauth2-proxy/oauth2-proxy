@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/bitly/go-simplejson"
 	"github.com/bitly/google_auth_proxy/providers"
 	"github.com/bmizerany/assert"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +14,11 @@ import (
 	"testing"
 	"time"
 )
+
+func init() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
+}
 
 func TestNewReverseProxy(t *testing.T) {
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -89,8 +94,7 @@ type TestProvider struct {
 	ValidToken   bool
 }
 
-func (tp *TestProvider) GetEmailAddress(unused_auth_response *simplejson.Json,
-	unused_access_token string) (string, error) {
+func (tp *TestProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
 	return tp.EmailAddress, nil
 }
 
@@ -113,16 +117,15 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 
 	t.provider_server = httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("%#v", r)
 			url := r.URL
 			payload := ""
 			switch url.Path {
 			case "/oauth/token":
 				payload = `{"access_token": "my_auth_token"}`
 			default:
-				token_header := r.Header["X-Forwarded-Access-Token"]
-				if len(token_header) != 0 {
-					payload = token_header[0]
-				} else {
+				payload = r.Header.Get("X-Forwarded-Access-Token")
+				if payload == "" {
 					payload = "No access token found."
 				}
 			}
@@ -189,8 +192,7 @@ func (pat_test *PassAccessTokenTest) getCallbackEndpoint() (http_code int,
 	return rw.Code, rw.HeaderMap["Set-Cookie"][0]
 }
 
-func (pat_test *PassAccessTokenTest) getRootEndpoint(
-	cookie string) (http_code int, access_token string) {
+func (pat_test *PassAccessTokenTest) getRootEndpoint(cookie string) (http_code int, access_token string) {
 	cookie_key := pat_test.proxy.CookieKey
 	var value string
 	key_prefix := cookie_key + "="

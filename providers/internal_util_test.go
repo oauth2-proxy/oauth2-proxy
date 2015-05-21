@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"github.com/bitly/go-simplejson"
 	"github.com/bmizerany/assert"
 	"net/http"
 	"net/http/httptest"
@@ -13,9 +12,7 @@ type ValidateTokenTestProvider struct {
 	*ProviderData
 }
 
-func (tp *ValidateTokenTestProvider) GetEmailAddress(
-	unused_auth_response *simplejson.Json,
-	unused_access_token string) (string, error) {
+func (tp *ValidateTokenTestProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
 	return "", nil
 }
 

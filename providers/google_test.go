@@ -2,7 +2,7 @@ package providers
 
 import (
 	"encoding/base64"
-	"github.com/bitly/go-simplejson"
+	"encoding/json"
 	"github.com/bmizerany/assert"
 	"net/url"
 	"testing"
@@ -68,39 +68,61 @@ func TestGoogleProviderOverrides(t *testing.T) {
 
 func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	p := newGoogleProvider()
-	j := simplejson.New()
-	j.Set("id_token", "ignored prefix."+base64.URLEncoding.EncodeToString(
-		[]byte("{\"email\": \"michael.bland@gsa.gov\"}")))
-	email, err := p.GetEmailAddress(j, "ignored access_token")
+	body, err := json.Marshal(
+		struct {
+			IdToken string `json:"id_token"`
+		}{
+			IdToken: "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": "michael.bland@gsa.gov"}`)),
+		},
+	)
+	assert.Equal(t, nil, err)
+	email, err := p.GetEmailAddress(body, "ignored access_token")
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 	assert.Equal(t, nil, err)
 }
 
 func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	p := newGoogleProvider()
-	j := simplejson.New()
-	j.Set("id_token", "ignored prefix.{\"email\": \"michael.bland@gsa.gov\"}")
-	email, err := p.GetEmailAddress(j, "ignored access_token")
+	body, err := json.Marshal(
+		struct {
+			IdToken string `json:"id_token"`
+		}{
+			IdToken: "ignored prefix." + `{"email": "michael.bland@gsa.gov"}`,
+		},
+	)
+	assert.Equal(t, nil, err)
+	email, err := p.GetEmailAddress(body, "ignored access_token")
 	assert.Equal(t, "", email)
 	assert.NotEqual(t, nil, err)
 }
 
 func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
 	p := newGoogleProvider()
-	j := simplejson.New()
-	j.Set("id_token", "ignored prefix."+base64.URLEncoding.EncodeToString(
-		[]byte("{email: michael.bland@gsa.gov}")))
-	email, err := p.GetEmailAddress(j, "ignored access_token")
+
+	body, err := json.Marshal(
+		struct {
+			IdToken string `json:"id_token"`
+		}{
+			IdToken: "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": michael.bland@gsa.gov}`)),
+		},
+	)
+	assert.Equal(t, nil, err)
+	email, err := p.GetEmailAddress(body, "ignored access_token")
 	assert.Equal(t, "", email)
 	assert.NotEqual(t, nil, err)
 }
 
 func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 	p := newGoogleProvider()
-	j := simplejson.New()
-	j.Set("id_token", "ignored prefix."+base64.URLEncoding.EncodeToString(
-		[]byte("{\"not_email\": \"missing!\"}")))
-	email, err := p.GetEmailAddress(j, "ignored access_token")
+	body, err := json.Marshal(
+		struct {
+			IdToken string `json:"id_token"`
+		}{
+			IdToken: "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"not_email": "missing"}`)),
+		},
+	)
+	assert.Equal(t, nil, err)
+	email, err := p.GetEmailAddress(body, "ignored access_token")
 	assert.Equal(t, "", email)
 	assert.NotEqual(t, nil, err)
 }
