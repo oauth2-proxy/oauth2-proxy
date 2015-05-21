@@ -20,9 +20,9 @@ echo "... running tests"
 
 for os in linux darwin; do
     echo "... building v$version for $os/$arch"
-    BUILD=$(mktemp -d -t google_auth_proxy)
-    TARGET="google_auth_proxy-$version.$os-$arch.$goversion"
-    GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o $BUILD/$TARGET/google_auth_proxy || exit 1
+    BUILD=$(mktemp -d -t oauth2_proxy)
+    TARGET="oauth2_proxy-$version.$os-$arch.$goversion"
+    GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o $BUILD/$TARGET/oauth2_proxy || exit 1
     pushd $BUILD
     tar czvf $TARGET.tar.gz $TARGET
     mv $TARGET.tar.gz $DIR/dist

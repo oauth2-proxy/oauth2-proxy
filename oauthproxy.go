@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitly/google_auth_proxy/providers"
+	"github.com/bitly/oauth2_proxy/providers"
 )
 
 const robotsPath = "/robots.txt"

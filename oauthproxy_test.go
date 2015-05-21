@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bitly/google_auth_proxy/providers"
+	"github.com/bitly/oauth2_proxy/providers"
 	"github.com/bmizerany/assert"
 	"io/ioutil"
 	"log"

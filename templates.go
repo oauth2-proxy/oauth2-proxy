@@ -130,7 +130,7 @@ func getTemplates() *template.Template {
 	</div>
 	{{ end }}
 	<footer>
-	Secured with <a href="https://github.com/bitly/google_auth_proxy#google_auth_proxy">Google Auth Proxy</a> version {{.Version}}
+	Secured with <a href="https://github.com/bitly/oauth2_proxy#oauth2_proxy">OAuth2 Proxy</a> version {{.Version}}
 	</footer>
 </body>
 </html>
