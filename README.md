@@ -1,10 +1,10 @@
-oaut2_proxy
+oauth2_proxy
 =================
 
-(This project was formerly known as Google Auth Proxy)
+<small>(This project was renamed from Google Auth Proxy - May 2015)</small>
 
 A reverse proxy that provides authentication using Providers (Google, Github, and others)
-to validate individual accounts, or a whole email domain.
+to validate accounts by email, domain or group.
 
 [![Build Status](https://secure.travis-ci.org/bitly/oauth2_proxy.png?branch=master)](http://travis-ci.org/bitly/oauth2_proxy)
 
@@ -13,28 +13,29 @@ to validate individual accounts, or a whole email domain.
 
 ## Architecture
 
-```
-    _______       ______________       __________
-    |Nginx| ----> |oauth2_proxy| ----> |upstream| 
-    -------       --------------       ----------
-                        ||
-                        \/
-              [provider OAuth2 API]
-```
-
+![oauth2_proxy_arch](https://cloud.githubusercontent.com/assets/45028/7749664/35fef390-ff9d-11e4-8d51-21a7ba78f857.png)
 
 ## Installation
 
-1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) or build from `master` with `$ go get github.com/bitly/oauth2_proxy` which should put the binary in `$GOROOT/bin`
+1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v1.1.1`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 2. Register an OAuth Application with a Provider
-3. Configure Google Auth Proxy using config file, command line options, or environment variables
+3. Configure Oauth2 Proxy using config file, command line options, or environment variables
 4. Deploy behind a SSL endpoint (example provided for Nginx)
 
-## OAuth Configuration
+## OAuth Provider Configuration
 
-You will need to register an OAuth application with Google (or [another
-provider](#providers)), and configure it with Redirect URI(s) for the domain
-you intend to run `OAUTH2_PROXY` on.
+You will need to register an OAuth application with a Provider (Google, Github or another provider), and configure it with Redirect URI(s) for the domain you intend to run `oauth2_proxy` on.
+
+Valid providers are :
+
+* [Google](#google-auth-provider) *default*
+* [GitHub](#github-auth-provider)
+* [LinkedIn](#linkedin-auth-provider)
+* [MyUSA](#myusa-auth-provider)
+
+The provider can be selected using the `provider` configuration value.
+
+### Google Auth Provider
 
 For Google, the registration steps are:
 
@@ -49,6 +50,19 @@ For Google, the registration steps are:
    * Fill in the necessary fields and Save (this is _required_)
 5. Take note of the **Client ID** and **Client Secret**
 
+### GitHub Auth Provider
+
+1. Create a new project: https://github.com/settings/developers
+2. Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
+
+The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access.
+
+    -github-org="": restrict logins to members of this organisation
+    -github-team="": restrict logins to members of this team
+
+
+### LinkedIn Auth Provider
+
 For LinkedIn, the registration steps are:
 
 1. Create a new project: https://www.linkedin.com/secure/developer
@@ -58,13 +72,17 @@ For LinkedIn, the registration steps are:
 3. Fill in the remaining required fields and Save.
 4. Take note of the **Consumer Key / API Key** and **Consumer Secret / Secret Key**
 
+### MyUSA Auth Provider
+
+The [MyUSA](https://alpha.my.usa.gov) authentication service ([GitHub](https://github.com/18F/myusa))
+
 ## Configuration
 
 `oauth2_proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
 
 ### Config File
 
-An example [OAUTH2_PROXY.cfg](contrib/oauth2_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2_proxy.cfg`
+An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2_proxy.cfg`
 
 ### Command Line Options
 
@@ -168,23 +186,11 @@ OAuth2 Proxy Proxy logs requests to stdout in a format similar to Apache Combine
 <REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
 ```
 
-## <a name="providers"></a>Providers
-
-Authentication providers can be specified by the `providers` flag/config
-directive. Right now this includes:
-
-* `google` - (default) [Google](https://console.developers.google.com/project)
-* `myusa` - The [MyUSA](https://alpha.my.usa.gov) authentication service
-  ([GitHub](https://github.com/18F/myusa))
-* `linkedin` - The [LinkedIn](https://developer.linkedin.com/docs/signin-with-linkedin) Sign In service.
-* `github` - Via [Github][https://github.com/settings/developers] OAuth App. Also supports restricting via org and team.
-
-    -github-org="": restrict logins to members of this organisation
-    -github-team="": restrict logins to members of this team
 
 ## Adding a new Provider
 
 Follow the examples in the [`providers` package](providers/) to define a new
 `Provider` instance. Add a new `case` to
-[`providers.New()`](providers/providers.go) to allow the auth proxy to use the
+[`providers.New()`](providers/providers.go) to allow `oauth2_proxy` to use the
 new `Provider`.
+
