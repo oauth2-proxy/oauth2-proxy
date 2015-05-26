@@ -1,5 +1,5 @@
-## Google Auth Proxy Config File
-## https://github.com/bitly/google_auth_proxy
+## OAuth2 Proxy Config File
+## https://github.com/bitly/oauth2_proxy
 
 ## <addr>:<port> to listen on for HTTP clients
 # http_address = "127.0.0.1:4180"
@@ -22,15 +22,17 @@
 ## when disabled the upstream Host is used as the Host Header
 # pass_host_header = true 
 
-## Google Apps Domains to allow authentication for
+## Email Domains to allow authentication for (this whitelists any email on this domain)
 # google_apps_domains = [
 #     "yourcompany.com"
 # ]
 
-
-## The Google OAuth Client ID, Secret
+## The OAuth Client ID, Secret
 # client_id = "123456.apps.googleusercontent.com"
 # client_secret = ""
+
+## Pass OAuth Access token to upstream via "X-Forwarded-Access-Token"
+# pass_access_token = false
 
 ## Authenticated Email Addresses File (one email per line)
 # authenticated_emails_file = ""
@@ -44,19 +46,20 @@
 ## optional directory with custom sign_in.html and error.html
 # custom_templates_dir = ""
 
-
 ## Cookie Settings
 ## Secret - the seed string for secure cookies; should be 16, 24, or 32 bytes
-##          for use with an AES cipher when cookie_refresh or pass_access_code
+##          for use with an AES cipher when cookie_refresh or pass_access_token
 ##          is set
-## Domain - optional cookie domain to force cookies to (ie: .yourcompany.com)
-## Expire - expire timeframe for cookie
-## Refresh - refresh the cookie when less than this much time remains before
-##           expiration; should be less than cookie_expire; set to 0 to disable
+## Domain - (optional) cookie domain to force cookies to (ie: .yourcompany.com)
+## Expire - (duration) expire timeframe for cookie
+## Refresh - (duration) refresh the cookie when less than this much time remains before
+##           expiration; should be less than cookie_expire; set to 0 to disable.
+##           Refresh revalidated the OAuth token to ensure it is still valid. ie: 24h
+## Secure - secure cookies are only sent by the browser of a HTTPS connection (recommended)
+## HttpOnly - httponly cookies are not readable by javascript (recommended)
 # cookie_secret = ""
 # cookie_domain = ""
 # cookie_expire = "168h"
-# cookie_refresh = "144h"
+# cookie_refresh = ""
 # cookie_secure = true
 # cookie_httponly = true
-# pass_access_code = true
