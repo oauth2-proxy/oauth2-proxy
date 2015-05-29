@@ -12,6 +12,7 @@ import (
 
 // Configuration Options that can be set by Command Line Flag, or Config File
 type Options struct {
+	ProxyPrefix  string `flag:"proxy-prefix" cfg:"proxy-prefix"`
 	HttpAddress  string `flag:"http-address" cfg:"http_address"`
 	RedirectUrl  string `flag:"redirect-url" cfg:"redirect_url"`
 	ClientID     string `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
@@ -25,6 +26,7 @@ type Options struct {
 	DisplayHtpasswdForm     bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form"`
 	CustomTemplatesDir      string   `flag:"custom-templates-dir" cfg:"custom_templates_dir"`
 
+	CookieKey       string        `flag:"cookie-key" cfg:"cookie_key" env:"OAUTH2_PROXY_COOKIE_KEY"`
 	CookieSecret    string        `flag:"cookie-secret" cfg:"cookie_secret" env:"OAUTH2_PROXY_COOKIE_SECRET"`
 	CookieDomain    string        `flag:"cookie-domain" cfg:"cookie_domain" env:"OAUTH2_PROXY_COOKIE_DOMAIN"`
 	CookieExpire    time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"OAUTH2_PROXY_COOKIE_EXPIRE"`
@@ -59,8 +61,10 @@ type Options struct {
 
 func NewOptions() *Options {
 	return &Options{
+		ProxyPrefix:         "/oauth2",
 		HttpAddress:         "127.0.0.1:4180",
 		DisplayHtpasswdForm: true,
+		CookieKey:           "_oauthproxy",
 		CookieHttpsOnly:     true,
 		CookieSecure:        true,
 		CookieHttpOnly:      true,

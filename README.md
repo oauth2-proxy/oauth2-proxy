@@ -90,17 +90,20 @@ An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is i
 Usage of oauth2_proxy:
   -authenticated-emails-file="": authenticate against emails via file (one per line)
   -client-id="": the OAuth Client ID: ie: "123456.apps.googleusercontent.com"
-  -client-secret="": the Client Secret
+  -client-secret="": the OAuth Client Secret
   -config="": path to config file
   -cookie-domain="": an optional cookie domain to force cookies to (ie: .yourcompany.com)*
   -cookie-expire=168h0m0s: expire timeframe for cookie
   -cookie-httponly=true: set HttpOnly cookie flag
   -cookie-https-only=true: set secure (HTTPS) cookies (deprecated. use --cookie-secure setting)
+  -cookie-key="_oauth2proxy": the name of the cookie that the oauth_proxy creates
   -cookie-refresh=0: refresh the cookie when less than this much time remains before expiration; 0 to disable
   -cookie-secret="": the seed string for secure cookies
   -cookie-secure=true: set secure (HTTPS) cookie flag
   -custom-templates-dir="": path to custom html templates
   -display-htpasswd-form=true: display username / password login form if an htpasswd file is provided
+  -github-org="": restrict logins to members of this organisation
+  -github-team="": restrict logins to members of this team
   -google-apps-domain=: authenticate against the given Google apps domain (may be given multiple times)
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
@@ -110,6 +113,7 @@ Usage of oauth2_proxy:
   -pass-host-header=true: pass the request Host Header to upstream
   -profile-url="": Profile access endpoint
   -provider="": Oauth provider (defaults to Google)
+  -proxy-prefix="/oauth2": the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)
   -redeem-url="": Token redemption endpoint
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -request-logging=true: Log requests to stdout
