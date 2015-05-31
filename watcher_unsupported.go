@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-func WatchForUpdates(filename string, done <-chan bool, action func()) bool {
+func WatchForUpdates(filename string, done <-chan bool, action func()) {
 	log.Printf("file watching not implemented on this platform")
-	return false
+	go func() { <-done }()
 }

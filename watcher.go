@@ -30,7 +30,7 @@ func WaitForReplacement(filename string, op fsnotify.Op,
 	}
 }
 
-func WatchForUpdates(filename string, done <-chan bool, action func()) bool {
+func WatchForUpdates(filename string, done <-chan bool, action func()) {
 	filename = filepath.Clean(filename)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -65,5 +65,5 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) bool {
 	if err = watcher.Add(filename); err != nil {
 		log.Fatal("failed to add ", filename, " to watcher: ", err)
 	}
-	return true
+	log.Printf("watching %s for updates", filename)
 }
