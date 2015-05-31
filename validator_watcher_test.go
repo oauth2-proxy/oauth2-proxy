@@ -1,5 +1,4 @@
-// +build go1.3
-// +build !plan9,!solaris
+// +build go1.3,!plan9,!solaris
 
 package main
 

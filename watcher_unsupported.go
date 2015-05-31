@@ -1,5 +1,4 @@
-// +build go1.1
-// +build plan9,solaris
+// +build !go1.3 plan9 solaris
 
 package main
 
@@ -7,7 +6,7 @@ import (
 	"log"
 )
 
-func WatchForUpdates(filename string, action func()) bool {
+func WatchForUpdates(filename string, done <-chan bool, action func()) bool {
 	log.Printf("file watching not implemented on this platform")
 	return false
 }
