@@ -19,7 +19,7 @@ type Options struct {
 	ClientSecret string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
-	GoogleAppsDomains       []string `flag:"google-apps-domain" cfg:"google_apps_domains"`
+	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
 	GitHubOrg               string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam              string   `flag:"github-team" cfg:"github_team"`
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`

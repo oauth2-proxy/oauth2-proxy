@@ -55,7 +55,7 @@ For Google, the registration steps are:
 1. Create a new project: https://github.com/settings/developers
 2. Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
 
-The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access.
+The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
 
     -github-org="": restrict logins to members of this organisation
     -github-team="": restrict logins to members of this team
@@ -102,9 +102,9 @@ Usage of oauth2_proxy:
   -cookie-secure=true: set secure (HTTPS) cookie flag
   -custom-templates-dir="": path to custom html templates
   -display-htpasswd-form=true: display username / password login form if an htpasswd file is provided
+  -email-domain=: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
   -github-org="": restrict logins to members of this organisation
   -github-team="": restrict logins to members of this team
-  -google-apps-domain=: authenticate against the given Google apps domain (may be given multiple times)
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
   -login-url="": Authentication endpoint
@@ -163,7 +163,7 @@ The command line to run `oauth2_proxy` would look like this:
 
 ```bash
 ./oauth2_proxy \
-   --google-apps-domain="yourcompany.com"  \
+   --email-domain="yourcompany.com"  \
    --upstream=http://127.0.0.1:8080/ \
    --cookie-secret=... \
    --cookie-secure=true \

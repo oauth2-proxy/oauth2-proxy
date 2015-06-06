@@ -62,7 +62,12 @@ func newValidatorImpl(domains []string, usersFile string,
 	done <-chan bool, onUpdate func()) func(string) bool {
 	validUsers := NewUserMap(usersFile, done, onUpdate)
 
+	var allowAll bool
 	for i, domain := range domains {
+		if domain == "*" {
+			allowAll = true
+			continue
+		}
 		domains[i] = fmt.Sprintf("@%s", strings.ToLower(domain))
 	}
 
@@ -74,6 +79,9 @@ func newValidatorImpl(domains []string, usersFile string,
 		}
 		if !valid {
 			valid = validUsers.IsValid(email)
+		}
+		if allowAll {
+			valid = true
 		}
 		log.Printf("validating: is %s valid? %v", email, valid)
 		return valid
