@@ -20,7 +20,7 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
 
-	googleAppsDomains := StringArray{}
+	emailDomains := StringArray{}
 	upstreams := StringArray{}
 	skipAuthRegex := StringArray{}
 
@@ -35,7 +35,7 @@ func main() {
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
 	flagSet.Var(&skipAuthRegex, "skip-auth-regex", "bypass authentication for requests path's that match (may be given multiple times)")
 
-	flagSet.Var(&googleAppsDomains, "google-apps-domain", "authenticate against the given Google apps domain (may be given multiple times)")
+	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
@@ -89,14 +89,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	validator := NewValidator(opts.GoogleAppsDomains, opts.AuthenticatedEmailsFile)
+	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 	oauthproxy := NewOauthProxy(opts, validator)
 
-	if len(opts.GoogleAppsDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
-		if len(opts.GoogleAppsDomains) > 1 {
-			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.GoogleAppsDomains, ", "))
-		} else {
-			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using %v", opts.GoogleAppsDomains[0])
+	if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
+		if len(opts.EmailDomains) > 1 {
+			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.EmailDomains, ", "))
+		} else if opts.EmailDomains[0] != "*" {
+			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using %v", opts.EmailDomains[0])
 		}
 	}
 

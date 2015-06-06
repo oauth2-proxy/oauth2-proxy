@@ -22,8 +22,10 @@
 ## when disabled the upstream Host is used as the Host Header
 # pass_host_header = true 
 
-## Email Domains to allow authentication for (this whitelists any email on this domain)
-# google_apps_domains = [
+## Email Domains to allow authentication for (this authorizes any email on this domain)
+## for more granular authorization use `authenticated_emails_file`
+## To authorize any email addresses use "*"
+# email_domains = [
 #     "yourcompany.com"
 # ]
 

@@ -450,7 +450,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			value, err := buildCookieValue(
 				email, p.AesCipher, access_token)
 			if err != nil {
-				log.Printf(err.Error())
+				log.Printf("%s", err)
 			}
 			p.SetCookie(rw, req, value)
 			http.Redirect(rw, req, redirect, 302)
