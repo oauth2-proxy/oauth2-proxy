@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 func (p *ProviderData) Redeem(redirectUrl, code string) (body []byte, token string, err error) {
@@ -37,6 +39,10 @@ func (p *ProviderData) Redeem(redirectUrl, code string) (body []byte, token stri
 		return nil, "", err
 	}
 
+	if resp.StatusCode != 200 {
+		return body, "", fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemUrl.String(), body)
+	}
+
 	// blindly try json and x-www-form-urlencoded
 	var jsonResponse struct {
 		AccessToken string `json:"access_token"`
@@ -48,4 +54,17 @@ func (p *ProviderData) Redeem(redirectUrl, code string) (body []byte, token stri
 
 	v, err := url.ParseQuery(string(body))
 	return body, v.Get("access_token"), err
+}
+
+func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
+	params := url.Values{}
+	params.Add("redirect_uri", redirectURI)
+	params.Add("approval_prompt", "force")
+	params.Add("scope", p.Scope)
+	params.Add("client_id", p.ClientID)
+	params.Add("response_type", "code")
+	if strings.HasPrefix(finalRedirect, "/") {
+		params.Add("state", finalRedirect)
+	}
+	return fmt.Sprintf("%s?%s", p.LoginUrl, params.Encode())
 }

@@ -5,6 +5,7 @@ type Provider interface {
 	GetEmailAddress(body []byte, access_token string) (string, error)
 	Redeem(string, string) ([]byte, string, error)
 	ValidateToken(access_token string) bool
+	GetLoginURL(redirectURI, finalRedirect string) string
 }
 
 func New(provider string, p *ProviderData) Provider {
