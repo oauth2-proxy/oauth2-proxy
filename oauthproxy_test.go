@@ -193,9 +193,9 @@ func (pat_test *PassAccessTokenTest) getCallbackEndpoint() (http_code int,
 }
 
 func (pat_test *PassAccessTokenTest) getRootEndpoint(cookie string) (http_code int, access_token string) {
-	cookie_key := pat_test.proxy.CookieKey
+	cookieName := pat_test.proxy.CookieName
 	var value string
-	key_prefix := cookie_key + "="
+	key_prefix := cookieName + "="
 
 	for _, field := range strings.Split(cookie, "; ") {
 		value = strings.TrimPrefix(field, key_prefix)
@@ -214,7 +214,7 @@ func (pat_test *PassAccessTokenTest) getRootEndpoint(cookie string) (http_code i
 		return 0, ""
 	}
 	req.AddCookie(&http.Cookie{
-		Name:     cookie_key,
+		Name:     cookieName,
 		Value:    value,
 		Path:     "/",
 		Expires:  time.Now().Add(time.Duration(24)),

@@ -54,7 +54,7 @@
 # custom_templates_dir = ""
 
 ## Cookie Settings
-## Key    - the cookie name
+## Name    - the cookie name
 ## Secret - the seed string for secure cookies; should be 16, 24, or 32 bytes
 ##          for use with an AES cipher when cookie_refresh or pass_access_token
 ##          is set
@@ -65,7 +65,7 @@
 ##           Refresh revalidated the OAuth token to ensure it is still valid. ie: 24h
 ## Secure - secure cookies are only sent by the browser of a HTTPS connection (recommended)
 ## HttpOnly - httponly cookies are not readable by javascript (recommended)
-# cookie_key = "_oauth2proxy"
+# cookie_name = "_oauth2_proxy"
 # cookie_secret = ""
 # cookie_domain = ""
 # cookie_expire = "168h"

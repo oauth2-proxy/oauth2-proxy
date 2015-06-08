@@ -3,10 +3,11 @@ go:
   - 1.3.3
   - 1.4.2
 script:
-  - curl -s https://raw.githubusercontent.com/pote/gpm/v1.3.1/bin/gpm > gpm
+  - curl -s https://raw.githubusercontent.com/pote/gpm/v1.3.2/bin/gpm > gpm
   - chmod +x gpm
   - ./gpm install
   - ./test.sh
+sudo: false
 notifications:
   email: false
 
