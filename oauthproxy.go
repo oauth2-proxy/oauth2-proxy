@@ -104,7 +104,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	redirectUrl := opts.redirectUrl
 	redirectUrl.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 
-	log.Printf("OauthProxy configured for %s", opts.ClientID)
+	log.Printf("OauthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
 	domain := opts.CookieDomain
 	if domain == "" {
 		domain = "<default>"
@@ -114,7 +114,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		opts.CookieSecure = opts.CookieHttpsOnly
 	}
 
-	log.Printf("Cookie settings: secure (https):%v httponly:%v expiry:%s domain:%s", opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain)
+	log.Printf("Cookie settings: name:%s secure (https):%v httponly:%v expiry:%s domain:%s", opts.CookieKey, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain)
 
 	var aes_cipher cipher.Block
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {

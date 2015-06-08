@@ -9,18 +9,18 @@ to validate accounts by email, domain or group.
 [![Build Status](https://secure.travis-ci.org/bitly/oauth2_proxy.png?branch=master)](http://travis-ci.org/bitly/oauth2_proxy)
 
 
-![sign_in_page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
+![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
 
 ## Architecture
 
-![oauth2_proxy_arch](https://cloud.githubusercontent.com/assets/45028/7749664/35fef390-ff9d-11e4-8d51-21a7ba78f857.png)
+![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
 
 ## Installation
 
 1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v1.1.1`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
-2. Register an OAuth Application with a Provider
-3. Configure Oauth2 Proxy using config file, command line options, or environment variables
-4. Deploy behind a SSL endpoint (example provided for Nginx)
+2. Select a Provider and Register an OAuth Application with a Provider
+3. Configure OAuth2 Proxy using config file, command line options, or environment variables
+4. Configure SSL or Deploy behind a SSL endpoint (example provided for Nginx)
 
 ## OAuth Provider Configuration
 
@@ -76,6 +76,10 @@ For LinkedIn, the registration steps are:
 
 The [MyUSA](https://alpha.my.usa.gov) authentication service ([GitHub](https://github.com/18F/myusa))
 
+## Email Authentication
+
+To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresse use `--email-domain=*`.
+
 ## Configuration
 
 `oauth2_proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
@@ -107,18 +111,21 @@ Usage of oauth2_proxy:
   -github-team="": restrict logins to members of this team
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
+  -https-address=":443": <addr>:<port> to listen on for HTTPS clients
   -login-url="": Authentication endpoint
   -pass-access-token=false: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
   -pass-basic-auth=true: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
   -pass-host-header=true: pass the request Host Header to upstream
   -profile-url="": Profile access endpoint
-  -provider="": Oauth provider (defaults to Google)
+  -provider="google": OAuth provider
   -proxy-prefix="/oauth2": the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)
   -redeem-url="": Token redemption endpoint
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -request-logging=true: Log requests to stdout
   -scope="": Oauth scope specification
   -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
+  -tls-cert="": path to certificate file
+  -tls-key="": path to private key file
   -upstream=: the http url(s) of the upstream endpoint. If multiple, routing is based on path
   -validate-url="": Access token validation endpoint
   -version=false: print version string
@@ -130,10 +137,32 @@ See below for provider specific options
 
 The environment variables `OAUTH2_PROXY_CLIENT_ID`, `OAUTH2_PROXY_CLIENT_SECRET`, `OAUTH2_PROXY_COOKIE_SECRET`, `OAUTH2_PROXY_COOKIE_DOMAIN` and `OAUTH2_PROXY_COOKIE_EXPIRE` can be used in place of the corresponding command-line arguments.
 
-### Example Nginx Configuration
+## SSL Configuration
 
-This example has a [Nginx](http://nginx.org/) SSL endpoint proxying to `oauth2_proxy` on port `4180`. 
-`oauth2_proxy` then authenticates requests for an upstream application running on port `8080`. The external 
+There are two recommended configurations. 
+
+1) Configure SSL Terminiation with OAuth2 Proxy by providing a `--tls-cert=/path/to/cert.pem` and `--tls-key=/path/to/cert.key`.
+
+The command line to run `oauth2_proxy` in this configuration would look like this:
+
+```bash
+./oauth2_proxy \
+   --email-domain="yourcompany.com"  \
+   --upstream=http://127.0.0.1:8080/ \
+   --tls-cert=/path/to/cert.pem \
+   --tls-key=/path/to/cert.key \
+   --cookie-secret=... \
+   --cookie-secure=true \
+   --provider=... \
+   --client-id=... \
+   --client-secret=...
+```
+
+
+2) Configure SSL Termination with [Nginx](http://nginx.org/) (example config below) or Amazon ELB, or ....
+
+Nginx will listen on port `443` and handle SSL connections while proxying to `oauth2_proxy` on port `4180`. 
+`oauth2_proxy` which will then authenticate requests for an upstream application. The external 
 endpoint for this example would be `https://internal.yourcompany.com/`.
 
 An example Nginx config follows. Note the use of `Strict-Transport-Security` header to pin requests to SSL 
@@ -159,7 +188,7 @@ server {
 }
 ```
 
-The command line to run `oauth2_proxy` would look like this:
+The command line to run `oauth2_proxy` in this configuration would look like this:
 
 ```bash
 ./oauth2_proxy \
@@ -167,6 +196,7 @@ The command line to run `oauth2_proxy` would look like this:
    --upstream=http://127.0.0.1:8080/ \
    --cookie-secret=... \
    --cookie-secure=true \
+   --provider=... \
    --client-id=... \
    --client-secret=...
 ```
@@ -174,7 +204,7 @@ The command line to run `oauth2_proxy` would look like this:
 
 ## Endpoint Documentation
 
-OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated.
+OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated. The `/oauth2` prefix can be changed with the `--proxy-prefix` config variable.
 
 * /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
 * /ping - returns an 200 OK response

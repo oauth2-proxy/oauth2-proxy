@@ -4,9 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
-	"net/http"
-	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -28,6 +25,9 @@ func main() {
 	showVersion := flagSet.Bool("version", false, "print version string")
 
 	flagSet.String("http-address", "127.0.0.1:4180", "[http://]<addr>:<port> or unix://<path> to listen on for HTTP clients")
+	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
+	flagSet.String("tls-cert", "", "path to certificate file")
+	flagSet.String("tls-key", "", "path to private key file")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
 	flagSet.Var(&upstreams, "upstream", "the http url(s) of the upstream endpoint. If multiple, routing is based on path")
 	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
@@ -57,7 +57,7 @@ func main() {
 
 	flagSet.Bool("request-logging", true, "Log requests to stdout")
 
-	flagSet.String("provider", "", "Oauth provider (defaults to Google)")
+	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -109,31 +109,9 @@ func main() {
 		}
 	}
 
-	u, err := url.Parse(opts.HttpAddress)
-	if err != nil {
-		log.Fatalf("FATAL: could not parse %#v: %v", opts.HttpAddress, err)
+	s := &Server{
+		Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging),
+		Opts:    opts,
 	}
-
-	var networkType string
-	switch u.Scheme {
-	case "", "http":
-		networkType = "tcp"
-	default:
-		networkType = u.Scheme
-	}
-	listenAddr := strings.TrimPrefix(u.String(), u.Scheme+"://")
-
-	listener, err := net.Listen(networkType, listenAddr)
-	if err != nil {
-		log.Fatalf("FATAL: listen (%s, %s) failed - %s", networkType, listenAddr, err)
-	}
-	log.Printf("listening on %s", listenAddr)
-
-	server := &http.Server{Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging)}
-	err = server.Serve(listener)
-	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		log.Printf("ERROR: http.Serve() - %s", err)
-	}
-
-	log.Printf("HTTP: closing %s", listener.Addr())
+	s.ListenAndServe()
 }

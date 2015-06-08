@@ -1,8 +1,13 @@
 ## OAuth2 Proxy Config File
 ## https://github.com/bitly/oauth2_proxy
 
-## <addr>:<port> to listen on for HTTP clients
+## <addr>:<port> to listen on for HTTP/HTTPS clients
 # http_address = "127.0.0.1:4180"
+# https_address = ":443"
+
+## TLS Settings
+# tls_cert_file = ""
+# tls_key_file = ""
 
 ## the OAuth Redirect URL.
 # defaults to the "https://" + requested host header + "/oauth2/callback"
