@@ -6,8 +6,7 @@ import (
 	"net/http"
 )
 
-func validateToken(p Provider, access_token string,
-	header http.Header) bool {
+func validateToken(p Provider, access_token string, header http.Header) bool {
 	if access_token == "" || p.Data().ValidateUrl == nil {
 		return false
 	}

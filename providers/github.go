@@ -2,6 +2,7 @@ package providers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -58,10 +59,11 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 
 	params := url.Values{
 		"access_token": {accessToken},
-		"limit": {"100"},
+		"limit":        {"100"},
 	}
 
-	req, _ := http.NewRequest("GET", "https://api.github.com/user/orgs?"+params.Encode(), nil)
+	endpoint := "https://api.github.com/user/orgs?" + params.Encode()
+	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Set("Accept", "application/vnd.github.moondragon+json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -72,6 +74,9 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 	resp.Body.Close()
 	if err != nil {
 		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, fmt.Errorf("got %d from %q %s", resp.StatusCode, endpoint, body)
 	}
 
 	if err := json.Unmarshal(body, &orgs); err != nil {
@@ -99,10 +104,11 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 
 	params := url.Values{
 		"access_token": {accessToken},
-		"limit": {"100"},
+		"limit":        {"100"},
 	}
 
-	req, _ := http.NewRequest("GET", "https://api.github.com/user/teams?"+params.Encode(), nil)
+	endpoint := "https://api.github.com/user/teams?" + params.Encode()
+	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Set("Accept", "application/vnd.github.moondragon+json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -114,9 +120,12 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if resp.StatusCode != 200 {
+		return false, fmt.Errorf("got %d from %q %s", resp.StatusCode, endpoint, body)
+	}
 
 	if err := json.Unmarshal(body, &teams); err != nil {
-		return false, err
+		return false, fmt.Errorf("%s unmarshaling %s", err, body)
 	}
 
 	for _, team := range teams {
@@ -136,7 +145,6 @@ func (p *GitHubProvider) GetEmailAddress(body []byte, access_token string) (stri
 		Primary bool   `json:"primary"`
 	}
 
-
 	// if we require an Org or Team, check that first
 	if p.Org != "" {
 		if p.Team != "" {
@@ -153,7 +161,8 @@ func (p *GitHubProvider) GetEmailAddress(body []byte, access_token string) (stri
 	params := url.Values{
 		"access_token": {access_token},
 	}
-	resp, err := http.DefaultClient.Get("https://api.github.com/user/emails?" + params.Encode())
+	endpoint := "https://api.github.com/user/emails?" + params.Encode()
+	resp, err := http.DefaultClient.Get(endpoint)
 	if err != nil {
 		return "", err
 	}
@@ -162,9 +171,12 @@ func (p *GitHubProvider) GetEmailAddress(body []byte, access_token string) (stri
 	if err != nil {
 		return "", err
 	}
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("got %d from %q %s", resp.StatusCode, endpoint, body)
+	}
 
 	if err := json.Unmarshal(body, &emails); err != nil {
-		return "", err
+		return "", fmt.Errorf("%s unmarshaling %s", err, body)
 	}
 
 	for _, email := range emails {

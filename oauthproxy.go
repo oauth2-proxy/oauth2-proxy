@@ -37,11 +37,6 @@ type OauthProxy struct {
 
 	redirectUrl         *url.URL // the url to receive requests at
 	provider            providers.Provider
-	oauthLoginUrl       *url.URL // to redirect the user to
-	oauthValidateUrl    *url.URL // to validate the access token
-	oauthScope          string
-	clientID            string
-	clientSecret        string
 	ProxyPrefix         string
 	SignInMessage       string
 	HtpasswdFile        *HtpasswdFile
@@ -147,25 +142,20 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		OauthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
 		OauthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 
-		clientID:         opts.ClientID,
-		clientSecret:     opts.ClientSecret,
-		ProxyPrefix:      opts.ProxyPrefix,
-		oauthScope:       opts.provider.Data().Scope,
-		provider:         opts.provider,
-		oauthLoginUrl:    opts.provider.Data().LoginUrl,
-		oauthValidateUrl: opts.provider.Data().ValidateUrl,
-		serveMux:         serveMux,
-		redirectUrl:      redirectUrl,
-		skipAuthRegex:    opts.SkipAuthRegex,
-		compiledRegex:    opts.CompiledRegex,
-		PassBasicAuth:    opts.PassBasicAuth,
-		PassAccessToken:  opts.PassAccessToken,
-		AesCipher:        aes_cipher,
-		templates:        loadTemplates(opts.CustomTemplatesDir),
+		ProxyPrefix:     opts.ProxyPrefix,
+		provider:        opts.provider,
+		serveMux:        serveMux,
+		redirectUrl:     redirectUrl,
+		skipAuthRegex:   opts.SkipAuthRegex,
+		compiledRegex:   opts.CompiledRegex,
+		PassBasicAuth:   opts.PassBasicAuth,
+		PassAccessToken: opts.PassAccessToken,
+		AesCipher:       aes_cipher,
+		templates:       loadTemplates(opts.CustomTemplatesDir),
 	}
 }
 
-func (p *OauthProxy) GetRedirectUrl(host string) string {
+func (p *OauthProxy) GetRedirectURI(host string) string {
 	// default to the request Host if not set
 	if p.redirectUrl.Host != "" {
 		return p.redirectUrl.String()
@@ -183,19 +173,6 @@ func (p *OauthProxy) GetRedirectUrl(host string) string {
 	return u.String()
 }
 
-func (p *OauthProxy) GetLoginURL(host, redirect string) string {
-	params := url.Values{}
-	params.Add("redirect_uri", p.GetRedirectUrl(host))
-	params.Add("approval_prompt", "force")
-	params.Add("scope", p.oauthScope)
-	params.Add("client_id", p.clientID)
-	params.Add("response_type", "code")
-	if strings.HasPrefix(redirect, "/") {
-		params.Add("state", redirect)
-	}
-	return fmt.Sprintf("%s?%s", p.oauthLoginUrl, params.Encode())
-}
-
 func (p *OauthProxy) displayCustomLoginForm() bool {
 	return p.HtpasswdFile != nil && p.DisplayHtpasswdForm
 }
@@ -204,7 +181,7 @@ func (p *OauthProxy) redeemCode(host, code string) (string, string, error) {
 	if code == "" {
 		return "", "", errors.New("missing code")
 	}
-	redirectUri := p.GetRedirectUrl(host)
+	redirectUri := p.GetRedirectURI(host)
 	body, access_token, err := p.provider.Redeem(redirectUri, code)
 	if err != nil {
 		return "", "", err
@@ -416,7 +393,8 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, 500, "Internal Error", err.Error())
 			return
 		}
-		http.Redirect(rw, req, p.GetLoginURL(req.Host, redirect), 302)
+		redirectURI := p.GetRedirectURI(req.Host)
+		http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, redirect), 302)
 		return
 	}
 	if req.URL.Path == p.OauthCallbackPath {

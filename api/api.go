@@ -1,9 +1,8 @@
 package api
 
 import (
-	"errors"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/bitly/go-simplejson"
@@ -20,8 +19,7 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		log.Printf("got response code %d - %s", resp.StatusCode, body)
-		return nil, errors.New("api request returned non 200 status code")
+		return nil, fmt.Errorf("got %d %s", resp.StatusCode, body)
 	}
 	data, err := simplejson.NewJson(body)
 	if err != nil {
@@ -30,19 +28,12 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 	return data, nil
 }
 
-func RequestUnparsedResponse(url string, header http.Header) (
-	response *http.Response, err error) {
+func RequestUnparsedResponse(url string, header http.Header) (resp *http.Response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, errors.New("failed building request for " +
-			url + ": " + err.Error())
+		return nil, err
 	}
 	req.Header = header
 
-	httpclient := &http.Client{}
-	if response, err = httpclient.Do(req); err != nil {
-		return nil, errors.New("request failed for " +
-			url + ": " + err.Error())
-	}
-	return
+	return http.DefaultClient.Do(req)
 }
