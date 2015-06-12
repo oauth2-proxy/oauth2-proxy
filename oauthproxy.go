@@ -21,7 +21,7 @@ import (
 
 type OauthProxy struct {
 	CookieSeed     string
-	CookieKey      string
+	CookieName     string
 	CookieDomain   string
 	CookieSecure   bool
 	CookieHttpOnly bool
@@ -109,12 +109,8 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	if domain == "" {
 		domain = "<default>"
 	}
-	if !opts.CookieHttpsOnly {
-		log.Printf("Warning: cookie-https-only setting is deprecated and will be removed in a future version. use cookie-secure")
-		opts.CookieSecure = opts.CookieHttpsOnly
-	}
 
-	log.Printf("Cookie settings: name:%s secure (https):%v httponly:%v expiry:%s domain:%s", opts.CookieKey, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain)
+	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain)
 
 	var aes_cipher cipher.Block
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
@@ -127,7 +123,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	}
 
 	return &OauthProxy{
-		CookieKey:      opts.CookieKey,
+		CookieName:     opts.CookieName,
 		CookieSeed:     opts.CookieSecret,
 		CookieDomain:   opts.CookieDomain,
 		CookieSecure:   opts.CookieSecure,
@@ -208,11 +204,11 @@ func (p *OauthProxy) MakeCookie(req *http.Request, value string, expiration time
 	}
 
 	if value != "" {
-		value = signedCookieValue(p.CookieSeed, p.CookieKey, value)
+		value = signedCookieValue(p.CookieSeed, p.CookieName, value)
 	}
 
 	return &http.Cookie{
-		Name:     p.CookieKey,
+		Name:     p.CookieName,
 		Value:    value,
 		Path:     "/",
 		Domain:   domain,
@@ -233,7 +229,7 @@ func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val st
 func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (email, user, access_token string, ok bool) {
 	var value string
 	var timestamp time.Time
-	cookie, err := req.Cookie(p.CookieKey)
+	cookie, err := req.Cookie(p.CookieName)
 	if err == nil {
 		value, timestamp, ok = validateCookie(cookie, p.CookieSeed)
 		if ok {

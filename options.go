@@ -29,14 +29,13 @@ type Options struct {
 	DisplayHtpasswdForm     bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form"`
 	CustomTemplatesDir      string   `flag:"custom-templates-dir" cfg:"custom_templates_dir"`
 
-	CookieKey       string        `flag:"cookie-key" cfg:"cookie_key" env:"OAUTH2_PROXY_COOKIE_KEY"`
-	CookieSecret    string        `flag:"cookie-secret" cfg:"cookie_secret" env:"OAUTH2_PROXY_COOKIE_SECRET"`
-	CookieDomain    string        `flag:"cookie-domain" cfg:"cookie_domain" env:"OAUTH2_PROXY_COOKIE_DOMAIN"`
-	CookieExpire    time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"OAUTH2_PROXY_COOKIE_EXPIRE"`
-	CookieRefresh   time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
-	CookieHttpsOnly bool          `flag:"cookie-https-only" cfg:"cookie_https_only"` // deprecated use cookie-secure
-	CookieSecure    bool          `flag:"cookie-secure" cfg:"cookie_secure"`
-	CookieHttpOnly  bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
+	CookieName     string        `flag:"cookie-name" cfg:"cookie_name" env:"OAUTH2_PROXY_COOKIE_NAME"`
+	CookieSecret   string        `flag:"cookie-secret" cfg:"cookie_secret" env:"OAUTH2_PROXY_COOKIE_SECRET"`
+	CookieDomain   string        `flag:"cookie-domain" cfg:"cookie_domain" env:"OAUTH2_PROXY_COOKIE_DOMAIN"`
+	CookieExpire   time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"OAUTH2_PROXY_COOKIE_EXPIRE"`
+	CookieRefresh  time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
+	CookieSecure   bool          `flag:"cookie-secure" cfg:"cookie_secure"`
+	CookieHttpOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
 
 	Upstreams       []string `flag:"upstream" cfg:"upstreams"`
 	SkipAuthRegex   []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
@@ -68,8 +67,7 @@ func NewOptions() *Options {
 		HttpAddress:         "127.0.0.1:4180",
 		HttpsAddress:        ":443",
 		DisplayHtpasswdForm: true,
-		CookieKey:           "_oauthproxy",
-		CookieHttpsOnly:     true,
+		CookieName:          "_oauth2_proxy",
 		CookieSecure:        true,
 		CookieHttpOnly:      true,
 		CookieExpire:        time.Duration(168) * time.Hour,
