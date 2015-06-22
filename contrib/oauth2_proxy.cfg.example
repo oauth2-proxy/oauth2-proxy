@@ -54,16 +54,17 @@
 # custom_templates_dir = ""
 
 ## Cookie Settings
-## Name    - the cookie name
-## Secret - the seed string for secure cookies; should be 16, 24, or 32 bytes
-##          for use with an AES cipher when cookie_refresh or pass_access_token
-##          is set
-## Domain - (optional) cookie domain to force cookies to (ie: .yourcompany.com)
-## Expire - (duration) expire timeframe for cookie
-## Refresh - (duration) refresh the cookie when less than this much time remains before
-##           expiration; should be less than cookie_expire; set to 0 to disable.
-##           Refresh revalidated the OAuth token to ensure it is still valid. ie: 24h
-## Secure - secure cookies are only sent by the browser of a HTTPS connection (recommended)
+## Name     - the cookie name
+## Secret   - the seed string for secure cookies; should be 16, 24, or 32 bytes
+##            for use with an AES cipher when cookie_refresh or pass_access_token
+##            is set
+## Domain   - (optional) cookie domain to force cookies to (ie: .yourcompany.com)
+## Expire   - (duration) expire timeframe for cookie
+## Refresh  - (duration) refresh the cookie when duration has elapsed after cookie was initially set.
+##            Should be less than cookie_expire; set to 0 to disable.
+##            On refresh, OAuth token is re-validated. 
+##            (ie: 1h means tokens are refreshed on request 1hr+ after it was set)
+## Secure   - secure cookies are only sent by the browser of a HTTPS connection (recommended)
 ## HttpOnly - httponly cookies are not readable by javascript (recommended)
 # cookie_name = "_oauth2_proxy"
 # cookie_secret = ""

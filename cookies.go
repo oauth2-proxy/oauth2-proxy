@@ -15,29 +15,39 @@ import (
 	"time"
 )
 
-func validateCookie(cookie *http.Cookie, seed string) (string, time.Time, bool) {
+func validateCookie(cookie *http.Cookie, seed string, expiration time.Duration) (value string, t time.Time, ok bool) {
 	// value, timestamp, sig
 	parts := strings.Split(cookie.Value, "|")
 	if len(parts) != 3 {
-		return "", time.Unix(0, 0), false
+		return
 	}
 	sig := cookieSignature(seed, cookie.Name, parts[0], parts[1])
 	if checkHmac(parts[2], sig) {
 		ts, err := strconv.Atoi(parts[1])
-		if err == nil && int64(ts) > time.Now().Add(time.Duration(24)*7*time.Hour*-1).Unix() {
+		if err != nil {
+			return
+		}
+		// The expiration timestamp set when the cookie was created
+		// isn't sent back by the browser. Hence, we check whether the
+		// creation timestamp stored in the cookie falls within the
+		// window defined by (Now()-expiration, Now()].
+		t = time.Unix(int64(ts), 0)
+		if t.After(time.Now().Add(expiration*-1)) && t.Before(time.Now().Add(time.Minute*5)) {
 			// it's a valid cookie. now get the contents
 			rawValue, err := base64.URLEncoding.DecodeString(parts[0])
 			if err == nil {
-				return string(rawValue), time.Unix(int64(ts), 0), true
+				value = string(rawValue)
+				ok = true
+				return
 			}
 		}
 	}
-	return "", time.Unix(0, 0), false
+	return
 }
 
-func signedCookieValue(seed string, key string, value string) string {
+func signedCookieValue(seed string, key string, value string, now time.Time) string {
 	encodedValue := base64.URLEncoding.EncodeToString([]byte(value))
-	timeStr := fmt.Sprintf("%d", time.Now().Unix())
+	timeStr := fmt.Sprintf("%d", now.Unix())
 	sig := cookieSignature(seed, key, encodedValue, timeStr)
 	cookieVal := fmt.Sprintf("%s|%s|%s", encodedValue, timeStr, sig)
 	return cookieVal
