@@ -50,6 +50,8 @@ For Google, the registration steps are:
    * Fill in the necessary fields and Save (this is _required_)
 5. Take note of the **Client ID** and **Client Secret**
 
+It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the account is still authorized.
+
 ### GitHub Auth Provider
 
 1. Create a new project: https://github.com/settings/developers
@@ -100,7 +102,7 @@ Usage of oauth2_proxy:
   -cookie-expire=168h0m0s: expire timeframe for cookie
   -cookie-httponly=true: set HttpOnly cookie flag
   -cookie-key="_oauth2_proxy": the name of the cookie that the oauth_proxy creates
-  -cookie-refresh=0: refresh the cookie when less than this much time remains before expiration; 0 to disable
+  -cookie-refresh=0: refresh the cookie after this duration; 0 to disable
   -cookie-secret="": the seed string for secure cookies
   -cookie-secure=true: set secure (HTTPS) cookie flag
   -custom-templates-dir="": path to custom html templates
