@@ -83,7 +83,6 @@ func newValidatorImpl(domains []string, usersFile string,
 		if allowAll {
 			valid = true
 		}
-		log.Printf("validating: is %s valid? %v", email, valid)
 		return valid
 	}
 	return validator

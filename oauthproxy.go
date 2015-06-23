@@ -246,7 +246,13 @@ func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (e
 	} else if ok && p.CookieRefresh != time.Duration(0) {
 		refresh := timestamp.Add(p.CookieRefresh)
 		if refresh.Before(time.Now()) {
-			ok = p.Validator(email) && p.provider.ValidateToken(access_token)
+			log.Printf("refreshing %s old session for %s (refresh after %s)", time.Now().Sub(timestamp), email, p.CookieRefresh)
+			ok = p.Validator(email)
+			log.Printf("re-validating %s valid:%v", email, ok)
+			if ok {
+				ok = p.provider.ValidateToken(access_token)
+				log.Printf("re-validating access token. valid:%v", ok)
+			}
 			if ok {
 				p.SetCookie(rw, req, value)
 			}
@@ -432,6 +438,7 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			http.Redirect(rw, req, redirect, 302)
 			return
 		} else {
+			log.Printf("validating: %s is unauthorized")
 			p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 			return
 		}

@@ -96,9 +96,9 @@ func TestDefaultProviderApiSettings(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, o.Validate())
 	p := o.provider.Data()
-	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth",
+	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth?access_type=offline",
 		p.LoginUrl.String())
-	assert.Equal(t, "https://accounts.google.com/o/oauth2/token",
+	assert.Equal(t, "https://www.googleapis.com/oauth2/v3/token",
 		p.RedeemUrl.String())
 	assert.Equal(t, "", p.ProfileUrl.String())
 	assert.Equal(t, "profile email", p.Scope)
