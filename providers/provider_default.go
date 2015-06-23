@@ -56,15 +56,19 @@ func (p *ProviderData) Redeem(redirectUrl, code string) (body []byte, token stri
 	return body, v.Get("access_token"), err
 }
 
+// GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
-	params := url.Values{}
-	params.Add("redirect_uri", redirectURI)
-	params.Add("approval_prompt", "force")
+	var a url.URL
+	a = *p.LoginUrl
+	params, _ := url.ParseQuery(a.RawQuery)
+	params.Set("redirect_uri", redirectURI)
+	params.Set("approval_prompt", "force")
 	params.Add("scope", p.Scope)
-	params.Add("client_id", p.ClientID)
-	params.Add("response_type", "code")
+	params.Set("client_id", p.ClientID)
+	params.Set("response_type", "code")
 	if strings.HasPrefix(finalRedirect, "/") {
 		params.Add("state", finalRedirect)
 	}
-	return fmt.Sprintf("%s?%s", p.LoginUrl, params.Encode())
+	a.RawQuery = params.Encode()
+	return a.String()
 }
