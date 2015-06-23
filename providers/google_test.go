@@ -3,10 +3,21 @@ package providers
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/bmizerany/assert"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/bmizerany/assert"
 )
+
+func newRedeemServer(body []byte) (*url.URL, *httptest.Server) {
+	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write(body)
+	}))
+	u, _ := url.Parse(s.URL)
+	return u, s
+}
 
 func newGoogleProvider() *GoogleProvider {
 	return NewGoogleProvider(
@@ -66,63 +77,88 @@ func TestGoogleProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestGoogleProviderGetEmailAddress(t *testing.T) {
-	p := newGoogleProvider()
-	body, err := json.Marshal(
-		struct {
-			IdToken string `json:"id_token"`
-		}{
-			IdToken: "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": "michael.bland@gsa.gov"}`)),
-		},
-	)
-	assert.Equal(t, nil, err)
-	email, err := p.GetEmailAddress(body, "ignored access_token")
-	assert.Equal(t, "michael.bland@gsa.gov", email)
-	assert.Equal(t, nil, err)
+type redeemResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int64  `json:"expires_in"`
+	IdToken      string `json:"id_token"`
 }
 
+func TestGoogleProviderGetEmailAddress(t *testing.T) {
+	p := newGoogleProvider()
+	body, err := json.Marshal(redeemResponse{
+		AccessToken:  "a1234",
+		ExpiresIn:    10,
+		RefreshToken: "refresh12345",
+		IdToken:      "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": "michael.bland@gsa.gov", "email_verified":true}`)),
+	})
+	assert.Equal(t, nil, err)
+	var server *httptest.Server
+	p.RedeemUrl, server = newRedeemServer(body)
+	defer server.Close()
+
+	session, err := p.Redeem("http://redirect/", "code1234")
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "a1234", session.AccessToken)
+	assert.Equal(t, "refresh12345", session.RefreshToken)
+}
+
+//
 func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	p := newGoogleProvider()
-	body, err := json.Marshal(
-		struct {
-			IdToken string `json:"id_token"`
-		}{
-			IdToken: "ignored prefix." + `{"email": "michael.bland@gsa.gov"}`,
-		},
-	)
+	body, err := json.Marshal(redeemResponse{
+		AccessToken: "a1234",
+		IdToken:     "ignored prefix." + `{"email": "michael.bland@gsa.gov"}`,
+	})
 	assert.Equal(t, nil, err)
-	email, err := p.GetEmailAddress(body, "ignored access_token")
-	assert.Equal(t, "", email)
+	var server *httptest.Server
+	p.RedeemUrl, server = newRedeemServer(body)
+	defer server.Close()
+
+	session, err := p.Redeem("http://redirect/", "code1234")
 	assert.NotEqual(t, nil, err)
+	if session != nil {
+		t.Errorf("expect nill session %#v", session)
+	}
 }
 
 func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
 	p := newGoogleProvider()
 
-	body, err := json.Marshal(
-		struct {
-			IdToken string `json:"id_token"`
-		}{
-			IdToken: "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": michael.bland@gsa.gov}`)),
-		},
-	)
+	body, err := json.Marshal(redeemResponse{
+		AccessToken: "a1234",
+		IdToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": michael.bland@gsa.gov}`)),
+	})
 	assert.Equal(t, nil, err)
-	email, err := p.GetEmailAddress(body, "ignored access_token")
-	assert.Equal(t, "", email)
+	var server *httptest.Server
+	p.RedeemUrl, server = newRedeemServer(body)
+	defer server.Close()
+
+	session, err := p.Redeem("http://redirect/", "code1234")
 	assert.NotEqual(t, nil, err)
+	if session != nil {
+		t.Errorf("expect nill session %#v", session)
+	}
+
 }
 
 func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 	p := newGoogleProvider()
-	body, err := json.Marshal(
-		struct {
-			IdToken string `json:"id_token"`
-		}{
-			IdToken: "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"not_email": "missing"}`)),
-		},
-	)
+	body, err := json.Marshal(redeemResponse{
+		AccessToken: "a1234",
+		IdToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"not_email": "missing"}`)),
+	})
 	assert.Equal(t, nil, err)
-	email, err := p.GetEmailAddress(body, "ignored access_token")
-	assert.Equal(t, "", email)
+	var server *httptest.Server
+	p.RedeemUrl, server = newRedeemServer(body)
+	defer server.Close()
+
+	session, err := p.Redeem("http://redirect/", "code1234")
 	assert.NotEqual(t, nil, err)
+	if session != nil {
+		t.Errorf("expect nill session %#v", session)
+	}
+
 }

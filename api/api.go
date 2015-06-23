@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/bitly/go-simplejson"
@@ -11,10 +12,12 @@ import (
 func Request(req *http.Request) (*simplejson.Json, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		log.Printf("%s %s %s", req.Method, req.URL, err)
 		return nil, err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
+	log.Printf("%d %s %s %s", resp.StatusCode, req.Method, req.URL, body)
 	if err != nil {
 		return nil, err
 	}

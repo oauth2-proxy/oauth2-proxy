@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -49,16 +48,15 @@ func getLinkedInHeader(access_token string) http.Header {
 	return header
 }
 
-func (p *LinkedInProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
-	if access_token == "" {
+func (p *LinkedInProvider) GetEmailAddress(s *SessionState) (string, error) {
+	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	params := url.Values{}
-	req, err := http.NewRequest("GET", p.ProfileUrl.String()+"?format=json", bytes.NewBufferString(params.Encode()))
+	req, err := http.NewRequest("GET", p.ProfileUrl.String()+"?format=json", nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header = getLinkedInHeader(access_token)
+	req.Header = getLinkedInHeader(s.AccessToken)
 
 	json, err := api.Request(req)
 	if err != nil {
@@ -74,6 +72,6 @@ func (p *LinkedInProvider) GetEmailAddress(body []byte, access_token string) (st
 	return email, nil
 }
 
-func (p *LinkedInProvider) ValidateToken(access_token string) bool {
-	return validateToken(p, access_token, getLinkedInHeader(access_token))
+func (p *LinkedInProvider) ValidateSessionState(s *SessionState) bool {
+	return validateToken(p, s.AccessToken, getLinkedInHeader(s.AccessToken))
 }

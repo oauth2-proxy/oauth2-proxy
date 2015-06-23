@@ -42,9 +42,9 @@ func NewMyUsaProvider(p *ProviderData) *MyUsaProvider {
 	return &MyUsaProvider{ProviderData: p}
 }
 
-func (p *MyUsaProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
+func (p *MyUsaProvider) GetEmailAddress(s *SessionState) (string, error) {
 	req, err := http.NewRequest("GET",
-		p.ProfileUrl.String()+"?access_token="+access_token, nil)
+		p.ProfileUrl.String()+"?access_token="+s.AccessToken, nil)
 	if err != nil {
 		log.Printf("failed building request %s", err)
 		return "", err
@@ -55,8 +55,4 @@ func (p *MyUsaProvider) GetEmailAddress(body []byte, access_token string) (strin
 		return "", err
 	}
 	return json.Get("email").String()
-}
-
-func (p *MyUsaProvider) ValidateToken(access_token string) bool {
-	return validateToken(p, access_token, nil)
 }

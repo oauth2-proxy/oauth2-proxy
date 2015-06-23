@@ -97,8 +97,8 @@ func TestLinkedInProviderGetEmailAddress(t *testing.T) {
 	b_url, _ := url.Parse(b.URL)
 	p := testLinkedInProvider(b_url.Host)
 
-	email, err := p.GetEmailAddress([]byte{},
-		"imaginary_access_token")
+	session := &SessionState{AccessToken: "imaginary_access_token"}
+	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@linkedin.com", email)
 }
@@ -113,7 +113,8 @@ func TestLinkedInProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
-	email, err := p.GetEmailAddress([]byte{}, "unexpected_access_token")
+	session := &SessionState{AccessToken: "unexpected_access_token"}
+	email, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -125,7 +126,8 @@ func TestLinkedInProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	b_url, _ := url.Parse(b.URL)
 	p := testLinkedInProvider(b_url.Host)
 
-	email, err := p.GetEmailAddress([]byte{}, "imaginary_access_token")
+	session := &SessionState{AccessToken: "imaginary_access_token"}
+	email, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }

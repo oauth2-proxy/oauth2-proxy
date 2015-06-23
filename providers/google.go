@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type GoogleProvider struct {
@@ -43,25 +45,19 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	return &GoogleProvider{ProviderData: p}
 }
 
-func (s *GoogleProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
-	var response struct {
-		IdToken string `json:"id_token"`
-	}
-
-	if err := json.Unmarshal(body, &response); err != nil {
-		return "", err
-	}
+func emailFromIdToken(idToken string) (string, error) {
 
 	// id_token is a base64 encode ID token payload
 	// https://developers.google.com/accounts/docs/OAuth2Login#obtainuserinfo
-	jwt := strings.Split(response.IdToken, ".")
+	jwt := strings.Split(idToken, ".")
 	b, err := jwtDecodeSegment(jwt[1])
 	if err != nil {
 		return "", err
 	}
 
 	var email struct {
-		Email string `json:"email"`
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
 	}
 	err = json.Unmarshal(b, &email)
 	if err != nil {
@@ -69,6 +65,9 @@ func (s *GoogleProvider) GetEmailAddress(body []byte, access_token string) (stri
 	}
 	if email.Email == "" {
 		return "", errors.New("missing email")
+	}
+	if !email.EmailVerified {
+		return "", fmt.Errorf("email %s not listed as verified", email.Email)
 	}
 	return email.Email, nil
 }
@@ -81,11 +80,7 @@ func jwtDecodeSegment(seg string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(seg)
 }
 
-func (p *GoogleProvider) ValidateToken(access_token string) bool {
-	return validateToken(p, access_token, nil)
-}
-
-func (p *GoogleProvider) Redeem(redirectUrl, code string) (body []byte, token string, err error) {
+func (p *GoogleProvider) Redeem(redirectUrl, code string) (s *SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -108,6 +103,7 @@ func (p *GoogleProvider) Redeem(redirectUrl, code string) (body []byte, token st
 	if err != nil {
 		return
 	}
+	var body []byte
 	body, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
@@ -122,17 +118,44 @@ func (p *GoogleProvider) Redeem(redirectUrl, code string) (body []byte, token st
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+		IdToken      string `json:"id_token"`
 	}
 	err = json.Unmarshal(body, &jsonResponse)
 	if err != nil {
 		return
 	}
-
-	token, err = p.redeemRefreshToken(jsonResponse.RefreshToken)
+	var email string
+	email, err = emailFromIdToken(jsonResponse.IdToken)
+	if err != nil {
+		return
+	}
+	s = &SessionState{
+		AccessToken:  jsonResponse.AccessToken,
+		ExpiresOn:    time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second),
+		RefreshToken: jsonResponse.RefreshToken,
+		Email:        email,
+	}
 	return
 }
 
-func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, err error) {
+func (p *GoogleProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
+	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+		return false, nil
+	}
+
+	newToken, duration, err := p.redeemRefreshToken(s.RefreshToken)
+	if err != nil {
+		return false, err
+	}
+	origExpiration := s.ExpiresOn
+	s.AccessToken = newToken
+	s.ExpiresOn = time.Now().Add(duration).Truncate(time.Second)
+	log.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
+	return true, nil
+}
+
+func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, expires time.Duration, err error) {
 	// https://developers.google.com/identity/protocols/OAuth2WebServer#refresh
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
@@ -162,12 +185,15 @@ func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, 
 		return
 	}
 
-	var jsonResponse struct {
+	var data struct {
 		AccessToken string `json:"access_token"`
+		ExpiresIn   int64  `json:"expires_in"`
 	}
-	err = json.Unmarshal(body, &jsonResponse)
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return
 	}
-	return jsonResponse.AccessToken, nil
+	token = data.AccessToken
+	expires = time.Duration(data.ExpiresIn) * time.Second
+	return
 }

@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/bitly/oauth2_proxy/cookie"
 )
 
-func (p *ProviderData) Redeem(redirectUrl, code string) (body []byte, token string, err error) {
+func (p *ProviderData) Redeem(redirectUrl, code string) (s *SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -23,24 +25,28 @@ func (p *ProviderData) Redeem(redirectUrl, code string) (body []byte, token stri
 	params.Add("client_secret", p.ClientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
-	req, err := http.NewRequest("POST", p.RedeemUrl.String(), bytes.NewBufferString(params.Encode()))
+	var req *http.Request
+	req, err = http.NewRequest("POST", p.RedeemUrl.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
-		return nil, "", err
+		return
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	var resp *http.Response
+	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
+	var body []byte
 	body, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return nil, "", err
+		return
 	}
 
 	if resp.StatusCode != 200 {
-		return body, "", fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemUrl.String(), body)
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemUrl.String(), body)
+		return
 	}
 
 	// blindly try json and x-www-form-urlencoded
@@ -49,11 +55,23 @@ func (p *ProviderData) Redeem(redirectUrl, code string) (body []byte, token stri
 	}
 	err = json.Unmarshal(body, &jsonResponse)
 	if err == nil {
-		return body, jsonResponse.AccessToken, nil
+		s = &SessionState{
+			AccessToken: jsonResponse.AccessToken,
+		}
+		return
 	}
 
-	v, err := url.ParseQuery(string(body))
-	return body, v.Get("access_token"), err
+	var v url.Values
+	v, err = url.ParseQuery(string(body))
+	if err != nil {
+		return
+	}
+	if a := v.Get("access_token"); a != "" {
+		s = &SessionState{AccessToken: a}
+	} else {
+		err = fmt.Errorf("no access token found %s", body)
+	}
+	return
 }
 
 // GetLoginURL with typical oauth parameters
@@ -71,4 +89,27 @@ func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
 	}
 	a.RawQuery = params.Encode()
 	return a.String()
+}
+
+// CookieForSession serializes a session state for storage in a cookie
+func (p *ProviderData) CookieForSession(s *SessionState, c *cookie.Cipher) (string, error) {
+	return s.EncodeSessionState(c)
+}
+
+// SessionFromCookie deserializes a session from a cookie value
+func (p *ProviderData) SessionFromCookie(v string, c *cookie.Cipher) (s *SessionState, err error) {
+	return DecodeSessionState(v, c)
+}
+
+func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
+	return "", errors.New("not implemented")
+}
+
+func (p *ProviderData) ValidateSessionState(s *SessionState) bool {
+	return validateToken(p, s.AccessToken, nil)
+}
+
+// RefreshSessionIfNeeded
+func (p *ProviderData) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
+	return false, nil
 }
