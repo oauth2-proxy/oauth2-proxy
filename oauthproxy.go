@@ -109,8 +109,12 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	if domain == "" {
 		domain = "<default>"
 	}
+	refresh := "disabled"
+	if opts.CookieRefresh != time.Duration(0) {
+		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
+	}
 
-	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain)
+	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain, refresh)
 
 	var aes_cipher cipher.Block
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
@@ -191,7 +195,7 @@ func (p *OauthProxy) redeemCode(host, code string) (string, string, error) {
 	return access_token, email, nil
 }
 
-func (p *OauthProxy) MakeCookie(req *http.Request, value string, expiration time.Duration) *http.Cookie {
+func (p *OauthProxy) MakeCookie(req *http.Request, value string, expiration time.Duration, now time.Time) *http.Cookie {
 	domain := req.Host
 	if h, _, err := net.SplitHostPort(domain); err == nil {
 		domain = h
@@ -204,7 +208,7 @@ func (p *OauthProxy) MakeCookie(req *http.Request, value string, expiration time
 	}
 
 	if value != "" {
-		value = signedCookieValue(p.CookieSeed, p.CookieName, value)
+		value = signedCookieValue(p.CookieSeed, p.CookieName, value, now)
 	}
 
 	return &http.Cookie{
@@ -214,16 +218,16 @@ func (p *OauthProxy) MakeCookie(req *http.Request, value string, expiration time
 		Domain:   domain,
 		HttpOnly: p.CookieHttpOnly,
 		Secure:   p.CookieSecure,
-		Expires:  time.Now().Add(expiration),
+		Expires:  now.Add(expiration),
 	}
 }
 
 func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
-	http.SetCookie(rw, p.MakeCookie(req, "", time.Duration(1)*time.Hour*-1))
+	http.SetCookie(rw, p.MakeCookie(req, "", time.Hour*-1, time.Now()))
 }
 
 func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
-	http.SetCookie(rw, p.MakeCookie(req, val, p.CookieExpire))
+	http.SetCookie(rw, p.MakeCookie(req, val, p.CookieExpire, time.Now()))
 }
 
 func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (email, user, access_token string, ok bool) {
@@ -231,19 +235,17 @@ func (p *OauthProxy) ProcessCookie(rw http.ResponseWriter, req *http.Request) (e
 	var timestamp time.Time
 	cookie, err := req.Cookie(p.CookieName)
 	if err == nil {
-		value, timestamp, ok = validateCookie(cookie, p.CookieSeed)
+		value, timestamp, ok = validateCookie(cookie, p.CookieSeed, p.CookieExpire)
 		if ok {
-			email, user, access_token, err = parseCookieValue(
-				value, p.AesCipher)
+			email, user, access_token, err = parseCookieValue(value, p.AesCipher)
 		}
 	}
 	if err != nil {
 		log.Printf(err.Error())
 		ok = false
-	} else if p.CookieRefresh != time.Duration(0) {
-		expires := timestamp.Add(p.CookieExpire)
-		refresh_threshold := time.Now().Add(p.CookieRefresh)
-		if refresh_threshold.Unix() > expires.Unix() {
+	} else if ok && p.CookieRefresh != time.Duration(0) {
+		refresh := timestamp.Add(p.CookieRefresh)
+		if refresh.Before(time.Now()) {
 			ok = p.Validator(email) && p.provider.ValidateToken(access_token)
 			if ok {
 				p.SetCookie(rw, req, value)
