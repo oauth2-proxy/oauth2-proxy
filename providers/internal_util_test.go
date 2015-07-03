@@ -1,36 +1,38 @@
 package providers
 
 import (
-	"github.com/bmizerany/assert"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/bmizerany/assert"
 )
 
-type ValidateTokenTestProvider struct {
+type ValidateSessionStateTestProvider struct {
 	*ProviderData
 }
 
-func (tp *ValidateTokenTestProvider) GetEmailAddress(body []byte, access_token string) (string, error) {
-	return "", nil
+func (tp *ValidateSessionStateTestProvider) GetEmailAddress(s *SessionState) (string, error) {
+	return "", errors.New("not implemented")
 }
 
 // Note that we're testing the internal validateToken() used to implement
-// several Provider's ValidateToken() implementations
-func (tp *ValidateTokenTestProvider) ValidateToken(access_token string) bool {
+// several Provider's ValidateSessionState() implementations
+func (tp *ValidateSessionStateTestProvider) ValidateSessionState(s *SessionState) bool {
 	return false
 }
 
-type ValidateTokenTest struct {
+type ValidateSessionStateTest struct {
 	backend       *httptest.Server
 	response_code int
-	provider      *ValidateTokenTestProvider
+	provider      *ValidateSessionStateTestProvider
 	header        http.Header
 }
 
-func NewValidateTokenTest() *ValidateTokenTest {
-	var vt_test ValidateTokenTest
+func NewValidateSessionStateTest() *ValidateSessionStateTest {
+	var vt_test ValidateSessionStateTest
 
 	vt_test.backend = httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +61,7 @@ func NewValidateTokenTest() *ValidateTokenTest {
 
 		}))
 	backend_url, _ := url.Parse(vt_test.backend.URL)
-	vt_test.provider = &ValidateTokenTestProvider{
+	vt_test.provider = &ValidateSessionStateTestProvider{
 		ProviderData: &ProviderData{
 			ValidateUrl: &url.URL{
 				Scheme: "http",
@@ -72,18 +74,18 @@ func NewValidateTokenTest() *ValidateTokenTest {
 	return &vt_test
 }
 
-func (vt_test *ValidateTokenTest) Close() {
+func (vt_test *ValidateSessionStateTest) Close() {
 	vt_test.backend.Close()
 }
 
-func TestValidateTokenValidToken(t *testing.T) {
-	vt_test := NewValidateTokenTest()
+func TestValidateSessionStateValidToken(t *testing.T) {
+	vt_test := NewValidateSessionStateTest()
 	defer vt_test.Close()
 	assert.Equal(t, true, validateToken(vt_test.provider, "foobar", nil))
 }
 
-func TestValidateTokenValidTokenWithHeaders(t *testing.T) {
-	vt_test := NewValidateTokenTest()
+func TestValidateSessionStateValidTokenWithHeaders(t *testing.T) {
+	vt_test := NewValidateSessionStateTest()
 	defer vt_test.Close()
 	vt_test.header = make(http.Header)
 	vt_test.header.Set("Authorization", "Bearer foobar")
@@ -91,28 +93,28 @@ func TestValidateTokenValidTokenWithHeaders(t *testing.T) {
 		validateToken(vt_test.provider, "foobar", vt_test.header))
 }
 
-func TestValidateTokenEmptyToken(t *testing.T) {
-	vt_test := NewValidateTokenTest()
+func TestValidateSessionStateEmptyToken(t *testing.T) {
+	vt_test := NewValidateSessionStateTest()
 	defer vt_test.Close()
 	assert.Equal(t, false, validateToken(vt_test.provider, "", nil))
 }
 
-func TestValidateTokenEmptyValidateUrl(t *testing.T) {
-	vt_test := NewValidateTokenTest()
+func TestValidateSessionStateEmptyValidateUrl(t *testing.T) {
+	vt_test := NewValidateSessionStateTest()
 	defer vt_test.Close()
 	vt_test.provider.Data().ValidateUrl = nil
 	assert.Equal(t, false, validateToken(vt_test.provider, "foobar", nil))
 }
 
-func TestValidateTokenRequestNetworkFailure(t *testing.T) {
-	vt_test := NewValidateTokenTest()
+func TestValidateSessionStateRequestNetworkFailure(t *testing.T) {
+	vt_test := NewValidateSessionStateTest()
 	// Close immediately to simulate a network failure
 	vt_test.Close()
 	assert.Equal(t, false, validateToken(vt_test.provider, "foobar", nil))
 }
 
-func TestValidateTokenExpiredToken(t *testing.T) {
-	vt_test := NewValidateTokenTest()
+func TestValidateSessionStateExpiredToken(t *testing.T) {
+	vt_test := NewValidateSessionStateTest()
 	defer vt_test.Close()
 	vt_test.response_code = 401
 	assert.Equal(t, false, validateToken(vt_test.provider, "foobar", nil))
