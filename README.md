@@ -160,11 +160,15 @@ The command line to run `oauth2_proxy` in this configuration would look like thi
 ```
 
 
-2) Configure SSL Termination with [Nginx](http://nginx.org/) (example config below) or Amazon ELB, or ....
+2) Configure SSL Termination with [Nginx](http://nginx.org/) (example config below), Amazon ELB, Google Cloud Platform Load Balancing, or ....
 
-Nginx will listen on port `443` and handle SSL connections while proxying to `oauth2_proxy` on port `4180`. 
-`oauth2_proxy` which will then authenticate requests for an upstream application. The external 
-endpoint for this example would be `https://internal.yourcompany.com/`.
+Because `oauth2_proxy` listens on `127.0.0.1:4180` by default, to listen on all interfaces (needed when using an
+external load balancer like Amazon ELB or Google Platform Load Balancing) use `--http-address="0.0.0.0:4180"` or
+`--http-address="http://:4180"`.
+
+Nginx will listen on port `443` and handle SSL connections while proxying to `oauth2_proxy` on port `4180`.
+`oauth2_proxy` will then authenticate requests for an upstream application. The external endpoint for this example
+would be `https://internal.yourcompany.com/`.
 
 An example Nginx config follows. Note the use of `Strict-Transport-Security` header to pin requests to SSL 
 via [HSTS](http://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security):
@@ -175,7 +179,7 @@ server {
     server_name internal.yourcompany.com;
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/cert.key;
-    add_header Strict-Transport-Security max-age=1209600;
+    add_header Strict-Transport-Security max-age=2592000;
 
     location / {
         proxy_pass http://127.0.0.1:4180;
