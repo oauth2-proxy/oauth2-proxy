@@ -484,7 +484,7 @@ func (p *OauthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if saveSession && session.Email != "" && !p.Validator(session.Email) {
+	if session != nil && session.Email != "" && !p.Validator(session.Email) {
 		log.Printf("%s Permission Denied: removing session %s", remoteAddr, session)
 		session = nil
 		saveSession = false
