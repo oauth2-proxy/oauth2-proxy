@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"github.com/bitly/oauth2_proxy/providers"
 	"github.com/bmizerany/assert"
 	"io/ioutil"
@@ -86,6 +87,101 @@ func TestRobotsTxt(t *testing.T) {
 	proxy.ServeHTTP(rw, req)
 	assert.Equal(t, 200, rw.Code)
 	assert.Equal(t, "User-agent: *\nDisallow: /", rw.Body.String())
+}
+
+func TestBasicAuthPassword(t *testing.T) {
+	provider_server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%#v", r)
+		url := r.URL
+		payload := ""
+		switch url.Path {
+		case "/oauth/token":
+			payload = `{"access_token": "my_auth_token"}`
+		default:
+			payload = r.Header.Get("Authorization")
+			if payload == "" {
+				payload = "No Authorization header found."
+			}
+		}
+		w.WriteHeader(200)
+		w.Write([]byte(payload))
+	}))
+	opts := NewOptions()
+	opts.Upstreams = append(opts.Upstreams, provider_server.URL)
+	// The CookieSecret must be 32 bytes in order to create the AES
+	// cipher.
+	opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
+	opts.ClientID = "bazquux"
+	opts.ClientSecret = "foobar"
+	opts.CookieSecure = false
+	opts.PassBasicAuth = true
+	opts.BasicAuthPassword = "This is a secure password"
+	opts.Validate()
+
+	provider_url, _ := url.Parse(provider_server.URL)
+	const email_address = "michael.bland@gsa.gov"
+	const user_name = "michael.bland"
+
+	opts.provider = &TestProvider{
+		ProviderData: &providers.ProviderData{
+			ProviderName: "Test Provider",
+			LoginUrl: &url.URL{
+				Scheme: "http",
+				Host:   provider_url.Host,
+				Path:   "/oauth/authorize",
+			},
+			RedeemUrl: &url.URL{
+				Scheme: "http",
+				Host:   provider_url.Host,
+				Path:   "/oauth/token",
+			},
+			ProfileUrl: &url.URL{
+				Scheme: "http",
+				Host:   provider_url.Host,
+				Path:   "/api/v1/profile",
+			},
+			Scope: "profile.email",
+		},
+		EmailAddress: email_address,
+	}
+
+	proxy := NewOauthProxy(opts, func(email string) bool {
+		return email == email_address
+	})
+
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/oauth2/callback?code=callback_code",
+		strings.NewReader(""))
+	proxy.ServeHTTP(rw, req)
+	cookie := rw.HeaderMap["Set-Cookie"][0]
+
+	cookieName := proxy.CookieName
+	var value string
+	key_prefix := cookieName + "="
+
+	for _, field := range strings.Split(cookie, "; ") {
+		value = strings.TrimPrefix(field, key_prefix)
+		if value != field {
+			break
+		} else {
+			value = ""
+		}
+	}
+
+	req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
+	req.AddCookie(&http.Cookie{
+		Name:     cookieName,
+		Value:    value,
+		Path:     "/",
+		Expires:  time.Now().Add(time.Duration(24)),
+		HttpOnly: true,
+	})
+
+	rw = httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(user_name+":"+opts.BasicAuthPassword))
+	assert.Equal(t, expectedHeader, rw.Body.String())
+	provider_server.Close()
 }
 
 type TestProvider struct {
