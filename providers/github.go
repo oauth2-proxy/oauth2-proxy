@@ -2,7 +2,6 @@ package providers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -211,5 +210,5 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 		}
 	}
 
-	return "", errors.New("no email address found")
+	return "", nil
 }

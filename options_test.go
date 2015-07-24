@@ -15,6 +15,7 @@ func testOptions() *Options {
 	o.CookieSecret = "foobar"
 	o.ClientID = "bazquux"
 	o.ClientSecret = "xyzzyplugh"
+	o.EmailDomains = []string{"*"}
 	return o
 }
 
@@ -27,6 +28,7 @@ func errorMsg(msgs []string) string {
 
 func TestNewOptions(t *testing.T) {
 	o := NewOptions()
+	o.EmailDomains = []string{"*"}
 	err := o.Validate()
 	assert.NotEqual(t, nil, err)
 
