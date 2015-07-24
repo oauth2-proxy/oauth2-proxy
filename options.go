@@ -37,11 +37,12 @@ type Options struct {
 	CookieSecure   bool          `flag:"cookie-secure" cfg:"cookie_secure"`
 	CookieHttpOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
 
-	Upstreams       []string `flag:"upstream" cfg:"upstreams"`
-	SkipAuthRegex   []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
-	PassBasicAuth   bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
-	PassAccessToken bool     `flag:"pass-access-token" cfg:"pass_access_token"`
-	PassHostHeader  bool     `flag:"pass-host-header" cfg:"pass_host_header"`
+	Upstreams         []string `flag:"upstream" cfg:"upstreams"`
+	SkipAuthRegex     []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
+	PassBasicAuth     bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
+	BasicAuthPassword string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
+	PassAccessToken   bool     `flag:"pass-access-token" cfg:"pass_access_token"`
+	PassHostHeader    bool     `flag:"pass-host-header" cfg:"pass_host_header"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.

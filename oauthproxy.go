@@ -42,6 +42,7 @@ type OauthProxy struct {
 	DisplayHtpasswdForm bool
 	serveMux            http.Handler
 	PassBasicAuth       bool
+	BasicAuthPassword   string
 	PassAccessToken     bool
 	CookieCipher        *cookie.Cipher
 	skipAuthRegex       []string
@@ -141,16 +142,17 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		OauthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
 		OauthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 
-		ProxyPrefix:     opts.ProxyPrefix,
-		provider:        opts.provider,
-		serveMux:        serveMux,
-		redirectUrl:     redirectUrl,
-		skipAuthRegex:   opts.SkipAuthRegex,
-		compiledRegex:   opts.CompiledRegex,
-		PassBasicAuth:   opts.PassBasicAuth,
-		PassAccessToken: opts.PassAccessToken,
-		CookieCipher:    cipher,
-		templates:       loadTemplates(opts.CustomTemplatesDir),
+		ProxyPrefix:       opts.ProxyPrefix,
+		provider:          opts.provider,
+		serveMux:          serveMux,
+		redirectUrl:       redirectUrl,
+		skipAuthRegex:     opts.SkipAuthRegex,
+		compiledRegex:     opts.CompiledRegex,
+		PassBasicAuth:     opts.PassBasicAuth,
+		BasicAuthPassword: opts.BasicAuthPassword,
+		PassAccessToken:   opts.PassAccessToken,
+		CookieCipher:      cipher,
+		templates:         loadTemplates(opts.CustomTemplatesDir),
 	}
 }
 
@@ -518,7 +520,7 @@ func (p *OauthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 	// At this point, the user is authenticated. proxy normally
 	if p.PassBasicAuth {
-		req.SetBasicAuth(session.User, "")
+		req.SetBasicAuth(session.User, p.BasicAuthPassword)
 		req.Header["X-Forwarded-User"] = []string{session.User}
 		if session.Email != "" {
 			req.Header["X-Forwarded-Email"] = []string{session.Email}
