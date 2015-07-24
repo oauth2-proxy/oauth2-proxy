@@ -216,7 +216,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 * /ping - returns an 200 OK response
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 * /oauth2/start - a URL that will redirect to start the OAuth cycle
-* /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this ass the callback url.
+* /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
 
 ## Logging Format
 
