@@ -46,12 +46,13 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider    string `flag:"provider" cfg:"provider"`
-	LoginUrl    string `flag:"login-url" cfg:"login_url"`
-	RedeemUrl   string `flag:"redeem-url" cfg:"redeem_url"`
-	ProfileUrl  string `flag:"profile-url" cfg:"profile_url"`
-	ValidateUrl string `flag:"validate-url" cfg:"validate_url"`
-	Scope       string `flag:"scope" cfg:"scope"`
+	Provider       string `flag:"provider" cfg:"provider"`
+	LoginUrl       string `flag:"login-url" cfg:"login_url"`
+	RedeemUrl      string `flag:"redeem-url" cfg:"redeem_url"`
+	ProfileUrl     string `flag:"profile-url" cfg:"profile_url"`
+	ValidateUrl    string `flag:"validate-url" cfg:"validate_url"`
+	Scope          string `flag:"scope" cfg:"scope"`
+	ApprovalPrompt string `flag:"approval-prompt" cfg:"approval_prompt"`
 
 	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
 
@@ -76,6 +77,7 @@ func NewOptions() *Options {
 		PassBasicAuth:       true,
 		PassAccessToken:     false,
 		PassHostHeader:      true,
+		ApprovalPrompt:      "force",
 		RequestLogging:      true,
 	}
 }
@@ -165,7 +167,12 @@ func (o *Options) Validate() error {
 }
 
 func parseProviderInfo(o *Options, msgs []string) []string {
-	p := &providers.ProviderData{Scope: o.Scope, ClientID: o.ClientID, ClientSecret: o.ClientSecret}
+	p := &providers.ProviderData{
+		Scope:          o.Scope,
+		ClientID:       o.ClientID,
+		ClientSecret:   o.ClientSecret,
+		ApprovalPrompt: o.ApprovalPrompt,
+	}
 	p.LoginUrl, msgs = parseUrl(o.LoginUrl, "login", msgs)
 	p.RedeemUrl, msgs = parseUrl(o.RedeemUrl, "redeem", msgs)
 	p.ProfileUrl, msgs = parseUrl(o.ProfileUrl, "profile", msgs)

@@ -63,6 +63,7 @@ func main() {
 	flagSet.String("profile-url", "", "Profile access endpoint")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
 	flagSet.String("scope", "", "Oauth scope specification")
+	flagSet.String("approval-prompt", "force", "Oauth approval_prompt")
 
 	flagSet.Parse(os.Args[1:])
 
