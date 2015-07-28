@@ -71,9 +71,11 @@ func newValidatorImpl(domains []string, usersFile string,
 		domains[i] = fmt.Sprintf("@%s", strings.ToLower(domain))
 	}
 
-	validator := func(email string) bool {
+	validator := func(email string) (valid bool) {
+		if email == "" {
+			return
+		}
 		email = strings.ToLower(email)
-		valid := false
 		for _, domain := range domains {
 			valid = valid || strings.HasSuffix(email, domain)
 		}

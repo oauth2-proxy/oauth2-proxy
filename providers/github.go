@@ -2,7 +2,6 @@ package providers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -66,7 +65,7 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 
 	endpoint := "https://api.github.com/user/orgs?" + params.Encode()
 	req, _ := http.NewRequest("GET", endpoint, nil)
-	req.Header.Set("Accept", "application/vnd.github.moondragon+json")
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return false, err
@@ -85,11 +84,16 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 		return false, err
 	}
 
+	var presentOrgs []string
 	for _, org := range orgs {
 		if p.Org == org.Login {
+			log.Printf("Found Github Organization: %q", org.Login)
 			return true, nil
 		}
+		presentOrgs = append(presentOrgs, org.Login)
 	}
+
+	log.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
 	return false, nil
 }
 
@@ -111,7 +115,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 
 	endpoint := "https://api.github.com/user/teams?" + params.Encode()
 	req, _ := http.NewRequest("GET", endpoint, nil)
-	req.Header.Set("Accept", "application/vnd.github.moondragon+json")
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return false, err
@@ -130,12 +134,28 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 		return false, fmt.Errorf("%s unmarshaling %s", err, body)
 	}
 
+	var hasOrg bool
+	presentOrgs := make(map[string]bool)
+	var presentTeams []string
 	for _, team := range teams {
+		presentOrgs[team.Org.Login] = true
 		if p.Org == team.Org.Login {
-			if p.Team == "" || p.Team == team.Slug {
+			hasOrg = true
+			if p.Team == team.Slug {
+				log.Printf("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
 				return true, nil
 			}
+			presentTeams = append(presentTeams, team.Slug)
 		}
+	}
+	if hasOrg {
+		log.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
+	} else {
+		var allOrgs []string
+		for org, _ := range presentOrgs {
+			allOrgs = append(allOrgs, org)
+		}
+		log.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
 	}
 	return false, nil
 }
@@ -190,5 +210,5 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 		}
 	}
 
-	return "", errors.New("no email address found")
+	return "", nil
 }

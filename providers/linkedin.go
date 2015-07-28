@@ -3,7 +3,6 @@ package providers
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 
@@ -60,13 +59,11 @@ func (p *LinkedInProvider) GetEmailAddress(s *SessionState) (string, error) {
 
 	json, err := api.Request(req)
 	if err != nil {
-		log.Printf("failed making request %s", err)
 		return "", err
 	}
 
 	email, err := json.String()
 	if err != nil {
-		log.Printf("failed making request %s", err)
 		return "", err
 	}
 	return email, nil
