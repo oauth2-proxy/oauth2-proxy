@@ -42,13 +42,12 @@ For Google, the registration steps are:
 1. Create a new project: https://console.developers.google.com/project
 2. Under "APIs & Auth", choose "Credentials"
 3. Now, choose "Create new Client ID"
-   * The Application Type should be **Web application**
-   * Enter your domain in the Authorized Javascript Origins `https://internal.yourcompany.com`
+   * The Application Type should be **Web application** and click **Configure Consent Screen**
+   * Fill out the appropriate details on the Consent Screen page and hit **Save**
+   * On the next screen, leaving **Web Application** checked, enter your domain in the Authorized Javascript Origins `https://internal.yourcompany.com`
    * Enter the correct Authorized Redirect URL `https://internal.yourcompany.com/oauth2/callback`
      * NOTE: `oauth2_proxy` will _only_ callback on the path `/oauth2/callback`
-4. Under "APIs & Auth" choose "Consent Screen"
-   * Fill in the necessary fields and Save (this is _required_)
-5. Take note of the **Client ID** and **Client Secret**
+4. Take note of the **Client ID** and **Client Secret**
 
 It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the account is still authorized.
 
