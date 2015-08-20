@@ -105,6 +105,23 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	assert.Equal(t, "refresh12345", session.RefreshToken)
 }
 
+func TestGoogleProviderValidateGroup(t *testing.T) {
+	p := newGoogleProvider()
+	p.GroupValidator = func(email string) bool {
+		return email == "michael.bland@gsa.gov"
+	}
+	assert.Equal(t, true, p.ValidateGroup("michael.bland@gsa.gov"))
+	p.GroupValidator = func(email string) bool {
+		return email != "michael.bland@gsa.gov"
+	}
+	assert.Equal(t, false, p.ValidateGroup("michael.bland@gsa.gov"))
+}
+
+func TestGoogleProviderWithoutValidateGroup(t *testing.T) {
+	p := newGoogleProvider()
+	assert.Equal(t, true, p.ValidateGroup("michael.bland@gsa.gov"))
+}
+
 //
 func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	p := newGoogleProvider()

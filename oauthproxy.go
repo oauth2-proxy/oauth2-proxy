@@ -433,7 +433,7 @@ func (p *OauthProxy) OauthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) {
+	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
 		log.Printf("%s authentication complete %s", remoteAddr, session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -477,7 +477,7 @@ func (p *OauthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		clearSession = true
 	}
 
-	if saveSession && !revalidated && session.AccessToken != "" {
+	if saveSession && !revalidated && session != nil && session.AccessToken != "" {
 		if !p.provider.ValidateSessionState(session) {
 			log.Printf("%s removing session. error validating %s", remoteAddr, session)
 			saveSession = false
@@ -493,7 +493,7 @@ func (p *OauthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		clearSession = true
 	}
 
-	if saveSession {
+	if saveSession && session != nil {
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			log.Printf("%s %s", remoteAddr, err)

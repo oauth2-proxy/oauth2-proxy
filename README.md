@@ -51,6 +51,26 @@ For Google, the registration steps are:
 
 It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the account is still authorized.
 
+#### Restrict auth to specific Google groups on your domain. (optional)
+
+1. Create a service account: https://developers.google.com/identity/protocols/OAuth2ServiceAccount and make sure to download the json file.
+2. Make note of the Client ID for a future step.
+3. Under "APIs & Auth", choose APIs.
+4. Click on Admin SDK and then Enable API.
+5. Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account and give the client id from step 2 the following oauth scopes:
+```
+https://www.googleapis.com/auth/admin.directory.group.readonly
+https://www.googleapis.com/auth/admin.directory.user.readonly
+```
+6. Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
+7. Create or choose an existing administrative email address on the Gmail domain to assign to the ```google-admin-email``` flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from step 5 for the reason why.
+8. Create or choose an existing email group and set that email to the ```google-group``` flag. You can pass multiple instances of this flag with different groups
+and the user will be checked against all the provided groups.
+9. Lock down the permissions on the json file downloaded from step 1 so only oauth2_proxy is able to read the file and set the path to the file in the ```google-service-account-json``` flag.
+10. Restart oauth2_proxy.
+
+Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
+
 ### GitHub Auth Provider
 
 1. Create a new project: https://github.com/settings/developers
@@ -110,6 +130,10 @@ Usage of oauth2_proxy:
   -email-domain=: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
   -github-org="": restrict logins to members of this organisation
   -github-team="": restrict logins to members of this team
+  -google-group="": restrict logins to members of this google group
+  -google-admin-email="": the google admin to impersonate for api calls
+  -google-service-account-json="": the path to the service account json credentials
+
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
   -https-address=":443": <addr>:<port> to listen on for HTTPS clients
@@ -141,7 +165,7 @@ The environment variables `OAUTH2_PROXY_CLIENT_ID`, `OAUTH2_PROXY_CLIENT_SECRET`
 
 ## SSL Configuration
 
-There are two recommended configurations. 
+There are two recommended configurations.
 
 1) Configure SSL Terminiation with OAuth2 Proxy by providing a `--tls-cert=/path/to/cert.pem` and `--tls-key=/path/to/cert.key`.
 
@@ -171,7 +195,7 @@ Nginx will listen on port `443` and handle SSL connections while proxying to `oa
 `oauth2_proxy` will then authenticate requests for an upstream application. The external endpoint for this example
 would be `https://internal.yourcompany.com/`.
 
-An example Nginx config follows. Note the use of `Strict-Transport-Security` header to pin requests to SSL 
+An example Nginx config follows. Note the use of `Strict-Transport-Security` header to pin requests to SSL
 via [HSTS](http://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security):
 
 ```
@@ -233,4 +257,3 @@ Follow the examples in the [`providers` package](providers/) to define a new
 `Provider` instance. Add a new `case` to
 [`providers.New()`](providers/providers.go) to allow `oauth2_proxy` to use the
 new `Provider`.
-

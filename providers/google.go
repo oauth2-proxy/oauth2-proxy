@@ -6,17 +6,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/admin/directory/v1"
 )
 
 type GoogleProvider struct {
 	*ProviderData
 	RedeemRefreshUrl *url.URL
+	// GroupValidator is a function that determines if the passed email is in
+	// the configured Google group.
+	GroupValidator func(string) bool
 }
 
 func NewGoogleProvider(p *ProviderData) *GoogleProvider {
@@ -42,7 +50,15 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	if p.Scope == "" {
 		p.Scope = "profile email"
 	}
-	return &GoogleProvider{ProviderData: p}
+
+	return &GoogleProvider{
+		ProviderData: p,
+		// Set a default GroupValidator to just always return valid (true), it will
+		// be overwritten if we configured a Google group restriction.
+		GroupValidator: func(email string) bool {
+			return true
+		},
+	}
 }
 
 func emailFromIdToken(idToken string) (string, error) {
@@ -139,6 +155,102 @@ func (p *GoogleProvider) Redeem(redirectUrl, code string) (s *SessionState, err 
 	return
 }
 
+// SetGroupRestriction configures the GoogleProvider to restrict access to the
+// specified group(s). AdminEmail has to be an administrative email on the domain that is
+// checked. CredentialsFile is the path to a json file containing a Google service
+// account credentials.
+func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
+	adminService := getAdminService(adminEmail, credentialsReader)
+	p.GroupValidator = func(email string) bool {
+		return userInGroup(adminService, groups, email)
+	}
+}
+
+func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Service {
+	data, err := ioutil.ReadAll(credentialsReader)
+	if err != nil {
+		log.Fatal("can't read Google credentials file:", err)
+	}
+	conf, err := google.JWTConfigFromJSON(data, admin.AdminDirectoryUserReadonlyScope, admin.AdminDirectoryGroupReadonlyScope)
+	if err != nil {
+		log.Fatal("can't load Google credentials file:", err)
+	}
+	conf.Subject = adminEmail
+
+	client := conf.Client(oauth2.NoContext)
+	adminService, err := admin.New(client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return adminService
+}
+
+func userInGroup(service *admin.Service, groups []string, email string) bool {
+	user, err := fetchUser(service, email)
+	if err != nil {
+		log.Printf("error fetching user: %v", err)
+		return false
+	}
+	id := user.Id
+	custID := user.CustomerId
+
+	for _, group := range groups {
+		members, err := fetchGroupMembers(service, group)
+		if err != nil {
+			log.Printf("error fetching group members: %v", err)
+			return false
+		}
+
+		for _, member := range members {
+			switch member.Type {
+			case "CUSTOMER":
+				if member.Id == custID {
+					return true
+				}
+			case "USER":
+				if member.Id == id {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func fetchUser(service *admin.Service, email string) (*admin.User, error) {
+	user, err := service.Users.Get(email).Do()
+	return user, err
+}
+
+func fetchGroupMembers(service *admin.Service, group string) ([]*admin.Member, error) {
+	members := []*admin.Member{}
+	pageToken := ""
+	for {
+		req := service.Members.List(group)
+		if pageToken != "" {
+			req.PageToken(pageToken)
+		}
+		r, err := req.Do()
+		if err != nil {
+			return nil, err
+		}
+		for _, member := range r.Members {
+			members = append(members, member)
+		}
+		if r.NextPageToken == "" {
+			break
+		}
+		pageToken = r.NextPageToken
+	}
+	return members, nil
+}
+
+// ValidateGroup validates that the provided email exists in the configured Google
+// group(s).
+func (p *GoogleProvider) ValidateGroup(email string) bool {
+	return p.GroupValidator(email)
+}
+
 func (p *GoogleProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil
@@ -148,6 +260,12 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	// re-check that the user is in the proper google group(s)
+	if !p.ValidateGroup(s.Email) {
+		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
+	}
+
 	origExpiration := s.ExpiresOn
 	s.AccessToken = newToken
 	s.ExpiresOn = time.Now().Add(duration).Truncate(time.Second)
