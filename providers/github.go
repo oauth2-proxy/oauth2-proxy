@@ -17,21 +17,21 @@ type GitHubProvider struct {
 
 func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 	p.ProviderName = "GitHub"
-	if p.LoginUrl.String() == "" {
+	if p.LoginUrl == nil || p.LoginUrl.String() == "" {
 		p.LoginUrl = &url.URL{
 			Scheme: "https",
 			Host:   "github.com",
 			Path:   "/login/oauth/authorize",
 		}
 	}
-	if p.RedeemUrl.String() == "" {
+	if p.RedeemUrl == nil || p.RedeemUrl.String() == "" {
 		p.RedeemUrl = &url.URL{
 			Scheme: "https",
 			Host:   "github.com",
 			Path:   "/login/oauth/access_token",
 		}
 	}
-	if p.ValidateUrl.String() == "" {
+	if p.ValidateUrl == nil || p.ValidateUrl.String() == "" {
 		p.ValidateUrl = &url.URL{
 			Scheme: "https",
 			Host:   "api.github.com",
