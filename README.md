@@ -93,6 +93,7 @@ An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is i
 
 ```
 Usage of oauth2_proxy:
+  -approval_prompt="force": Oauth approval_prompt
   -authenticated-emails-file="": authenticate against emails via file (one per line)
   -client-id="": the OAuth Client ID: ie: "123456.apps.googleusercontent.com"
   -client-secret="": the OAuth Client Secret

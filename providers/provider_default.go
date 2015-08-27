@@ -80,7 +80,7 @@ func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
 	a = *p.LoginUrl
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-	params.Set("approval_prompt", "force")
+	params.Set("approval_prompt", p.ApprovalPrompt)
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
