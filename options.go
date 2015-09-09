@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -21,13 +22,16 @@ type Options struct {
 	TLSCertFile  string `flag:"tls-cert" cfg:"tls_cert_file"`
 	TLSKeyFile   string `flag:"tls-key" cfg:"tls_key_file"`
 
-	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
-	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
-	GitHubOrg               string   `flag:"github-org" cfg:"github_org"`
-	GitHubTeam              string   `flag:"github-team" cfg:"github_team"`
-	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
-	DisplayHtpasswdForm     bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form"`
-	CustomTemplatesDir      string   `flag:"custom-templates-dir" cfg:"custom_templates_dir"`
+	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
+	EmailDomains             []string `flag:"email-domain" cfg:"email_domains"`
+	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
+	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
+	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
+	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
+	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
+	HtpasswdFile             string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
+	DisplayHtpasswdForm      bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form"`
+	CustomTemplatesDir       string   `flag:"custom-templates-dir" cfg:"custom_templates_dir"`
 
 	CookieName     string        `flag:"cookie-name" cfg:"cookie_name" env:"OAUTH2_PROXY_COOKIE_NAME"`
 	CookieSecret   string        `flag:"cookie-secret" cfg:"cookie_secret" env:"OAUTH2_PROXY_COOKIE_SECRET"`
@@ -159,6 +163,18 @@ func (o *Options) Validate() error {
 			o.CookieExpire.String()))
 	}
 
+	if len(o.GoogleGroups) > 0 || o.GoogleAdminEmail != "" || o.GoogleServiceAccountJSON != "" {
+		if len(o.GoogleGroups) < 1 {
+			msgs = append(msgs, "missing setting: google-group")
+		}
+		if o.GoogleAdminEmail == "" {
+			msgs = append(msgs, "missing setting: google-admin-email")
+		}
+		if o.GoogleServiceAccountJSON == "" {
+			msgs = append(msgs, "missing setting: google-service-account-json")
+		}
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
@@ -182,6 +198,15 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 	switch p := o.provider.(type) {
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
+	case *providers.GoogleProvider:
+		if o.GoogleServiceAccountJSON != "" {
+			file, err := os.Open(o.GoogleServiceAccountJSON)
+			if err != nil {
+				msgs = append(msgs, "invalid Google credentials file: "+o.GoogleServiceAccountJSON)
+			} else {
+				p.SetGroupRestriction(o.GoogleGroups, o.GoogleAdminEmail, file)
+			}
+		}
 	}
 	return msgs
 }

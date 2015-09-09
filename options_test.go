@@ -40,6 +40,32 @@ func TestNewOptions(t *testing.T) {
 	assert.Equal(t, expected, err.Error())
 }
 
+func TestGoogleGroupOptions(t *testing.T) {
+	o := testOptions()
+	o.GoogleGroups = []string{"googlegroup"}
+	err := o.Validate()
+	assert.NotEqual(t, nil, err)
+
+	expected := errorMsg([]string{
+		"missing setting: google-admin-email",
+		"missing setting: google-service-account-json"})
+	assert.Equal(t, expected, err.Error())
+}
+
+func TestGoogleGroupInvalidFile(t *testing.T) {
+	o := testOptions()
+	o.GoogleGroups = []string{"test_group"}
+	o.GoogleAdminEmail = "admin@example.com"
+	o.GoogleServiceAccountJSON = "file_doesnt_exist.json"
+	err := o.Validate()
+	assert.NotEqual(t, nil, err)
+
+	expected := errorMsg([]string{
+		"invalid Google credentials file: file_doesnt_exist.json",
+	})
+	assert.Equal(t, expected, err.Error())
+}
+
 func TestInitializedOptions(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, o.Validate())

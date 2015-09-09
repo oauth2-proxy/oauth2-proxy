@@ -1,5 +1,8 @@
-github.com/BurntSushi/toml              3883ac1ce943878302255f538fce319d23226223
-github.com/bitly/go-simplejson          3378bdcb5cebedcbf8b5750edee28010f128fe24
-github.com/mreiferson/go-options        ee94b57f2fbf116075426f853e5abbcdfeca8b3d
-github.com/bmizerany/assert             e17e99893cb6509f428e1728281c2ad60a6b31e3
-gopkg.in/fsnotify.v1                    v1.2.0
+github.com/BurntSushi/toml               3883ac1ce943878302255f538fce319d23226223
+github.com/bitly/go-simplejson           3378bdcb5cebedcbf8b5750edee28010f128fe24
+github.com/mreiferson/go-options         ee94b57f2fbf116075426f853e5abbcdfeca8b3d
+github.com/bmizerany/assert              e17e99893cb6509f428e1728281c2ad60a6b31e3
+gopkg.in/fsnotify.v1                     v1.2.0
+golang.org/x/oauth2                      397fe7649477ff2e8ced8fc0b2696f781e53745a
+golang.org/x/oauth2/google               397fe7649477ff2e8ced8fc0b2696f781e53745a
+google.golang.org/api/admin/directory/v1 a5c3e2a4792aff40e59840d9ecdff0542a202a80
