@@ -82,20 +82,35 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 		req.URL.RawQuery = ""
 	}
 }
+func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
+	return http.StripPrefix(path, http.FileServer(http.Dir(filesystemPath)))
+}
 
 func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	serveMux := http.NewServeMux()
 	for _, u := range opts.proxyUrls {
 		path := u.Path
-		u.Path = ""
-		log.Printf("mapping path %q => upstream %q", path, u)
-		proxy := NewReverseProxy(u)
-		if !opts.PassHostHeader {
-			setProxyUpstreamHostHeader(proxy, u)
-		} else {
-			setProxyDirector(proxy)
+		switch u.Scheme {
+		case "http", "https":
+			u.Path = ""
+			log.Printf("mapping path %q => upstream %q", path, u)
+			proxy := NewReverseProxy(u)
+			if !opts.PassHostHeader {
+				setProxyUpstreamHostHeader(proxy, u)
+			} else {
+				setProxyDirector(proxy)
+			}
+			serveMux.Handle(path, &UpstreamProxy{u.Host, proxy})
+		case "file":
+			if u.Fragment != "" {
+				path = u.Fragment
+			}
+			log.Printf("mapping path %q => file system %q", path, u.Path)
+			proxy := NewFileServer(path, u.Path)
+			serveMux.Handle(path, &UpstreamProxy{path, proxy})
+		default:
+			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
 		}
-		serveMux.Handle(path, &UpstreamProxy{u.Host, proxy})
 	}
 	for _, u := range opts.CompiledRegex {
 		log.Printf("compiled skip-auth-regex => %q", u)

@@ -75,7 +75,6 @@ func TestEncodedSlashes(t *testing.T) {
 
 func TestRobotsTxt(t *testing.T) {
 	opts := NewOptions()
-	opts.Upstreams = append(opts.Upstreams, "unused")
 	opts.ClientID = "bazquux"
 	opts.ClientSecret = "foobar"
 	opts.CookieSecret = "xyzzyplugh"
@@ -371,7 +370,6 @@ func NewSignInPageTest() *SignInPageTest {
 	var sip_test SignInPageTest
 
 	sip_test.opts = NewOptions()
-	sip_test.opts.Upstreams = append(sip_test.opts.Upstreams, "unused")
 	sip_test.opts.CookieSecret = "foobar"
 	sip_test.opts.ClientID = "bazquux"
 	sip_test.opts.ClientSecret = "xyzzyplugh"
@@ -443,7 +441,6 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts) *ProcessCookieTest {
 	var pc_test ProcessCookieTest
 
 	pc_test.opts = NewOptions()
-	pc_test.opts.Upstreams = append(pc_test.opts.Upstreams, "unused")
 	pc_test.opts.ClientID = "bazquux"
 	pc_test.opts.ClientSecret = "xyzzyplugh"
 	pc_test.opts.CookieSecret = "0123456789abcdef"
