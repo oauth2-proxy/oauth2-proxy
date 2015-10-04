@@ -287,11 +287,13 @@ func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 	log.Printf("ErrorPage %d %s %s", code, title, message)
 	rw.WriteHeader(code)
 	t := struct {
-		Title   string
-		Message string
+		Title       string
+		Message     string
+		ProxyPrefix string
 	}{
-		Title:   fmt.Sprintf("%d %s", code, title),
-		Message: message,
+		Title:       fmt.Sprintf("%d %s", code, title),
+		Message:     message,
+		ProxyPrefix: p.ProxyPrefix,
 	}
 	p.templates.ExecuteTemplate(rw, "error.html", t)
 }
