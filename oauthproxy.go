@@ -470,21 +470,27 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
-	remoteAddr := getRemoteAddr(req)
-	if session, _, err := p.LoadCookiedSession(req); err != nil {
-		log.Printf("%s %s", remoteAddr, err)
-	} else if session.IsExpired() {
-		log.Printf("%s Expired", remoteAddr, session)
-	} else if !p.Validator(session.Email) {
-		log.Printf("%s Permission Denied", remoteAddr, session)
-	} else {
+	status := p.Authenticate(rw, req)
+	if status == http.StatusAccepted {
 		rw.WriteHeader(http.StatusAccepted)
-		return
+	} else {
+		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
 	}
-	http.Error(rw, "unauthorized request", http.StatusUnauthorized)
 }
 
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
+	status := p.Authenticate(rw, req)
+	if status == http.StatusInternalServerError {
+		p.ErrorPage(rw, http.StatusInternalServerError,
+			"Internal Error", "Internal Error")
+	} else if status == http.StatusForbidden {
+		p.SignInPage(rw, req, http.StatusForbidden)
+	} else {
+		p.serveMux.ServeHTTP(rw, req)
+	}
+}
+
+func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int {
 	var saveSession, clearSession, revalidated bool
 	remoteAddr := getRemoteAddr(req)
 
@@ -533,8 +539,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			log.Printf("%s %s", remoteAddr, err)
-			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
-			return
+			return http.StatusInternalServerError
 		}
 	}
 
@@ -550,8 +555,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if session == nil {
-		p.SignInPage(rw, req, 403)
-		return
+		return http.StatusForbidden
 	}
 
 	// At this point, the user is authenticated. proxy normally
@@ -570,8 +574,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	} else {
 		rw.Header().Set("GAP-Auth", session.Email)
 	}
-
-	p.serveMux.ServeHTTP(rw, req)
+	return http.StatusAccepted
 }
 
 func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState, error) {
