@@ -33,6 +33,7 @@ type OAuthProxy struct {
 	SignInPath        string
 	OAuthStartPath    string
 	OAuthCallbackPath string
+	AuthOnlyPath      string
 
 	redirectURL         *url.URL // the url to receive requests at
 	provider            providers.Provider
@@ -156,6 +157,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
 		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
+		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 
 		ProxyPrefix:       opts.ProxyPrefix,
 		provider:          opts.provider,
@@ -390,6 +392,8 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.OAuthStart(rw, req)
 	case path == p.OAuthCallbackPath:
 		p.OAuthCallback(rw, req)
+	case path == p.AuthOnlyPath:
+		p.AuthenticateOnly(rw, req)
 	default:
 		p.Proxy(rw, req)
 	}
@@ -463,6 +467,21 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		log.Printf("%s Permission Denied: %q is unauthorized", remoteAddr, session.Email)
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 	}
+}
+
+func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
+	remoteAddr := getRemoteAddr(req)
+	if session, _, err := p.LoadCookiedSession(req); err != nil {
+		log.Printf("%s %s", remoteAddr, err)
+	} else if session.IsExpired() {
+		log.Printf("%s Expired", remoteAddr, session)
+	} else if !p.Validator(session.Email) {
+		log.Printf("%s Permission Denied", remoteAddr, session)
+	} else {
+		rw.WriteHeader(http.StatusAccepted)
+		return
+	}
+	http.Error(rw, "unauthorized request", http.StatusUnauthorized)
 }
 
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
