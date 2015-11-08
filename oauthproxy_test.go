@@ -124,17 +124,17 @@ func TestBasicAuthPassword(t *testing.T) {
 	opts.provider = &TestProvider{
 		ProviderData: &providers.ProviderData{
 			ProviderName: "Test Provider",
-			LoginUrl: &url.URL{
+			LoginURL: &url.URL{
 				Scheme: "http",
 				Host:   provider_url.Host,
 				Path:   "/oauth/authorize",
 			},
-			RedeemUrl: &url.URL{
+			RedeemURL: &url.URL{
 				Scheme: "http",
 				Host:   provider_url.Host,
 				Path:   "/oauth/token",
 			},
-			ProfileUrl: &url.URL{
+			ProfileURL: &url.URL{
 				Scheme: "http",
 				Host:   provider_url.Host,
 				Path:   "/api/v1/profile",
@@ -245,17 +245,17 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 	t.opts.provider = &TestProvider{
 		ProviderData: &providers.ProviderData{
 			ProviderName: "Test Provider",
-			LoginUrl: &url.URL{
+			LoginURL: &url.URL{
 				Scheme: "http",
 				Host:   provider_url.Host,
 				Path:   "/oauth/authorize",
 			},
-			RedeemUrl: &url.URL{
+			RedeemURL: &url.URL{
 				Scheme: "http",
 				Host:   provider_url.Host,
 				Path:   "/oauth/token",
 			},
-			ProfileUrl: &url.URL{
+			ProfileURL: &url.URL{
 				Scheme: "http",
 				Host:   provider_url.Host,
 				Path:   "/api/v1/profile",

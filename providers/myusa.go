@@ -16,23 +16,23 @@ func NewMyUsaProvider(p *ProviderData) *MyUsaProvider {
 	const myUsaHost string = "alpha.my.usa.gov"
 
 	p.ProviderName = "MyUSA"
-	if p.LoginUrl.String() == "" {
-		p.LoginUrl = &url.URL{Scheme: "https",
+	if p.LoginURL.String() == "" {
+		p.LoginURL = &url.URL{Scheme: "https",
 			Host: myUsaHost,
 			Path: "/oauth/authorize"}
 	}
-	if p.RedeemUrl.String() == "" {
-		p.RedeemUrl = &url.URL{Scheme: "https",
+	if p.RedeemURL.String() == "" {
+		p.RedeemURL = &url.URL{Scheme: "https",
 			Host: myUsaHost,
 			Path: "/oauth/token"}
 	}
-	if p.ProfileUrl.String() == "" {
-		p.ProfileUrl = &url.URL{Scheme: "https",
+	if p.ProfileURL.String() == "" {
+		p.ProfileURL = &url.URL{Scheme: "https",
 			Host: myUsaHost,
 			Path: "/api/v1/profile"}
 	}
-	if p.ValidateUrl.String() == "" {
-		p.ValidateUrl = &url.URL{Scheme: "https",
+	if p.ValidateURL.String() == "" {
+		p.ValidateURL = &url.URL{Scheme: "https",
 			Host: myUsaHost,
 			Path: "/api/v1/tokeninfo"}
 	}
@@ -44,7 +44,7 @@ func NewMyUsaProvider(p *ProviderData) *MyUsaProvider {
 
 func (p *MyUsaProvider) GetEmailAddress(s *SessionState) (string, error) {
 	req, err := http.NewRequest("GET",
-		p.ProfileUrl.String()+"?access_token="+s.AccessToken, nil)
+		p.ProfileURL.String()+"?access_token="+s.AccessToken, nil)
 	if err != nil {
 		log.Printf("failed building request %s", err)
 		return "", err

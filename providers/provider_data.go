@@ -8,10 +8,10 @@ type ProviderData struct {
 	ProviderName   string
 	ClientID       string
 	ClientSecret   string
-	LoginUrl       *url.URL
-	RedeemUrl      *url.URL
-	ProfileUrl     *url.URL
-	ValidateUrl    *url.URL
+	LoginURL       *url.URL
+	RedeemURL      *url.URL
+	ProfileURL     *url.URL
+	ValidateURL    *url.URL
 	Scope          string
 	ApprovalPrompt string
 }

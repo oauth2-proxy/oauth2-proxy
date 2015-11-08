@@ -34,7 +34,7 @@ type OauthProxy struct {
 	OauthStartPath    string
 	OauthCallbackPath string
 
-	redirectUrl         *url.URL // the url to receive requests at
+	redirectURL         *url.URL // the url to receive requests at
 	provider            providers.Provider
 	ProxyPrefix         string
 	SignInMessage       string
@@ -88,7 +88,7 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 
 func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	serveMux := http.NewServeMux()
-	for _, u := range opts.proxyUrls {
+	for _, u := range opts.proxyURLs {
 		path := u.Path
 		switch u.Scheme {
 		case "http", "https":
@@ -116,8 +116,8 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		log.Printf("compiled skip-auth-regex => %q", u)
 	}
 
-	redirectUrl := opts.redirectUrl
-	redirectUrl.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
+	redirectURL := opts.redirectURL
+	redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 
 	log.Printf("OauthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
 	domain := opts.CookieDomain
@@ -160,7 +160,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		ProxyPrefix:       opts.ProxyPrefix,
 		provider:          opts.provider,
 		serveMux:          serveMux,
-		redirectUrl:       redirectUrl,
+		redirectURL:       redirectURL,
 		skipAuthRegex:     opts.SkipAuthRegex,
 		compiledRegex:     opts.CompiledRegex,
 		PassBasicAuth:     opts.PassBasicAuth,
@@ -173,11 +173,11 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 
 func (p *OauthProxy) GetRedirectURI(host string) string {
 	// default to the request Host if not set
-	if p.redirectUrl.Host != "" {
-		return p.redirectUrl.String()
+	if p.redirectURL.Host != "" {
+		return p.redirectURL.String()
 	}
 	var u url.URL
-	u = *p.redirectUrl
+	u = *p.redirectURL
 	if u.Scheme == "" {
 		if p.CookieSecure {
 			u.Scheme = "https"

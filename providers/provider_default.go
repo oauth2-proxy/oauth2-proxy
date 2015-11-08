@@ -13,20 +13,20 @@ import (
 	"github.com/bitly/oauth2_proxy/cookie"
 )
 
-func (p *ProviderData) Redeem(redirectUrl, code string) (s *SessionState, err error) {
+func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
 	}
 
 	params := url.Values{}
-	params.Add("redirect_uri", redirectUrl)
+	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", p.ClientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemUrl.String(), bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return
 	}
@@ -45,7 +45,7 @@ func (p *ProviderData) Redeem(redirectUrl, code string) (s *SessionState, err er
 	}
 
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemUrl.String(), body)
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
 		return
 	}
 
@@ -77,7 +77,7 @@ func (p *ProviderData) Redeem(redirectUrl, code string) (s *SessionState, err er
 // GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
 	var a url.URL
-	a = *p.LoginUrl
+	a = *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
 	params.Set("approval_prompt", p.ApprovalPrompt)
