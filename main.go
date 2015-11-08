@@ -66,8 +66,8 @@ func main() {
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
-	flagSet.String("scope", "", "Oauth scope specification")
-	flagSet.String("approval-prompt", "force", "Oauth approval_prompt")
+	flagSet.String("scope", "", "OAuth scope specification")
+	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 
 	flagSet.Parse(os.Args[1:])
 
@@ -95,7 +95,7 @@ func main() {
 	}
 
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
-	oauthproxy := NewOauthProxy(opts, validator)
+	oauthproxy := NewOAuthProxy(opts, validator)
 
 	if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
 		if len(opts.EmailDomains) > 1 {

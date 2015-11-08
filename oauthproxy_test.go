@@ -80,7 +80,7 @@ func TestRobotsTxt(t *testing.T) {
 	opts.CookieSecret = "xyzzyplugh"
 	opts.Validate()
 
-	proxy := NewOauthProxy(opts, func(string) bool { return true })
+	proxy := NewOAuthProxy(opts, func(string) bool { return true })
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/robots.txt", nil)
 	proxy.ServeHTTP(rw, req)
@@ -144,7 +144,7 @@ func TestBasicAuthPassword(t *testing.T) {
 		EmailAddress: email_address,
 	}
 
-	proxy := NewOauthProxy(opts, func(email string) bool {
+	proxy := NewOAuthProxy(opts, func(email string) bool {
 		return email == email_address
 	})
 
@@ -199,7 +199,7 @@ func (tp *TestProvider) ValidateSessionState(session *providers.SessionState) bo
 
 type PassAccessTokenTest struct {
 	provider_server *httptest.Server
-	proxy           *OauthProxy
+	proxy           *OAuthProxy
 	opts            *Options
 }
 
@@ -265,7 +265,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 		EmailAddress: email_address,
 	}
 
-	t.proxy = NewOauthProxy(t.opts, func(email string) bool {
+	t.proxy = NewOAuthProxy(t.opts, func(email string) bool {
 		return email == email_address
 	})
 	return t
@@ -360,7 +360,7 @@ func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 
 type SignInPageTest struct {
 	opts           *Options
-	proxy          *OauthProxy
+	proxy          *OAuthProxy
 	sign_in_regexp *regexp.Regexp
 }
 
@@ -375,7 +375,7 @@ func NewSignInPageTest() *SignInPageTest {
 	sip_test.opts.ClientSecret = "xyzzyplugh"
 	sip_test.opts.Validate()
 
-	sip_test.proxy = NewOauthProxy(sip_test.opts, func(email string) bool {
+	sip_test.proxy = NewOAuthProxy(sip_test.opts, func(email string) bool {
 		return true
 	})
 	sip_test.sign_in_regexp = regexp.MustCompile(signInRedirectPattern)
@@ -425,7 +425,7 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 
 type ProcessCookieTest struct {
 	opts          *Options
-	proxy         *OauthProxy
+	proxy         *OAuthProxy
 	rw            *httptest.ResponseRecorder
 	req           *http.Request
 	provider      TestProvider
@@ -449,7 +449,7 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts) *ProcessCookieTest {
 	pc_test.opts.CookieRefresh = time.Hour
 	pc_test.opts.Validate()
 
-	pc_test.proxy = NewOauthProxy(pc_test.opts, func(email string) bool {
+	pc_test.proxy = NewOAuthProxy(pc_test.opts, func(email string) bool {
 		return pc_test.validate_user
 	})
 	pc_test.proxy.provider = &TestProvider{
