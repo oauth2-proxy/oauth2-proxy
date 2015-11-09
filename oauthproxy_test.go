@@ -555,3 +555,58 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 		t.Errorf("expected nil session %#v", session)
 	}
 }
+
+func NewAuthOnlyEndpointTest() *ProcessCookieTest {
+	pc_test := NewProcessCookieTestWithDefaults()
+	pc_test.req, _ = http.NewRequest("GET",
+		pc_test.opts.ProxyPrefix + "/auth", nil)
+	return pc_test
+}
+
+func TestAuthOnlyEndpointAccepted(t *testing.T) {
+	test := NewAuthOnlyEndpointTest()
+	startSession := &providers.SessionState{
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
+	test.SaveSession(startSession, time.Now())
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusAccepted, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "", string(bodyBytes))
+}
+
+func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
+	test := NewAuthOnlyEndpointTest()
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+}
+
+func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
+	test := NewAuthOnlyEndpointTest()
+	test.proxy.CookieExpire = time.Duration(24) * time.Hour
+	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
+	startSession := &providers.SessionState{
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
+	test.SaveSession(startSession, reference)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+}
+
+func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
+	test := NewAuthOnlyEndpointTest()
+	startSession := &providers.SessionState{
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
+	test.SaveSession(startSession, time.Now())
+	test.validate_user = false
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+}

@@ -239,7 +239,6 @@ The command line to run `oauth2_proxy` in this configuration would look like thi
    --client-secret=...
 ```
 
-
 ## Endpoint Documentation
 
 OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated. The `/oauth2` prefix can be changed with the `--proxy-prefix` config variable.
@@ -249,6 +248,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 * /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 * /oauth2/start - a URL that will redirect to start the OAuth cycle
 * /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
+* /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; for use with the [Nginx `auth_request` directive](#nginx-auth-request)
 
 ## Logging Format
 
@@ -265,3 +265,30 @@ Follow the examples in the [`providers` package](providers/) to define a new
 `Provider` instance. Add a new `case` to
 [`providers.New()`](providers/providers.go) to allow `oauth2_proxy` to use the
 new `Provider`.
+
+## <a name="nginx-auth-request"></a>Configuring for use with the Nginx `auth_request` directive
+
+The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2_proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
+
+```nginx
+server {
+  listen 443 ssl spdy;
+  server_name ...;
+  include ssl/ssl.conf;
+
+  location = /auth {
+    internal;
+    proxy_pass http://127.0.0.1:4180;
+  }
+
+  location / {
+    auth_request /auth;
+    error_page 401 = ...;
+
+    root /path/to/the/site;
+    default_type text/html;
+    charset utf-8;
+    charset_types application/json utf-8;
+  }
+}
+```
