@@ -41,9 +41,8 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 		for {
 			select {
 			case _ = <-done:
-				log.Printf("Shutting down watcher for: %s",
-					filename)
-				return
+				log.Printf("Shutting down watcher for: %s", filename)
+				break
 			case event := <-watcher.Events:
 				// On Arch Linux, it appears Chmod events precede Remove events,
 				// which causes a race between action() and the coming Remove event.

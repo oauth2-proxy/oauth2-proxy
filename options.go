@@ -25,6 +25,7 @@ type Options struct {
 	TLSKeyFile   string `flag:"tls-key" cfg:"tls_key_file"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
+	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
 	EmailDomains             []string `flag:"email-domain" cfg:"email_domains"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
@@ -52,13 +53,14 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider       string `flag:"provider" cfg:"provider"`
-	LoginURL       string `flag:"login-url" cfg:"login_url"`
-	RedeemURL      string `flag:"redeem-url" cfg:"redeem_url"`
-	ProfileURL     string `flag:"profile-url" cfg:"profile_url"`
-	ValidateURL    string `flag:"validate-url" cfg:"validate_url"`
-	Scope          string `flag:"scope" cfg:"scope"`
-	ApprovalPrompt string `flag:"approval-prompt" cfg:"approval_prompt"`
+	Provider          string `flag:"provider" cfg:"provider"`
+	LoginURL          string `flag:"login-url" cfg:"login_url"`
+	RedeemURL         string `flag:"redeem-url" cfg:"redeem_url"`
+	ProfileURL        string `flag:"profile-url" cfg:"profile_url"`
+	ProtectedResource string `flag:"resource" cfg:"resource"`
+	ValidateURL       string `flag:"validate-url" cfg:"validate_url"`
+	Scope             string `flag:"scope" cfg:"scope"`
+	ApprovalPrompt    string `flag:"approval-prompt" cfg:"approval_prompt"`
 
 	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
 
@@ -205,9 +207,12 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 	p.RedeemURL, msgs = parseURL(o.RedeemURL, "redeem", msgs)
 	p.ProfileURL, msgs = parseURL(o.ProfileURL, "profile", msgs)
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
+	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
 
 	o.provider = providers.New(o.Provider, p)
 	switch p := o.provider.(type) {
+	case *providers.AzureProvider:
+		p.Configure(o.AzureTenant)
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
 	case *providers.GoogleProvider:
