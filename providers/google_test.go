@@ -23,10 +23,10 @@ func newGoogleProvider() *GoogleProvider {
 	return NewGoogleProvider(
 		&ProviderData{
 			ProviderName: "",
-			LoginUrl:     &url.URL{},
-			RedeemUrl:    &url.URL{},
-			ProfileUrl:   &url.URL{},
-			ValidateUrl:  &url.URL{},
+			LoginURL:     &url.URL{},
+			RedeemURL:    &url.URL{},
+			ProfileURL:   &url.URL{},
+			ValidateURL:  &url.URL{},
 			Scope:        ""})
 }
 
@@ -35,31 +35,31 @@ func TestGoogleProviderDefaults(t *testing.T) {
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Google", p.Data().ProviderName)
 	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth?access_type=offline",
-		p.Data().LoginUrl.String())
+		p.Data().LoginURL.String())
 	assert.Equal(t, "https://www.googleapis.com/oauth2/v3/token",
-		p.Data().RedeemUrl.String())
+		p.Data().RedeemURL.String())
 	assert.Equal(t, "https://www.googleapis.com/oauth2/v1/tokeninfo",
-		p.Data().ValidateUrl.String())
-	assert.Equal(t, "", p.Data().ProfileUrl.String())
+		p.Data().ValidateURL.String())
+	assert.Equal(t, "", p.Data().ProfileURL.String())
 	assert.Equal(t, "profile email", p.Data().Scope)
 }
 
 func TestGoogleProviderOverrides(t *testing.T) {
 	p := NewGoogleProvider(
 		&ProviderData{
-			LoginUrl: &url.URL{
+			LoginURL: &url.URL{
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/auth"},
-			RedeemUrl: &url.URL{
+			RedeemURL: &url.URL{
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/token"},
-			ProfileUrl: &url.URL{
+			ProfileURL: &url.URL{
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/profile"},
-			ValidateUrl: &url.URL{
+			ValidateURL: &url.URL{
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/tokeninfo"},
@@ -67,13 +67,13 @@ func TestGoogleProviderOverrides(t *testing.T) {
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Google", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/oauth/auth",
-		p.Data().LoginUrl.String())
+		p.Data().LoginURL.String())
 	assert.Equal(t, "https://example.com/oauth/token",
-		p.Data().RedeemUrl.String())
+		p.Data().RedeemURL.String())
 	assert.Equal(t, "https://example.com/oauth/profile",
-		p.Data().ProfileUrl.String())
+		p.Data().ProfileURL.String())
 	assert.Equal(t, "https://example.com/oauth/tokeninfo",
-		p.Data().ValidateUrl.String())
+		p.Data().ValidateURL.String())
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
@@ -94,7 +94,7 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server
-	p.RedeemUrl, server = newRedeemServer(body)
+	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
 	session, err := p.Redeem("http://redirect/", "code1234")
@@ -131,7 +131,7 @@ func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server
-	p.RedeemUrl, server = newRedeemServer(body)
+	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
 	session, err := p.Redeem("http://redirect/", "code1234")
@@ -150,7 +150,7 @@ func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server
-	p.RedeemUrl, server = newRedeemServer(body)
+	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
 	session, err := p.Redeem("http://redirect/", "code1234")
@@ -169,7 +169,7 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server
-	p.RedeemUrl, server = newRedeemServer(body)
+	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
 	session, err := p.Redeem("http://redirect/", "code1234")

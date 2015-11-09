@@ -21,7 +21,7 @@ import (
 
 type GoogleProvider struct {
 	*ProviderData
-	RedeemRefreshUrl *url.URL
+	RedeemRefreshURL *url.URL
 	// GroupValidator is a function that determines if the passed email is in
 	// the configured Google group.
 	GroupValidator func(string) bool
@@ -29,21 +29,21 @@ type GoogleProvider struct {
 
 func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	p.ProviderName = "Google"
-	if p.LoginUrl.String() == "" {
-		p.LoginUrl = &url.URL{Scheme: "https",
+	if p.LoginURL.String() == "" {
+		p.LoginURL = &url.URL{Scheme: "https",
 			Host: "accounts.google.com",
 			Path: "/o/oauth2/auth",
 			// to get a refresh token. see https://developers.google.com/identity/protocols/OAuth2WebServer#offline
 			RawQuery: "access_type=offline",
 		}
 	}
-	if p.RedeemUrl.String() == "" {
-		p.RedeemUrl = &url.URL{Scheme: "https",
+	if p.RedeemURL.String() == "" {
+		p.RedeemURL = &url.URL{Scheme: "https",
 			Host: "www.googleapis.com",
 			Path: "/oauth2/v3/token"}
 	}
-	if p.ValidateUrl.String() == "" {
-		p.ValidateUrl = &url.URL{Scheme: "https",
+	if p.ValidateURL.String() == "" {
+		p.ValidateURL = &url.URL{Scheme: "https",
 			Host: "www.googleapis.com",
 			Path: "/oauth2/v1/tokeninfo"}
 	}
@@ -96,20 +96,20 @@ func jwtDecodeSegment(seg string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(seg)
 }
 
-func (p *GoogleProvider) Redeem(redirectUrl, code string) (s *SessionState, err error) {
+func (p *GoogleProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
 	}
 
 	params := url.Values{}
-	params.Add("redirect_uri", redirectUrl)
+	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", p.ClientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemUrl.String(), bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return
 	}
@@ -127,7 +127,7 @@ func (p *GoogleProvider) Redeem(redirectUrl, code string) (s *SessionState, err 
 	}
 
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemUrl.String(), body)
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
 		return
 	}
 
@@ -281,7 +281,7 @@ func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, 
 	params.Add("refresh_token", refreshToken)
 	params.Add("grant_type", "refresh_token")
 	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemUrl.String(), bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return
 	}
@@ -299,7 +299,7 @@ func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, 
 	}
 
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemUrl.String(), body)
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
 		return
 	}
 

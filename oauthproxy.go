@@ -18,7 +18,7 @@ import (
 	"github.com/bitly/oauth2_proxy/providers"
 )
 
-type OauthProxy struct {
+type OAuthProxy struct {
 	CookieSeed     string
 	CookieName     string
 	CookieDomain   string
@@ -31,10 +31,10 @@ type OauthProxy struct {
 	RobotsPath        string
 	PingPath          string
 	SignInPath        string
-	OauthStartPath    string
-	OauthCallbackPath string
+	OAuthStartPath    string
+	OAuthCallbackPath string
 
-	redirectUrl         *url.URL // the url to receive requests at
+	redirectURL         *url.URL // the url to receive requests at
 	provider            providers.Provider
 	ProxyPrefix         string
 	SignInMessage       string
@@ -86,9 +86,9 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 	return http.StripPrefix(path, http.FileServer(http.Dir(filesystemPath)))
 }
 
-func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
+func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	serveMux := http.NewServeMux()
-	for _, u := range opts.proxyUrls {
+	for _, u := range opts.proxyURLs {
 		path := u.Path
 		switch u.Scheme {
 		case "http", "https":
@@ -116,10 +116,10 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		log.Printf("compiled skip-auth-regex => %q", u)
 	}
 
-	redirectUrl := opts.redirectUrl
-	redirectUrl.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
+	redirectURL := opts.redirectURL
+	redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 
-	log.Printf("OauthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
+	log.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
 	domain := opts.CookieDomain
 	if domain == "" {
 		domain = "<default>"
@@ -141,7 +141,7 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		}
 	}
 
-	return &OauthProxy{
+	return &OAuthProxy{
 		CookieName:     opts.CookieName,
 		CookieSeed:     opts.CookieSecret,
 		CookieDomain:   opts.CookieDomain,
@@ -154,13 +154,13 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 		RobotsPath:        "/robots.txt",
 		PingPath:          "/ping",
 		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
-		OauthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
-		OauthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
+		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
+		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 
 		ProxyPrefix:       opts.ProxyPrefix,
 		provider:          opts.provider,
 		serveMux:          serveMux,
-		redirectUrl:       redirectUrl,
+		redirectURL:       redirectURL,
 		skipAuthRegex:     opts.SkipAuthRegex,
 		compiledRegex:     opts.CompiledRegex,
 		PassBasicAuth:     opts.PassBasicAuth,
@@ -171,13 +171,13 @@ func NewOauthProxy(opts *Options, validator func(string) bool) *OauthProxy {
 	}
 }
 
-func (p *OauthProxy) GetRedirectURI(host string) string {
+func (p *OAuthProxy) GetRedirectURI(host string) string {
 	// default to the request Host if not set
-	if p.redirectUrl.Host != "" {
-		return p.redirectUrl.String()
+	if p.redirectURL.Host != "" {
+		return p.redirectURL.String()
 	}
 	var u url.URL
-	u = *p.redirectUrl
+	u = *p.redirectURL
 	if u.Scheme == "" {
 		if p.CookieSecure {
 			u.Scheme = "https"
@@ -189,16 +189,16 @@ func (p *OauthProxy) GetRedirectURI(host string) string {
 	return u.String()
 }
 
-func (p *OauthProxy) displayCustomLoginForm() bool {
+func (p *OAuthProxy) displayCustomLoginForm() bool {
 	return p.HtpasswdFile != nil && p.DisplayHtpasswdForm
 }
 
-func (p *OauthProxy) redeemCode(host, code string) (s *providers.SessionState, err error) {
+func (p *OAuthProxy) redeemCode(host, code string) (s *providers.SessionState, err error) {
 	if code == "" {
 		return nil, errors.New("missing code")
 	}
-	redirectUri := p.GetRedirectURI(host)
-	s, err = p.provider.Redeem(redirectUri, code)
+	redirectURI := p.GetRedirectURI(host)
+	s, err = p.provider.Redeem(redirectURI, code)
 	if err != nil {
 		return
 	}
@@ -209,7 +209,7 @@ func (p *OauthProxy) redeemCode(host, code string) (s *providers.SessionState, e
 	return
 }
 
-func (p *OauthProxy) MakeCookie(req *http.Request, value string, expiration time.Duration, now time.Time) *http.Cookie {
+func (p *OAuthProxy) MakeCookie(req *http.Request, value string, expiration time.Duration, now time.Time) *http.Cookie {
 	domain := req.Host
 	if h, _, err := net.SplitHostPort(domain); err == nil {
 		domain = h
@@ -235,15 +235,15 @@ func (p *OauthProxy) MakeCookie(req *http.Request, value string, expiration time
 	}
 }
 
-func (p *OauthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 	http.SetCookie(rw, p.MakeCookie(req, "", time.Hour*-1, time.Now()))
 }
 
-func (p *OauthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
+func (p *OAuthProxy) SetCookie(rw http.ResponseWriter, req *http.Request, val string) {
 	http.SetCookie(rw, p.MakeCookie(req, val, p.CookieExpire, time.Now()))
 }
 
-func (p *OauthProxy) LoadCookiedSession(req *http.Request) (*providers.SessionState, time.Duration, error) {
+func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*providers.SessionState, time.Duration, error) {
 	var age time.Duration
 	c, err := req.Cookie(p.CookieName)
 	if err != nil {
@@ -264,7 +264,7 @@ func (p *OauthProxy) LoadCookiedSession(req *http.Request) (*providers.SessionSt
 	return session, age, nil
 }
 
-func (p *OauthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *providers.SessionState) error {
+func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *providers.SessionState) error {
 	value, err := p.provider.CookieForSession(s, p.CookieCipher)
 	if err != nil {
 		return err
@@ -273,17 +273,17 @@ func (p *OauthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *p
 	return nil
 }
 
-func (p *OauthProxy) RobotsTxt(rw http.ResponseWriter) {
+func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 	rw.WriteHeader(http.StatusOK)
 	fmt.Fprintf(rw, "User-agent: *\nDisallow: /")
 }
 
-func (p *OauthProxy) PingPage(rw http.ResponseWriter) {
+func (p *OAuthProxy) PingPage(rw http.ResponseWriter) {
 	rw.WriteHeader(http.StatusOK)
 	fmt.Fprintf(rw, "OK")
 }
 
-func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
+func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	log.Printf("ErrorPage %d %s %s", code, title, message)
 	rw.WriteHeader(code)
 	t := struct {
@@ -298,7 +298,7 @@ func (p *OauthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 	p.templates.ExecuteTemplate(rw, "error.html", t)
 }
 
-func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
+func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	p.ClearCookie(rw, req)
 	rw.WriteHeader(code)
 
@@ -325,7 +325,7 @@ func (p *OauthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
 }
 
-func (p *OauthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {
+func (p *OAuthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {
 	if req.Method != "POST" || p.HtpasswdFile == nil {
 		return "", false
 	}
@@ -342,7 +342,7 @@ func (p *OauthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (st
 	return "", false
 }
 
-func (p *OauthProxy) GetRedirect(req *http.Request) (string, error) {
+func (p *OAuthProxy) GetRedirect(req *http.Request) (string, error) {
 	err := req.ParseForm()
 
 	if err != nil {
@@ -358,7 +358,7 @@ func (p *OauthProxy) GetRedirect(req *http.Request) (string, error) {
 	return redirect, err
 }
 
-func (p *OauthProxy) IsWhitelistedPath(path string) (ok bool) {
+func (p *OAuthProxy) IsWhitelistedPath(path string) (ok bool) {
 	for _, u := range p.compiledRegex {
 		ok = u.MatchString(path)
 		if ok {
@@ -376,7 +376,7 @@ func getRemoteAddr(req *http.Request) (s string) {
 	return
 }
 
-func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	switch path := req.URL.Path; {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
@@ -386,16 +386,16 @@ func (p *OauthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.serveMux.ServeHTTP(rw, req)
 	case path == p.SignInPath:
 		p.SignIn(rw, req)
-	case path == p.OauthStartPath:
-		p.OauthStart(rw, req)
-	case path == p.OauthCallbackPath:
-		p.OauthCallback(rw, req)
+	case path == p.OAuthStartPath:
+		p.OAuthStart(rw, req)
+	case path == p.OAuthCallbackPath:
+		p.OAuthCallback(rw, req)
 	default:
 		p.Proxy(rw, req)
 	}
 }
 
-func (p *OauthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
 		p.ErrorPage(rw, 500, "Internal Error", err.Error())
@@ -412,7 +412,7 @@ func (p *OauthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (p *OauthProxy) OauthStart(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
 		p.ErrorPage(rw, 500, "Internal Error", err.Error())
@@ -422,7 +422,7 @@ func (p *OauthProxy) OauthStart(rw http.ResponseWriter, req *http.Request) {
 	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, redirect), 302)
 }
 
-func (p *OauthProxy) OauthCallback(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	remoteAddr := getRemoteAddr(req)
 
 	// finish the oauth cycle
@@ -465,7 +465,7 @@ func (p *OauthProxy) OauthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (p *OauthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	var saveSession, clearSession, revalidated bool
 	remoteAddr := getRemoteAddr(req)
 
@@ -555,7 +555,7 @@ func (p *OauthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	p.serveMux.ServeHTTP(rw, req)
 }
 
-func (p *OauthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState, error) {
+func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState, error) {
 	if p.HtpasswdFile == nil {
 		return nil, nil
 	}

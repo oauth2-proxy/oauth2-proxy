@@ -73,16 +73,16 @@ func TestInitializedOptions(t *testing.T) {
 
 // Note that it's not worth testing nonparseable URLs, since url.Parse()
 // seems to parse damn near anything.
-func TestRedirectUrl(t *testing.T) {
+func TestRedirectURL(t *testing.T) {
 	o := testOptions()
-	o.RedirectUrl = "https://myhost.com/oauth2/callback"
+	o.RedirectURL = "https://myhost.com/oauth2/callback"
 	assert.Equal(t, nil, o.Validate())
 	expected := &url.URL{
 		Scheme: "https", Host: "myhost.com", Path: "/oauth2/callback"}
-	assert.Equal(t, expected, o.redirectUrl)
+	assert.Equal(t, expected, o.redirectURL)
 }
 
-func TestProxyUrls(t *testing.T) {
+func TestProxyURLs(t *testing.T) {
 	o := testOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8081")
 	assert.Equal(t, nil, o.Validate())
@@ -91,7 +91,7 @@ func TestProxyUrls(t *testing.T) {
 		// note the '/' was added
 		&url.URL{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"},
 	}
-	assert.Equal(t, expected, o.proxyUrls)
+	assert.Equal(t, expected, o.proxyURLs)
 }
 
 func TestCompiledRegex(t *testing.T) {
@@ -125,10 +125,10 @@ func TestDefaultProviderApiSettings(t *testing.T) {
 	assert.Equal(t, nil, o.Validate())
 	p := o.provider.Data()
 	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth?access_type=offline",
-		p.LoginUrl.String())
+		p.LoginURL.String())
 	assert.Equal(t, "https://www.googleapis.com/oauth2/v3/token",
-		p.RedeemUrl.String())
-	assert.Equal(t, "", p.ProfileUrl.String())
+		p.RedeemURL.String())
+	assert.Equal(t, "", p.ProfileURL.String())
 	assert.Equal(t, "profile email", p.Scope)
 }
 

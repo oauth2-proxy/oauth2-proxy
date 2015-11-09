@@ -11,10 +11,10 @@ import (
 
 // validateToken returns true if token is valid
 func validateToken(p Provider, access_token string, header http.Header) bool {
-	if access_token == "" || p.Data().ValidateUrl == nil {
+	if access_token == "" || p.Data().ValidateURL == nil {
 		return false
 	}
-	endpoint := p.Data().ValidateUrl.String()
+	endpoint := p.Data().ValidateURL.String()
 	if len(header) == 0 {
 		params := url.Values{"access_token": {access_token}}
 		endpoint = endpoint + "?" + params.Encode()
