@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto"
 	"fmt"
 	"net/url"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/18F/hmacauth"
 	"github.com/bitly/oauth2_proxy/providers"
 )
 
@@ -60,11 +62,19 @@ type Options struct {
 
 	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
 
+	SignatureKey string `flag:"signature-key" cfg:"signature_key"`
+
 	// internal values that are set after config validation
 	redirectURL   *url.URL
 	proxyURLs     []*url.URL
 	CompiledRegex []*regexp.Regexp
 	provider      providers.Provider
+	signatureData *SignatureData
+}
+
+type SignatureData struct {
+	hash crypto.Hash
+	key  string
 }
 
 func NewOptions() *Options {
@@ -175,6 +185,8 @@ func (o *Options) Validate() error {
 		}
 	}
 
+	msgs = parseSignatureKey(o, msgs)
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
@@ -207,6 +219,27 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 				p.SetGroupRestriction(o.GoogleGroups, o.GoogleAdminEmail, file)
 			}
 		}
+	}
+	return msgs
+}
+
+func parseSignatureKey(o *Options, msgs []string) []string {
+	if o.SignatureKey == "" {
+		return msgs
+	}
+
+	components := strings.Split(o.SignatureKey, ":")
+	if len(components) != 2 {
+		return append(msgs, "invalid signature hash:key spec: "+
+			o.SignatureKey)
+	}
+
+	algorithm, secretKey := components[0], components[1]
+	if hash, err := hmacauth.DigestNameToCryptoHash(algorithm); err != nil {
+		return append(msgs, "unsupported signature hash algorithm: "+
+			o.SignatureKey)
+	} else {
+		o.signatureData = &SignatureData{hash, secretKey}
 	}
 	return msgs
 }

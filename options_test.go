@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto"
 	"net/url"
 	"strings"
 	"testing"
@@ -165,4 +166,28 @@ func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
 
 	o.CookieRefresh -= time.Duration(1)
 	assert.Equal(t, nil, o.Validate())
+}
+
+func TestValidateSignatureKey(t *testing.T) {
+	o := testOptions()
+	o.SignatureKey = "sha1:secret"
+	assert.Equal(t, nil, o.Validate())
+	assert.Equal(t, o.signatureData.hash, crypto.SHA1)
+	assert.Equal(t, o.signatureData.key, "secret")
+}
+
+func TestValidateSignatureKeyInvalidSpec(t *testing.T) {
+	o := testOptions()
+	o.SignatureKey = "invalid spec"
+	err := o.Validate()
+	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
+		"  invalid signature hash:key spec: "+o.SignatureKey)
+}
+
+func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
+	o := testOptions()
+	o.SignatureKey = "unsupported:default secret"
+	err := o.Validate()
+	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
+		"  unsupported signature hash algorithm: "+o.SignatureKey)
 }

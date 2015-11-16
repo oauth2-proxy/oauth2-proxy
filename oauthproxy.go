@@ -14,9 +14,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/18F/hmacauth"
 	"github.com/bitly/oauth2_proxy/cookie"
 	"github.com/bitly/oauth2_proxy/providers"
 )
+
+const SignatureHeader = "GAP-Signature"
+
+var SignatureHeaders []string = []string{
+	"Content-Length",
+	"Content-Md5",
+	"Content-Type",
+	"Date",
+	"Authorization",
+	"X-Forwarded-User",
+	"X-Forwarded-Email",
+	"X-Forwarded-Access-Token",
+	"Cookie",
+	"Gap-Auth",
+}
 
 type OAuthProxy struct {
 	CookieSeed     string
@@ -54,10 +70,15 @@ type OAuthProxy struct {
 type UpstreamProxy struct {
 	upstream string
 	handler  http.Handler
+	auth     hmacauth.HmacAuth
 }
 
 func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("GAP-Upstream-Address", u.upstream)
+	if u.auth != nil {
+		r.Header.Set("GAP-Auth", w.Header().Get("GAP-Auth"))
+		u.auth.SignRequest(r)
+	}
 	u.handler.ServeHTTP(w, r)
 }
 
@@ -89,6 +110,11 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 
 func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	serveMux := http.NewServeMux()
+	var auth hmacauth.HmacAuth
+	if sigData := opts.signatureData; sigData != nil {
+		auth = hmacauth.NewHmacAuth(sigData.hash, []byte(sigData.key),
+			SignatureHeader, SignatureHeaders)
+	}
 	for _, u := range opts.proxyURLs {
 		path := u.Path
 		switch u.Scheme {
@@ -101,14 +127,15 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			} else {
 				setProxyDirector(proxy)
 			}
-			serveMux.Handle(path, &UpstreamProxy{u.Host, proxy})
+			serveMux.Handle(path,
+				&UpstreamProxy{u.Host, proxy, auth})
 		case "file":
 			if u.Fragment != "" {
 				path = u.Fragment
 			}
 			log.Printf("mapping path %q => file system %q", path, u.Path)
 			proxy := NewFileServer(path, u.Path)
-			serveMux.Handle(path, &UpstreamProxy{path, proxy})
+			serveMux.Handle(path, &UpstreamProxy{path, proxy, nil})
 		default:
 			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
 		}

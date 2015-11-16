@@ -113,15 +113,16 @@ An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is i
 
 ```
 Usage of oauth2_proxy:
-  -approval_prompt="force": Oauth approval_prompt
+  -approval-prompt="force": Oauth approval_prompt
   -authenticated-emails-file="": authenticate against emails via file (one per line)
+  -basic-auth-password="": the password to set when passing the HTTP Basic Auth header
   -client-id="": the OAuth Client ID: ie: "123456.apps.googleusercontent.com"
   -client-secret="": the OAuth Client Secret
   -config="": path to config file
   -cookie-domain="": an optional cookie domain to force cookies to (ie: .yourcompany.com)*
   -cookie-expire=168h0m0s: expire timeframe for cookie
   -cookie-httponly=true: set HttpOnly cookie flag
-  -cookie-key="_oauth2_proxy": the name of the cookie that the oauth_proxy creates
+  -cookie-name="_oauth2_proxy": the name of the cookie that the oauth_proxy creates
   -cookie-refresh=0: refresh the cookie after this duration; 0 to disable
   -cookie-secret="": the seed string for secure cookies
   -cookie-secure=true: set secure (HTTPS) cookie flag
@@ -130,17 +131,15 @@ Usage of oauth2_proxy:
   -email-domain=: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
   -github-org="": restrict logins to members of this organisation
   -github-team="": restrict logins to members of this team
-  -google-group="": restrict logins to members of this google group
   -google-admin-email="": the google admin to impersonate for api calls
+  -google-group=: restrict logins to members of this google group (may be given multiple times).
   -google-service-account-json="": the path to the service account json credentials
-
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
   -https-address=":443": <addr>:<port> to listen on for HTTPS clients
   -login-url="": Authentication endpoint
   -pass-access-token=false: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
   -pass-basic-auth=true: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
-  -basic-auth-password="": the password to set when passing the HTTP Basic Auth header
   -pass-host-header=true: pass the request Host Header to upstream
   -profile-url="": Profile access endpoint
   -provider="google": OAuth provider
@@ -149,6 +148,7 @@ Usage of oauth2_proxy:
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -request-logging=true: Log requests to stdout
   -scope="": Oauth scope specification
+  -signature-key="": GAP-Signature request signature key (algorithm:secretkey)
   -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
   -tls-cert="": path to certificate file
   -tls-key="": path to private key file
@@ -250,6 +250,24 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 * /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
 * /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; for use with the [Nginx `auth_request` directive](#nginx-auth-request)
 
+## Request signatures
+
+If `signature_key` is defined, proxied requests will be signed with the
+`GAP-Signature` header, which is a [Hash-based Message Authentication Code
+(HMAC)](https://en.wikipedia.org/wiki/Hash-based_message_authentication_code)
+of selected request information and the request body [see `SIGNATURE_HEADERS`
+in `oauthproxy.go`](./oauthproxy.go).
+
+`signature_key` must be of the form `algorithm:secretkey`, (ie: `signature_key = "sha1:secret0"`)
+
+For more information about HMAC request signature validation, read the
+following:
+
+* [Amazon Web Services: Signing and Authenticating REST
+  Requests](https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html)
+* [rc3.org: Using HMAC to authenticate Web service
+  requests](http://rc3.org/2011/12/02/using-hmac-to-authenticate-web-service-requests/)
+
 ## Logging Format
 
 OAuth2 Proxy logs requests to stdout in a format similar to Apache Combined Log.
@@ -257,7 +275,6 @@ OAuth2 Proxy logs requests to stdout in a format similar to Apache Combined Log.
 ```
 <REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
 ```
-
 
 ## Adding a new Provider
 

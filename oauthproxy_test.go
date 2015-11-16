@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto"
 	"encoding/base64"
+	"github.com/18F/hmacauth"
 	"github.com/bitly/oauth2_proxy/providers"
 	"github.com/bmizerany/assert"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -88,6 +91,45 @@ func TestRobotsTxt(t *testing.T) {
 	assert.Equal(t, "User-agent: *\nDisallow: /", rw.Body.String())
 }
 
+type TestProvider struct {
+	*providers.ProviderData
+	EmailAddress string
+	ValidToken   bool
+}
+
+func NewTestProvider(provider_url *url.URL, email_address string) *TestProvider {
+	return &TestProvider{
+		ProviderData: &providers.ProviderData{
+			ProviderName: "Test Provider",
+			LoginURL: &url.URL{
+				Scheme: "http",
+				Host:   provider_url.Host,
+				Path:   "/oauth/authorize",
+			},
+			RedeemURL: &url.URL{
+				Scheme: "http",
+				Host:   provider_url.Host,
+				Path:   "/oauth/token",
+			},
+			ProfileURL: &url.URL{
+				Scheme: "http",
+				Host:   provider_url.Host,
+				Path:   "/api/v1/profile",
+			},
+			Scope: "profile.email",
+		},
+		EmailAddress: email_address,
+	}
+}
+
+func (tp *TestProvider) GetEmailAddress(session *providers.SessionState) (string, error) {
+	return tp.EmailAddress, nil
+}
+
+func (tp *TestProvider) ValidateSessionState(session *providers.SessionState) bool {
+	return tp.ValidToken
+}
+
 func TestBasicAuthPassword(t *testing.T) {
 	provider_server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%#v", r)
@@ -121,29 +163,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	const email_address = "michael.bland@gsa.gov"
 	const user_name = "michael.bland"
 
-	opts.provider = &TestProvider{
-		ProviderData: &providers.ProviderData{
-			ProviderName: "Test Provider",
-			LoginURL: &url.URL{
-				Scheme: "http",
-				Host:   provider_url.Host,
-				Path:   "/oauth/authorize",
-			},
-			RedeemURL: &url.URL{
-				Scheme: "http",
-				Host:   provider_url.Host,
-				Path:   "/oauth/token",
-			},
-			ProfileURL: &url.URL{
-				Scheme: "http",
-				Host:   provider_url.Host,
-				Path:   "/api/v1/profile",
-			},
-			Scope: "profile.email",
-		},
-		EmailAddress: email_address,
-	}
-
+	opts.provider = NewTestProvider(provider_url, email_address)
 	proxy := NewOAuthProxy(opts, func(email string) bool {
 		return email == email_address
 	})
@@ -181,20 +201,6 @@ func TestBasicAuthPassword(t *testing.T) {
 	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(user_name+":"+opts.BasicAuthPassword))
 	assert.Equal(t, expectedHeader, rw.Body.String())
 	provider_server.Close()
-}
-
-type TestProvider struct {
-	*providers.ProviderData
-	EmailAddress string
-	ValidToken   bool
-}
-
-func (tp *TestProvider) GetEmailAddress(session *providers.SessionState) (string, error) {
-	return tp.EmailAddress, nil
-}
-
-func (tp *TestProvider) ValidateSessionState(session *providers.SessionState) bool {
-	return tp.ValidToken
 }
 
 type PassAccessTokenTest struct {
@@ -242,29 +248,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 	provider_url, _ := url.Parse(t.provider_server.URL)
 	const email_address = "michael.bland@gsa.gov"
 
-	t.opts.provider = &TestProvider{
-		ProviderData: &providers.ProviderData{
-			ProviderName: "Test Provider",
-			LoginURL: &url.URL{
-				Scheme: "http",
-				Host:   provider_url.Host,
-				Path:   "/oauth/authorize",
-			},
-			RedeemURL: &url.URL{
-				Scheme: "http",
-				Host:   provider_url.Host,
-				Path:   "/oauth/token",
-			},
-			ProfileURL: &url.URL{
-				Scheme: "http",
-				Host:   provider_url.Host,
-				Path:   "/api/v1/profile",
-			},
-			Scope: "profile.email",
-		},
-		EmailAddress: email_address,
-	}
-
+	t.opts.provider = NewTestProvider(provider_url, email_address)
 	t.proxy = NewOAuthProxy(t.opts, func(email string) bool {
 		return email == email_address
 	})
@@ -559,7 +543,7 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 func NewAuthOnlyEndpointTest() *ProcessCookieTest {
 	pc_test := NewProcessCookieTestWithDefaults()
 	pc_test.req, _ = http.NewRequest("GET",
-		pc_test.opts.ProxyPrefix + "/auth", nil)
+		pc_test.opts.ProxyPrefix+"/auth", nil)
 	return pc_test
 }
 
@@ -609,4 +593,144 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
 	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+}
+
+type SignatureAuthenticator struct {
+	auth hmacauth.HmacAuth
+}
+
+func (v *SignatureAuthenticator) Authenticate(
+	w http.ResponseWriter, r *http.Request) {
+	result, headerSig, computedSig := v.auth.AuthenticateRequest(r)
+	if result == hmacauth.ResultNoSignature {
+		w.Write([]byte("no signature received"))
+	} else if result == hmacauth.ResultMatch {
+		w.Write([]byte("signatures match"))
+	} else if result == hmacauth.ResultMismatch {
+		w.Write([]byte("signatures do not match:" +
+			"\n  received: " + headerSig +
+			"\n  computed: " + computedSig))
+	} else {
+		panic("Unknown result value: " + result.String())
+	}
+}
+
+type SignatureTest struct {
+	opts          *Options
+	upstream      *httptest.Server
+	upstream_host string
+	provider      *httptest.Server
+	header        http.Header
+	rw            *httptest.ResponseRecorder
+	authenticator *SignatureAuthenticator
+}
+
+func NewSignatureTest() *SignatureTest {
+	opts := NewOptions()
+	opts.CookieSecret = "cookie secret"
+	opts.ClientID = "client ID"
+	opts.ClientSecret = "client secret"
+	opts.EmailDomains = []string{"acm.org"}
+
+	authenticator := &SignatureAuthenticator{}
+	upstream := httptest.NewServer(
+		http.HandlerFunc(authenticator.Authenticate))
+	upstream_url, _ := url.Parse(upstream.URL)
+	opts.Upstreams = append(opts.Upstreams, upstream.URL)
+
+	providerHandler := func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"access_token": "my_auth_token"}`))
+	}
+	provider := httptest.NewServer(http.HandlerFunc(providerHandler))
+	provider_url, _ := url.Parse(provider.URL)
+	opts.provider = NewTestProvider(provider_url, "mbland@acm.org")
+
+	return &SignatureTest{
+		opts,
+		upstream,
+		upstream_url.Host,
+		provider,
+		make(http.Header),
+		httptest.NewRecorder(),
+		authenticator,
+	}
+}
+
+func (st *SignatureTest) Close() {
+	st.provider.Close()
+	st.upstream.Close()
+}
+
+// fakeNetConn simulates an http.Request.Body buffer that will be consumed
+// when it is read by the hmacauth.HmacAuth if not handled properly. See:
+//   https://github.com/18F/hmacauth/pull/4
+type fakeNetConn struct {
+	reqBody string
+}
+
+func (fnc *fakeNetConn) Read(p []byte) (n int, err error) {
+	if bodyLen := len(fnc.reqBody); bodyLen != 0 {
+		copy(p, fnc.reqBody)
+		fnc.reqBody = ""
+		return bodyLen, io.EOF
+	}
+	return 0, io.EOF
+}
+
+func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
+	err := st.opts.Validate()
+	if err != nil {
+		panic(err)
+	}
+	proxy := NewOAuthProxy(st.opts, func(email string) bool { return true })
+
+	var bodyBuf io.ReadCloser
+	if body != "" {
+		bodyBuf = ioutil.NopCloser(&fakeNetConn{reqBody: body})
+	}
+	req, err := http.NewRequest(method, "/foo/bar", bodyBuf)
+	if err != nil {
+		panic(err)
+	}
+	req.Header = st.header
+
+	state := &providers.SessionState{
+		Email: "mbland@acm.org", AccessToken: "my_access_token"}
+	value, err := proxy.provider.CookieForSession(state, proxy.CookieCipher)
+	if err != nil {
+		panic(err)
+	}
+	cookie := proxy.MakeCookie(req, value, proxy.CookieExpire, time.Now())
+	req.AddCookie(cookie)
+	// This is used by the upstream to validate the signature.
+	st.authenticator.auth = hmacauth.NewHmacAuth(
+		crypto.SHA1, []byte(key), SignatureHeader, SignatureHeaders)
+	proxy.ServeHTTP(st.rw, req)
+}
+
+func TestNoRequestSignature(t *testing.T) {
+	st := NewSignatureTest()
+	defer st.Close()
+	st.MakeRequestWithExpectedKey("GET", "", "")
+	assert.Equal(t, 200, st.rw.Code)
+	assert.Equal(t, st.rw.Body.String(), "no signature received")
+}
+
+func TestRequestSignatureGetRequest(t *testing.T) {
+	st := NewSignatureTest()
+	defer st.Close()
+	st.opts.SignatureKey = "sha1:foobar"
+	st.MakeRequestWithExpectedKey("GET", "", "foobar")
+	assert.Equal(t, 200, st.rw.Code)
+	assert.Equal(t, st.rw.Body.String(), "signatures match")
+}
+
+func TestRequestSignaturePostRequest(t *testing.T) {
+	st := NewSignatureTest()
+	defer st.Close()
+	st.opts.SignatureKey = "sha1:foobar"
+	payload := `{ "hello": "world!" }`
+	st.MakeRequestWithExpectedKey("POST", payload, "foobar")
+	assert.Equal(t, 200, st.rw.Code)
+	assert.Equal(t, st.rw.Body.String(), "signatures match")
 }
