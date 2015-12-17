@@ -40,13 +40,18 @@ The provider can be selected using the `provider` configuration value.
 For Google, the registration steps are:
 
 1. Create a new project: https://console.developers.google.com/project
-2. Under "APIs & Auth", choose "Credentials"
-3. Now, choose "Create new Client ID"
-   * The Application Type should be **Web application** and click **Configure Consent Screen**
-   * Fill out the appropriate details on the Consent Screen page and hit **Save**
-   * On the next screen, leaving **Web Application** checked, enter your domain in the Authorized Javascript Origins `https://internal.yourcompany.com`
-   * Enter the correct Authorized Redirect URL `https://internal.yourcompany.com/oauth2/callback`
-     * NOTE: `oauth2_proxy` will _only_ callback on the path `/oauth2/callback`
+2. Choose the new project from the top right project dropdown (only if another project is selected)
+3. In the project Dashboard center pane, choose **"Enable and manage APIs"**
+4. In the left Nav pane, choose **"Credentials"**
+5. In the center pane, choose **"OAuth consent screen"** tab. Fill in **"Product name shown to users"** and hit save.
+6. In the center pane, choose **"Credentials"** tab.
+   * Open the **"New credentials"** drop down
+   * Choose **"OAuth client ID"**
+   * Choose **"Web application"**
+   * Application name is freeform, choose something appropriate
+   * Authorized JavaScript origins is your domain ex: `https://internal.yourcompany.com`
+   * Authorized redirect URIs is the location of oath2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
+   * Choose **"Create"**
 4. Take note of the **Client ID** and **Client Secret**
 
 It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the account is still authorized.
