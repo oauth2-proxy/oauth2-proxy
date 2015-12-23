@@ -147,3 +147,16 @@ func TestValidatorComparisonsAreCaseInsensitive(t *testing.T) {
 		t.Error("validated domains are not lower-cased")
 	}
 }
+
+func TestValidatorIgnoreSpacesInAuthEmails(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	vt.WriteEmails(t, []string{"   foo.bar@example.com   "})
+	domains := []string(nil)
+	validator := vt.NewValidator(domains, nil)
+
+	if !validator("foo.bar@example.com") {
+		t.Error("email should validate")
+	}
+}
