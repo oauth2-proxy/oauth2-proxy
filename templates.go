@@ -129,6 +129,16 @@ func getTemplates() *template.Template {
 	</form>
 	</div>
 	{{ end }}
+	<script>
+		if (window.location.hash) {
+			(function() {
+				var inputs = document.getElementsByName('rd');
+				for (var i = 0; i < inputs.length; i++) {
+					inputs[i].value += window.location.hash;
+				}
+			})();
+		}
+	</script>
 	<footer>
 	Secured with <a href="https://github.com/bitly/oauth2_proxy#oauth2_proxy">OAuth2 Proxy</a> version {{.Version}}
 	</footer>
