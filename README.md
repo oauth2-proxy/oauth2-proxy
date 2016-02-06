@@ -97,6 +97,12 @@ The GitHub auth provider supports two additional parameters to restrict authenti
     -github-org="": restrict logins to members of this organisation
     -github-team="": restrict logins to members of this team
 
+If you are using github enterprise, make sure you set the following to the appropriate url:
+
+    -login-url="<enterprise github url>/login/oauth/authorize"
+    -redeem-url="<enterprise github url>/login/oauth/access_token"
+    -validate-url="<enterprise github api url>/user/emails"
+
 
 ### LinkedIn Auth Provider
 
