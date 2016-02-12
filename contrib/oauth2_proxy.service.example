@@ -1,0 +1,22 @@
+# Systemd service file for oauth2_proxy daemon
+#
+# Date: Feb 9, 2016
+# Author: Srdjan Grubor <sgnn7@sgnn7.org>
+
+[Unit]
+Description=oauth2_proxy daemon service
+After=syslog.target network.target
+
+[Service]
+# www-data group and user need to be created before using these lines
+User=www-data
+Group=www-data
+
+ExecStart=/usr/local/bin/oauth2_proxy -config="/etc/oauth2_proxy.cfg"
+ExecReload=/bin/kill -HUP $MAINPID
+
+KillMode=process
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
