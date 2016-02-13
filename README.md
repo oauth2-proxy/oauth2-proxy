@@ -29,7 +29,6 @@ You will need to register an OAuth application with a Provider (Google, Github o
 Valid providers are :
 
 * [Google](#google-auth-provider) *default*
-
 * [Azure](#azure-auth-provider)
 * [GitHub](#github-auth-provider)
 * [LinkedIn](#linkedin-auth-provider)
