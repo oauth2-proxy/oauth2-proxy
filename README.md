@@ -126,7 +126,7 @@ Take note of your `TenantId` if applicable for your situation. The `TenantId` ca
 
 ## Email Authentication
 
-To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresse use `--email-domain=*`.
+To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresses use `--email-domain=*`.
 
 ## Configuration
 
