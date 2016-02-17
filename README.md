@@ -31,6 +31,7 @@ Valid providers are :
 * [Google](#google-auth-provider) *default*
 * [Azure](#azure-auth-provider)
 * [GitHub](#github-auth-provider)
+* [GitLab](#gitlab-auth-provider)
 * [LinkedIn](#linkedin-auth-provider)
 * [MyUSA](#myusa-auth-provider)
 
@@ -101,6 +102,17 @@ If you are using github enterprise, make sure you set the following to the appro
     -login-url="<enterprise github url>/login/oauth/authorize"
     -redeem-url="<enterprise github url>/login/oauth/access_token"
     -validate-url="<enterprise github api url>/user/emails"
+
+
+### GitLab Auth Provider
+
+Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](http://doc.gitlab.com/ce/integration/oauth_provider.html)
+
+If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
+
+    -login-url="<your gitlab url>/oauth/authorize"
+    -redeem-url="<your gitlab url>/oauth/token"
+    -validate-url="<your gitlab url>/api/v3/user"
 
 
 ### LinkedIn Auth Provider
