@@ -94,7 +94,7 @@ The Azure AD auth provider uses `openid` as it default scope. It uses `https://g
 The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
 
     -github-org="": restrict logins to members of this organisation
-    -github-team="": restrict logins to members of this team
+    -github-team="": restrict logins to members of any of these teams, separated by a comma
 
 If you are using github enterprise, make sure you set the following to the appropriate url:
 

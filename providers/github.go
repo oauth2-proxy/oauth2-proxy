@@ -3,6 +3,7 @@ package providers
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -141,9 +142,12 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 		presentOrgs[team.Org.Login] = true
 		if p.Org == team.Org.Login {
 			hasOrg = true
-			if p.Team == team.Slug {
-				log.Printf("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
-				return true, nil
+			ts := strings.Split(p.Team, ",")
+			for _, t := range ts {
+				if t == team.Slug {
+					log.Printf("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
+					return true, nil
+				}
 			}
 			presentTeams = append(presentTeams, team.Slug)
 		}
