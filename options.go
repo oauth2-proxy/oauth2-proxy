@@ -64,7 +64,7 @@ type Options struct {
 
 	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
 
-	SignatureKey string `flag:"signature-key" cfg:"signature_key"`
+	SignatureKey string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 
 	// internal values that are set after config validation
 	redirectURL   *url.URL
