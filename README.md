@@ -81,7 +81,7 @@ Note: The user is checked against the group members list on initial authenticati
 ### Azure Auth Provider
 
 1. [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
-2. On the App properties page provide the correct Sign-On URL ie `https//internal.yourcompany.com/oauth2/callback`
+2. On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
 3. If applicable take note of your `TenantID` and provide it via the `--azure-tenant=<YOUR TENANT ID>` commandline option. Default the `common` tenant is used.
 
 The Azure AD auth provider uses `openid` as it default scope. It uses `https://graph.windows.net` as a default protected resource. It call to `https://graph.windows.net/me` to get the email address of the user that logs in.
