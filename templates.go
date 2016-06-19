@@ -130,7 +130,12 @@ func getTemplates() *template.Template {
 	</div>
 	{{ end }}
 	<footer>
+	{{ if eq .Footer "-" }}
+	{{ else if eq .Footer ""}}
 	Secured with <a href="https://github.com/bitly/oauth2_proxy#oauth2_proxy">OAuth2 Proxy</a> version {{.Version}}
+	{{ else }}
+	{{.Footer}}
+	{{ end }}
 	</footer>
 </body>
 </html>
