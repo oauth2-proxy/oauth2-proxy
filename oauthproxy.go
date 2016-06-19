@@ -59,6 +59,7 @@ type OAuthProxy struct {
 	DisplayHtpasswdForm bool
 	serveMux            http.Handler
 	PassBasicAuth       bool
+	SkipProviderButton  bool
 	BasicAuthPassword   string
 	PassAccessToken     bool
 	CookieCipher        *cookie.Cipher
@@ -186,17 +187,18 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 
-		ProxyPrefix:       opts.ProxyPrefix,
-		provider:          opts.provider,
-		serveMux:          serveMux,
-		redirectURL:       redirectURL,
-		skipAuthRegex:     opts.SkipAuthRegex,
-		compiledRegex:     opts.CompiledRegex,
-		PassBasicAuth:     opts.PassBasicAuth,
-		BasicAuthPassword: opts.BasicAuthPassword,
-		PassAccessToken:   opts.PassAccessToken,
-		CookieCipher:      cipher,
-		templates:         loadTemplates(opts.CustomTemplatesDir),
+		ProxyPrefix:        opts.ProxyPrefix,
+		provider:           opts.provider,
+		serveMux:           serveMux,
+		redirectURL:        redirectURL,
+		skipAuthRegex:      opts.SkipAuthRegex,
+		compiledRegex:      opts.CompiledRegex,
+		PassBasicAuth:      opts.PassBasicAuth,
+		BasicAuthPassword:  opts.BasicAuthPassword,
+		PassAccessToken:    opts.PassAccessToken,
+		SkipProviderButton: opts.SkipProviderButton,
+		CookieCipher:       cipher,
+		templates:          loadTemplates(opts.CustomTemplatesDir),
 	}
 }
 
@@ -511,7 +513,11 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, http.StatusInternalServerError,
 			"Internal Error", "Internal Error")
 	} else if status == http.StatusForbidden {
-		p.SignInPage(rw, req, http.StatusForbidden)
+		if p.SkipProviderButton {
+			p.OAuthStart(rw, req)
+		} else {
+			p.SignInPage(rw, req, http.StatusForbidden)
+		}
 	} else {
 		p.serveMux.ServeHTTP(rw, req)
 	}
