@@ -85,8 +85,8 @@ type Cipher struct {
 }
 
 // NewCipher returns a new aes Cipher for encrypting cookie values
-func NewCipher(secret string) (*Cipher, error) {
-	c, err := aes.NewCipher([]byte(secret))
+func NewCipher(secret []byte) (*Cipher, error) {
+	c, err := aes.NewCipher(secret)
 	if err != nil {
 		return nil, err
 	}

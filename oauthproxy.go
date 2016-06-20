@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/base64"
+	b64 "encoding/base64"
 	"errors"
 	"fmt"
 	"html/template"
@@ -164,10 +164,9 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	var cipher *cookie.Cipher
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
 		var err error
-		cipher, err = cookie.NewCipher(opts.CookieSecret)
+		cipher, err = cookie.NewCipher(secretBytes(opts.CookieSecret))
 		if err != nil {
-			log.Fatal("error creating AES cipher with "+
-				"cookie-secret ", opts.CookieSecret, ": ", err)
+			log.Fatal("cookie-secret error: ", err)
 		}
 	}
 
@@ -626,7 +625,7 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState,
 	if len(s) != 2 || s[0] != "Basic" {
 		return nil, fmt.Errorf("invalid Authorization header %s", req.Header.Get("Authorization"))
 	}
-	b, err := base64.StdEncoding.DecodeString(s[1])
+	b, err := b64.StdEncoding.DecodeString(s[1])
 	if err != nil {
 		return nil, err
 	}

@@ -13,9 +13,9 @@ const secret = "0123456789abcdefghijklmnopqrstuv"
 const altSecret = "0000000000abcdefghijklmnopqrstuv"
 
 func TestSessionStateSerialization(t *testing.T) {
-	c, err := cookie.NewCipher(secret)
+	c, err := cookie.NewCipher([]byte(secret))
 	assert.Equal(t, nil, err)
-	c2, err := cookie.NewCipher(altSecret)
+	c2, err := cookie.NewCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
 	s := &SessionState{
 		Email:        "user@domain.com",
