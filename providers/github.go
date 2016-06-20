@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 )
 
@@ -32,11 +33,12 @@ func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 			Path:   "/login/oauth/access_token",
 		}
 	}
+	// ValidationURL is the API Base URL
 	if p.ValidateURL == nil || p.ValidateURL.String() == "" {
 		p.ValidateURL = &url.URL{
 			Scheme: "https",
 			Host:   "api.github.com",
-			Path:   "/user/emails",
+			Path:   "/",
 		}
 	}
 	if p.Scope == "" {
@@ -64,8 +66,13 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 		"limit":        {"100"},
 	}
 
-	endpoint := p.ValidateURL.Scheme + "://" + p.ValidateURL.Host + "/user/orgs?" + params.Encode()
-	req, _ := http.NewRequest("GET", endpoint, nil)
+	endpoint := &url.URL{
+		Scheme:   p.ValidateURL.Scheme,
+		Host:     p.ValidateURL.Host,
+		Path:     path.Join(p.ValidateURL.Path, "/user/orgs"),
+		RawQuery: params.Encode(),
+	}
+	req, _ := http.NewRequest("GET", endpoint.String(), nil)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -114,8 +121,13 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 		"limit":        {"100"},
 	}
 
-	endpoint := p.ValidateURL.Scheme + "://" + p.ValidateURL.Host + "/user/teams?" + params.Encode()
-	req, _ := http.NewRequest("GET", endpoint, nil)
+	endpoint := &url.URL{
+		Scheme:   p.ValidateURL.Scheme,
+		Host:     p.ValidateURL.Host,
+		Path:     path.Join(p.ValidateURL.Path, "/user/teams"),
+		RawQuery: params.Encode(),
+	}
+	req, _ := http.NewRequest("GET", endpoint.String(), nil)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -187,8 +199,14 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 	params := url.Values{
 		"access_token": {s.AccessToken},
 	}
-	endpoint := p.ValidateURL.Scheme + "://" + p.ValidateURL.Host + p.ValidateURL.Path + "?" + params.Encode()
-	resp, err := http.DefaultClient.Get(endpoint)
+
+	endpoint := &url.URL{
+		Scheme:   p.ValidateURL.Scheme,
+		Host:     p.ValidateURL.Host,
+		Path:     path.Join(p.ValidateURL.Path, "/user/emails"),
+		RawQuery: params.Encode(),
+	}
+	resp, err := http.DefaultClient.Get(endpoint.String())
 	if err != nil {
 		return "", err
 	}
