@@ -160,11 +160,36 @@ func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, o.Validate())
 
-	o.CookieSecret = "0123456789abcdef"
+	o.CookieSecret = "0123456789abcdefabcd"
 	o.CookieRefresh = o.CookieExpire
 	assert.NotEqual(t, nil, o.Validate())
 
 	o.CookieRefresh -= time.Duration(1)
+	assert.Equal(t, nil, o.Validate())
+}
+
+func TestBase64CookieSecret(t *testing.T) {
+	o := testOptions()
+	assert.Equal(t, nil, o.Validate())
+
+	// 32 byte, base64 (urlsafe) encoded key
+	o.CookieSecret = "yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ="
+	assert.Equal(t, nil, o.Validate())
+
+	// 32 byte, base64 (urlsafe) encoded key, w/o padding
+	o.CookieSecret = "yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ"
+	assert.Equal(t, nil, o.Validate())
+
+	// 24 byte, base64 (urlsafe) encoded key
+	o.CookieSecret = "Kp33Gj-GQmYtz4zZUyUDdqQKx5_Hgkv3"
+	assert.Equal(t, nil, o.Validate())
+
+	// 16 byte, base64 (urlsafe) encoded key
+	o.CookieSecret = "LFEqZYvYUwKwzn0tEuTpLA=="
+	assert.Equal(t, nil, o.Validate())
+
+	// 16 byte, base64 (urlsafe) encoded key, w/o padding
+	o.CookieSecret = "LFEqZYvYUwKwzn0tEuTpLA"
 	assert.Equal(t, nil, o.Validate())
 }
 

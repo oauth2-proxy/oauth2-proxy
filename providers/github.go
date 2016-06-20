@@ -3,11 +3,11 @@ package providers
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type GitHubProvider struct {
@@ -64,7 +64,7 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 		"limit":        {"100"},
 	}
 
-	endpoint := p.ValidateURL.Scheme + "://"  + p.ValidateURL.Host + "/user/orgs?" + params.Encode()
+	endpoint := p.ValidateURL.Scheme + "://" + p.ValidateURL.Host + "/user/orgs?" + params.Encode()
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	resp, err := http.DefaultClient.Do(req)
