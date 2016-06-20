@@ -97,12 +97,11 @@ The GitHub auth provider supports two additional parameters to restrict authenti
     -github-org="": restrict logins to members of this organisation
     -github-team="": restrict logins to members of any of these teams, separated by a comma
 
-If you are using github enterprise, make sure you set the following to the appropriate url:
+If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 
-    -login-url="<enterprise github url>/login/oauth/authorize"
-    -redeem-url="<enterprise github url>/login/oauth/access_token"
-    -validate-url="<enterprise github api url>/user/emails"
-
+    -login-url="http(s)://<enterprise github host>/login/oauth/authorize"
+    -redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
+    -validate-url="http(s)://<enterprise github host>/api/v3"
 
 ### GitLab Auth Provider
 
