@@ -1,7 +1,7 @@
 github.com/18F/hmacauth                  1.0.1
 github.com/BurntSushi/toml               3883ac1ce943878302255f538fce319d23226223
 github.com/bitly/go-simplejson           3378bdcb5cebedcbf8b5750edee28010f128fe24
-github.com/mreiferson/go-options         ee94b57f2fbf116075426f853e5abbcdfeca8b3d
+github.com/mreiferson/go-options         33795234b6f327f1be2d78a541893012362a4e06
 github.com/bmizerany/assert              e17e99893cb6509f428e1728281c2ad60a6b31e3
 gopkg.in/fsnotify.v1                     v1.2.0
 golang.org/x/oauth2                      397fe7649477ff2e8ced8fc0b2696f781e53745a
