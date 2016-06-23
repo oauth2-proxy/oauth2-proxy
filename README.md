@@ -30,6 +30,7 @@ Valid providers are :
 
 * [Google](#google-auth-provider) *default*
 * [Azure](#azure-auth-provider)
+* [Facebook](#facebook-auth-provider)
 * [GitHub](#github-auth-provider)
 * [GitLab](#gitlab-auth-provider)
 * [LinkedIn](#linkedin-auth-provider)
@@ -86,6 +87,11 @@ Note: The user is checked against the group members list on initial authenticati
 
 The Azure AD auth provider uses `openid` as it default scope. It uses `https://graph.windows.net` as a default protected resource. It call to `https://graph.windows.net/me` to get the email address of the user that logs in.
 
+
+### Facebook Auth Provider
+
+1. Create a new FB App from <https://developers.facebook.com/>
+2. Under FB Login, set your Valid OAuth redirect URIs to `https://internal.yourcompany.com/oauth2/callback`
 
 ### GitHub Auth Provider
 
