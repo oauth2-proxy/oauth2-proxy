@@ -350,13 +350,13 @@ server {
   server_name ...;
   include ssl/ssl.conf;
 
-  location = /auth {
+  location = /oauth2/auth {
     internal;
     proxy_pass http://127.0.0.1:4180;
   }
 
   location / {
-    auth_request /auth;
+    auth_request /oauth2/auth;
     error_page 401 = ...;
 
     root /path/to/the/site;
