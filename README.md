@@ -355,14 +355,18 @@ server {
     proxy_pass http://127.0.0.1:4180;
   }
 
+  location /oauth2/ {
+    proxy_pass http://127.0.0.1:4180;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Scheme $scheme;
+  }
+
   location / {
     auth_request /oauth2/auth;
-    error_page 401 = ...;
+    error_page 401 = https://example.com/oauth2/sign_in;
 
     root /path/to/the/site;
-    default_type text/html;
-    charset utf-8;
-    charset_types application/json utf-8;
   }
 }
 ```
