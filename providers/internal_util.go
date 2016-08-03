@@ -9,6 +9,42 @@ import (
 	"github.com/bitly/oauth2_proxy/api"
 )
 
+// stripToken is a helper function to obfuscate "access_token"
+// query parameters
+func stripToken(endpoint string) string {
+	return stripParam("access_token", endpoint)
+}
+
+// stripParam generalizes the obfuscation of a particular
+// query parameter - typically 'access_token' or 'client_secret'
+// The parameter's second half is replaced by '...' and returned
+// as part of the encoded query parameters.
+// If the target parameter isn't found, the endpoint is returned
+// unmodified.
+func stripParam(param, endpoint string) string {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		log.Printf("error attempting to strip %s: %s", param, err)
+		return endpoint
+	}
+
+	if u.RawQuery != "" {
+		values, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			log.Printf("error attempting to strip %s: %s", param, err)
+			return u.String()
+		}
+
+		if val := values.Get(param); val != "" {
+			values.Set(param, val[:(len(val)/2)]+"...")
+			u.RawQuery = values.Encode()
+			return u.String()
+		}
+	}
+
+	return endpoint
+}
+
 // validateToken returns true if token is valid
 func validateToken(p Provider, access_token string, header http.Header) bool {
 	if access_token == "" || p.Data().ValidateURL == nil {
@@ -28,7 +64,7 @@ func validateToken(p Provider, access_token string, header http.Header) bool {
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
-	log.Printf("%d GET %s %s", resp.StatusCode, endpoint, body)
+	log.Printf("%d GET %s %s", resp.StatusCode, stripToken(endpoint), body)
 
 	if resp.StatusCode == 200 {
 		return true
