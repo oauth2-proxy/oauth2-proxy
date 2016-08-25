@@ -4,6 +4,6 @@ github.com/bitly/go-simplejson           3378bdcb5cebedcbf8b5750edee28010f128fe2
 github.com/mreiferson/go-options         33795234b6f327f1be2d78a541893012362a4e06
 github.com/bmizerany/assert              e17e99893cb6509f428e1728281c2ad60a6b31e3
 gopkg.in/fsnotify.v1                     v1.2.0
-golang.org/x/oauth2                      397fe7649477ff2e8ced8fc0b2696f781e53745a
-golang.org/x/oauth2/google               397fe7649477ff2e8ced8fc0b2696f781e53745a
+golang.org/x/oauth2                      04e1573abc896e70388bd387a69753c378d46466
+golang.org/x/oauth2/google               04e1573abc896e70388bd387a69753c378d46466
 google.golang.org/api/admin/directory/v1 a5c3e2a4792aff40e59840d9ecdff0542a202a80
