@@ -57,6 +57,7 @@ type Options struct {
 	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
 	PassUserHeaders       bool     `flag:"pass-user-headers" cfg:"pass_user_headers"`
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
+	SetXAuthRequest       bool     `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -97,6 +98,7 @@ func NewOptions() *Options {
 		CookieHttpOnly:      true,
 		CookieExpire:        time.Duration(168) * time.Hour,
 		CookieRefresh:       time.Duration(0),
+		SetXAuthRequest:     false,
 		PassBasicAuth:       true,
 		PassUserHeaders:     true,
 		PassAccessToken:     false,

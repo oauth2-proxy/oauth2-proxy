@@ -611,6 +611,36 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
 }
 
+func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
+	var pc_test ProcessCookieTest
+
+	pc_test.opts = NewOptions()
+	pc_test.opts.SetXAuthRequest = true
+	pc_test.opts.Validate()
+
+	pc_test.proxy = NewOAuthProxy(pc_test.opts, func(email string) bool {
+		return pc_test.validate_user
+	})
+	pc_test.proxy.provider = &TestProvider{
+		ValidToken: true,
+	}
+
+	pc_test.validate_user = true
+
+	pc_test.rw = httptest.NewRecorder()
+	pc_test.req, _ = http.NewRequest("GET",
+		pc_test.opts.ProxyPrefix+"/auth", nil)
+
+	startSession := &providers.SessionState{
+		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token"}
+	pc_test.SaveSession(startSession, time.Now())
+
+	pc_test.proxy.ServeHTTP(pc_test.rw, pc_test.req)
+	assert.Equal(t, http.StatusAccepted, pc_test.rw.Code)
+	assert.Equal(t, "oauth_user", pc_test.rw.HeaderMap["X-Auth-Request-User"][0])
+	assert.Equal(t, "oauth_user@example.com", pc_test.rw.HeaderMap["X-Auth-Request-Email"][0])
+}
+
 type SignatureAuthenticator struct {
 	auth hmacauth.HmacAuth
 }
