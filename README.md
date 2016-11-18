@@ -3,7 +3,7 @@ oauth2_proxy
 
 <small>(This project was renamed from Google Auth Proxy - May 2015)</small>
 
-A reverse proxy and static file server that provides authentication using Providers (Google, Github, and others)
+A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
 to validate accounts by email, domain or group.
 
 [![Build Status](https://secure.travis-ci.org/bitly/oauth2_proxy.png?branch=master)](http://travis-ci.org/bitly/oauth2_proxy)
@@ -24,7 +24,7 @@ to validate accounts by email, domain or group.
 
 ## OAuth Provider Configuration
 
-You will need to register an OAuth application with a Provider (Google, Github or another provider), and configure it with Redirect URI(s) for the domain you intend to run `oauth2_proxy` on.
+You will need to register an OAuth application with a Provider (Google, GitHub or another provider), and configure it with Redirect URI(s) for the domain you intend to run `oauth2_proxy` on.
 
 Valid providers are :
 
