@@ -72,11 +72,11 @@ func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 			return "", err
 		}
 	}
-	return fmt.Sprintf("%s|%s|%d|%s", s.userOrEmail(), a, s.ExpiresOn.Unix(), r), nil
+	return fmt.Sprintf("%s:%s:%d:%s", s.userOrEmail(), a, s.ExpiresOn.Unix(), r), nil
 }
 
 func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error) {
-	chunks := strings.Split(v, "|")
+	chunks := strings.Split(v, ":")
 	if len(chunks) == 1 {
 		if strings.Contains(chunks[0], "@") {
 			u := strings.Split(v, "@")[0]

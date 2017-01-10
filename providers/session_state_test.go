@@ -25,7 +25,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 3, strings.Count(encoded, "|"))
+	assert.Equal(t, 3, strings.Count(encoded, ":"))
 
 	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
