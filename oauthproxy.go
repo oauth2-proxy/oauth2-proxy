@@ -30,6 +30,7 @@ var SignatureHeaders []string = []string{
 	"X-Forwarded-User",
 	"X-Forwarded-Email",
 	"X-Forwarded-Access-Token",
+	"X-Forwarded-Groups",
 	"Cookie",
 	"Gap-Auth",
 }
@@ -62,6 +63,7 @@ type OAuthProxy struct {
 	serveMux            http.Handler
 	SetXAuthRequest     bool
 	PassBasicAuth       bool
+	PassGroups          bool
 	SkipProviderButton  bool
 	PassUserHeaders     bool
 	BasicAuthPassword   string
@@ -91,6 +93,7 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func NewReverseProxy(target *url.URL) (proxy *httputil.ReverseProxy) {
 	return httputil.NewSingleHostReverseProxy(target)
 }
+
 func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
 	director := proxy.Director
 	proxy.Director = func(req *http.Request) {
@@ -101,6 +104,7 @@ func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
 		req.URL.RawQuery = ""
 	}
 }
+
 func setProxyDirector(proxy *httputil.ReverseProxy) {
 	director := proxy.Director
 	proxy.Director = func(req *http.Request) {
@@ -110,6 +114,7 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 		req.URL.RawQuery = ""
 	}
 }
+
 func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 	return http.StripPrefix(path, http.FileServer(http.Dir(filesystemPath)))
 }
@@ -202,6 +207,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		SetXAuthRequest:    opts.SetXAuthRequest,
 		PassBasicAuth:      opts.PassBasicAuth,
 		PassUserHeaders:    opts.PassUserHeaders,
+		PassGroups:         opts.PassGroups,
 		BasicAuthPassword:  opts.BasicAuthPassword,
 		PassAccessToken:    opts.PassAccessToken,
 		SkipProviderButton: opts.SkipProviderButton,
@@ -237,6 +243,7 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *providers.SessionState, e
 	if code == "" {
 		return nil, errors.New("missing code")
 	}
+
 	redirectURI := p.GetRedirectURI(host)
 	s, err = p.provider.Redeem(redirectURI, code)
 	if err != nil {
@@ -509,6 +516,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, 500, "Internal Error", err.Error())
 		return
 	}
+
 	errorString := req.Form.Get("error")
 	if errorString != "" {
 		p.ErrorPage(rw, 403, "Permission Denied", errorString)
@@ -541,6 +549,16 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	session.IDToken = req.Form.Get("id_token")
+	if p.PassGroups && session.IDToken != "" {
+		session.Groups, err = p.provider.GetGroups(session)
+		if err != nil {
+			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+			return
+		}
+	}
+
+	redirect = req.Form.Get("state")
 	if !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") {
 		redirect = "/"
 	}
@@ -594,6 +612,7 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	if err != nil {
 		log.Printf("%s %s", remoteAddr, err)
 	}
+
 	if session != nil && sessionAge > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
 		log.Printf("%s refreshing %s old session cookie for %s (refresh after %s)", remoteAddr, sessionAge, session, p.CookieRefresh)
 		saveSession = true
@@ -655,11 +674,15 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	}
 
 	// At this point, the user is authenticated. proxy normally
+
 	if p.PassBasicAuth {
 		req.SetBasicAuth(session.User, p.BasicAuthPassword)
 		req.Header["X-Forwarded-User"] = []string{session.User}
 		if session.Email != "" {
 			req.Header["X-Forwarded-Email"] = []string{session.Email}
+		}
+		if p.PassGroups && session.Groups != "" {
+			req.Header["X-Forwarded-Groups"] = []string{session.Groups}
 		}
 	}
 	if p.PassUserHeaders {
@@ -674,6 +697,7 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 			rw.Header().Set("X-Auth-Request-Email", session.Email)
 		}
 	}
+
 	if p.PassAccessToken && session.AccessToken != "" {
 		req.Header["X-Forwarded-Access-Token"] = []string{session.AccessToken}
 	}

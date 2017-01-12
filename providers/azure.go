@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type AzureProvider struct {
@@ -20,20 +21,23 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 
 	if p.ProfileURL == nil || p.ProfileURL.String() == "" {
 		p.ProfileURL = &url.URL{
-			Scheme:   "https",
-			Host:     "graph.windows.net",
-			Path:     "/me",
-			RawQuery: "api-version=1.6",
+			Scheme: "https",
+			Host:   "graph.microsoft.com",
+			Path:   "/v1.0/me",
 		}
 	}
 	if p.ProtectedResource == nil || p.ProtectedResource.String() == "" {
 		p.ProtectedResource = &url.URL{
 			Scheme: "https",
-			Host:   "graph.windows.net",
+			Host:   "graph.microsoft.com",
 		}
 	}
 	if p.Scope == "" {
 		p.Scope = "openid"
+	}
+
+	if p.ApprovalPrompt == "" || p.ApprovalPrompt == "force" {
+		p.ApprovalPrompt = "consent"
 	}
 
 	return &AzureProvider{ProviderData: p}
@@ -121,4 +125,67 @@ func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 	}
 
 	return email, err
+}
+
+func (p *AzureProvider) GetGroups(s *SessionState) (string, error) {
+	if s.AccessToken == "" {
+		return "", errors.New("missing access token")
+	}
+
+	if s.IDToken == "" {
+		return "", errors.New("missing id token")
+	}
+
+	// parse token, check if it has groups
+	// if groups, return "|".join(groups_list)
+	// else
+	//   look for claim source
+	//   GET source
+	//   parse response
+	//   return "|".join(response.groups_list)
+
+	req, err := http.NewRequest("GET", "https://graph.microsoft.com/v1.0/me/memberOf/", nil)
+	//req, err := http.NewRequest("POST", "https://graph.microsoft.com/v1.0/me/getMemberGroups", strings.NewReader("{\"securityEnabledOnly\":true}"))
+	if err != nil {
+		return "", err
+	}
+	req.Header = getAzureHeader(s.AccessToken)
+	req.Header.Add("Content-Type", "application/json")
+
+	groupData, err := api.Request(req)
+
+	groups := make([]string, 0)
+	for _, groupInfo := range groupData.Get("value").MustArray() {
+		//v, ok := groupInfo.(string)
+		v, ok := groupInfo.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		dname := v["displayName"].(string)
+		secen := v["securityEnabled"].(bool)
+		mailen := v["mailEnabled"].(bool)
+		if secen == true && mailen == false {
+			groups = append(groups, dname)
+		}
+	}
+
+	return strings.Join(groups, "|"), nil
+}
+
+func (p *AzureProvider) GetLoginURL(redirectURI, finalRedirect string) string {
+	var a url.URL
+	a = *p.LoginURL
+	params, _ := url.ParseQuery(a.RawQuery)
+	params.Set("client_id", p.ClientID)
+	params.Set("response_type", "id_token code")
+	params.Set("redirect_uri", redirectURI)
+	params.Set("response_mode", "form_post")
+	params.Add("scope", p.Scope)
+	params.Set("prompt", p.ApprovalPrompt)
+	params.Set("nonce", "FIXME")
+	if strings.HasPrefix(finalRedirect, "/") {
+		params.Add("state", finalRedirect)
+	}
+	a.RawQuery = params.Encode()
+	return a.String()
 }

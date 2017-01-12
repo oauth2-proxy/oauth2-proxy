@@ -11,10 +11,12 @@ import (
 
 type SessionState struct {
 	AccessToken  string
+	IDToken      string
 	ExpiresOn    time.Time
 	RefreshToken string
 	Email        string
 	User         string
+	Groups       string
 }
 
 func (s *SessionState) IsExpired() bool {
@@ -34,6 +36,9 @@ func (s *SessionState) String() string {
 	}
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
+	}
+	if s.Groups != "" {
+		o += fmt.Sprintf(" groups:%s", s.Groups)
 	}
 	return o + "}"
 }
@@ -72,7 +77,7 @@ func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 			return "", err
 		}
 	}
-	return fmt.Sprintf("%s:%s:%d:%s", s.userOrEmail(), a, s.ExpiresOn.Unix(), r), nil
+	return fmt.Sprintf("%s:%s:%d:%s:%s", s.userOrEmail(), a, s.ExpiresOn.Unix(), r, s.Groups), nil
 }
 
 func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error) {
@@ -85,8 +90,8 @@ func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error)
 		return &SessionState{User: v}, nil
 	}
 
-	if len(chunks) != 4 {
-		err = fmt.Errorf("invalid number of fields (got %d expected 4)", len(chunks))
+	if len(chunks) != 5 {
+		err = fmt.Errorf("invalid number of fields (got %d expected 5)", len(chunks))
 		return
 	}
 
@@ -108,6 +113,9 @@ func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error)
 		s.User = strings.Split(u, "@")[0]
 	} else {
 		s.User = u
+	}
+	if chunks[4] != "" {
+		s.Groups = chunks[4]
 	}
 	ts, _ := strconv.Atoi(chunks[2])
 	s.ExpiresOn = time.Unix(int64(ts), 0)

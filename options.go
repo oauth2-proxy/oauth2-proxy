@@ -51,6 +51,7 @@ type Options struct {
 	Upstreams             []string `flag:"upstream" cfg:"upstreams"`
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 	PassBasicAuth         bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
+	PassGroups            bool     `flag:"pass-groups" cfg:"pass_groups"`
 	BasicAuthPassword     string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
 	PassAccessToken       bool     `flag:"pass-access-token" cfg:"pass_access_token"`
 	PassHostHeader        bool     `flag:"pass-host-header" cfg:"pass_host_header"`
@@ -101,6 +102,7 @@ func NewOptions() *Options {
 		SetXAuthRequest:     false,
 		PassBasicAuth:       true,
 		PassUserHeaders:     true,
+		PassGroups:          false,
 		PassAccessToken:     false,
 		PassHostHeader:      true,
 		ApprovalPrompt:      "force",
@@ -128,7 +130,7 @@ func (o *Options) Validate() error {
 	if o.ClientID == "" {
 		msgs = append(msgs, "missing setting: client-id")
 	}
-	if o.ClientSecret == "" {
+	if o.ClientSecret == "" && o.Provider != "azure" {
 		msgs = append(msgs, "missing setting: client-secret")
 	}
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -21,7 +22,9 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 	params := url.Values{}
 	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", p.ClientSecret)
+	if p.ClientSecret != "" {
+		params.Add("client_secret", p.ClientSecret)
+	}
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
@@ -36,15 +39,17 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
+	resp, c_err := http.DefaultClient.Do(req)
 	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
+	body, b_err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
-	if err != nil {
+	if b_err != nil {
 		return
+	}
+	if c_err != nil {
+		log.Printf("headers from failed redemption are %s", resp.Header)
+		log.Printf("body from failed redemption is %s", body)
+		return nil, c_err
 	}
 
 	if resp.StatusCode != 200 {
@@ -103,6 +108,10 @@ func (p *ProviderData) SessionFromCookie(v string, c *cookie.Cipher) (s *Session
 }
 
 func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
+	return "", errors.New("not implemented")
+}
+
+func (p *ProviderData) GetGroups(s *SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
