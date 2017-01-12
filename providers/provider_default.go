@@ -111,7 +111,7 @@ func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
-func (p *ProviderData) GetGroups(s *SessionState) (string, error) {
+func (p *ProviderData) GetGroups(s *SessionState, f string) (string, error) {
 	return "", errors.New("not implemented")
 }
 

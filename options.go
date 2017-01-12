@@ -52,6 +52,7 @@ type Options struct {
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 	PassBasicAuth         bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
 	PassGroups            bool     `flag:"pass-groups" cfg:"pass_groups"`
+	FilterGroups          string   `flag:"filter-groups" cfg:"filter_groups"`
 	BasicAuthPassword     string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
 	PassAccessToken       bool     `flag:"pass-access-token" cfg:"pass_access_token"`
 	PassHostHeader        bool     `flag:"pass-host-header" cfg:"pass_host_header"`
@@ -103,6 +104,7 @@ func NewOptions() *Options {
 		PassBasicAuth:       true,
 		PassUserHeaders:     true,
 		PassGroups:          false,
+		FilterGroups:        "",
 		PassAccessToken:     false,
 		PassHostHeader:      true,
 		ApprovalPrompt:      "force",

@@ -127,7 +127,8 @@ func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 	return email, err
 }
 
-func (p *AzureProvider) GetGroups(s *SessionState) (string, error) {
+// Get list of groups user belong to. Filter the desired names of groups (in case of huge group set)
+func (p *AzureProvider) GetGroups(s *SessionState, f string) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
@@ -136,36 +137,51 @@ func (p *AzureProvider) GetGroups(s *SessionState) (string, error) {
 		return "", errors.New("missing id token")
 	}
 
-	// parse token, check if it has groups
-	// if groups, return "|".join(groups_list)
-	// else
-	//   look for claim source
-	//   GET source
-	//   parse response
-	//   return "|".join(response.groups_list)
+	// For future use. Right now microsoft graph don't support filter
+	// http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part2-url-conventions/odata-v4.0-errata02-os-part2-url-conventions-complete.html#_Toc406398116
 
-	req, err := http.NewRequest("GET", "https://graph.microsoft.com/v1.0/me/memberOf/", nil)
-	//req, err := http.NewRequest("POST", "https://graph.microsoft.com/v1.0/me/getMemberGroups", strings.NewReader("{\"securityEnabledOnly\":true}"))
-	if err != nil {
-		return "", err
-	}
-	req.Header = getAzureHeader(s.AccessToken)
-	req.Header.Add("Content-Type", "application/json")
-
-	groupData, err := api.Request(req)
-
-	groups := make([]string, 0)
-	for _, groupInfo := range groupData.Get("value").MustArray() {
-		//v, ok := groupInfo.(string)
-		v, ok := groupInfo.(map[string]interface{})
-		if !ok {
-			continue
+	/*
+		var request string = "https://graph.microsoft.com/v1.0/me/memberOf?$select=id,displayName,groupTypes,securityEnabled,description,mailEnabled&$top=999"
+		if f != "" {
+			request += "?$filter=contains(displayName, '"+f+"')"
 		}
-		dname := v["displayName"].(string)
-		secen := v["securityEnabled"].(bool)
-		mailen := v["mailEnabled"].(bool)
-		if secen == true && mailen == false {
-			groups = append(groups, dname)
+	*/
+	//
+	// Filters that will be possible to use:
+	// contains - unknown function | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=contains(displayName,%27olm%27)"
+	// startswith - not supported  | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=startswith(displayName,%27olm%27)"
+	// substring - not supported   | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=substring(displayName,0,2)%20eq%20%27olm%27"
+
+	requestUrl := "https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName"
+	groups := make([]string, 0)
+
+	for {
+		req, err := http.NewRequest("GET", requestUrl, nil)
+
+		if err != nil {
+			return "", err
+		}
+		req.Header = getAzureHeader(s.AccessToken)
+		req.Header.Add("Content-Type", "application/json")
+
+		groupData, err := api.Request(req)
+
+		for _, groupInfo := range groupData.Get("value").MustArray() {
+			v, ok := groupInfo.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			dname := v["displayName"].(string)
+			if strings.Contains(dname, f) {
+				groups = append(groups, dname)
+			}
+
+		}
+
+		if nextlink := groupData.Get("@odata.nextLink").MustString(); nextlink != "" {
+			requestUrl = nextlink
+		} else {
+			break
 		}
 	}
 
