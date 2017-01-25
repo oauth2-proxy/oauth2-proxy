@@ -14,6 +14,7 @@ import (
 func testOptions() *Options {
 	o := NewOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
+	o.Provider = "google"
 	o.CookieSecret = "foobar"
 	o.ClientID = "bazquux"
 	o.ClientSecret = "xyzzyplugh"
@@ -38,25 +39,34 @@ func TestNewOptions(t *testing.T) {
 		"missing setting: upstream",
 		"missing setting: cookie-secret",
 		"missing setting: client-id",
-		"missing setting: client-secret"})
+		"missing setting: client-secret",
+		"missing setting: provider"})
 	assert.Equal(t, expected, err.Error())
 }
 
-func TestGoogleGroupOptions(t *testing.T) {
+func TestGooglePermitGroupsOptions(t *testing.T) {
 	o := testOptions()
-	o.GoogleGroups = []string{"googlegroup"}
+	o.GoogleAdminEmail = "admin@example.com"
 	err := o.Validate()
 	assert.NotEqual(t, nil, err)
 
 	expected := errorMsg([]string{
-		"missing setting: google-admin-email",
+		"missing setting: permit-groups",
 		"missing setting: google-service-account-json"})
 	assert.Equal(t, expected, err.Error())
 }
 
-func TestGoogleGroupInvalidFile(t *testing.T) {
+func TestPermitGroupsOptions(t *testing.T) {
 	o := testOptions()
-	o.GoogleGroups = []string{"test_group"}
+	o.Provider = "azure"
+	o.PermitGroups = []string{"agoodgroup"}
+	err := o.Validate()
+	assert.Equal(t, nil, err)
+}
+
+func TestPermitGroupsInvalidFile(t *testing.T) {
+	o := testOptions()
+	o.PermitGroups = []string{"test_group"}
 	o.GoogleAdminEmail = "admin@example.com"
 	o.GoogleServiceAccountJSON = "file_doesnt_exist.json"
 	err := o.Validate()

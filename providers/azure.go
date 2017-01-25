@@ -13,7 +13,8 @@ import (
 
 type AzureProvider struct {
 	*ProviderData
-	Tenant string
+	Tenant          string
+	PermittedGroups []string
 }
 
 func NewAzureProvider(p *ProviderData) *AzureProvider {
@@ -204,4 +205,19 @@ func (p *AzureProvider) GetLoginURL(redirectURI, finalRedirect string) string {
 	}
 	a.RawQuery = params.Encode()
 	return a.String()
+}
+
+func (p *AzureProvider) SetGroupRestriction(groups []string) {
+	p.PermittedGroups = groups
+}
+
+func (p *AzureProvider) ValidateGroup(s *SessionState) bool {
+	if len(p.PermittedGroups) != 0 {
+		for _, pGroup := range p.PermittedGroups {
+			if strings.Contains(s.Groups, pGroup) {
+				return true
+			}
+		}
+	}
+	return false
 }

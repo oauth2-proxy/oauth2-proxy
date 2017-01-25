@@ -117,7 +117,7 @@ func (p *ProviderData) GetGroups(s *SessionState, f string) (string, error) {
 
 // ValidateGroup validates that the provided email exists in the configured provider
 // email group(s).
-func (p *ProviderData) ValidateGroup(email string) bool {
+func (p *ProviderData) ValidateGroup(s *SessionState) bool {
 	return true
 }
 

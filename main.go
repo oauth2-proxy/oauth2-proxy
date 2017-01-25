@@ -20,7 +20,7 @@ func main() {
 	emailDomains := StringArray{}
 	upstreams := StringArray{}
 	skipAuthRegex := StringArray{}
-	googleGroups := StringArray{}
+	permittedGroups := StringArray{}
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -36,6 +36,7 @@ func main() {
 	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.Bool("pass-groups", false, "pass user group information in the X-Forwarded-Groups header to upstream (Azure only)")
 	flagSet.String("filter-groups", "", "exclude groups that do not contain this value in its 'displayName' (Azure only)")
+	flagSet.Var(&permittedGroups, "permit-groups", "restrict logins to members of this group (may be given multiple times; Azure and Google only).")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
 	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
@@ -47,7 +48,6 @@ func main() {
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
-	flagSet.Var(&googleGroups, "google-group", "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
