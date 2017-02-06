@@ -219,5 +219,5 @@ func (p *AzureProvider) ValidateGroup(s *SessionState) bool {
 			}
 		}
 	}
-	return false
+	return true
 }
