@@ -22,10 +22,11 @@ func TestSessionStateSerialization(t *testing.T) {
 		AccessToken:  "token1234",
 		ExpiresOn:    time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken: "refresh4321",
+		Groups:       "test-group-1|test-group-2",
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 3, strings.Count(encoded, ":"))
+	assert.Equal(t, 4, strings.Count(encoded, ":"))
 
 	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)

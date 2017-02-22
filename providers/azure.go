@@ -41,6 +41,7 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 		p.ApprovalPrompt = "consent"
 	}
 
+
 	return &AzureProvider{ProviderData: p}
 }
 
@@ -149,11 +150,12 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (string, error) {
 	*/
 	//
 	// Filters that will be possible to use:
-	// contains - unknown function | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=contains(displayName,%27olm%27)"
-	// startswith - not supported  | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=startswith(displayName,%27olm%27)"
-	// substring - not supported   | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=substring(displayName,0,2)%20eq%20%27olm%27"
+	// contains - unknown function | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=contains(displayName,%27groupname%27)"
+	// startswith - not supported  | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=startswith(displayName,%27groupname%27)"
+	// substring - not supported   | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=substring(displayName,0,2)%20eq%20%27groupname%27"
 
 	requestUrl := "https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName"
+
 	groups := make([]string, 0)
 
 	for {
@@ -166,6 +168,9 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (string, error) {
 		req.Header.Add("Content-Type", "application/json")
 
 		groupData, err := api.Request(req)
+		if err != nil {
+			return "", err
+		}
 
 		for _, groupInfo := range groupData.Get("value").MustArray() {
 			v, ok := groupInfo.(map[string]interface{})
@@ -218,6 +223,7 @@ func (p *AzureProvider) ValidateGroup(s *SessionState) bool {
 				return true
 			}
 		}
+		return false
 	}
 	return true
 }
