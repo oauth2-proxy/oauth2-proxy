@@ -72,21 +72,11 @@ https://www.googleapis.com/auth/admin.directory.user.readonly
 ```
 6. Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
 7. Create or choose an existing administrative email address on the Gmail domain to assign to the ```google-admin-email``` flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from step 5 for the reason why.
-8. Create or choose an existing email group and set that email to the ```google-group``` flag. You can pass multiple instances of this flag with different groups
-and the user will be checked against all the provided groups.
+8. Create or choose an existing email group and set that email to the ```permit-groups``` flag. You can pass multiple instances of this flag with different groups and the user will be checked against all the provided groups.
 9. Lock down the permissions on the json file downloaded from step 1 so only oauth2_proxy is able to read the file and set the path to the file in the ```google-service-account-json``` flag.
 10. Restart oauth2_proxy.
 
 Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
-
-### Azure Auth Provider
-
-1. [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
-2. On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
-3. If applicable take note of your `TenantID` and provide it via the `--azure-tenant=<YOUR TENANT ID>` commandline option. Default the `common` tenant is used.
-
-The Azure AD auth provider uses `openid` as it default scope. It uses `https://graph.windows.net` as a default protected resource. It call to `https://graph.windows.net/me` to get the email address of the user that logs in.
-
 
 ### Facebook Auth Provider
 
@@ -135,11 +125,25 @@ For LinkedIn, the registration steps are:
 
 The [MyUSA](https://alpha.my.usa.gov) authentication service ([GitHub](https://github.com/18F/myusa))
 
-### Microsoft Azure AD Provider
+### Microsoft Azure Active Directory Provider
 
-For adding an application to the Microsoft Azure AD follow [these steps to add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/).
+1. [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
+2. On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
+3. Delegate permission to "Access the Directory as the Signed-In User".
+4. If applicable take note of your `TenantID` and provide it via the `--azure-tenant=<YOUR TENANT ID>` commandline option. Default the `common` tenant is used.
+5. Take note of your application's `Application ID`; this is used as the `client_id` (the OAuth2 'public' client). You do not need a `client_secret`.
 
-Take note of your `TenantId` if applicable for your situation. The `TenantId` can be used to override the default `common` authorization server with a tenant specific server.
+The Azure AD auth provider uses `openid` as it default scope. It uses `https://graph.microsoft.com` as a default protected resource. It uses the [Microsoft Graph API](https://developer.microsoft.com/en-us/graph/) to obtain the user's email address, and optionally gather group membership information.
+
+#### Group Support
+
+The Azure provider supports passing (optionally filtered) group membership information, as well as doing basic authorization checking based on group membership.
+
+Set the `pass-groups` flag to enable an additional X-Forwarded-Groups header that contains a pipe-separated list of groups to which the user belongs.
+
+The `filter-groups` flag enables a simple filter that will elide any groups that do not contain that string. For example, if the `filter-groups` flag were set to `admins`, the X-Forwarded-Groups header for a user in groups `[foo-admins, bar-admins, users-foo-group]` would be `foo-admins|bar-admins`. If the flag were set to `foo`, the header would be `foo-admins|users-foo-group`.
+
+The `permit-groups` flag requires that a user belong to a group that contains the specified string (or one of the specified strings). The X-Forwarded-Group header is checked for a `strings.Contains` match for each item in the list.
 
 ## Email Authentication
 
@@ -176,10 +180,10 @@ Usage of oauth2_proxy:
   -custom-templates-dir="": path to custom html templates
   -display-htpasswd-form=true: display username / password login form if an htpasswd file is provided
   -email-domain=: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
+  -filter-groups="": only pass groups in the X-Forwarded-Groups header that contain this string
   -github-org="": restrict logins to members of this organisation
   -github-team="": restrict logins to members of this team
   -google-admin-email="": the google admin to impersonate for api calls
-  -google-group=: restrict logins to members of this google group (may be given multiple times).
   -google-service-account-json="": the path to the service account json credentials
   -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
@@ -189,12 +193,14 @@ Usage of oauth2_proxy:
   -pass-basic-auth=true: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
   -pass-user-headers=true: pass X-Forwarded-User and X-Forwarded-Email information to upstream
   -pass-host-header=true: pass the request Host Header to upstream
+  -pass-groups=false: pass a pipe-separated list of groups to which the user belongs in the X-Forwarded-Groups header
+  -permit-groups="": The user groups to which a user must belong in order to use the proxy (see also filter-groups)
   -profile-url="": Profile access endpoint
   -provider="google": OAuth provider
   -proxy-prefix="/oauth2": the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)
   -redeem-url="": Token redemption endpoint
   -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
-  -resource="": the resource that is being protected. ie: "https://graph.windows.net". Currently only used in the Azure provider.
+  -resource="": the resource that is being protected. ie: "https://graph.microsoft.com". Currently only used in the Azure provider.
   -request-logging=true: Log requests to stdout
   -scope="": Oauth scope specification
   -signature-key="": GAP-Signature request signature key (algorithm:secretkey)
@@ -235,7 +241,7 @@ The following environment variables can be used in place of the corresponding co
 
 There are two recommended configurations.
 
-1) Configure SSL Terminiation with OAuth2 Proxy by providing a `--tls-cert=/path/to/cert.pem` and `--tls-key=/path/to/cert.key`.
+1) Configure SSL Termination with OAuth2 Proxy by providing a `--tls-cert=/path/to/cert.pem` and `--tls-key=/path/to/cert.key`.
 
 The command line to run `oauth2_proxy` in this configuration would look like this:
 
