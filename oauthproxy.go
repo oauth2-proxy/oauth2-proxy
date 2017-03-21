@@ -47,6 +47,7 @@ type OAuthProxy struct {
 	RobotsPath        string
 	PingPath          string
 	SignInPath        string
+	SignOutPath       string
 	OAuthStartPath    string
 	OAuthCallbackPath string
 	AuthOnlyPath      string
@@ -183,6 +184,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		RobotsPath:        "/robots.txt",
 		PingPath:          "/ping",
 		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
+		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
 		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
 		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
@@ -420,6 +422,8 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.serveMux.ServeHTTP(rw, req)
 	case path == p.SignInPath:
 		p.SignIn(rw, req)
+	case path == p.SignOutPath:
+		p.SignOut(rw, req)
 	case path == p.OAuthStartPath:
 		p.OAuthStart(rw, req)
 	case path == p.OAuthCallbackPath:
@@ -446,6 +450,11 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	} else {
 		p.SignInPage(rw, req, 200)
 	}
+}
+
+func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+	p.ClearCookie(rw, req)
+	http.Redirect(rw, req, "/", 302)
 }
 
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
