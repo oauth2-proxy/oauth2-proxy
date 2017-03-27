@@ -20,9 +20,13 @@ echo "... running tests"
 
 for os in windows linux darwin; do
     echo "... building v$version for $os/$arch"
+    EXT=
+    if [ $os = windows ]; then
+        EXT=".exe"
+    fi
     BUILD=$(mktemp -d ${TMPDIR:-/tmp}/oauth2_proxy.XXXXXX)
     TARGET="oauth2_proxy-$version.$os-$arch.$goversion"
-    GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o $BUILD/$TARGET/oauth2_proxy || exit 1
+    GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o $BUILD/$TARGET/oauth2_proxy$EXT || exit 1
     pushd $BUILD
     tar czvf $TARGET.tar.gz $TARGET
     mv $TARGET.tar.gz $DIR/dist
