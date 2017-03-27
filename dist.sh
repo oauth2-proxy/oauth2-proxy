@@ -7,7 +7,7 @@ echo "working dir $DIR"
 mkdir -p $DIR/dist
 mkdir -p $DIR/.godeps
 export GOPATH=$DIR/.godeps:$GOPATH
-gpm install
+GOPATH=$DIR/.godeps gpm install
 
 os=$(go env GOOS)
 arch=$(go env GOARCH)
