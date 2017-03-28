@@ -599,8 +599,7 @@ type SignatureAuthenticator struct {
 	auth hmacauth.HmacAuth
 }
 
-func (v *SignatureAuthenticator) Authenticate(
-	w http.ResponseWriter, r *http.Request) {
+func (v *SignatureAuthenticator) Authenticate(w http.ResponseWriter, r *http.Request) {
 	result, headerSig, computedSig := v.auth.AuthenticateRequest(r)
 	if result == hmacauth.ResultNoSignature {
 		w.Write([]byte("no signature received"))
@@ -688,10 +687,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
 	if body != "" {
 		bodyBuf = ioutil.NopCloser(&fakeNetConn{reqBody: body})
 	}
-	req, err := http.NewRequest(method, "/foo/bar", bodyBuf)
-	if err != nil {
-		panic(err)
-	}
+	req := httptest.NewRequest(method, "/foo/bar", bodyBuf)
 	req.Header = st.header
 
 	state := &providers.SessionState{
