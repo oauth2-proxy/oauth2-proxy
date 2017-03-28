@@ -1,14 +1,13 @@
 #!/bin/bash
-
 # build binary distributions for linux/amd64 and darwin/amd64
-set -e 
+set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "working dir $DIR"
 mkdir -p $DIR/dist
 mkdir -p $DIR/.godeps
 export GOPATH=$DIR/.godeps:$GOPATH
-gpm install
+GOPATH=$DIR/.godeps gpm install
 
 os=$(go env GOOS)
 arch=$(go env GOARCH)
@@ -16,7 +15,7 @@ version=$(cat $DIR/version.go | grep "const VERSION" | awk '{print $NF}' | sed '
 goversion=$(go version | awk '{print $3}')
 
 echo "... running tests"
-./test.sh || exit 1
+./test.sh
 
 for os in windows linux darwin; do
     echo "... building v$version for $os/$arch"
