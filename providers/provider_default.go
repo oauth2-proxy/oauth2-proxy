@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/bitly/oauth2_proxy/cookie"
 )
@@ -79,7 +78,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 }
 
 // GetLoginURL with typical oauth parameters
-func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
+func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	var a url.URL
 	a = *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
@@ -88,9 +87,7 @@ func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
-	if strings.HasPrefix(finalRedirect, "/") && !strings.HasPrefix(finalRedirect,"//") {
-		params.Add("state", finalRedirect)
-	}
+	params.Add("state", state)
 	a.RawQuery = params.Encode()
 	return a.String()
 }

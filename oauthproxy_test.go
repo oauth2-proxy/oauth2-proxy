@@ -170,10 +170,14 @@ func TestBasicAuthPassword(t *testing.T) {
 	})
 
 	rw := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/oauth2/callback?code=callback_code",
+	req, _ := http.NewRequest("GET", "/oauth2/callback?code=callback_code&state=nonce:",
 		strings.NewReader(""))
+	req.AddCookie(proxy.MakeCSRFCookie(req, "nonce", proxy.CookieExpire, time.Now()))
 	proxy.ServeHTTP(rw, req)
-	cookie := rw.HeaderMap["Set-Cookie"][0]
+	if rw.Code >= 400 {
+		t.Fatalf("expected 3xx got %d", rw.Code)
+	}
+	cookie := rw.HeaderMap["Set-Cookie"][1]
 
 	cookieName := proxy.CookieName
 	var value string
@@ -196,9 +200,11 @@ func TestBasicAuthPassword(t *testing.T) {
 		Expires:  time.Now().Add(time.Duration(24)),
 		HttpOnly: true,
 	})
+	req.AddCookie(proxy.MakeCSRFCookie(req, "nonce", proxy.CookieExpire, time.Now()))
 
 	rw = httptest.NewRecorder()
 	proxy.ServeHTTP(rw, req)
+
 	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(user_name+":"+opts.BasicAuthPassword))
 	assert.Equal(t, expectedHeader, rw.Body.String())
 	provider_server.Close()
@@ -263,13 +269,14 @@ func (pat_test *PassAccessTokenTest) Close() {
 func (pat_test *PassAccessTokenTest) getCallbackEndpoint() (http_code int,
 	cookie string) {
 	rw := httptest.NewRecorder()
-	req, err := http.NewRequest("GET", "/oauth2/callback?code=callback_code",
+	req, err := http.NewRequest("GET", "/oauth2/callback?code=callback_code&state=nonce:",
 		strings.NewReader(""))
 	if err != nil {
 		return 0, ""
 	}
+	req.AddCookie(pat_test.proxy.MakeCSRFCookie(req, "nonce", time.Hour, time.Now()))
 	pat_test.proxy.ServeHTTP(rw, req)
-	return rw.Code, rw.HeaderMap["Set-Cookie"][0]
+	return rw.Code, rw.HeaderMap["Set-Cookie"][1]
 }
 
 func (pat_test *PassAccessTokenTest) getRootEndpoint(cookie string) (http_code int, access_token string) {
@@ -314,14 +321,18 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 
 	// A successful validation will redirect and set the auth cookie.
 	code, cookie := pat_test.getCallbackEndpoint()
-	assert.Equal(t, 302, code)
+	if code != 302 {
+		t.Fatalf("expected 302; got %d", code)
+	}
 	assert.NotEqual(t, nil, cookie)
 
 	// Now we make a regular request; the access_token from the cookie is
 	// forwarded as the "X-Forwarded-Access-Token" header. The token is
 	// read by the test provider server and written in the response body.
 	code, payload := pat_test.getRootEndpoint(cookie)
-	assert.Equal(t, 200, code)
+	if code != 200 {
+		t.Fatalf("expected 200; got %d", code)
+	}
 	assert.Equal(t, "my_auth_token", payload)
 }
 
@@ -333,13 +344,17 @@ func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 
 	// A successful validation will redirect and set the auth cookie.
 	code, cookie := pat_test.getCallbackEndpoint()
-	assert.Equal(t, 302, code)
+	if code != 302 {
+		t.Fatalf("expected 302; got %d", code)
+	}
 	assert.NotEqual(t, nil, cookie)
 
 	// Now we make a regular request, but the access token header should
 	// not be present.
 	code, payload := pat_test.getRootEndpoint(cookie)
-	assert.Equal(t, 200, code)
+	if code != 200 {
+		t.Fatalf("expected 200; got %d", code)
+	}
 	assert.Equal(t, "No access token found.", payload)
 }
 
@@ -457,7 +472,7 @@ func NewProcessCookieTestWithDefaults() *ProcessCookieTest {
 }
 
 func (p *ProcessCookieTest) MakeCookie(value string, ref time.Time) *http.Cookie {
-	return p.proxy.MakeCookie(p.req, value, p.opts.CookieExpire, ref)
+	return p.proxy.MakeSessionCookie(p.req, value, p.opts.CookieExpire, ref)
 }
 
 func (p *ProcessCookieTest) SaveSession(s *providers.SessionState, ref time.Time) error {
@@ -465,7 +480,7 @@ func (p *ProcessCookieTest) SaveSession(s *providers.SessionState, ref time.Time
 	if err != nil {
 		return err
 	}
-	p.req.AddCookie(p.proxy.MakeCookie(p.req, value, p.proxy.CookieExpire, ref))
+	p.req.AddCookie(p.proxy.MakeSessionCookie(p.req, value, p.proxy.CookieExpire, ref))
 	return nil
 }
 
@@ -697,7 +712,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
 	if err != nil {
 		panic(err)
 	}
-	cookie := proxy.MakeCookie(req, value, proxy.CookieExpire, time.Now())
+	cookie := proxy.MakeSessionCookie(req, value, proxy.CookieExpire, time.Now())
 	req.AddCookie(cookie)
 	// This is used by the upstream to validate the signature.
 	st.authenticator.auth = hmacauth.NewHmacAuth(
