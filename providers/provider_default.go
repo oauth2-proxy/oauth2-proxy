@@ -88,7 +88,7 @@ func (p *ProviderData) GetLoginURL(redirectURI, finalRedirect string) string {
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
-	if strings.HasPrefix(finalRedirect, "/") {
+	if strings.HasPrefix(finalRedirect, "/") && !strings.HasPrefix(finalRedirect,"//") {
 		params.Add("state", finalRedirect)
 	}
 	a.RawQuery = params.Encode()
