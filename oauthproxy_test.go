@@ -156,6 +156,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	opts.ClientSecret = "foobar"
 	opts.CookieSecure = false
 	opts.PassBasicAuth = true
+	opts.PassUserHeaders = true
 	opts.BasicAuthPassword = "This is a secure password"
 	opts.Validate()
 

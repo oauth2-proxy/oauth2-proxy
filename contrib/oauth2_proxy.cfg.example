@@ -23,6 +23,7 @@
 
 ## pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
 # pass_basic_auth = true
+# pass_user_headers = true
 ## pass the request Host Header to upstream
 ## when disabled the upstream Host is used as the Host Header
 # pass_host_header = true 
