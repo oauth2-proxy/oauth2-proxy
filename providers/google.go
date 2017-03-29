@@ -17,6 +17,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/admin/directory/v1"
+	"google.golang.org/api/googleapi"
 )
 
 type GoogleProvider struct {
@@ -197,8 +198,12 @@ func userInGroup(service *admin.Service, groups []string, email string) bool {
 	for _, group := range groups {
 		members, err := fetchGroupMembers(service, group)
 		if err != nil {
-			log.Printf("error fetching group members: %v", err)
-			return false
+			if err, ok := err.(*googleapi.Error); ok && err.Code == 404 {
+				log.Printf("error fetching members for group %s: group does not exist", group)
+			} else {
+				log.Printf("error fetching group members: %v", err)
+				return false
+			}
 		}
 
 		for _, member := range members {
