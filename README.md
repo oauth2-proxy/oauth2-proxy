@@ -200,6 +200,7 @@ Usage of oauth2_proxy:
   -signature-key="": GAP-Signature request signature key (algorithm:secretkey)
   -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
   -skip-provider-button=false: will skip sign-in-page to directly reach the next step: oauth/start
+  -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
   -tls-cert="": path to certificate file
   -tls-key="": path to private key file
   -upstream=: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
