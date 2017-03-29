@@ -257,6 +257,10 @@ func (p *OAuthProxy) MakeCookie(req *http.Request, value string, expiration time
 
 	if value != "" {
 		value = cookie.SignedValue(p.CookieSeed, p.CookieName, value, now)
+		if len(value) > 4096 {
+			// Cookies cannot be larger than 4kb
+			log.Printf("WARNING - Cookie Size: %d bytes", len(value))
+		}
 	}
 	return &http.Cookie{
 		Name:     p.CookieName,
