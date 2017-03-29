@@ -54,6 +54,10 @@
 ## optional directory with custom sign_in.html and error.html
 # custom_templates_dir = ""
 
+## skip SSL checking for HTTPS requests
+# ssl_insecure_skip_verify = false
+
+
 ## Cookie Settings
 ## Name     - the cookie name
 ## Secret   - the seed string for secure cookies; should be 16, 24, or 32 bytes
