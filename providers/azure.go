@@ -3,11 +3,11 @@ package providers
 import (
 	"errors"
 	"fmt"
+	"github.com/bitly/go-simplejson"
 	"github.com/bitly/oauth2_proxy/api"
 	"log"
 	"net/http"
 	"net/url"
-	"github.com/bitly/go-simplejson"
 )
 
 type AzureProvider struct {
@@ -67,26 +67,26 @@ func getAzureHeader(access_token string) http.Header {
 }
 
 func getEmailFromJSON(json *simplejson.Json) (string, error) {
- 	var email string
+	var email string
 	var err error
-	 
+
 	email, err = json.Get("mail").String()
- 
+
 	if err != nil || email == "" {
 		otherMails, otherMailsErr := json.Get("otherMails").Array()
-		if len(otherMails) > 0{
+		if len(otherMails) > 0 {
 			email = otherMails[0].(string)
 		}
 		err = otherMailsErr
 	}
-	
+
 	return email, err
- }
+}
 
 func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 	var email string
 	var err error
-	
+
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
@@ -109,16 +109,16 @@ func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 	}
 
 	email, err = json.Get("userPrincipalName").String()
-	
+
 	if err != nil {
 		log.Printf("failed making request %s", err)
 		return "", err
 	}
-	
+
 	if email == "" {
 		log.Printf("failed to get email address")
 		return "", err
 	}
-	
+
 	return email, err
 }
