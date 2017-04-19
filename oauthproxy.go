@@ -155,16 +155,12 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 
 	log.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
-	domain := opts.CookieDomain
-	if domain == "" {
-		domain = "<default>"
-	}
 	refresh := "disabled"
 	if opts.CookieRefresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
 	}
 
-	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain, refresh)
+	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, opts.CookieDomain, refresh)
 
 	var cipher *cookie.Cipher
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
@@ -267,22 +263,21 @@ func (p *OAuthProxy) MakeCSRFCookie(req *http.Request, value string, expiration 
 }
 
 func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
-	domain := req.Host
-	if h, _, err := net.SplitHostPort(domain); err == nil {
-		domain = h
-	}
 	if p.CookieDomain != "" {
+		domain := req.Host
+		if h, _, err := net.SplitHostPort(domain); err == nil {
+			domain = h
+		}
 		if !strings.HasSuffix(domain, p.CookieDomain) {
 			log.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, p.CookieDomain)
 		}
-		domain = p.CookieDomain
 	}
 
 	return &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     "/",
-		Domain:   domain,
+		Domain:   p.CookieDomain,
 		HttpOnly: p.CookieHttpOnly,
 		Secure:   p.CookieSecure,
 		Expires:  now.Add(expiration),
