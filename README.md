@@ -373,6 +373,10 @@ server {
     proxy_set_header X-User  $user;
     proxy_set_header X-Email $email;
 
+    # if you enabled --cookie-refresh, this is needed for it to work with auth_request
+    auth_request_set $auth_cookie $upstream_http_set_cookie;
+    add_header Set-Cookie $auth_cookie;
+
     proxy_pass http://backend/;
     # or "root /path/to/site;" or "fastcgi_pass ..." etc
   }
