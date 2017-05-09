@@ -8,3 +8,6 @@ golang.org/x/oauth2                      7fdf09982454086d5570c7db3e11f360194830c
 golang.org/x/net/context                 242b6b35177ec3909636b6cf6a47e8c2c6324b5d
 google.golang.org/api/admin/directory/v1 650535c7d6201e8304c92f38c922a9a3a36c6877
 cloud.google.com/go/compute/metadata     v0.7.0
+github.com/coreos/go-oidc                c797a55f1c1001ec3169f1d0fbb4c5523563bec6
+gopkg.in/square/go-jose.v2               v2.1.1
+github.com/pquerna/cachecontrol          9299cc36e57c32f83e47ffb3c25d8a3dec10ea0b
