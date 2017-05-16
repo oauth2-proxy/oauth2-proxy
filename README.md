@@ -350,14 +350,9 @@ The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth
 
 ```nginx
 server {
-  listen 443 ssl spdy;
+  listen 443 ssl;
   server_name ...;
   include ssl/ssl.conf;
-
-  location = /oauth2/auth {
-    internal;
-    proxy_pass http://127.0.0.1:4180;
-  }
 
   location /oauth2/ {
     proxy_pass       http://127.0.0.1:4180;
@@ -367,7 +362,7 @@ server {
     proxy_set_header X-Auth-Request-Redirect $request_uri;
   }
 
-  location /upstream/ {
+  location / {
     auth_request /oauth2/auth;
     error_page 401 = /oauth2/sign_in;
 
@@ -378,14 +373,12 @@ server {
     proxy_set_header X-User  $user;
     proxy_set_header X-Email $email;
 
+    # if you enabled --cookie-refresh, this is needed for it to work with auth_request
+    auth_request_set $auth_cookie $upstream_http_set_cookie;
+    add_header Set-Cookie $auth_cookie;
+
     proxy_pass http://backend/;
-  }
-
-  location / {
-    auth_request /oauth2/auth;
-    error_page 401 = https://example.com/oauth2/sign_in;
-
-    root /path/to/the/site;
+    # or "root /path/to/site;" or "fastcgi_pass ..." etc
   }
 }
 ```
