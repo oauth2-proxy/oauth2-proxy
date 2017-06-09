@@ -51,7 +51,7 @@ For Google, the registration steps are:
    * Choose **"Web application"**
    * Application name is freeform, choose something appropriate
    * Authorized JavaScript origins is your domain ex: `https://internal.yourcompany.com`
-   * Authorized redirect URIs is the location of oath2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
+   * Authorized redirect URIs is the location of oauth2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
    * Choose **"Create"**
 4. Take note of the **Client ID** and **Client Secret**
 
