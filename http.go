@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -24,19 +23,24 @@ func (s *Server) ListenAndServe() {
 }
 
 func (s *Server) ServeHTTP() {
-	u, err := url.Parse(s.Opts.HttpAddress)
-	if err != nil {
-		log.Fatalf("FATAL: could not parse %#v: %v", s.Opts.HttpAddress, err)
+	httpAddress := s.Opts.HttpAddress
+	scheme := ""
+
+	i := strings.Index(httpAddress, "://")
+	if i > -1 {
+		scheme = httpAddress[0:i]
 	}
 
 	var networkType string
-	switch u.Scheme {
+	switch scheme {
 	case "", "http":
 		networkType = "tcp"
 	default:
-		networkType = u.Scheme
+		networkType = scheme
 	}
-	listenAddr := strings.TrimPrefix(u.String(), u.Scheme+"://")
+
+	slice := strings.SplitN(httpAddress, "//", 2)
+	listenAddr := slice[len(slice)-1]
 
 	listener, err := net.Listen(networkType, listenAddr)
 	if err != nil {

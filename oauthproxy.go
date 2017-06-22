@@ -71,6 +71,7 @@ type OAuthProxy struct {
 	PassAccessToken     bool
 	CookieCipher        *cookie.Cipher
 	skipAuthRegex       []string
+	skipAuthPreflight   bool
 	compiledRegex       []*regexp.Regexp
 	templates           *template.Template
 	Footer              string
@@ -204,6 +205,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		serveMux:           serveMux,
 		redirectURL:        redirectURL,
 		skipAuthRegex:      opts.SkipAuthRegex,
+		skipAuthPreflight:  opts.SkipAuthPreflight,
 		compiledRegex:      opts.CompiledRegex,
 		SetXAuthRequest:    opts.SetXAuthRequest,
 		PassBasicAuth:      opts.PassBasicAuth,
@@ -430,6 +432,11 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	return
 }
 
+func (p *OAuthProxy) IsWhitelistedRequest(req *http.Request) (ok bool) {
+	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
+	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path)
+}
+
 func (p *OAuthProxy) IsWhitelistedPath(path string) (ok bool) {
 	for _, u := range p.compiledRegex {
 		ok = u.MatchString(path)
@@ -454,7 +461,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.RobotsTxt(rw)
 	case path == p.PingPath:
 		p.PingPage(rw)
-	case p.IsWhitelistedPath(path):
+	case p.IsWhitelistedRequest(req):
 		p.serveMux.ServeHTTP(rw, req)
 	case path == p.SignInPath:
 		p.SignIn(rw, req)
