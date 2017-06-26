@@ -109,7 +109,7 @@ func NewOptions() *Options {
 		FilterGroups:        "",
 		PassAccessToken:     false,
 		PassHostHeader:      true,
-		ApprovalPrompt:      "force",
+		ApprovalPrompt:      "",
 		RequestLogging:      true,
 	}
 }
