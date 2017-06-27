@@ -37,10 +37,10 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 		p.Scope = "openid"
 	}
 
-	if p.ApprovalPrompt == "" || p.ApprovalPrompt == "force" {
+	if p.ApprovalPrompt == "force" {
 		p.ApprovalPrompt = "consent"
 	}
-
+	log.Printf("Approval prompt: '%s'", p.ApprovalPrompt)
 
 	return &AzureProvider{ProviderData: p}
 }
@@ -194,7 +194,7 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (string, error) {
 	return strings.Join(groups, "|"), nil
 }
 
-func (p *AzureProvider) GetLoginURL(redirectURI, finalRedirect string) string {
+func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 	var a url.URL
 	a = *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
@@ -203,17 +203,23 @@ func (p *AzureProvider) GetLoginURL(redirectURI, finalRedirect string) string {
 	params.Set("redirect_uri", redirectURI)
 	params.Set("response_mode", "form_post")
 	params.Add("scope", p.Scope)
+	params.Add("state", state)
 	params.Set("prompt", p.ApprovalPrompt)
 	params.Set("nonce", "FIXME")
-	if strings.HasPrefix(finalRedirect, "/") {
-		params.Add("state", finalRedirect)
-	}
 	a.RawQuery = params.Encode()
 	return a.String()
 }
 
 func (p *AzureProvider) SetGroupRestriction(groups []string) {
-	p.PermittedGroups = groups
+	if len(groups) == 1 && strings.Index(groups[0], "|") >= 0 {
+		p.PermittedGroups = strings.Split(groups[0], "|")
+	} else {
+		p.PermittedGroups = groups
+	}
+	log.Printf("Set group restrictions. Allowed groups are:")
+	for _, pGroup := range p.PermittedGroups {
+		log.Printf("\t'%s'", pGroup)
+	}
 }
 
 func (p *AzureProvider) ValidateGroup(s *SessionState) bool {

@@ -17,7 +17,7 @@ to validate accounts by email, domain or group.
 
 ## Installation
 
-1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v2.1`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
+1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v2.2`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 2. Select a Provider and Register an OAuth Application with a Provider
 3. Configure OAuth2 Proxy using config file, command line options, or environment variables
 4. Configure SSL or Deploy behind a SSL endpoint (example provided for Nginx)
@@ -44,7 +44,7 @@ For Google, the registration steps are:
 
 1. Create a new project: https://console.developers.google.com/project
 2. Choose the new project from the top right project dropdown (only if another project is selected)
-3. In the project Dashboard center pane, choose **"Enable and manage APIs"**
+3. In the project Dashboard center pane, choose **"API Manager"**
 4. In the left Nav pane, choose **"Credentials"**
 5. In the center pane, choose **"OAuth consent screen"** tab. Fill in **"Product name shown to users"** and hit save.
 6. In the center pane, choose **"Credentials"** tab.
@@ -53,7 +53,7 @@ For Google, the registration steps are:
    * Choose **"Web application"**
    * Application name is freeform, choose something appropriate
    * Authorized JavaScript origins is your domain ex: `https://internal.yourcompany.com`
-   * Authorized redirect URIs is the location of oath2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
+   * Authorized redirect URIs is the location of oauth2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
    * Choose **"Create"**
 4. Take note of the **Client ID** and **Client Secret**
 
@@ -72,11 +72,21 @@ https://www.googleapis.com/auth/admin.directory.user.readonly
 ```
 6. Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
 7. Create or choose an existing administrative email address on the Gmail domain to assign to the ```google-admin-email``` flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from step 5 for the reason why.
-8. Create or choose an existing email group and set that email to the ```permit-groups``` flag. You can pass multiple instances of this flag with different groups and the user will be checked against all the provided groups.
+8. Create or choose an existing email group and set that email to the ```google-group``` flag. You can pass multiple instances of this flag with different groups
+and the user will be checked against all the provided groups.
 9. Lock down the permissions on the json file downloaded from step 1 so only oauth2_proxy is able to read the file and set the path to the file in the ```google-service-account-json``` flag.
 10. Restart oauth2_proxy.
 
 Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
+
+### Azure Auth Provider
+
+1. [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
+2. On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
+3. If applicable take note of your `TenantID` and provide it via the `--azure-tenant=<YOUR TENANT ID>` commandline option. Default the `common` tenant is used.
+
+The Azure AD auth provider uses `openid` as it default scope. It uses `https://graph.windows.net` as a default protected resource. It call to `https://graph.windows.net/me` to get the email address of the user that logs in.
+
 
 ### Facebook Auth Provider
 
@@ -125,7 +135,7 @@ For LinkedIn, the registration steps are:
 
 The [MyUSA](https://alpha.my.usa.gov) authentication service ([GitHub](https://github.com/18F/myusa))
 
-### Microsoft Azure Active Directory Provider
+### Microsoft Azure AD Provider
 
 1. [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
 2. On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
@@ -163,55 +173,59 @@ An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is i
 
 ```
 Usage of oauth2_proxy:
-  -approval-prompt="force": Oauth approval_prompt
-  -authenticated-emails-file="": authenticate against emails via file (one per line)
-  -azure-tenant="common": go to a tenant-specific or common (tenant-independent) endpoint.
-  -basic-auth-password="": the password to set when passing the HTTP Basic Auth header
-  -client-id="": the OAuth Client ID: ie: "123456.apps.googleusercontent.com"
-  -client-secret="": the OAuth Client Secret
-  -config="": path to config file
-  -cookie-domain="": an optional cookie domain to force cookies to (ie: .yourcompany.com)*
-  -cookie-expire=168h0m0s: expire timeframe for cookie
-  -cookie-httponly=true: set HttpOnly cookie flag
-  -cookie-name="_oauth2_proxy": the name of the cookie that the oauth_proxy creates
-  -cookie-refresh=0: refresh the cookie after this duration; 0 to disable
-  -cookie-secret="": the seed string for secure cookies
-  -cookie-secure=true: set secure (HTTPS) cookie flag
-  -custom-templates-dir="": path to custom html templates
-  -display-htpasswd-form=true: display username / password login form if an htpasswd file is provided
-  -email-domain=: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
-  -filter-groups="": only pass groups in the X-Forwarded-Groups header that contain this string
-  -github-org="": restrict logins to members of this organisation
-  -github-team="": restrict logins to members of this team
-  -google-admin-email="": the google admin to impersonate for api calls
-  -google-service-account-json="": the path to the service account json credentials
-  -htpasswd-file="": additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
-  -http-address="127.0.0.1:4180": [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
-  -https-address=":443": <addr>:<port> to listen on for HTTPS clients
-  -login-url="": Authentication endpoint
-  -pass-access-token=false: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
-  -pass-basic-auth=true: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
-  -pass-user-headers=true: pass X-Forwarded-User and X-Forwarded-Email information to upstream
-  -pass-host-header=true: pass the request Host Header to upstream
-  -pass-groups=false: pass a pipe-separated list of groups to which the user belongs in the X-Forwarded-Groups header
-  -permit-groups="": The user groups to which a user must belong in order to use the proxy (see also filter-groups)
-  -profile-url="": Profile access endpoint
-  -provider="google": OAuth provider
-  -proxy-prefix="/oauth2": the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)
-  -redeem-url="": Token redemption endpoint
-  -redirect-url="": the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
-  -resource="": the resource that is being protected. ie: "https://graph.microsoft.com". Currently only used in the Azure provider.
-  -request-logging=true: Log requests to stdout
-  -scope="": Oauth scope specification
-  -signature-key="": GAP-Signature request signature key (algorithm:secretkey)
-  -skip-auth-regex=: bypass authentication for requests path's that match (may be given multiple times)
-  -skip-provider-button=false: will skip sign-in-page to directly reach the next step: oauth/start
+  -approval-prompt string: OAuth approval_prompt (default "force")
+  -authenticated-emails-file string: authenticate against emails via file (one per line)
+  -azure-tenant string: go to a tenant-specific or common (tenant-independent) endpoint. (default "common")
+  -basic-auth-password string: the password to set when passing the HTTP Basic Auth header
+  -client-id string: the OAuth Client ID: ie: "123456.apps.googleusercontent.com"
+  -client-secret string: the OAuth Client Secret
+  -config string: path to config file
+  -cookie-domain string: an optional cookie domain to force cookies to (ie: .yourcompany.com)*
+  -cookie-expire duration: expire timeframe for cookie (default 168h0m0s)
+  -cookie-httponly: set HttpOnly cookie flag (default true)
+  -cookie-name string: the name of the cookie that the oauth_proxy creates (default "_oauth2_proxy")
+  -cookie-refresh duration: refresh the cookie after this duration; 0 to disable
+  -cookie-secret string: the seed string for secure cookies (optionally base64 encoded)
+  -cookie-secure: set secure (HTTPS) cookie flag (default true)
+  -custom-templates-dir string: path to custom html templates
+  -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
+  -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
+  -filter-groups string: only pass groups in the X-Forwarded-Groups header that contain this string
+  -footer string: custom footer string. Use "-" to disable default footer.
+  -github-org string: restrict logins to members of this organisation
+  -github-team string: restrict logins to members of this team
+  -google-admin-email string: the google admin to impersonate for api calls
+  -google-group value: restrict logins to members of this google group (may be given multiple times).
+  -google-service-account-json string: the path to the service account json credentials
+  -htpasswd-file string: additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
+  -http-address string: [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients (default "127.0.0.1:4180")
+  -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
+  -login-url string: Authentication endpoint
+  -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
+  -pass-basic-auth: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
+  -pass-host-header: pass the request Host Header to upstream (default true)
+  -pass-user-headers: pass X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
+  -pass-groups boolean: pass a pipe-separated list of groups to which the user belongs in the X-Forwarded-Groups header
+  -permit-groups string: The user groups to which a user must belong in order to use the proxy (see also filter-groups)
+  -profile-url string: Profile access endpoint
+  -provider string: OAuth provider (default "google")
+  -proxy-prefix string: the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in) (default "/oauth2")
+  -redeem-url string: Token redemption endpoint
+  -redirect-url string: the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
+  -request-logging: Log requests to stdout (default true)
+  -resource string: The resource that is protected (Azure AD only)
+  -scope string: OAuth scope specification
+  -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
+  -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
+  -skip-auth-preflight: will skip authentication for OPTIONS requests
+  -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
+  -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
   -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
-  -tls-cert="": path to certificate file
-  -tls-key="": path to private key file
-  -upstream=: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
-  -validate-url="": Access token validation endpoint
-  -version=false: print version string
+  -tls-cert string: path to certificate file
+  -tls-key string: path to private key file
+  -upstream value: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
+  -validate-url string: Access token validation endpoint
+  -version: print version string
 ```
 
 See below for provider specific options
@@ -355,14 +369,9 @@ The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth
 
 ```nginx
 server {
-  listen 443 ssl spdy;
+  listen 443 ssl;
   server_name ...;
   include ssl/ssl.conf;
-
-  location = /oauth2/auth {
-    internal;
-    proxy_pass http://127.0.0.1:4180;
-  }
 
   location /oauth2/ {
     proxy_pass       http://127.0.0.1:4180;
@@ -372,7 +381,7 @@ server {
     proxy_set_header X-Auth-Request-Redirect $request_uri;
   }
 
-  location /upstream/ {
+  location / {
     auth_request /oauth2/auth;
     error_page 401 = /oauth2/sign_in;
 
@@ -383,14 +392,12 @@ server {
     proxy_set_header X-User  $user;
     proxy_set_header X-Email $email;
 
+    # if you enabled --cookie-refresh, this is needed for it to work with auth_request
+    auth_request_set $auth_cookie $upstream_http_set_cookie;
+    add_header Set-Cookie $auth_cookie;
+
     proxy_pass http://backend/;
-  }
-
-  location / {
-    auth_request /oauth2/auth;
-    error_page 401 = https://example.com/oauth2/sign_in;
-
-    root /path/to/the/site;
+    # or "root /path/to/site;" or "fastcgi_pass ..." etc
   }
 }
 ```

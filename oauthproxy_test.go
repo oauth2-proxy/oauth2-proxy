@@ -646,6 +646,33 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	assert.Equal(t, "oauth_user@example.com", pc_test.rw.HeaderMap["X-Auth-Request-Email"][0])
 }
 
+func TestAuthSkippedForPreflightRequests(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte("response"))
+	}))
+	defer upstream.Close()
+
+	opts := NewOptions()
+	opts.Upstreams = append(opts.Upstreams, upstream.URL)
+	opts.ClientID = "bazquux"
+	opts.ClientSecret = "foobar"
+	opts.CookieSecret = "xyzzyplugh"
+	opts.SkipAuthPreflight = true
+	opts.Validate()
+
+	upstream_url, _ := url.Parse(upstream.URL)
+	opts.provider = NewTestProvider(upstream_url, "")
+
+	proxy := NewOAuthProxy(opts, func(string) bool { return false })
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("OPTIONS", "/preflight-request", nil)
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, 200, rw.Code)
+	assert.Equal(t, "response", rw.Body.String())
+}
+
 type SignatureAuthenticator struct {
 	auth hmacauth.HmacAuth
 }
