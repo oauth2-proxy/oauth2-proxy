@@ -14,7 +14,6 @@ import (
 func testOptions() *Options {
 	o := NewOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
-	o.Provider = "google"
 	o.CookieSecret = "foobar"
 	o.ClientID = "bazquux"
 	o.ClientSecret = "xyzzyplugh"
@@ -39,8 +38,7 @@ func TestNewOptions(t *testing.T) {
 		"missing setting: upstream",
 		"missing setting: cookie-secret",
 		"missing setting: client-id",
-		"missing setting: client-secret",
-		"missing setting: provider"})
+		"missing setting: client-secret"})
 	assert.Equal(t, expected, err.Error())
 }
 

@@ -78,7 +78,6 @@ func TestEncodedSlashes(t *testing.T) {
 
 func TestRobotsTxt(t *testing.T) {
 	opts := NewOptions()
-	opts.Provider = "google"
 	opts.ClientID = "bazquux"
 	opts.ClientSecret = "foobar"
 	opts.CookieSecret = "xyzzyplugh"
@@ -152,7 +151,6 @@ func TestBasicAuthPassword(t *testing.T) {
 	opts.Upstreams = append(opts.Upstreams, provider_server.URL)
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
-	opts.Provider = "google"
 	opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
 	opts.ClientID = "bazquux"
 	opts.ClientSecret = "foobar"
@@ -247,7 +245,6 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 	t.opts.Upstreams = append(t.opts.Upstreams, t.provider_server.URL)
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
-	t.opts.Provider = "google"
 	t.opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
 	t.opts.ClientID = "bazquux"
 	t.opts.ClientSecret = "foobar"
@@ -373,7 +370,6 @@ func NewSignInPageTest() *SignInPageTest {
 	var sip_test SignInPageTest
 
 	sip_test.opts = NewOptions()
-	sip_test.opts.Provider = "google"
 	sip_test.opts.CookieSecret = "foobar"
 	sip_test.opts.ClientID = "bazquux"
 	sip_test.opts.ClientSecret = "xyzzyplugh"
@@ -445,7 +441,6 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts) *ProcessCookieTest {
 	var pc_test ProcessCookieTest
 
 	pc_test.opts = NewOptions()
-	pc_test.opts.Provider = "google"
 	pc_test.opts.ClientID = "bazquux"
 	pc_test.opts.ClientSecret = "xyzzyplugh"
 	pc_test.opts.CookieSecret = "0123456789abcdefabcd"
@@ -704,7 +699,6 @@ type SignatureTest struct {
 
 func NewSignatureTest() *SignatureTest {
 	opts := NewOptions()
-	opts.Provider = "google"
 	opts.CookieSecret = "cookie secret"
 	opts.ClientID = "client ID"
 	opts.ClientSecret = "client secret"
