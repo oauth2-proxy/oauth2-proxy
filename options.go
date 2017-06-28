@@ -111,6 +111,7 @@ func NewOptions() *Options {
 		PassHostHeader:      true,
 		ApprovalPrompt:      "",
 		RequestLogging:      true,
+		Provider:            "google",
 	}
 }
 
