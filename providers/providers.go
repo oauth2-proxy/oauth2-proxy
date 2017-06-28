@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"errors"
 	"github.com/bitly/oauth2_proxy/cookie"
 )
 
@@ -32,9 +31,7 @@ func New(provider string, p *ProviderData) (Provider, error) {
 		return NewAzureProvider(p), nil
 	case "gitlab":
 		return NewGitLabProvider(p), nil
-	case "google":
-		return NewGoogleProvider(p), nil
 	default:
-		return nil, errors.New("missing setting: provider")
+		return NewGoogleProvider(p), nil
 	}
 }
