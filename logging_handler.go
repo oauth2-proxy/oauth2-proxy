@@ -9,7 +9,12 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"text/template"
 	"time"
+)
+
+const (
+	defaultRequestLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
 )
 
 // responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP status
@@ -64,15 +69,38 @@ func (l *responseLogger) Size() int {
 	return l.size
 }
 
-// loggingHandler is the http.Handler implementation for LoggingHandlerTo and its friends
-type loggingHandler struct {
-	writer  io.Writer
-	handler http.Handler
-	enabled bool
+// logMessageData is the container for all values that are available as variables in the request logging format.
+// All values are pre-formatted strings so it is easy to use them in the format string.
+type logMessageData struct {
+	Client,
+	Host,
+	Protocol,
+	RequestDuration,
+	RequestMethod,
+	RequestURI,
+	ResponseSize,
+	StatusCode,
+	Timestamp,
+	Upstream,
+	UserAgent,
+	Username string
 }
 
-func LoggingHandler(out io.Writer, h http.Handler, v bool) http.Handler {
-	return loggingHandler{out, h, v}
+// loggingHandler is the http.Handler implementation for LoggingHandlerTo and its friends
+type loggingHandler struct {
+	writer      io.Writer
+	handler     http.Handler
+	enabled     bool
+	logTemplate *template.Template
+}
+
+func LoggingHandler(out io.Writer, h http.Handler, v bool, requestLoggingTpl string) http.Handler {
+	return loggingHandler{
+		writer:      out,
+		handler:     h,
+		enabled:     v,
+		logTemplate: template.Must(template.New("request-log").Parse(requestLoggingTpl)),
+	}
 }
 
 func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -83,14 +111,13 @@ func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !h.enabled {
 		return
 	}
-	logLine := buildLogLine(logger.authInfo, logger.upstream, req, url, t, logger.Status(), logger.Size())
-	h.writer.Write(logLine)
+	h.writeLogLine(logger.authInfo, logger.upstream, req, url, t, logger.Status(), logger.Size())
 }
 
 // Log entry for req similar to Apache Common Log Format.
 // ts is the timestamp with which the entry should be logged.
 // status, size are used to provide the response HTTP status and size.
-func buildLogLine(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) []byte {
+func (h loggingHandler) writeLogLine(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) {
 	if username == "" {
 		username = "-"
 	}
@@ -114,19 +141,20 @@ func buildLogLine(username, upstream string, req *http.Request, url url.URL, ts 
 
 	duration := float64(time.Now().Sub(ts)) / float64(time.Second)
 
-	logLine := fmt.Sprintf("%s - %s [%s] %s %s %s %q %s %q %d %d %0.3f\n",
-		client,
-		username,
-		ts.Format("02/Jan/2006:15:04:05 -0700"),
-		req.Host,
-		req.Method,
-		upstream,
-		url.RequestURI(),
-		req.Proto,
-		req.UserAgent(),
-		status,
-		size,
-		duration,
-	)
-	return []byte(logLine)
+	h.logTemplate.Execute(h.writer, logMessageData{
+		Client:          client,
+		Host:            req.Host,
+		Protocol:        req.Proto,
+		RequestDuration: fmt.Sprintf("%0.3f", duration),
+		RequestMethod:   req.Method,
+		RequestURI:      fmt.Sprintf("%q", url.RequestURI()),
+		ResponseSize:    fmt.Sprintf("%d", size),
+		StatusCode:      fmt.Sprintf("%d", status),
+		Timestamp:       ts.Format("02/Jan/2006:15:04:05 -0700"),
+		Upstream:        upstream,
+		UserAgent:       fmt.Sprintf("%q", req.UserAgent()),
+		Username:        username,
+	})
+
+	h.writer.Write([]byte("\n"))
 }
