@@ -680,6 +680,9 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		if session.Email != "" {
 			rw.Header().Set("X-Auth-Request-Email", session.Email)
 		}
+		if p.PassAccessToken && session.AccessToken != "" {
+			rw.Header().Set("X-Auth-Request-Access-Token", session.AccessToken)
+		}
 	}
 	if p.PassAccessToken && session.AccessToken != "" {
 		req.Header["X-Forwarded-Access-Token"] = []string{session.AccessToken}
