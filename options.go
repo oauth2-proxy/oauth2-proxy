@@ -121,9 +121,6 @@ func parseURL(to_parse string, urltype string, msgs []string) (*url.URL, []strin
 
 func (o *Options) Validate() error {
 	msgs := make([]string, 0)
-	if len(o.Upstreams) < 1 {
-		msgs = append(msgs, "missing setting: upstream")
-	}
 	if o.CookieSecret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
 	}
