@@ -142,14 +142,13 @@ func (o *Options) Validate() error {
 	for _, u := range o.Upstreams {
 		upstreamURL, err := url.Parse(u)
 		if err != nil {
-			msgs = append(msgs, fmt.Sprintf(
-				"error parsing upstream=%q %s",
-				upstreamURL, err))
+			msgs = append(msgs, fmt.Sprintf("error parsing upstream: %s", err))
+		} else {
+			if upstreamURL.Path == "" {
+				upstreamURL.Path = "/"
+			}
+			o.proxyURLs = append(o.proxyURLs, upstreamURL)
 		}
-		if upstreamURL.Path == "" {
-			upstreamURL.Path = "/"
-		}
-		o.proxyURLs = append(o.proxyURLs, upstreamURL)
 	}
 
 	for _, u := range o.SkipAuthRegex {
