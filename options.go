@@ -134,7 +134,8 @@ func (o *Options) Validate() error {
 		msgs = append(msgs, "missing setting: client-secret")
 	}
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
-		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required.\n      use email-domain=* to authorize all email addresses")
+		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
+			"\n      use email-domain=* to authorize all email addresses")
 	}
 
 	o.redirectURL, msgs = parseURL(o.RedirectURL, "redirect", msgs)
