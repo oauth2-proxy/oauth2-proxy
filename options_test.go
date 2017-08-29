@@ -35,7 +35,6 @@ func TestNewOptions(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 
 	expected := errorMsg([]string{
-		"missing setting: upstream",
 		"missing setting: cookie-secret",
 		"missing setting: client-id",
 		"missing setting: client-secret"})
