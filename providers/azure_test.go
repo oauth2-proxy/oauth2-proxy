@@ -351,3 +351,18 @@ func TestAzureRightPermittedGroups(t *testing.T) {
 
 	assert.Equal(t, true, result)
 }
+
+func TestAzureLoginURLnoResource(t *testing.T) {
+	p := testAzureProvider("")
+	p.ProtectedResource = nil
+
+	result := p.GetLoginURL("http://redirect/url", "state")
+	assert.Equal(t, "?client_id=&nonce=FIXME&prompt=&redirect_uri=http%3A%2F%2Fredirect%2Furl&response_mode=form_post&response_type=id_token+code&scope=openid&state=state", result)
+}
+
+func TestAzureLoginURL(t *testing.T) {
+	p := testAzureProvider("")
+
+	result := p.GetLoginURL("http://redirect/url", "state")
+	assert.Equal(t, "?client_id=&nonce=FIXME&prompt=&redirect_uri=http%3A%2F%2Fredirect%2Furl&resource=https%3A%2F%2Fgraph.microsoft.com&response_mode=form_post&response_type=id_token+code&scope=openid&state=state", result)
+}

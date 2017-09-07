@@ -491,7 +491,11 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		p.SaveSession(rw, req, session)
 		http.Redirect(rw, req, redirect, 302)
 	} else {
-		p.SignInPage(rw, req, 200)
+		if p.SkipProviderButton {
+			p.OAuthStart(rw, req)
+		} else {
+			p.SignInPage(rw, req, http.StatusOK)
+		}
 	}
 }
 

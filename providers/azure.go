@@ -206,7 +206,11 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 	params.Add("state", state)
 	params.Set("prompt", p.ApprovalPrompt)
 	params.Set("nonce", "FIXME")
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		params.Add("resource", p.ProtectedResource.String())
+	}
 	a.RawQuery = params.Encode()
+
 	return a.String()
 }
 

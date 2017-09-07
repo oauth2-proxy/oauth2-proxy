@@ -4,7 +4,7 @@ oauth2_proxy
 A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
 to validate accounts by email, domain or group.
 
-[![Build Status](https://secure.travis-ci.org/bitly/oauth2_proxy.png?branch=master)](http://travis-ci.org/bitly/oauth2_proxy)
+[![Build Status](https://secure.travis-ci.org/bitly/oauth2_proxy.svg?branch=master)](http://travis-ci.org/bitly/oauth2_proxy)
 
 
 ![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
@@ -161,7 +161,7 @@ To authorize by email domain use `--email-domain=yourcompany.com`. To authorize 
 
 `oauth2_proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
 
-To generate a strong cookie secret use `python -c 'import os,base64; print base64.b64encode(os.urandom(16))'`
+To generate a strong cookie secret use `python -c 'import os,base64; print base64.urlsafe_b64encode(os.urandom(16))'`
 
 ### Config File
 
