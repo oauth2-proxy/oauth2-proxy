@@ -126,9 +126,6 @@ func parseURL(to_parse string, urltype string, msgs []string) (*url.URL, []strin
 
 func (o *Options) Validate() error {
 	msgs := make([]string, 0)
-	if len(o.Upstreams) < 1 {
-		msgs = append(msgs, "missing setting: upstream")
-	}
 	if o.CookieSecret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
 	}
@@ -139,7 +136,8 @@ func (o *Options) Validate() error {
 		msgs = append(msgs, "missing setting: client-secret")
 	}
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
-		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required.\n      use email-domain=* to authorize all email addresses")
+		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
+			"\n      use email-domain=* to authorize all email addresses")
 	}
 
 	o.redirectURL, msgs = parseURL(o.RedirectURL, "redirect", msgs)
@@ -147,14 +145,13 @@ func (o *Options) Validate() error {
 	for _, u := range o.Upstreams {
 		upstreamURL, err := url.Parse(u)
 		if err != nil {
-			msgs = append(msgs, fmt.Sprintf(
-				"error parsing upstream=%q %s",
-				upstreamURL, err))
+			msgs = append(msgs, fmt.Sprintf("error parsing upstream: %s", err))
+		} else {
+			if upstreamURL.Path == "" {
+				upstreamURL.Path = "/"
+			}
+			o.proxyURLs = append(o.proxyURLs, upstreamURL)
 		}
-		if upstreamURL.Path == "" {
-			upstreamURL.Path = "/"
-		}
-		o.proxyURLs = append(o.proxyURLs, upstreamURL)
 	}
 
 	for _, u := range o.SkipAuthRegex {

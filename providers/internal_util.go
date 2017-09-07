@@ -57,7 +57,7 @@ func validateToken(p Provider, access_token string, header http.Header) bool {
 	}
 	resp, err := api.RequestUnparsedResponse(endpoint, header)
 	if err != nil {
-		log.Printf("GET %s", endpoint)
+		log.Printf("GET %s", stripToken(endpoint))
 		log.Printf("token validation request failed: %s", err)
 		return false
 	}
