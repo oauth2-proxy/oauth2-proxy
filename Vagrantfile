@@ -19,8 +19,9 @@ Vagrant.configure("2") do |config|
     apt-get update
     apt-get install software-properties-common
     add-apt-repository ppa:ubuntu-lxc/lxd-stable
+    add-apt-repository ppa:jonathonf/golang-1.8
     apt-get update
-    apt-get install -y python golang
+    apt-get install -y python golang-1.8
   SHELL
 
   config.vm.provision "shell", inline: <<-SHELL
