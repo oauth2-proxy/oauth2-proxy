@@ -36,7 +36,7 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 		}
 	}
 	if p.Scope == "" {
-		p.Scope = "api"
+		p.Scope = "read_user"
 	}
 	return &GitLabProvider{ProviderData: p}
 }
