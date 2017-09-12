@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/18F/hmacauth"
 	"github.com/bitly/oauth2_proxy/providers"
 	oidc "github.com/coreos/go-oidc"
+	"github.com/mbland/hmacauth"
 )
 
 // Configuration Options that can be set by Command Line Flag, or Config File
