@@ -53,7 +53,7 @@ func TestGitLabProviderDefaults(t *testing.T) {
 		p.Data().RedeemURL.String())
 	assert.Equal(t, "https://gitlab.com/api/v3/user",
 		p.Data().ValidateURL.String())
-	assert.Equal(t, "api", p.Data().Scope)
+	assert.Equal(t, "read_user", p.Data().Scope)
 }
 
 func TestGitLabProviderOverrides(t *testing.T) {
