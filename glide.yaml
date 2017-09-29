@@ -1,0 +1,35 @@
+package: github.com/pusher/oauth2_proxy
+import:
+- package: github.com/18F/hmacauth
+- package: github.com/BurntSushi/toml
+- package: github.com/bitly/go-simplejson
+- package: github.com/mreiferson/go-options
+- package: github.com/bmizerany/assert
+- package: gopkg.in/fsnotify.v1
+  version: v1.2.0
+- package: golang.org/x/oauth2
+  subpackages:
+  - google
+- package: golang.org/x/net
+  version: ab5485076ff3407ad2d02db054635913f017b0ed
+  subpackages:
+  - context
+  - http2
+- package: cloud.google.com/go
+  version: v0.7.0
+  subpackages:
+  - compute/metadata
+- package: github.com/coreos/go-oidc
+- package: gopkg.in/square/go-jose.v2
+  version: v2.1.1
+- package: github.com/pquerna/cachecontrol
+- package: github.com/bitly/oauth2_proxy
+  subpackages:
+  - api
+  - cookie
+  - providers
+- package: google.golang.org/api
+  subpackages:
+  - admin/directory/v1
+  - googleapi
+- package: google.golang.org/grpc

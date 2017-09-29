@@ -28,3 +28,6 @@ dist
 
 # Editor swap/temp files
 .*.swp
+
+# Ignore vendored dependencies
+vendor/

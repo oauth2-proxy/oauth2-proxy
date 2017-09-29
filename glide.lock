@@ -1,0 +1,117 @@
+hash: 12d22aec528e97cba687bc68c91e0d110aae330409cf9e530c7e50a7bb2fdd2a
+updated: 2017-09-29T15:04:12.169442087+01:00
+imports:
+- name: cloud.google.com/go
+  version: 2e6a95edb1071d750f6d7db777bf66cd2997af6c
+  subpackages:
+  - compute/metadata
+  - internal
+- name: github.com/18F/hmacauth
+  version: 9232a6386b737d7d1e5c1c6e817aa48d5d8ee7cd
+- name: github.com/bitly/go-simplejson
+  version: da1a8928f709389522c8023062a3739f3b4af419
+- name: github.com/bitly/oauth2_proxy
+  version: 7b26256df62d0d00993433105794d2f23d8c27e4
+  subpackages:
+  - api
+  - cookie
+  - providers
+- name: github.com/bmizerany/assert
+  version: e17e99893cb6509f428e1728281c2ad60a6b31e3
+- name: github.com/BurntSushi/toml
+  version: d94612f9fc140360834f9742158c70b5c5b5535b
+- name: github.com/coreos/go-oidc
+  version: c797a55f1c1001ec3169f1d0fbb4c5523563bec6
+- name: github.com/golang/protobuf
+  version: 130e6b02ab059e7b717a096f397c5b60111cae74
+  subpackages:
+  - proto
+  - ptypes
+  - ptypes/any
+  - ptypes/duration
+  - ptypes/timestamp
+- name: github.com/googleapis/gax-go
+  version: 317e0006254c44a0ac427cc52a0e083ff0b9622f
+- name: github.com/mreiferson/go-options
+  version: 77551d20752b54535462404ad9d877ebdb26e53d
+- name: github.com/pquerna/cachecontrol
+  version: 9299cc36e57c32f83e47ffb3c25d8a3dec10ea0b
+  subpackages:
+  - cacheobject
+- name: golang.org/x/net
+  version: ab5485076ff3407ad2d02db054635913f017b0ed
+  subpackages:
+  - context
+  - context/ctxhttp
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
+- name: golang.org/x/oauth2
+  version: 7fdf09982454086d5570c7db3e11f360194830ca
+  subpackages:
+  - google
+  - internal
+  - jws
+  - jwt
+- name: golang.org/x/text
+  version: 1cbadb444a806fd9430d14ad08967ed91da4fa0a
+  subpackages:
+  - secure/bidirule
+  - transform
+  - unicode/bidi
+  - unicode/norm
+- name: google.golang.org/api
+  version: 650535c7d6201e8304c92f38c922a9a3a36c6877
+  subpackages:
+  - admin/directory/v1
+  - gensupport
+  - googleapi
+  - googleapi/internal/uritemplates
+- name: google.golang.org/appengine
+  version: 24e4144ec923c2374f6b06610c0df16a9222c3d9
+  subpackages:
+  - internal
+  - internal/app_identity
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/modules
+  - internal/remote_api
+  - internal/urlfetch
+  - urlfetch
+- name: google.golang.org/genproto
+  version: 1e559d0a00eef8a9a43151db4665280bd8dd5886
+  subpackages:
+  - googleapis/rpc/status
+- name: google.golang.org/grpc
+  version: f92cdcd7dcdc69e81b2d7b338479a19a8723cfa3
+  subpackages:
+  - codes
+  - connectivity
+  - credentials
+  - grpclb/grpc_lb_v1/messages
+  - grpclog
+  - internal
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - stats
+  - status
+  - tap
+  - transport
+- name: gopkg.in/fsnotify.v1
+  version: 96c060f6a6b7e0d6f75fddd10efeaca3e5d1bcb0
+- name: gopkg.in/square/go-jose.v2
+  version: af13e1fbc7ac2df7f7eab54e5177104d546d0e9c
+  subpackages:
+  - cipher
+  - json
+testImports:
+- name: github.com/kr/pretty
+  version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
+- name: github.com/kr/text
+  version: 7cafcd837844e784b526369c9bce262804aebc60
