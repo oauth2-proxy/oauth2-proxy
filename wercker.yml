@@ -1,0 +1,58 @@
+box:
+  id: pusher/elements-alpine-golang-build:1.9-alpine3.6
+  aws-access-key: $AWS_CI_ACCESS_KEY_ID
+  aws-secret-key: $AWS_CI_SECRET_ACCESS_KEY
+  aws-region: us-east-1
+  aws-registry-id: $AWS_CI_REGISTRY_ID
+
+scm:
+  steps:
+  - script:
+    name: Do nothing
+    code: sleep 1
+
+glide-install:
+  steps:
+    - script:
+      name: Fetch dependencies
+      code: |
+        glide --home $WERCKER_CACHE_DIR/.glide install -v
+
+test:
+  steps:
+  - wercker/setup-go-workspace:
+      package-dir: github.com/pusher/oauth2_proxy
+  - script:
+      name: go test
+      code: go test $(glide novendor)
+
+build:
+  steps:
+  - wercker/setup-go-workspace:
+      package-dir: github.com/pusher/oauth2_proxy
+  - script:
+      name: go build
+      code: GOPATH=/go GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o oauth2_proxy
+  - script:
+      name: Copy to output directory
+      code: cp oauth2_proxy "$WERCKER_OUTPUT_DIR"
+
+push-to-ecr:
+  box: alpine
+  steps:
+  - script:
+      name: Copy binary
+      code: cp oauth2_proxy /
+  - script:
+      name: Install CA-Certificates
+      code: |
+        apk update
+        apk add ca-certificates
+  - internal/docker-push:
+      aws-access-key: $AWS_CI_ACCESS_KEY_ID
+      aws-secret-key: $AWS_CI_SECRET_ACCESS_KEY
+      aws-region: us-east-1
+      aws-registry-id: $AWS_CI_REGISTRY_ID
+      repository: pusher/oauth2-proxy
+      tag: $WERCKER_GIT_COMMIT, $WERCKER_GIT_BRANCH, latest
+      entrypoint: /oauth2_proxy
