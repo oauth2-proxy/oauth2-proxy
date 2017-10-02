@@ -93,6 +93,44 @@ func TestRobotsTxt(t *testing.T) {
 	assert.Equal(t, "User-agent: *\nDisallow: /", rw.Body.String())
 }
 
+func TestIsValidRedirect(t *testing.T) {
+	opts := NewOptions()
+	opts.ClientID = "bazquux"
+	opts.ClientSecret = "foobar"
+	opts.CookieSecret = "xyzzyplugh"
+	opts.WhitelistDomains = []string{"foo.bar"}
+	opts.Validate()
+
+	proxy := NewOAuthProxy(opts, func(string) bool { return true })
+
+	noRD := proxy.IsValidRedirect("")
+	assert.Equal(t, false, noRD)
+
+	singleSlash := proxy.IsValidRedirect("/redirect")
+	assert.Equal(t, true, singleSlash)
+
+	doubleSlash := proxy.IsValidRedirect("//redirect")
+	assert.Equal(t, false, doubleSlash)
+
+	validHTTP := proxy.IsValidRedirect("http://baz.foo.bar/redirect")
+	assert.Equal(t, true, validHTTP)
+
+	validHTTPS := proxy.IsValidRedirect("https://baz.foo.bar/redirect")
+	assert.Equal(t, true, validHTTPS)
+
+	invalidHTTP1 := proxy.IsValidRedirect("http://foo.bar.evil.corp/redirect")
+	assert.Equal(t, false, invalidHTTP1)
+
+	invalidHTTPS1 := proxy.IsValidRedirect("https://foo.bar.evil.corp/redirect")
+	assert.Equal(t, false, invalidHTTPS1)
+
+	invalidHTTP2 := proxy.IsValidRedirect("http://evil.corp/redirect?rd=foo.bar")
+	assert.Equal(t, false, invalidHTTP2)
+
+	invalidHTTPS2 := proxy.IsValidRedirect("https://evil.corp/redirect?rd=foo.bar")
+	assert.Equal(t, false, invalidHTTPS2)
+}
+
 type TestProvider struct {
 	*providers.ProviderData
 	EmailAddress string
