@@ -155,7 +155,8 @@ func (o *Options) Validate() error {
 			return err
 		}
 		o.oidcVerifier = provider.Verifier(&oidc.Config{
-			ClientID: o.ClientID,
+			ClientID:          o.ClientID,
+			SkipClientIDCheck: true,
 		})
 		o.LoginURL = provider.Endpoint().AuthURL
 		o.RedeemURL = provider.Endpoint().TokenURL
