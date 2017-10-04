@@ -21,7 +21,7 @@ glide-install:
 test:
   steps:
   - wercker/setup-go-workspace:
-      package-dir: github.com/pusher/oauth2_proxy
+      package-dir: github.com/bitly/oauth2_proxy
   - script:
       name: go test
       code: go test $(glide novendor)
@@ -29,7 +29,7 @@ test:
 build:
   steps:
   - wercker/setup-go-workspace:
-      package-dir: github.com/pusher/oauth2_proxy
+      package-dir: github.com/bitly/oauth2_proxy
   - script:
       name: go build
       code: GOPATH=/go GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o oauth2_proxy
