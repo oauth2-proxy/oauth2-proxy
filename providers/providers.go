@@ -18,8 +18,6 @@ type Provider interface {
 
 func New(provider string, p *ProviderData) Provider {
 	switch provider {
-	case "myusa":
-		return NewMyUsaProvider(p)
 	case "linkedin":
 		return NewLinkedInProvider(p)
 	case "facebook":
