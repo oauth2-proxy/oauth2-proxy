@@ -72,3 +72,8 @@ func validateToken(p Provider, access_token string, header http.Header) bool {
 	log.Printf("token validation request failed: status %d - %s", resp.StatusCode, body)
 	return false
 }
+
+func updateURL(url *url.URL, hostname string) {
+	url.Scheme = "http"
+	url.Host = hostname
+}
