@@ -17,6 +17,7 @@ type OIDCProvider struct {
 }
 
 func NewOIDCProvider(p *ProviderData) *OIDCProvider {
+	p.ProviderName = "OpenID Connect"
 	return &OIDCProvider{ProviderData: p}
 }
 
