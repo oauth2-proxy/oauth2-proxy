@@ -25,6 +25,7 @@ type Options struct {
 	HttpsAddress string `flag:"https-address" cfg:"https_address"`
 	RedirectURL  string `flag:"redirect-url" cfg:"redirect_url"`
 	ClientID     string `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
+	AudienceClientID     string `flag:"audience-client-id" cfg:"audience_client_id" env:"OAUTH2_PROXY_AUDIENCE_CLIENT_ID"`
 	ClientSecret string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
 	TLSCertFile  string `flag:"tls-cert" cfg:"tls_cert_file"`
 	TLSKeyFile   string `flag:"tls-key" cfg:"tls_key_file"`
@@ -153,8 +154,15 @@ func (o *Options) Validate() error {
 		if err != nil {
 			return err
 		}
+
+		ClientID := o.AudienceClientID
+
+		if ClientID == "" {
+			ClientID = o.ClientID
+		}
+
 		o.oidcVerifier = provider.Verifier(&oidc.Config{
-			ClientID: o.ClientID,
+			ClientID: ClientID,
 		})
 		o.LoginURL = provider.Endpoint().AuthURL
 		o.RedeemURL = provider.Endpoint().TokenURL

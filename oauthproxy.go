@@ -155,6 +155,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 
 	log.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
+	log.Printf("OAuthProxy configured for %s Audience Client ID: %s", opts.provider.Data().ProviderName, opts.AudienceClientID)
 	refresh := "disabled"
 	if opts.CookieRefresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
