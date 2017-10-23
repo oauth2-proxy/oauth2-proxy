@@ -2,12 +2,13 @@ package api
 
 import (
 	"github.com/bitly/go-simplejson"
-	"github.com/bmizerany/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func testBackend(response_code int, payload string) *httptest.Server {

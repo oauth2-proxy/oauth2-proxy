@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func newRedeemServer(body []byte) (*url.URL, *httptest.Server) {
