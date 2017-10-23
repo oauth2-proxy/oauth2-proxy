@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEncodeAndDecodeAccessToken(t *testing.T) {

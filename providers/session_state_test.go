@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/bitly/oauth2_proxy/cookie"
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 const secret = "0123456789abcdefghijklmnopqrstuv"

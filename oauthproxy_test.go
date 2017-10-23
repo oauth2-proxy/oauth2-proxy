@@ -17,7 +17,7 @@ import (
 
 	"github.com/18F/hmacauth"
 	"github.com/bitly/oauth2_proxy/providers"
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
