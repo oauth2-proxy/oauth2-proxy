@@ -20,7 +20,7 @@ func NewValidatorTest(t *testing.T) *ValidatorTest {
 	if err != nil {
 		t.Fatal("failed to create temp file: " + err.Error())
 	}
-	vt.done = make(chan bool)
+	vt.done = make(chan bool, 1)
 	return vt
 }
 
