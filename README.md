@@ -114,7 +114,7 @@ If you are using self-hosted GitLab, make sure you set the following to the appr
 
     -login-url="<your gitlab url>/oauth/authorize"
     -redeem-url="<your gitlab url>/oauth/token"
-    -validate-url="<your gitlab url>/api/v3/user"
+    -validate-url="<your gitlab url>/api/v4/user"
 
 
 ### LinkedIn Auth Provider
