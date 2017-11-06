@@ -28,7 +28,7 @@ func testGitLabProvider(hostname string) *GitLabProvider {
 }
 
 func testGitLabBackend(payload string) *httptest.Server {
-	path := "/api/v3/user"
+	path := "/api/v4/user"
 	query := "access_token=imaginary_access_token"
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -51,7 +51,7 @@ func TestGitLabProviderDefaults(t *testing.T) {
 		p.Data().LoginURL.String())
 	assert.Equal(t, "https://gitlab.com/oauth/token",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://gitlab.com/api/v3/user",
+	assert.Equal(t, "https://gitlab.com/api/v4/user",
 		p.Data().ValidateURL.String())
 	assert.Equal(t, "read_user", p.Data().Scope)
 }
@@ -70,7 +70,7 @@ func TestGitLabProviderOverrides(t *testing.T) {
 			ValidateURL: &url.URL{
 				Scheme: "https",
 				Host:   "example.com",
-				Path:   "/api/v3/user"},
+				Path:   "/api/v4/user"},
 			Scope: "profile"})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "GitLab", p.Data().ProviderName)
@@ -78,7 +78,7 @@ func TestGitLabProviderOverrides(t *testing.T) {
 		p.Data().LoginURL.String())
 	assert.Equal(t, "https://example.com/oauth/token",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://example.com/api/v3/user",
+	assert.Equal(t, "https://example.com/api/v4/user",
 		p.Data().ValidateURL.String())
 	assert.Equal(t, "profile", p.Data().Scope)
 }
