@@ -155,21 +155,34 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (string, error) {
 	// substring - not supported   | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=substring(displayName,0,2)%20eq%20%27groupname%27"
 
 	requestUrl := "https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName"
+	workaround_set := false
 
 	groups := make([]string, 0)
 
 	for {
 		req, err := http.NewRequest("GET", requestUrl, nil)
+		// err = errors.New("fake error")
 
 		if err != nil {
-			return "", err
+            return "", err
 		}
 		req.Header = getAzureHeader(s.AccessToken)
 		req.Header.Add("Content-Type", "application/json")
 
 		groupData, err := api.Request(req)
 		if err != nil {
-			return "", err
+            // If workaround already tried, just fail the execution
+            if workaround_set {
+           	    log.Printf("[GetGroups] We tried hard, but still receive error: '%s'", err)
+                return "", err
+            }
+
+		    // It might be that it is a Graph bug, try to workaround it by accessing another URL
+		    log.Printf("[GetGroups] Failed to get groups details: %s", err)
+            requestUrl = "https://graph.microsoft.com/v1.0/users/" + s.Email + "/memberOf"
+		    log.Printf("[GetGroups] Try to workaround by accessing: '%s'", requestUrl)
+            workaround_set = true
+            continue
 		}
 
 		for _, groupInfo := range groupData.Get("value").MustArray() {
