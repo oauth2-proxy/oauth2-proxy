@@ -1,11 +1,11 @@
 language: go
 go:
-  - 1.7.5
-  - 1.8.1
+  - 1.8.x
+  - 1.9.x
 script:
-  - curl -s https://raw.githubusercontent.com/pote/gpm/v1.4.0/bin/gpm > gpm
-  - chmod +x gpm
-  - ./gpm install
+  - wget -O dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
+  - chmod +x dep
+  - ./dep ensure
   - ./test.sh
 sudo: false
 notifications:
