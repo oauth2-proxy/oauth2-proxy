@@ -180,8 +180,8 @@ func (o *Options) Validate() error {
 	for _, u := range o.SkipAuthRegex {
 		CompiledRegex, err := regexp.Compile(u)
 		if err != nil {
-			msgs = append(msgs, fmt.Sprintf(
-				"error compiling regex=%q %s", u, err))
+			msgs = append(msgs, fmt.Sprintf("error compiling regex=%q %s", u, err))
+			continue
 		}
 		o.CompiledRegex = append(o.CompiledRegex, CompiledRegex)
 	}
