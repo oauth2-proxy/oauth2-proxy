@@ -16,6 +16,11 @@ to validate accounts by email, domain or group.
 ## Installation
 
 1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v2.2`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
+Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v2.3`.
+```
+sha256sum -c sha256sum.txt 2>&1 | grep OK
+oauth2_proxy-2.3.linux-amd64: OK
+```
 2. Select a Provider and Register an OAuth Application with a Provider
 3. Configure OAuth2 Proxy using config file, command line options, or environment variables
 4. Configure SSL or Deploy behind a SSL endpoint (example provided for Nginx)
