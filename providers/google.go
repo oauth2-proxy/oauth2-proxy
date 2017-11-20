@@ -67,7 +67,7 @@ func emailFromIdToken(idToken string) (string, error) {
 	// id_token is a base64 encode ID token payload
 	// https://developers.google.com/accounts/docs/OAuth2Login#obtainuserinfo
 	jwt := strings.Split(idToken, ".")
-	b, err := jwtDecodeSegment(jwt[1])
+	b, err := base64.RawURLEncoding.DecodeString(jwt[1])
 	if err != nil {
 		return "", err
 	}
@@ -87,14 +87,6 @@ func emailFromIdToken(idToken string) (string, error) {
 		return "", fmt.Errorf("email %s not listed as verified", email.Email)
 	}
 	return email.Email, nil
-}
-
-func jwtDecodeSegment(seg string) ([]byte, error) {
-	if l := len(seg) % 4; l > 0 {
-		seg += strings.Repeat("=", 4-l)
-	}
-
-	return base64.URLEncoding.DecodeString(seg)
 }
 
 func (p *GoogleProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
