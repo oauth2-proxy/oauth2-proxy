@@ -67,6 +67,7 @@ func main() {
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 
 	flagSet.Bool("request-logging", true, "Log requests to stdout")
+	flagSet.String("request-logging-format", defaultRequestLoggingFormat, "Template for log lines")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
@@ -125,7 +126,7 @@ func main() {
 	}
 
 	s := &Server{
-		Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging),
+		Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat),
 		Opts:    opts,
 	}
 	s.ListenAndServe()
