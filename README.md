@@ -212,7 +212,7 @@ Usage of oauth2_proxy:
   -github-org string: restrict logins to members of this organisation
   -github-team string: restrict logins to members of any of these teams (slug), separated by a comma
   -google-admin-email string: the google admin to impersonate for api calls
-  -google-group value: restrict logins to members of this google group (may be given multiple times).
+  -google-group value: restrict logins to members of this google group (may be given multiple times). Depricated. Please use `permit-groups` instead
   -google-service-account-json string: the path to the service account json credentials
   -htpasswd-file string: additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address string: [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients (default "127.0.0.1:4180")
