@@ -580,20 +580,13 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	switch {
 	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//"):
 		return true
-	case strings.HasPrefix(redirect, "http://"):
-		redirect = strings.TrimPrefix(redirect, "http://")
-		redirect = strings.Split(redirect, "/")[0]
-		for _, domain := range p.whitelistDomains {
-			if strings.HasSuffix(redirect, domain) {
-				return true
-			}
+	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
+		redirectURL, err := url.Parse(redirect)
+		if err != nil {
+			return false
 		}
-		return false
-	case strings.HasPrefix(redirect, "https://"):
-		redirect = strings.TrimPrefix(redirect, "https://")
-		redirect = strings.Split(redirect, "/")[0]
 		for _, domain := range p.whitelistDomains {
-			if strings.HasSuffix(redirect, domain) {
+			if (redirectURL.Host == domain) || (strings.HasPrefix(domain, ".") && strings.HasSuffix(redirectURL.Host, domain)) {
 				return true
 			}
 		}
