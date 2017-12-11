@@ -7,7 +7,8 @@ import (
 type Provider interface {
 	Data() *ProviderData
 	GetEmailAddress(*SessionState) (string, error)
-	GetGroups(*SessionState, string) (string, error)
+	GetUserName(*SessionState) (string, error)
+	GetGroups(*SessionState, string) ([]string, error)
 	Redeem(string, string) (*SessionState, error)
 	ValidateGroup(*SessionState) bool
 	ValidateSessionState(*SessionState) bool
@@ -19,8 +20,6 @@ type Provider interface {
 
 func New(provider string, p *ProviderData) (Provider, error) {
 	switch provider {
-	case "myusa":
-		return NewMyUsaProvider(p), nil
 	case "linkedin":
 		return NewLinkedInProvider(p), nil
 	case "facebook":
@@ -31,6 +30,8 @@ func New(provider string, p *ProviderData) (Provider, error) {
 		return NewAzureProvider(p), nil
 	case "gitlab":
 		return NewGitLabProvider(p), nil
+	case "oidc":
+		return NewOIDCProvider(p), nil
 	default:
 		return NewGoogleProvider(p), nil
 	}

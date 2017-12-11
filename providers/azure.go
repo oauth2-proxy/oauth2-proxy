@@ -130,13 +130,13 @@ func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 }
 
 // Get list of groups user belong to. Filter the desired names of groups (in case of huge group set)
-func (p *AzureProvider) GetGroups(s *SessionState, f string) (string, error) {
+func (p *AzureProvider) GetGroups(s *SessionState, f string) ([]string, error) {
 	if s.AccessToken == "" {
-		return "", errors.New("missing access token")
+		return []string{}, errors.New("missing access token")
 	}
 
 	if s.IDToken == "" {
-		return "", errors.New("missing id token")
+		return []string{}, errors.New("missing id token")
 	}
 
 	// For future use. Right now microsoft graph don't support filter
@@ -164,25 +164,25 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (string, error) {
 		// err = errors.New("fake error")
 
 		if err != nil {
-            return "", err
+			return []string{}, err
 		}
 		req.Header = getAzureHeader(s.AccessToken)
 		req.Header.Add("Content-Type", "application/json")
 
 		groupData, err := api.Request(req)
 		if err != nil {
-            // If workaround already tried, just fail the execution
-            if workaround_set {
-           	    log.Printf("[GetGroups] We tried hard, but still receive error: '%s'", err)
-                return "", err
-            }
+			// If workaround already tried, just fail the execution
+			if workaround_set {
+				log.Printf("[GetGroups] We tried hard, but still receive error: '%s'", err)
+				return []string{}, err
+			}
 
-		    // It might be that it is a Graph bug, try to workaround it by accessing another URL
-		    log.Printf("[GetGroups] Failed to get groups details: %s", err)
-            requestUrl = "https://graph.microsoft.com/v1.0/users/" + s.Email + "/memberOf"
-		    log.Printf("[GetGroups] Try to workaround by accessing: '%s'", requestUrl)
-            workaround_set = true
-            continue
+			// It might be that it is a Graph bug, try to workaround it by accessing another URL
+			log.Printf("[GetGroups] Failed to get groups details: %s", err)
+			requestUrl = "https://graph.microsoft.com/v1.0/users/" + s.Email + "/memberOf"
+			log.Printf("[GetGroups] Try to workaround by accessing: '%s'", requestUrl)
+			workaround_set = true
+			continue
 		}
 
 		for _, groupInfo := range groupData.Get("value").MustArray() {
@@ -204,7 +204,7 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (string, error) {
 		}
 	}
 
-	return strings.Join(groups, "|"), nil
+	return groups, nil
 }
 
 func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {

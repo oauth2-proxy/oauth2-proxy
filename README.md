@@ -32,7 +32,6 @@ Valid providers are :
 * [GitHub](#github-auth-provider)
 * [GitLab](#gitlab-auth-provider)
 * [LinkedIn](#linkedin-auth-provider)
-* [MyUSA](#myusa-auth-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -99,7 +98,7 @@ The Azure AD auth provider uses `openid` as it default scope. It uses `https://g
 The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
 
     -github-org="": restrict logins to members of this organisation
-    -github-team="": restrict logins to members of any of these teams, separated by a comma
+    -github-team="": restrict logins to members of any of these teams (slug), separated by a comma
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 
@@ -115,7 +114,7 @@ If you are using self-hosted GitLab, make sure you set the following to the appr
 
     -login-url="<your gitlab url>/oauth/authorize"
     -redeem-url="<your gitlab url>/oauth/token"
-    -validate-url="<your gitlab url>/api/v3/user"
+    -validate-url="<your gitlab url>/api/v4/user"
 
 
 ### LinkedIn Auth Provider
@@ -128,10 +127,6 @@ For LinkedIn, the registration steps are:
    * In "OAuth 2.0 Redirect URLs", enter `https://internal.yourcompany.com/oauth2/callback`
 3. Fill in the remaining required fields and Save.
 4. Take note of the **Consumer Key / API Key** and **Consumer Secret / Secret Key**
-
-### MyUSA Auth Provider
-
-The [MyUSA](https://alpha.my.usa.gov) authentication service ([GitHub](https://github.com/18F/myusa))
 
 ### Microsoft Azure AD Provider
 
@@ -152,6 +147,24 @@ Set the `pass-groups` flag to enable an additional X-Forwarded-Groups header tha
 The `filter-groups` flag enables a simple filter that will elide any groups that do not contain that string. For example, if the `filter-groups` flag were set to `admins`, the X-Forwarded-Groups header for a user in groups `[foo-admins, bar-admins, users-foo-group]` would be `foo-admins|bar-admins`. If the flag were set to `foo`, the header would be `foo-admins|users-foo-group`.
 
 The `permit-groups` flag requires that a user belong to a group that contains the specified string (or one of the specified strings). The X-Forwarded-Group header is checked for a `strings.Contains` match for each item in the list.
+
+The 'group-delimiter' flag reflects how multiple group names will be represented in X-Forwarded-Groups header. By default group names will be delimited with '|' symbol
+
+### OpenID Connect Provider
+
+OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects. This provider was originally built against CoreOS Dex and we will use it as an example.
+
+1. Launch a Dex instance using the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md).
+2. Setup oauth2_proxy with the correct provider and using the default ports and callbacks.
+3. Login with the fixture use in the dex guide and run the oauth2_proxy with the following args:
+
+    -provider oidc
+    -client-id oauth2_proxy
+    -client-secret proxy
+    -redirect-url http://127.0.0.1:4180/oauth2/callback
+    -oidc-issuer-url http://127.0.0.1:5556
+    -cookie-secure=false
+    -email-domain example.com
 
 ## Email Authentication
 
@@ -178,7 +191,7 @@ Usage of oauth2_proxy:
   -client-id string: the OAuth Client ID: ie: "123456.apps.googleusercontent.com"
   -client-secret string: the OAuth Client Secret
   -config string: path to config file
-  -cookie-domain string: an optional cookie domain to force cookies to (ie: .yourcompany.com)*
+  -cookie-domain string: an optional cookie domain to force cookies to (ie: .yourcompany.com)
   -cookie-expire duration: expire timeframe for cookie (default 168h0m0s)
   -cookie-httponly: set HttpOnly cookie flag (default true)
   -cookie-name string: the name of the cookie that the oauth_proxy creates (default "_oauth2_proxy")
@@ -189,9 +202,10 @@ Usage of oauth2_proxy:
   -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
   -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
   -filter-groups string: only pass groups in the X-Forwarded-Groups header that contain this string
+  -groups-delimiter string: delimiter that will be used between group names in X-Forwarded-Groups header
   -footer string: custom footer string. Use "-" to disable default footer.
   -github-org string: restrict logins to members of this organisation
-  -github-team string: restrict logins to members of this team
+  -github-team string: restrict logins to members of any of these teams (slug), separated by a comma
   -google-admin-email string: the google admin to impersonate for api calls
   -google-group value: restrict logins to members of this google group (may be given multiple times).
   -google-service-account-json string: the path to the service account json credentials

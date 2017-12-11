@@ -37,6 +37,7 @@ func main() {
 	flagSet.Bool("pass-groups", false, "pass user group information in the X-Forwarded-Groups header to upstream (Azure only)")
 	flagSet.String("filter-groups", "", "exclude groups that do not contain this value in its 'displayName' (Azure only)")
 	flagSet.Var(&permittedGroups, "permit-groups", "restrict logins to members of this group (may be given multiple times; Azure and Google only).")
+	flagSet.String("groups-delimiter", "|", "delimiter between group names if more than one found. By default it is '|' symbol")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
 	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
@@ -71,6 +72,7 @@ func main() {
 	flagSet.Bool("request-logging", true, "Log requests to stdout")
 
 	flagSet.String("provider", "google", "OAuth provider")
+	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")

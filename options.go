@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto"
 	"crypto/tls"
 	"encoding/base64"
@@ -12,8 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/18F/hmacauth"
 	"github.com/bitly/oauth2_proxy/providers"
+	oidc "github.com/coreos/go-oidc"
+	"github.com/mbland/hmacauth"
 )
 
 // Configuration Options that can be set by Command Line Flag, or Config File
@@ -53,6 +55,7 @@ type Options struct {
 	PassGroups            bool     `flag:"pass-groups" cfg:"pass_groups"`
 	FilterGroups          string   `flag:"filter-groups" cfg:"filter_groups"`
 	PermitGroups          []string `flag:"permit-groups" cfg:"permit_groups"`
+	GroupsDelimiter       string   `flag:"groups-delimiter" cfg:"groups_delimiter"`
 	BasicAuthPassword     string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
 	PassAccessToken       bool     `flag:"pass-access-token" cfg:"pass_access_token"`
 	PassHostHeader        bool     `flag:"pass-host-header" cfg:"pass_host_header"`
@@ -65,6 +68,7 @@ type Options struct {
 	// These options allow for other providers besides Google, with
 	// potential overrides.
 	Provider          string `flag:"provider" cfg:"provider"`
+	OIDCIssuerURL     string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	LoginURL          string `flag:"login-url" cfg:"login_url"`
 	RedeemURL         string `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL        string `flag:"profile-url" cfg:"profile_url"`
@@ -83,6 +87,7 @@ type Options struct {
 	CompiledRegex []*regexp.Regexp
 	provider      providers.Provider
 	signatureData *SignatureData
+	oidcVerifier  *oidc.IDTokenVerifier
 }
 
 type SignatureData struct {
@@ -107,6 +112,7 @@ func NewOptions() *Options {
 		PassUserHeaders:     true,
 		PassGroups:          false,
 		FilterGroups:        "",
+		GroupsDelimiter:     "|",
 		PassAccessToken:     false,
 		PassHostHeader:      true,
 		ApprovalPrompt:      "",
@@ -125,6 +131,14 @@ func parseURL(to_parse string, urltype string, msgs []string) (*url.URL, []strin
 }
 
 func (o *Options) Validate() error {
+	if o.SSLInsecureSkipVerify {
+		// TODO: Accept a certificate bundle.
+		insecureTransport := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		http.DefaultClient = &http.Client{Transport: insecureTransport}
+	}
+
 	msgs := make([]string, 0)
 	if o.CookieSecret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
@@ -138,6 +152,22 @@ func (o *Options) Validate() error {
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
 			"\n      use email-domain=* to authorize all email addresses")
+	}
+
+	if o.OIDCIssuerURL != "" {
+		// Configure discoverable provider data.
+		provider, err := oidc.NewProvider(context.Background(), o.OIDCIssuerURL)
+		if err != nil {
+			return err
+		}
+		o.oidcVerifier = provider.Verifier(&oidc.Config{
+			ClientID: o.ClientID,
+		})
+		o.LoginURL = provider.Endpoint().AuthURL
+		o.RedeemURL = provider.Endpoint().TokenURL
+		if o.Scope == "" {
+			o.Scope = "openid email profile"
+		}
 	}
 
 	o.redirectURL, msgs = parseURL(o.RedirectURL, "redirect", msgs)
@@ -157,8 +187,8 @@ func (o *Options) Validate() error {
 	for _, u := range o.SkipAuthRegex {
 		CompiledRegex, err := regexp.Compile(u)
 		if err != nil {
-			msgs = append(msgs, fmt.Sprintf(
-				"error compiling regex=%q %s", u, err))
+			msgs = append(msgs, fmt.Sprintf("error compiling regex=%q %s", u, err))
+			continue
 		}
 		o.CompiledRegex = append(o.CompiledRegex, CompiledRegex)
 	}
@@ -214,13 +244,6 @@ func (o *Options) Validate() error {
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
 
-	if o.SSLInsecureSkipVerify {
-		insecureTransport := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		http.DefaultClient = &http.Client{Transport: insecureTransport}
-	}
-
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
@@ -262,6 +285,12 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			} else {
 				p.SetGroupRestriction(o.PermitGroups, o.GoogleAdminEmail, file)
 			}
+		}
+	case *providers.OIDCProvider:
+		if o.oidcVerifier == nil {
+			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
+		} else {
+			p.Verifier = o.oidcVerifier
 		}
 	}
 	return msgs

@@ -111,8 +111,13 @@ func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
-func (p *ProviderData) GetGroups(s *SessionState, f string) (string, error) {
+// GetUserName returns the Account username
+func (p *ProviderData) GetUserName(s *SessionState) (string, error) {
 	return "", errors.New("not implemented")
+}
+
+func (p *ProviderData) GetGroups(s *SessionState, f string) ([]string, error) {
+	return []string{}, errors.New("not implemented")
 }
 
 // ValidateGroup validates that the provided email exists in the configured provider

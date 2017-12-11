@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/18F/hmacauth"
 	"github.com/bitly/oauth2_proxy/cookie"
 	"github.com/bitly/oauth2_proxy/providers"
+	"github.com/mbland/hmacauth"
 )
 
 const SignatureHeader = "GAP-Signature"
@@ -64,6 +64,7 @@ type OAuthProxy struct {
 	SetXAuthRequest     bool
 	PassBasicAuth       bool
 	PassGroups          bool
+	GroupsDelimiter     string
 	FilterGroups        string
 	SkipProviderButton  bool
 	PassUserHeaders     bool
@@ -161,16 +162,12 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 
 	log.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
-	domain := opts.CookieDomain
-	if domain == "" {
-		domain = "<default>"
-	}
 	refresh := "disabled"
 	if opts.CookieRefresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
 	}
 
-	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain, refresh)
+	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, opts.CookieDomain, refresh)
 
 	var cipher *cookie.Cipher
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
@@ -211,6 +208,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		PassBasicAuth:      opts.PassBasicAuth,
 		PassUserHeaders:    opts.PassUserHeaders,
 		PassGroups:         opts.PassGroups,
+		GroupsDelimiter:    opts.GroupsDelimiter,
 		FilterGroups:       opts.FilterGroups,
 		BasicAuthPassword:  opts.BasicAuthPassword,
 		PassAccessToken:    opts.PassAccessToken,
@@ -257,6 +255,13 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *providers.SessionState, e
 	if s.Email == "" {
 		s.Email, err = p.provider.GetEmailAddress(s)
 	}
+
+	if s.User == "" {
+		s.User, err = p.provider.GetUserName(s)
+		if err != nil && err.Error() == "not implemented" {
+			err = nil
+		}
+	}
 	return
 }
 
@@ -276,22 +281,21 @@ func (p *OAuthProxy) MakeCSRFCookie(req *http.Request, value string, expiration 
 }
 
 func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
-	domain := req.Host
-	if h, _, err := net.SplitHostPort(domain); err == nil {
-		domain = h
-	}
 	if p.CookieDomain != "" {
+		domain := req.Host
+		if h, _, err := net.SplitHostPort(domain); err == nil {
+			domain = h
+		}
 		if !strings.HasSuffix(domain, p.CookieDomain) {
 			log.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, p.CookieDomain)
 		}
-		domain = p.CookieDomain
 	}
 
 	return &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     "/",
-		Domain:   domain,
+		Domain:   p.CookieDomain,
 		HttpOnly: p.CookieHttpOnly,
 		Secure:   p.CookieSecure,
 		Expires:  now.Add(expiration),
@@ -537,11 +541,10 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	errorString := req.Form.Get("error")
 	if errorString != "" {
-        log.Printf("[OAuthCallback] error in parsed form (REQ) : %s", req)
-        log.Printf("[OAuthCallback] error in parsed form (REQ.Form) : %s", req.Form)
-        log.Printf("[OAuthCallback] error in parsed form (REQ.error string) : %s", errorString)
-	    p.ErrorPage(rw, 403, "Permission Denied", errorString)
-	    return
+		log.Printf("[OAuthCallback] error in parsed form (REQ.Form) : %s", req.Form)
+		log.Printf("[OAuthCallback] error in parsed form (REQ.error string) : %s", errorString)
+		p.ErrorPage(rw, 403, "Permission Denied", errorString)
+		return
 	}
 
 	session, err := p.redeemCode(req.Host, req.Form.Get("code"))
@@ -572,11 +575,12 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	session.IDToken = req.Form.Get("id_token")
 	if p.PassGroups && session.IDToken != "" {
-		session.Groups, err = p.provider.GetGroups(session, p.FilterGroups)
+		groups, err := p.provider.GetGroups(session, p.FilterGroups)
 		if err != nil {
 			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
 			return
 		}
+		session.Groups = strings.Join(groups, p.GroupsDelimiter)
 	}
 
 	redirect = req.Form.Get("state")

@@ -218,9 +218,9 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("got %d from %q %s",
 			resp.StatusCode, endpoint.String(), body)
-	} else {
-		log.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
 	}
+
+	log.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
 
 	if err := json.Unmarshal(body, &emails); err != nil {
 		return "", fmt.Errorf("%s unmarshaling %s", err, body)
@@ -233,4 +233,47 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 	}
 
 	return "", nil
+}
+
+func (p *GitHubProvider) GetUserName(s *SessionState) (string, error) {
+	var user struct {
+		Login string `json:"login"`
+		Email string `json:"email"`
+	}
+
+	endpoint := &url.URL{
+		Scheme: p.ValidateURL.Scheme,
+		Host:   p.ValidateURL.Host,
+		Path:   path.Join(p.ValidateURL.Path, "/user"),
+	}
+
+	req, err := http.NewRequest("GET", endpoint.String(), nil)
+	if err != nil {
+		return "", fmt.Errorf("could not create new GET request: %v", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", s.AccessToken))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("got %d from %q %s",
+			resp.StatusCode, endpoint.String(), body)
+	}
+
+	log.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
+
+	if err := json.Unmarshal(body, &user); err != nil {
+		return "", fmt.Errorf("%s unmarshaling %s", err, body)
+	}
+
+	return user.Login, nil
 }

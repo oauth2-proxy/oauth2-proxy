@@ -2,7 +2,6 @@ package providers
 
 import (
 	"fmt"
-	"github.com/bmizerany/assert"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -273,7 +274,8 @@ func TestAzureProviderNoGroups(t *testing.T) {
 	http.DefaultClient.Transport = nil
 
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "", groups)
+	// assert.Equal(t, "", groups)
+	assert.Equal(t, []string{}, groups)
 }
 
 func TestAzureProviderWrongRequestGroups(t *testing.T) {
@@ -292,7 +294,7 @@ func TestAzureProviderWrongRequestGroups(t *testing.T) {
 	http.DefaultClient.Transport = nil
 
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", groups)
+	assert.Equal(t, []string{}, groups)
 }
 
 func TestAzureProviderMultiRequestsGroups(t *testing.T) {
@@ -311,7 +313,7 @@ func TestAzureProviderMultiRequestsGroups(t *testing.T) {
 	http.DefaultClient.Transport = nil
 
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "test-group-1|test-group-2|test-group-3", groups)
+	assert.Equal(t, []string{"test-group-1", "test-group-2", "test-group-3"}, groups)
 }
 
 func TestAzureEmptyPermittedGroups(t *testing.T) {
