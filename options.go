@@ -34,6 +34,7 @@ type Options struct {
 	EmailDomains             []string `flag:"email-domain" cfg:"email_domains"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
+	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
 	HtpasswdFile             string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
@@ -77,7 +78,8 @@ type Options struct {
 	Scope             string `flag:"scope" cfg:"scope"`
 	ApprovalPrompt    string `flag:"approval-prompt" cfg:"approval_prompt"`
 
-	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
+	RequestLogging       bool   `flag:"request-logging" cfg:"request_logging"`
+	RequestLoggingFormat string `flag:"request-logging-format" cfg:"request_logging_format"`
 
 	SignatureKey string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 
@@ -97,27 +99,28 @@ type SignatureData struct {
 
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:         "/oauth2",
-		HttpAddress:         "127.0.0.1:4180",
-		HttpsAddress:        ":443",
-		DisplayHtpasswdForm: true,
-		CookieName:          "_oauth2_proxy",
-		CookieSecure:        true,
-		CookieHttpOnly:      true,
-		CookieExpire:        time.Duration(168) * time.Hour,
-		CookieRefresh:       time.Duration(0),
-		SetXAuthRequest:     false,
-		SkipAuthPreflight:   false,
-		PassBasicAuth:       true,
-		PassUserHeaders:     true,
-		PassGroups:          false,
-		FilterGroups:        "",
-		GroupsDelimiter:     "|",
-		PassAccessToken:     false,
-		PassHostHeader:      true,
-		ApprovalPrompt:      "",
-		RequestLogging:      true,
-		Provider:            "google",
+		ProxyPrefix:          "/oauth2",
+		HttpAddress:          "127.0.0.1:4180",
+		HttpsAddress:         ":443",
+		Provider:             "google",
+		DisplayHtpasswdForm:  true,
+		CookieName:           "_oauth2_proxy",
+		CookieSecure:         true,
+		CookieHttpOnly:       true,
+		CookieExpire:         time.Duration(168) * time.Hour,
+		CookieRefresh:        time.Duration(0),
+		SetXAuthRequest:      false,
+		SkipAuthPreflight:    false,
+		PassBasicAuth:        true,
+		PassUserHeaders:      true,
+		PassGroups:           false,
+		FilterGroups:         "",
+		GroupsDelimiter:      "|",
+		PassAccessToken:      false,
+		PassHostHeader:       true,
+		ApprovalPrompt:       "force",
+		RequestLogging:       true,
+		RequestLoggingFormat: defaultRequestLoggingFormat,
 	}
 }
 
@@ -225,6 +228,18 @@ func (o *Options) Validate() error {
 				"cookie_expire (%s)",
 			o.CookieRefresh.String(),
 			o.CookieExpire.String()))
+	}
+
+	// Backwards compatibility. We can still use `GoogleGroups` if google is used as provider
+	if len(o.GoogleGroups) > 0 {
+		if o.Provider != "google" {
+			msgs = append(msgs, "incorrect setting: 'google-group' parameter could be used within google provider only")
+		}
+		if len(o.PermitGroups) > 0 {
+			msgs = append(msgs, "incorrect setting: 'google-group' and 'permit-groups' can't be defined together")
+		} else {
+			o.PermitGroups = o.GoogleGroups
+		}
 	}
 
 	if o.Provider == "google" {

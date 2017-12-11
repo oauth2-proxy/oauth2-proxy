@@ -525,14 +525,9 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
-	log.Printf("[OAuthCallback] Starting OAuthCallback")
-
 	remoteAddr := getRemoteAddr(req)
 
-	log.Printf("[OAuthCallback] remoteAddr = %s", remoteAddr)
-
 	// finish the oauth cycle
-	log.Printf("[OAuthCallback] req.ParseForm")
 	err := req.ParseForm()
 	if err != nil {
 		p.ErrorPage(rw, 500, "Internal Error", err.Error())
@@ -541,8 +536,6 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	errorString := req.Form.Get("error")
 	if errorString != "" {
-		log.Printf("[OAuthCallback] error in parsed form (REQ.Form) : %s", req.Form)
-		log.Printf("[OAuthCallback] error in parsed form (REQ.error string) : %s", errorString)
 		p.ErrorPage(rw, 403, "Permission Denied", errorString)
 		return
 	}

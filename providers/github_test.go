@@ -27,23 +27,32 @@ func testGitHubProvider(hostname string) *GitHubProvider {
 	return p
 }
 
-func testGitHubBackend(payload string) *httptest.Server {
-	pathToQueryMap := map[string]string{
-		"/user":        "",
-		"/user/emails": "",
+func testGitHubBackend(payload []string) *httptest.Server {
+	pathToQueryMap := map[string][]string{
+		"/user":        []string{""},
+		"/user/emails": []string{""},
+		"/user/orgs":   []string{"limit=200&page=1", "limit=200&page=2", "limit=200&page=3"},
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			url := r.URL
 			query, ok := pathToQueryMap[url.Path]
+			validQuery := false
+			index := 0
+			for i, q := range query {
+				if q == url.RawQuery {
+					validQuery = true
+					index = i
+				}
+			}
 			if !ok {
 				w.WriteHeader(404)
-			} else if url.RawQuery != query {
+			} else if !validQuery {
 				w.WriteHeader(404)
 			} else {
 				w.WriteHeader(200)
-				w.Write([]byte(payload))
+				w.Write([]byte(payload[index]))
 			}
 		}))
 }
@@ -89,7 +98,7 @@ func TestGitHubProviderOverrides(t *testing.T) {
 }
 
 func TestGitHubProviderGetEmailAddress(t *testing.T) {
-	b := testGitHubBackend(`[ {"email": "michael.bland@gsa.gov", "primary": true} ]`)
+	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "primary": true} ]`})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -101,10 +110,28 @@ func TestGitHubProviderGetEmailAddress(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
 
+func TestGitHubProviderGetEmailAddressWithOrg(t *testing.T) {
+	b := testGitHubBackend([]string{
+		`[ {"email": "michael.bland@gsa.gov", "primary": true, "login":"testorg"} ]`,
+		`[ {"email": "michael.bland1@gsa.gov", "primary": true, "login":"testorg1"} ]`,
+		`[ ]`,
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.Org = "testorg1"
+
+	session := &SessionState{AccessToken: "imaginary_access_token"}
+	email, err := p.GetEmailAddress(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
 func TestGitHubProviderGetEmailAddressFailedRequest(t *testing.T) {
-	b := testGitHubBackend("unused payload")
+	b := testGitHubBackend([]string{"unused payload"})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -120,7 +147,7 @@ func TestGitHubProviderGetEmailAddressFailedRequest(t *testing.T) {
 }
 
 func TestGitHubProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
-	b := testGitHubBackend("{\"foo\": \"bar\"}")
+	b := testGitHubBackend([]string{"{\"foo\": \"bar\"}"})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -133,7 +160,7 @@ func TestGitHubProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 }
 
 func TestGitHubProviderGetUserName(t *testing.T) {
-	b := testGitHubBackend(`{"email": "michael.bland@gsa.gov", "login": "mbland"}`)
+	b := testGitHubBackend([]string{`{"email": "michael.bland@gsa.gov", "login": "mbland"}`})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)

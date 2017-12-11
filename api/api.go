@@ -11,7 +11,6 @@ import (
 )
 
 func Request(req *http.Request) (*simplejson.Json, error) {
-	log.Printf("New request to: '%s'", req.URL)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Printf("%s %s %s", req.Method, req.URL, err)
