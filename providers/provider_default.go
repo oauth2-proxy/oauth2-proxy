@@ -40,13 +40,13 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 
 	var resp *http.Response
 	resp, c_err := http.DefaultClient.Do(req)
+	if c_err != nil {
+		return
+	}
 	var body []byte
 	body, b_err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if b_err != nil {
-		return
-	}
-	if c_err != nil {
 		log.Printf("headers from failed redemption are %s", resp.Header)
 		log.Printf("body from failed redemption is %s", body)
 		return nil, c_err
