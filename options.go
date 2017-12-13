@@ -118,7 +118,7 @@ func NewOptions() *Options {
 		GroupsDelimiter:      "|",
 		PassAccessToken:      false,
 		PassHostHeader:       true,
-		ApprovalPrompt:       "force",
+		ApprovalPrompt:       "",
 		RequestLogging:       true,
 		RequestLoggingFormat: defaultRequestLoggingFormat,
 	}

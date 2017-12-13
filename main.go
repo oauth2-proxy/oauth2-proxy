@@ -82,7 +82,7 @@ func main() {
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
-	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
+	flagSet.String("approval-prompt", "", "OAuth approval_prompt")
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 
