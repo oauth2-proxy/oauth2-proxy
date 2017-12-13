@@ -300,7 +300,15 @@ func (p *OAuthProxy) SetCSRFCookie(rw http.ResponseWriter, req *http.Request, va
 }
 
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) {
-	http.SetCookie(rw, p.MakeSessionCookie(req, "", time.Hour*-1, time.Now()))
+	clr := p.MakeSessionCookie(req, "", time.Hour*-1, time.Now())
+	http.SetCookie(rw, clr)
+
+	// ugly hack because default domain changed
+	if p.CookieDomain == "" {
+		clr2 := *clr
+		clr2.Domain = req.Host
+		http.SetCookie(rw, &clr2)
+	}
 }
 
 func (p *OAuthProxy) SetSessionCookie(rw http.ResponseWriter, req *http.Request, val string) {
