@@ -66,7 +66,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 		s = &SessionState{
 			AccessToken: jsonResponse.AccessToken,
 		}
-		return nil, err
+		return s, nil
 	}
 
 	var v url.Values
@@ -79,7 +79,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 	} else {
 		err = fmt.Errorf("no access token found %s", body)
 	}
-	return s, nil
+	return s, err
 }
 
 // GetLoginURL with typical oauth parameters
