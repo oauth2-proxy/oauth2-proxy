@@ -170,6 +170,10 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, opts.CookieDomain, refresh)
 
 	var cipher *cookie.Cipher
+	log.Printf("Pass Access Token : %v", opts.PassAccessToken)
+	log.Printf("CookieRefresh : %v", opts.CookieRefresh)
+	log.Printf("Time duration 0 : %v", time.Duration(0))
+	log.Printf("Time duration not equal : %v", opts.CookieRefresh != time.Duration(0))
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
 		var err error
 		cipher, err = cookie.NewCipher(secretBytes(opts.CookieSecret))
@@ -249,7 +253,7 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *providers.SessionState, e
 	redirectURI := p.GetRedirectURI(host)
 	s, err = p.provider.Redeem(redirectURI, code)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if s.Email == "" {
@@ -262,7 +266,7 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *providers.SessionState, e
 			err = nil
 		}
 	}
-	return
+	return s, nil
 }
 
 func (p *OAuthProxy) MakeSessionCookie(req *http.Request, value string, expiration time.Duration, now time.Time) *http.Cookie {

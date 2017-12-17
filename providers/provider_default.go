@@ -16,7 +16,7 @@ import (
 func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -34,14 +34,14 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 	var req *http.Request
 	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
-		return
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var resp *http.Response
 	resp, c_err := http.DefaultClient.Do(req)
 	if c_err != nil {
-		return
+		return nil, c_err
 	}
 	var body []byte
 	body, b_err := ioutil.ReadAll(resp.Body)
@@ -49,12 +49,12 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 	if b_err != nil {
 		log.Printf("headers from failed redemption are %s", resp.Header)
 		log.Printf("body from failed redemption is %s", body)
-		return nil, c_err
+		return nil, b_err
 	}
 
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
+		return nil, err
 	}
 
 	// blindly try json and x-www-form-urlencoded
@@ -66,20 +66,20 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 		s = &SessionState{
 			AccessToken: jsonResponse.AccessToken,
 		}
-		return
+		return nil, err
 	}
 
 	var v url.Values
 	v, err = url.ParseQuery(string(body))
 	if err != nil {
-		return
+		return nil, err
 	}
 	if a := v.Get("access_token"); a != "" {
 		s = &SessionState{AccessToken: a}
 	} else {
 		err = fmt.Errorf("no access token found %s", body)
 	}
-	return
+	return s, nil
 }
 
 // GetLoginURL with typical oauth parameters
