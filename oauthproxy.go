@@ -170,10 +170,6 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, opts.CookieDomain, refresh)
 
 	var cipher *cookie.Cipher
-	log.Printf("Pass Access Token : %v", opts.PassAccessToken)
-	log.Printf("CookieRefresh : %v", opts.CookieRefresh)
-	log.Printf("Time duration 0 : %v", time.Duration(0))
-	log.Printf("Time duration not equal : %v", opts.CookieRefresh != time.Duration(0))
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
 		var err error
 		cipher, err = cookie.NewCipher(secretBytes(opts.CookieSecret))

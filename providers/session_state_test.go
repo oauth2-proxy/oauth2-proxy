@@ -2,7 +2,6 @@ package providers
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"testing"
 	"time"
@@ -28,9 +27,6 @@ func TestSessionStateSerialization(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	log.Printf("T = %v", t)
-	log.Printf("encoded = %v", encoded)
-	// assert.Equal(t, 4, strings.Count(encoded, ":"))
 	assert.Equal(t, 4, strings.Count(encoded, "|"))
 
 	ss, err := DecodeSessionState(encoded, c)
@@ -67,7 +63,6 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	log.Printf("Encoded string = %s", encoded)
 	assert.Equal(t, 4, strings.Count(encoded, "|"))
 
 	ss, err := DecodeSessionState(encoded, c)
