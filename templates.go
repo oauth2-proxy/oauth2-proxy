@@ -61,7 +61,7 @@ func getTemplates() *template.Template {
 	.btn:hover {
 		background-color: #3071a9;
 		border-color: #285e8e;
-		ext-decoration: none;
+		text-decoration: none;
 	}
 	label {
 		display: inline-block;
