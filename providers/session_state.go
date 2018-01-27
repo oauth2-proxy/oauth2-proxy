@@ -12,6 +12,7 @@ import (
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
 	AccessToken  string
+	IDToken      string
 	ExpiresOn    time.Time
 	RefreshToken string
 	Email        string
