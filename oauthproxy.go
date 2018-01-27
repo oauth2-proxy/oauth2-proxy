@@ -26,6 +26,10 @@ const (
 
 	httpScheme  = "http"
 	httpsScheme = "https"
+
+	// Cookies are limited to 4kb including the length of the cookie name,
+	// the cookie name can be up to 256 bytes
+	maxCookieLength = 3840
 )
 
 // SignatureHeaders contains the headers to be signed by the hmac algorithm
@@ -282,15 +286,100 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *providers.SessionState, e
 
 // MakeSessionCookie creates an http.Cookie containing the authenticated user's
 // authentication details
-func (p *OAuthProxy) MakeSessionCookie(req *http.Request, value string, expiration time.Duration, now time.Time) *http.Cookie {
+func (p *OAuthProxy) MakeSessionCookie(req *http.Request, value string, expiration time.Duration, now time.Time) []*http.Cookie {
 	if value != "" {
 		value = cookie.SignedValue(p.CookieSeed, p.CookieName, value, now)
-		if len(value) > 4096 {
-			// Cookies cannot be larger than 4kb
-			log.Printf("WARNING - Cookie Size: %d bytes", len(value))
+	}
+	c := p.makeCookie(req, p.CookieName, value, expiration, now)
+	if len(c.Value) > 4096 {
+		return splitCookie(c)
+	}
+	return []*http.Cookie{c}
+}
+
+func copyCookie(c *http.Cookie) *http.Cookie {
+	return &http.Cookie{
+		Name:       c.Name,
+		Value:      c.Value,
+		Path:       c.Path,
+		Domain:     c.Domain,
+		Expires:    c.Expires,
+		RawExpires: c.RawExpires,
+		MaxAge:     c.MaxAge,
+		Secure:     c.Secure,
+		HttpOnly:   c.HttpOnly,
+		Raw:        c.Raw,
+		Unparsed:   c.Unparsed,
+	}
+}
+
+// splitCookie reads the full cookie generated to store the session and splits
+// it into a slice of cookies which fit within the 4kb cookie limit indexing
+// the cookies from 0
+func splitCookie(c *http.Cookie) []*http.Cookie {
+	if len(c.Value) < maxCookieLength {
+		return []*http.Cookie{c}
+	}
+	cookies := []*http.Cookie{}
+	valueBytes := []byte(c.Value)
+	count := 0
+	for len(valueBytes) > 0 {
+		new := copyCookie(c)
+		new.Name = fmt.Sprintf("%s-%d", c.Name, count)
+		count++
+		if len(valueBytes) < maxCookieLength {
+			new.Value = string(valueBytes)
+			valueBytes = []byte{}
+		} else {
+			newValue := valueBytes[:maxCookieLength]
+			valueBytes = valueBytes[maxCookieLength:]
+			new.Value = string(newValue)
+		}
+		cookies = append(cookies, new)
+	}
+	return cookies
+}
+
+// joinCookies takes a slice of cookies from the request and reconstructs the
+// full session cookie
+func joinCookies(cookies []*http.Cookie) (*http.Cookie, error) {
+	if len(cookies) == 0 {
+		return nil, fmt.Errorf("list of cookies must be > 0")
+	}
+	if len(cookies) == 1 {
+		return cookies[0], nil
+	}
+	c := copyCookie(cookies[0])
+	for i := 1; i < len(cookies); i++ {
+		c.Value += cookies[i].Value
+	}
+	c.Name = strings.TrimRight(c.Name, "-0")
+	return c, nil
+}
+
+// loadCookie retreieves the sessions state cookie from the http request.
+// If a single cookie is present this will be returned, otherwise it attempts
+// to reconstruct a cookie split up by splitCookie
+func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {
+	c, err := req.Cookie(cookieName)
+	if err == nil {
+		return c, nil
+	}
+	cookies := []*http.Cookie{}
+	err = nil
+	count := 0
+	for err == nil {
+		var c *http.Cookie
+		c, err = req.Cookie(fmt.Sprintf("%s-%d", cookieName, count))
+		if err == nil {
+			cookies = append(cookies, c)
+			count++
 		}
 	}
-	return p.makeCookie(req, p.CookieName, value, expiration, now)
+	if len(cookies) == 0 {
+		return nil, fmt.Errorf("Could not find cookie %s", cookieName)
+	}
+	return joinCookies(cookies)
 }
 
 // MakeCSRFCookie creates a cookie for CSRF
@@ -334,12 +423,14 @@ func (p *OAuthProxy) SetCSRFCookie(rw http.ResponseWriter, req *http.Request, va
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) {
-	clr := p.MakeSessionCookie(req, "", time.Hour*-1, time.Now())
-	http.SetCookie(rw, clr)
+	cookies := p.MakeSessionCookie(req, "", time.Hour*-1, time.Now())
+	for _, clr := range cookies {
+		http.SetCookie(rw, clr)
+	}
 
 	// ugly hack because default domain changed
-	if p.CookieDomain == "" {
-		clr2 := *clr
+	if p.CookieDomain == "" && len(cookies) > 0 {
+		clr2 := *cookies[0]
 		clr2.Domain = req.Host
 		http.SetCookie(rw, &clr2)
 	}
@@ -347,13 +438,15 @@ func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Reques
 
 // SetSessionCookie adds the user's session cookie to the response
 func (p *OAuthProxy) SetSessionCookie(rw http.ResponseWriter, req *http.Request, val string) {
-	http.SetCookie(rw, p.MakeSessionCookie(req, val, p.CookieExpire, time.Now()))
+	for _, c := range p.MakeSessionCookie(req, val, p.CookieExpire, time.Now()) {
+		http.SetCookie(rw, c)
+	}
 }
 
 // LoadCookiedSession reads the user's authentication details from the request
 func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*providers.SessionState, time.Duration, error) {
 	var age time.Duration
-	c, err := req.Cookie(p.CookieName)
+	c, err := loadCookie(req, p.CookieName)
 	if err != nil {
 		// always http.ErrNoCookie
 		return nil, age, fmt.Errorf("Cookie %q not present", p.CookieName)
