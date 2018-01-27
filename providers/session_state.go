@@ -11,6 +11,7 @@ import (
 
 type SessionState struct {
 	AccessToken  string
+	IdToken      string
 	ExpiresOn    time.Time
 	RefreshToken string
 	Email        string

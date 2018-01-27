@@ -61,6 +61,8 @@ type Options struct {
 	PassUserHeaders       bool     `flag:"pass-user-headers" cfg:"pass_user_headers"`
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	SetXAuthRequest       bool     `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
+	SetAuthorization      bool     `flag:"set-authorization-header" cfg:"set_authorization_header"`
+	PassAuthorization     bool     `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 
 	// These options allow for other providers besides Google, with
@@ -111,6 +113,8 @@ func NewOptions() *Options {
 		PassUserHeaders:      true,
 		PassAccessToken:      false,
 		PassHostHeader:       true,
+		SetAuthorization:     false,
+		PassAuthorization:    false,
 		ApprovalPrompt:       "force",
 		RequestLogging:       true,
 		RequestLoggingFormat: defaultRequestLoggingFormat,

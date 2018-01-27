@@ -67,6 +67,8 @@ type OAuthProxy struct {
 	PassUserHeaders     bool
 	BasicAuthPassword   string
 	PassAccessToken     bool
+	SetAuthorization    bool
+	PassAuthorization   bool
 	CookieCipher        *cookie.Cipher
 	skipAuthRegex       []string
 	skipAuthPreflight   bool
@@ -164,7 +166,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, opts.CookieDomain, refresh)
 
 	var cipher *cookie.Cipher
-	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
+	if opts.PassAccessToken || opts.SetAuthorization || opts.PassAuthorization || (opts.CookieRefresh != time.Duration(0)) {
 		var err error
 		cipher, err = cookie.NewCipher(secretBytes(opts.CookieSecret))
 		if err != nil {
@@ -204,6 +206,8 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		PassUserHeaders:    opts.PassUserHeaders,
 		BasicAuthPassword:  opts.BasicAuthPassword,
 		PassAccessToken:    opts.PassAccessToken,
+		SetAuthorization:   opts.SetAuthorization,
+		PassAuthorization:  opts.PassAuthorization,
 		SkipProviderButton: opts.SkipProviderButton,
 		CookieCipher:       cipher,
 		templates:          loadTemplates(opts.CustomTemplatesDir),
@@ -719,6 +723,12 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	}
 	if p.PassAccessToken && session.AccessToken != "" {
 		req.Header["X-Forwarded-Access-Token"] = []string{session.AccessToken}
+	}
+	if p.PassAuthorization && session.IdToken != "" {
+		req.Header["Authorization"] = []string{fmt.Sprintf("Bearer %s", session.IdToken)}
+	}
+	if p.SetAuthorization && session.IdToken != "" {
+		rw.Header().Set("Authorization", fmt.Sprintf("Bearer %s", session.IdToken))
 	}
 	if session.Email == "" {
 		rw.Header().Set("GAP-Auth", session.User)
