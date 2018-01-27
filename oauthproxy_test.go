@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -141,6 +142,73 @@ func TestIsValidRedirect(t *testing.T) {
 
 	invalidHttps2 := proxy.IsValidRedirect("https://evil.corp/redirect?rd=foo.bar")
 	assert.Equal(t, false, invalidHttps2)
+}
+
+func randomString(length int) string {
+	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+func TestSplitCookie(t *testing.T) {
+	c1 := &http.Cookie{
+		Name:     "cookie-name",
+		Value:    randomString(5120),
+		Path:     "/",
+		Domain:   "foo.bar",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now(),
+	}
+	cookies := splitCookie(c1)
+	assert.Equal(t, 2, len(cookies))
+
+	assert.Equal(t, c1.Name+"-0", cookies[0].Name)
+	assert.Equal(t, c1.Name+"-1", cookies[1].Name)
+
+	assert.Equal(t, 3840, len(cookies[0].Value))
+	assert.Equal(t, 5120-3840, len(cookies[1].Value))
+
+	c2 := &http.Cookie{
+		Name:     "cookie-name",
+		Value:    randomString(3000),
+		Path:     "/",
+		Domain:   "foo.bar",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now(),
+	}
+
+	cookies2 := splitCookie(c2)
+	assert.Equal(t, 1, len(cookies2))
+
+	assert.Equal(t, c2.Name, cookies2[0].Name)
+	assert.Equal(t, c2.Value, cookies2[0].Value)
+}
+
+func TestJoinCookies(t *testing.T) {
+	c1 := &http.Cookie{
+		Name:     "cookie-name",
+		Value:    randomString(5120),
+		Path:     "/",
+		Domain:   "foo.bar",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now(),
+	}
+	// Split Cookies
+	cookies := splitCookie(c1)
+	assert.Equal(t, 2, len(cookies))
+
+	// join cookies should be the ivnerse
+	c2, _ := joinCookies(cookies)
+
+	assert.Equal(t, c1.Name, c2.Name)
+	assert.Equal(t, c1.Value, c2.Value)
 }
 
 type TestProvider struct {
@@ -555,7 +623,7 @@ func NewProcessCookieTestWithDefaults() *ProcessCookieTest {
 	})
 }
 
-func (p *ProcessCookieTest) MakeCookie(value string, ref time.Time) *http.Cookie {
+func (p *ProcessCookieTest) MakeCookie(value string, ref time.Time) []*http.Cookie {
 	return p.proxy.MakeSessionCookie(p.req, value, p.opts.CookieExpire, ref)
 }
 
@@ -564,7 +632,9 @@ func (p *ProcessCookieTest) SaveSession(s *providers.SessionState, ref time.Time
 	if err != nil {
 		return err
 	}
-	p.req.AddCookie(p.proxy.MakeSessionCookie(p.req, value, p.proxy.CookieExpire, ref))
+	for _, c := range p.proxy.MakeSessionCookie(p.req, value, p.proxy.CookieExpire, ref) {
+		p.req.AddCookie(c)
+	}
 	return nil
 }
 
@@ -853,8 +923,9 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
 	if err != nil {
 		panic(err)
 	}
-	cookie := proxy.MakeSessionCookie(req, value, proxy.CookieExpire, time.Now())
-	req.AddCookie(cookie)
+	for _, c := range proxy.MakeSessionCookie(req, value, proxy.CookieExpire, time.Now()) {
+		req.AddCookie(c)
+	}
 	// This is used by the upstream to validate the signature.
 	st.authenticator.auth = hmacauth.NewHmacAuth(
 		crypto.SHA1, []byte(key), SignatureHeader, SignatureHeaders)
