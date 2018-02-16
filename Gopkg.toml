@@ -38,3 +38,7 @@
 [[constraint]]
   name = "gopkg.in/fsnotify.v1"
   version = "~1.2.0"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"
