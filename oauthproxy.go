@@ -265,7 +265,7 @@ func (p *OAuthProxy) MakeSessionCookie(req *http.Request, value string, expirati
 		value = cookie.SignedValue(p.CookieSeed, p.CookieName, value, now)
 	}
 	c := p.makeCookie(req, p.CookieName, value, expiration, now)
-	if len(c.Value) > 4096 {
+	if len(c.Value) > 3839 {
 		return splitCookie(c)
 	}
 	return []*http.Cookie{c}
