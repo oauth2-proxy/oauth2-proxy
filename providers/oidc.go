@@ -128,3 +128,14 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		Email:        claims.Email,
 	}, nil
 }
+
+// ValidateSessionState checks that the session's IDToken is still valid
+func (p *OIDCProvider) ValidateSessionState(s *SessionState) bool {
+	ctx := context.Background()
+	_, err := p.Verifier.Verify(ctx, s.IDToken)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
