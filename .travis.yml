@@ -2,10 +2,18 @@ language: go
 go:
   - 1.8.x
   - 1.9.x
-script:
+  - 1.10.x
+install:
+  # Fetch dependencies
   - wget -O dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
   - chmod +x dep
-  - ./dep ensure
+  - ./dep ensure --vendor-only
+script:
+  # Lint
+  - go get -u github.com/alecthomas/gometalinter
+  - gometalinter --install
+  - ./lint.sh
+  # Run tests
   - ./test.sh
 sudo: false
 notifications:
