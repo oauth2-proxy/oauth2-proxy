@@ -7,7 +7,7 @@ to validate accounts by email, domain or group.
 Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork.
 A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
-[![Build Status](https://secure.travis-ci.org/bitly/oauth2_proxy.svg?branch=master)](http://travis-ci.org/bitly/oauth2_proxy)
+[![Build Status](https://secure.travis-ci.org/pusher/oauth2_proxy.svg?branch=master)](http://travis-ci.org/pusher/oauth2_proxy)
 
 ![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
 
@@ -17,7 +17,7 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
 ## Installation
 
-1.  Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v2.2`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
+1.  Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v2.2`) or build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
     Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v2.3`.
 
 ```
