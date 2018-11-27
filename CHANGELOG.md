@@ -2,6 +2,7 @@
 
 ## Changes since v2.2:
 
+- Fix fsnotify import
 - Update README to reflect new repository ownership
 - Update CI scripts to separate linting and testing
   - Now using `gometalinter` for linting

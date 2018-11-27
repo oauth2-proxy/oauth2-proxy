@@ -164,7 +164,7 @@
 
 [[projects]]
   digest = "1:cb5b2a45a3dd41c01ff779c54ae4c8aab0271d6d3b3f734c8a8bd2c890299ef2"
-  name = "gopkg.in/fsnotify.v1"
+  name = "gopkg.in/fsnotify/fsnotify.v1"
   packages = ["."]
   pruneopts = ""
   revision = "836bfd95fecc0f1511dd66bdbf2b5b61ab8b00b6"
@@ -197,7 +197,7 @@
     "golang.org/x/oauth2/google",
     "google.golang.org/api/admin/directory/v1",
     "google.golang.org/api/googleapi",
-    "gopkg.in/fsnotify.v1",
+    "gopkg.in/fsnotify/fsnotify.v1",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
