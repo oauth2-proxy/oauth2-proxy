@@ -9,6 +9,7 @@ install:
   - chmod +x dep
   - ./dep ensure --vendor-only
 script:
+  - set -e
   # Lint
   - go get -u github.com/alecthomas/gometalinter
   - gometalinter --install
