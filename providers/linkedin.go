@@ -39,11 +39,11 @@ func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
 	return &LinkedInProvider{ProviderData: p}
 }
 
-func getLinkedInHeader(access_token string) http.Header {
+func getLinkedInHeader(accessToken string) http.Header {
 	header := make(http.Header)
 	header.Set("Accept", "application/json")
 	header.Set("x-li-format", "json")
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", access_token))
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
 }
 

@@ -28,12 +28,12 @@ func NewHtpasswdFromFile(path string) (*HtpasswdFile, error) {
 }
 
 func NewHtpasswd(file io.Reader) (*HtpasswdFile, error) {
-	csv_reader := csv.NewReader(file)
-	csv_reader.Comma = ':'
-	csv_reader.Comment = '#'
-	csv_reader.TrimLeadingSpace = true
+	csvReader := csv.NewReader(file)
+	csvReader.Comma = ':'
+	csvReader.Comment = '#'
+	csvReader.TrimLeadingSpace = true
 
-	records, err := csv_reader.ReadAll()
+	records, err := csvReader.ReadAll()
 	if err != nil {
 		return nil, err
 	}

@@ -14,14 +14,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/providers"
-	"github.com/mbland/hmacauth"
 )
 
-const SignatureHeader = "GAP-Signature"
+const (
+	SignatureHeader = "GAP-Signature"
 
-var SignatureHeaders []string = []string{
+	httpScheme  = "http"
+	httpsScheme = "https"
+)
+
+var SignatureHeaders = []string{
 	"Content-Length",
 	"Content-Md5",
 	"Content-Type",
@@ -40,7 +45,7 @@ type OAuthProxy struct {
 	CSRFCookieName string
 	CookieDomain   string
 	CookieSecure   bool
-	CookieHttpOnly bool
+	CookieHTTPOnly bool
 	CookieExpire   time.Duration
 	CookieRefresh  time.Duration
 	Validator      func(string) bool
@@ -125,7 +130,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	for _, u := range opts.proxyURLs {
 		path := u.Path
 		switch u.Scheme {
-		case "http", "https":
+		case httpScheme, httpsScheme:
 			u.Path = ""
 			log.Printf("mapping path %q => upstream %q", path, u)
 			proxy := NewReverseProxy(u)
@@ -160,7 +165,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
 	}
 
-	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, opts.CookieDomain, refresh)
+	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, refresh)
 
 	var cipher *cookie.Cipher
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
@@ -177,7 +182,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		CookieSeed:     opts.CookieSecret,
 		CookieDomain:   opts.CookieDomain,
 		CookieSecure:   opts.CookieSecure,
-		CookieHttpOnly: opts.CookieHttpOnly,
+		CookieHTTPOnly: opts.CookieHTTPOnly,
 		CookieExpire:   opts.CookieExpire,
 		CookieRefresh:  opts.CookieRefresh,
 		Validator:      validator,
@@ -218,9 +223,9 @@ func (p *OAuthProxy) GetRedirectURI(host string) string {
 	u = *p.redirectURL
 	if u.Scheme == "" {
 		if p.CookieSecure {
-			u.Scheme = "https"
+			u.Scheme = httpsScheme
 		} else {
-			u.Scheme = "http"
+			u.Scheme = httpScheme
 		}
 	}
 	u.Host = host
@@ -285,7 +290,7 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 		Value:    value,
 		Path:     "/",
 		Domain:   p.CookieDomain,
-		HttpOnly: p.CookieHttpOnly,
+		HttpOnly: p.CookieHTTPOnly,
 		Secure:   p.CookieSecure,
 		Expires:  now.Add(expiration),
 	}
@@ -374,12 +379,12 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	p.ClearSessionCookie(rw, req)
 	rw.WriteHeader(code)
 
-	redirect_url := req.URL.RequestURI()
+	redirecURL := req.URL.RequestURI()
 	if req.Header.Get("X-Auth-Request-Redirect") != "" {
-		redirect_url = req.Header.Get("X-Auth-Request-Redirect")
+		redirecURL = req.Header.Get("X-Auth-Request-Redirect")
 	}
-	if redirect_url == p.SignInPath {
-		redirect_url = "/"
+	if redirecURL == p.SignInPath {
+		redirecURL = "/"
 	}
 
 	t := struct {
@@ -394,7 +399,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		ProviderName:  p.provider.Data().ProviderName,
 		SignInMessage: p.SignInMessage,
 		CustomLogin:   p.displayCustomLoginForm(),
-		Redirect:      redirect_url,
+		Redirect:      redirecURL,
 		Version:       VERSION,
 		ProxyPrefix:   p.ProxyPrefix,
 		Footer:        template.HTML(p.Footer),
@@ -653,7 +658,7 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	}
 
 	if saveSession && session != nil {
-		err := p.SaveSession(rw, req, session)
+		err = p.SaveSession(rw, req, session)
 		if err != nil {
 			log.Printf("%s %s", remoteAddr, err)
 			return http.StatusInternalServerError

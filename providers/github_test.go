@@ -29,19 +29,18 @@ func testGitHubProvider(hostname string) *GitHubProvider {
 
 func testGitHubBackend(payload []string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
-		"/user":        []string{""},
-		"/user/emails": []string{""},
-		"/user/orgs":   []string{"limit=200&page=1", "limit=200&page=2", "limit=200&page=3"},
+		"/user":        {""},
+		"/user/emails": {""},
+		"/user/orgs":   {"limit=200&page=1", "limit=200&page=2", "limit=200&page=3"},
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			url := r.URL
-			query, ok := pathToQueryMap[url.Path]
+			query, ok := pathToQueryMap[r.URL.Path]
 			validQuery := false
 			index := 0
 			for i, q := range query {
-				if q == url.RawQuery {
+				if q == r.URL.RawQuery {
 					validQuery = true
 					index = i
 				}

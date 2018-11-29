@@ -23,12 +23,12 @@ func (s *Server) ListenAndServe() {
 }
 
 func (s *Server) ServeHTTP() {
-	httpAddress := s.Opts.HttpAddress
+	HTTPAddress := s.Opts.HTTPAddress
 	scheme := ""
 
-	i := strings.Index(httpAddress, "://")
+	i := strings.Index(HTTPAddress, "://")
 	if i > -1 {
-		scheme = httpAddress[0:i]
+		scheme = HTTPAddress[0:i]
 	}
 
 	var networkType string
@@ -39,7 +39,7 @@ func (s *Server) ServeHTTP() {
 		networkType = scheme
 	}
 
-	slice := strings.SplitN(httpAddress, "//", 2)
+	slice := strings.SplitN(HTTPAddress, "//", 2)
 	listenAddr := slice[len(slice)-1]
 
 	listener, err := net.Listen(networkType, listenAddr)
@@ -58,7 +58,7 @@ func (s *Server) ServeHTTP() {
 }
 
 func (s *Server) ServeHTTPS() {
-	addr := s.Opts.HttpsAddress
+	addr := s.Opts.HTTPSAddress
 	config := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		MaxVersion: tls.VersionTLS12,

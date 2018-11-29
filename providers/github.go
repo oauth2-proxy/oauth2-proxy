@@ -106,7 +106,7 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 		}
 
 		orgs = append(orgs, op...)
-		pn += 1
+		pn++
 	}
 
 	var presentOrgs []string
@@ -186,7 +186,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 		log.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
 	} else {
 		var allOrgs []string
-		for org, _ := range presentOrgs {
+		for org := range presentOrgs {
 			allOrgs = append(allOrgs, org)
 		}
 		log.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)

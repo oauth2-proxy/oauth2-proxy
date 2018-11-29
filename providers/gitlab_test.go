@@ -33,8 +33,7 @@ func testGitLabBackend(payload string) *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			url := r.URL
-			if url.Path != path || url.RawQuery != query {
+			if r.URL.Path != path || r.URL.RawQuery != query {
 				w.WriteHeader(404)
 			} else {
 				w.WriteHeader(200)
@@ -87,8 +86,8 @@ func TestGitLabProviderGetEmailAddress(t *testing.T) {
 	b := testGitLabBackend("{\"email\": \"michael.bland@gsa.gov\"}")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testGitLabProvider(b_url.Host)
+	bURL, _ := url.Parse(b.URL)
+	p := testGitLabProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
@@ -102,8 +101,8 @@ func TestGitLabProviderGetEmailAddressFailedRequest(t *testing.T) {
 	b := testGitLabBackend("unused payload")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testGitLabProvider(b_url.Host)
+	bURL, _ := url.Parse(b.URL)
+	p := testGitLabProvider(bURL.Host)
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -118,8 +117,8 @@ func TestGitLabProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	b := testGitLabBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testGitLabProvider(b_url.Host)
+	bURL, _ := url.Parse(b.URL)
+	p := testGitLabProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)

@@ -62,7 +62,7 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	}
 }
 
-func emailFromIdToken(idToken string) (string, error) {
+func emailFromIDToken(idToken string) (string, error) {
 
 	// id_token is a base64 encode ID token payload
 	// https://developers.google.com/accounts/docs/OAuth2Login#obtainuserinfo
@@ -129,14 +129,14 @@ func (p *GoogleProvider) Redeem(redirectURL, code string) (s *SessionState, err 
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 		ExpiresIn    int64  `json:"expires_in"`
-		IdToken      string `json:"id_token"`
+		IDToken      string `json:"id_token"`
 	}
 	err = json.Unmarshal(body, &jsonResponse)
 	if err != nil {
 		return
 	}
 	var email string
-	email, err = emailFromIdToken(jsonResponse.IdToken)
+	email, err = emailFromIDToken(jsonResponse.IDToken)
 	if err != nil {
 		return
 	}

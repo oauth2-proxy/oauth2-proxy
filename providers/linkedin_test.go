@@ -31,8 +31,7 @@ func testLinkedInBackend(payload string) *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			url := r.URL
-			if url.Path != path {
+			if r.URL.Path != path {
 				w.WriteHeader(404)
 			} else if r.Header.Get("Authorization") != "Bearer imaginary_access_token" {
 				w.WriteHeader(403)
@@ -95,8 +94,8 @@ func TestLinkedInProviderGetEmailAddress(t *testing.T) {
 	b := testLinkedInBackend(`"user@linkedin.com"`)
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testLinkedInProvider(b_url.Host)
+	bURL, _ := url.Parse(b.URL)
+	p := testLinkedInProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
@@ -108,8 +107,8 @@ func TestLinkedInProviderGetEmailAddressFailedRequest(t *testing.T) {
 	b := testLinkedInBackend("unused payload")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testLinkedInProvider(b_url.Host)
+	bURL, _ := url.Parse(b.URL)
+	p := testLinkedInProvider(bURL.Host)
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -124,8 +123,8 @@ func TestLinkedInProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	b := testLinkedInBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testLinkedInProvider(b_url.Host)
+	bURL, _ := url.Parse(b.URL)
+	p := testLinkedInProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)

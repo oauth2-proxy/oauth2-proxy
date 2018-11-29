@@ -32,7 +32,7 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 	return data, nil
 }
 
-func RequestJson(req *http.Request, v interface{}) error {
+func RequestJSON(req *http.Request, v interface{}) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Printf("%s %s %s", req.Method, req.URL, err)

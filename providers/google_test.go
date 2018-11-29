@@ -81,7 +81,7 @@ type redeemResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int64  `json:"expires_in"`
-	IdToken      string `json:"id_token"`
+	IDToken      string `json:"id_token"`
 }
 
 func TestGoogleProviderGetEmailAddress(t *testing.T) {
@@ -90,7 +90,7 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 		AccessToken:  "a1234",
 		ExpiresIn:    10,
 		RefreshToken: "refresh12345",
-		IdToken:      "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": "michael.bland@gsa.gov", "email_verified":true}`)),
+		IDToken:      "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": "michael.bland@gsa.gov", "email_verified":true}`)),
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server
@@ -127,7 +127,7 @@ func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	p := newGoogleProvider()
 	body, err := json.Marshal(redeemResponse{
 		AccessToken: "a1234",
-		IdToken:     "ignored prefix." + `{"email": "michael.bland@gsa.gov"}`,
+		IDToken:     "ignored prefix." + `{"email": "michael.bland@gsa.gov"}`,
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server
@@ -146,7 +146,7 @@ func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
 
 	body, err := json.Marshal(redeemResponse{
 		AccessToken: "a1234",
-		IdToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": michael.bland@gsa.gov}`)),
+		IDToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"email": michael.bland@gsa.gov}`)),
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server
@@ -165,7 +165,7 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 	p := newGoogleProvider()
 	body, err := json.Marshal(redeemResponse{
 		AccessToken: "a1234",
-		IdToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"not_email": "missing"}`)),
+		IDToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"not_email": "missing"}`)),
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server

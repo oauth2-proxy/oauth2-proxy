@@ -88,9 +88,9 @@ func TestProxyURLs(t *testing.T) {
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8081")
 	assert.Equal(t, nil, o.Validate())
 	expected := []*url.URL{
-		&url.URL{Scheme: "http", Host: "127.0.0.1:8080", Path: "/"},
+		{Scheme: "http", Host: "127.0.0.1:8080", Path: "/"},
 		// note the '/' was added
-		&url.URL{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"},
+		{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"},
 	}
 	assert.Equal(t, expected, o.proxyURLs)
 }

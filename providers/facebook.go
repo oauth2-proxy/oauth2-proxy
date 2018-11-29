@@ -43,11 +43,11 @@ func NewFacebookProvider(p *ProviderData) *FacebookProvider {
 	return &FacebookProvider{ProviderData: p}
 }
 
-func getFacebookHeader(access_token string) http.Header {
+func getFacebookHeader(accessToken string) http.Header {
 	header := make(http.Header)
 	header.Set("Accept", "application/json")
 	header.Set("x-li-format", "json")
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", access_token))
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
 }
 
@@ -65,7 +65,7 @@ func (p *FacebookProvider) GetEmailAddress(s *SessionState) (string, error) {
 		Email string
 	}
 	var r result
-	err = api.RequestJson(req, &r)
+	err = api.RequestJSON(req, &r)
 	if err != nil {
 		return "", err
 	}

@@ -110,8 +110,7 @@ func testAzureBackend(payload string) *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			url := r.URL
-			if url.Path != path || url.RawQuery != query {
+			if r.URL.Path != path || r.URL.RawQuery != query {
 				w.WriteHeader(404)
 			} else if r.Header.Get("Authorization") != "Bearer imaginary_access_token" {
 				w.WriteHeader(403)

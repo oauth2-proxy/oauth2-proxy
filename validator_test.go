@@ -8,15 +8,15 @@ import (
 )
 
 type ValidatorTest struct {
-	auth_email_file *os.File
-	done            chan bool
-	update_seen     bool
+	authEmailFile *os.File
+	done          chan bool
+	updateSeen    bool
 }
 
 func NewValidatorTest(t *testing.T) *ValidatorTest {
 	vt := &ValidatorTest{}
 	var err error
-	vt.auth_email_file, err = ioutil.TempFile("", "test_auth_emails_")
+	vt.authEmailFile, err = ioutil.TempFile("", "test_auth_emails_")
 	if err != nil {
 		t.Fatal("failed to create temp file: " + err.Error())
 	}
@@ -26,27 +26,27 @@ func NewValidatorTest(t *testing.T) *ValidatorTest {
 
 func (vt *ValidatorTest) TearDown() {
 	vt.done <- true
-	os.Remove(vt.auth_email_file.Name())
+	os.Remove(vt.authEmailFile.Name())
 }
 
 func (vt *ValidatorTest) NewValidator(domains []string,
 	updated chan<- bool) func(string) bool {
-	return newValidatorImpl(domains, vt.auth_email_file.Name(),
+	return newValidatorImpl(domains, vt.authEmailFile.Name(),
 		vt.done, func() {
-			if vt.update_seen == false {
+			if vt.updateSeen == false {
 				updated <- true
-				vt.update_seen = true
+				vt.updateSeen = true
 			}
 		})
 }
 
-// This will close vt.auth_email_file.
+// This will close vt.authEmailFile.
 func (vt *ValidatorTest) WriteEmails(t *testing.T, emails []string) {
-	defer vt.auth_email_file.Close()
-	vt.auth_email_file.WriteString(strings.Join(emails, "\n"))
-	if err := vt.auth_email_file.Close(); err != nil {
+	defer vt.authEmailFile.Close()
+	vt.authEmailFile.WriteString(strings.Join(emails, "\n"))
+	if err := vt.authEmailFile.Close(); err != nil {
 		t.Fatal("failed to close temp file " +
-			vt.auth_email_file.Name() + ": " + err.Error())
+			vt.authEmailFile.Name() + ": " + err.Error())
 	}
 }
 

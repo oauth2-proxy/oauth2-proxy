@@ -10,8 +10,8 @@ import (
 
 func (vt *ValidatorTest) UpdateEmailFile(t *testing.T, emails []string) {
 	var err error
-	vt.auth_email_file, err = os.OpenFile(
-		vt.auth_email_file.Name(), os.O_WRONLY|os.O_CREATE, 0600)
+	vt.authEmailFile, err = os.OpenFile(
+		vt.authEmailFile.Name(), os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		t.Fatal("failed to re-open temp file for updates")
 	}
@@ -20,24 +20,24 @@ func (vt *ValidatorTest) UpdateEmailFile(t *testing.T, emails []string) {
 
 func (vt *ValidatorTest) UpdateEmailFileViaRenameAndReplace(
 	t *testing.T, emails []string) {
-	orig_file := vt.auth_email_file
+	origFile := vt.authEmailFile
 	var err error
-	vt.auth_email_file, err = ioutil.TempFile("", "test_auth_emails_")
+	vt.authEmailFile, err = ioutil.TempFile("", "test_auth_emails_")
 	if err != nil {
 		t.Fatal("failed to create temp file for rename and replace: " +
 			err.Error())
 	}
 	vt.WriteEmails(t, emails)
 
-	moved_name := orig_file.Name() + "-moved"
-	err = os.Rename(orig_file.Name(), moved_name)
-	err = os.Rename(vt.auth_email_file.Name(), orig_file.Name())
+	movedName := origFile.Name() + "-moved"
+	err = os.Rename(origFile.Name(), movedName)
+	err = os.Rename(vt.authEmailFile.Name(), origFile.Name())
 	if err != nil {
 		t.Fatal("failed to rename and replace temp file: " +
 			err.Error())
 	}
-	vt.auth_email_file = orig_file
-	os.Remove(moved_name)
+	vt.authEmailFile = origFile
+	os.Remove(movedName)
 }
 
 func TestValidatorOverwriteEmailListDirectly(t *testing.T) {

@@ -121,7 +121,8 @@ func (p *ProviderData) ValidateSessionState(s *SessionState) bool {
 	return validateToken(p, s.AccessToken, nil)
 }
 
-// RefreshSessionIfNeeded
+// RefreshSessionIfNeeded should refresh the user's session if required and
+// do nothing if a refresh is not required
 func (p *ProviderData) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	return false, nil
 }

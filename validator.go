@@ -42,11 +42,11 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 		log.Fatalf("failed opening authenticated-emails-file=%q, %s", um.usersFile, err)
 	}
 	defer r.Close()
-	csv_reader := csv.NewReader(r)
-	csv_reader.Comma = ','
-	csv_reader.Comment = '#'
-	csv_reader.TrimLeadingSpace = true
-	records, err := csv_reader.ReadAll()
+	csvReader := csv.NewReader(r)
+	csvReader.Comma = ','
+	csvReader.Comment = '#'
+	csvReader.TrimLeadingSpace = true
+	records, err := csvReader.ReadAll()
 	if err != nil {
 		log.Printf("error reading authenticated-emails-file=%q, %s", um.usersFile, err)
 		return

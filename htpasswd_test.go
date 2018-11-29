@@ -20,6 +20,7 @@ func TestSHA(t *testing.T) {
 
 func TestBcrypt(t *testing.T) {
 	hash1, err := bcrypt.GenerateFromPassword([]byte("password"), 1)
+	assert.Equal(t, err, nil)
 	hash2, err := bcrypt.GenerateFromPassword([]byte("top-secret"), 2)
 	assert.Equal(t, err, nil)
 
