@@ -183,7 +183,9 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	}
 
 	redirectURL := opts.redirectURL
-	redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
+	if redirectURL.String() == "" {
+		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
+	}
 
 	log.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
 	refresh := "disabled"
