@@ -3,6 +3,7 @@
 ## Changes since v3.1.0
 
 - [#68](https://github.com/pusher/oauth2_proxy/pull/68) forward X-Auth-Access-Token header (@davidholsgrove)
+- [#10](https://github.com/pusher/oauth2_proxy/pull/10) fix redirect url param handling (@dt-rush)
 
 # v3.1.0
 
