@@ -17,8 +17,15 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
 ## Installation
 
-1.  Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v2.2`) or build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
-    Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v2.3`.
+1.  Choose how to deploy:
+
+    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v2.2`)
+
+    b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
+
+    c. Using the prebuilt docker image [quay.io/pusher/oauth2_proxy](quay.io/pusher/oauth2_proxy)
+
+Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v2.3`.
 
 ```
 sha256sum -c sha256sum.txt 2>&1 | grep OK
