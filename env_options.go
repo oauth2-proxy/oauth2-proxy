@@ -6,8 +6,14 @@ import (
 	"strings"
 )
 
+// EnvOptions holds program options loaded from the process environment
 type EnvOptions map[string]interface{}
 
+// LoadEnvForStruct loads environment variables for each field in an options
+// struct passed into it.
+//
+// Fields in the options struct must have an `env` and `cfg` tag to be read
+// from the environment
 func (cfg EnvOptions) LoadEnvForStruct(options interface{}) {
 	val := reflect.ValueOf(options).Elem()
 	typ := val.Type()

@@ -11,6 +11,8 @@ import (
 	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
 )
 
+// WaitForReplacement waits for a file to exist on disk and then starts a watch
+// for the file
 func WaitForReplacement(filename string, op fsnotify.Op,
 	watcher *fsnotify.Watcher) {
 	const sleepInterval = 50 * time.Millisecond
@@ -30,6 +32,7 @@ func WaitForReplacement(filename string, op fsnotify.Op,
 	}
 }
 
+// WatchForUpdates performs an action every time a file on disk is updated
 func WatchForUpdates(filename string, done <-chan bool, action func()) {
 	filename = filepath.Clean(filename)
 	watcher, err := fsnotify.NewWatcher()

@@ -10,11 +10,13 @@ import (
 	"unsafe"
 )
 
+// UserMap holds information from the authenticated emails file
 type UserMap struct {
 	usersFile string
 	m         unsafe.Pointer
 }
 
+// NewUserMap parses the authenticated emails file into a new UserMap
 func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	um := &UserMap{usersFile: usersFile}
 	m := make(map[string]bool)
@@ -30,12 +32,15 @@ func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	return um
 }
 
+// IsValid checks if an email is allowed
 func (um *UserMap) IsValid(email string) (result bool) {
 	m := *(*map[string]bool)(atomic.LoadPointer(&um.m))
 	_, result = m[email]
 	return
 }
 
+// LoadAuthenticatedEmailsFile loads the authenticated emails file from disk
+// and parses the contents as CSV
 func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	r, err := os.Open(um.usersFile)
 	if err != nil {
@@ -91,6 +96,7 @@ func newValidatorImpl(domains []string, usersFile string,
 	return validator
 }
 
+// NewValidator constructs a function to validate email addresses
 func NewValidator(domains []string, usersFile string) func(string) bool {
 	return newValidatorImpl(domains, usersFile, nil, func() {})
 }

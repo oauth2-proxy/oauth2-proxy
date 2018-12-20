@@ -89,11 +89,13 @@ type Options struct {
 	oidcVerifier  *oidc.IDTokenVerifier
 }
 
+// SignatureData holds hmacauth signature hash and key
 type SignatureData struct {
 	hash crypto.Hash
 	key  string
 }
 
+// NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
 		ProxyPrefix:          "/oauth2",
@@ -126,6 +128,8 @@ func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string
 	return parsed, msgs
 }
 
+// Validate checks that required options are set and validates those that they
+// are of the correct format
 func (o *Options) Validate() error {
 	if o.SSLInsecureSkipVerify {
 		// TODO: Accept a certificate bundle.
