@@ -420,3 +420,7 @@ server {
   }
 }
 ```
+
+## Contributing
+
+Please see our [Contributing](CONTRIBUTING.md) guidelines.
