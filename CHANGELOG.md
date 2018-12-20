@@ -2,6 +2,7 @@
 
 ## Changes since v2.2:
 
+- Add Issue and Pull Request templates
 - Add Dockerfile
 - Fix fsnotify import
 - Update README to reflect new repository ownership
