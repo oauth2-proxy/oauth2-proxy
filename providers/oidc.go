@@ -10,17 +10,20 @@ import (
 	oidc "github.com/coreos/go-oidc"
 )
 
+// OIDCProvider represents an OIDC based Identity Provider
 type OIDCProvider struct {
 	*ProviderData
 
 	Verifier *oidc.IDTokenVerifier
 }
 
+// NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData) *OIDCProvider {
 	p.ProviderName = "OpenID Connect"
 	return &OIDCProvider{ProviderData: p}
 }
 
+// Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *OIDCProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
 	ctx := context.Background()
 	c := oauth2.Config{
@@ -73,6 +76,11 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *SessionState, err er
 	return
 }
 
+// RefreshSessionIfNeeded checks if the session has expired and uses the
+// RefreshToken to fetch a new ID token if required
+//
+// WARNGING: This implementation is broken and does not check with the upstream
+// OIDC provider before refreshing the session
 func (p *OIDCProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil

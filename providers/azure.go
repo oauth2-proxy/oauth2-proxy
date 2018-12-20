@@ -11,11 +11,13 @@ import (
 	"github.com/pusher/oauth2_proxy/api"
 )
 
+// AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
 	*ProviderData
 	Tenant string
 }
 
+// NewAzureProvider initiates a new AzureProvider
 func NewAzureProvider(p *ProviderData) *AzureProvider {
 	p.ProviderName = "Azure"
 
@@ -40,6 +42,7 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 	return &AzureProvider{ProviderData: p}
 }
 
+// Configure defaults the AzureProvider configuration options
 func (p *AzureProvider) Configure(tenant string) {
 	p.Tenant = tenant
 	if tenant == "" {
@@ -84,6 +87,7 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	return email, err
 }
 
+// GetEmailAddress returns the Account email address
 func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 	var email string
 	var err error

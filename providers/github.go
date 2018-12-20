@@ -12,12 +12,14 @@ import (
 	"strings"
 )
 
+// GitHubProvider represents an GitHub based Identity Provider
 type GitHubProvider struct {
 	*ProviderData
 	Org  string
 	Team string
 }
 
+// NewGitHubProvider initiates a new GitHubProvider
 func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 	p.ProviderName = "GitHub"
 	if p.LoginURL == nil || p.LoginURL.String() == "" {
@@ -47,6 +49,8 @@ func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 	}
 	return &GitHubProvider{ProviderData: p}
 }
+
+// SetOrgTeam adds GitHub org reading parameters to the OAuth2 scope
 func (p *GitHubProvider) SetOrgTeam(org, team string) {
 	p.Org = org
 	p.Team = team
@@ -194,6 +198,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 	return false, nil
 }
 
+// GetEmailAddress returns the Account email address
 func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 
 	var emails []struct {
@@ -251,6 +256,7 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 	return "", nil
 }
 
+// GetUserName returns the Account user name
 func (p *GitHubProvider) GetUserName(s *SessionState) (string, error) {
 	var user struct {
 		Login string `json:"login"`

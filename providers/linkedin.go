@@ -9,10 +9,12 @@ import (
 	"github.com/pusher/oauth2_proxy/api"
 )
 
+// LinkedInProvider represents an LinkedIn based Identity Provider
 type LinkedInProvider struct {
 	*ProviderData
 }
 
+// NewLinkedInProvider initiates a new LinkedInProvider
 func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
 	p.ProviderName = "LinkedIn"
 	if p.LoginURL.String() == "" {
@@ -47,6 +49,7 @@ func getLinkedInHeader(accessToken string) http.Header {
 	return header
 }
 
+// GetEmailAddress returns the Account email address
 func (p *LinkedInProvider) GetEmailAddress(s *SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
@@ -69,6 +72,7 @@ func (p *LinkedInProvider) GetEmailAddress(s *SessionState) (string, error) {
 	return email, nil
 }
 
+// ValidateSessionState validates the AccessToken
 func (p *LinkedInProvider) ValidateSessionState(s *SessionState) bool {
 	return validateToken(p, s.AccessToken, getLinkedInHeader(s.AccessToken))
 }

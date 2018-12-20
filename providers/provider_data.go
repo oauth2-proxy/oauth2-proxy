@@ -4,6 +4,8 @@ import (
 	"net/url"
 )
 
+// ProviderData contains information required to configure all implementations
+// of OAuth2 providers
 type ProviderData struct {
 	ProviderName      string
 	ClientID          string
@@ -17,4 +19,5 @@ type ProviderData struct {
 	ApprovalPrompt    string
 }
 
+// Data returns the ProviderData
 func (p *ProviderData) Data() *ProviderData { return p }
