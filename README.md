@@ -23,7 +23,7 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
     b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 
-    c. Using the prebuilt docker image [quay.io/pusher/oauth2_proxy](quay.io/pusher/oauth2_proxy)
+    c. Using the prebuilt docker image [quay.io/pusher/oauth2_proxy](https://quay.io/pusher/oauth2_proxy)
 
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v2.3`.
 
