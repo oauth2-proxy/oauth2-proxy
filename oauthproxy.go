@@ -671,7 +671,8 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		saveSession = true
 	}
 
-	if ok, err := p.provider.RefreshSessionIfNeeded(session); err != nil {
+	var ok bool
+	if ok, err = p.provider.RefreshSessionIfNeeded(session); err != nil {
 		log.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
 		clearSession = true
 		session = nil
