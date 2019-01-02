@@ -1,0 +1,3 @@
+# Default owner should be a Pusher cloud-team member unless overridden by later
+# rules in this file
+* @pusher/cloud-team
