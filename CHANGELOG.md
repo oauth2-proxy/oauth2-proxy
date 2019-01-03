@@ -2,6 +2,7 @@
 
 ## Changes since v2.2:
 
+- Remove Go v1.8.x from Travis CI testing
 - Add CODEOWNERS file
 - Add CONTRIBUTING guide
 - Add Issue and Pull Request templates
