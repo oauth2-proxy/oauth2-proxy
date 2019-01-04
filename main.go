@@ -84,7 +84,7 @@ func main() {
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("oauth2_proxy v%s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("oauth2_proxy %s (built with %s)\n", VERSION, runtime.Version())
 		return
 	}
 

@@ -2,6 +2,12 @@
 
 ## Changes since v2.2:
 
+- Move automated build to debian base image
+- Add Makefile
+  - Update CI to run `make test`
+  - Update Dockerfile to use `make clean oauth2_proxy`
+  - Update `VERSION` parameter to be set by `ldflags` from Git Status
+  - Remove lint and test scripts
 - Remove Go v1.8.x from Travis CI testing
 - Add CODEOWNERS file
 - Add CONTRIBUTING guide

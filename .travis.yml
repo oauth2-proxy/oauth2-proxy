@@ -6,15 +6,10 @@ install:
   # Fetch dependencies
   - wget -O dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
   - chmod +x dep
-  - ./dep ensure --vendor-only
 script:
-  - set -e
-  # Lint
-  - go get -u github.com/alecthomas/gometalinter
-  - gometalinter --install
-  - ./lint.sh
+  - ./configure
   # Run tests
-  - ./test.sh
+  - make test
 sudo: false
 notifications:
   email: false
