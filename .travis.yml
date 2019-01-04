@@ -6,7 +6,7 @@ install:
   # Fetch dependencies
   - wget -O dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
   - chmod +x dep
-  - mv dep /usr/local/bin/dep
+  - mv dep $GOPATH/bin/dep
 script:
   - ./configure
   # Run tests
