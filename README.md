@@ -3,7 +3,7 @@
 A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
 to validate accounts by email, domain or group.
 
-**Note:** This repository was forked from [Bitly/OAuth2_Proxy](https://github.com/bitly/oauth2_proxy) on 27/11/2018.
+**Note:** This repository was forked from [bitly/OAuth2_Proxy](https://github.com/bitly/oauth2_proxy) on 27/11/2018.
 Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork.
 A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
