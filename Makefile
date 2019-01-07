@@ -1,6 +1,7 @@
 include .env
 BINARY := oauth2_proxy
 VERSION := $(shell git describe --always --long --dirty --tags 2>/dev/null || echo "undefined")
+.NOTPARALLEL:
 
 .PHONY: all
 all: dep lint $(BINARY)
@@ -49,7 +50,7 @@ test: dep lint
 	$(GO) test -v -race $(go list ./... | grep -v /vendor/)
 
 .PHONY: release
-release: dep lint test
+release: lint test
 	mkdir release
 	GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" -o release/$(BINARY)-darwin-amd64 github.com/pusher/oauth2_proxy
 	GOOS=linux GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" -o release/$(BINARY)-linux-amd64 github.com/pusher/oauth2_proxy
