@@ -27,10 +27,13 @@ type responseLogger struct {
 	authInfo string
 }
 
+// Header returns the ResponseWriter's Header
 func (l *responseLogger) Header() http.Header {
 	return l.w.Header()
 }
 
+// ExtractGAPMetadata extracts and removes GAP headers from the ResponseWriter's
+// Header
 func (l *responseLogger) ExtractGAPMetadata() {
 	upstream := l.w.Header().Get("GAP-Upstream-Address")
 	if upstream != "" {
@@ -44,6 +47,7 @@ func (l *responseLogger) ExtractGAPMetadata() {
 	}
 }
 
+// Write writes the response using the ResponseWriter
 func (l *responseLogger) Write(b []byte) (int, error) {
 	if l.status == 0 {
 		// The status will be StatusOK if WriteHeader has not been called yet
@@ -55,16 +59,19 @@ func (l *responseLogger) Write(b []byte) (int, error) {
 	return size, err
 }
 
+// WriteHeader writes the status code for the Response
 func (l *responseLogger) WriteHeader(s int) {
 	l.ExtractGAPMetadata()
 	l.w.WriteHeader(s)
 	l.status = s
 }
 
+// Status returns the response status code
 func (l *responseLogger) Status() int {
 	return l.status
 }
 
+// Size returns teh response size
 func (l *responseLogger) Size() int {
 	return l.size
 }
@@ -94,6 +101,7 @@ type loggingHandler struct {
 	logTemplate *template.Template
 }
 
+// LoggingHandler provides an http.Handler which logs requests to the HTTP server
 func LoggingHandler(out io.Writer, h http.Handler, v bool, requestLoggingTpl string) http.Handler {
 	return loggingHandler{
 		writer:      out,

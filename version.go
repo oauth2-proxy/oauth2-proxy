@@ -1,3 +1,4 @@
 package main
 
-const VERSION = "2.2.1-alpha"
+// VERSION contains version information
+var VERSION = "undefined"

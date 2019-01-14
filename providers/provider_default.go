@@ -9,9 +9,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/oauth2_proxy/cookie"
+	"github.com/pusher/oauth2_proxy/cookie"
 )
 
+// Redeem provides a default implementation of the OAuth2 token redemption process
 func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
@@ -102,6 +103,7 @@ func (p *ProviderData) SessionFromCookie(v string, c *cookie.Cipher) (s *Session
 	return DecodeSessionState(v, c)
 }
 
+// GetEmailAddress returns the Account email address
 func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
@@ -117,11 +119,13 @@ func (p *ProviderData) ValidateGroup(email string) bool {
 	return true
 }
 
+// ValidateSessionState validates the AccessToken
 func (p *ProviderData) ValidateSessionState(s *SessionState) bool {
 	return validateToken(p, s.AccessToken, nil)
 }
 
-// RefreshSessionIfNeeded
+// RefreshSessionIfNeeded should refresh the user's session if required and
+// do nothing if a refresh is not required
 func (p *ProviderData) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	return false, nil
 }

@@ -9,11 +9,13 @@ import (
 	"time"
 )
 
+// Server represents an HTTP server
 type Server struct {
 	Handler http.Handler
 	Opts    *Options
 }
 
+// ListenAndServe will serve traffic on HTTP or HTTPS depending on TLS options
 func (s *Server) ListenAndServe() {
 	if s.Opts.TLSKeyFile != "" || s.Opts.TLSCertFile != "" {
 		s.ServeHTTPS()
@@ -22,13 +24,14 @@ func (s *Server) ListenAndServe() {
 	}
 }
 
+// ServeHTTP constructs a net.Listener and starts handling HTTP requests
 func (s *Server) ServeHTTP() {
-	httpAddress := s.Opts.HttpAddress
-	scheme := ""
+	HTTPAddress := s.Opts.HTTPAddress
+	var scheme string
 
-	i := strings.Index(httpAddress, "://")
+	i := strings.Index(HTTPAddress, "://")
 	if i > -1 {
-		scheme = httpAddress[0:i]
+		scheme = HTTPAddress[0:i]
 	}
 
 	var networkType string
@@ -39,7 +42,7 @@ func (s *Server) ServeHTTP() {
 		networkType = scheme
 	}
 
-	slice := strings.SplitN(httpAddress, "//", 2)
+	slice := strings.SplitN(HTTPAddress, "//", 2)
 	listenAddr := slice[len(slice)-1]
 
 	listener, err := net.Listen(networkType, listenAddr)
@@ -57,8 +60,9 @@ func (s *Server) ServeHTTP() {
 	log.Printf("HTTP: closing %s", listener.Addr())
 }
 
+// ServeHTTPS constructs a net.Listener and starts handling HTTPS requests
 func (s *Server) ServeHTTPS() {
-	addr := s.Opts.HttpsAddress
+	addr := s.Opts.HTTPSAddress
 	config := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		MaxVersion: tls.VersionTLS12,

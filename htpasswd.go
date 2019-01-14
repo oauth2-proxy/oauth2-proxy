@@ -14,10 +14,12 @@ import (
 // Lookup passwords in a htpasswd file
 // Passwords must be generated with -B for bcrypt or -s for SHA1.
 
+// HtpasswdFile represents the structure of an htpasswd file
 type HtpasswdFile struct {
 	Users map[string]string
 }
 
+// NewHtpasswdFromFile constructs an HtpasswdFile from the file at the path given
 func NewHtpasswdFromFile(path string) (*HtpasswdFile, error) {
 	r, err := os.Open(path)
 	if err != nil {
@@ -27,13 +29,14 @@ func NewHtpasswdFromFile(path string) (*HtpasswdFile, error) {
 	return NewHtpasswd(r)
 }
 
+// NewHtpasswd  consctructs an HtpasswdFile from an io.Reader (opened file)
 func NewHtpasswd(file io.Reader) (*HtpasswdFile, error) {
-	csv_reader := csv.NewReader(file)
-	csv_reader.Comma = ':'
-	csv_reader.Comment = '#'
-	csv_reader.TrimLeadingSpace = true
+	csvReader := csv.NewReader(file)
+	csvReader.Comma = ':'
+	csvReader.Comment = '#'
+	csvReader.TrimLeadingSpace = true
 
-	records, err := csv_reader.ReadAll()
+	records, err := csvReader.ReadAll()
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +47,7 @@ func NewHtpasswd(file io.Reader) (*HtpasswdFile, error) {
 	return h, nil
 }
 
+// Validate checks a users password against the HtpasswdFile entries
 func (h *HtpasswdFile) Validate(user string, password string) bool {
 	realPassword, exists := h.Users[user]
 	if !exists {

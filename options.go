@@ -13,16 +13,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitly/oauth2_proxy/providers"
 	oidc "github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
+	"github.com/pusher/oauth2_proxy/providers"
 )
 
-// Configuration Options that can be set by Command Line Flag, or Config File
+// Options holds Configuration Options that can be set by Command Line Flag,
+// or Config File
 type Options struct {
 	ProxyPrefix  string `flag:"proxy-prefix" cfg:"proxy-prefix"`
-	HttpAddress  string `flag:"http-address" cfg:"http_address"`
-	HttpsAddress string `flag:"https-address" cfg:"https_address"`
+	HTTPAddress  string `flag:"http-address" cfg:"http_address"`
+	HTTPSAddress string `flag:"https-address" cfg:"https_address"`
 	RedirectURL  string `flag:"redirect-url" cfg:"redirect_url"`
 	ClientID     string `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
 	ClientSecret string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
@@ -48,7 +49,7 @@ type Options struct {
 	CookieExpire   time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"OAUTH2_PROXY_COOKIE_EXPIRE"`
 	CookieRefresh  time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
 	CookieSecure   bool          `flag:"cookie-secure" cfg:"cookie_secure"`
-	CookieHttpOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
+	CookieHTTPOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
 
 	Upstreams             []string `flag:"upstream" cfg:"upstreams"`
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
@@ -88,20 +89,22 @@ type Options struct {
 	oidcVerifier  *oidc.IDTokenVerifier
 }
 
+// SignatureData holds hmacauth signature hash and key
 type SignatureData struct {
 	hash crypto.Hash
 	key  string
 }
 
+// NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
 		ProxyPrefix:          "/oauth2",
-		HttpAddress:          "127.0.0.1:4180",
-		HttpsAddress:         ":443",
+		HTTPAddress:          "127.0.0.1:4180",
+		HTTPSAddress:         ":443",
 		DisplayHtpasswdForm:  true,
 		CookieName:           "_oauth2_proxy",
 		CookieSecure:         true,
-		CookieHttpOnly:       true,
+		CookieHTTPOnly:       true,
 		CookieExpire:         time.Duration(168) * time.Hour,
 		CookieRefresh:        time.Duration(0),
 		SetXAuthRequest:      false,
@@ -116,15 +119,17 @@ func NewOptions() *Options {
 	}
 }
 
-func parseURL(to_parse string, urltype string, msgs []string) (*url.URL, []string) {
-	parsed, err := url.Parse(to_parse)
+func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string) {
+	parsed, err := url.Parse(toParse)
 	if err != nil {
 		return nil, append(msgs, fmt.Sprintf(
-			"error parsing %s-url=%q %s", urltype, to_parse, err))
+			"error parsing %s-url=%q %s", urltype, toParse, err))
 	}
 	return parsed, msgs
 }
 
+// Validate checks that required options are set and validates those that they
+// are of the correct format
 func (o *Options) Validate() error {
 	if o.SSLInsecureSkipVerify {
 		// TODO: Accept a certificate bundle.
@@ -190,17 +195,17 @@ func (o *Options) Validate() error {
 	msgs = parseProviderInfo(o, msgs)
 
 	if o.PassAccessToken || (o.CookieRefresh != time.Duration(0)) {
-		valid_cookie_secret_size := false
+		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
 			if len(secretBytes(o.CookieSecret)) == i {
-				valid_cookie_secret_size = true
+				validCookieSecretSize = true
 			}
 		}
 		var decoded bool
 		if string(secretBytes(o.CookieSecret)) != o.CookieSecret {
 			decoded = true
 		}
-		if valid_cookie_secret_size == false {
+		if validCookieSecretSize == false {
 			var suffix string
 			if decoded {
 				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.CookieSecret)
@@ -294,12 +299,13 @@ func parseSignatureKey(o *Options, msgs []string) []string {
 	}
 
 	algorithm, secretKey := components[0], components[1]
-	if hash, err := hmacauth.DigestNameToCryptoHash(algorithm); err != nil {
+	var hash crypto.Hash
+	var err error
+	if hash, err = hmacauth.DigestNameToCryptoHash(algorithm); err != nil {
 		return append(msgs, "unsupported signature hash algorithm: "+
 			o.SignatureKey)
-	} else {
-		o.signatureData = &SignatureData{hash, secretKey}
 	}
+	o.signatureData = &SignatureData{hash, secretKey}
 	return msgs
 }
 

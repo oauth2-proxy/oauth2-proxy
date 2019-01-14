@@ -1,20 +1,21 @@
 package api
 
 import (
-	"github.com/bitly/go-simplejson"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/bitly/go-simplejson"
+
 	"github.com/stretchr/testify/assert"
 )
 
-func testBackend(response_code int, payload string) *httptest.Server {
+func testBackend(responseCode int, payload string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(response_code)
+			w.WriteHeader(responseCode)
 			w.Write([]byte(payload))
 		}))
 }

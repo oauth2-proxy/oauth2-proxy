@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/oauth2_proxy/api"
+	"github.com/pusher/oauth2_proxy/api"
 )
 
+// FacebookProvider represents an Facebook based Identity Provider
 type FacebookProvider struct {
 	*ProviderData
 }
 
+// NewFacebookProvider initiates a new FacebookProvider
 func NewFacebookProvider(p *ProviderData) *FacebookProvider {
 	p.ProviderName = "Facebook"
 	if p.LoginURL.String() == "" {
@@ -43,14 +45,15 @@ func NewFacebookProvider(p *ProviderData) *FacebookProvider {
 	return &FacebookProvider{ProviderData: p}
 }
 
-func getFacebookHeader(access_token string) http.Header {
+func getFacebookHeader(accessToken string) http.Header {
 	header := make(http.Header)
 	header.Set("Accept", "application/json")
 	header.Set("x-li-format", "json")
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", access_token))
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
 }
 
+// GetEmailAddress returns the Account email address
 func (p *FacebookProvider) GetEmailAddress(s *SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
@@ -65,7 +68,7 @@ func (p *FacebookProvider) GetEmailAddress(s *SessionState) (string, error) {
 		Email string
 	}
 	var r result
-	err = api.RequestJson(req, &r)
+	err = api.RequestJSON(req, &r)
 	if err != nil {
 		return "", err
 	}
@@ -75,6 +78,7 @@ func (p *FacebookProvider) GetEmailAddress(s *SessionState) (string, error) {
 	return r.Email, nil
 }
 
+// ValidateSessionState validates the AccessToken
 func (p *FacebookProvider) ValidateSessionState(s *SessionState) bool {
 	return validateToken(p, s.AccessToken, getFacebookHeader(s.AccessToken))
 }

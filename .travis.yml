@@ -1,12 +1,16 @@
 language: go
 go:
-  - 1.8.x
   - 1.9.x
-script:
+  - 1.10.x
+install:
+  # Fetch dependencies
   - wget -O dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
   - chmod +x dep
-  - ./dep ensure
-  - ./test.sh
+  - mv dep $GOPATH/bin/dep
+script:
+  - ./configure
+  # Run tests
+  - make test
 sudo: false
 notifications:
   email: false

@@ -12,18 +12,18 @@ import (
 
 func (vt *ValidatorTest) UpdateEmailFileViaCopyingOver(
 	t *testing.T, emails []string) {
-	orig_file := vt.auth_email_file
+	origFile := vt.authEmailFile
 	var err error
-	vt.auth_email_file, err = ioutil.TempFile("", "test_auth_emails_")
+	vt.authEmailFile, err = ioutil.TempFile("", "test_auth_emails_")
 	if err != nil {
 		t.Fatal("failed to create temp file for copy: " + err.Error())
 	}
 	vt.WriteEmails(t, emails)
-	err = os.Rename(vt.auth_email_file.Name(), orig_file.Name())
+	err = os.Rename(vt.authEmailFile.Name(), origFile.Name())
 	if err != nil {
 		t.Fatal("failed to copy over temp file: " + err.Error())
 	}
-	vt.auth_email_file = orig_file
+	vt.authEmailFile = origFile
 }
 
 func TestValidatorOverwriteEmailListViaCopyingOver(t *testing.T) {

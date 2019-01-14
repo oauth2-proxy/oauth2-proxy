@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/oauth2_proxy/api"
+	"github.com/pusher/oauth2_proxy/api"
 )
 
+// LinkedInProvider represents an LinkedIn based Identity Provider
 type LinkedInProvider struct {
 	*ProviderData
 }
 
+// NewLinkedInProvider initiates a new LinkedInProvider
 func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
 	p.ProviderName = "LinkedIn"
 	if p.LoginURL.String() == "" {
@@ -39,14 +41,15 @@ func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
 	return &LinkedInProvider{ProviderData: p}
 }
 
-func getLinkedInHeader(access_token string) http.Header {
+func getLinkedInHeader(accessToken string) http.Header {
 	header := make(http.Header)
 	header.Set("Accept", "application/json")
 	header.Set("x-li-format", "json")
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", access_token))
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
 }
 
+// GetEmailAddress returns the Account email address
 func (p *LinkedInProvider) GetEmailAddress(s *SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
@@ -69,6 +72,7 @@ func (p *LinkedInProvider) GetEmailAddress(s *SessionState) (string, error) {
 	return email, nil
 }
 
+// ValidateSessionState validates the AccessToken
 func (p *LinkedInProvider) ValidateSessionState(s *SessionState) bool {
 	return validateToken(p, s.AccessToken, getLinkedInHeader(s.AccessToken))
 }

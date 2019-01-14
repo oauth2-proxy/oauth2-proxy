@@ -1,11 +1,13 @@
-oauth2_proxy
-=================
+# oauth2_proxy
 
 A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
 to validate accounts by email, domain or group.
 
-[![Build Status](https://secure.travis-ci.org/bitly/oauth2_proxy.svg?branch=master)](http://travis-ci.org/bitly/oauth2_proxy)
+**Note:** This repository was forked from [bitly/OAuth2_Proxy](https://github.com/bitly/oauth2_proxy) on 27/11/2018.
+Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork.
+A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
+[![Build Status](https://secure.travis-ci.org/pusher/oauth2_proxy.svg?branch=master)](http://travis-ci.org/pusher/oauth2_proxy)
 
 ![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
 
@@ -15,15 +17,24 @@ to validate accounts by email, domain or group.
 
 ## Installation
 
-1. Download [Prebuilt Binary](https://github.com/bitly/oauth2_proxy/releases) (current release is `v2.2`) or build with `$ go get github.com/bitly/oauth2_proxy` which will put the binary in `$GOROOT/bin`
+1.  Choose how to deploy:
+
+    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v2.2`)
+
+    b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
+
+    c. Using the prebuilt docker image [quay.io/pusher/oauth2_proxy](https://quay.io/pusher/oauth2_proxy)
+
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v2.3`.
+
 ```
 sha256sum -c sha256sum.txt 2>&1 | grep OK
 oauth2_proxy-2.3.linux-amd64: OK
 ```
-2. Select a Provider and Register an OAuth Application with a Provider
-3. Configure OAuth2 Proxy using config file, command line options, or environment variables
-4. Configure SSL or Deploy behind a SSL endpoint (example provided for Nginx)
+
+2.  Select a Provider and Register an OAuth Application with a Provider
+3.  Configure OAuth2 Proxy using config file, command line options, or environment variables
+4.  Configure SSL or Deploy behind a SSL endpoint (example provided for Nginx)
 
 ## OAuth Provider Configuration
 
@@ -31,12 +42,12 @@ You will need to register an OAuth application with a Provider (Google, GitHub o
 
 Valid providers are :
 
-* [Google](#google-auth-provider) *default*
-* [Azure](#azure-auth-provider)
-* [Facebook](#facebook-auth-provider)
-* [GitHub](#github-auth-provider)
-* [GitLab](#gitlab-auth-provider)
-* [LinkedIn](#linkedin-auth-provider)
+- [Google](#google-auth-provider) _default_
+- [Azure](#azure-auth-provider)
+- [Facebook](#facebook-auth-provider)
+- [GitHub](#github-auth-provider)
+- [GitLab](#gitlab-auth-provider)
+- [LinkedIn](#linkedin-auth-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -44,61 +55,62 @@ The provider can be selected using the `provider` configuration value.
 
 For Google, the registration steps are:
 
-1. Create a new project: https://console.developers.google.com/project
-2. Choose the new project from the top right project dropdown (only if another project is selected)
-3. In the project Dashboard center pane, choose **"API Manager"**
-4. In the left Nav pane, choose **"Credentials"**
-5. In the center pane, choose **"OAuth consent screen"** tab. Fill in **"Product name shown to users"** and hit save.
-6. In the center pane, choose **"Credentials"** tab.
-   * Open the **"New credentials"** drop down
-   * Choose **"OAuth client ID"**
-   * Choose **"Web application"**
-   * Application name is freeform, choose something appropriate
-   * Authorized JavaScript origins is your domain ex: `https://internal.yourcompany.com`
-   * Authorized redirect URIs is the location of oauth2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
-   * Choose **"Create"**
-4. Take note of the **Client ID** and **Client Secret**
+1.  Create a new project: https://console.developers.google.com/project
+2.  Choose the new project from the top right project dropdown (only if another project is selected)
+3.  In the project Dashboard center pane, choose **"API Manager"**
+4.  In the left Nav pane, choose **"Credentials"**
+5.  In the center pane, choose **"OAuth consent screen"** tab. Fill in **"Product name shown to users"** and hit save.
+6.  In the center pane, choose **"Credentials"** tab.
+    - Open the **"New credentials"** drop down
+    - Choose **"OAuth client ID"**
+    - Choose **"Web application"**
+    - Application name is freeform, choose something appropriate
+    - Authorized JavaScript origins is your domain ex: `https://internal.yourcompany.com`
+    - Authorized redirect URIs is the location of oauth2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
+    - Choose **"Create"**
+7.  Take note of the **Client ID** and **Client Secret**
 
 It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the account is still authorized.
 
 #### Restrict auth to specific Google groups on your domain. (optional)
 
-1. Create a service account: https://developers.google.com/identity/protocols/OAuth2ServiceAccount and make sure to download the json file.
-2. Make note of the Client ID for a future step.
-3. Under "APIs & Auth", choose APIs.
-4. Click on Admin SDK and then Enable API.
-5. Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account and give the client id from step 2 the following oauth scopes:
+1.  Create a service account: https://developers.google.com/identity/protocols/OAuth2ServiceAccount and make sure to download the json file.
+2.  Make note of the Client ID for a future step.
+3.  Under "APIs & Auth", choose APIs.
+4.  Click on Admin SDK and then Enable API.
+5.  Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account and give the client id from step 2 the following oauth scopes:
+
 ```
 https://www.googleapis.com/auth/admin.directory.group.readonly
 https://www.googleapis.com/auth/admin.directory.user.readonly
 ```
-6. Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
-7. Create or choose an existing administrative email address on the Gmail domain to assign to the ```google-admin-email``` flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from step 5 for the reason why.
-8. Create or choose an existing email group and set that email to the ```google-group``` flag. You can pass multiple instances of this flag with different groups
-and the user will be checked against all the provided groups.
-9. Lock down the permissions on the json file downloaded from step 1 so only oauth2_proxy is able to read the file and set the path to the file in the ```google-service-account-json``` flag.
+
+6.  Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
+7.  Create or choose an existing administrative email address on the Gmail domain to assign to the `google-admin-email` flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from step 5 for the reason why.
+8.  Create or choose an existing email group and set that email to the `google-group` flag. You can pass multiple instances of this flag with different groups
+    and the user will be checked against all the provided groups.
+9.  Lock down the permissions on the json file downloaded from step 1 so only oauth2_proxy is able to read the file and set the path to the file in the `google-service-account-json` flag.
 10. Restart oauth2_proxy.
 
 Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
 
 ### Azure Auth Provider
 
-1. [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
-2. On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
-3. If applicable take note of your `TenantID` and provide it via the `--azure-tenant=<YOUR TENANT ID>` commandline option. Default the `common` tenant is used.
+1.  [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
+2.  On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
+3.  If applicable take note of your `TenantID` and provide it via the `--azure-tenant=<YOUR TENANT ID>` commandline option. Default the `common` tenant is used.
 
 The Azure AD auth provider uses `openid` as it default scope. It uses `https://graph.windows.net` as a default protected resource. It call to `https://graph.windows.net/me` to get the email address of the user that logs in.
 
-
 ### Facebook Auth Provider
 
-1. Create a new FB App from <https://developers.facebook.com/>
-2. Under FB Login, set your Valid OAuth redirect URIs to `https://internal.yourcompany.com/oauth2/callback`
+1.  Create a new FB App from <https://developers.facebook.com/>
+2.  Under FB Login, set your Valid OAuth redirect URIs to `https://internal.yourcompany.com/oauth2/callback`
 
 ### GitHub Auth Provider
 
-1. Create a new project: https://github.com/settings/developers
-2. Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
+1.  Create a new project: https://github.com/settings/developers
+2.  Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
 
 The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
 
@@ -121,17 +133,16 @@ If you are using self-hosted GitLab, make sure you set the following to the appr
     -redeem-url="<your gitlab url>/oauth/token"
     -validate-url="<your gitlab url>/api/v4/user"
 
-
 ### LinkedIn Auth Provider
 
 For LinkedIn, the registration steps are:
 
-1. Create a new project: https://www.linkedin.com/secure/developer
-2. In the OAuth User Agreement section:
-   * In default scope, select r_basicprofile and r_emailaddress.
-   * In "OAuth 2.0 Redirect URLs", enter `https://internal.yourcompany.com/oauth2/callback`
-3. Fill in the remaining required fields and Save.
-4. Take note of the **Consumer Key / API Key** and **Consumer Secret / Secret Key**
+1.  Create a new project: https://www.linkedin.com/secure/developer
+2.  In the OAuth User Agreement section:
+    - In default scope, select r_basicprofile and r_emailaddress.
+    - In "OAuth 2.0 Redirect URLs", enter `https://internal.yourcompany.com/oauth2/callback`
+3.  Fill in the remaining required fields and Save.
+4.  Take note of the **Consumer Key / API Key** and **Consumer Secret / Secret Key**
 
 ### Microsoft Azure AD Provider
 
@@ -143,9 +154,9 @@ Take note of your `TenantId` if applicable for your situation. The `TenantId` ca
 
 OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects. This provider was originally built against CoreOS Dex and we will use it as an example.
 
-1. Launch a Dex instance using the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md).
-2. Setup oauth2_proxy with the correct provider and using the default ports and callbacks.
-3. Login with the fixture use in the dex guide and run the oauth2_proxy with the following args:
+1.  Launch a Dex instance using the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md).
+2.  Setup oauth2_proxy with the correct provider and using the default ports and callbacks.
+3.  Login with the fixture use in the dex guide and run the oauth2_proxy with the following args:
 
     -provider oidc
     -client-id oauth2_proxy
@@ -253,7 +264,7 @@ The following environment variables can be used in place of the corresponding co
 
 There are two recommended configurations.
 
-1) Configure SSL Termination with OAuth2 Proxy by providing a `--tls-cert=/path/to/cert.pem` and `--tls-key=/path/to/cert.key`.
+1.  Configure SSL Termination with OAuth2 Proxy by providing a `--tls-cert=/path/to/cert.pem` and `--tls-key=/path/to/cert.key`.
 
 The command line to run `oauth2_proxy` in this configuration would look like this:
 
@@ -270,8 +281,7 @@ The command line to run `oauth2_proxy` in this configuration would look like thi
    --client-secret=...
 ```
 
-
-2) Configure SSL Termination with [Nginx](http://nginx.org/) (example config below), Amazon ELB, Google Cloud Platform Load Balancing, or ....
+2.  Configure SSL Termination with [Nginx](http://nginx.org/) (example config below), Amazon ELB, Google Cloud Platform Load Balancing, or ....
 
 Because `oauth2_proxy` listens on `127.0.0.1:4180` by default, to listen on all interfaces (needed when using an
 external load balancer like Amazon ELB or Google Platform Load Balancing) use `--http-address="0.0.0.0:4180"` or
@@ -321,12 +331,12 @@ The command line to run `oauth2_proxy` in this configuration would look like thi
 
 OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated. The `/oauth2` prefix can be changed with the `--proxy-prefix` config variable.
 
-* /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
-* /ping - returns an 200 OK response
-* /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
-* /oauth2/start - a URL that will redirect to start the OAuth cycle
-* /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
-* /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; for use with the [Nginx `auth_request` directive](#nginx-auth-request)
+- /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
+- /ping - returns an 200 OK response
+- /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
+- /oauth2/start - a URL that will redirect to start the OAuth cycle
+- /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
+- /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; for use with the [Nginx `auth_request` directive](#nginx-auth-request)
 
 ## Request signatures
 
@@ -341,9 +351,9 @@ in `oauthproxy.go`](./oauthproxy.go).
 For more information about HMAC request signature validation, read the
 following:
 
-* [Amazon Web Services: Signing and Authenticating REST
+- [Amazon Web Services: Signing and Authenticating REST
   Requests](https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html)
-* [rc3.org: Using HMAC to authenticate Web service
+- [rc3.org: Using HMAC to authenticate Web service
   requests](http://rc3.org/2011/12/02/using-hmac-to-authenticate-web-service-requests/)
 
 ## Logging Format
@@ -417,3 +427,7 @@ server {
   }
 }
 ```
+
+## Contributing
+
+Please see our [Contributing](CONTRIBUTING.md) guidelines.

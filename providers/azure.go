@@ -3,18 +3,21 @@ package providers
 import (
 	"errors"
 	"fmt"
-	"github.com/bitly/go-simplejson"
-	"github.com/bitly/oauth2_proxy/api"
 	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/bitly/go-simplejson"
+	"github.com/pusher/oauth2_proxy/api"
 )
 
+// AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
 	*ProviderData
 	Tenant string
 }
 
+// NewAzureProvider initiates a new AzureProvider
 func NewAzureProvider(p *ProviderData) *AzureProvider {
 	p.ProviderName = "Azure"
 
@@ -39,6 +42,7 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 	return &AzureProvider{ProviderData: p}
 }
 
+// Configure defaults the AzureProvider configuration options
 func (p *AzureProvider) Configure(tenant string) {
 	p.Tenant = tenant
 	if tenant == "" {
@@ -60,9 +64,9 @@ func (p *AzureProvider) Configure(tenant string) {
 	}
 }
 
-func getAzureHeader(access_token string) http.Header {
+func getAzureHeader(accessToken string) http.Header {
 	header := make(http.Header)
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", access_token))
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
 }
 
@@ -83,6 +87,7 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	return email, err
 }
 
+// GetEmailAddress returns the Account email address
 func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 	var email string
 	var err error

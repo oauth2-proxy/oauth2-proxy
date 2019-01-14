@@ -24,10 +24,11 @@ func TestEncodeAndDecodeAccessToken(t *testing.T) {
 }
 
 func TestEncodeAndDecodeAccessTokenB64(t *testing.T) {
-	const secret_b64 = "A3Xbr6fu6Al0HkgrP1ztjb-mYiwmxgNPP-XbNsz1WBk="
+	const secretBase64 = "A3Xbr6fu6Al0HkgrP1ztjb-mYiwmxgNPP-XbNsz1WBk="
 	const token = "my access token"
 
-	secret, err := base64.URLEncoding.DecodeString(secret_b64)
+	secret, err := base64.URLEncoding.DecodeString(secretBase64)
+	assert.Equal(t, nil, err)
 	c, err := NewCipher([]byte(secret))
 	assert.Equal(t, nil, err)
 

@@ -8,16 +8,18 @@ import (
 	"path/filepath"
 	"time"
 
-	"gopkg.in/fsnotify.v1"
+	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
 )
 
+// WaitForReplacement waits for a file to exist on disk and then starts a watch
+// for the file
 func WaitForReplacement(filename string, op fsnotify.Op,
 	watcher *fsnotify.Watcher) {
-	const sleep_interval = 50 * time.Millisecond
+	const sleepInterval = 50 * time.Millisecond
 
 	// Avoid a race when fsnofity.Remove is preceded by fsnotify.Chmod.
 	if op&fsnotify.Chmod != 0 {
-		time.Sleep(sleep_interval)
+		time.Sleep(sleepInterval)
 	}
 	for {
 		if _, err := os.Stat(filename); err == nil {
@@ -26,10 +28,11 @@ func WaitForReplacement(filename string, op fsnotify.Op,
 				return
 			}
 		}
-		time.Sleep(sleep_interval)
+		time.Sleep(sleepInterval)
 	}
 }
 
+// WatchForUpdates performs an action every time a file on disk is updated
 func WatchForUpdates(filename string, done <-chan bool, action func()) {
 	filename = filepath.Clean(filename)
 	watcher, err := fsnotify.NewWatcher()
@@ -56,7 +59,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 				}
 				log.Printf("reloading after event: %s", event)
 				action()
-			case err := <-watcher.Errors:
+			case err = <-watcher.Errors:
 				log.Printf("error watching %s: %s", filename, err)
 			}
 		}

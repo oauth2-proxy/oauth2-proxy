@@ -5,13 +5,15 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/oauth2_proxy/api"
+	"github.com/pusher/oauth2_proxy/api"
 )
 
+// GitLabProvider represents an GitLab based Identity Provider
 type GitLabProvider struct {
 	*ProviderData
 }
 
+// NewGitLabProvider initiates a new GitLabProvider
 func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 	p.ProviderName = "GitLab"
 	if p.LoginURL == nil || p.LoginURL.String() == "" {
@@ -41,6 +43,7 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 	return &GitLabProvider{ProviderData: p}
 }
 
+// GetEmailAddress returns the Account email address
 func (p *GitLabProvider) GetEmailAddress(s *SessionState) (string, error) {
 
 	req, err := http.NewRequest("GET",

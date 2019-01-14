@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitly/oauth2_proxy/cookie"
+	"github.com/pusher/oauth2_proxy/cookie"
 )
 
+// SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
 	AccessToken  string
 	ExpiresOn    time.Time
@@ -17,6 +18,7 @@ type SessionState struct {
 	User         string
 }
 
+// IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
 	if !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(time.Now()) {
 		return true
@@ -24,6 +26,7 @@ func (s *SessionState) IsExpired() bool {
 	return false
 }
 
+// String constructs a summary of the session state
 func (s *SessionState) String() string {
 	o := fmt.Sprintf("Session{%s", s.accountInfo())
 	if s.AccessToken != "" {
@@ -38,6 +41,7 @@ func (s *SessionState) String() string {
 	return o + "}"
 }
 
+// EncodeSessionState returns string representation of the current session
 func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
 	if c == nil || s.AccessToken == "" {
 		return s.accountInfo(), nil
@@ -49,6 +53,7 @@ func (s *SessionState) accountInfo() string {
 	return fmt.Sprintf("email:%s user:%s", s.Email, s.User)
 }
 
+// EncryptedString encrypts the session state into a cookie string
 func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 	var err error
 	if c == nil {
@@ -84,6 +89,7 @@ func decodeSessionStatePlain(v string) (s *SessionState, err error) {
 	return &SessionState{User: user, Email: email}, nil
 }
 
+// DecodeSessionState decodes the session cookie string into a SessionState
 func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error) {
 	if c == nil {
 		return decodeSessionStatePlain(v)

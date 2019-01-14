@@ -10,6 +10,7 @@ import (
 	"github.com/bitly/go-simplejson"
 )
 
+// Request parses the request body into a simplejson.Json object
 func Request(req *http.Request) (*simplejson.Json, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -32,7 +33,8 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 	return data, nil
 }
 
-func RequestJson(req *http.Request, v interface{}) error {
+// RequestJSON parses the request body into the given interface
+func RequestJSON(req *http.Request, v interface{}) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Printf("%s %s %s", req.Method, req.URL, err)
@@ -50,6 +52,7 @@ func RequestJson(req *http.Request, v interface{}) error {
 	return json.Unmarshal(body, v)
 }
 
+// RequestUnparsedResponse performs a GET and returns the raw response object
 func RequestUnparsedResponse(url string, header http.Header) (resp *http.Response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
