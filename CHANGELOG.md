@@ -10,7 +10,7 @@ v2.2 as released by Bitly.
 
 ## Changes since v2.2:
 
-- #7 Migration to Pusher (@joelspeed)
+- [#7](https://github.com/pusher/oauth2_proxy/pull/7) Migration to Pusher (@joelspeed)
   - Move automated build to debian base image
   - Add Makefile
     - Update CI to run `make test`
