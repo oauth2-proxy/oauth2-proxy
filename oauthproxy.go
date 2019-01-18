@@ -110,8 +110,10 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // NewReverseProxy creates a new reverse proxy for proxying requests to upstream
 // servers
-func NewReverseProxy(target *url.URL) (proxy *httputil.ReverseProxy) {
-	return httputil.NewSingleHostReverseProxy(target)
+func NewReverseProxy(target *url.URL, flushInterval time.Duration) (proxy *httputil.ReverseProxy) {
+	proxy = httputil.NewSingleHostReverseProxy(target)
+	proxy.FlushInterval = flushInterval
+	return proxy
 }
 
 func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
@@ -154,7 +156,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		case httpScheme, httpsScheme:
 			u.Path = ""
 			log.Printf("mapping path %q => upstream %q", path, u)
-			proxy := NewReverseProxy(u)
+			proxy := NewReverseProxy(u, opts.FlushInterval)
 			if !opts.PassHostHeader {
 				setProxyUpstreamHostHeader(proxy, u)
 			} else {

@@ -64,6 +64,7 @@ type Options struct {
 	SetAuthorization      bool     `flag:"set-authorization-header" cfg:"set_authorization_header"`
 	PassAuthorization     bool     `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
+	FlushInterval         time.Duration `flag:"flush-interval" cfg:"flush_interval"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.

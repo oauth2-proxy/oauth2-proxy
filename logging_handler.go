@@ -76,6 +76,12 @@ func (l *responseLogger) Size() int {
 	return l.size
 }
 
+func (l *responseLogger) Flush() {
+	if flusher, ok := l.w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
 // logMessageData is the container for all values that are available as variables in the request logging format.
 // All values are pre-formatted strings so it is easy to use them in the format string.
 type logMessageData struct {
