@@ -43,7 +43,7 @@ dep:
 build: clean $(BINARY)
 
 $(BINARY):
-	$(GO) build -ldflags="-X main.VERSION=${VERSION}" -o $(BINARY) github.com/pusher/oauth2_proxy
+	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/pusher/oauth2_proxy
 
 .PHONY: test
 test: dep lint
