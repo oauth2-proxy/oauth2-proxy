@@ -29,3 +29,10 @@ _testmain.go
 
 # Editor swap/temp files
 .*.swp
+
+# Dockerfile.dev is ignored by both git and docker
+# for faster development cycle of docker build
+# cp Dockerfile Dockerfile.dev
+# vi Dockerfile.dev
+# docker build -f Dockerfile.dev .
+Dockerfile.dev
