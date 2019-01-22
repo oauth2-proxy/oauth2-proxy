@@ -7,6 +7,8 @@
   - Implement token refreshing in OIDC provider
   - Split cookies larger than 4k limit into multiple cookies
   - Implement token validation in OIDC provider
+- [#15](https://github.com/pusher/oauth2_proxy/pull/21) WhitelistDomains (@joelspeed)
+  - Add `--whitelist-domain` flag to allow redirection to approved domains after OAuth flow
 - [#21](https://github.com/pusher/oauth2_proxy/pull/21) Docker Improvement (@yaegashi)
   - Move Docker base image from debian to alpine
   - Install ca-certificates in docker image
