@@ -2,6 +2,11 @@
 
 ## Changes since v3.0.0
 
+- [#14](https://github.com/pusher/oauth2_proxy/pull/14) OIDC ID Token, Authorization Headers, Refreshing and Verification (@joelspeed)
+  - Implement `pass-authorization-header` and `set-authorization-header` flags
+  - Implement token refreshing in OIDC provider
+  - Split cookies larger than 4k limit into multiple cookies
+  - Implement token validation in OIDC provider
 - [#21](https://github.com/pusher/oauth2_proxy/pull/21) Docker Improvement (@yaegashi)
   - Move Docker base image from debian to alpine
   - Install ca-certificates in docker image
