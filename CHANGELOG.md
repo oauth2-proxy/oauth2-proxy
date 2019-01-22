@@ -2,6 +2,10 @@
 
 ## Changes since v3.0.0
 
+- [#21](https://github.com/pusher/oauth2_proxy/pull/21) Docker Improvement (@yaegashi)
+  - Move Docker base image from debian to alpine
+  - Install ca-certificates in docker image
+
 # v3.0.0
 
 Adoption of OAuth2_Proxy by Pusher.
