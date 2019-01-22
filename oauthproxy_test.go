@@ -502,7 +502,7 @@ func NewProcessCookieTestWithDefaults() *ProcessCookieTest {
 	})
 }
 
-func (p *ProcessCookieTest) MakeCookie(value string, ref time.Time) *http.Cookie {
+func (p *ProcessCookieTest) MakeCookie(value string, ref time.Time) []*http.Cookie {
 	return p.proxy.MakeSessionCookie(p.req, value, p.opts.CookieExpire, ref)
 }
 
@@ -511,7 +511,9 @@ func (p *ProcessCookieTest) SaveSession(s *providers.SessionState, ref time.Time
 	if err != nil {
 		return err
 	}
-	p.req.AddCookie(p.proxy.MakeSessionCookie(p.req, value, p.proxy.CookieExpire, ref))
+	for _, c := range p.proxy.MakeSessionCookie(p.req, value, p.proxy.CookieExpire, ref) {
+		p.req.AddCookie(c)
+	}
 	return nil
 }
 
@@ -800,8 +802,9 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
 	if err != nil {
 		panic(err)
 	}
-	cookie := proxy.MakeSessionCookie(req, value, proxy.CookieExpire, time.Now())
-	req.AddCookie(cookie)
+	for _, c := range proxy.MakeSessionCookie(req, value, proxy.CookieExpire, time.Now()) {
+		req.AddCookie(c)
+	}
 	// This is used by the upstream to validate the signature.
 	st.authenticator.auth = hmacauth.NewHmacAuth(
 		crypto.SHA1, []byte(key), SignatureHeader, SignatureHeaders)

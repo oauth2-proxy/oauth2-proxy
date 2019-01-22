@@ -12,6 +12,7 @@ import (
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
 	AccessToken  string
+	IDToken      string
 	ExpiresOn    time.Time
 	RefreshToken string
 	Email        string
@@ -31,6 +32,9 @@ func (s *SessionState) String() string {
 	o := fmt.Sprintf("Session{%s", s.accountInfo())
 	if s.AccessToken != "" {
 		o += " token:true"
+	}
+	if s.IDToken != "" {
+		o += " id_token:true"
 	}
 	if !s.ExpiresOn.IsZero() {
 		o += fmt.Sprintf(" expires:%s", s.ExpiresOn)
@@ -65,13 +69,19 @@ func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 			return "", err
 		}
 	}
+	i := s.IDToken
+	if i != "" {
+		if i, err = c.Encrypt(i); err != nil {
+			return "", err
+		}
+	}
 	r := s.RefreshToken
 	if r != "" {
 		if r, err = c.Encrypt(r); err != nil {
 			return "", err
 		}
 	}
-	return fmt.Sprintf("%s|%s|%d|%s", s.accountInfo(), a, s.ExpiresOn.Unix(), r), nil
+	return fmt.Sprintf("%s|%s|%s|%d|%s", s.accountInfo(), a, i, s.ExpiresOn.Unix(), r), nil
 }
 
 func decodeSessionStatePlain(v string) (s *SessionState, err error) {
@@ -96,8 +106,8 @@ func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error)
 	}
 
 	chunks := strings.Split(v, "|")
-	if len(chunks) != 4 {
-		err = fmt.Errorf("invalid number of fields (got %d expected 4)", len(chunks))
+	if len(chunks) != 5 {
+		err = fmt.Errorf("invalid number of fields (got %d expected 5)", len(chunks))
 		return
 	}
 
@@ -112,11 +122,17 @@ func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error)
 		}
 	}
 
-	ts, _ := strconv.Atoi(chunks[2])
+	if chunks[2] != "" {
+		if sessionState.IDToken, err = c.Decrypt(chunks[2]); err != nil {
+			return nil, err
+		}
+	}
+
+	ts, _ := strconv.Atoi(chunks[3])
 	sessionState.ExpiresOn = time.Unix(int64(ts), 0)
 
-	if chunks[3] != "" {
-		if sessionState.RefreshToken, err = c.Decrypt(chunks[3]); err != nil {
+	if chunks[4] != "" {
+		if sessionState.RefreshToken, err = c.Decrypt(chunks[4]); err != nil {
 			return nil, err
 		}
 	}
