@@ -14,6 +14,7 @@ Bitly will no longer be accepting PRs or helping on issues.
 There has been a [discussion](https://github.com/bitly/oauth2_proxy/issues/628)
 to find a new home for the project which has led to the following notable forks:
 
+- [pomerium](https://github.com/pomerium/pomerium) an identity-access proxy, inspired by BeyondCorp.
 - [buzzfeed/sso](https://github.com/buzzfeed/sso) a "double OAuth2" flow, where sso-auth is the OAuth2 provider for sso-proxy and Google is the OAuth2 provider for sso-auth.
 - [openshift/oauth_proxy](https://github.com/openshift/oauth-proxy) an openshift specific version of this project.
 - [pusher/oauth2_proxy](https://github.com/pusher/oauth2_proxy) official hard fork of this project.
