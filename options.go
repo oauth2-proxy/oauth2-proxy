@@ -84,6 +84,8 @@ type Options struct {
 
 	SignatureKey string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 
+	B2CPolicy string `flag:"b2c-policy" cfg:"b2c_policy"`
+
 	// internal values that are set after config validation
 	redirectURL   *url.URL
 	proxyURLs     []*url.URL
@@ -162,7 +164,7 @@ func (o *Options) Validate() error {
 
 	if o.OIDCIssuerURL != "" {
 		// Configure discoverable provider data.
-		provider, err := oidc.NewProvider(context.Background(), o.OIDCIssuerURL)
+		provider, err := oidc.NewProvider(context.Background(), o.OIDCIssuerURL, o.B2CPolicy)
 		if err != nil {
 			return err
 		}
