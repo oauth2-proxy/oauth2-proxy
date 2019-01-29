@@ -856,7 +856,7 @@ func TestGetRedirect(t *testing.T) {
 			expectedRedirect: "/foo/bar",
 		},
 		{
-			name:             "request under of ProxyPrefix redirects to original URL",
+			name:             "request under ProxyPrefix redirects to root",
 			url:              proxy.ProxyPrefix + "/foo/bar",
 			expectedRedirect: "/",
 		},
