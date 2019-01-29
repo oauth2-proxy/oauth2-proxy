@@ -9,6 +9,18 @@ to validate accounts by email, domain or group.
 
 ![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
 
+**NOTICE**: This project was officially archived by Bitly at the end of September 2018.
+Bitly will no longer be accepting PRs or helping on issues.
+There has been a [discussion](https://github.com/bitly/oauth2_proxy/issues/628)
+to find a new home for the project which has led to the following notable forks:
+
+- [pomerium](https://github.com/pomerium/pomerium) an identity-access proxy, inspired by BeyondCorp.
+- [buzzfeed/sso](https://github.com/buzzfeed/sso) a "double OAuth2" flow, where sso-auth is the OAuth2 provider for sso-proxy and Google is the OAuth2 provider for sso-auth.
+- [openshift/oauth_proxy](https://github.com/openshift/oauth-proxy) an openshift specific version of this project.
+- [pusher/oauth2_proxy](https://github.com/pusher/oauth2_proxy) official hard fork of this project.
+
+Please submit all future PRs and issues to [pusher/oauth2_proxy](https://github.com/pusher/oauth2_proxy).
+
 ## Architecture
 
 ![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
@@ -406,6 +418,15 @@ server {
     proxy_set_header X-Real-IP               $remote_addr;
     proxy_set_header X-Scheme                $scheme;
     proxy_set_header X-Auth-Request-Redirect $request_uri;
+  }
+  location = /oauth2/auth {
+    proxy_pass       http://127.0.0.1:4180;
+    proxy_set_header Host             $host;
+    proxy_set_header X-Real-IP        $remote_addr;
+    proxy_set_header X-Scheme         $scheme;
+    # nginx auth_request includes headers but not body
+    proxy_set_header Content-Length   "";
+    proxy_pass_request_body           off;
   }
 
   location / {

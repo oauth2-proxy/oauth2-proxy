@@ -7,10 +7,12 @@ import (
 	"io"
 	"log"
 	"os"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
-// lookup passwords in a htpasswd file
-// The entries must have been created with -s for SHA encryption
+// Lookup passwords in a htpasswd file
+// Passwords must be generated with -B for bcrypt or -s for SHA1.
 
 type HtpasswdFile struct {
 	Users map[string]string
@@ -47,14 +49,20 @@ func (h *HtpasswdFile) Validate(user string, password string) bool {
 	if !exists {
 		return false
 	}
-	if realPassword[:5] == "{SHA}" {
+
+	shaPrefix := realPassword[:5]
+	if shaPrefix == "{SHA}" {
+		shaValue := realPassword[5:]
 		d := sha1.New()
 		d.Write([]byte(password))
-		if realPassword[5:] == base64.StdEncoding.EncodeToString(d.Sum(nil)) {
-			return true
-		}
-	} else {
-		log.Printf("Invalid htpasswd entry for %s. Must be a SHA entry.", user)
+		return shaValue == base64.StdEncoding.EncodeToString(d.Sum(nil))
 	}
+
+	bcryptPrefix := realPassword[:4]
+	if bcryptPrefix == "$2a$" || bcryptPrefix == "$2b$" || bcryptPrefix == "$2x$" || bcryptPrefix == "$2y$" {
+		return bcrypt.CompareHashAndPassword([]byte(realPassword), []byte(password)) == nil
+	}
+
+	log.Printf("Invalid htpasswd entry for %s. Must be a SHA or bcrypt entry.", user)
 	return false
 }
