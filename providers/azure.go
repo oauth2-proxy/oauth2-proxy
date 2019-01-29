@@ -73,17 +73,17 @@ func getAzureHeader(access_token string) http.Header {
 }
 
 func getEmailFromJSON(json *simplejson.Json) (string, error) {
-    // First try to return `userPrincipalName`
-    // if not defined, try to return `mail`
-    // if that also failed, try to get first record from `otherMails`
-    // TODO: Return everything in list and then try requests one by one
+	// First try to return `userPrincipalName`
+	// if not defined, try to return `mail`
+	// if that also failed, try to get first record from `otherMails`
+	// TODO: Return everything in list and then try requests one by one
 
 	var email string
 	var err error
 
 	email, err = json.Get("userPrincipalName").String()
 	if err == nil {
-	    return email, err
+		return email, err
 	}
 
 	email, err = json.Get("mail").String()
@@ -118,14 +118,16 @@ func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 		return "", err
 	}
 
+	log.Printf(" JSON: %v", json)
 	email, err = getEmailFromJSON(json)
+	log.Printf(" EMAIL: %v", email)
 
 	if err != nil {
 		log.Printf("[GetEmailAddress] failed making request %s", err)
 		return "", err
 	}
 
-    log.Printf("[GetEmailAddress] Chosen email address: '%s'", email)
+	log.Printf("[GetEmailAddress] Chosen email address: '%s'", email)
 	if email == "" {
 		log.Printf("failed to get email address")
 		return "", err
