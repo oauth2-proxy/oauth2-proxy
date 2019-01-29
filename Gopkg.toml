@@ -36,5 +36,5 @@
   name = "google.golang.org/api"
 
 [[constraint]]
-  name = "gopkg.in/fsnotify.v1"
+  name = "github.com/mbland/hmacauth"
   version = "~1.2.0"

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"gopkg.in/fsnotify.v1"
+	"github.com/mbland/hmacauth"
 )
 
 func WaitForReplacement(filename string, op fsnotify.Op,

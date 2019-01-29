@@ -98,10 +98,11 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "gopkg.in/fsnotify.v1"
+  name = "gopkg.in/fsnotify/fsnotify.v1"
   packages = ["."]
   revision = "836bfd95fecc0f1511dd66bdbf2b5b61ab8b00b6"
-  version = "v1.2.11"
+  version = "v1.4.7"
+  # version = "v1.2.11"
 
 [[projects]]
   name = "gopkg.in/square/go-jose.v2"
@@ -112,6 +113,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "efab48a0e196c2a849bfbe9aa02d2ae28d281ce1bfe9f23720d648858eefc8e6"
+  inputs-digest = "cfdd05348394cd0597edb858bdba5681665358a963356ed248d98f39373c33b5"
   solver-name = "gps-cdcl"
   solver-version = 1

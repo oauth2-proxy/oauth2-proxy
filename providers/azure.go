@@ -73,8 +73,18 @@ func getAzureHeader(access_token string) http.Header {
 }
 
 func getEmailFromJSON(json *simplejson.Json) (string, error) {
+    // First try to return `userPrincipalName`
+    // if not defined, try to return `mail`
+    // if that also failed, try to get first record from `otherMails`
+    // TODO: Return everything in list and then try requests one by one
+
 	var email string
 	var err error
+
+	email, err = json.Get("userPrincipalName").String()
+	if err == nil {
+	    return email, err
+	}
 
 	email, err = json.Get("mail").String()
 
@@ -110,17 +120,12 @@ func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 
 	email, err = getEmailFromJSON(json)
 
-	if err == nil && email != "" {
-		return email, err
-	}
-
-	email, err = json.Get("userPrincipalName").String()
-
 	if err != nil {
-		log.Printf("failed making request %s", err)
+		log.Printf("[GetEmailAddress] failed making request %s", err)
 		return "", err
 	}
 
+    log.Printf("[GetEmailAddress] Chosen email address: '%s'", email)
 	if email == "" {
 		log.Printf("failed to get email address")
 		return "", err
@@ -179,12 +184,16 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) ([]string, error) {
 
 			// It might be that it is a Graph bug, try to workaround it by accessing another URL
 			log.Printf("[GetGroups] Failed to get groups details: %s", err)
+			// requestUrl = "https://graph.microsoft.com/v1.0/users/" + s.Email + "/memberOf"
+			log.Printf("[GetGroups] DETAILS: %s", s)
+
 			requestUrl = "https://graph.microsoft.com/v1.0/users/" + s.Email + "/memberOf"
 			log.Printf("[GetGroups] Try to workaround by accessing: '%s'", requestUrl)
 			workaround_set = true
 			continue
 		}
 
+		log.Printf("[GetGroups] groupData: %s", groupData)
 		for _, groupInfo := range groupData.Get("value").MustArray() {
 			v, ok := groupInfo.(map[string]interface{})
 			if !ok {
