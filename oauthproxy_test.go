@@ -18,6 +18,7 @@ import (
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -836,4 +837,37 @@ func TestRequestSignaturePostRequest(t *testing.T) {
 	st.MakeRequestWithExpectedKey("POST", payload, "foobar")
 	assert.Equal(t, 200, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "signatures match")
+}
+
+func TestGetRedirect(t *testing.T) {
+	options := NewOptions()
+	_ = options.Validate()
+	require.NotEmpty(t, options.ProxyPrefix)
+	proxy := NewOAuthProxy(options, func(s string) bool { return false })
+
+	tests := []struct {
+		name             string
+		url              string
+		expectedRedirect string
+	}{
+		{
+			name:             "request outside of ProxyPrefix redirects to original URL",
+			url:              "/foo/bar",
+			expectedRedirect: "/foo/bar",
+		},
+		{
+			name:             "request under ProxyPrefix redirects to root",
+			url:              proxy.ProxyPrefix + "/foo/bar",
+			expectedRedirect: "/",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", tt.url, nil)
+			redirect, err := proxy.GetRedirect(req)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedRedirect, redirect)
+		})
+	}
 }
