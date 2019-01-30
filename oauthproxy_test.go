@@ -871,3 +871,67 @@ func TestGetRedirect(t *testing.T) {
 		})
 	}
 }
+
+type ajaxRequestTest struct {
+	opts  *Options
+	proxy *OAuthProxy
+}
+
+func newAjaxRequestTest() *ajaxRequestTest {
+	test := &ajaxRequestTest{}
+	test.opts = NewOptions()
+	test.opts.CookieSecret = "foobar"
+	test.opts.ClientID = "bazquux"
+	test.opts.ClientSecret = "xyzzyplugh"
+	test.opts.Validate()
+	test.proxy = NewOAuthProxy(test.opts, func(email string) bool {
+		return true
+	})
+	return test
+}
+
+func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (int, http.Header, error) {
+	rw := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodGet, endpoint, strings.NewReader(""))
+	if err != nil {
+		return 0, nil, err
+	}
+	req.Header = header
+	test.proxy.ServeHTTP(rw, req)
+	return rw.Code, rw.Header(), nil
+}
+
+func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
+	test := newAjaxRequestTest()
+	const endpoint = "/test"
+
+	code, rh, err := test.getEndpoint(endpoint, header)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, code)
+	mime := rh.Get("Content-Type")
+	assert.Equal(t, "application/json", mime)
+}
+func TestAjaxUnauthorizedRequest1(t *testing.T) {
+	header := make(http.Header)
+	header.Add("accept", "application/json")
+
+	testAjaxUnauthorizedRequest(t, header)
+}
+
+func TestAjaxUnauthorizedRequest2(t *testing.T) {
+	header := make(http.Header)
+	header.Add("Accept", "application/json")
+
+	testAjaxUnauthorizedRequest(t, header)
+}
+
+func TestAjaxForbiddendRequest(t *testing.T) {
+	test := newAjaxRequestTest()
+	const endpoint = "/test"
+	header := make(http.Header)
+	code, rh, err := test.getEndpoint(endpoint, header)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, code)
+	mime := rh.Get("Content-Type")
+	assert.NotEqual(t, "application/json", mime)
+}
