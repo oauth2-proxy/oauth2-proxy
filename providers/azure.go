@@ -92,8 +92,8 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 		otherMails, otherMailsErr := json.Get("otherMails").Array()
 		if len(otherMails) > 0 {
 			email = otherMails[0].(string)
+			err = otherMailsErr
 		}
-		err = otherMailsErr
 	}
 
 	return email, err
