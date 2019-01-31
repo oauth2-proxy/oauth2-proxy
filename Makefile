@@ -54,10 +54,16 @@ release: lint test
 	mkdir release
 	GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" -o release/$(BINARY)-darwin-amd64 github.com/pusher/oauth2_proxy
 	GOOS=linux GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" -o release/$(BINARY)-linux-amd64 github.com/pusher/oauth2_proxy
+	GOOS=linux GOARCH=arm64 go build -ldflags="-X main.VERSION=${VERSION}" -o release/$(BINARY)-linux-arm64 github.com/pusher/oauth2_proxy
+	GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-X main.VERSION=${VERSION}" -o release/$(BINARY)-linux-armv6 github.com/pusher/oauth2_proxy
 	GOOS=windows GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" -o release/$(BINARY)-windows-amd64 github.com/pusher/oauth2_proxy
 	shasum -a 256 release/$(BINARY)-darwin-amd64 > release/$(BINARY)-darwin-amd64-sha256sum.txt
 	shasum -a 256 release/$(BINARY)-linux-amd64 > release/$(BINARY)-linux-amd64-sha256sum.txt
+	shasum -a 256 release/$(BINARY)-linux-arm64 > release/$(BINARY)-linux-arm64-sha256sum.txt
+	shasum -a 256 release/$(BINARY)-linux-armv6 > release/$(BINARY)-linux-armv6-sha256sum.txt
 	shasum -a 256 release/$(BINARY)-windows-amd64 > release/$(BINARY)-windows-amd64-sha256sum.txt
 	tar -cvf release/$(BINARY)-$(VERSION).darwin-amd64.$(GO_VERSION).tar.gz release/$(BINARY)-darwin-amd64
 	tar -cvf release/$(BINARY)-$(VERSION).linux-amd64.$(GO_VERSION).tar.gz release/$(BINARY)-linux-amd64
+	tar -cvf release/$(BINARY)-$(VERSION).linux-arm64.$(GO_VERSION).tar.gz release/$(BINARY)-linux-arm64
+	tar -cvf release/$(BINARY)-$(VERSION).linux-armv6.$(GO_VERSION).tar.gz release/$(BINARY)-linux-armv6
 	tar -cvf release/$(BINARY)-$(VERSION).windows-amd64.$(GO_VERSION).tar.gz release/$(BINARY)-windows-amd64
