@@ -14,6 +14,8 @@
   - Long-running upstream responses will get flushed every <timeperiod> (1 second by default)
 - [#24](https://github.com/pusher/oauth2_proxy/pull/24) Redirect fix (@agentgonzo)
   - After a successful login, you will be redirected to your original URL rather than /
+- [#35](https://github.com/pusher/oauth2_proxy/pull/35) arm and arm64 binary releases (@kskewes)
+  - Add armv6 and arm64 to Makefile `release` target
 
 # v3.0.0
 
