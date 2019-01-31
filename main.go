@@ -43,6 +43,7 @@ func main() {
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS")
+	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
