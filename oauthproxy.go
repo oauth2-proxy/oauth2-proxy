@@ -30,6 +30,8 @@ const (
 	// Cookies are limited to 4kb including the length of the cookie name,
 	// the cookie name can be up to 256 bytes
 	maxCookieLength = 3840
+
+	applicationJSON = "application/json"
 )
 
 // SignatureHeaders contains the headers to be signed by the hmac algorithm
@@ -908,7 +910,7 @@ func (p *OAuthProxy) isAjax(req *http.Request) bool {
 	if !ok {
 		acceptValues = req.Header["Accept"]
 	}
-	const ajaxReq = "application/json"
+	const ajaxReq = applicationJSON
 	for _, v := range acceptValues {
 		if v == ajaxReq {
 			return true
@@ -919,6 +921,6 @@ func (p *OAuthProxy) isAjax(req *http.Request) bool {
 
 // ErrorJSON returns the error code witht an application/json mime type
 func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
-	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)
 }

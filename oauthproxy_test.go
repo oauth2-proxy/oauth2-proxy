@@ -903,35 +903,35 @@ func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (i
 
 func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
 	test := newAjaxRequestTest()
-	const endpoint = "/test"
+	endpoint := "/test"
 
 	code, rh, err := test.getEndpoint(endpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusUnauthorized, code)
 	mime := rh.Get("Content-Type")
-	assert.Equal(t, "application/json", mime)
+	assert.Equal(t, applicationJSON, mime)
 }
 func TestAjaxUnauthorizedRequest1(t *testing.T) {
 	header := make(http.Header)
-	header.Add("accept", "application/json")
+	header.Add("accept", applicationJSON)
 
 	testAjaxUnauthorizedRequest(t, header)
 }
 
 func TestAjaxUnauthorizedRequest2(t *testing.T) {
 	header := make(http.Header)
-	header.Add("Accept", "application/json")
+	header.Add("Accept", applicationJSON)
 
 	testAjaxUnauthorizedRequest(t, header)
 }
 
 func TestAjaxForbiddendRequest(t *testing.T) {
 	test := newAjaxRequestTest()
-	const endpoint = "/test"
+	endpoint := "/test"
 	header := make(http.Header)
 	code, rh, err := test.getEndpoint(endpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, code)
 	mime := rh.Get("Content-Type")
-	assert.NotEqual(t, "application/json", mime)
+	assert.NotEqual(t, applicationJSON, mime)
 }
