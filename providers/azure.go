@@ -14,7 +14,8 @@ import (
 type AzureProvider struct {
 	*ProviderData
 	Tenant          string
-	PermittedGroups []string
+	PermittedGroups map[string]string
+	ExemptedUsers map[string]string
 }
 
 func NewAzureProvider(p *ProviderData) *AzureProvider {
@@ -99,52 +100,119 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	return email, err
 }
 
-func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
-	var email string
+func getUserIDFromJSON(json *simplejson.Json) (string, error) {
+	// Try to get user ID
+	// if not defined, return empty string
+
+	uid, err := json.Get("id").String()
+	if err != nil {
+		return "", err
+	}
+
+	return uid, err
+}
+
+func (p *AzureProvider) GetUserDetails(s *SessionState) (map[string]string, error) {
+	userDetails := map[string]string{}
 	var err error
 
 	if s.AccessToken == "" {
-		return "", errors.New("missing access token")
+		return userDetails, errors.New("missing access token")
 	}
 	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
 	if err != nil {
-		return "", err
+		return userDetails, err
 	}
 	req.Header = getAzureHeader(s.AccessToken)
 
 	json, err := api.Request(req)
 
 	if err != nil {
-		return "", err
+		return userDetails, err
 	}
 
 	log.Printf(" JSON: %v", json)
-	email, err = getEmailFromJSON(json)
-	log.Printf(" EMAIL: %v", email)
+	for key, value := range json.Interface().(map[string]interface{}) {
+		log.Printf("\t %20v : %v", key, value)
+	}
+	email, err := getEmailFromJSON(json)
+	userDetails["email"] = email
 
 	if err != nil {
-		log.Printf("[GetEmailAddress] failed making request %s", err)
-		return "", err
+		log.Printf("[GetEmailAddress] failed making request: %s", err)
+		return userDetails, err
+	} else if email == "" {
+		log.Printf("failed to get email address")
+	}
+
+	uid, err := getUserIDFromJSON(json)
+	userDetails["uid"] = uid
+	if err != nil {
+		log.Printf("[GetEmailAddress] failed to get User ID: %s", err)
 	}
 
 	log.Printf("[GetEmailAddress] Chosen email address: '%s'", email)
-	if email == "" {
-		log.Printf("failed to get email address")
-		return "", err
-	}
 
-	return email, err
+	return userDetails, err
 }
 
 // Get list of groups user belong to. Filter the desired names of groups (in case of huge group set)
-func (p *AzureProvider) GetGroups(s *SessionState, f string) ([]string, error) {
+func (p *AzureProvider) GetGroups(s *SessionState, f string) (map[string]string, error) {
 	if s.AccessToken == "" {
-		return []string{}, errors.New("missing access token")
+		return map[string]string{}, errors.New("missing access token")
 	}
 
 	if s.IDToken == "" {
-		return []string{}, errors.New("missing id token")
+		return map[string]string{}, errors.New("missing id token")
 	}
+
+	// Step 1: Try the most simple request that returns all group membership for user
+	groups, err := p.GetAllGroupMemberships(s, f)
+	if err == nil {
+		log.Printf("GetGroups: got list of groups: %v", groups)
+		return groups, err
+	}
+
+	// Step 2: Ok then, try to check groups from `permit_groups` one by one if they have user in member list
+	if len(p.PermittedGroups) != 0 {
+		log.Printf("GetGroups: unable to get group membership, will try to get check each group individually: %v", err)
+		groups := map[string]string{}
+		for gName, gID := range p.PermittedGroups {
+			log.Printf("GetGroups: checking membership in: %v", gName)
+			found, err := p.HasGroupMembership(s, gName, gID)
+			if err != nil {
+				log.Printf("GetGroups: checking membership in: %v : failed", gName)
+			} else if found {
+				groups[gName] = gID
+			}
+		}
+		if len(groups) > 0 {
+			log.Printf("GetGroups: returning list of groups that we were able to verify individually: %v", groups)
+			return groups, nil
+		}
+	} else {
+		log.Printf("GetGroups: unable to get group membership. We do not have defined `permit_groups` to check them individually: %v", err)
+	}
+
+	// Step 3: Well, looks like we have no other option but only check if this user is listed in local `groups_exemption` list
+	if p.ValidateExemptions(s) {
+		log.Printf("GetGroups: found '%v' in exemption list. Will let it login, but without list of groups", s.Email)
+		return map[string]string{}, nil
+	}
+	log.Printf("GetGroups: looks like no matter how hard we try, we can't verify '%v'", s.Email)
+	return map[string]string{}, errors.New("Unable to verify user group membership")
+}
+
+
+// Get group membership on behalf of user
+func (p *AzureProvider) GetAllGroupMemberships(s *SessionState, f string) (map[string]string, error) {
+	// REST Documentation: https://docs.microsoft.com/en-us/graph/api/user-list-memberof?view=graph-rest-1.0
+	// This call permission requirements (any from the list):
+	//   - Directory.Read.All
+	//   - Directory.ReadWrite.All
+	//   - Directory.AccessAsUser.All
+	//
+	// NOTE: group filter is discarded if list of permitted groups is defined
 
 	// For future use. Right now microsoft graph don't support filter
 	// http://docs.oasis-open.org/odata/odata/v4.0/errata02/os/complete/part2-url-conventions/odata-v4.0-errata02-os-part2-url-conventions-complete.html#_Toc406398116
@@ -161,17 +229,17 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) ([]string, error) {
 	// startswith - not supported  | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=startswith(displayName,%27groupname%27)"
 	// substring - not supported   | "https://graph.microsoft.com/v1.0/me/memberOf?$filter=substring(displayName,0,2)%20eq%20%27groupname%27"
 
-	requestUrl := "https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName"
+	requestUrl := "https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName,id"
 	workaround_set := false
 
-	groups := make([]string, 0)
+	groups := make(map[string]string, 0)
 
 	for {
 		req, err := http.NewRequest("GET", requestUrl, nil)
 		// err = errors.New("fake error")
 
 		if err != nil {
-			return []string{}, err
+			return map[string]string{}, err
 		}
 		req.Header = getAzureHeader(s.AccessToken)
 		req.Header.Add("Content-Type", "application/json")
@@ -181,7 +249,7 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) ([]string, error) {
 			// If workaround already tried, just fail the execution
 			if workaround_set {
 				log.Printf("[GetGroups] We tried hard, but still receive error: '%s'", err)
-				return []string{}, err
+				return map[string]string{}, err
 			}
 
 			// It might be that it is a Graph bug, try to workaround it by accessing another URL
@@ -189,7 +257,7 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) ([]string, error) {
 			// requestUrl = "https://graph.microsoft.com/v1.0/users/" + s.Email + "/memberOf"
 			log.Printf("[GetGroups] DETAILS: %s", s)
 
-			requestUrl = "https://graph.microsoft.com/v1.0/users/" + s.Email + "/memberOf"
+			requestUrl = "https://graph.microsoft.com/v1.0/users/" + s.Email + "/memberOf$select=displayName,id"
 			log.Printf("[GetGroups] Try to workaround by accessing: '%s'", requestUrl)
 			workaround_set = true
 			continue
@@ -202,10 +270,10 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) ([]string, error) {
 				continue
 			}
 			dname := v["displayName"].(string)
-			if strings.Contains(dname, f) {
-				groups = append(groups, dname)
+			uid := v["id"].(string)
+			if p.GroupPermitted(&dname, &uid) {
+				groups[dname] = uid
 			}
-
 		}
 
 		if nextlink := groupData.Get("@odata.nextLink").MustString(); nextlink != "" {
@@ -214,8 +282,93 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) ([]string, error) {
 			break
 		}
 	}
-
 	return groups, nil
+}
+
+// Verify logged user is member of specific group
+func (p *AzureProvider) HasGroupMembership(s *SessionState, gName string, gID string) (bool, error) {
+	// Call to `/groups/{GROUPID}/members` has different permission level
+	// so if `/me/memberof` failed, there is a slight chance to get lucky here
+	//
+	// REST Documentation: https://docs.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0
+	// This call permission requirements (any from the list):
+	//   - User.ReadBasic.All
+	//   - User.Read.All
+	//   - Directory.Read.All
+	//   - Directory.ReadWrite.All
+	//   - Directory.AccessAsUser.All
+
+	if gID == "" {
+		log.Printf("HasGroupMembership could not be done for '%v' as group ID is not provided", gName)
+		return false, errors.New("missing Group ID")
+	}
+
+	if s.ID == "" {
+		log.Printf("HasGroupMembership could not be done for '%v' as we don't know current user ID", gName)
+		return false, errors.New("missing User ID")
+	}
+
+	requestUrl := "https://graph.microsoft.com/v1.0/groups/" + gID + "/members?$filter=id+eq+'" + s.ID + "'&$select=userPrincipalName,id"
+
+	for {
+		req, err := http.NewRequest("GET", requestUrl, nil)
+
+		if err != nil {
+			return false, err
+		}
+		req.Header = getAzureHeader(s.AccessToken)
+		req.Header.Add("Content-Type", "application/json")
+
+		groupData, err := api.Request(req)
+		if err != nil {
+			return false, err
+		}
+
+		log.Printf("HasGroupMembership groupData: %s", groupData)
+		for _, groupInfo := range groupData.Get("value").MustArray() {
+			v, ok := groupInfo.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			uName := v["userPrincipalName"].(string)
+			uID := v["id"].(string)
+			if uName == s.Email {
+				log.Printf("HasGroupMembership: '%v' is found in '%v'", uName, gName)
+				if uID == s.ID {
+					log.Printf("HasGroupMembership: '%v' User ID in '%v' matches logged User ID", uName, gName)
+					return true, nil
+				} else {
+					log.Printf("HasGroupMembership: '%v' has User ID in '%v' different to User ID of logged user ('%v' != '%v')", uName, gName, uID, s.ID)
+				}
+			}
+		}
+
+		if nextlink := groupData.Get("@odata.nextLink").MustString(); nextlink != "" {
+			requestUrl = nextlink
+		} else {
+			break
+		}
+	}
+	return false, nil
+}
+
+// ValidateExemptions checks if we can allow user login dispite group membership returned failure
+func (p *AzureProvider) ValidateExemptions(s *SessionState) bool {
+	log.Printf("ValidateExemptions: validating for %v : %v", s.Email, s.ID)
+	for eUserName, eUserID := range p.ExemptedUsers {
+		if eUserName == s.Email {
+			log.Printf("ValidateExemptions: \t found same username in exemption list, now checking User ID")
+			if eUserID == "" || s.ID == "" {
+				log.Printf("ValidateExemptions: \t no User ID is setup, so we are skipping such check")
+				return true
+			} else if eUserID == s.ID {
+				log.Printf("ValidateExemptions: \t User ID matched one defined in exemption list")
+				return true
+			}
+			log.Printf("ValidateExemptions: \t User ID verification FAILED (%v != %v)", eUserID, s.ID)
+		}
+	}
+	return false
 }
 
 func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
@@ -239,22 +392,118 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 }
 
 func (p *AzureProvider) SetGroupRestriction(groups []string) {
-	if len(groups) == 1 && strings.Index(groups[0], "|") >= 0 {
-		p.PermittedGroups = strings.Split(groups[0], "|")
-	} else {
-		p.PermittedGroups = groups
+	// Get list of groups (optionally with Group IDs) that ONLY allowed for user
+	// That means even if user has wider group membership, only membership in those groups will be forwarded
+
+	p.PermittedGroups = make(map[string]string)
+	if len(groups) == 0 {
+		return
 	}
 	log.Printf("Set group restrictions. Allowed groups are:")
-	for _, pGroup := range p.PermittedGroups {
-		log.Printf("\t'%s'", pGroup)
+	log.Printf("\t                     *GROUP NAME* : *GROUP ID*")
+	for _, pGroup := range groups {
+		splittedGroup := strings.Split(pGroup,":")
+		var groupName string
+		var groupID string
+
+		if len(splittedGroup) == 1 {
+			groupName, groupID = splittedGroup[0], ""
+			p.PermittedGroups[splittedGroup[0]] = ""
+		} else if len(splittedGroup) > 2 {
+			log.Fatalf("failed to parse '%v'. Too many ':' separators", pGroup)
+		} else {
+			groupName, groupID = splittedGroup[0], splittedGroup[1]
+			p.PermittedGroups[splittedGroup[0]] = splittedGroup[1]
+		}
+		log.Printf("\t - %30s   %s", groupName, groupID)
 	}
+	log.Printf("")
 }
 
-func (p *AzureProvider) ValidateGroup(s *SessionState) bool {
+func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
+	// Get list of users (optionally with User IDs) that could still be allowed to login
+	// when group membership calls fail (e.g. insufficient permissions)
+
+	p.ExemptedUsers = make(map[string]string)
+	if len(exemptions) == 0 {
+		return
+	}
+	log.Printf("Configure user exemption list:")
+	log.Printf("\t                      *USER NAME* : *USER ID*")
+	for _, pRecord := range exemptions {
+		splittedRecord := strings.Split(pRecord,":")
+		var userName string
+		var userID string
+
+		if len(splittedRecord) == 1 {
+			userName, userID = splittedRecord[0], ""
+			p.ExemptedUsers[splittedRecord[0]] = ""
+		} else if len(splittedRecord) > 2 {
+			log.Fatalf("failed to parse '%v'. Too many ':' separators", pRecord)
+		} else {
+			userName, userID = splittedRecord[0], splittedRecord[1]
+			p.ExemptedUsers[splittedRecord[0]] = splittedRecord[1]
+		}
+		log.Printf("\t - %30s   %s", userName, userID)
+	}
+	log.Printf("")
+}
+
+//func (p *AzureProvider) ValidateGroup(s *SessionState) bool {
+//	if len(p.PermittedGroups) != 0 {
+//		log.Printf("VALIDATION: %v", s.Groups)
+//		for _, pGroup := range p.PermittedGroups {
+//			log.Printf("ValidateGroup: %v", pGroup)
+//			if strings.Contains(s.Groups, pGroup) {
+//				return true
+//			}
+//		}
+//		return false
+//	}
+//	return true
+//}
+
+//func (p *AzureProvider) ValidateGroup(gName *string, gID *string) bool {
+//	// Validate provided group
+//	// if "PermitGroups" are defined, for each user group membership, include only those groups that
+//	// marked in list
+//	//
+//	// NOTE: if group in "PermitGroups" does not have group_id defined, this parameter is ignored
+//	if len(p.PermittedGroups) != 0 {
+//		log.Printf("VALIDATION FOR : %v : %v", *gName, *gID)
+//		for pGroupName, pGroupID := range p.PermittedGroups {
+//			log.Printf("       ValidateGroup: %v : %v", pGroupName, pGroupID)
+//			if pGroupName == *gName {
+//				if pGroupID == "" || gID == nil {
+//					return true
+//				} else if pGroupID == *gID {
+//					return true
+//				}
+//			}
+//		}
+//		return false
+//	}
+//	return true
+//}
+
+func (p *AzureProvider) GroupPermitted(gName *string, gID *string) bool {
+	// Validate provided group
+	// if "PermitGroups" are defined, for each user group membership, include only those groups that
+	// marked in list
+	//
+	// NOTE: if group in "PermitGroups" does not have group_id defined, this parameter is ignored
 	if len(p.PermittedGroups) != 0 {
-		for _, pGroup := range p.PermittedGroups {
-			if strings.Contains(s.Groups, pGroup) {
-				return true
+		for pGroupName, pGroupID := range p.PermittedGroups {
+			if pGroupName == *gName {
+				log.Printf("ValidateGroup: %v : %v", pGroupName, pGroupID)
+				if pGroupID == "" || gID == nil {
+					log.Printf("ValidateGroup: %v : %v : no Group ID defined for permitted group. Approving", pGroupName, pGroupID)
+					return true
+				} else if pGroupID == *gID {
+					log.Printf("ValidateGroup: %v : %v : Group ID matches defined in permitted group. Approving", pGroupName, pGroupID)
+					return true
+				}
+				log.Printf("ValidateGroup: %v : %v != %v Group IDs didn't match", pGroupName, pGroupID, *gID)
 			}
 		}
 		return false

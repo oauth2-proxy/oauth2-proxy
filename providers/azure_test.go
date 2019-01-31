@@ -162,6 +162,24 @@ func TestAzureSetTenant(t *testing.T) {
 	assert.Equal(t, "openid", p.Data().Scope)
 }
 
+func TestAzureSetTenant(t *testing.T) {
+	p := testAzureProvider("")
+	p.Configure("example")
+	assert.Equal(t, "Azure", p.Data().ProviderName)
+	assert.Equal(t, "example", p.Tenant)
+	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/authorize",
+		p.Data().LoginURL.String())
+	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/token",
+		p.Data().RedeemURL.String())
+	assert.Equal(t, "https://graph.microsoft.com/v1.0/me",
+		p.Data().ProfileURL.String())
+	assert.Equal(t, "https://graph.microsoft.com",
+		p.Data().ProtectedResource.String())
+	assert.Equal(t, "",
+		p.Data().ValidateURL.String())
+	assert.Equal(t, "openid", p.Data().Scope)
+}
+
 func testAzureBackend(payload string) *httptest.Server {
 	path := "/v1.0/me"
 	query := ""

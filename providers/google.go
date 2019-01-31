@@ -243,8 +243,8 @@ func fetchGroupMembers(service *admin.Service, group string) ([]*admin.Member, e
 	return members, nil
 }
 
-// ValidateGroup validates that the provided email exists in the configured Google
-// group(s).
+//ValidateGroup validates that the provided email exists in the configured Google
+//group(s).
 func (p *GoogleProvider) ValidateGroup(s *SessionState) bool {
 	return p.GroupValidator(s.Email)
 }

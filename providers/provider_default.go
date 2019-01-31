@@ -107,23 +107,31 @@ func (p *ProviderData) SessionFromCookie(v string, c *cookie.Cipher) (s *Session
 	return DecodeSessionState(v, c)
 }
 
-func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
-	return "", errors.New("not implemented")
+func (p *ProviderData) GetUserDetails(s *SessionState) (map[string]string, error) {
+	return map[string]string{}, errors.New("not implemented")
 }
+//func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
+//	return "", errors.New("not implemented")
+//}
 
 // GetUserName returns the Account username
 func (p *ProviderData) GetUserName(s *SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
-func (p *ProviderData) GetGroups(s *SessionState, f string) ([]string, error) {
-	return []string{}, errors.New("not implemented")
+func (p *ProviderData) GetGroups(s *SessionState, f string) (map[string]string, error) {
+	return map[string]string{}, errors.New("not implemented")
 }
 
 // ValidateGroup validates that the provided email exists in the configured provider
 // email group(s).
 func (p *ProviderData) ValidateGroup(s *SessionState) bool {
 	return true
+}
+
+// ValidateExemptions checks if we can allow user login dispite group membership returned failure
+func (p *ProviderData) ValidateExemptions(s *SessionState) bool {
+	return false
 }
 
 func (p *ProviderData) ValidateSessionState(s *SessionState) bool {

@@ -57,6 +57,7 @@ type Options struct {
 	FilterGroups          string   `flag:"filter-groups" cfg:"filter_groups"`
 	PermitGroups          []string `flag:"permit-groups" cfg:"permit_groups"`
 	GroupsDelimiter       string   `flag:"groups-delimiter" cfg:"groups_delimiter"`
+	GroupsExemption       []string `flag:"groups-exemption" cfg:"groups_exemption"`
 	BasicAuthPassword     string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
 	PassAccessToken       bool     `flag:"pass-access-token" cfg:"pass_access_token"`
 	PassHostHeader        bool     `flag:"pass-host-header" cfg:"pass_host_header"`
@@ -289,6 +290,9 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		p.Configure(o.AzureTenant)
 		if len(o.PermitGroups) > 0 {
 			p.SetGroupRestriction(o.PermitGroups)
+		}
+		if len(o.GroupsExemption) > 0 {
+			p.SetGroupsExemption(o.GroupsExemption)
 		}
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)

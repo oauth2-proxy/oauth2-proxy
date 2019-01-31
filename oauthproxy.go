@@ -253,7 +253,16 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *providers.SessionState, e
 	}
 
 	if s.Email == "" {
-		s.Email, err = p.provider.GetEmailAddress(s)
+		userDetails, err := p.provider.GetUserDetails(s)
+		if err != nil {
+			return s, err
+		}
+		s.Email = userDetails["email"]
+		if uid, found := userDetails["uid"]; found {
+			s.ID = uid
+		} else {
+			s.ID = ""
+		}
 	}
 
 	if s.User == "" {
@@ -581,7 +590,12 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
 			return
 		}
-		session.Groups = strings.Join(groups, p.GroupsDelimiter)
+
+		groupNames := []string{}
+		for groupName := range groups {
+			groupNames = append(groupNames, groupName)
+		}
+		session.Groups = strings.Join(groupNames, p.GroupsDelimiter)
 	}
 
 	redirect = req.Form.Get("state")

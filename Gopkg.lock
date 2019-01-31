@@ -70,7 +70,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ed25519","ed25519/internal/edwards25519"]
+  packages = ["bcrypt","blowfish","ed25519","ed25519/internal/edwards25519"]
   revision = "9f005a07e0d31d45e6656d241bb5c0f2efd4bc94"
 
 [[projects]]
@@ -87,6 +87,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "302c3dd5f1cc82baae8e44d9c3178e89b6e2b345"
+
+[[projects]]
+  branch = "master"
   name = "google.golang.org/api"
   packages = ["admin/directory/v1","gensupport","googleapi","googleapi/internal/uritemplates"]
   revision = "8791354e7ab150705ede13637a18c1fcc16b62e8"
@@ -100,8 +106,9 @@
 [[projects]]
   name = "gopkg.in/fsnotify.v1"
   packages = ["."]
-  revision = "836bfd95fecc0f1511dd66bdbf2b5b61ab8b00b6"
-  version = "v1.2.11"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
+  version = "v1.4.7"
 
 [[projects]]
   name = "gopkg.in/square/go-jose.v2"
@@ -112,6 +119,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "efab48a0e196c2a849bfbe9aa02d2ae28d281ce1bfe9f23720d648858eefc8e6"
+  inputs-digest = "8605a2d7d0488bc815a1c0e96249a5bf4d6baa3afead23a7ac6bf4c3b3422680"
   solver-name = "gps-cdcl"
   solver-version = 1

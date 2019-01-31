@@ -6,11 +6,12 @@ import (
 
 type Provider interface {
 	Data() *ProviderData
-	GetEmailAddress(*SessionState) (string, error)
+	GetUserDetails(*SessionState) (map[string]string, error)
 	GetUserName(*SessionState) (string, error)
-	GetGroups(*SessionState, string) ([]string, error)
+	GetGroups(*SessionState, string) (map[string]string, error)
 	Redeem(string, string) (*SessionState, error)
 	ValidateGroup(*SessionState) bool
+	ValidateExemptions(*SessionState) bool
 	ValidateSessionState(*SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(*SessionState) (bool, error)

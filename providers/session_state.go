@@ -16,6 +16,7 @@ type SessionState struct {
 	RefreshToken string
 	Email        string
 	User         string
+	ID           string
 	Groups       string
 }
 
@@ -51,7 +52,7 @@ func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
 }
 
 func (s *SessionState) accountInfo() string {
-	return fmt.Sprintf("email:%s user:%s", s.Email, s.User)
+	return fmt.Sprintf("email:%s user:%s id:%s", s.Email, s.User, s.ID)
 }
 
 func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
@@ -79,17 +80,18 @@ func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 
 func decodeSessionStatePlain(v string) (s *SessionState, err error) {
 	chunks := strings.Split(v, " ")
-	if len(chunks) != 2 {
-		return nil, fmt.Errorf("could not decode session state: expected 2 chunks got %d", len(chunks))
+	if len(chunks) != 3 {
+		return nil, fmt.Errorf("could not decode session state: expected 3 chunks got %d", len(chunks))
 	}
 
 	email := strings.TrimPrefix(chunks[0], "email:")
 	user := strings.TrimPrefix(chunks[1], "user:")
+	uid := strings.TrimPrefix(chunks[2], "id:")
 	if user == "" {
 		user = strings.Split(email, "@")[0]
 	}
 
-	return &SessionState{User: user, Email: email}, nil
+	return &SessionState{User: user, Email: email, ID: uid}, nil
 }
 
 func decodeUserGroups(v string) (groups string, err error) {
