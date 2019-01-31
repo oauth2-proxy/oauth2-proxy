@@ -10,7 +10,8 @@ type Provider interface {
 	GetUserName(*SessionState) (string, error)
 	GetGroups(*SessionState, string) (map[string]string, error)
 	Redeem(string, string) (*SessionState, error)
-	ValidateGroup(*SessionState) bool
+	//ValidateGroup(*SessionState) bool
+	ValidateGroups([]string) bool
 	ValidateExemptions(*SessionState) bool
 	ValidateSessionState(*SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string

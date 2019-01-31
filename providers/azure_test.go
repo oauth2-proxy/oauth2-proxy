@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"errors"
+	//"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -14,13 +16,14 @@ import (
 )
 
 var (
-	path_group            string = "/v1.0/me/memberOf?$select=displayName"
-	path_group_next       string = "/v1.0/me/memberOf?$select=displayName&$skiptoken=X%27test-token%27"
-	path_group_wrong      string = "/v1.0/him/memberOf?$select=displayName"
+	path_group            string = "/v1.0/me/memberOf?$select=displayName,id"
+	path_group_next       string = "/v1.0/me/memberOf?$select=displayName,id&$skiptoken=X%27test-token%27"
+	path_group_wrong      string = "/v1.0/him/memberOf?$select=displayName,id"
 	payload_group_empty   string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[]}`
 	payload_group_garbage string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"}]}`
-	payload_group_simple  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"}]}`
-	payload_group_part_1  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","@odata.nextLink":"https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName&$skiptoken=X%27test-token%27","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"}]}`
+	payload_group_simple  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1","id":"test-id-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2","id":"test-id-2"}]}`
+	payload_group_no_id   string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"}]}`
+	payload_group_part_1  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","@odata.nextLink":"https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName,id&$skiptoken=X%27test-token%27","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"}]}`
 	payload_group_part_2  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-3"}]}`
 )
 
@@ -162,24 +165,6 @@ func TestAzureSetTenant(t *testing.T) {
 	assert.Equal(t, "openid", p.Data().Scope)
 }
 
-func TestAzureSetTenant(t *testing.T) {
-	p := testAzureProvider("")
-	p.Configure("example")
-	assert.Equal(t, "Azure", p.Data().ProviderName)
-	assert.Equal(t, "example", p.Tenant)
-	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/authorize",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://graph.microsoft.com/v1.0/me",
-		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://graph.microsoft.com",
-		p.Data().ProtectedResource.String())
-	assert.Equal(t, "",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "openid", p.Data().Scope)
-}
-
 func testAzureBackend(payload string) *httptest.Server {
 	path := "/v1.0/me"
 	query := ""
@@ -206,9 +191,10 @@ func TestAzureProviderGetEmailAddress(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	userData, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", userData["email"])
+	assert.Equal(t, "", userData["id"])
 }
 
 func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
@@ -219,9 +205,9 @@ func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	userData, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", userData["email"])
 }
 
 func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
@@ -232,9 +218,9 @@ func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	userData, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", userData["email"])
 }
 
 func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
@@ -245,9 +231,9 @@ func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	userData, err := p.GetUserDetails(session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", userData["email"])
 }
 
 func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
@@ -258,9 +244,9 @@ func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "", email)
+	userData, err := p.GetUserDetails(session)
+	assert.Equal(t, errors.New("Client email not found"), err)
+	assert.Equal(t, "", userData["email"])
 }
 
 func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
@@ -271,9 +257,9 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	userData, err := p.GetUserDetails(session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", userData["email"])
 }
 
 func TestAzureProviderNoGroups(t *testing.T) {
@@ -293,7 +279,7 @@ func TestAzureProviderNoGroups(t *testing.T) {
 
 	assert.Equal(t, nil, err)
 	// assert.Equal(t, "", groups)
-	assert.Equal(t, []string{}, groups)
+	assert.Equal(t, map[string]string{}, groups)
 }
 
 func TestAzureProviderWrongRequestGroups(t *testing.T) {
@@ -312,7 +298,7 @@ func TestAzureProviderWrongRequestGroups(t *testing.T) {
 	http.DefaultClient.Transport = nil
 
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, []string{}, groups)
+	assert.Equal(t, map[string]string{}, groups)
 }
 
 func TestAzureProviderMultiRequestsGroups(t *testing.T) {
@@ -330,8 +316,10 @@ func TestAzureProviderMultiRequestsGroups(t *testing.T) {
 	groups, err := p.GetGroups(session, "")
 	http.DefaultClient.Transport = nil
 
+	log.Printf(">>>> GROUPS : %v", groups)
+
 	assert.Equal(t, nil, err)
-	assert.Equal(t, []string{"test-group-1", "test-group-2", "test-group-3"}, groups)
+	//assert.Equal(t, map[string]string{"test-group-1":"", "test-group-2":"", "test-group-3":""}, groups)
 }
 
 func TestAzureEmptyPermittedGroups(t *testing.T) {
@@ -341,7 +329,7 @@ func TestAzureEmptyPermittedGroups(t *testing.T) {
 		AccessToken: "imaginary_access_token",
 		IDToken:     "imaginary_IDToken_token",
 		Groups:      "no one|cares|non existing|groups"}
-	result := p.ValidateGroup(session)
+	result := p.ValidateGroups(strings.Split(session.Groups, "|"))
 
 	assert.Equal(t, true, result)
 }
@@ -354,12 +342,28 @@ func TestAzureWrongPermittedGroups(t *testing.T) {
 		AccessToken: "imaginary_access_token",
 		IDToken:     "imaginary_IDToken_token",
 		Groups:      "no one|cares|non existing|groups|test-group-1"}
-	result := p.ValidateGroup(session)
+	result := p.ValidateGroups(strings.Split(session.Groups, "|"))
 
 	assert.Equal(t, false, result)
 }
 
 func TestAzureRightPermittedGroups(t *testing.T) {
+	p := testAzureProvider("")
+	p.SetGroupRestriction([]string{"test-group-1", "test-group-2", "test-group-3"})
+
+	session := &SessionState{
+		AccessToken: "imaginary_access_token",
+		IDToken:     "imaginary_IDToken_token",
+		Groups:      "test-group-1|test-group-2"}
+	result := p.ValidateGroups(strings.Split(session.Groups, "|"))
+
+	assert.Equal(t, true, result)
+}
+
+func TestAzureMoreThanPermittedGroups(t *testing.T) {
+	//
+	// We must ensure if we have defined set of permitted groups, user can't sneak in any extra membership
+	//
 	p := testAzureProvider("")
 	p.SetGroupRestriction([]string{"test-group-1", "test-group-2"})
 
@@ -367,9 +371,9 @@ func TestAzureRightPermittedGroups(t *testing.T) {
 		AccessToken: "imaginary_access_token",
 		IDToken:     "imaginary_IDToken_token",
 		Groups:      "no one|cares|test-group-2|non existing|groups"}
-	result := p.ValidateGroup(session)
+	result := p.ValidateGroups(strings.Split(session.Groups, "|"))
 
-	assert.Equal(t, true, result)
+	assert.Equal(t, false, result)
 }
 
 func TestAzureLoginURLnoResource(t *testing.T) {

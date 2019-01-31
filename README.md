@@ -236,7 +236,7 @@ Usage of oauth2_proxy:
   -pass-user-headers: pass X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
   -pass-groups boolean: pass a pipe-separated list of groups to which the user belongs in the X-Forwarded-Groups header
   -permit-groups string: The user groups to which a user must belong in order to use the proxy (see also filter-groups)
-  -groups-exemption string: List of users that could authorize in case if groups check fails
+  -groups-exemption string: List of users that could authorize in case if groups check fails. In such case they will have `permit-groups` in their group list
   -profile-url string: Profile access endpoint
   -provider string: OAuth provider (default "google")
   -proxy-prefix string: the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in) (default "/oauth2")

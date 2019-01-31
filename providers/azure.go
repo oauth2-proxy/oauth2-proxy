@@ -141,8 +141,6 @@ func (p *AzureProvider) GetUserDetails(s *SessionState) (map[string]string, erro
 	if err != nil {
 		log.Printf("[GetEmailAddress] failed making request: %s", err)
 		return userDetails, err
-	} else if email == "" {
-		log.Printf("failed to get email address")
 	}
 
 	uid, err := getUserIDFromJSON(json)
@@ -151,9 +149,13 @@ func (p *AzureProvider) GetUserDetails(s *SessionState) (map[string]string, erro
 		log.Printf("[GetEmailAddress] failed to get User ID: %s", err)
 	}
 
+	if email == "" {
+		log.Printf("failed to get email address")
+		return userDetails, errors.New("Client email not found")
+	}
 	log.Printf("[GetEmailAddress] Chosen email address: '%s'", email)
 
-	return userDetails, err
+	return userDetails, nil
 }
 
 // Get list of groups user belong to. Filter the desired names of groups (in case of huge group set)
@@ -196,8 +198,8 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (map[string]string,
 
 	// Step 3: Well, looks like we have no other option but only check if this user is listed in local `groups_exemption` list
 	if p.ValidateExemptions(s) {
-		log.Printf("GetGroups: found '%v' in exemption list. Will let it login, but without list of groups", s.Email)
-		return map[string]string{}, nil
+		log.Printf("GetGroups: found '%v' in exemption list. Will pretend they have access to '%v'", s.Email, p.PermittedGroups)
+		return p.PermittedGroups, nil
 	}
 	log.Printf("GetGroups: looks like no matter how hard we try, we can't verify '%v'", s.Email)
 	return map[string]string{}, errors.New("Unable to verify user group membership")
@@ -270,9 +272,12 @@ func (p *AzureProvider) GetAllGroupMemberships(s *SessionState, f string) (map[s
 				continue
 			}
 			dname := v["displayName"].(string)
-			uid := v["id"].(string)
-			if p.GroupPermitted(&dname, &uid) {
-				groups[dname] = uid
+			if uid, found := v["id"].(string); found {
+				if p.GroupPermitted(&dname, &uid) {
+					groups[dname] = uid
+				}
+			} else {
+				groups[dname] = ""
 			}
 		}
 
@@ -449,19 +454,21 @@ func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
 	log.Printf("")
 }
 
-//func (p *AzureProvider) ValidateGroup(s *SessionState) bool {
-//	if len(p.PermittedGroups) != 0 {
-//		log.Printf("VALIDATION: %v", s.Groups)
-//		for _, pGroup := range p.PermittedGroups {
-//			log.Printf("ValidateGroup: %v", pGroup)
-//			if strings.Contains(s.Groups, pGroup) {
-//				return true
-//			}
-//		}
-//		return false
-//	}
-//	return true
-//}
+func (p *AzureProvider) ValidateGroups(groups []string) bool {
+	//
+	// We want to make sure only permitted groups are stored in session
+	// Otherwise user can authorize with one set of groups and then try to change that value in session
+	//
+	if len(p.PermittedGroups) != 0 {
+		for _, gName := range groups {
+			if _, found := p.PermittedGroups[gName]; ! found {
+				log.Printf("Session group list validation error. Group '%v' not found in permitted list", gName)
+				return false
+			}
+		}
+	}
+	return true
+}
 
 //func (p *AzureProvider) ValidateGroup(gName *string, gID *string) bool {
 //	// Validate provided group

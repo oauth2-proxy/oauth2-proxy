@@ -87,6 +87,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["semaphore"]
+  revision = "37e7f081c4d4c64e13b10787722085407fe5d15f"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
   revision = "302c3dd5f1cc82baae8e44d9c3178e89b6e2b345"
@@ -94,7 +100,7 @@
 [[projects]]
   branch = "master"
   name = "google.golang.org/api"
-  packages = ["admin/directory/v1","gensupport","googleapi","googleapi/internal/uritemplates"]
+  packages = ["admin/directory/v1","bigquery/v2","books/v1","calendar/v3","compute/v1","drive/v2","fitness/v1","gensupport","gmail/v1","googleapi","googleapi/internal/uritemplates","iterator","iterator/testing","mirror/v1","prediction/v1.6","pubsub/v1beta2","storage/v1","tasks/v1","urlshortener/v1","youtube/v3"]
   revision = "8791354e7ab150705ede13637a18c1fcc16b62e8"
 
 [[projects]]
@@ -119,6 +125,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8605a2d7d0488bc815a1c0e96249a5bf4d6baa3afead23a7ac6bf4c3b3422680"
+  inputs-digest = "cfa015a3f81770b9204b35318aca2c57890d00e73549742a231f255923727773"
   solver-name = "gps-cdcl"
   solver-version = 1
