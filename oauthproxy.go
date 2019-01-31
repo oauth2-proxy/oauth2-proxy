@@ -30,6 +30,8 @@ const (
 	// Cookies are limited to 4kb including the length of the cookie name,
 	// the cookie name can be up to 256 bytes
 	maxCookieLength = 3840
+
+	applicationJSON = "application/json"
 )
 
 // SignatureHeaders contains the headers to be signed by the hmac algorithm
@@ -754,6 +756,8 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		} else {
 			p.SignInPage(rw, req, http.StatusForbidden)
 		}
+	} else if status == http.StatusUnauthorized {
+		p.ErrorJSON(rw, status)
 	} else {
 		p.serveMux.ServeHTTP(rw, req)
 	}
@@ -826,6 +830,11 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	}
 
 	if session == nil {
+		// Check if is an ajax request and return unauthorized to avoid a redirect
+		// to the login page
+		if p.isAjax(req) {
+			return http.StatusUnauthorized
+		}
 		return http.StatusForbidden
 	}
 
@@ -893,4 +902,25 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState,
 		return &providers.SessionState{User: pair[0]}, nil
 	}
 	return nil, fmt.Errorf("%s not in HtpasswdFile", pair[0])
+}
+
+// isAjax checks if a request is an ajax request
+func (p *OAuthProxy) isAjax(req *http.Request) bool {
+	acceptValues, ok := req.Header["accept"]
+	if !ok {
+		acceptValues = req.Header["Accept"]
+	}
+	const ajaxReq = applicationJSON
+	for _, v := range acceptValues {
+		if v == ajaxReq {
+			return true
+		}
+	}
+	return false
+}
+
+// ErrorJSON returns the error code witht an application/json mime type
+func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
+	rw.Header().Set("Content-Type", applicationJSON)
+	rw.WriteHeader(code)
 }
