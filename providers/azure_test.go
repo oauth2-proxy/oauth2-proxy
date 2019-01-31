@@ -23,6 +23,7 @@ var (
 	payload_group_garbage string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"}]}`
 	payload_group_simple  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1","id":"test-id-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2","id":"test-id-2"}]}`
 	payload_group_no_id   string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"}]}`
+	payload_group_mix_id  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1","id":"test-id-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-3","id":"test-id-3"}]}`
 	payload_group_part_1  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","@odata.nextLink":"https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName,id&$skiptoken=X%27test-token%27","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-1"},{"@odata.type":"#microsoft.graph.group","displayName":"test-group-2"}]}`
 	payload_group_part_2  string = `{"@odata.context":"https://graph.microsoft.com/v1.0/$metadata#directoryObjects(displayName)","value":[{"@odata.type":"#microsoft.graph.group","displayName":"test-group-3"}]}`
 )
@@ -278,8 +279,58 @@ func TestAzureProviderNoGroups(t *testing.T) {
 	http.DefaultClient.Transport = nil
 
 	assert.Equal(t, nil, err)
-	// assert.Equal(t, "", groups)
 	assert.Equal(t, map[string]string{}, groups)
+}
+
+func TestAzureProviderRestictedGroupsMixedID(t *testing.T) {
+	//
+	// When group IDs are same as configured in PermittedGroups, all of them should be saved
+	// Except group-3, as we must drop any group membership that not configured in PermittedGroups (if it is defined)
+	//
+	params := map[string]string{
+		path_group: payload_group_mix_id}
+
+	http.DefaultClient.Transport = newMockTransport(params)
+
+	p := testAzureProvider("")
+	p.PermittedGroups = map[string]string{"test-group-1":"test-id-1", "test-group-2":"test-id-2"}
+
+	session := &SessionState{
+		AccessToken: "imaginary_access_token",
+		IDToken:     "imaginary_IDToken_token"}
+
+	groups, err := p.GetGroups(session, "")
+	http.DefaultClient.Transport = nil
+
+	log.Printf(" GROUPS: %v", groups)
+
+	assert.Equal(t, nil, err)
+	assert.Equal(t, map[string]string{"test-group-1":"test-id-1", "test-group-2":""}, groups)
+}
+
+func TestAzureProviderRestictedGroupsMixedIDWrongID(t *testing.T) {
+	//
+	// If we got list of groups with different IDs (different Org), only one with no ID requirement should be kept
+	//
+	params := map[string]string{
+		path_group: payload_group_mix_id}
+
+	http.DefaultClient.Transport = newMockTransport(params)
+
+	p := testAzureProvider("")
+	p.PermittedGroups = map[string]string{"test-group-1":"fake-id-1", "test-group-2":"fake-id-2", "test-group-3":"fake-id-3"}
+
+	session := &SessionState{
+		AccessToken: "imaginary_access_token",
+		IDToken:     "imaginary_IDToken_token"}
+
+	groups, err := p.GetGroups(session, "")
+	http.DefaultClient.Transport = nil
+
+	log.Printf(" GROUPS: %v", groups)
+
+	assert.Equal(t, nil, err)
+	assert.Equal(t, map[string]string{"test-group-2":""}, groups)
 }
 
 func TestAzureProviderWrongRequestGroups(t *testing.T) {
