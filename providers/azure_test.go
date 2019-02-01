@@ -380,7 +380,7 @@ func TestAzureEmptyPermittedGroups(t *testing.T) {
 		AccessToken: "imaginary_access_token",
 		IDToken:     "imaginary_IDToken_token",
 		Groups:      "no one|cares|non existing|groups"}
-	result := p.ValidateGroups(strings.Split(session.Groups, "|"))
+	result := p.ValidateGroup(session)
 
 	assert.Equal(t, true, result)
 }
@@ -393,7 +393,7 @@ func TestAzureWrongPermittedGroups(t *testing.T) {
 		AccessToken: "imaginary_access_token",
 		IDToken:     "imaginary_IDToken_token",
 		Groups:      "no one|cares|non existing|groups|test-group-1"}
-	result := p.ValidateGroups(strings.Split(session.Groups, "|"))
+	result := p.ValidateGroup(session)
 
 	assert.Equal(t, false, result)
 }
@@ -406,7 +406,7 @@ func TestAzureRightPermittedGroups(t *testing.T) {
 		AccessToken: "imaginary_access_token",
 		IDToken:     "imaginary_IDToken_token",
 		Groups:      "test-group-1|test-group-2"}
-	result := p.ValidateGroups(strings.Split(session.Groups, "|"))
+	result := p.ValidateGroup(session)
 
 	assert.Equal(t, true, result)
 }
@@ -422,9 +422,9 @@ func TestAzureMoreThanPermittedGroups(t *testing.T) {
 		AccessToken: "imaginary_access_token",
 		IDToken:     "imaginary_IDToken_token",
 		Groups:      "no one|cares|test-group-2|non existing|groups"}
-	result := p.ValidateGroups(strings.Split(session.Groups, "|"))
+	result := p.ValidateGroup(session)
 
-	assert.Equal(t, false, result)
+	assert.Equal(t, true, result)
 }
 
 func TestAzureLoginURLnoResource(t *testing.T) {

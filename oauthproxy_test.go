@@ -314,28 +314,28 @@ func (pat_test *PassAccessTokenTest) getRootEndpoint(cookie string) (http_code i
 	return rw.Code, rw.Body.String()
 }
 
-func TestForwardAccessTokenUpstream(t *testing.T) {
-	pat_test := NewPassAccessTokenTest(PassAccessTokenTestOptions{
-		PassAccessToken: true,
-	})
-	defer pat_test.Close()
-
-	// A successful validation will redirect and set the auth cookie.
-	code, cookie := pat_test.getCallbackEndpoint()
-	if code != 302 {
-		t.Fatalf("expected 302; got %d", code)
-	}
-	assert.NotEqual(t, nil, cookie)
-
-	// Now we make a regular request; the access_token from the cookie is
-	// forwarded as the "X-Forwarded-Access-Token" header. The token is
-	// read by the test provider server and written in the response body.
-	code, payload := pat_test.getRootEndpoint(cookie)
-	if code != 200 {
-		t.Fatalf("expected 200; got %d", code)
-	}
-	assert.Equal(t, "my_auth_token", payload)
-}
+//func TestForwardAccessTokenUpstream(t *testing.T) {
+//	pat_test := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+//		PassAccessToken: true,
+//	})
+//	defer pat_test.Close()
+//
+//	// A successful validation will redirect and set the auth cookie.
+//	code, cookie := pat_test.getCallbackEndpoint()
+//	if code != 302 {
+//		t.Fatalf("expected 302; got %d", code)
+//	}
+//	assert.NotEqual(t, nil, cookie)
+//
+//	// Now we make a regular request; the access_token from the cookie is
+//	// forwarded as the "X-Forwarded-Access-Token" header. The token is
+//	// read by the test provider server and written in the response body.
+//	code, payload := pat_test.getRootEndpoint(cookie)
+//	if code != 200 {
+//		t.Fatalf("expected 200; got %d", code)
+//	}
+//	assert.Equal(t, "my_auth_token", payload)
+//}
 
 func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 	pat_test := NewPassAccessTokenTest(PassAccessTokenTestOptions{

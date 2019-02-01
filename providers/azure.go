@@ -454,44 +454,35 @@ func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
 	log.Printf("")
 }
 
-func (p *AzureProvider) ValidateGroups(groups []string) bool {
-	//
-	// We want to make sure only permitted groups are stored in session
-	// Otherwise user can authorize with one set of groups and then try to change that value in session
-	//
-	if len(p.PermittedGroups) != 0 {
-		for _, gName := range groups {
-			if _, found := p.PermittedGroups[gName]; ! found {
-				log.Printf("Session group list validation error. Group '%v' not found in permitted list", gName)
-				return false
-			}
-		}
-	}
-	return true
-}
-
-//func (p *AzureProvider) ValidateGroup(gName *string, gID *string) bool {
-//	// Validate provided group
-//	// if "PermitGroups" are defined, for each user group membership, include only those groups that
-//	// marked in list
+//func (p *AzureProvider) ValidateGroups(groups []string) bool {
 //	//
-//	// NOTE: if group in "PermitGroups" does not have group_id defined, this parameter is ignored
+//	// We want to make sure only permitted groups are stored in session
+//	// Otherwise user can authorize with one set of groups and then try to change that value in session
+//	//
 //	if len(p.PermittedGroups) != 0 {
-//		log.Printf("VALIDATION FOR : %v : %v", *gName, *gID)
-//		for pGroupName, pGroupID := range p.PermittedGroups {
-//			log.Printf("       ValidateGroup: %v : %v", pGroupName, pGroupID)
-//			if pGroupName == *gName {
-//				if pGroupID == "" || gID == nil {
-//					return true
-//				} else if pGroupID == *gID {
-//					return true
-//				}
+//		for _, gName := range groups {
+//			if _, found := p.PermittedGroups[gName]; ! found {
+//				log.Printf("Session group list validation error. Group '%v' not found in permitted list", gName)
+//				return false
 //			}
 //		}
-//		return false
 //	}
 //	return true
 //}
+
+func (p *AzureProvider) ValidateGroup(s *SessionState) bool {
+	if len(p.PermittedGroups) != 0 {
+		log.Printf("VALIDATION: %v", s.Groups)
+		for pGroup, _ := range p.PermittedGroups {
+			log.Printf("ValidateGroup: %v", pGroup)
+			if strings.Contains(s.Groups, pGroup) {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
 
 func (p *AzureProvider) GroupPermitted(gName *string, gID *string) bool {
 	// Validate provided group
