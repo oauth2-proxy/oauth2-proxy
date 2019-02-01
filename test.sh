@@ -21,7 +21,7 @@ for pkg in $(go list ./... | grep -v '/vendor/' ); do
     go vet "$pkg" || EXIT_CODE=1
     echo "go test ${VERBOSE} $pkg"
     go test ${VERBOSE} -timeout 90s "$pkg" || EXIT_CODE=1
-    echo "go test ${VERBOSE} -race $pkg"
-    GOMAXPROCS=4 go test ${VERBOSE} -timeout 90s0s -race "$pkg" || EXIT_CODE=1
+    # echo "go test ${VERBOSE} -race $pkg"
+    # GOMAXPROCS=4 go test ${VERBOSE} -timeout 90s0s -race "$pkg" || EXIT_CODE=1
 done
 exit $EXIT_CODE
