@@ -25,6 +25,8 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
     c. Using the prebuilt docker image [quay.io/pusher/oauth2_proxy](https://quay.io/pusher/oauth2_proxy)
 
+    d. Building from scratch following our [Building](BUILDING.md) guide
+
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 
 ```

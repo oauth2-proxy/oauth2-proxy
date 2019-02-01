@@ -14,6 +14,7 @@
   - After a successful login, you will be redirected to your original URL rather than /
 - [#35](https://github.com/pusher/oauth2_proxy/pull/35) arm and arm64 binary releases (@kskewes)
   - Add armv6 and arm64 to Makefile `release` target
+- [#37](https://github.com/pusher/oauth2_proxy/pull/37) cross build arm and arm64 docker images (@kskewes)
 
 # v3.0.0
 
