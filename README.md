@@ -424,10 +424,44 @@ server {
     auth_request_set $auth_cookie $upstream_http_set_cookie;
     add_header Set-Cookie $auth_cookie;
 
+    # if you enabled --set-authorization and your cookies are split into multiple parts,
+    # you also need to extract the additional cookies, because $upstream_http_set_cookie
+    # only contains the first Set-Cookie header from the auth_request.
+    auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
+      
+    # Extract the Cookie attributes from the first Set-Cookie header and append them
+    # to the second part ($upstream_cookie_* variables only contain the raw cookie content)
+    if ($auth_cookie ~* "(; .*)") {
+        set $auth_cookie_name_0 $auth_cookie; 
+        set $auth_cookie_name_1 "auth_cookie_name_1=$auth_cookie_name_upstream_1$1";
+    }
+    
+    # Send both Set-Cookie headers now if there was a second part
+    if ($auth_cookie_name_upstream_1) {
+        add_header Set-Cookie $auth_cookie_name_0;
+        add_header Set-Cookie $auth_cookie_name_1;
+    }
+
     proxy_pass http://backend/;
     # or "root /path/to/site;" or "fastcgi_pass ..." etc
   }
 }
+```
+
+If you use ingress-nginx in Kubernetes (which includes the Lua module), you also can use the following configuration snippet for your Ingress:
+
+```yaml
+nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=$request_uri
+nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
+nginx.ingress.kubernetes.io/configuration-snippet: |
+  auth_request_set $name_upstream_1 $upstream_cookie_name_1;
+
+  access_by_lua_block {
+    if ngx.var.name_upstream_1 ~= "" then
+      ngx.header["Set-Cookie"] = "name_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
+    end
+  }
 ```
 
 ## Contributing
