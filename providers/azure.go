@@ -15,7 +15,7 @@ type AzureProvider struct {
 	*ProviderData
 	Tenant          string
 	PermittedGroups map[string]string
-	ExemptedUsers map[string]string
+	ExemptedUsers   map[string]string
 }
 
 func NewAzureProvider(p *ProviderData) *AzureProvider {
@@ -204,7 +204,6 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (map[string]string,
 	log.Printf("GetGroups: looks like no matter how hard we try, we can't verify '%v'", s.Email)
 	return map[string]string{}, errors.New("Unable to verify user group membership")
 }
-
 
 // Get group membership on behalf of user
 func (p *AzureProvider) GetAllGroupMemberships(s *SessionState, f string) (map[string]string, error) {
@@ -407,7 +406,7 @@ func (p *AzureProvider) SetGroupRestriction(groups []string) {
 	log.Printf("Set group restrictions. Allowed groups are:")
 	log.Printf("\t                     *GROUP NAME* : *GROUP ID*")
 	for _, pGroup := range groups {
-		splittedGroup := strings.Split(pGroup,":")
+		splittedGroup := strings.Split(pGroup, ":")
 		var groupName string
 		var groupID string
 
@@ -436,7 +435,7 @@ func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
 	log.Printf("Configure user exemption list:")
 	log.Printf("\t                      *USER NAME* : *USER ID*")
 	for _, pRecord := range exemptions {
-		splittedRecord := strings.Split(pRecord,":")
+		splittedRecord := strings.Split(pRecord, ":")
 		var userName string
 		var userID string
 

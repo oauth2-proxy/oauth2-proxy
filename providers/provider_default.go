@@ -110,9 +110,6 @@ func (p *ProviderData) SessionFromCookie(v string, c *cookie.Cipher) (s *Session
 func (p *ProviderData) GetUserDetails(s *SessionState) (map[string]string, error) {
 	return map[string]string{}, errors.New("not implemented")
 }
-//func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
-//	return "", errors.New("not implemented")
-//}
 
 // GetUserName returns the Account username
 func (p *ProviderData) GetUserName(s *SessionState) (string, error) {

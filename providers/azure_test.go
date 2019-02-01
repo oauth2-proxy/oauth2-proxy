@@ -293,7 +293,7 @@ func TestAzureProviderRestictedGroupsMixedID(t *testing.T) {
 	http.DefaultClient.Transport = newMockTransport(params)
 
 	p := testAzureProvider("")
-	p.PermittedGroups = map[string]string{"test-group-1":"test-id-1", "test-group-2":"test-id-2"}
+	p.PermittedGroups = map[string]string{"test-group-1": "test-id-1", "test-group-2": "test-id-2"}
 
 	session := &SessionState{
 		AccessToken: "imaginary_access_token",
@@ -305,7 +305,7 @@ func TestAzureProviderRestictedGroupsMixedID(t *testing.T) {
 	log.Printf(" GROUPS: %v", groups)
 
 	assert.Equal(t, nil, err)
-	assert.Equal(t, map[string]string{"test-group-1":"test-id-1", "test-group-2":""}, groups)
+	assert.Equal(t, map[string]string{"test-group-1": "test-id-1", "test-group-2": ""}, groups)
 }
 
 func TestAzureProviderRestictedGroupsMixedIDWrongID(t *testing.T) {
@@ -318,7 +318,7 @@ func TestAzureProviderRestictedGroupsMixedIDWrongID(t *testing.T) {
 	http.DefaultClient.Transport = newMockTransport(params)
 
 	p := testAzureProvider("")
-	p.PermittedGroups = map[string]string{"test-group-1":"fake-id-1", "test-group-2":"fake-id-2", "test-group-3":"fake-id-3"}
+	p.PermittedGroups = map[string]string{"test-group-1": "fake-id-1", "test-group-2": "fake-id-2", "test-group-3": "fake-id-3"}
 
 	session := &SessionState{
 		AccessToken: "imaginary_access_token",
@@ -330,7 +330,7 @@ func TestAzureProviderRestictedGroupsMixedIDWrongID(t *testing.T) {
 	log.Printf(" GROUPS: %v", groups)
 
 	assert.Equal(t, nil, err)
-	assert.Equal(t, map[string]string{"test-group-2":""}, groups)
+	assert.Equal(t, map[string]string{"test-group-2": ""}, groups)
 }
 
 func TestAzureProviderWrongRequestGroups(t *testing.T) {
