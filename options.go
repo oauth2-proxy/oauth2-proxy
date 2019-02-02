@@ -289,17 +289,6 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		} else {
 			p.Verifier = o.oidcVerifier
 		}
-	case *providers.LoginGovProvider:
-		if o.oidcVerifier == nil {
-			msgs = append(msgs, "login.gov provider requires an oidc issuer URL")
-		} else {
-			p.Verifier = o.oidcVerifier
-		}
-		if o.AcrValues == nil {
-			msgs = append(msgs, "login.gov provider requires acr_values to be set")
-		} else {
-			p.AcrValues = o.AcrValues
-		}
 	}
 	return msgs
 }
