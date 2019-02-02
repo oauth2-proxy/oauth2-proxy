@@ -16,9 +16,7 @@ RUN ./configure && GOARCH=arm64 make build
 
 # Copy binary to alpine
 FROM arm64v8/alpine:3.8
-COPY dist/qemu-aarch64-static /usr/bin/
-RUN apk add --no-cache ca-certificates
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
-RUN rm /usr/bin/qemu-*-static -f
 
 ENTRYPOINT ["/bin/oauth2_proxy"]

@@ -16,7 +16,7 @@ RUN ./configure && make build
 
 # Copy binary to alpine
 FROM alpine:3.8
-RUN apk add --no-cache ca-certificates
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
 
 ENTRYPOINT ["/bin/oauth2_proxy"]

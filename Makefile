@@ -45,26 +45,12 @@ build: clean $(BINARY)
 $(BINARY):
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/pusher/oauth2_proxy
 
-# Ubuntu 18.04.1 Qemu version
-QEMU-STATIC-VERSION=v2.11.1
-
-.PHONY: qemu-static
-qemu-static:
-	wget -O dist/qemu-amd64-static https://github.com/multiarch/qemu-user-static/releases/download/${QEMU-STATIC-VERSION}/qemu-x86_64-static
-	wget -O dist/qemu-aarch64-static https://github.com/multiarch/qemu-user-static/releases/download/${QEMU-STATIC-VERSION}/qemu-aarch64-static
-	wget -O dist/qemu-arm-static https://github.com/multiarch/qemu-user-static/releases/download/${QEMU-STATIC-VERSION}/qemu-arm-static
-	chmod +x dist/qemu-*-static
-
-.PHONY: qemu-register
-qemu-register:
-	docker run --rm --privileged multiarch/qemu-user-static:register
-
 .PHONY: docker
 docker:
 	docker build -f Dockerfile -t pusher/oauth2_proxy:latest .
 
 .PHONY: docker-all
-docker-all: qemu-static docker
+docker-all: docker
 	docker build -f Dockerfile -t pusher/oauth2_proxy:latest-amd64 .
 	docker build -f Dockerfile -t pusher/oauth2_proxy:${VERSION} .
 	docker build -f Dockerfile -t pusher/oauth2_proxy:${VERSION}-amd64 .
