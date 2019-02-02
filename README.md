@@ -424,7 +424,11 @@ server {
     auth_request_set $auth_cookie $upstream_http_set_cookie;
     add_header Set-Cookie $auth_cookie;
 
-    # if you enabled --set-authorization and your cookies are split into multiple parts,
+    # When using the --set-authorization flag, some provider's cookies can exceed the 4kb 
+    # limit and so the OAuth2 Proxy splits these into multiple parts. 
+    # Nginx normally only copies the first `Set-Cookie` header from the auth_request to the response,
+    # so if your cookies are larger than 4kb, you will need to extract additional cookies manually.
+    auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
     # you also need to extract the additional cookies, because $upstream_http_set_cookie
     # only contains the first Set-Cookie header from the auth_request.
     auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
