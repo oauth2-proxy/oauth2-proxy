@@ -20,6 +20,7 @@ type Provider interface {
 
 // New provides a new Provider based on the configured provider string
 func New(provider string, p *ProviderData) Provider {
+	log.Printf("choosing a provider now")
 	switch provider {
 	case "linkedin":
 		return NewLinkedInProvider(p)
