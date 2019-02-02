@@ -429,9 +429,6 @@ server {
     # Nginx normally only copies the first `Set-Cookie` header from the auth_request to the response,
     # so if your cookies are larger than 4kb, you will need to extract additional cookies manually.
     auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
-    # you also need to extract the additional cookies, because $upstream_http_set_cookie
-    # only contains the first Set-Cookie header from the auth_request.
-    auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
       
     # Extract the Cookie attributes from the first Set-Cookie header and append them
     # to the second part ($upstream_cookie_* variables only contain the raw cookie content)
