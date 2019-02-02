@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pusher/oauth2_proxy/api"
+	"github.com/timothy-spencer/oauth2_proxy-1/api"
 )
 
 // GitLabProvider represents an GitLab based Identity Provider
