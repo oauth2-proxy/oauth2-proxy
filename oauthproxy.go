@@ -70,6 +70,7 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 
 	redirectURL         *url.URL // the url to receive requests at
+	whitelistDomains    []string
 	provider            providers.Provider
 	ProxyPrefix         string
 	SignInMessage       string
@@ -224,6 +225,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		provider:           opts.provider,
 		serveMux:           serveMux,
 		redirectURL:        redirectURL,
+		whitelistDomains:   opts.WhitelistDomains,
 		skipAuthRegex:      opts.SkipAuthRegex,
 		skipAuthPreflight:  opts.SkipAuthPreflight,
 		compiledRegex:      opts.CompiledRegex,
@@ -567,7 +569,7 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	}
 
 	redirect = req.Form.Get("rd")
-	if redirect == "" || !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") {
+	if !p.IsValidRedirect(redirect) {
 		redirect = req.URL.Path
 		if strings.HasPrefix(redirect, p.ProxyPrefix) {
 			redirect = "/"
@@ -575,6 +577,27 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	}
 
 	return
+}
+
+// IsValidRedirect checks whether the redirect URL is whitelisted
+func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
+	switch {
+	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//"):
+		return true
+	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
+		redirectURL, err := url.Parse(redirect)
+		if err != nil {
+			return false
+		}
+		for _, domain := range p.whitelistDomains {
+			if (redirectURL.Host == domain) || (strings.HasPrefix(domain, ".") && strings.HasSuffix(redirectURL.Host, domain)) {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
 }
 
 // IsWhitelistedRequest is used to check if auth should be skipped for this request
@@ -713,7 +736,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") {
+	if !p.IsValidRedirect(redirect) {
 		redirect = "/"
 	}
 

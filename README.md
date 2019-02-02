@@ -237,7 +237,10 @@ Usage of oauth2_proxy:
   -upstream value: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
   -validate-url string: Access token validation endpoint
   -version: print version string
+  -whitelist-domain: allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)
 ```
+
+Note, when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL.
 
 See below for provider specific options
 

@@ -93,6 +93,57 @@ func TestRobotsTxt(t *testing.T) {
 	assert.Equal(t, "User-agent: *\nDisallow: /", rw.Body.String())
 }
 
+func TestIsValidRedirect(t *testing.T) {
+	opts := NewOptions()
+	opts.ClientID = "bazquux"
+	opts.ClientSecret = "foobar"
+	opts.CookieSecret = "xyzzyplugh"
+	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
+	opts.WhitelistDomains = []string{"foo.bar", ".bar.foo"}
+	opts.Validate()
+
+	proxy := NewOAuthProxy(opts, func(string) bool { return true })
+
+	noRD := proxy.IsValidRedirect("")
+	assert.Equal(t, false, noRD)
+
+	singleSlash := proxy.IsValidRedirect("/redirect")
+	assert.Equal(t, true, singleSlash)
+
+	doubleSlash := proxy.IsValidRedirect("//redirect")
+	assert.Equal(t, false, doubleSlash)
+
+	validHTTP := proxy.IsValidRedirect("http://foo.bar/redirect")
+	assert.Equal(t, true, validHTTP)
+
+	validHTTPS := proxy.IsValidRedirect("https://foo.bar/redirect")
+	assert.Equal(t, true, validHTTPS)
+
+	invalidHTTPSubdomain := proxy.IsValidRedirect("http://baz.foo.bar/redirect")
+	assert.Equal(t, false, invalidHTTPSubdomain)
+
+	invalidHTTPSSubdomain := proxy.IsValidRedirect("https://baz.foo.bar/redirect")
+	assert.Equal(t, false, invalidHTTPSSubdomain)
+
+	validHTTPSubdomain := proxy.IsValidRedirect("http://baz.bar.foo/redirect")
+	assert.Equal(t, true, validHTTPSubdomain)
+
+	validHTTPSSubdomain := proxy.IsValidRedirect("https://baz.bar.foo/redirect")
+	assert.Equal(t, true, validHTTPSSubdomain)
+
+	invalidHTTP1 := proxy.IsValidRedirect("http://foo.bar.evil.corp/redirect")
+	assert.Equal(t, false, invalidHTTP1)
+
+	invalidHTTPS1 := proxy.IsValidRedirect("https://foo.bar.evil.corp/redirect")
+	assert.Equal(t, false, invalidHTTPS1)
+
+	invalidHTTP2 := proxy.IsValidRedirect("http://evil.corp/redirect?rd=foo.bar")
+	assert.Equal(t, false, invalidHTTP2)
+
+	invalidHTTPS2 := proxy.IsValidRedirect("https://evil.corp/redirect?rd=foo.bar")
+	assert.Equal(t, false, invalidHTTPS2)
+}
+
 type TestProvider struct {
 	*providers.ProviderData
 	EmailAddress string
