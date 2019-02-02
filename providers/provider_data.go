@@ -17,7 +17,6 @@ type ProviderData struct {
 	ValidateURL       *url.URL
 	Scope             string
 	ApprovalPrompt    string
-	Nonce             string
 }
 
 // Data returns the ProviderData

@@ -3,6 +3,8 @@ package providers
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -16,8 +18,8 @@ type LoginGovProvider struct {
 	*ProviderData
 
 	Verifier  *oidc.IDTokenVerifier
-	AcrValues string
 	Nonce     string
+	AcrValues string
 }
 
 // For generating a nonce
@@ -35,10 +37,36 @@ func randSeq(n int) string {
 func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 	p.ProviderName = "login.gov"
 
-	rand.Seed(time.Now().UnixNano())
-	p.Nonce = randSeq(32)
+	if p.LoginURL == nil || p.LoginURL.String() == "" {
+		p.LoginURL = &url.URL{
+			Scheme: "https",
+			Host:   "secure.login.gov",
+			Path:   "/openid_connect/authorize",
+		}
+	}
+	if p.RedeemURL == nil || p.RedeemURL.String() == "" {
+		p.RedeemURL = &url.URL{
+			Scheme: "https",
+			Host:   "secure.login.gov",
+			Path:   "/api/openid_connect/token",
+		}
+	}
+	if p.ProfileURL == nil || p.ProfileURL.String() == "" {
+		p.ProfileURL = &url.URL{
+			Scheme: "https",
+			Host:   "secure.login.gov",
+			Path:   "/api/openid_connect/userinfo",
+		}
+	}
+	if p.Scope == "" {
+		p.Scope = "email openid"
+	}
 
-	return &LoginGovProvider{ProviderData: p}
+	return &LoginGovProvider{
+		ProviderData: p,
+		AcrValues:    "http://idmanagement.gov/ns/assurance/loa/1",
+		Nonce:        randSeq(32),
+	}
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
@@ -61,6 +89,22 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 		return nil, fmt.Errorf("unable to update session: %v", err)
 	}
 	return
+}
+
+func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
+	var a url.URL
+	a = *p.LoginURL
+	params, _ := url.ParseQuery(a.RawQuery)
+	params.Set("redirect_uri", redirectURI)
+	params.Set("approval_prompt", p.ApprovalPrompt)
+	params.Add("scope", p.Scope)
+	params.Set("client_id", p.ClientID)
+	params.Set("response_type", "code")
+	params.Add("state", state)
+	params.Add("acr_values", p.AcrValues)
+	params.Add("nonce", p.Nonce)
+	a.RawQuery = params.Encode()
+	return a.String()
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the

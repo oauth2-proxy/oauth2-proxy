@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"runtime"
 	"strings"
@@ -127,6 +128,8 @@ func main() {
 			log.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
 		}
 	}
+
+	rand.Seed(time.Now().UnixNano())
 
 	s := &Server{
 		Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat),
