@@ -331,7 +331,7 @@ func splitCookie(c *http.Cookie) []*http.Cookie {
 	count := 0
 	for len(valueBytes) > 0 {
 		new := copyCookie(c)
-		new.Name = fmt.Sprintf("%s-%d", c.Name, count)
+		new.Name = fmt.Sprintf("%s_%d", c.Name, count)
 		count++
 		if len(valueBytes) < maxCookieLength {
 			new.Value = string(valueBytes)
@@ -359,7 +359,7 @@ func joinCookies(cookies []*http.Cookie) (*http.Cookie, error) {
 	for i := 1; i < len(cookies); i++ {
 		c.Value += cookies[i].Value
 	}
-	c.Name = strings.TrimRight(c.Name, "-0")
+	c.Name = strings.TrimRight(c.Name, "_0")
 	return c, nil
 }
 
@@ -376,7 +376,7 @@ func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {
 	count := 0
 	for err == nil {
 		var c *http.Cookie
-		c, err = req.Cookie(fmt.Sprintf("%s-%d", cookieName, count))
+		c, err = req.Cookie(fmt.Sprintf("%s_%d", cookieName, count))
 		if err == nil {
 			cookies = append(cookies, c)
 			count++
