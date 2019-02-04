@@ -127,8 +127,8 @@ func (p *ProviderData) ValidateGroup(s *SessionState) bool {
 }
 
 // ValidateExemptions checks if we can allow user login dispite group membership returned failure
-func (p *ProviderData) ValidateExemptions(s *SessionState) bool {
-	return false
+func (p *ProviderData) ValidateExemptions(s *SessionState) (bool, string) {
+	return false, ""
 }
 
 func (p *ProviderData) ValidateSessionState(s *SessionState) bool {

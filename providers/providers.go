@@ -11,7 +11,7 @@ type Provider interface {
 	GetGroups(*SessionState, string) (map[string]string, error)
 	Redeem(string, string) (*SessionState, error)
 	ValidateGroup(*SessionState) bool
-	ValidateExemptions(*SessionState) bool
+	ValidateExemptions(*SessionState) (bool, string)
 	ValidateSessionState(*SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(*SessionState) (bool, error)

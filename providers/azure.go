@@ -197,9 +197,9 @@ func (p *AzureProvider) GetGroups(s *SessionState, f string) (map[string]string,
 	}
 
 	// Step 3: Well, looks like we have no other option but only check if this user is listed in local `groups_exemption` list
-	if p.ValidateExemptions(s) {
-		log.Printf("GetGroups: found '%v' in exemption list. Will pretend they have access to '%v'", s.Email, p.PermittedGroups)
-		return p.PermittedGroups, nil
+	if valid, group := p.ValidateExemptions(s); valid {
+		log.Printf("GetGroups: found '%v' in exemption list. Will pretend they have access to '%v'", s.Email, group)
+		return map[string]string{group: ""}, nil
 	}
 	log.Printf("GetGroups: looks like no matter how hard we try, we can't verify '%v'", s.Email)
 	return map[string]string{}, errors.New("Unable to verify user group membership")
@@ -357,22 +357,15 @@ func (p *AzureProvider) HasGroupMembership(s *SessionState, gName string, gID st
 }
 
 // ValidateExemptions checks if we can allow user login dispite group membership returned failure
-func (p *AzureProvider) ValidateExemptions(s *SessionState) bool {
+func (p *AzureProvider) ValidateExemptions(s *SessionState) (bool, string) {
 	log.Printf("ValidateExemptions: validating for %v : %v", s.Email, s.ID)
-	for eUserName, eUserID := range p.ExemptedUsers {
-		if eUserName == s.Email {
-			log.Printf("ValidateExemptions: \t found same username in exemption list, now checking User ID")
-			if eUserID == "" || s.ID == "" {
-				log.Printf("ValidateExemptions: \t no User ID is setup, so we are skipping such check")
-				return true
-			} else if eUserID == s.ID {
-				log.Printf("ValidateExemptions: \t User ID matched one defined in exemption list")
-				return true
-			}
-			log.Printf("ValidateExemptions: \t User ID verification FAILED (%v != %v)", eUserID, s.ID)
+	for eAccount, eGroup := range p.ExemptedUsers {
+		if eAccount == s.Email || eAccount == s.Email+":"+s.ID {
+			log.Printf("ValidateExemptions: \t found '%v' user in exemption list. Returning '%v' group membership", eAccount, eGroup)
+			return true, eGroup
 		}
 	}
-	return false
+	return false, ""
 }
 
 func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
@@ -404,7 +397,7 @@ func (p *AzureProvider) SetGroupRestriction(groups []string) {
 		return
 	}
 	log.Printf("Set group restrictions. Allowed groups are:")
-	log.Printf("\t                     *GROUP NAME* : *GROUP ID*")
+	log.Printf("\t                *GROUP NAME*      : *GROUP ID*")
 	for _, pGroup := range groups {
 		splittedGroup := strings.Split(pGroup, ":")
 		var groupName string
@@ -419,7 +412,7 @@ func (p *AzureProvider) SetGroupRestriction(groups []string) {
 			groupName, groupID = splittedGroup[0], splittedGroup[1]
 			p.PermittedGroups[splittedGroup[0]] = splittedGroup[1]
 		}
-		log.Printf("\t - %30s   %s", groupName, groupID)
+		log.Printf("\t - %-30s   %s", groupName, groupID)
 	}
 	log.Printf("")
 }
@@ -432,23 +425,26 @@ func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
 	if len(exemptions) == 0 {
 		return
 	}
+
+	var userRecord string
+	var groupName string
 	log.Printf("Configure user exemption list:")
-	log.Printf("\t                      *USER NAME* : *USER ID*")
+	log.Printf("\t                    *USER NAME*:*USER ID*                            : *DEFAULT GROUP*")
 	for _, pRecord := range exemptions {
 		splittedRecord := strings.Split(pRecord, ":")
-		var userName string
-		var userID string
 
 		if len(splittedRecord) == 1 {
-			userName, userID = splittedRecord[0], ""
-			p.ExemptedUsers[splittedRecord[0]] = ""
-		} else if len(splittedRecord) > 2 {
+			userRecord, groupName = splittedRecord[0], ""
+		} else if len(splittedRecord) == 2 {
+			userRecord, groupName = splittedRecord[0], splittedRecord[1]
+		} else if len(splittedRecord) > 3 {
 			log.Fatalf("failed to parse '%v'. Too many ':' separators", pRecord)
 		} else {
-			userName, userID = splittedRecord[0], splittedRecord[1]
-			p.ExemptedUsers[splittedRecord[0]] = splittedRecord[1]
+			userRecord = splittedRecord[0] + ":" + splittedRecord[1]
+			groupName = splittedRecord[2]
 		}
-		log.Printf("\t - %30s   %s", userName, userID)
+		p.ExemptedUsers[userRecord] = groupName
+		log.Printf("\t - %-65s    %s", userRecord, groupName)
 	}
 	log.Printf("")
 }
