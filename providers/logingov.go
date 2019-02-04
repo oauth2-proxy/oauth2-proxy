@@ -17,10 +17,10 @@ import (
 type LoginGovProvider struct {
 	*ProviderData
 
-	Verifier   *oidc.IDTokenVerifier
-	Nonce      string
-	AcrValues  string
-	JWTKey     string
+	Verifier  *oidc.IDTokenVerifier
+	Nonce     string
+	AcrValues string
+	JWTKey    string
 }
 
 // For generating a nonce
@@ -73,9 +73,9 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
 	ctx := context.Background()
 	c := jwt.Config{
-		Email:      p.ClientID,
-		JWTKey:     p.JWTKey,
-		TokenURL:   p.RedeemURL.String(),
+		Email:    p.ClientID,
+		JWTKey:   p.JWTKey,
+		TokenURL: p.RedeemURL.String(),
 	}
 	token, err := c.Exchange(ctx, code)
 	if err != nil {
@@ -124,9 +124,9 @@ func (p *LoginGovProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error)
 
 func (p *LoginGovProvider) redeemRefreshToken(s *SessionState) (err error) {
 	c := jwt.Config{
-		Email:      p.ClientID,
-		JWTKey:     p.JWTKey
-		TokenURL:   p.RedeemURL.String(),
+		Email:    p.ClientID,
+		JWTKey:   p.JWTKey,
+		TokenURL: p.RedeemURL.String(),
 	}
 	ctx := context.Background()
 	t := &oauth2.Token{
