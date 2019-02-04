@@ -20,7 +20,7 @@ type LoginGovProvider struct {
 	Verifier  *oidc.IDTokenVerifier
 	Nonce     string
 	AcrValues string
-	JWTKey    string
+	JWTKey    []byte
 }
 
 // For generating a nonce
