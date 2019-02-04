@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/jwt"
 
 	oidc "github.com/coreos/go-oidc"
 	"math/rand"
@@ -16,9 +17,10 @@ import (
 type LoginGovProvider struct {
 	*ProviderData
 
-	Verifier  *oidc.IDTokenVerifier
-	Nonce     string
-	AcrValues string
+	Verifier   *oidc.IDTokenVerifier
+	Nonce      string
+	AcrValues  string
+	JWTKey     string
 }
 
 // For generating a nonce
@@ -63,7 +65,6 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 
 	return &LoginGovProvider{
 		ProviderData: p,
-		AcrValues:    "http://idmanagement.gov/ns/assurance/loa/1",
 		Nonce:        randSeq(32),
 	}
 }
@@ -71,13 +72,10 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
 	ctx := context.Background()
-	c := oauth2.Config{
-		ClientID:     p.ClientID,
-		ClientSecret: p.ClientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
-		},
-		RedirectURL: redirectURL,
+	c := jwt.Config{
+		Email:      p.ClientID,
+		JWTKey:     p.JWTKey,
+		TokenURL:   p.RedeemURL.String(),
 	}
 	token, err := c.Exchange(ctx, code)
 	if err != nil {
@@ -125,12 +123,10 @@ func (p *LoginGovProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error)
 }
 
 func (p *LoginGovProvider) redeemRefreshToken(s *SessionState) (err error) {
-	c := oauth2.Config{
-		ClientID:     p.ClientID,
-		ClientSecret: p.ClientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
-		},
+	c := jwt.Config{
+		Email:      p.ClientID,
+		JWTKey:     p.JWTKey
+		TokenURL:   p.RedeemURL.String(),
 	}
 	ctx := context.Background()
 	t := &oauth2.Token{

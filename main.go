@@ -84,7 +84,8 @@ func main() {
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
-	flagSet.String("acr-values", "", "optional acr values string that can be used used by login.gov")
+	flagSet.String("acr-values", "http://idmanagement.gov/ns/assurance/loa/1", "acr values string:  optional, used by login.gov")
+	flagSet.String("jwt-key", "", "private key used to sign JWT: required by login.gov")
 
 	flagSet.Parse(os.Args[1:])
 

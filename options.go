@@ -83,6 +83,7 @@ type Options struct {
 
 	SignatureKey string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 	AcrValues    string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`
+	JWTKey       string `flag:"jwt-key" cfg:"jwt_key" env:"OAUTH2_PROXY_JWT_KEY"`
 
 	// internal values that are set after config validation
 	redirectURL   *url.URL
@@ -288,6 +289,13 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {
 			p.Verifier = o.oidcVerifier
+		}
+	case *providers.LoginGovProvider:
+		p.AcrValues = o.AcrValues
+		if o.JWTKey == "" {
+			msgs = append(msgs, "login.gov provider requires a private key for signing JWTs")
+		} else {
+			p.JWTKey = o.JWTKey
 		}
 	}
 	return msgs
