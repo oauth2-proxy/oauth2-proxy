@@ -45,6 +45,20 @@ build: clean $(BINARY)
 $(BINARY):
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/pusher/oauth2_proxy
 
+.PHONY: docker
+docker:
+	docker build -f Dockerfile -t pusher/oauth2_proxy:latest .
+
+.PHONY: docker-all
+docker-all: docker
+	docker build -f Dockerfile -t pusher/oauth2_proxy:latest-amd64 .
+	docker build -f Dockerfile -t pusher/oauth2_proxy:${VERSION} .
+	docker build -f Dockerfile -t pusher/oauth2_proxy:${VERSION}-amd64 .
+	docker build -f Dockerfile.arm64 -t pusher/oauth2_proxy:latest-arm64 .
+	docker build -f Dockerfile.arm64 -t pusher/oauth2_proxy:${VERSION}-arm64 .
+	docker build -f Dockerfile.armv6 -t pusher/oauth2_proxy:latest-armv6 .
+	docker build -f Dockerfile.armv6 -t pusher/oauth2_proxy:${VERSION}-armv6 .
+
 .PHONY: test
 test: dep lint
 	$(GO) test -v -race $(go list ./... | grep -v /vendor/)

@@ -12,10 +12,10 @@ COPY . .
 RUN dep ensure --vendor-only
 
 # Build binary
-RUN ./configure && make build
+RUN ./configure && GOARCH=arm64 make build
 
 # Copy binary to alpine
-FROM alpine:3.8
+FROM arm64v8/alpine:3.8
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
 
