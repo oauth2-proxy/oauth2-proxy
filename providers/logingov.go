@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
