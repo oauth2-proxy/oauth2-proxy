@@ -11,10 +11,6 @@ COPY . .
 # Fetch dependencies
 RUN dep ensure --vendor-only
 
-RUN rm -rvf vendor/github.com/coreos/go-oidc
-
-RUN git clone https://github.com/karrieretutor/go-oidc vendor/github.com/coreos/go-oidc
-
 # Build binary
 RUN ./configure && make build
 
