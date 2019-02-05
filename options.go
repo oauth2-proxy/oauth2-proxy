@@ -142,7 +142,6 @@ func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string
 }
 
 // OIDCManualTransport is a structure that is used for manual OIDC endpoints definition
-
 //
 type OIDCManualTransport struct {
 	Issuer                string `json:"issuer"`
