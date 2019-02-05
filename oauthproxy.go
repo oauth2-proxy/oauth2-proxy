@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/github.com/pusher/oauth2_proxy/cookie"
-	"github.com/github.com/pusher/oauth2_proxy/providers"
 	"github.com/mbland/hmacauth"
+	"github.com/timothy-spencer/oauth2_proxy-1/cookie"
+	"github.com/timothy-spencer/oauth2_proxy-1/providers"
 )
 
 const (

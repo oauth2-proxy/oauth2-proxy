@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/github.com/pusher/oauth2_proxy/providers"
 	"github.com/mbland/hmacauth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/timothy-spencer/oauth2_proxy-1/providers"
 )
 
 func init() {

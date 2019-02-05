@@ -19,7 +19,7 @@ type LoginGovProvider struct {
 
 	Nonce     string
 	AcrValues string
-	JWTKey    []byte
+	JWTKey    string
 }
 
 // For generating a nonce
@@ -83,7 +83,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 		Id:        randSeq(32),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString(p.JWTKey)
+	ss, err := token.SignedString([]byte(p.JWTKey))
 
 	params := url.Values{}
 	params.Add("client_assertion", ss)

@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"github.com/github.com/pusher/oauth2_proxy/cookie"
+	"github.com/timothy-spencer/oauth2_proxy-1/cookie"
 )
 
 // Provider represents an upstream identity provider implementation

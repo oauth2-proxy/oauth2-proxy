@@ -15,7 +15,7 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
-	"github.com/github.com/pusher/oauth2_proxy/providers"
+	"github.com/timothy-spencer/oauth2_proxy-1/providers"
 )
 
 // Options holds Configuration Options that can be set by Command Line Flag,
@@ -83,7 +83,7 @@ type Options struct {
 
 	SignatureKey string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 	AcrValues    string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`
-	JWTKey       []byte `flag:"jwt-key" cfg:"jwt_key" env:"OAUTH2_PROXY_JWT_KEY"`
+	JWTKey       string `flag:"jwt-key" cfg:"jwt_key" env:"OAUTH2_PROXY_JWT_KEY"`
 
 	// internal values that are set after config validation
 	redirectURL   *url.URL
@@ -153,7 +153,7 @@ func (o *Options) Validate() error {
 	if o.ClientID == "" {
 		msgs = append(msgs, "missing setting: client-id")
 	}
-	if o.ClientSecret == "" {
+	if o.ClientSecret == "" && o.Provider != "login.gov" {
 		msgs = append(msgs, "missing setting: client-secret")
 	}
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
@@ -292,7 +292,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		}
 	case *providers.LoginGovProvider:
 		p.AcrValues = o.AcrValues
-		if o.JWTKey == []byte"" {
+		if o.JWTKey == "" {
 			msgs = append(msgs, "login.gov provider requires a private key for signing JWTs")
 		} else {
 			p.JWTKey = o.JWTKey

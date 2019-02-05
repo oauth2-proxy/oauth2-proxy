@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/github.com/pusher/oauth2_proxy/api"
+	"github.com/timothy-spencer/oauth2_proxy-1/api"
 )
 
 // FacebookProvider represents an Facebook based Identity Provider
