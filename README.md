@@ -213,6 +213,8 @@ Usage of oauth2_proxy:
   -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
   -login-url string: Authentication endpoint
   -oidc-issuer-url: the OpenID Connect issuer URL. ie: "https://accounts.google.com"
+  -oidc-jwks-url string: OIDC JWKS URI for token verification; required if OIDC discovery is disabled
+  -oidc-userinfo-url string: OIDC Userinfo Endpoint; optional if OIDC discovery is disabled
   -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
   -pass-authorization-header: pass OIDC IDToken to upstream via Authorization Bearer header
   -pass-basic-auth: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
@@ -232,6 +234,7 @@ Usage of oauth2_proxy:
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
   -skip-auth-preflight: will skip authentication for OPTIONS requests
   -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
+  -skip-oidc-discovery: bypass OIDC endpoint discovery. login-url, redeem-url and oidc-jwks-url must be configured in this case
   -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
   -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
   -tls-cert string: path to certificate file

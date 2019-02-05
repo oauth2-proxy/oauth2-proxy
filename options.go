@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -71,6 +74,9 @@ type Options struct {
 	// potential overrides.
 	Provider          string `flag:"provider" cfg:"provider"`
 	OIDCIssuerURL     string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
+	SkipOidcDiscovery bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
+	OIDCUserInfoURL   string `flag:"oidc-userinfo-url" cfg:"oidc_userinfo_url"`
+	OIDCJwksURL       string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	LoginURL          string `flag:"login-url" cfg:"login_url"`
 	RedeemURL         string `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL        string `flag:"profile-url" cfg:"profile_url"`
@@ -123,6 +129,7 @@ func NewOptions() *Options {
 		PassAuthorization:    false,
 		ApprovalPrompt:       "force",
 		RequestLogging:       true,
+		SkipOidcDiscovery:    false,
 		RequestLoggingFormat: defaultRequestLoggingFormat,
 	}
 }
@@ -134,6 +141,32 @@ func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string
 			"error parsing %s-url=%q %s", urltype, toParse, err))
 	}
 	return parsed, msgs
+}
+
+// OIDCManualTransport is a structu that is used for manual OIDC endpoints definition
+//
+type OIDCManualTransport struct {
+	Issuer                string `json:"issuer"`
+	AuthorizationEndpoint string `json:"authorization_endpoint"`
+	TokenEndpoint         string `json:"token_endpoint"`
+	JwksURI               string `json:"jwks_uri"`
+	UserInfoURL           string `json:"userinfo_endpoint"`
+}
+
+// RoundTrip fakes an HTTP request so that go-oidc receives a JSON response
+// from our custom definition instead of a response from the real discovery endpoint
+func (t *OIDCManualTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if strings.HasSuffix(req.URL.Path, "/.well-known/openid-configuration") {
+		jsonResponse, err := json.Marshal(t)
+		manualBody := ioutil.NopCloser(bytes.NewReader(jsonResponse))
+
+		return &http.Response{
+			StatusCode: 200,
+			Body:       manualBody,
+		}, err
+	}
+
+	return http.DefaultTransport.RoundTrip(req)
 }
 
 // Validate checks that required options are set and validates those that they
@@ -163,8 +196,35 @@ func (o *Options) Validate() error {
 	}
 
 	if o.OIDCIssuerURL != "" {
+
+		ctx := context.Background()
+
+		// Override discoverable provider data with a custom http.Client that fakes
+		// a discovery response with our manual setting on go-oidc side
+		// only if -skip-oidc-discovery is enabled
+		if o.SkipOidcDiscovery {
+			if o.LoginURL == "" {
+				msgs = append(msgs, "missing setting: login-url")
+			}
+			if o.RedeemURL == "" {
+				msgs = append(msgs, "missing setting: redeem-url")
+			}
+			if o.OIDCJwksURL == "" {
+				msgs = append(msgs, "missing setting: oidc-jwks-url")
+			}
+			ctx = oidc.ClientContext(ctx, &http.Client{
+				Transport: &OIDCManualTransport{
+					Issuer:                o.OIDCIssuerURL,
+					AuthorizationEndpoint: o.LoginURL,
+					TokenEndpoint:         o.RedeemURL,
+					JwksURI:               o.OIDCJwksURL,
+					UserInfoURL:           o.OIDCUserInfoURL,
+				},
+			})
+		}
+
 		// Configure discoverable provider data.
-		provider, err := oidc.NewProvider(context.Background(), o.OIDCIssuerURL, o.B2CPolicy)
+		provider, err := oidc.NewProvider(ctx, o.OIDCIssuerURL)
 		if err != nil {
 			return err
 		}
