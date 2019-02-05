@@ -15,7 +15,7 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
-	"github.com/timothy-spencer/oauth2_proxy-1/providers"
+	"github.com/github.com/pusher/oauth2_proxy/providers"
 )
 
 // Options holds Configuration Options that can be set by Command Line Flag,
@@ -292,7 +292,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		}
 	case *providers.LoginGovProvider:
 		p.AcrValues = o.AcrValues
-		if o.JWTKey == "" {
+		if o.JWTKey == []byte"" {
 			msgs = append(msgs, "login.gov provider requires a private key for signing JWTs")
 		} else {
 			p.JWTKey = o.JWTKey

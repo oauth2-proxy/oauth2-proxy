@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/timothy-spencer/oauth2_proxy-1/cookie"
+	"github.com/github.com/pusher/oauth2_proxy/cookie"
 )
 
 // SessionState is used to store information about the currently authenticated user session
