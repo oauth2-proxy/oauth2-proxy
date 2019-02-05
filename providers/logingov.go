@@ -1,16 +1,11 @@
 package providers
 
 import (
-	"context"
 	"fmt"
-	"net/url"
 	"time"
-
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/jwt"
-
-	oidc "github.com/coreos/go-oidc"
+	"github.com/dgrijalva/jwt-go"
 	"math/rand"
+	"net/url"
 )
 
 // LoginGovProvider represents an OIDC based Identity Provider
@@ -70,19 +65,79 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
-	ctx := context.Background()
-	c := jwt.Config{
-		Email:      p.ClientID,
-		PrivateKey: p.JWTKey,
-		TokenURL:   p.RedeemURL.String(),
+	if code == "" {
+		err = errors.New("missing code")
+		return
 	}
-	token, err := c.Exchange(ctx, code)
-	if err != nil {
-		return nil, fmt.Errorf("token exchange: %v", err)
+
+	type CustomClaims struct {
+		iss: string `json:"iss"`,
+		sub: string `json:"sub"`,
+		aud: string `json:"aud"`,
+		jti: string `json:"jti"`,
+		exp: int64  `json:"exp"`,
 	}
-	s, err = p.createSessionState(ctx, token)
+	claims := CustomClaims{
+		iss: p.ClientID,
+		sub: p.ClientID,
+		aud: p.RedeemURL.String(),
+		jti: randSeq(32),
+		exp: time.Now().Add(time.Duration(5 * time.Minute)),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, err := token.SignedString(mySigningKey)
+
+	params := url.Values{}
+	params.Add("client_assertion", ss)
+	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+
+	var req *http.Request
+	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("unable to update session: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	var resp *http.Response
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	var body []byte
+	body, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
+		return
+	}
+
+	// blindly try json and x-www-form-urlencoded
+	var jsonResponse struct {
+		AccessToken string `json:"access_token"`
+	}
+	err = json.Unmarshal(body, &jsonResponse)
+	if err == nil {
+		s = &SessionState{
+			AccessToken: jsonResponse.AccessToken,
+		}
+		return
+	}
+
+	var v url.Values
+	v, err = url.ParseQuery(string(body))
+	if err != nil {
+		return
+	}
+	if a := v.Get("access_token"); a != "" {
+		s = &SessionState{AccessToken: a}
+	} else {
+		err = fmt.Errorf("no access token found %s", body)
 	}
 	return
 }
