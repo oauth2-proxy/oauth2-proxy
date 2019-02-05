@@ -71,22 +71,15 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 		return
 	}
 
-	type CustomClaims struct {
-		iss string `json:"iss"`
-		sub string `json:"sub"`
-		aud string `json:"aud"`
-		jti string `json:"jti"`
-		exp int64  `json:"exp"`
-	}
-	claims := CustomClaims{
-		iss: p.ClientID,
-		sub: p.ClientID,
-		aud: p.RedeemURL.String(),
-		jti: randSeq(32),
-		exp: int64(time.Now().Add(time.Duration(5 * time.Minute)).Unix()),
+	claims := &jwt.StandardClaims{
+		Issuer:    p.ClientID,
+		Subject:   p.ClientID,
+		Audience:  p.RedeemURL.String(),
+		ExpiresAt: int64(time.Now().Add(time.Duration(5 * time.Minute)).Unix()),
+		Id:        randSeq(32),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString(p.JWTkey)
+	ss, err := token.SignedString(p.JWTKey)
 
 	params := url.Values{}
 	params.Add("client_assertion", ss)
