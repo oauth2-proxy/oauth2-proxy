@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"http"
 	"math/rand"
 	"net/url"
 	"time"
@@ -82,10 +83,10 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 		sub: p.ClientID,
 		aud: p.RedeemURL.String(),
 		jti: randSeq(32),
-		exp: time.Now().Add(time.Duration(5 * time.Minute)),
+		exp: int64(time.Now().Add(time.Duration(5 * time.Minute)).Unix()),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString(mySigningKey)
+	ss, err := token.SignedString(p.JWTkey)
 
 	params := url.Values{}
 	params.Add("client_assertion", ss)
