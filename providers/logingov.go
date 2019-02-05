@@ -1,24 +1,25 @@
 package providers
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
+	"io/ioutil"
+	"math/rand"
+	"net/http"
 	"net/url"
 	"time"
-
-	"golang.org/x/oauth2"
-
-	oidc "github.com/coreos/go-oidc"
-	"math/rand"
 )
 
 // LoginGovProvider represents an OIDC based Identity Provider
 type LoginGovProvider struct {
 	*ProviderData
 
-	Verifier  *oidc.IDTokenVerifier
 	Nonce     string
 	AcrValues string
+	JWTKey    string
 }
 
 // For generating a nonce
@@ -63,29 +64,78 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 
 	return &LoginGovProvider{
 		ProviderData: p,
-		AcrValues:    "http://idmanagement.gov/ns/assurance/loa/1",
 		Nonce:        randSeq(32),
 	}
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
-	ctx := context.Background()
-	c := oauth2.Config{
-		ClientID:     p.ClientID,
-		ClientSecret: p.ClientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
-		},
-		RedirectURL: redirectURL,
+	if code == "" {
+		err = errors.New("missing code")
+		return
 	}
-	token, err := c.Exchange(ctx, code)
-	if err != nil {
-		return nil, fmt.Errorf("token exchange: %v", err)
+
+	claims := &jwt.StandardClaims{
+		Issuer:    p.ClientID,
+		Subject:   p.ClientID,
+		Audience:  p.RedeemURL.String(),
+		ExpiresAt: int64(time.Now().Add(time.Duration(5 * time.Minute)).Unix()),
+		Id:        randSeq(32),
 	}
-	s, err = p.createSessionState(ctx, token)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, err := token.SignedString([]byte(p.JWTKey))
+
+	params := url.Values{}
+	params.Add("client_assertion", ss)
+	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+
+	var req *http.Request
+	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("unable to update session: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	var resp *http.Response
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	var body []byte
+	body, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
+		return
+	}
+
+	// blindly try json and x-www-form-urlencoded
+	var jsonResponse struct {
+		AccessToken string `json:"access_token"`
+	}
+	err = json.Unmarshal(body, &jsonResponse)
+	if err == nil {
+		s = &SessionState{
+			AccessToken: jsonResponse.AccessToken,
+		}
+		return
+	}
+
+	var v url.Values
+	v, err = url.ParseQuery(string(body))
+	if err != nil {
+		return
+	}
+	if a := v.Get("access_token"); a != "" {
+		s = &SessionState{AccessToken: a}
+	} else {
+		err = fmt.Errorf("no access token found %s", body)
 	}
 	return
 }
@@ -104,99 +154,4 @@ func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
 	params.Add("nonce", p.Nonce)
 	a.RawQuery = params.Encode()
 	return a.String()
-}
-
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
-func (p *LoginGovProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
-	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
-		return false, nil
-	}
-
-	origExpiration := s.ExpiresOn
-
-	err := p.redeemRefreshToken(s)
-	if err != nil {
-		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
-	}
-
-	fmt.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
-	return true, nil
-}
-
-func (p *LoginGovProvider) redeemRefreshToken(s *SessionState) (err error) {
-	c := oauth2.Config{
-		ClientID:     p.ClientID,
-		ClientSecret: p.ClientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
-		},
-	}
-	ctx := context.Background()
-	t := &oauth2.Token{
-		RefreshToken: s.RefreshToken,
-		Expiry:       time.Now().Add(-time.Hour),
-	}
-	token, err := c.TokenSource(ctx, t).Token()
-	if err != nil {
-		return fmt.Errorf("failed to get token: %v", err)
-	}
-	newSession, err := p.createSessionState(ctx, token)
-	if err != nil {
-		return fmt.Errorf("unable to update session: %v", err)
-	}
-	s.AccessToken = newSession.AccessToken
-	s.IDToken = newSession.IDToken
-	s.RefreshToken = newSession.RefreshToken
-	s.ExpiresOn = newSession.ExpiresOn
-	s.Email = newSession.Email
-	return
-}
-
-func (p *LoginGovProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*SessionState, error) {
-	rawIDToken, ok := token.Extra("id_token").(string)
-	if !ok {
-		return nil, fmt.Errorf("token response did not contain an id_token")
-	}
-
-	// Parse and verify ID Token payload.
-	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
-	if err != nil {
-		return nil, fmt.Errorf("could not verify id_token: %v", err)
-	}
-
-	// Extract custom claims.
-	var claims struct {
-		Email    string `json:"email"`
-		Verified *bool  `json:"email_verified"`
-	}
-	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
-	}
-
-	if claims.Email == "" {
-		return nil, fmt.Errorf("id_token did not contain an email")
-	}
-	if claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-	}
-
-	return &SessionState{
-		AccessToken:  token.AccessToken,
-		IDToken:      rawIDToken,
-		RefreshToken: token.RefreshToken,
-		ExpiresOn:    token.Expiry,
-		Email:        claims.Email,
-	}, nil
-}
-
-// ValidateSessionState checks that the session's IDToken is still valid
-func (p *LoginGovProvider) ValidateSessionState(s *SessionState) bool {
-	ctx := context.Background()
-	_, err := p.Verifier.Verify(ctx, s.IDToken)
-	if err != nil {
-		return false
-	}
-
-	return true
 }
