@@ -89,8 +89,6 @@ func main() {
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 
-	flagSet.String("b2c-policy", "", "Azure AD B2C Policy name")
-
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
