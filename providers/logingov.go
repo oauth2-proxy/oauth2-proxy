@@ -2,10 +2,10 @@ package providers
 
 import (
 	"fmt"
-	"time"
 	"github.com/dgrijalva/jwt-go"
 	"math/rand"
 	"net/url"
+	"time"
 )
 
 // LoginGovProvider represents an OIDC based Identity Provider
@@ -71,11 +71,11 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 	}
 
 	type CustomClaims struct {
-		iss string `json:"iss"`,
-		sub string `json:"sub"`,
-		aud string `json:"aud"`,
-		jti string `json:"jti"`,
-		exp int64  `json:"exp"`,
+		iss string `json:"iss"`
+		sub string `json:"sub"`
+		aud string `json:"aud"`
+		jti string `json:"jti"`
+		exp int64  `json:"exp"`
 	}
 	claims := CustomClaims{
 		iss: p.ClientID,
