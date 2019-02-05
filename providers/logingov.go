@@ -3,8 +3,8 @@ package providers
 import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	"http"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"time"
 )
