@@ -2,14 +2,17 @@ package providers
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -19,7 +22,7 @@ type LoginGovProvider struct {
 
 	Nonce     string
 	AcrValues string
-	JWTKey    string
+	JWTKey    *rsa.PrivateKey
 }
 
 // For generating a nonce
@@ -82,14 +85,34 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 		ExpiresAt: int64(time.Now().Add(time.Duration(5 * time.Minute)).Unix()),
 		Id:        randSeq(32),
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString([]byte(p.JWTKey))
+	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
+	ss, err := token.SignedString(p.JWTKey)
+	if err != nil {
+		return
+	}
 
 	params := url.Values{}
 	params.Add("client_assertion", ss)
 	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+
+	// XXX debug stuff
+	// log.Printf("params for token redeem are: %q", params)
+	// key, _ := ioutil.ReadFile("/tmp/devcert.pem")
+	// jwtPubKey, err := jwt.ParseRSAPublicKeyFromPEM(key)
+	// if err != nil {
+	// 	log.Printf("could not parse RSA pubkey")
+	// 	return
+	// }
+	// parts := strings.Split(ss, ".")
+	// err = jwt.SigningMethodRS256.Verify(strings.Join(parts[0:2], "."), parts[2], jwtPubKey)
+	// if err != nil {
+	// 	return
+	// } else {
+	// 	log.Printf("verified JWT")
+	// }
+	// XXX end debug stuff
 
 	var req *http.Request
 	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
