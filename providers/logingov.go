@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -69,6 +67,54 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 		ProviderData: p,
 		Nonce:        randSeq(32),
 	}
+}
+
+func emailFromUserInfo(accessToken string, userInfoEndpoint string) (email string, err error) {
+	// query the user info endpoint for user attributes
+	params := url.Values{}
+	params.Add("Authorization", "Bearer "+accessToken)
+	var req *http.Request
+	req, err = http.NewRequest("POST", userInfoEndpoint, bytes.NewBufferString(params.Encode()))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
+	var body []byte
+	body, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, userInfoEndpoint, body)
+		return
+	}
+
+	// parse the user attributes from the user info endpoint
+	var emailData struct {
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+	}
+	err = json.Unmarshal(body, &emailData)
+	if err != nil {
+		return
+	}
+	if emailData.Email == "" {
+		err = fmt.Errorf("missing email")
+		return
+	}
+	email = emailData.Email
+	if !emailData.EmailVerified {
+		err = fmt.Errorf("email %s not listed as verified", email)
+		return
+	}
+	return
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
@@ -138,27 +184,30 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 		return
 	}
 
-	// blindly try json and x-www-form-urlencoded
+	// Get the token
 	var jsonResponse struct {
 		AccessToken string `json:"access_token"`
+		IDToken     string `json:"id_token"`
+		TokenType   string `json:"token_type"`
+		ExpiresIn   int64  `json:"expires_in"`
 	}
 	err = json.Unmarshal(body, &jsonResponse)
-	if err == nil {
-		s = &SessionState{
-			AccessToken: jsonResponse.AccessToken,
-		}
-		return
-	}
-
-	var v url.Values
-	v, err = url.ParseQuery(string(body))
 	if err != nil {
 		return
 	}
-	if a := v.Get("access_token"); a != "" {
-		s = &SessionState{AccessToken: a}
-	} else {
-		err = fmt.Errorf("no access token found %s", body)
+
+	// XXX should we check signature on JWT and nonce here?
+
+	var email string
+	email, err = emailFromUserInfo(jsonResponse.AccessToken, p.ProfileURL.String())
+	if err != nil {
+		return
+	}
+	s = &SessionState{
+		AccessToken: jsonResponse.AccessToken,
+		IDToken:     jsonResponse.IDToken,
+		ExpiresOn:   time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second),
+		Email:       email,
 	}
 	return
 }
