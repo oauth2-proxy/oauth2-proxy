@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"net/http"
 	"net/url"
 	"os"
@@ -295,7 +296,12 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		if o.JWTKey == "" {
 			msgs = append(msgs, "login.gov provider requires a private key for signing JWTs")
 		} else {
-			p.JWTKey = o.JWTKey
+			signKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(o.JWTKey))
+			if err != nil {
+				msgs = append(msgs, "could not parse RSA Private Key PEM")
+			} else {
+				p.JWTKey = signKey
+			}
 		}
 	}
 	return msgs
