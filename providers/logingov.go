@@ -96,7 +96,8 @@ func emailFromUserInfo(accessToken string, userInfoEndpoint string) (email strin
 		return
 	}
 
-	// parse the user attributes from the user info endpoint
+	// parse the user attributes from the data we got and make sure that
+	// the email address has been validated.
 	var emailData struct {
 		Email         string `json:"email"`
 		EmailVerified bool   `json:"email_verified"`
@@ -184,7 +185,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 		return
 	}
 
-	// Get the token
+	// Get the token from the body that we got from the token endpoint.
 	var jsonResponse struct {
 		AccessToken string `json:"access_token"`
 		IDToken     string `json:"id_token"`
@@ -198,11 +199,14 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 
 	// XXX should we check signature on JWT and nonce here?
 
+	// Get the email address
 	var email string
 	email, err = emailFromUserInfo(jsonResponse.AccessToken, p.ProfileURL.String())
 	if err != nil {
 		return
 	}
+
+	// Store the data that we found in the session state
 	s = &SessionState{
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,

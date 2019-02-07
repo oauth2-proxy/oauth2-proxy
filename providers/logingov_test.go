@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -101,10 +102,11 @@ func TestLoginGovProviderGetEmailAddress(t *testing.T) {
 		ExpiresIn   int64  `json:"expires_in"`
 		IDToken     string `json:"id_token"`
 	}
+	expiresIn := int64(10)
 	body, err := json.Marshal(loginGovRedeemResponse{
 		AccessToken: "a1234",
 		TokenType:   "Bearer",
-		ExpiresIn:   10,
+		ExpiresIn:   expiresIn,
 		IDToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"nonce": "fakenonce", "exp":1234}`)),
 	})
 	assert.Equal(t, nil, err)
@@ -132,4 +134,7 @@ func TestLoginGovProviderGetEmailAddress(t *testing.T) {
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "timothy.spencer@gsa.gov", session.Email)
 	assert.Equal(t, "a1234", session.AccessToken)
+
+	// The test ought to run in under 2 seconds.  If not, you may need to bump this up.
+	assert.InDelta(t, session.ExpiresOn.Unix(), time.Now().Unix()+expiresIn, 2)
 }
