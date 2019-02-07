@@ -71,14 +71,12 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 
 func emailFromUserInfo(accessToken string, userInfoEndpoint string) (email string, err error) {
 	// query the user info endpoint for user attributes
-	params := url.Values{}
-	params.Add("Authorization", "Bearer "+accessToken)
 	var req *http.Request
-	req, err = http.NewRequest("POST", userInfoEndpoint, bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequest("GET", userInfoEndpoint, nil)
 	if err != nil {
 		return
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -216,6 +214,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 	return
 }
 
+// override GetLoginURL to add login.gov parameters
 func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
 	var a url.URL
 	a = *p.LoginURL

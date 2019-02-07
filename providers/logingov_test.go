@@ -91,7 +91,7 @@ func TestLoginGovProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestLoginGovProviderGetEmailAddress(t *testing.T) {
+func TestLoginGovProviderSessionData(t *testing.T) {
 	p, err := newLoginGovProvider()
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, nil, err)
