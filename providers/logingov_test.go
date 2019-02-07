@@ -73,10 +73,6 @@ func TestLoginGovProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/profile"},
-			// ValidateURL: &url.URL{
-			// 	Scheme: "https",
-			// 	Host:   "example.com",
-			// 	Path:   "/oauth/tokeninfo"},
 			Scope: "profile"})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "login.gov", p.Data().ProviderName)
@@ -86,8 +82,6 @@ func TestLoginGovProviderOverrides(t *testing.T) {
 		p.Data().RedeemURL.String())
 	assert.Equal(t, "https://example.com/oauth/profile",
 		p.Data().ProfileURL.String())
-	// assert.Equal(t, "https://example.com/oauth/tokeninfo",
-	// 	p.Data().ValidateURL.String())
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
