@@ -23,7 +23,7 @@ func newLoginGovRedeemServer(body []byte) (*url.URL, *httptest.Server) {
 }
 
 func newLoginGovProvider() (l *LoginGovProvider, err error) {
-	keyData, err := ioutil.ReadFile("test/sample_key")
+	keyData, err := ioutil.ReadFile("sample_key")
 	if err != nil {
 		return
 	}

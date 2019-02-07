@@ -142,23 +142,6 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 
-	// XXX debug stuff
-	// log.Printf("params for token redeem are: %q", params)
-	// key, _ := ioutil.ReadFile("/tmp/devcert.pem")
-	// jwtPubKey, err := jwt.ParseRSAPublicKeyFromPEM(key)
-	// if err != nil {
-	// 	log.Printf("could not parse RSA pubkey")
-	// 	return
-	// }
-	// parts := strings.Split(ss, ".")
-	// err = jwt.SigningMethodRS256.Verify(strings.Join(parts[0:2], "."), parts[2], jwtPubKey)
-	// if err != nil {
-	// 	return
-	// } else {
-	// 	log.Printf("verified JWT")
-	// }
-	// XXX end debug stuff
-
 	var req *http.Request
 	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
