@@ -1,6 +1,7 @@
 oauth2_proxy
 vendor
 dist
+release
 .godeps
 *.exe
 .env

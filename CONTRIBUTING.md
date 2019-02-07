@@ -8,6 +8,8 @@ Download the dependencies using [`dep`](https://github.com/golang/dep).
 ```bash
 cd $GOPATH/src/github.com # Create this directory if it doesn't exist
 git clone git@github.com:<YOUR_FORK>/oauth2_proxy pusher/oauth2_proxy
+cd pusher/oauth2_proxy
+./configure # Setup your environment variables
 make dep
 ```
 

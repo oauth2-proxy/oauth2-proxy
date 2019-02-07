@@ -237,7 +237,10 @@ Usage of oauth2_proxy:
   -upstream value: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
   -validate-url string: Access token validation endpoint
   -version: print version string
+  -whitelist-domain: allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)
 ```
+
+Note, when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL.
 
 See below for provider specific options
 
@@ -424,10 +427,45 @@ server {
     auth_request_set $auth_cookie $upstream_http_set_cookie;
     add_header Set-Cookie $auth_cookie;
 
+    # When using the --set-authorization flag, some provider's cookies can exceed the 4kb 
+    # limit and so the OAuth2 Proxy splits these into multiple parts. 
+    # Nginx normally only copies the first `Set-Cookie` header from the auth_request to the response,
+    # so if your cookies are larger than 4kb, you will need to extract additional cookies manually.
+    auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
+      
+    # Extract the Cookie attributes from the first Set-Cookie header and append them
+    # to the second part ($upstream_cookie_* variables only contain the raw cookie content)
+    if ($auth_cookie ~* "(; .*)") {
+        set $auth_cookie_name_0 $auth_cookie; 
+        set $auth_cookie_name_1 "auth_cookie_name_1=$auth_cookie_name_upstream_1$1";
+    }
+    
+    # Send both Set-Cookie headers now if there was a second part
+    if ($auth_cookie_name_upstream_1) {
+        add_header Set-Cookie $auth_cookie_name_0;
+        add_header Set-Cookie $auth_cookie_name_1;
+    }
+
     proxy_pass http://backend/;
     # or "root /path/to/site;" or "fastcgi_pass ..." etc
   }
 }
+```
+
+If you use ingress-nginx in Kubernetes (which includes the Lua module), you also can use the following configuration snippet for your Ingress:
+
+```yaml
+nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=$request_uri
+nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
+nginx.ingress.kubernetes.io/configuration-snippet: |
+  auth_request_set $name_upstream_1 $upstream_cookie_name_1;
+
+  access_by_lua_block {
+    if ngx.var.name_upstream_1 ~= "" then
+      ngx.header["Set-Cookie"] = "name_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
+    end
+  }
 ```
 
 ## Contributing

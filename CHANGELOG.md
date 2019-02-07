@@ -7,6 +7,8 @@
   - Implement token refreshing in OIDC provider
   - Split cookies larger than 4k limit into multiple cookies
   - Implement token validation in OIDC provider
+- [#15](https://github.com/pusher/oauth2_proxy/pull/21) WhitelistDomains (@joelspeed)
+  - Add `--whitelist-domain` flag to allow redirection to approved domains after OAuth flow
 - [#21](https://github.com/pusher/oauth2_proxy/pull/21) Docker Improvement (@yaegashi)
   - Move Docker base image from debian to alpine
   - Install ca-certificates in docker image
@@ -16,6 +18,7 @@
   - After a successful login, you will be redirected to your original URL rather than /
 - [#35](https://github.com/pusher/oauth2_proxy/pull/35) arm and arm64 binary releases (@kskewes)
   - Add armv6 and arm64 to Makefile `release` target
+- [#37](https://github.com/pusher/oauth2_proxy/pull/37) cross build arm and arm64 docker images (@kskewes)
 
 # v3.0.0
 
