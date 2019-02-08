@@ -1,5 +1,24 @@
 # Vx.x.x (Pre-release)
 
+## Changes since v3.1.0
+
+# v3.1.0
+
+## Release highlights
+
+- Introduction of ARM releases and and general improvements to Docker builds
+- Improvements to OIDC provider allowing pass-through of ID Tokens
+- Multiple redirect domains can now be whitelisted
+- Streamed responses are now flushed periodically
+
+## Important notes
+
+If you have been using [#bitly/621](https://github.com/bitly/oauth2_proxy/pull/621)
+and have cookies larger than the 4kb limit,
+the cookie splitting pattern has changed and now uses `_` in place of `-` when
+indexing cookies.
+This will force users to reauthenticate the first time they use `v3.1.0`.
+
 ## Changes since v3.0.0
 
 - [#14](https://github.com/pusher/oauth2_proxy/pull/14) OIDC ID Token, Authorization Headers, Refreshing and Verification (@joelspeed)
