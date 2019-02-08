@@ -1,6 +1,6 @@
 include .env
 BINARY := oauth2_proxy
-VERSION := $(shell git describe --always --long --dirty --tags 2>/dev/null || echo "undefined")
+VERSION := $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 .NOTPARALLEL:
 
 .PHONY: all
