@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 func TestLoggingHandler_ServeHTTP(t *testing.T) {
@@ -32,7 +34,9 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 			w.Write([]byte("test"))
 		}
 
-		h := LoggingHandler(buf, http.HandlerFunc(handler), true, test.Format)
+		logger.SetOutput(buf)
+		logger.SetReqTemplate(test.Format)
+		h := LoggingHandler(http.HandlerFunc(handler))
 
 		r, _ := http.NewRequest("GET", "/foo/bar", nil)
 		r.RemoteAddr = "127.0.0.1"

@@ -16,11 +16,11 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	logger.SetFlags(logger.Lshortfile)
 	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
 
 	emailDomains := StringArray{}
-	whitelistDomains := StringArray{}
+	whitelistandardomains := StringArray{}
 	upstreams := StringArray{}
 	skipAuthRegex := StringArray{}
 	googleGroups := StringArray{}
@@ -49,7 +49,7 @@ func main() {
 	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
-	flagSet.Var(&whitelistDomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
+	flagSet.Var(&whitelistandardomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
@@ -75,8 +75,21 @@ func main() {
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 
-	flagSet.Bool("request-logging", true, "Log requests to stdout")
-	flagSet.String("request-logging-format", defaultRequestLoggingFormat, "Template for log lines")
+	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
+	flagSet.Int("logging-max-size", 100, "Maximum size in megabytes of the log file before rotation")
+	flagSet.Int("logging-max-age", 7, "Maximum number of days to retain old log files")
+	flagSet.Int("logging-max-backups", 0, "Maximum number of old log files to retain; 0 to disable")
+	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
+	flagSet.Bool("logging-compress", false, "Should rotated log files be compressed using gzip")
+
+	flagSet.Bool("standard-logging", true, "Log standard runtime information")
+	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
+
+	flagSet.Bool("request-logging", true, "Log HTTP requests")
+	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
+
+	flagSet.Bool("auth-logging", true, "Log authentication attempts")
+	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
@@ -109,7 +122,7 @@ func main() {
 	if *config != "" {
 		_, err := toml.DecodeFile(*config, &cfg)
 		if err != nil {
-			log.Fatalf("ERROR: failed to load config file %s - %s", *config, err)
+			logger.Fatalf("ERROR: failed to load config file %s - %s", *config, err)
 		}
 	}
 	cfg.LoadEnvForStruct(opts)
@@ -117,9 +130,10 @@ func main() {
 
 	err := opts.Validate()
 	if err != nil {
-		log.Printf("%s", err)
+		logger.Printf("%s", err)
 		os.Exit(1)
 	}
+
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 	oauthproxy := NewOAuthProxy(opts, validator)
 
@@ -132,11 +146,11 @@ func main() {
 	}
 
 	if opts.HtpasswdFile != "" {
-		log.Printf("using htpasswd file %s", opts.HtpasswdFile)
+		logger.Printf("using htpasswd file %s", opts.HtpasswdFile)
 		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(opts.HtpasswdFile)
 		oauthproxy.DisplayHtpasswdForm = opts.DisplayHtpasswdForm
 		if err != nil {
-			log.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
+			logger.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
 		}
 	}
 
@@ -149,7 +163,11 @@ func main() {
 		handler = LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat)
 	}
 	s := &Server{
+<<<<<<< HEAD
 		Handler: handler,
+=======
+		Handler: LoggingHandler(oauthproxy),
+>>>>>>> Auth and standard logging with file rolling
 		Opts:    opts,
 	}
 	s.ListenAndServe()

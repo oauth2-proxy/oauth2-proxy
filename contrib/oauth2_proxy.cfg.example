@@ -18,8 +18,18 @@
 #     "http://127.0.0.1:8080/"
 # ]
 
-## Log requests to stdout
-# request_logging = true
+## Logging configuration
+#logging_filename = ""
+#logging_max_size = 100
+#logging_max_age = 7
+#logging_local_time = true
+#logging_compress = false
+#standard_logging = true
+#standard_logging_format = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
+#request_logging = true
+#request_logging_format = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+#auth_logging = true
+#auth_logging_format = "{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
 
 ## pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream
 # pass_basic_auth = true

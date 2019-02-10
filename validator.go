@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 // UserMap holds information from the authenticated emails file
@@ -22,7 +23,7 @@ func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	m := make(map[string]bool)
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m))
 	if usersFile != "" {
-		log.Printf("using authenticated emails file %s", usersFile)
+		logger.Printf("using authenticated emails file %s", usersFile)
 		WatchForUpdates(usersFile, done, func() {
 			um.LoadAuthenticatedEmailsFile()
 			onUpdate()
@@ -44,7 +45,7 @@ func (um *UserMap) IsValid(email string) (result bool) {
 func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	r, err := os.Open(um.usersFile)
 	if err != nil {
-		log.Fatalf("failed opening authenticated-emails-file=%q, %s", um.usersFile, err)
+		logger.Fatalf("failed opening authenticated-emails-file=%q, %s", um.usersFile, err)
 	}
 	defer r.Close()
 	csvReader := csv.NewReader(r)
@@ -53,7 +54,7 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	csvReader.TrimLeadingSpace = true
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		log.Printf("error reading authenticated-emails-file=%q, %s", um.usersFile, err)
+		logger.Printf("error reading authenticated-emails-file=%q, %s", um.usersFile, err)
 		return
 	}
 	updated := make(map[string]bool)

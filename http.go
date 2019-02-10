@@ -2,11 +2,12 @@ package main
 
 import (
 	"crypto/tls"
-	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 // Server represents an HTTP server
@@ -86,17 +87,17 @@ func (s *Server) ServeHTTP() {
 
 	listener, err := net.Listen(networkType, listenAddr)
 	if err != nil {
-		log.Fatalf("FATAL: listen (%s, %s) failed - %s", networkType, listenAddr, err)
+		logger.Fatalf("FATAL: listen (%s, %s) failed - %s", networkType, listenAddr, err)
 	}
-	log.Printf("HTTP: listening on %s", listenAddr)
+	logger.Printf("HTTP: listening on %s", listenAddr)
 
 	server := &http.Server{Handler: s.Handler}
 	err = server.Serve(listener)
 	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		log.Printf("ERROR: http.Serve() - %s", err)
+		logger.Printf("ERROR: http.Serve() - %s", err)
 	}
 
-	log.Printf("HTTP: closing %s", listener.Addr())
+	logger.Printf("HTTP: closing %s", listener.Addr())
 }
 
 // ServeHTTPS constructs a net.Listener and starts handling HTTPS requests
@@ -114,24 +115,24 @@ func (s *Server) ServeHTTPS() {
 	config.Certificates = make([]tls.Certificate, 1)
 	config.Certificates[0], err = tls.LoadX509KeyPair(s.Opts.TLSCertFile, s.Opts.TLSKeyFile)
 	if err != nil {
-		log.Fatalf("FATAL: loading tls config (%s, %s) failed - %s", s.Opts.TLSCertFile, s.Opts.TLSKeyFile, err)
+		logger.Fatalf("FATAL: loading tls config (%s, %s) failed - %s", s.Opts.TLSCertFile, s.Opts.TLSKeyFile, err)
 	}
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("FATAL: listen (%s) failed - %s", addr, err)
+		logger.Fatalf("FATAL: listen (%s) failed - %s", addr, err)
 	}
-	log.Printf("HTTPS: listening on %s", ln.Addr())
+	logger.Printf("HTTPS: listening on %s", ln.Addr())
 
 	tlsListener := tls.NewListener(tcpKeepAliveListener{ln.(*net.TCPListener)}, config)
 	srv := &http.Server{Handler: s.Handler}
 	err = srv.Serve(tlsListener)
 
 	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		log.Printf("ERROR: https.Serve() - %s", err)
+		logger.Printf("ERROR: https.Serve() - %s", err)
 	}
 
-	log.Printf("HTTPS: closing %s", tlsListener.Addr())
+	logger.Printf("HTTPS: closing %s", tlsListener.Addr())
 }
 
 // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
