@@ -38,3 +38,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/crypto"
+
+[[constraint]]
+  name = "gopkg.in/natefinch/lumberjack.v2"
+  version = "2.1.0"

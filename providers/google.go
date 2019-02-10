@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/pusher/oauth2_proxy/logger"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/admin/directory/v1"
@@ -167,18 +167,18 @@ func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string,
 func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Service {
 	data, err := ioutil.ReadAll(credentialsReader)
 	if err != nil {
-		log.Fatal("can't read Google credentials file:", err)
+		logger.Fatal("can't read Google credentials file:", err)
 	}
 	conf, err := google.JWTConfigFromJSON(data, admin.AdminDirectoryUserReadonlyScope, admin.AdminDirectoryGroupReadonlyScope)
 	if err != nil {
-		log.Fatal("can't load Google credentials file:", err)
+		logger.Fatal("can't load Google credentials file:", err)
 	}
 	conf.Subject = adminEmail
 
 	client := conf.Client(oauth2.NoContext)
 	adminService, err := admin.New(client)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	return adminService
 }
@@ -186,7 +186,7 @@ func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Serv
 func userInGroup(service *admin.Service, groups []string, email string) bool {
 	user, err := fetchUser(service, email)
 	if err != nil {
-		log.Printf("error fetching user: %v", err)
+		logger.Printf("error fetching user: %v", err)
 		return false
 	}
 	id := user.Id
@@ -196,9 +196,9 @@ func userInGroup(service *admin.Service, groups []string, email string) bool {
 		members, err := fetchGroupMembers(service, group)
 		if err != nil {
 			if err, ok := err.(*googleapi.Error); ok && err.Code == 404 {
-				log.Printf("error fetching members for group %s: group does not exist", group)
+				logger.Printf("error fetching members for group %s: group does not exist", group)
 			} else {
-				log.Printf("error fetching group members: %v", err)
+				logger.Printf("error fetching group members: %v", err)
 				return false
 			}
 		}
@@ -273,7 +273,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	origExpiration := s.ExpiresOn
 	s.AccessToken = newToken
 	s.ExpiresOn = time.Now().Add(duration).Truncate(time.Second)
-	log.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
+	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
 	return true, nil
 }
 

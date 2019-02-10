@@ -1,11 +1,11 @@
 package providers
 
 import (
-	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/pusher/oauth2_proxy/api"
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 // GitLabProvider represents an GitLab based Identity Provider
@@ -49,12 +49,12 @@ func (p *GitLabProvider) GetEmailAddress(s *SessionState) (string, error) {
 	req, err := http.NewRequest("GET",
 		p.ValidateURL.String()+"?access_token="+s.AccessToken, nil)
 	if err != nil {
-		log.Printf("failed building request %s", err)
+		logger.Printf("failed building request %s", err)
 		return "", err
 	}
 	json, err := api.Request(req)
 	if err != nil {
-		log.Printf("failed making request %s", err)
+		logger.Printf("failed making request %s", err)
 		return "", err
 	}
 	return json.Get("email").String()

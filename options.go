@@ -15,7 +15,9 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
+	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/providers"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
 // Options holds Configuration Options that can be set by Command Line Flag,
@@ -79,8 +81,19 @@ type Options struct {
 	Scope             string `flag:"scope" cfg:"scope"`
 	ApprovalPrompt    string `flag:"approval-prompt" cfg:"approval_prompt"`
 
-	RequestLogging       bool   `flag:"request-logging" cfg:"request_logging"`
-	RequestLoggingFormat string `flag:"request-logging-format" cfg:"request_logging_format"`
+	// Configuration values for logging
+	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename"`
+	LoggingMaxSize        int    `flag:"logging-max-size" cfg:"logging_max_size"`
+	LoggingMaxAge         int    `flag:"logging-max-age" cfg:"logging_max_age"`
+	LoggingMaxBackups     int    `flag:"logging-max-backups" cfg:"logging_max_backups"`
+	LoggingLocalTime      bool   `flag:"logging-local-time" cfg:"logging_local_time"`
+	LoggingCompress       bool   `flag:"logging-compress" cfg:"logging_compress"`
+	StandardLogging       bool   `flag:"standard-logging" cfg:"standard_logging"`
+	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format"`
+	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging"`
+	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format"`
+	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging"`
+	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format"`
 
 	SignatureKey string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 
@@ -102,26 +115,36 @@ type SignatureData struct {
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:          "/oauth2",
-		HTTPAddress:          "127.0.0.1:4180",
-		HTTPSAddress:         ":443",
-		DisplayHtpasswdForm:  true,
-		CookieName:           "_oauth2_proxy",
-		CookieSecure:         true,
-		CookieHTTPOnly:       true,
-		CookieExpire:         time.Duration(168) * time.Hour,
-		CookieRefresh:        time.Duration(0),
-		SetXAuthRequest:      false,
-		SkipAuthPreflight:    false,
-		PassBasicAuth:        true,
-		PassUserHeaders:      true,
-		PassAccessToken:      false,
-		PassHostHeader:       true,
-		SetAuthorization:     false,
-		PassAuthorization:    false,
-		ApprovalPrompt:       "force",
-		RequestLogging:       true,
-		RequestLoggingFormat: defaultRequestLoggingFormat,
+		ProxyPrefix:           "/oauth2",
+		HTTPAddress:           "127.0.0.1:4180",
+		HTTPSAddress:          ":443",
+		DisplayHtpasswdForm:   true,
+		CookieName:            "_oauth2_proxy",
+		CookieSecure:          true,
+		CookieHTTPOnly:        true,
+		CookieExpire:          time.Duration(168) * time.Hour,
+		CookieRefresh:         time.Duration(0),
+		SetXAuthRequest:       false,
+		SkipAuthPreflight:     false,
+		PassBasicAuth:         true,
+		PassUserHeaders:       true,
+		PassAccessToken:       false,
+		PassHostHeader:        true,
+		SetAuthorization:      false,
+		PassAuthorization:     false,
+		ApprovalPrompt:        "force",
+		LoggingFilename:       "",
+		LoggingMaxSize:        100,
+		LoggingMaxAge:         7,
+		LoggingMaxBackups:     0,
+		LoggingLocalTime:      true,
+		LoggingCompress:       false,
+		StandardLogging:       true,
+		StandardLoggingFormat: logger.DefaultStandardLoggingFormat,
+		RequestLogging:        true,
+		RequestLoggingFormat:  logger.DefaultRequestLoggingFormat,
+		AuthLogging:           true,
+		AuthLoggingFormat:     logger.DefaultAuthLoggingFormat,
 	}
 }
 
@@ -247,6 +270,7 @@ func (o *Options) Validate() error {
 
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
+	msgs = setupLogger(o, msgs)
 
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
@@ -344,4 +368,50 @@ func secretBytes(secret string) []byte {
 		return []byte(addPadding(string(b)))
 	}
 	return []byte(secret)
+}
+
+func setupLogger(o *Options, msgs []string) []string {
+	// Setup the log file
+	if len(o.LoggingFilename) > 0 {
+		// Validate that the file/dir can be written
+		file, err := os.OpenFile(o.LoggingFilename, os.O_WRONLY|os.O_CREATE, 0666)
+		if err != nil {
+			if os.IsPermission(err) {
+				return append(msgs, "unable to write to log file: "+o.LoggingFilename)
+			}
+		}
+		file.Close()
+
+		logger.Printf("Redirecting logging to file: %s", o.LoggingFilename)
+
+		logWriter := &lumberjack.Logger{
+			Filename:   o.LoggingFilename,
+			MaxSize:    o.LoggingMaxSize, // megabytes
+			MaxAge:     o.LoggingMaxAge,  // days
+			MaxBackups: o.LoggingMaxBackups,
+			LocalTime:  o.LoggingLocalTime,
+			Compress:   o.LoggingCompress,
+		}
+
+		logger.SetOutput(logWriter)
+	}
+
+	// Supply a sanity warning to the logger if all logging is disabled
+	if !o.StandardLogging && !o.AuthLogging && !o.RequestLogging {
+		logger.Print("Warning: Logging disabled. No further logs will be shown.")
+	}
+
+	// Pass configuration values to the standard logger
+	logger.SetStandardEnabled(o.StandardLogging)
+	logger.SetAuthEnabled(o.AuthLogging)
+	logger.SetReqEnabled(o.RequestLogging)
+	logger.SetStandardTemplate(o.StandardLoggingFormat)
+	logger.SetAuthTemplate(o.AuthLoggingFormat)
+	logger.SetReqTemplate(o.RequestLoggingFormat)
+
+	if !o.LoggingLocalTime {
+		logger.SetFlags(logger.Flags() | logger.LUTC)
+	}
+
+	return msgs
 }

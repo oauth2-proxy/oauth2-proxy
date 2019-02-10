@@ -87,7 +87,10 @@
 [[projects]]
   digest = "1:3926a4ec9a4ff1a072458451aa2d9b98acd059a45b38f7335d31e06c3d6a0159"
   name = "github.com/stretchr/testify"
-  packages = ["assert"]
+  packages = [
+    "assert",
+    "require",
+  ]
   pruneopts = ""
   revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
   version = "v1.1.4"
@@ -171,6 +174,14 @@
   version = "v1.2.11"
 
 [[projects]]
+  digest = "1:11c58e19ff7ce22740423bb933f1ddca3bf575def40d5ac3437ec12871b1648b"
+  name = "gopkg.in/natefinch/lumberjack.v2"
+  packages = ["."]
+  pruneopts = ""
+  revision = "a96e63847dc3c67d17befa69c303767e2f84e54f"
+  version = "v2.1"
+
+[[projects]]
   digest = "1:be4ed0a2b15944dd777a663681a39260ed05f9c4e213017ed2e2255622c8820c"
   name = "gopkg.in/square/go-jose.v2"
   packages = [
@@ -192,12 +203,14 @@
     "github.com/mbland/hmacauth",
     "github.com/mreiferson/go-options",
     "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
     "golang.org/x/crypto/bcrypt",
     "golang.org/x/oauth2",
     "golang.org/x/oauth2/google",
     "google.golang.org/api/admin/directory/v1",
     "google.golang.org/api/googleapi",
     "gopkg.in/fsnotify/fsnotify.v1",
+    "gopkg.in/natefinch/lumberjack.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

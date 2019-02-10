@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -16,13 +15,14 @@ import (
 	"time"
 
 	"github.com/mbland/hmacauth"
+	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func init() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	logger.SetFlags(logger.Lshortfile)
 
 }
 
@@ -185,7 +185,7 @@ func (tp *TestProvider) ValidateSessionState(session *providers.SessionState) bo
 
 func TestBasicAuthPassword(t *testing.T) {
 	providerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%#v", r)
+		logger.Printf("%#v", r)
 		var payload string
 		switch r.URL.Path {
 		case "/oauth/token":
@@ -277,7 +277,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 
 	t.providerServer = httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("%#v", r)
+			logger.Printf("%#v", r)
 			var payload string
 			switch r.URL.Path {
 			case "/oauth/token":

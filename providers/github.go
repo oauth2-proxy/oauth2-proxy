@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 // GitHubProvider represents an GitHub based Identity Provider
@@ -116,13 +117,13 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 	var presentOrgs []string
 	for _, org := range orgs {
 		if p.Org == org.Login {
-			log.Printf("Found Github Organization: %q", org.Login)
+			logger.Printf("Found Github Organization: %q", org.Login)
 			return true, nil
 		}
 		presentOrgs = append(presentOrgs, org.Login)
 	}
 
-	log.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
+	logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
 	return false, nil
 }
 
@@ -179,7 +180,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 			ts := strings.Split(p.Team, ",")
 			for _, t := range ts {
 				if t == team.Slug {
-					log.Printf("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
+					logger.Printf("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
 					return true, nil
 				}
 			}
@@ -187,13 +188,13 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 		}
 	}
 	if hasOrg {
-		log.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
+		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
 	} else {
 		var allOrgs []string
 		for org := range presentOrgs {
 			allOrgs = append(allOrgs, org)
 		}
-		log.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
+		logger.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
 	}
 	return false, nil
 }
@@ -241,7 +242,7 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 			resp.StatusCode, endpoint.String(), body)
 	}
 
-	log.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
+	logger.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
 
 	if err := json.Unmarshal(body, &emails); err != nil {
 		return "", fmt.Errorf("%s unmarshaling %s", err, body)
@@ -291,7 +292,7 @@ func (p *GitHubProvider) GetUserName(s *SessionState) (string, error) {
 			resp.StatusCode, endpoint.String(), body)
 	}
 
-	log.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
+	logger.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
 
 	if err := json.Unmarshal(body, &user); err != nil {
 		return "", fmt.Errorf("%s unmarshaling %s", err, body)

@@ -3,11 +3,11 @@
 package main
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/pusher/oauth2_proxy/logger"
 	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
 )
 
@@ -24,7 +24,7 @@ func WaitForReplacement(filename string, op fsnotify.Op,
 	for {
 		if _, err := os.Stat(filename); err == nil {
 			if err := watcher.Add(filename); err == nil {
-				log.Printf("watching resumed for %s", filename)
+				logger.Printf("watching resumed for %s", filename)
 				return
 			}
 		}
@@ -37,14 +37,14 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 	filename = filepath.Clean(filename)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal("failed to create watcher for ", filename, ": ", err)
+		logger.Fatal("failed to create watcher for ", filename, ": ", err)
 	}
 	go func() {
 		defer watcher.Close()
 		for {
 			select {
 			case _ = <-done:
-				log.Printf("Shutting down watcher for: %s", filename)
+				logger.Printf("Shutting down watcher for: %s", filename)
 				return
 			case event := <-watcher.Events:
 				// On Arch Linux, it appears Chmod events precede Remove events,
@@ -53,19 +53,19 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 				// UserMap.LoadAuthenticatedEmailsFile()) crashes when the file
 				// can't be opened.
 				if event.Op&(fsnotify.Remove|fsnotify.Rename|fsnotify.Chmod) != 0 {
-					log.Printf("watching interrupted on event: %s", event)
+					logger.Printf("watching interrupted on event: %s", event)
 					watcher.Remove(filename)
 					WaitForReplacement(filename, event.Op, watcher)
 				}
-				log.Printf("reloading after event: %s", event)
+				logger.Printf("reloading after event: %s", event)
 				action()
 			case err = <-watcher.Errors:
-				log.Printf("error watching %s: %s", filename, err)
+				logger.Printf("error watching %s: %s", filename, err)
 			}
 		}
 	}()
 	if err = watcher.Add(filename); err != nil {
-		log.Fatal("failed to add ", filename, " to watcher: ", err)
+		logger.Fatal("failed to add ", filename, " to watcher: ", err)
 	}
-	log.Printf("watching %s for updates", filename)
+	logger.Printf("watching %s for updates", filename)
 }

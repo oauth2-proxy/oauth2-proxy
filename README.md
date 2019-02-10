@@ -185,6 +185,8 @@ An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is i
 ```
 Usage of oauth2_proxy:
   -approval-prompt string: OAuth approval_prompt (default "force")
+  -auth-logging: Log authentication attempts (default true)
+  -auth-logging-format string: Template for authentication log lines (see "Logging Configuration" paragraph below)
   -authenticated-emails-file string: authenticate against emails via file (one per line)
   -azure-tenant string: go to a tenant-specific or common (tenant-independent) endpoint. (default "common")
   -basic-auth-password string: the password to set when passing the HTTP Basic Auth header
@@ -210,6 +212,12 @@ Usage of oauth2_proxy:
   -htpasswd-file string: additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address string: [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients (default "127.0.0.1:4180")
   -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
+  -logging-compress: Should rotated log files be compressed using gzip (default false)
+  -logging-filename string: File to log requests to, empty for stdout (default to stdout)
+  -logging-local-time: If the time in log files and backup filenames are local or UTC time (default true)
+  -logging-max-age int: Maximum number of days to retain old log files (default 7)
+  -logging-max-backups int: Maximum number of old log files to retain; 0 to disable (default 0)
+  -logging-max-size int: Maximum size in megabytes of the log file before rotation (default 100)
   -login-url string: Authentication endpoint
   -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
   -pass-authorization-header: pass OIDC IDToken to upstream via Authorization Bearer header
@@ -222,7 +230,7 @@ Usage of oauth2_proxy:
   -redeem-url string: Token redemption endpoint
   -redirect-url string: the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -request-logging: Log requests to stdout (default true)
-  -request-logging-format: Template for request log lines (see "Logging Format" paragraph below)
+  -request-logging-format: Template for request log lines (see "Logging Configuration" paragraph below)
   -resource string: The resource that is protected (Azure AD only)
   -scope string: OAuth scope specification
   -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
@@ -232,6 +240,8 @@ Usage of oauth2_proxy:
   -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
   -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
   -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
+  -standard-logging: Log standard runtime information (default true)
+  -standard-logging-format string: Template for standard log lines (see "Logging Configuration" paragraph below)
   -tls-cert string: path to certificate file
   -tls-key string: path to private key file
   -upstream value: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
@@ -361,9 +371,40 @@ following:
 - [rc3.org: Using HMAC to authenticate Web service
   requests](http://rc3.org/2011/12/02/using-hmac-to-authenticate-web-service-requests/)
 
-## Logging Format
+## Logging Configuration
 
-By default, OAuth2 Proxy logs requests to stdout in a format similar to Apache Combined Log.
+By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the `-logging-filename` command.
+
+If logging to a file you can also configure the maximum file size (`-logging-max-size`), age (`-logging-max-age`), max backup logs (`-logging-max-backups`), and if backup logs should be compressed (`-logging-compress`).
+
+There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `-standard-logging`, `-auth-logging`, and `-request-logging`.
+
+Each type of logging has their own configurable format and variables. By default these formats are similar to the Apache Combined Log.
+
+### Auth Log Format
+Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
+
+```
+<REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] [<STATUS>] <MESSAGE>
+```
+
+The status block will contain one of the below strings:
+
+- `AuthSuccess` If a user has authenticated successfully by any method
+- `AuthFailure` If the user failed to authenticate explicitly
+- `AuthError` If there was an unexpected error during authentication
+
+If you require a different format than that, you can configure it with the `-auth-logging-format` flag.
+The default format is configured as follows:
+
+```
+{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
+```
+
+[See `authLogMessageData` in `logging_handler.go`](./logger/logger.go) for all available variables.
+
+### Request Log Format
+HTTP request logs will output by default in the below format:
 
 ```
 <REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
@@ -376,7 +417,20 @@ The default format is configured as follows:
 {{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
 ```
 
-[See `logMessageData` in `logging_handler.go`](./logging_handler.go) for all available variables.
+[See `requestLogMessageData` in `logging_handler.go`](./logger/logger.go) for all available variables.
+
+### Standard Log Format
+All other logging that is not covered by the above two types of logging will be output in this standard logging format. This includes configuration information at startup and errors that occur outside of a session. The default format is below:
+
+```
+[19/Mar/2015:17:20:19 -0400] [main.go:40] <MESSAGE>
+```
+
+If you require a different format than that, you can configure it with the `-standard-logging-format` flag. The default format is configured as follows:
+
+```
+[{{.Timestamp}}] [{{.File}}] {{.Message}}
+```
 
 ## Adding a new Provider
 
