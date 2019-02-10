@@ -604,10 +604,10 @@ func (p *OAuthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (st
 	}
 	// check auth
 	if p.HtpasswdFile.Validate(user, passwd) {
-		logger.PrintAuthf(user, req, logger.AuthSuccess, "Successful authentication via HtpasswdFile")
+		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via HtpasswdFile")
 		return user, true
 	}
-	logger.PrintAuthf(user, req, logger.AuthFailure, "Failed authentication via HtpasswdFile; unauthorized")
+	logger.PrintAuthf(user, req, logger.AuthFailure, "Invalid authentication via HtpasswdFile")
 	return "", false
 }
 
@@ -755,27 +755,27 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	// finish the oauth cycle
 	err := req.ParseForm()
 	if err != nil {
-		logger.Printf("Error while parsing OAuth callback: %s" + err.Error())
+		logger.Printf("Error while parsing OAuth2 callback: %s" + err.Error())
 		p.ErrorPage(rw, 500, "Internal Error", err.Error())
 		return
 	}
 	errorString := req.Form.Get("error")
 	if errorString != "" {
-		logger.Printf("Error while parsing OAuth callback: %s ", errorString)
+		logger.Printf("Error while parsing OAuth2 callback: %s ", errorString)
 		p.ErrorPage(rw, 403, "Permission Denied", errorString)
 		return
 	}
 
 	session, err := p.redeemCode(req.Host, req.Form.Get("code"))
 	if err != nil {
-		logger.Printf("Error while parsing OAuth callback: %s ", errorString)
+		logger.Printf("Error redeeming code during OAuth2 callback: %s ", errorString)
 		p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
 		return
 	}
 
 	s := strings.SplitN(req.Form.Get("state"), ":", 2)
 	if len(s) != 2 {
-		logger.Printf("Error while parsing OAuth state; invalid length")
+		logger.Printf("Error while parsing OAuth2 state; invalid length")
 		p.ErrorPage(rw, 500, "Internal Error", "Invalid State")
 		return
 	}
@@ -783,13 +783,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	redirect := s[1]
 	c, err := req.Cookie(p.CSRFCookieName)
 	if err != nil {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Failed authentication via oauth2; unable too obtain CSRF cookie")
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2; unable too obtain CSRF cookie")
 		p.ErrorPage(rw, 403, "Permission Denied", err.Error())
 		return
 	}
 	p.ClearCSRFCookie(rw, req)
 	if c.Value != nonce {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Failed authentication via oauth2; csrf token mismatch, potential attack")
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2; csrf token mismatch, potential attack")
 		p.ErrorPage(rw, 403, "Permission Denied", "csrf failed")
 		return
 	}
@@ -800,7 +800,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	// set cookie, or deny
 	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Successful authentication via oauth2; %s", session)
+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2; %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Printf("%s %s", remoteAddr, err)
@@ -809,7 +809,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		}
 		http.Redirect(rw, req, redirect, 302)
 	} else {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Failed authentication via oauth2; unauthorized")
+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Invalid authentication via OAuth2; unauthorized")
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 	}
 }
@@ -885,7 +885,7 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	}
 
 	if session != nil && session.Email != "" && !p.Validator(session.Email) {
-		logger.Printf(session.Email, req, logger.AuthFailure, "Failed authentication via session; removing session %s", session)
+		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session; removing session %s", session)
 		session = nil
 		saveSession = false
 		clearSession = true
@@ -979,10 +979,10 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState,
 		return nil, fmt.Errorf("invalid format %s", b)
 	}
 	if p.HtpasswdFile.Validate(pair[0], pair[1]) {
-		logger.PrintAuthf(pair[0], req, logger.AuthSuccess, "Successful authentication via basic auth")
+		logger.PrintAuthf(pair[0], req, logger.AuthSuccess, "Authenticated via basic auth and HTpasswd File")
 		return &providers.SessionState{User: pair[0]}, nil
 	}
-	logger.PrintAuthf(pair[0], req, logger.AuthFailure, "Failed authentication via basic auth; not in Htpasswd file")
+	logger.PrintAuthf(pair[0], req, logger.AuthFailure, "Invalid authentication via basic auth; not in Htpasswd File")
 	return nil, fmt.Errorf("%s not in HtpasswdFile", pair[0])
 }
 
