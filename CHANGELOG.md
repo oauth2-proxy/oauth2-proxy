@@ -2,6 +2,9 @@
 
 ## Changes since v3.1.0
 
+- Added login.gov provider
+- Added environment variables for all config options
+
 # v3.1.0
 
 ## Release highlights
