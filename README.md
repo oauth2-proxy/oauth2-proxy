@@ -19,17 +19,17 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v3.0.0`)
+    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v3.1.0`)
 
     b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 
-    c. Using the prebuilt docker image [quay.io/pusher/oauth2_proxy](https://quay.io/pusher/oauth2_proxy)
+    c. Using the prebuilt docker image [quay.io/pusher/oauth2_proxy](https://quay.io/pusher/oauth2_proxy) (AMD64, ARMv6 and ARM64 tags available)
 
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 
 ```
 sha256sum -c sha256sum.txt 2>&1 | grep OK
-oauth2_proxy-3.0.0.linux-amd64: OK
+oauth2_proxy-3.1.0.linux-amd64: OK
 ```
 
 2.  Select a Provider and Register an OAuth Application with a Provider
@@ -250,6 +250,7 @@ Usage of oauth2_proxy:
   -custom-templates-dir string: path to custom html templates
   -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
   -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
+  -flush-interval: period between flushing response buffers when streaming responses (default "1s")
   -footer string: custom footer string. Use "-" to disable default footer.
   -github-org string: restrict logins to members of this organisation
   -github-team string: restrict logins to members of any of these teams (slug), separated by a comma
@@ -476,19 +477,19 @@ server {
     auth_request_set $auth_cookie $upstream_http_set_cookie;
     add_header Set-Cookie $auth_cookie;
 
-    # When using the --set-authorization flag, some provider's cookies can exceed the 4kb 
-    # limit and so the OAuth2 Proxy splits these into multiple parts. 
+    # When using the --set-authorization flag, some provider's cookies can exceed the 4kb
+    # limit and so the OAuth2 Proxy splits these into multiple parts.
     # Nginx normally only copies the first `Set-Cookie` header from the auth_request to the response,
     # so if your cookies are larger than 4kb, you will need to extract additional cookies manually.
     auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
-      
+
     # Extract the Cookie attributes from the first Set-Cookie header and append them
     # to the second part ($upstream_cookie_* variables only contain the raw cookie content)
     if ($auth_cookie ~* "(; .*)") {
-        set $auth_cookie_name_0 $auth_cookie; 
+        set $auth_cookie_name_0 $auth_cookie;
         set $auth_cookie_name_1 "auth_cookie_name_1=$auth_cookie_name_upstream_1$1";
     }
-    
+
     # Send both Set-Cookie headers now if there was a second part
     if ($auth_cookie_name_upstream_1) {
         add_header Set-Cookie $auth_cookie_name_0;
