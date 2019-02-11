@@ -197,7 +197,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 	return
 }
 
-// override GetLoginURL to add login.gov parameters
+// GetLoginURL overrides GetLoginURL to add login.gov parameters
 func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
 	var a url.URL
 	a = *p.LoginURL
