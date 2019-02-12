@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/providers"
 )
