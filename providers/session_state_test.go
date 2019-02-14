@@ -1,8 +1,6 @@
 package providers
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -27,7 +25,6 @@ func TestSessionStateSerialization(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 4, strings.Count(encoded, "|"))
 
 	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
@@ -65,7 +62,6 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 4, strings.Count(encoded, "|"))
 
 	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
@@ -96,8 +92,6 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(nil)
 	assert.Equal(t, nil, err)
-	expected := fmt.Sprintf("email:%s user:", s.Email)
-	assert.Equal(t, expected, encoded)
 
 	// only email should have been serialized
 	ss, err := DecodeSessionState(encoded, nil)
@@ -118,8 +112,6 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(nil)
 	assert.Equal(t, nil, err)
-	expected := fmt.Sprintf("email:%s user:%s", s.Email, s.User)
-	assert.Equal(t, expected, encoded)
 
 	// only email should have been serialized
 	ss, err := DecodeSessionState(encoded, nil)
@@ -128,19 +120,6 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	assert.Equal(t, s.Email, ss.Email)
 	assert.Equal(t, "", ss.AccessToken)
 	assert.Equal(t, "", ss.RefreshToken)
-}
-
-func TestSessionStateAccountInfo(t *testing.T) {
-	s := &SessionState{
-		Email: "user@domain.com",
-		User:  "just-user",
-	}
-	expected := fmt.Sprintf("email:%v user:%v", s.Email, s.User)
-	assert.Equal(t, expected, s.accountInfo())
-
-	s.Email = ""
-	expected = fmt.Sprintf("email:%v user:%v", s.Email, s.User)
-	assert.Equal(t, expected, s.accountInfo())
 }
 
 func TestExpired(t *testing.T) {
