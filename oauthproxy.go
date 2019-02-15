@@ -854,6 +854,9 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 
 	if session == nil {
 		session, err = p.CheckBasicAuth(req)
+		if err != nil {
+			logger.Printf("Error during basic auth validation: %s", err)
+		}
 	}
 
 	if session == nil {
@@ -929,7 +932,7 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState,
 		return &providers.SessionState{User: pair[0]}, nil
 	}
 	logger.PrintAuthf(pair[0], req, logger.AuthFailure, "Invalid authentication via basic auth; not in Htpasswd File")
-	return nil, fmt.Errorf("%s not in HtpasswdFile", pair[0])
+	return nil, nil
 }
 
 // isAjax checks if a request is an ajax request

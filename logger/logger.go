@@ -13,24 +13,32 @@ import (
 	"time"
 )
 
+// AuthStatus defines the different types of auth logging that occur
 type AuthStatus string
 
 const (
-	// Default logging formats
+	// DefaultStandardLoggingFormat defines the default standard log format
 	DefaultStandardLoggingFormat = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
-	DefaultAuthLoggingFormat     = "{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
-	DefaultRequestLoggingFormat  = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+	// DefaultAuthLoggingFormat defines the default auth log format
+	DefaultAuthLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
+	// DefaultRequestLoggingFormat defines the default request log format
+	DefaultRequestLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
 
-	// Auth statuses
+	// AuthSuccess indicates that an auth attempt has succeeded explicitly
 	AuthSuccess AuthStatus = "AuthSuccess"
+	// AuthFailure indicates that an auth attempt has failed explicitly
 	AuthFailure AuthStatus = "AuthFailure"
-	AuthError   AuthStatus = "AuthError"
+	// AuthError indicates that an auth attempt has failed due to an error
+	AuthError AuthStatus = "AuthError"
 
-	// General logging config
-	Llongfile               = 1 << iota // full file name and line number: /a/b/c/d.go:23
-	Lshortfile                          // final file name element and line number: d.go:23. overrides Llongfile
-	LUTC                                // use UTC rather than the local time zone
-	LstdFlags  = Lshortfile             // initial values for the standard logger
+	// Llongfile flag to log full file name and line number: /a/b/c/d.go:23
+	Llongfile = 1 << iota
+	// Lshortfile flag to log final file name element and line number: d.go:23. overrides Llongfile
+	Lshortfile
+	// LUTC flag to log UTC datetime rather than the local time zone
+	LUTC
+	// LstdFlags flag for initial values for the logger
+	LstdFlags = Lshortfile
 )
 
 // These are the containers for all values that are available as variables in the logging formats.
@@ -68,6 +76,11 @@ type reqLogMessageData struct {
 	Username string
 }
 
+// A Logger represents an active logging object that generates lines of
+// output to an io.Writer passed through a formatter. Each logging
+// operation makes a single call to the Writer's Write method. A Logger
+// can be used simultaneously from multiple goroutines; it guarantees to
+// serialize access to the Writer.
 type Logger struct {
 	mu             sync.Mutex
 	flag           int
@@ -96,23 +109,6 @@ func New(flag int) *Logger {
 
 var std = New(LstdFlags)
 
-// Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.
-func itoa(buf *[]byte, i int, wid int) {
-	// Assemble decimal in reverse order.
-	var b [20]byte
-	bp := len(b) - 1
-	for i >= 10 || wid > 1 {
-		wid--
-		q := i / 10
-		b[bp] = byte('0' + i - q*10)
-		bp--
-		i = q
-	}
-	// i < 10
-	b[bp] = byte('0' + i)
-	*buf = append(*buf, b[bp:]...)
-}
-
 // Output a standard log template with a simple message.
 // Write a final newline at the end of every message.
 func (l *Logger) Output(calldepth int, message string) {
@@ -139,9 +135,9 @@ func (l *Logger) Output(calldepth int, message string) {
 	l.writer.Write([]byte("\n"))
 }
 
-// Print auth details to the logger. Requires an http.Request to log details.
-// Remaining arguments are handled in the manner of fmt.Sprintf.
-// Writes a final newline to the end of every message.
+// PrintAuth writes auth info to the logger. Requires an http.Request to
+// log request details. Remaining arguments are handled in the manner of
+// fmt.Sprintf. Writes a final newline to the end of every message.
 func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus, format string, a ...interface{}) {
 	if !l.authEnabled {
 		return
@@ -173,8 +169,9 @@ func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus
 	l.writer.Write([]byte("\n"))
 }
 
-// Print HTTP request details to the Logger.
-// Writes a final newline to the end of every message.
+// PrintReq writes request details to the Logger using the http.Request,
+// url, and timestamp of the request.  Writes a final newline to the end
+// of every message.
 func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) {
 	if !l.reqEnabled {
 		return
@@ -219,7 +216,9 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	l.writer.Write([]byte("\n"))
 }
 
-// Obtains file and line number info for the standard output log
+// GetFileLineString will find the caller file and line number
+// taking in to account the calldepth to iterate up the stack
+// to find the non-logging call location.
 func (l *Logger) GetFileLineString(calldepth int) string {
 	var file string
 	var line int
@@ -245,7 +244,7 @@ func (l *Logger) GetFileLineString(calldepth int) string {
 	return fmt.Sprintf("%s:%d", file, line)
 }
 
-// Parse an HTTP request for the client/remote IP
+// GetClient parses an HTTP request for the client/remote IP address.
 func GetClient(req *http.Request) string {
 	client := req.Header.Get("X-Real-IP")
 	if client == "" {
@@ -259,7 +258,7 @@ func GetClient(req *http.Request) string {
 	return client
 }
 
-// Returns a formatted timestamp
+// FormatTimestamp returns a formatted timestamp.
 func (l *Logger) FormatTimestamp(ts time.Time) string {
 	if l.flag&LUTC != 0 {
 		ts = ts.UTC()
@@ -282,42 +281,42 @@ func (l *Logger) SetFlags(flag int) {
 	l.flag = flag
 }
 
-// Set all logging enabled for the logger.
+// SetStandardEnabled enables or disables standard logging.
 func (l *Logger) SetStandardEnabled(e bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.stdEnabled = e
 }
 
-// Set auth logging enabled for the standard logger
+// SetAuthEnabled enables or disables auth logging.
 func (l *Logger) SetAuthEnabled(e bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.authEnabled = e
 }
 
-// Set request logging enabled for the standard logger
+// SetReqEnabled enabled or disables request logging.
 func (l *Logger) SetReqEnabled(e bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.reqEnabled = e
 }
 
-// Set the output template for the standard logger
+// SetStandardTemplate sets the template for standard logging.
 func (l *Logger) SetStandardTemplate(t string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.stdLogTemplate = template.Must(template.New("std-log").Parse(t))
 }
 
-// Set the auth template for the standard logger
+// SetAuthTemplate sets the template for auth logging.
 func (l *Logger) SetAuthTemplate(t string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.authTemplate = template.Must(template.New("auth-log").Parse(t))
 }
 
-// Set the request template for the standard logger
+// SetReqTemplate sets the template for request logging.
 func (l *Logger) SetReqTemplate(t string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -326,7 +325,7 @@ func (l *Logger) SetReqTemplate(t string) {
 
 // These functions utilize the standard logger.
 
-// Returns a formatted timestamp for the standard logger.
+// FormatTimestamp returns a formatted timestamp for the standard logger.
 func FormatTimestamp(ts time.Time) string {
 	return std.FormatTimestamp(ts)
 }
@@ -348,32 +347,38 @@ func SetOutput(w io.Writer) {
 	std.writer = w
 }
 
-// Set output logging enabled for the standard logger
+// SetStandardEnabled enables or disables standard logging for the
+// standard logger.
 func SetStandardEnabled(e bool) {
 	std.SetStandardEnabled(e)
 }
 
-// Set auth logging enabled for the standard logger
+// SetAuthEnabled enables or disables auth logging for the standard
+// logger.
 func SetAuthEnabled(e bool) {
 	std.SetAuthEnabled(e)
 }
 
-// Set request logging enabled for the standard logger
+// SetReqEnabled enables or disables request logging for the
+// standard logger.
 func SetReqEnabled(e bool) {
 	std.SetReqEnabled(e)
 }
 
-// Set the output template for the standard logger
+// SetStandardTemplate sets the template for standard logging for
+// the standard logger.
 func SetStandardTemplate(t string) {
 	std.SetStandardTemplate(t)
 }
 
-// Set the auth template for the standard logger
+// SetAuthTemplate sets the template for auth logging for the
+// standard logger.
 func SetAuthTemplate(t string) {
 	std.SetAuthTemplate(t)
 }
 
-// Set the request template for the standard logger
+// SetReqTemplate sets the template for request logging for the
+// standard logger.
 func SetReqTemplate(t string) {
 	std.SetReqTemplate(t)
 }
@@ -441,7 +446,7 @@ func PrintAuthf(username string, req *http.Request, status AuthStatus, format st
 	std.PrintAuth(username, req, status, format, a...)
 }
 
-// PrintAuthf writes request details to the standard logger.
+// PrintReq writes request details to the standard logger.
 func PrintReq(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) {
 	std.PrintReq(username, upstream, req, url, ts, status, size)
 }
