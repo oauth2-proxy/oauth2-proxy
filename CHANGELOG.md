@@ -2,6 +2,21 @@
 
 ## Changes since v3.1.0
 
+- [#52](https://github.com/pusher/oauth2_proxy/pull/52) Logging Improvements
+  - Implement flags to configure file logging
+    - `-logging-filename` Defines the filename to log to
+    - `-logging-max-size` Defines the maximum
+    - `-logging-max-age` Defines the maximum age of backups to retain
+    - `-logging-max-backups` Defines the maximum number of rollover log files to retain
+    - `-logging-compress` Defines if rollover log files should be compressed
+    - `-logging-local-time` Defines if logging date and time should be local or UTC
+  - Implement two new flags to enable or disable specific logging types
+    - `-standard-logging` Enables or disables standard (not request or auth) logging
+    - `-auth-logging` Enables or disables auth logging
+  - Implement two new flags to customize the logging format
+    - `-standard-logging-format` Sets the format for standard logging
+    - `-auth-logging-format` Sets the format for auth logging
+
 # v3.1.0
 
 ## Release highlights
