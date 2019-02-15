@@ -27,7 +27,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 4, strings.Count(encoded, "|"))
+	assert.Equal(t, 5, strings.Count(encoded, "|"))
 
 	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
@@ -43,8 +43,8 @@ func TestSessionStateSerialization(t *testing.T) {
 	ss, err = DecodeSessionState(encoded, c2)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user", ss.User)
-	assert.Equal(t, s.Email, ss.Email)
+	assert.NotEqual(t, "user", ss.User)
+	assert.NotEqual(t, s.Email, ss.Email)
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
 	assert.NotEqual(t, s.IDToken, ss.IDToken)
@@ -65,7 +65,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 4, strings.Count(encoded, "|"))
+	assert.Equal(t, 5, strings.Count(encoded, "|"))
 
 	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
@@ -80,8 +80,8 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	ss, err = DecodeSessionState(encoded, c2)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, s.User, ss.User)
-	assert.Equal(t, s.Email, ss.Email)
+	assert.NotEqual(t, s.User, ss.User)
+	assert.NotEqual(t, s.Email, ss.Email)
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
 	assert.NotEqual(t, s.RefreshToken, ss.RefreshToken)

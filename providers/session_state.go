@@ -63,6 +63,21 @@ func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 	if c == nil {
 		panic("error. missing cipher")
 	}
+	e := s.Email
+	if e != "" {
+		if e, err = c.Encrypt(e); err != nil {
+			return "", err
+		}
+	}
+	u := s.User
+	if u == "" {
+		u = strings.Split(s.Email, "@")[0]
+	}
+	if u != "" {
+		if u, err = c.Encrypt(u); err != nil {
+			return "", err
+		}
+	}
 	a := s.AccessToken
 	if a != "" {
 		if a, err = c.Encrypt(a); err != nil {
@@ -81,7 +96,7 @@ func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
 			return "", err
 		}
 	}
-	return fmt.Sprintf("%s|%s|%s|%d|%s", s.accountInfo(), a, i, s.ExpiresOn.Unix(), r), nil
+	return fmt.Sprintf("%s|%s|%s|%s|%d|%s", e, u, a, i, s.ExpiresOn.Unix(), r), nil
 }
 
 func decodeSessionStatePlain(v string) (s *SessionState, err error) {
@@ -106,36 +121,44 @@ func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error)
 	}
 
 	chunks := strings.Split(v, "|")
-	if len(chunks) != 5 {
-		err = fmt.Errorf("invalid number of fields (got %d expected 5)", len(chunks))
+	if len(chunks) != 6 {
+		err = fmt.Errorf("invalid number of fields (got %d expected 6)", len(chunks))
 		return
 	}
-
-	sessionState, err := decodeSessionStatePlain(chunks[0])
-	if err != nil {
-		return nil, err
+	
+	sessionState := SessionState{}
+	if chunks[0] != "" {
+		if sessionState.Email, err = c.Decrypt(chunks[0]); err != nil {
+			return nil, err
+		}
 	}
 
 	if chunks[1] != "" {
-		if sessionState.AccessToken, err = c.Decrypt(chunks[1]); err != nil {
+		if sessionState.User, err = c.Decrypt(chunks[1]); err != nil {
 			return nil, err
 		}
 	}
 
 	if chunks[2] != "" {
-		if sessionState.IDToken, err = c.Decrypt(chunks[2]); err != nil {
+		if sessionState.AccessToken, err = c.Decrypt(chunks[2]); err != nil {
 			return nil, err
 		}
 	}
 
-	ts, _ := strconv.Atoi(chunks[3])
+	if chunks[3] != "" {
+		if sessionState.IDToken, err = c.Decrypt(chunks[3]); err != nil {
+			return nil, err
+		}
+	}
+
+	ts, _ := strconv.Atoi(chunks[4])
 	sessionState.ExpiresOn = time.Unix(int64(ts), 0)
 
-	if chunks[4] != "" {
-		if sessionState.RefreshToken, err = c.Decrypt(chunks[4]); err != nil {
+	if chunks[5] != "" {
+		if sessionState.RefreshToken, err = c.Decrypt(chunks[5]); err != nil {
 			return nil, err
 		}
 	}
 
-	return sessionState, nil
+	return &sessionState, nil
 }
