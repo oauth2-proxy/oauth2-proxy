@@ -125,7 +125,7 @@ func DecodeSessionState(v string, c *cookie.Cipher) (s *SessionState, err error)
 		err = fmt.Errorf("invalid number of fields (got %d expected 6)", len(chunks))
 		return
 	}
-	
+
 	sessionState := SessionState{}
 	if chunks[0] != "" {
 		if sessionState.Email, err = c.Decrypt(chunks[0]); err != nil {
