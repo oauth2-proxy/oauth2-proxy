@@ -2,6 +2,8 @@
 
 ## Changes since v3.1.0
 
+- Encrypt and decrypt the email and user in the cookie
+
 # v3.1.0
 
 ## Release highlights
