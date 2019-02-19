@@ -105,8 +105,8 @@ Note: The user is checked against the group members list on initial authenticati
 7. Configure the proxy with
 
 ```
-   --provider=azure \
-   --client-id=<application ID from step 3> \
+   --provider=azure
+   --client-id=<application ID from step 3>
    --client-secret=<value from step 6>
 ```
 
