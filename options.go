@@ -72,7 +72,6 @@ type Options struct {
 	Provider          string `flag:"provider" cfg:"provider"`
 	OIDCIssuerURL     string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	SkipOIDCDiscovery bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
-	OIDCUserInfoURL   string `flag:"oidc-userinfo-url" cfg:"oidc_userinfo_url"`
 	OIDCJwksURL       string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	LoginURL          string `flag:"login-url" cfg:"login_url"`
 	RedeemURL         string `flag:"redeem-url" cfg:"redeem_url"`
