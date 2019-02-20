@@ -167,9 +167,10 @@ func (o *Options) Validate() error {
 
 		ctx := context.Background()
 
-		// Override discoverable provider data with a custom http.Client that fakes
-		// a discovery response with our manual setting on go-oidc side
-		// only if -skip-oidc-discovery is enabled
+		// Construct a manual IDTokenVerifier from issuer URL & JWKS URI
+		// instead of metadata discovery if we enable -skip-oidc-discovery.
+		// In this case we need to make sure the required endpoints for
+		// the provider are configured.
 		if o.SkipOIDCDiscovery {
 			if o.LoginURL == "" {
 				msgs = append(msgs, "missing setting: login-url")
