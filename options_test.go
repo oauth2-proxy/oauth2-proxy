@@ -256,7 +256,7 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 	o := testOptions()
 	o.Provider = "oidc"
 	o.OIDCIssuerURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/v2.0/"
-	o.SkipOidcDiscovery = true
+	o.SkipOIDCDiscovery = true
 
 	err := o.Validate()
 	assert.Equal(t, "Invalid configuration:\n"+
