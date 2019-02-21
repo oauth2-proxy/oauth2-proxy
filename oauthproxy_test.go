@@ -1064,3 +1064,47 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 	mime := rh.Get("Content-Type")
 	assert.NotEqual(t, applicationJSON, mime)
 }
+
+func TestClearSplittedCookie(t *testing.T) {
+	p := OAuthProxy{CookieName: "oauth2"}
+	var rw = httptest.NewRecorder()
+	req := httptest.NewRequest("get", "/", nil)
+
+	req.AddCookie(&http.Cookie{
+		Name:  "test1",
+		Value: "test1",
+	})
+	req.AddCookie(&http.Cookie{
+		Name:  "oauth2-0",
+		Value: "oauth2-0",
+	})
+	req.AddCookie(&http.Cookie{
+		Name:  "oauth2-1",
+		Value: "oauth2-1",
+	})
+
+	p.ClearSessionCookie(rw, req)
+	header := rw.Header()
+
+	assert.Equal(t, 3, len(header["Set-Cookie"]), "should have 3 set-cookie header entries")
+}
+
+func TestClearNotSplittedCookie(t *testing.T) {
+	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
+	var rw = httptest.NewRecorder()
+	req := httptest.NewRequest("get", "/", nil)
+
+	req.AddCookie(&http.Cookie{
+		Name:  "test1",
+		Value: "test1",
+	})
+	req.AddCookie(&http.Cookie{
+		Name:  "oauth2",
+		Value: "oauth2",
+	})
+
+	p.ClearSessionCookie(rw, req)
+	header := rw.Header()
+
+	assert.Equal(t, 1, len(header["Set-Cookie"]), "should have 1 set-cookie header entries")
+}
