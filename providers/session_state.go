@@ -14,10 +14,16 @@ import (
 type SessionState struct {
 	AccessToken  string    `json:",omitempty"`
 	IDToken      string    `json:",omitempty"`
-	ExpiresOn    time.Time `json:",omitempty"`
+	ExpiresOn    time.Time `json:"-"`
 	RefreshToken string    `json:",omitempty"`
 	Email        string    `json:",omitempty"`
 	User         string    `json:",omitempty"`
+}
+
+// SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
+type SessionStateJSON struct {
+	*SessionState
+	ExpiresOn *time.Time `json:",omitempty"`
 }
 
 // IsExpired checks whether the session has expired
@@ -75,7 +81,12 @@ func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
 			}
 		}
 	}
-	b, err := json.Marshal(ss)
+	// Embed SessionState and ExpiresOn pointer into SessionStateJSON
+	ssj := &SessionStateJSON{SessionState: &ss}
+	if !ss.ExpiresOn.IsZero() {
+		ssj.ExpiresOn = &ss.ExpiresOn
+	}
+	b, err := json.Marshal(ssj)
 	return string(b), err
 }
 
@@ -138,21 +149,29 @@ func legacyDecodeSessionState(v string, c *cookie.Cipher) (*SessionState, error)
 
 // DecodeSessionState decodes the session cookie string into a SessionState
 func DecodeSessionState(v string, c *cookie.Cipher) (*SessionState, error) {
-	var ss SessionState
-	var s *SessionState
-	err := json.Unmarshal([]byte(v), &s)
-	if err != nil {
-		s, err = legacyDecodeSessionState(v, c)
+	var ssj SessionStateJSON
+	var ss *SessionState
+	err := json.Unmarshal([]byte(v), &ssj)
+	if err == nil && ssj.SessionState != nil {
+		// Extract SessionState and ExpiresOn value from SessionStateJSON
+		ss = ssj.SessionState
+		if ssj.ExpiresOn != nil {
+			ss.ExpiresOn = *ssj.ExpiresOn
+		}
+	} else {
+		// Try to decode a legacy string when json.Unmarshal failed
+		ss, err = legacyDecodeSessionState(v, c)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if c == nil {
 		// Load only Email and User when cipher is unavailable
-		ss.Email = s.Email
-		ss.User = s.User
+		ss = &SessionState{
+			Email: ss.Email,
+			User:  ss.User,
+		}
 	} else {
-		ss = *s
 		if ss.AccessToken != "" {
 			ss.AccessToken, err = c.Decrypt(ss.AccessToken)
 			if err != nil {
@@ -175,5 +194,5 @@ func DecodeSessionState(v string, c *cookie.Cipher) (*SessionState, error) {
 	if ss.User == "" {
 		ss.User = strings.Split(ss.Email, "@")[0]
 	}
-	return &ss, nil
+	return ss, nil
 }

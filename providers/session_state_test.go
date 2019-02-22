@@ -143,10 +143,8 @@ type testCase struct {
 
 // TestEncodeSessionState tests EncodeSessionState with the test vector
 //
-// - Currently only tests without cipher here because we have no way to mock
+// Currently only tests without cipher here because we have no way to mock
 // the random generator used in EncodeSessionState.
-// - The zero value of time.Time is encoded to "0001-01-01T00:00:00Z"
-// (`json:",omitempty"` is not effective for time.Time).
 func TestEncodeSessionState(t *testing.T) {
 	e := time.Now().Add(time.Duration(1) * time.Hour)
 
@@ -156,7 +154,7 @@ func TestEncodeSessionState(t *testing.T) {
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user","ExpiresOn":"0001-01-01T00:00:00Z"}`,
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
 		},
 		{
 			SessionState: SessionState{
@@ -167,7 +165,7 @@ func TestEncodeSessionState(t *testing.T) {
 				ExpiresOn:    e,
 				RefreshToken: "refresh4321",
 			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user","ExpiresOn":"0001-01-01T00:00:00Z"}`,
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
 		},
 	}
 
@@ -200,7 +198,7 @@ func TestDecodeSessionState(t *testing.T) {
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user","ExpiresOn":"0001-01-01T00:00:00Z"}`,
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
 		},
 		{
 			SessionState: SessionState{
@@ -239,16 +237,16 @@ func TestDecodeSessionState(t *testing.T) {
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user","ExpiresOn":"0001-01-01T00:00:00Z"}`,
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
 			Cipher:  c,
 		},
 		{
-			Encoded: `{"Email":"user@domain.com","User":"just-user","ExpiresOn":"0001-01-01T00:00:00Z","AccessToken":"X"}`,
+			Encoded: `{"Email":"user@domain.com","User":"just-user","AccessToken":"X"}`,
 			Cipher:  c,
 			Error:   true,
 		},
 		{
-			Encoded: `{"Email":"user@domain.com","User":"just-user","ExpiresOn":"0001-01-01T00:00:00Z","IDToken":"XXXX"}`,
+			Encoded: `{"Email":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
 			Cipher:  c,
 			Error:   true,
 		},
