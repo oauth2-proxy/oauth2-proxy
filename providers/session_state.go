@@ -124,7 +124,10 @@ func legacyDecodeSessionState(v string, c *cookie.Cipher) (*SessionState, error)
 	}
 
 	i++
-	ts, _ := strconv.Atoi(chunks[i])
+	ts, err := strconv.Atoi(chunks[i])
+	if err != nil {
+		return nil, fmt.Errorf("invalid session state (legacy: wrong expiration time: %s)", err)
+	}
 	ss.ExpiresOn = time.Unix(int64(ts), 0)
 
 	i++

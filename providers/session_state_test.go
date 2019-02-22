@@ -269,6 +269,11 @@ func TestDecodeSessionState(t *testing.T) {
 			Error:   true,
 		},
 		{
+			Encoded: "email:user@domain.com user:just-user|||99999999999999999999|",
+			Cipher:  c,
+			Error:   true,
+		},
+		{
 			SessionState: SessionState{
 				Email:        "user@domain.com",
 				User:         "just-user",
