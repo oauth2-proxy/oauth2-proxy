@@ -455,8 +455,11 @@ func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Reques
 	reqCookies := req.Cookies()
 	var cookies []*http.Cookie
 
+	// matches CookieName, CookieName_<number>
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", p.CookieName))
+
 	for _, c := range reqCookies {
-		if strings.HasPrefix(c.Name, p.CookieName) {
+		if cookieNameRegex.MatchString(c.Name) {
 			clearCookie := p.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
 
 			http.SetCookie(rw, clearCookie)

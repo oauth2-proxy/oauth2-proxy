@@ -1075,12 +1075,12 @@ func TestClearSplitCookie(t *testing.T) {
 		Value: "test1",
 	})
 	req.AddCookie(&http.Cookie{
-		Name:  "oauth2-0",
-		Value: "oauth2-0",
+		Name:  "oauth2_0",
+		Value: "oauth2_0",
 	})
 	req.AddCookie(&http.Cookie{
-		Name:  "oauth2-1",
-		Value: "oauth2-1",
+		Name:  "oauth2_1",
+		Value: "oauth2_1",
 	})
 
 	p.ClearSessionCookie(rw, req)
