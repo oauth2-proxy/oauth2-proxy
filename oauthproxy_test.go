@@ -1065,8 +1065,8 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 	assert.NotEqual(t, applicationJSON, mime)
 }
 
-func TestClearSplittedCookie(t *testing.T) {
-	p := OAuthProxy{CookieName: "oauth2"}
+func TestClearSplitCookie(t *testing.T) {
+	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -1086,10 +1086,10 @@ func TestClearSplittedCookie(t *testing.T) {
 	p.ClearSessionCookie(rw, req)
 	header := rw.Header()
 
-	assert.Equal(t, 3, len(header["Set-Cookie"]), "should have 3 set-cookie header entries")
+	assert.Equal(t, 2, len(header["Set-Cookie"]), "should have 3 set-cookie header entries")
 }
 
-func TestClearNotSplittedCookie(t *testing.T) {
+func TestClearSingleCookie(t *testing.T) {
 	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
