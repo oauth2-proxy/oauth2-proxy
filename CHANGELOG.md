@@ -2,6 +2,8 @@
 
 ## Changes since v3.1.0
 
+- [#68](https://github.com/pusher/oauth2_proxy/pull/68) forward X-Auth-Access-Token header (@davidholsgrove)
+
 # v3.1.0
 
 ## Release highlights
