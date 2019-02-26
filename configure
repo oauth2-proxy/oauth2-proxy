@@ -106,6 +106,7 @@ check_docker_version() {
 
 check_go_env() {
   echo -n "Checking \$GOPATH... "
+  GOPATH="$(go env GOPATH)"
   if [ -z "$GOPATH" ]; then
     printf "${RED}invalid${NC} - GOPATH not set\n"
     exit 1

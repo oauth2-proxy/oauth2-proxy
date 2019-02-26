@@ -16,6 +16,8 @@
   - Implement two new flags to customize the logging format
     - `-standard-logging-format` Sets the format for standard logging
     - `-auth-logging-format` Sets the format for auth logging
+- [#68](https://github.com/pusher/oauth2_proxy/pull/68) forward X-Auth-Access-Token header (@davidholsgrove)
+
 
 # v3.1.0
 
