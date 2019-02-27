@@ -261,6 +261,7 @@ Usage of oauth2_proxy:
   -http-address string: [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients (default "127.0.0.1:4180")
   -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
   -login-url string: Authentication endpoint
+  -oidc-issuer-url: the OpenID Connect issuer URL. ie: "https://accounts.google.com"
   -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
   -pass-authorization-header: pass OIDC IDToken to upstream via Authorization Bearer header
   -pass-basic-auth: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
@@ -472,6 +473,10 @@ server {
     auth_request_set $email  $upstream_http_x_auth_request_email;
     proxy_set_header X-User  $user;
     proxy_set_header X-Email $email;
+
+    # if you enabled --pass-access-token, this will pass the token to the backend
+    auth_request_set $token  $upstream_http_x_auth_request_access_token;
+    proxy_set_header X-Access-Token $token;
 
     # if you enabled --cookie-refresh, this is needed for it to work with auth_request
     auth_request_set $auth_cookie $upstream_http_set_cookie;
