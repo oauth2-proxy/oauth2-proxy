@@ -2,6 +2,7 @@
 
 ## Changes since v3.1.0
 
+- [#82](https://github.com/pusher/oauth2_proxy/pull/82) Docker run as non-root user and group (@kskewes)
 - [#68](https://github.com/pusher/oauth2_proxy/pull/68) forward X-Auth-Access-Token header (@davidholsgrove)
 
 # v3.1.0
