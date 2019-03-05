@@ -452,7 +452,6 @@ func (p *OAuthProxy) SetCSRFCookie(rw http.ResponseWriter, req *http.Request, va
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) {
-	reqCookies := req.Cookies()
 	var cookies []*http.Cookie
 
 	// matches CookieName, CookieName_<number>
