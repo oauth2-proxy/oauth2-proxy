@@ -2,6 +2,7 @@
 
 ## Changes since v3.1.0
 
+- [#85](https://github.com/pusher/oauth2_proxy/pull/85) Potentially breaking change: docker user & group (@kskewes)
 - [#68](https://github.com/pusher/oauth2_proxy/pull/68) forward X-Auth-Access-Token header (@davidholsgrove)
 
 # v3.1.0
