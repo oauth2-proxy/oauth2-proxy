@@ -16,7 +16,7 @@ import (
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/admin/directory/v1"
+	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 )
 
@@ -260,7 +260,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 		return false, nil
 	}
 
-	newToken, duration, err := p.redeemRefreshToken(s.RefreshToken)
+	newToken, newIDToken, duration, err := p.redeemRefreshToken(s.RefreshToken)
 	if err != nil {
 		return false, err
 	}
@@ -272,12 +272,13 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 
 	origExpiration := s.ExpiresOn
 	s.AccessToken = newToken
+	s.IDToken = newIDToken
 	s.ExpiresOn = time.Now().Add(duration).Truncate(time.Second)
 	log.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
 	return true, nil
 }
 
-func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, expires time.Duration, err error) {
+func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, idToken string, expires time.Duration, err error) {
 	// https://developers.google.com/identity/protocols/OAuth2WebServer#refresh
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
@@ -310,12 +311,14 @@ func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, 
 	var data struct {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int64  `json:"expires_in"`
+		IDToken     string `json:"id_token"`
 	}
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return
 	}
 	token = data.AccessToken
+	idToken = data.IDToken
 	expires = time.Duration(data.ExpiresIn) * time.Second
 	return
 }

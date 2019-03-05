@@ -166,6 +166,26 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
     -cookie-secure=false
     -email-domain example.com
 
+#### Skip OIDC discovery
+
+Some providers do not support OIDC discovery via their issuer URL, so oauth2_proxy cannot simply grab the authorization, token and jwks URI endpoints from the provider's metadata.
+
+In this case, you can set the `-skip-oidc-discovery` option, and supply those required endpoints manually:
+
+```
+    -provider oidc
+    -client-id oauth2_proxy
+    -client-secret proxy
+    -redirect-url http://127.0.0.1:4180/oauth2/callback
+    -oidc-issuer-url http://127.0.0.1:5556
+    -skip-oidc-discovery
+    -login-url http://127.0.0.1:5556/authorize
+    -redeem-url http://127.0.0.1:5556/token
+    -oidc-jwks-url http://127.0.0.1:5556/keys
+    -cookie-secure=false
+    -email-domain example.com
+```
+
 ## Email Authentication
 
 To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresses use `--email-domain=*`.
@@ -213,6 +233,7 @@ Usage of oauth2_proxy:
   -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
   -login-url string: Authentication endpoint
   -oidc-issuer-url: the OpenID Connect issuer URL. ie: "https://accounts.google.com"
+  -oidc-jwks-url string: OIDC JWKS URI for token verification; required if OIDC discovery is disabled
   -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
   -pass-authorization-header: pass OIDC IDToken to upstream via Authorization Bearer header
   -pass-basic-auth: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
@@ -232,6 +253,7 @@ Usage of oauth2_proxy:
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
   -skip-auth-preflight: will skip authentication for OPTIONS requests
   -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
+  -skip-oidc-discovery: bypass OIDC endpoint discovery. login-url, redeem-url and oidc-jwks-url must be configured in this case
   -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
   -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
   -tls-cert string: path to certificate file
@@ -339,7 +361,7 @@ The command line to run `oauth2_proxy` in this configuration would look like thi
 OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated. The `/oauth2` prefix can be changed with the `--proxy-prefix` config variable.
 
 - /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
-- /ping - returns an 200 OK response
+- /ping - returns a 200 OK response, which is intended for use with health checks  
 - /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 - /oauth2/start - a URL that will redirect to start the OAuth cycle
 - /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
