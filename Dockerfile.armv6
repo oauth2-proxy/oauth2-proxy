@@ -19,4 +19,7 @@ FROM arm32v6/alpine:3.8
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
 
+RUN addgroup -S -g 2000 oauth2proxy && adduser -S -u 2000 oauth2proxy -G oauth2proxy
+USER oauth2proxy
+
 ENTRYPOINT ["/bin/oauth2_proxy"]
