@@ -16,6 +16,7 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/providers"
+	"go.uber.org/zap"
 )
 
 // Options holds Configuration Options that can be set by Command Line Flag,
@@ -82,10 +83,13 @@ type Options struct {
 	Scope             string `flag:"scope" cfg:"scope"`
 	ApprovalPrompt    string `flag:"approval-prompt" cfg:"approval_prompt"`
 
-	RequestLogging       bool   `flag:"request-logging" cfg:"request_logging"`
-	RequestLoggingFormat string `flag:"request-logging-format" cfg:"request_logging_format"`
+	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
 
-	SignatureKey string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
+	SignatureKey string    `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
+	HTTPLogPath  string    `flag:"http-log-path" cfg:"http_log_path" env:"HTTP_LOG_PATH"`
+	LogPath      string    `flag:"log-path" cfg:"log_path" env:"LOG_PATH"`
+	LevelFlag    LevelFlag `flag:"log-level" cfg:"log_level" env:"LOG_LEVEL"`
+	JSONLogging  bool      `flag:"json-logging" cfg:"json-logging" env:"JSON_LOGGING"`
 
 	// internal values that are set after config validation
 	redirectURL   *url.URL
@@ -105,28 +109,30 @@ type SignatureData struct {
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:          "/oauth2",
-		ProxyWebSockets:      true,
-		HTTPAddress:          "127.0.0.1:4180",
-		HTTPSAddress:         ":443",
-		DisplayHtpasswdForm:  true,
-		CookieName:           "_oauth2_proxy",
-		CookieSecure:         true,
-		CookieHTTPOnly:       true,
-		CookieExpire:         time.Duration(168) * time.Hour,
-		CookieRefresh:        time.Duration(0),
-		SetXAuthRequest:      false,
-		SkipAuthPreflight:    false,
-		PassBasicAuth:        true,
-		PassUserHeaders:      true,
-		PassAccessToken:      false,
-		PassHostHeader:       true,
-		SetAuthorization:     false,
-		PassAuthorization:    false,
-		ApprovalPrompt:       "force",
-		RequestLogging:       true,
-		SkipOIDCDiscovery:    false,
-		RequestLoggingFormat: defaultRequestLoggingFormat,
+		ProxyPrefix:         "/oauth2",
+		ProxyWebSockets:     true,
+		HTTPAddress:         "127.0.0.1:4180",
+		HTTPSAddress:        ":443",
+		DisplayHtpasswdForm: true,
+		CookieName:          "_oauth2_proxy",
+		CookieSecure:        true,
+		CookieHTTPOnly:      true,
+		CookieExpire:        time.Duration(168) * time.Hour,
+		CookieRefresh:       time.Duration(0),
+		SetXAuthRequest:     false,
+		SkipAuthPreflight:   false,
+		PassBasicAuth:       true,
+		PassUserHeaders:     true,
+		PassAccessToken:     false,
+		PassHostHeader:      true,
+		SetAuthorization:    false,
+		PassAuthorization:   false,
+		ApprovalPrompt:      "force",
+		RequestLogging:      true,
+		SkipOIDCDiscovery:   false,
+		HTTPLogPath:         "/dev/stdout",
+		LevelFlag:           NewLevelFlagAt(zap.InfoLevel),
+		JSONLogging:         false,
 	}
 }
 
@@ -166,6 +172,8 @@ func (o *Options) Validate() error {
 	}
 
 	if o.OIDCIssuerURL != "" {
+		logger.Info("Validing OIDC Issuer URL",
+			zap.String("oidc_issuer_url", o.OIDCIssuerURL))
 
 		ctx := context.Background()
 
@@ -174,6 +182,7 @@ func (o *Options) Validate() error {
 		// In this case we need to make sure the required endpoints for
 		// the provider are configured.
 		if o.SkipOIDCDiscovery {
+			logger.Info("Skipping OIDC Discovery")
 			if o.LoginURL == "" {
 				msgs = append(msgs, "missing setting: login-url")
 			}
@@ -191,6 +200,9 @@ func (o *Options) Validate() error {
 			// Configure discoverable provider data.
 			provider, err := oidc.NewProvider(ctx, o.OIDCIssuerURL)
 			if err != nil {
+				logger.Fatal("Unable to create new OIDC provider",
+					zap.String("oidc_issuer_url", o.OIDCIssuerURL),
+					zap.String("err", err.Error()))
 				return err
 			}
 			o.oidcVerifier = provider.Verifier(&oidc.Config{
@@ -199,10 +211,18 @@ func (o *Options) Validate() error {
 
 			o.LoginURL = provider.Endpoint().AuthURL
 			o.RedeemURL = provider.Endpoint().TokenURL
+
+			logger.Debug("Discovered OIDC configuration",
+				zap.String("oidc_issuer_url", o.OIDCIssuerURL),
+				zap.String("AuthURL", provider.Endpoint().AuthURL),
+				zap.String("TokenURL", provider.Endpoint().TokenURL))
 		}
+
 		if o.Scope == "" {
 			o.Scope = "openid email profile"
 		}
+		logger.Info("Configured OIDC scopes",
+			zap.String("scopes", o.Scope))
 	}
 
 	o.redirectURL, msgs = parseURL(o.RedirectURL, "redirect", msgs)

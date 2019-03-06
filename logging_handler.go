@@ -4,17 +4,14 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"text/template"
 	"time"
-)
 
-const (
-	defaultRequestLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+	zap "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP status
@@ -82,38 +79,30 @@ func (l *responseLogger) Flush() {
 	}
 }
 
-// logMessageData is the container for all values that are available as variables in the request logging format.
-// All values are pre-formatted strings so it is easy to use them in the format string.
-type logMessageData struct {
-	Client,
-	Host,
-	Protocol,
-	RequestDuration,
-	RequestMethod,
-	RequestURI,
-	ResponseSize,
-	StatusCode,
-	Timestamp,
-	Upstream,
-	UserAgent,
-	Username string
-}
-
 // loggingHandler is the http.Handler implementation for LoggingHandlerTo and its friends
 type loggingHandler struct {
-	writer      io.Writer
-	handler     http.Handler
-	enabled     bool
-	logTemplate *template.Template
+	logger  *zap.Logger
+	writer  io.Writer
+	handler http.Handler
+	enabled bool
 }
 
 // LoggingHandler provides an http.Handler which logs requests to the HTTP server
-func LoggingHandler(out io.Writer, h http.Handler, v bool, requestLoggingTpl string) http.Handler {
+func LoggingHandler(h http.Handler, v bool, logPath string) http.Handler {
+	var logger *zap.Logger
+	if v {
+		config := zap.NewProductionConfig()
+		config.OutputPaths = []string{logPath}
+		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+		logger, _ = config.Build()
+	} else {
+		logger = zap.NewNop()
+	}
+	defer logger.Sync()
 	return loggingHandler{
-		writer:      out,
-		handler:     h,
-		enabled:     v,
-		logTemplate: template.Must(template.New("request-log").Parse(requestLoggingTpl)),
+		logger:  logger,
+		handler: h,
+		enabled: v,
 	}
 }
 
@@ -153,22 +142,20 @@ func (h loggingHandler) writeLogLine(username, upstream string, req *http.Reques
 		client = c
 	}
 
-	duration := float64(time.Now().Sub(ts)) / float64(time.Second)
+	duration := time.Now().Sub(ts)
 
-	h.logTemplate.Execute(h.writer, logMessageData{
-		Client:          client,
-		Host:            req.Host,
-		Protocol:        req.Proto,
-		RequestDuration: fmt.Sprintf("%0.3f", duration),
-		RequestMethod:   req.Method,
-		RequestURI:      fmt.Sprintf("%q", url.RequestURI()),
-		ResponseSize:    fmt.Sprintf("%d", size),
-		StatusCode:      fmt.Sprintf("%d", status),
-		Timestamp:       ts.Format("02/Jan/2006:15:04:05 -0700"),
-		Upstream:        upstream,
-		UserAgent:       fmt.Sprintf("%q", req.UserAgent()),
-		Username:        username,
-	})
-
-	h.writer.Write([]byte("\n"))
+	h.logger.Info("HTTP Request",
+		zap.String("Client", client),
+		zap.String("Host", req.Host),
+		zap.String("Protocol", req.Proto),
+		zap.Duration("RequestDuration", duration),
+		zap.String("RequestMethod", req.Method),
+		zap.String("RequestURI", url.RequestURI()),
+		zap.Int("ResponseSize", size),
+		zap.Int("StatusCode", status),
+		zap.Time("Timestamp", ts),
+		zap.String("Upstream", upstream),
+		zap.String("UserAgent", req.UserAgent()),
+		zap.String("Username", username),
+	)
 }

@@ -1,32 +1,29 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
-	"time"
 )
 
 func TestLoggingHandler_ServeHTTP(t *testing.T) {
-	ts := time.Now()
-
 	tests := []struct {
-		Format,
 		ExpectedLogMessage string
 	}{
-		{defaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", ts.Format("02/Jan/2006:15:04:05 -0700"))},
-		{"{{.RequestMethod}}", "GET\n"},
+		{"GET"},
 	}
 
 	for _, test := range tests {
-		buf := bytes.NewBuffer(nil)
+		tmpfile, _ := ioutil.TempFile("", "testfile")
+		defer os.Remove(tmpfile.Name())
 		handler := func(w http.ResponseWriter, req *http.Request) {
 			w.Write([]byte("test"))
 		}
 
-		h := LoggingHandler(buf, http.HandlerFunc(handler), true, test.Format)
+		h := LoggingHandler(http.HandlerFunc(handler), true, tmpfile.Name())
 
 		r, _ := http.NewRequest("GET", "/foo/bar", nil)
 		r.RemoteAddr = "127.0.0.1"
@@ -34,8 +31,9 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 
 		h.ServeHTTP(httptest.NewRecorder(), r)
 
-		actual := buf.String()
-		if actual != test.ExpectedLogMessage {
+		buf, _ := ioutil.ReadFile(tmpfile.Name())
+		actual := string(buf)
+		if !strings.Contains(actual, test.ExpectedLogMessage) {
 			t.Errorf("Log message was\n%s\ninstead of expected \n%s", actual, test.ExpectedLogMessage)
 		}
 	}
