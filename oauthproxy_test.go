@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/stretchr/testify/assert"
@@ -22,8 +24,8 @@ import (
 )
 
 func init() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
+	logger, _ = zap.NewDevelopment()
+	defer logger.Sync()
 }
 
 func TestNewReverseProxy(t *testing.T) {

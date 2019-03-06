@@ -11,10 +11,26 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/mreiferson/go-options"
+	"go.uber.org/zap"
 )
 
+var (
+	logger    *zap.Logger
+	logConfig *zap.Config
+)
+
+func initializeZapLogger() {
+	config := zap.NewProductionConfig()
+	config.OutputPaths = []string{"/dev/stdout"}
+	logConfig = &config
+	logger, _ = logConfig.Build()
+	defer logger.Sync()
+	zap.ReplaceGlobals(logger)
+	zap.RedirectStdLogAt(logger, zap.InfoLevel)
+}
+
 func main() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	initializeZapLogger()
 	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
 
 	emailDomains := StringArray{}
@@ -22,6 +38,7 @@ func main() {
 	upstreams := StringArray{}
 	skipAuthRegex := StringArray{}
 	googleGroups := StringArray{}
+	level := NewLevelFlagAt(zap.DebugLevel)
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -72,7 +89,6 @@ func main() {
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 
 	flagSet.Bool("request-logging", true, "Log requests to stdout")
-	flagSet.String("request-logging-format", defaultRequestLoggingFormat, "Template for log lines")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
@@ -88,10 +104,15 @@ func main() {
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 
+	flagSet.String("http-log-path", "/dev/stdout", "Log file path for http request logs. Defaults to stdout.")
+	flagSet.String("log-path", "/dev/stdout", "Log file path for oauth2_proxy logs.")
+	flagSet.Var(&level, "log-level", "Log level to use for logging oauth2_proxy messages.")
+
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("oauth2_proxy %s (built with %s)\n", VERSION, runtime.Version())
+		logger.Info("oauth2_proxy build version",
+			zap.String("version", runtime.Version()))
 		return
 	}
 
@@ -107,11 +128,19 @@ func main() {
 	cfg.LoadEnvForStruct(opts)
 	options.Resolve(opts, flagSet, cfg)
 
+	// Update log settings from options
+	logConfig.Level.SetLevel(level.Level())
+	logConfig.OutputPaths = []string{opts.LogPath}
+	logger, _ = logConfig.Build()
+	defer logger.Sync()
+
 	err := opts.Validate()
 	if err != nil {
-		log.Printf("%s", err)
+		logger.Error("Options validation errors",
+			zap.String("errors", err.Error()))
 		os.Exit(1)
 	}
+
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 	oauthproxy := NewOAuthProxy(opts, validator)
 
@@ -124,16 +153,19 @@ func main() {
 	}
 
 	if opts.HtpasswdFile != "" {
-		log.Printf("using htpasswd file %s", opts.HtpasswdFile)
+		logger.Info("Using htpasswd file",
+			zap.String("htpasswdfile", opts.HtpasswdFile))
 		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(opts.HtpasswdFile)
 		oauthproxy.DisplayHtpasswdForm = opts.DisplayHtpasswdForm
 		if err != nil {
-			log.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
+			logger.Fatal("Unable to open htpasswdfile",
+				zap.String("htpasswdfile", opts.HtpasswdFile),
+				zap.String("error", err.Error()))
 		}
 	}
 
 	s := &Server{
-		Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat),
+		Handler: LoggingHandler(oauthproxy, opts.RequestLogging, opts.HTTPLogPath),
 		Opts:    opts,
 	}
 	s.ListenAndServe()

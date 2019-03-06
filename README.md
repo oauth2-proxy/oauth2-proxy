@@ -231,6 +231,9 @@ Usage of oauth2_proxy:
   -htpasswd-file string: additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address string: [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients (default "127.0.0.1:4180")
   -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
+  -http-log-path string: **bLog** file path for http request logs. Defaults to stdout. (default "/dev/stdout")
+  -log-level value: Log level to use for logging oauth2_proxy messages. (default debug)
+  -log-path string: Log file path for oauth2_proxy logs. (default "/dev/stdout")
   -login-url string: Authentication endpoint
   -oidc-issuer-url: the OpenID Connect issuer URL. ie: "https://accounts.google.com"
   -oidc-jwks-url string: OIDC JWKS URI for token verification; required if OIDC discovery is disabled
@@ -245,7 +248,6 @@ Usage of oauth2_proxy:
   -redeem-url string: Token redemption endpoint
   -redirect-url string: the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -request-logging: Log requests to stdout (default true)
-  -request-logging-format: Template for request log lines (see "Logging Format" paragraph below)
   -resource string: The resource that is protected (Azure AD only)
   -scope string: OAuth scope specification
   -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
@@ -385,22 +387,26 @@ following:
 - [rc3.org: Using HMAC to authenticate Web service
   requests](http://rc3.org/2011/12/02/using-hmac-to-authenticate-web-service-requests/)
 
-## Logging Format
+## Logging
 
-By default, OAuth2 Proxy logs requests to stdout in a format similar to Apache Combined Log.
+There are two logging sources: OAuth2_Proxy logs and HTTP request logs. 
 
-```
-<REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
-```
+### OAuth2_Proxy Logs
 
-If you require a different format than that, you can configure it with the `-request-logging-format` flag.
-The default format is configured as follows:
+By default, OAuth2_Proxy logs are written as `json` to `stdout`. This can be configured by the option `log-path` to log to a differnt file. Typical log levels are also supported and configurable, via `log-level` option. Log levels must be provided in lower case in command line. They are documented [here](https://github.com/uber-go/zap/blob/master/level.go).
 
-```
-{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
+```json
+{"level":"info","ts":"2019-03-06T14:49:54.162-0800","caller":"oauth2_proxy/logging_handler.go:147","msg":"HTTP Request","Client":"::1","Host":"localhost:4180","Protocol":"HTTP/1.1","RequestDuration":0.000163047,"RequestMethod":"GET","RequestURI":"/favicon.ico","ResponseSize":2493,"StatusCode":403,"Timestamp":"2019-03-06T14:49:54.162-0800","Upstream":"-","UserAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36","Username":"-"}
 ```
 
-[See `logMessageData` in `logging_handler.go`](./logging_handler.go) for all available variables.
+### Request Logs
+
+By default, requests are logged to `stdout` in `json` format. This can be configured by the option `http-log-path` to log to a different file. 
+
+```json
+{"level":"info","ts":"2019-03-06T14:49:53.841-0800","caller":"oauth2_proxy/logging_handler.go:147","msg":"HTTP Request","Client":"::1","Host":"localhost:4180","Protocol":"HTTP/1.1","RequestDuration":0.000620123,"RequestMethod":"GET","RequestURI":"/","ResponseSize":2482,"StatusCode":403,"Timestamp":"2019-03-06T14:49:53.841-0800","Upstream":"-","UserAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36","Username":"-"}
+```
+
 
 ## Adding a new Provider
 

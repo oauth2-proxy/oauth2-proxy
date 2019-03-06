@@ -17,6 +17,7 @@ import (
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/providers"
+	"go.uber.org/zap"
 )
 
 const (
@@ -158,7 +159,9 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		switch u.Scheme {
 		case httpScheme, httpsScheme:
 			u.Path = ""
-			log.Printf("mapping path %q => upstream %q", path, u)
+			logger.Info("Mapping path to upstream",
+				zap.String("path", path),
+				zap.String("upstream", u.String()))
 			proxy := NewReverseProxy(u, opts.FlushInterval)
 			if !opts.PassHostHeader {
 				setProxyUpstreamHostHeader(proxy, u)
@@ -171,7 +174,9 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			if u.Fragment != "" {
 				path = u.Fragment
 			}
-			log.Printf("mapping path %q => file system %q", path, u.Path)
+			logger.Info("Mapping path to filesystem",
+				zap.String("path", path),
+				zap.String("fspath", u.Path))
 			proxy := NewFileServer(path, u.Path)
 			serveMux.Handle(path, &UpstreamProxy{path, proxy, nil})
 		default:
@@ -179,7 +184,8 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		}
 	}
 	for _, u := range opts.CompiledRegex {
-		log.Printf("compiled skip-auth-regex => %q", u)
+		logger.Debug("Compiled skip-auth-regex",
+			zap.String("regex", u.String()))
 	}
 
 	redirectURL := opts.redirectURL
@@ -187,20 +193,29 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 	}
 
-	log.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
+	logger.Info("OAuthProxy configured",
+		zap.String("provider", opts.provider.Data().ProviderName),
+		zap.String("clientid", opts.ClientID))
 	refresh := "disabled"
 	if opts.CookieRefresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
 	}
 
-	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, refresh)
+	logger.Info("Cookie Settings",
+		zap.String("name", opts.CookieName),
+		zap.Bool("secure", opts.CookieSecure),
+		zap.Bool("httponly", opts.CookieHTTPOnly),
+		zap.Duration("expiry", opts.CookieExpire),
+		zap.String("domain", opts.CookieDomain),
+		zap.String("refresh", refresh))
 
 	var cipher *cookie.Cipher
 	if opts.PassAccessToken || opts.SetAuthorization || opts.PassAuthorization || (opts.CookieRefresh != time.Duration(0)) {
 		var err error
 		cipher, err = cookie.NewCipher(secretBytes(opts.CookieSecret))
 		if err != nil {
-			log.Fatal("cookie-secret error: ", err)
+			logger.Fatal("cookie-secret error",
+				zap.String("error", err.Error()))
 		}
 	}
 
@@ -402,7 +417,9 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 			domain = h
 		}
 		if !strings.HasSuffix(domain, p.CookieDomain) {
-			log.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, p.CookieDomain)
+			logger.Warn("Request host is different from configured cookie domain",
+				zap.String("requestHost", domain),
+				zap.String("cookieDomain", p.CookieDomain))
 		}
 	}
 
