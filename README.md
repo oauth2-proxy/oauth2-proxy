@@ -287,6 +287,7 @@ The following environment variables can be used in place of the corresponding co
 - `OAUTH2_PROXY_COOKIE_DOMAIN`
 - `OAUTH2_PROXY_COOKIE_EXPIRE`
 - `OAUTH2_PROXY_COOKIE_REFRESH`
+- `OAUTH2_PROXY_REDIRECT_URL`
 - `OAUTH2_PROXY_SIGNATURE_KEY`
 
 ## SSL Configuration
