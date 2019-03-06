@@ -72,8 +72,8 @@ type Options struct {
 	// potential overrides.
 	Provider          string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
 	OIDCIssuerURL     string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
-  SkipOIDCDiscovery bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_SKIP_OIDC_DISCOVERY"`
-  OIDCJwksURL       string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_OIDC_JWKS_URL"`
+	SkipOIDCDiscovery bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_SKIP_OIDC_DISCOVERY"`
+	OIDCJwksURL       string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_OIDC_JWKS_URL"`
 	LoginURL          string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
 	RedeemURL         string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
 	ProfileURL        string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
