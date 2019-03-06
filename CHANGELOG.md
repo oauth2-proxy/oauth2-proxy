@@ -2,8 +2,8 @@
 
 ## Changes since v3.1.0
 
-- Added login.gov provider
-- Added environment variables for all config options
+- [#55](https://github.com/pusher/oauth2_proxy/pull/55) Added login.gov provider (@timothy-spencer)
+- [#55](https://github.com/pusher/oauth2_proxy/pull/55) Added environment variables for all config options (@timothy-spencer)
 - [#68](https://github.com/pusher/oauth2_proxy/pull/68) forward X-Auth-Access-Token header (@davidholsgrove)
 
 # v3.1.0

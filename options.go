@@ -155,6 +155,7 @@ func (o *Options) Validate() error {
 	if o.ClientID == "" {
 		msgs = append(msgs, "missing setting: client-id")
 	}
+	// login.gov uses a signed JWT to authenticate, not a client-secret
 	if o.ClientSecret == "" && o.Provider != "login.gov" {
 		msgs = append(msgs, "missing setting: client-secret")
 	}

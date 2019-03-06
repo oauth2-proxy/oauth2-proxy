@@ -1,16 +1,16 @@
 package providers
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,11 +23,7 @@ func newLoginGovRedeemServer(body []byte) (*url.URL, *httptest.Server) {
 }
 
 func newLoginGovProvider() (l *LoginGovProvider, err error) {
-	keyData, err := ioutil.ReadFile("sample_key")
-	if err != nil {
-		return
-	}
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyData)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return
 	}
