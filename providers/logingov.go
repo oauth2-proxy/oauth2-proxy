@@ -70,6 +70,20 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 	}
 }
 
+// checkNonce checks the nonce in the id_token
+func checkNonce(idToken string, p *LoginGovProvider) (err error) {
+	token, _ := jwt.Parse(idToken, func(token *jwt.Token) (interface{}, error) {
+		return []byte("Not Valid Key"), nil
+	})
+
+	claims := token.Claims.(jwt.MapClaims)
+	if claims["nonce"] != p.Nonce {
+		err = fmt.Errorf("nonce validation failed")
+		return
+	}
+	return
+}
+
 func emailFromUserInfo(accessToken string, userInfoEndpoint string) (email string, err error) {
 	// query the user info endpoint for user attributes
 	var req *http.Request
@@ -179,7 +193,11 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 		return
 	}
 
-	// XXX should we check signature on JWT and nonce here?
+	// check nonce here
+	err = checkNonce(jsonResponse.IDToken, p)
+	if err != nil {
+		return
+	}
 
 	// Get the email address
 	var email string

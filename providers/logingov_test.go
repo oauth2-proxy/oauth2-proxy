@@ -37,6 +37,7 @@ func newLoginGovProvider() (l *LoginGovProvider, err error) {
 			ValidateURL:  &url.URL{},
 			Scope:        ""})
 	l.JWTKey = privateKey
+	l.Nonce = "fakenonce"
 	return
 }
 
@@ -97,7 +98,8 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 		AccessToken: "a1234",
 		TokenType:   "Bearer",
 		ExpiresIn:   expiresIn,
-		IDToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"nonce": "fakenonce", "exp":1234}`)),
+		// This is a totally fake token.
+		IDToken: base64.URLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`)) + "." + base64.URLEncoding.EncodeToString([]byte(`{"nonce": "fakenonce", "exp": 1234, "aud": "audience", "jti": "id", "iat": 1234, "iss": "issuer", "nbf": 1234, "sub": "subject"}`)) + ".aGVsbG8gd29ybGQK",
 	})
 	assert.Equal(t, nil, err)
 	var server *httptest.Server
@@ -127,4 +129,49 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 
 	// The test ought to run in under 2 seconds.  If not, you may need to bump this up.
 	assert.InDelta(t, session.ExpiresOn.Unix(), time.Now().Unix()+expiresIn, 2)
+}
+
+func TestLoginGovProviderBadNonce(t *testing.T) {
+	p, err := newLoginGovProvider()
+	assert.NotEqual(t, nil, p)
+	assert.Equal(t, nil, err)
+
+	type loginGovRedeemResponse struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+		ExpiresIn   int64  `json:"expires_in"`
+		IDToken     string `json:"id_token"`
+	}
+	expiresIn := int64(10)
+	body, err := json.Marshal(loginGovRedeemResponse{
+		AccessToken: "a1234",
+		TokenType:   "Bearer",
+		ExpiresIn:   expiresIn,
+		// This is a totally fake token.
+		IDToken: base64.URLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`)) + "." + base64.URLEncoding.EncodeToString([]byte(`{"nonce": "badfakenonce", "exp": 1234, "aud": "audience", "jti": "id", "iat": 1234, "iss": "issuer", "nbf": 1234, "sub": "subject"}`)) + ".aGVsbG8gd29ybGQK",
+	})
+	assert.Equal(t, nil, err)
+	var server *httptest.Server
+	p.RedeemURL, server = newLoginGovRedeemServer(body)
+	defer server.Close()
+
+	type loginGovUserResponse struct {
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+		Subject       string `json:"sub"`
+	}
+	userbody, err := json.Marshal(loginGovUserResponse{
+		Email:         "timothy.spencer@gsa.gov",
+		EmailVerified: true,
+		Subject:       "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
+	})
+	assert.Equal(t, nil, err)
+	var userserver *httptest.Server
+	p.ProfileURL, userserver = newLoginGovRedeemServer(userbody)
+	defer userserver.Close()
+
+	_, err = p.Redeem("http://redirect/", "code1234")
+
+	// The "badfakenonce" in the idtoken above should cause this to error out
+	assert.NotEqual(t, nil, err)
 }
