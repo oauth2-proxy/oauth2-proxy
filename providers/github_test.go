@@ -31,7 +31,7 @@ func testGitHubBackend(payload []string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
 		"/user":        {""},
 		"/user/emails": {""},
-		"/user/orgs":   {"per_page=100&page=1", "per_page=100&page=2", "per_page=100&page=3"},
+		"/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -123,7 +123,7 @@ func TestGitHubProviderGetEmailAddressWithOrg(t *testing.T) {
 
 	session := &SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
 
