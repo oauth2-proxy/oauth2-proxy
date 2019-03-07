@@ -31,7 +31,7 @@ func testGitHubBackend(payload []string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
 		"/user":        {""},
 		"/user/emails": {""},
-		"/user/orgs":   {"per_page=200&page=1", "per_page=200&page=2", "per_page=200&page=3"},
+		"/user/orgs":   {"per_page=100&page=1", "per_page=100&page=2", "per_page=100&page=3"},
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
