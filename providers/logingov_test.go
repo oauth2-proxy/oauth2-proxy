@@ -1,9 +1,9 @@
 package providers
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,10 +11,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/square/go-jose.v2"
 )
 
-func newLoginGovRedeemServer(body []byte) (*url.URL, *httptest.Server) {
+type MyKeyData struct {
+	PubKey  crypto.PublicKey
+	PrivKey *rsa.PrivateKey
+	PubJWK  jose.JSONWebKey
+}
+
+func newLoginGovServer(body []byte) (*url.URL, *httptest.Server) {
 	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		rw.Write(body)
 	}))
@@ -22,7 +30,22 @@ func newLoginGovRedeemServer(body []byte) (*url.URL, *httptest.Server) {
 	return u, s
 }
 
-func newLoginGovProvider() (l *LoginGovProvider, err error) {
+func newLoginGovProvider() (l *LoginGovProvider, serverKey *MyKeyData, err error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return
+	}
+	serverKey = &MyKeyData{
+		PubKey:  key.Public(),
+		PrivKey: key,
+		PubJWK: jose.JSONWebKey{
+			Key:       key.Public(),
+			KeyID:     "testkey",
+			Algorithm: string(jose.RS256),
+			Use:       "sig",
+		},
+	}
+
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return
@@ -42,9 +65,9 @@ func newLoginGovProvider() (l *LoginGovProvider, err error) {
 }
 
 func TestLoginGovProviderDefaults(t *testing.T) {
-	p, err := newLoginGovProvider()
+	p, _, err := newLoginGovProvider()
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "login.gov", p.Data().ProviderName)
 	assert.Equal(t, "https://secure.login.gov/openid_connect/authorize",
 		p.Data().LoginURL.String())
@@ -83,29 +106,65 @@ func TestLoginGovProviderOverrides(t *testing.T) {
 }
 
 func TestLoginGovProviderSessionData(t *testing.T) {
-	p, err := newLoginGovProvider()
+	p, serverkey, err := newLoginGovProvider()
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 
+	// Set up the redeem endpoint here
 	type loginGovRedeemResponse struct {
 		AccessToken string `json:"access_token"`
 		TokenType   string `json:"token_type"`
 		ExpiresIn   int64  `json:"expires_in"`
 		IDToken     string `json:"id_token"`
 	}
-	expiresIn := int64(10)
+	expiresIn := int64(60)
+	type MyCustomClaims struct {
+		Acr           string `json:"acr"`
+		Nonce         string `json:"nonce"`
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+		GivenName     string `json:"given_name"`
+		FamilyName    string `json:"family_name"`
+		Birthdate     string `json:"birthdate"`
+		AtHash        string `json:"at_hash"`
+		CHash         string `json:"c_hash"`
+		jwt.StandardClaims
+	}
+	claims := MyCustomClaims{
+		"http://idmanagement.gov/ns/assurance/loa/1",
+		"fakenonce",
+		"timothy.spencer@gsa.gov",
+		true,
+		"",
+		"",
+		"",
+		"",
+		"",
+		jwt.StandardClaims{
+			Audience:  "Audience",
+			ExpiresAt: time.Now().Unix() + expiresIn,
+			Id:        "foo",
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    "https://idp.int.login.gov",
+			NotBefore: time.Now().Unix() - 1,
+			Subject:   "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
+		},
+	}
+	idtoken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	signedidtoken, err := idtoken.SignedString(serverkey.PrivKey)
+	assert.NoError(t, err)
 	body, err := json.Marshal(loginGovRedeemResponse{
 		AccessToken: "a1234",
 		TokenType:   "Bearer",
 		ExpiresIn:   expiresIn,
-		// This is a totally fake token.
-		IDToken: base64.URLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`)) + "." + base64.URLEncoding.EncodeToString([]byte(`{"nonce": "fakenonce", "exp": 1234, "aud": "audience", "jti": "id", "iat": 1234, "iss": "issuer", "nbf": 1234, "sub": "subject"}`)) + ".aGVsbG8gd29ybGQK",
+		IDToken:     signedidtoken,
 	})
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	var server *httptest.Server
-	p.RedeemURL, server = newLoginGovRedeemServer(body)
+	p.RedeemURL, server = newLoginGovServer(body)
 	defer server.Close()
 
+	// Set up the user endpoint here
 	type loginGovUserResponse struct {
 		Email         string `json:"email"`
 		EmailVerified bool   `json:"email_verified"`
@@ -116,13 +175,22 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 		EmailVerified: true,
 		Subject:       "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
 	})
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	var userserver *httptest.Server
-	p.ProfileURL, userserver = newLoginGovRedeemServer(userbody)
+	p.ProfileURL, userserver = newLoginGovServer(userbody)
 	defer userserver.Close()
 
+	// Set up the PubJWKURL endpoint here used to verify the JWT
+	var pubkeys jose.JSONWebKeySet
+	pubkeys.Keys = append(pubkeys.Keys, serverkey.PubJWK)
+	pubjwkbody, err := json.Marshal(pubkeys)
+	assert.NoError(t, err)
+	var pubjwkserver *httptest.Server
+	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
+	defer pubjwkserver.Close()
+
 	session, err := p.Redeem("http://redirect/", "code1234")
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "timothy.spencer@gsa.gov", session.Email)
 	assert.Equal(t, "a1234", session.AccessToken)
@@ -132,29 +200,65 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 }
 
 func TestLoginGovProviderBadNonce(t *testing.T) {
-	p, err := newLoginGovProvider()
+	p, serverkey, err := newLoginGovProvider()
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 
+	// Set up the redeem endpoint here
 	type loginGovRedeemResponse struct {
 		AccessToken string `json:"access_token"`
 		TokenType   string `json:"token_type"`
 		ExpiresIn   int64  `json:"expires_in"`
 		IDToken     string `json:"id_token"`
 	}
-	expiresIn := int64(10)
+	expiresIn := int64(60)
+	type MyCustomClaims struct {
+		Acr           string `json:"acr"`
+		Nonce         string `json:"nonce"`
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+		GivenName     string `json:"given_name"`
+		FamilyName    string `json:"family_name"`
+		Birthdate     string `json:"birthdate"`
+		AtHash        string `json:"at_hash"`
+		CHash         string `json:"c_hash"`
+		jwt.StandardClaims
+	}
+	claims := MyCustomClaims{
+		"http://idmanagement.gov/ns/assurance/loa/1",
+		"badfakenonce",
+		"timothy.spencer@gsa.gov",
+		true,
+		"",
+		"",
+		"",
+		"",
+		"",
+		jwt.StandardClaims{
+			Audience:  "Audience",
+			ExpiresAt: time.Now().Unix() + expiresIn,
+			Id:        "foo",
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    "https://idp.int.login.gov",
+			NotBefore: time.Now().Unix() - 1,
+			Subject:   "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
+		},
+	}
+	idtoken := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	signedidtoken, err := idtoken.SignedString(serverkey.PrivKey)
+	assert.NoError(t, err)
 	body, err := json.Marshal(loginGovRedeemResponse{
 		AccessToken: "a1234",
 		TokenType:   "Bearer",
 		ExpiresIn:   expiresIn,
-		// This is a totally fake token.
-		IDToken: base64.URLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`)) + "." + base64.URLEncoding.EncodeToString([]byte(`{"nonce": "badfakenonce", "exp": 1234, "aud": "audience", "jti": "id", "iat": 1234, "iss": "issuer", "nbf": 1234, "sub": "subject"}`)) + ".aGVsbG8gd29ybGQK",
+		IDToken:     signedidtoken,
 	})
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	var server *httptest.Server
-	p.RedeemURL, server = newLoginGovRedeemServer(body)
+	p.RedeemURL, server = newLoginGovServer(body)
 	defer server.Close()
 
+	// Set up the user endpoint here
 	type loginGovUserResponse struct {
 		Email         string `json:"email"`
 		EmailVerified bool   `json:"email_verified"`
@@ -165,13 +269,22 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 		EmailVerified: true,
 		Subject:       "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
 	})
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	var userserver *httptest.Server
-	p.ProfileURL, userserver = newLoginGovRedeemServer(userbody)
+	p.ProfileURL, userserver = newLoginGovServer(userbody)
 	defer userserver.Close()
+
+	// Set up the PubJWKURL endpoint here used to verify the JWT
+	var pubkeys jose.JSONWebKeySet
+	pubkeys.Keys = append(pubkeys.Keys, serverkey.PubJWK)
+	pubjwkbody, err := json.Marshal(pubkeys)
+	assert.NoError(t, err)
+	var pubjwkserver *httptest.Server
+	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
+	defer pubjwkserver.Close()
 
 	_, err = p.Redeem("http://redirect/", "code1234")
 
 	// The "badfakenonce" in the idtoken above should cause this to error out
-	assert.NotEqual(t, nil, err)
+	assert.Error(t, err)
 }

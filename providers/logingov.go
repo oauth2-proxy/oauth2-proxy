@@ -13,15 +13,19 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"gopkg.in/square/go-jose.v2"
 )
 
 // LoginGovProvider represents an OIDC based Identity Provider
 type LoginGovProvider struct {
 	*ProviderData
 
+	// XXX Ideally, the nonce would be in the session state, but the session state
+	// is created only upon code redemption, not during the auth, when this must be supplied.
 	Nonce     string
 	AcrValues string
 	JWTKey    *rsa.PrivateKey
+	PubJWKURL *url.URL
 }
 
 // For generating a nonce
@@ -70,14 +74,51 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 	}
 }
 
+type LoginGovCustomClaims struct {
+	Acr           string `json:"acr"`
+	Nonce         string `json:"nonce"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	GivenName     string `json:"given_name"`
+	FamilyName    string `json:"family_name"`
+	Birthdate     string `json:"birthdate"`
+	AtHash        string `json:"at_hash"`
+	CHash         string `json:"c_hash"`
+	jwt.StandardClaims
+}
+
 // checkNonce checks the nonce in the id_token
 func checkNonce(idToken string, p *LoginGovProvider) (err error) {
-	token, _ := jwt.Parse(idToken, func(token *jwt.Token) (interface{}, error) {
-		return []byte("Not Valid Key"), nil
-	})
+	token, err := jwt.ParseWithClaims(idToken, &LoginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		resp, err := http.Get(p.PubJWKURL.String())
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode != 200 {
+			err = fmt.Errorf("got %d from %q", resp.StatusCode, p.PubJWKURL.String())
+			return nil, err
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
 
-	claims := token.Claims.(jwt.MapClaims)
-	if claims["nonce"] != p.Nonce {
+		var pubkeys jose.JSONWebKeySet
+		err = json.Unmarshal(body, &pubkeys)
+		if err != nil {
+			return nil, err
+		}
+		pubkey := pubkeys.Keys[0]
+
+		return pubkey.Key, nil
+	})
+	if err != nil {
+		return
+	}
+
+	claims := token.Claims.(*LoginGovCustomClaims)
+	if claims.Nonce != p.Nonce {
 		err = fmt.Errorf("nonce validation failed")
 		return
 	}
