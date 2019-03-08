@@ -90,24 +90,24 @@ type loginGovCustomClaims struct {
 // checkNonce checks the nonce in the id_token
 func checkNonce(idToken string, p *LoginGovProvider) (err error) {
 	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		resp, err := http.Get(p.PubJWKURL.String())
-		if err != nil {
-			return nil, err
+		resp, myerr := http.Get(p.PubJWKURL.String())
+		if myerr != nil {
+			return nil, myerr
 		}
 		if resp.StatusCode != 200 {
-			err = fmt.Errorf("got %d from %q", resp.StatusCode, p.PubJWKURL.String())
-			return nil, err
+			myerr = fmt.Errorf("got %d from %q", resp.StatusCode, p.PubJWKURL.String())
+			return nil, myerr
 		}
-		body, err := ioutil.ReadAll(resp.Body)
+		body, myerr := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		if err != nil {
-			return nil, err
+		if myerr != nil {
+			return nil, myerr
 		}
 
 		var pubkeys jose.JSONWebKeySet
-		err = json.Unmarshal(body, &pubkeys)
-		if err != nil {
-			return nil, err
+		myerr = json.Unmarshal(body, &pubkeys)
+		if myerr != nil {
+			return nil, myerr
 		}
 		pubkey := pubkeys.Keys[0]
 
