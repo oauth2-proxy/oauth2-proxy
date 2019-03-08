@@ -203,6 +203,7 @@ Now start the proxy up with the following options:
   -cookie-secret=somerandomstring12341234567890AB \
   -cookie-domain=localhost \
   -skip-provider-button=true \
+  -pubjwk-url=https://idp.int.identitysandbox.gov/api/openid_connect/certs \
   -profile-url=https://idp.int.identitysandbox.gov/api/openid_connect/userinfo \
   -jwt-key="${OAUTH2_PROXY_JWT_KEY}"
 ```
