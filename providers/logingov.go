@@ -74,7 +74,7 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 	}
 }
 
-type LoginGovCustomClaims struct {
+type loginGovCustomClaims struct {
 	Acr           string `json:"acr"`
 	Nonce         string `json:"nonce"`
 	Email         string `json:"email"`
@@ -89,7 +89,7 @@ type LoginGovCustomClaims struct {
 
 // checkNonce checks the nonce in the id_token
 func checkNonce(idToken string, p *LoginGovProvider) (err error) {
-	token, err := jwt.ParseWithClaims(idToken, &LoginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		resp, err := http.Get(p.PubJWKURL.String())
 		if err != nil {
 			return nil, err
@@ -117,7 +117,7 @@ func checkNonce(idToken string, p *LoginGovProvider) (err error) {
 		return
 	}
 
-	claims := token.Claims.(*LoginGovCustomClaims)
+	claims := token.Claims.(*loginGovCustomClaims)
 	if claims.Nonce != p.Nonce {
 		err = fmt.Errorf("nonce validation failed")
 		return
