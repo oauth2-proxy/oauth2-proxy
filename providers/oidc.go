@@ -106,6 +106,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 
 	// Extract custom claims.
 	var claims struct {
+		Subject  string `json:"sub"`
 		Email    string `json:"email"`
 		Verified *bool  `json:"email_verified"`
 	}
@@ -114,7 +115,8 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 	}
 
 	if claims.Email == "" {
-		return nil, fmt.Errorf("id_token did not contain an email")
+		// TODO: Try getting email from /userinfo before falling back to Subject
+		claims.Email = claims.Subject
 	}
 	if claims.Verified != nil && !*claims.Verified {
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
