@@ -11,6 +11,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/mreiferson/go-options"
+	"github.com/pusher/oauth2_proxy/middleware"
 )
 
 func main() {
@@ -132,8 +133,11 @@ func main() {
 		}
 	}
 
+	h := LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat)
+	wrappedHandler := middleware.IngressHealthCheck(h, func() error { return nil })
+
 	s := &Server{
-		Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat),
+		Handler: wrappedHandler,
 		Opts:    opts,
 	}
 	s.ListenAndServe()
