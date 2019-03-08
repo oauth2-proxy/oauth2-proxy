@@ -19,17 +19,16 @@ import (
 // additionally, the 'value' is encrypted so it's opaque to the browser
 
 // Validate ensures a cookie is properly signed
-func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value string, t time.Time, ok bool) {
-	// value, timestamp, sig
+func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value string, t time.Time, err error) {
 	parts := strings.Split(cookie.Value, "|")
 	if len(parts) != 3 {
-		return
+		return value, t, fmt.Errorf("not enough parts in cookie")
 	}
 	sig := cookieSignature(seed, cookie.Name, parts[0], parts[1])
 	if checkHmac(parts[2], sig) {
 		ts, err := strconv.Atoi(parts[1])
 		if err != nil {
-			return
+			return value, t, err
 		}
 		// The expiration timestamp set when the cookie was created
 		// isn't sent back by the browser. Hence, we check whether the
@@ -41,12 +40,11 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 			rawValue, err := base64.URLEncoding.DecodeString(parts[0])
 			if err == nil {
 				value = string(rawValue)
-				ok = true
-				return
+				return value, t, err
 			}
 		}
 	}
-	return
+	return value, t, fmt.Errorf("unable to verify HMAC signature")
 }
 
 // SignedValue returns a cookie that is signed and can later be checked with Validate

@@ -491,8 +491,8 @@ func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*providers.SessionSt
 		// always http.ErrNoCookie
 		return nil, age, fmt.Errorf("Cookie %q not present", p.CookieName)
 	}
-	val, timestamp, ok := cookie.Validate(c, p.CookieSeed, p.CookieExpire)
-	if !ok {
+	val, timestamp, err := cookie.Validate(c, p.CookieSeed, p.CookieExpire)
+	if err != nil {
 		return nil, age, errors.New("Cookie Signature not valid")
 	}
 
