@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // Server represents an HTTP server
@@ -21,6 +22,7 @@ type Server struct {
 // ListenAndServe will serve traffic on HTTP or HTTPS depending on TLS options
 func (s *Server) ListenAndServe() {
 	config := zap.NewProductionConfig()
+	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	config.OutputPaths = []string{s.Opts.HTTPLogPath}
 	s.logger, _ = config.Build()
 	defer s.logger.Sync()

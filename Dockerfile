@@ -15,13 +15,9 @@ COPY . .
 # Build binary
 RUN ./configure && make build
 
-# Copy binary to alpine
-# FROM alpine:3.8
 FROM gcr.io/distroless/static:latest
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
 
-RUN addgroup -S -g 2000 oauth2proxy && adduser -S -u 2000 oauth2proxy -G oauth2proxy
-USER oauth2proxy
-
+USER 2000:2000
 ENTRYPOINT ["/bin/oauth2_proxy"]

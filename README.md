@@ -232,6 +232,7 @@ Usage of oauth2_proxy:
   -http-address string: [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients (default "127.0.0.1:4180")
   -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
   -http-log-path string: **bLog** file path for http request logs. Defaults to stdout. (default "/dev/stdout")
+  -json-logging: Log OAuth2_Proxy in json format. Default is human-friendly partial json format. (default false)
   -log-level value: Log level to use for logging oauth2_proxy messages. (default debug)
   -log-path string: Log file path for oauth2_proxy logs. (default "/dev/stdout")
   -login-url string: Authentication endpoint
@@ -393,8 +394,20 @@ There are two logging sources: OAuth2_Proxy logs and HTTP request logs.
 
 ### OAuth2_Proxy Logs
 
-By default, OAuth2_Proxy logs are written as `json` to `stdout`. This can be configured by the option `log-path` to log to a differnt file. Typical log levels are also supported and configurable, via `log-level` option. Log levels must be provided in lower case in command line. They are documented [here](https://github.com/uber-go/zap/blob/master/level.go).
+By default, OAuth2_Proxy logs are written to `stdout`. This can be configured by the option `log-path` to log to a differnt file. Typical log levels are also supported and configurable, via `log-level` option. Log levels must be provided in lower case in command line. They are documented [here](https://github.com/uber-go/zap/blob/master/level.go).
 
+Two modes of logging are supported: `console` and `json`. `json` logs are enabled by setting `-json-logging` flag to `true`.
+
+_`console` logs_
+```2019-03-07T23:02:51.056-0800    INFO    oauth2_proxy/options.go:173     Validing OIDC Issuer URL        {"oidc_issuer_url": "https://company.oktapreview.com"}
+2019-03-07T23:02:52.193-0800    DEBUG   oauth2_proxy/options.go:213     Discovered OIDC configuration   {"oidc_issuer_url": "https://company.oktapreview.com", "AuthURL": "https://company.oktapreview.com/oauth2/v1/authorize", "TokenURL": "https://company.oktapreview.com/oauth2/v1/token"}
+2019-03-07T23:02:52.193-0800    INFO    oauth2_proxy/options.go:222     Configured OIDC scopes  {"scopes": "openid email profile"}
+2019-03-07T23:02:52.193-0800    INFO    oauth2_proxy/oauthproxy.go:162  Mapping path to upstream        {"path": "/", "upstream": "https://localhost:10443"}
+2019-03-07T23:02:52.193-0800    INFO    oauth2_proxy/oauthproxy.go:196  OAuthProxy configured   {"provider": "OpenID Connect", "clientid": "somesecretclientid"}
+2019-03-07T23:02:52.193-0800    INFO    oauth2_proxy/oauthproxy.go:204  Cookie Settings {"name": "_oauth2_proxy", "secure": false, "httponly": true, "expiry": 36000, "domain": "localhost", "refresh": "disabled"}
+{"level":"info","ts":"2019-03-07T23:02:52.194-0800","caller":"oauth2_proxy/http.go:64","msg":"HTTP Listening","listenAddress":":4180"}
+```
+_`json` logs_
 ```json
 {"level":"info","ts":"2019-03-06T14:49:54.162-0800","caller":"oauth2_proxy/logging_handler.go:147","msg":"HTTP Request","Client":"::1","Host":"localhost:4180","Protocol":"HTTP/1.1","RequestDuration":0.000163047,"RequestMethod":"GET","RequestURI":"/favicon.ico","ResponseSize":2493,"StatusCode":403,"Timestamp":"2019-03-06T14:49:54.162-0800","Upstream":"-","UserAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36","Username":"-"}
 ```

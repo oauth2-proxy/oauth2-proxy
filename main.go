@@ -12,6 +12,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/mreiferson/go-options"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -20,8 +21,16 @@ var (
 )
 
 func initializeZapLogger() {
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{"/dev/stdout"}
+	config := zap.Config{
+		Encoding:         "console",
+		Level:            zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		OutputPaths:      []string{"/dev/stdout"},
+		ErrorOutputPaths: []string{"/dev/stderr"},
+		EncoderConfig:    zap.NewProductionEncoderConfig(),
+	}
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+	config.EncoderConfig.TimeKey = "timestamp"
+	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	logConfig = &config
 	logger, _ = logConfig.Build()
 	defer logger.Sync()
@@ -107,6 +116,7 @@ func main() {
 	flagSet.String("http-log-path", "/dev/stdout", "Log file path for http request logs. Defaults to stdout.")
 	flagSet.String("log-path", "/dev/stdout", "Log file path for oauth2_proxy logs.")
 	flagSet.Var(&level, "log-level", "Log level to use for logging oauth2_proxy messages.")
+	flagSet.Bool("json-logging", false, "Log OAuth2_Proxy in json format. Default is human-friendly partial json format.")
 
 	flagSet.Parse(os.Args[1:])
 
@@ -131,6 +141,11 @@ func main() {
 	// Update log settings from options
 	logConfig.Level.SetLevel(level.Level())
 	logConfig.OutputPaths = []string{opts.LogPath}
+	if opts.JSONLogging {
+		logConfig.Encoding = "json"
+	} else {
+		logConfig.Encoding = "console"
+	}
 	logger, _ = logConfig.Build()
 	defer logger.Sync()
 

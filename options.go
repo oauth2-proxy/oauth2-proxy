@@ -87,7 +87,8 @@ type Options struct {
 	SignatureKey string    `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 	HTTPLogPath  string    `flag:"http-log-path" cfg:"http_log_path" env:"HTTP_LOG_PATH"`
 	LogPath      string    `flag:"log-path" cfg:"log_path" env:"LOG_PATH"`
-	LevelFlag    LevelFlag `flag:"log-level" cfg:"log_level"`
+	LevelFlag    LevelFlag `flag:"log-level" cfg:"log_level" env:"LOG_LEVEL"`
+	JSONLogging  bool      `flag:"json-logging" cfg:"json-logging" env:"JSON_LOGGING"`
 
 	// internal values that are set after config validation
 	redirectURL   *url.URL
@@ -129,6 +130,7 @@ func NewOptions() *Options {
 		SkipOIDCDiscovery:   false,
 		HTTPLogPath:         "/dev/stdout",
 		LevelFlag:           NewLevelFlagAt(zap.InfoLevel),
+		JSONLogging:         false,
 	}
 }
 
