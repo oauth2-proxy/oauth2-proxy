@@ -97,7 +97,7 @@ func TestGitHubProviderOverrides(t *testing.T) {
 }
 
 func TestGitHubProviderGetEmailAddress(t *testing.T) {
-	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "primary": true} ]`})
+	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "verified": true} ]`})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -111,8 +111,8 @@ func TestGitHubProviderGetEmailAddress(t *testing.T) {
 
 func TestGitHubProviderGetEmailAddressWithOrg(t *testing.T) {
 	b := testGitHubBackend([]string{
-		`[ {"email": "michael.bland@gsa.gov", "primary": true, "login":"testorg"} ]`,
-		`[ {"email": "michael.bland1@gsa.gov", "primary": true, "login":"testorg1"} ]`,
+		`[ {"email": "michael.bland@gsa.gov", "verified": true, "login":"testorg"} ]`,
+		`[ {"email": "michael.bland1@gsa.gov", "verified": true, "login":"testorg1"} ]`,
 		`[ ]`,
 	})
 	defer b.Close()

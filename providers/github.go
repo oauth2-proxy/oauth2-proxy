@@ -202,8 +202,8 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 
 	var emails []struct {
-		Email   string `json:"email"`
-		Primary bool   `json:"primary"`
+		Email    string `json:"email"`
+		Verified bool   `json:"verified"`
 	}
 
 	// if we require an Org or Team, check that first
@@ -248,7 +248,7 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 	}
 
 	for _, email := range emails {
-		if email.Primary {
+		if email.Verified {
 			return email.Email, nil
 		}
 	}
