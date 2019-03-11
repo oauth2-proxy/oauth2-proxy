@@ -2,6 +2,7 @@
 
 ## Changes since v3.1.0
 
+- [#96](https://github.com/bitly/oauth2_proxy/pull/96) Check if email is verified on GitHub (@caarlos0)
 - [#92](https://github.com/pusher/oauth2_proxy/pull/92) Merge websocket proxy feature from openshift/oauth-proxy (@butzist)
 - [#57](https://github.com/pusher/oauth2_proxy/pull/57) Fall back to using OIDC Subject instead of Email (@aigarius)
 - [#85](https://github.com/pusher/oauth2_proxy/pull/85) Use non-root user in docker images (@kskewes)
