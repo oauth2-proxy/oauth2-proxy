@@ -20,7 +20,7 @@ import (
 type LoginGovProvider struct {
 	*ProviderData
 
-	// XXX Ideally, the nonce would be in the session state, but the session state
+	// TODO (@timothy-spencer): Ideally, the nonce would be in the session state, but the session state
 	// is created only upon code redemption, not during the auth, when this must be supplied.
 	Nonce     string
 	AcrValues string
