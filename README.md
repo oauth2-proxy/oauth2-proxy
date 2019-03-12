@@ -291,6 +291,7 @@ Usage of oauth2_proxy:
   -profile-url string: Profile access endpoint
   -provider string: OAuth provider (default "google")
   -proxy-prefix string: the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in) (default "/oauth2")
+  -proxy-websockets: enables WebSocket proxying (default true)
   -redeem-url string: Token redemption endpoint
   -redirect-url string: the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -request-logging: Log requests to stdout (default true)

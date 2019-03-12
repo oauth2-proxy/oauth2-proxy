@@ -67,11 +67,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9408fb9c637c103010e5147469c232ce6b68edc840879cc730a2a15918e6cae8"
+  digest = "1:15c0562bca5d78ac087fb39c211071dc124e79fb18f8b7c3f8a0bc7ffcb2a38e"
   name = "github.com/mreiferson/go-options"
   packages = ["."]
   pruneopts = ""
-  revision = "77551d20752b54535462404ad9d877ebdb26e53d"
+  revision = "20ba7d382d05facb01e02eb777af0c5f229c5c95"
 
 [[projects]]
   digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
@@ -105,6 +105,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:39630a0e2844fc4297c27caacb394a9fd342f869292284a62f856877adab65bc"
+  name = "github.com/yhat/wsutil"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1d66fa95c997864ba4d8479f56609620fe542928"
+
+[[projects]]
+  branch = "master"
   digest = "1:f6a006d27619a4d93bf9b66fe1999b8c8d1fa62bdc63af14f10fbe6fcaa2aa1a"
   name = "golang.org/x/crypto"
   packages = [
@@ -123,6 +131,7 @@
   packages = [
     "context",
     "context/ctxhttp",
+    "websocket",
   ]
   pruneopts = ""
   revision = "9dfe39835686865bff950a07b394c12a98ddc811"
@@ -205,7 +214,9 @@
     "github.com/mreiferson/go-options",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
+    "github.com/yhat/wsutil",
     "golang.org/x/crypto/bcrypt",
+    "golang.org/x/net/websocket",
     "golang.org/x/oauth2",
     "golang.org/x/oauth2/google",
     "google.golang.org/api/admin/directory/v1",
