@@ -2,7 +2,7 @@ package middleware_test
 
 import (
 	"errors"
-	"github.com/tumelohq/gke-ingress-healthcheck-middleware"
+	"github.com/pusher/oauth2_proxy/middleware"
 	"io/ioutil"
 	"log"
 	"math/rand"
