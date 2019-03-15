@@ -452,9 +452,18 @@ func (p *OAuthProxy) SetCSRFCookie(rw http.ResponseWriter, req *http.Request, va
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) {
-	cookies := p.MakeSessionCookie(req, "", time.Hour*-1, time.Now())
-	for _, clr := range cookies {
-		http.SetCookie(rw, clr)
+	var cookies []*http.Cookie
+
+	// matches CookieName, CookieName_<number>
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", p.CookieName))
+
+	for _, c := range req.Cookies() {
+		if cookieNameRegex.MatchString(c.Name) {
+			clearCookie := p.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
+
+			http.SetCookie(rw, clearCookie)
+			cookies = append(cookies, clearCookie)
+		}
 	}
 
 	// ugly hack because default domain changed
