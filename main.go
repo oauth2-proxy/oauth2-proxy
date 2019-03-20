@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"runtime"
 	"strings"
@@ -88,6 +89,9 @@ func main() {
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
+	flagSet.String("acr-values", "http://idmanagement.gov/ns/assurance/loa/1", "acr values string:  optional, used by login.gov")
+	flagSet.String("jwt-key", "", "private key used to sign JWT: required by login.gov")
+	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 
 	flagSet.Parse(os.Args[1:])
 
@@ -132,6 +136,8 @@ func main() {
 			log.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
 		}
 	}
+
+	rand.Seed(time.Now().UnixNano())
 
 	s := &Server{
 		Handler: LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat),

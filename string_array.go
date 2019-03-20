@@ -7,6 +7,11 @@ import (
 // StringArray is a type alias for a slice of strings
 type StringArray []string
 
+// Get returns the slice of strings
+func (a *StringArray) Get() interface{} {
+	return []string(*a)
+}
+
 // Set appends a string to the StringArray
 func (a *StringArray) Set(s string) error {
 	*a = append(*a, s)

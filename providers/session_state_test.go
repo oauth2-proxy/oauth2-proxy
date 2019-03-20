@@ -2,7 +2,6 @@ package providers
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -27,7 +26,6 @@ func TestSessionStateSerialization(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 4, strings.Count(encoded, "|"))
 
 	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
@@ -65,7 +63,6 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 4, strings.Count(encoded, "|"))
 
 	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
@@ -96,8 +93,6 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(nil)
 	assert.Equal(t, nil, err)
-	expected := fmt.Sprintf("email:%s user:", s.Email)
-	assert.Equal(t, expected, encoded)
 
 	// only email should have been serialized
 	ss, err := DecodeSessionState(encoded, nil)
@@ -118,8 +113,6 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	}
 	encoded, err := s.EncodeSessionState(nil)
 	assert.Equal(t, nil, err)
-	expected := fmt.Sprintf("email:%s user:%s", s.Email, s.User)
-	assert.Equal(t, expected, encoded)
 
 	// only email should have been serialized
 	ss, err := DecodeSessionState(encoded, nil)
@@ -128,19 +121,6 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	assert.Equal(t, s.Email, ss.Email)
 	assert.Equal(t, "", ss.AccessToken)
 	assert.Equal(t, "", ss.RefreshToken)
-}
-
-func TestSessionStateAccountInfo(t *testing.T) {
-	s := &SessionState{
-		Email: "user@domain.com",
-		User:  "just-user",
-	}
-	expected := fmt.Sprintf("email:%v user:%v", s.Email, s.User)
-	assert.Equal(t, expected, s.accountInfo())
-
-	s.Email = ""
-	expected = fmt.Sprintf("email:%v user:%v", s.Email, s.User)
-	assert.Equal(t, expected, s.accountInfo())
 }
 
 func TestExpired(t *testing.T) {
@@ -152,4 +132,186 @@ func TestExpired(t *testing.T) {
 
 	s = &SessionState{}
 	assert.Equal(t, false, s.IsExpired())
+}
+
+type testCase struct {
+	SessionState
+	Encoded string
+	Cipher  *cookie.Cipher
+	Error   bool
+}
+
+// TestEncodeSessionState tests EncodeSessionState with the test vector
+//
+// Currently only tests without cipher here because we have no way to mock
+// the random generator used in EncodeSessionState.
+func TestEncodeSessionState(t *testing.T) {
+	e := time.Now().Add(time.Duration(1) * time.Hour)
+
+	testCases := []testCase{
+		{
+			SessionState: SessionState{
+				Email: "user@domain.com",
+				User:  "just-user",
+			},
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+		},
+		{
+			SessionState: SessionState{
+				Email:        "user@domain.com",
+				User:         "just-user",
+				AccessToken:  "token1234",
+				IDToken:      "rawtoken1234",
+				ExpiresOn:    e,
+				RefreshToken: "refresh4321",
+			},
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+		},
+	}
+
+	for i, tc := range testCases {
+		encoded, err := tc.EncodeSessionState(tc.Cipher)
+		t.Logf("i:%d Encoded:%#v SessionState:%#v Error:%#v", i, encoded, tc.SessionState, err)
+		if tc.Error {
+			assert.Error(t, err)
+			assert.Empty(t, encoded)
+			continue
+		}
+		assert.NoError(t, err)
+		assert.JSONEq(t, tc.Encoded, encoded)
+	}
+}
+
+// TestDecodeSessionState tests DecodeSessionState with the test vector
+func TestDecodeSessionState(t *testing.T) {
+	e := time.Now().Add(time.Duration(1) * time.Hour)
+	eJSON, _ := e.MarshalJSON()
+	eString := string(eJSON)
+	eUnix := e.Unix()
+
+	c, err := cookie.NewCipher([]byte(secret))
+	assert.NoError(t, err)
+
+	testCases := []testCase{
+		{
+			SessionState: SessionState{
+				Email: "user@domain.com",
+				User:  "just-user",
+			},
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+		},
+		{
+			SessionState: SessionState{
+				Email: "user@domain.com",
+				User:  "user",
+			},
+			Encoded: `{"Email":"user@domain.com"}`,
+		},
+		{
+			SessionState: SessionState{
+				User: "just-user",
+			},
+			Encoded: `{"User":"just-user"}`,
+		},
+		{
+			SessionState: SessionState{
+				Email: "user@domain.com",
+				User:  "just-user",
+			},
+			Encoded: fmt.Sprintf(`{"Email":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","ExpiresOn":%s}`, eString),
+		},
+		{
+			SessionState: SessionState{
+				Email:        "user@domain.com",
+				User:         "just-user",
+				AccessToken:  "token1234",
+				IDToken:      "rawtoken1234",
+				ExpiresOn:    e,
+				RefreshToken: "refresh4321",
+			},
+			Encoded: fmt.Sprintf(`{"Email":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","ExpiresOn":%s}`, eString),
+			Cipher:  c,
+		},
+		{
+			SessionState: SessionState{
+				Email: "user@domain.com",
+				User:  "just-user",
+			},
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+			Cipher:  c,
+		},
+		{
+			Encoded: `{"Email":"user@domain.com","User":"just-user","AccessToken":"X"}`,
+			Cipher:  c,
+			Error:   true,
+		},
+		{
+			Encoded: `{"Email":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
+			Cipher:  c,
+			Error:   true,
+		},
+		{
+			SessionState: SessionState{
+				User:  "just-user",
+				Email: "user@domain.com",
+			},
+			Encoded: "email:user@domain.com user:just-user",
+		},
+		{
+			Encoded: "email:user@domain.com user:just-user||||",
+			Error:   true,
+		},
+		{
+			Encoded: "email:user@domain.com user:just-user",
+			Cipher:  c,
+			Error:   true,
+		},
+		{
+			Encoded: "email:user@domain.com user:just-user|||99999999999999999999|",
+			Cipher:  c,
+			Error:   true,
+		},
+		{
+			SessionState: SessionState{
+				Email:        "user@domain.com",
+				User:         "just-user",
+				AccessToken:  "token1234",
+				ExpiresOn:    e,
+				RefreshToken: "refresh4321",
+			},
+			Encoded: fmt.Sprintf("email:user@domain.com user:just-user|I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==|%d|qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K", eUnix),
+			Cipher:  c,
+		},
+		{
+			SessionState: SessionState{
+				Email:        "user@domain.com",
+				User:         "just-user",
+				AccessToken:  "token1234",
+				IDToken:      "rawtoken1234",
+				ExpiresOn:    e,
+				RefreshToken: "refresh4321",
+			},
+			Encoded: fmt.Sprintf("email:user@domain.com user:just-user|I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==|xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==|%d|qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K", eUnix),
+			Cipher:  c,
+		},
+	}
+
+	for i, tc := range testCases {
+		ss, err := DecodeSessionState(tc.Encoded, tc.Cipher)
+		t.Logf("i:%d Encoded:%#v SessionState:%#v Error:%#v", i, tc.Encoded, ss, err)
+		if tc.Error {
+			assert.Error(t, err)
+			assert.Nil(t, ss)
+			continue
+		}
+		assert.NoError(t, err)
+		if assert.NotNil(t, ss) {
+			assert.Equal(t, tc.User, ss.User)
+			assert.Equal(t, tc.Email, ss.Email)
+			assert.Equal(t, tc.AccessToken, ss.AccessToken)
+			assert.Equal(t, tc.RefreshToken, ss.RefreshToken)
+			assert.Equal(t, tc.IDToken, ss.IDToken)
+			assert.Equal(t, tc.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
+		}
+	}
 }
