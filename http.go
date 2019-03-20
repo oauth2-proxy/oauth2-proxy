@@ -24,6 +24,23 @@ func (s *Server) ListenAndServe() {
 	}
 }
 
+// gcpHealthcheck handles healthcheck queries from GCP
+func gcpHealthcheck(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.EscapedPath() == "/liveness_check" {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+			return
+		}
+		if r.URL.EscapedPath() == "/readiness_check" {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
 // ServeHTTP constructs a net.Listener and starts handling HTTP requests
 func (s *Server) ServeHTTP() {
 	HTTPAddress := s.Opts.HTTPAddress
