@@ -48,7 +48,7 @@ Valid providers are :
 - [GitHub](#github-auth-provider)
 - [GitLab](#gitlab-auth-provider)
 - [LinkedIn](#linkedin-auth-provider)
-- [login.gov](#login.gov-provider)
+- [login.gov](#logingov-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -272,6 +272,7 @@ Usage of oauth2_proxy:
   -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
   -flush-interval: period between flushing response buffers when streaming responses (default "1s")
   -footer string: custom footer string. Use "-" to disable default footer.
+  -gcp-healthchecks: will enable /liveness_check and /readiness_check endpoints that will make it work well with GCP App Engine (default false)
   -github-org string: restrict logins to members of this organisation
   -github-team string: restrict logins to members of any of these teams (slug), separated by a comma
   -google-admin-email string: the google admin to impersonate for api calls
