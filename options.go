@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -90,6 +91,7 @@ type Options struct {
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 	AcrValues       string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`
 	JWTKey          string `flag:"jwt-key" cfg:"jwt_key" env:"OAUTH2_PROXY_JWT_KEY"`
+	JWTKeyFile      string `flag:"jwt-key-file" cfg:"jwt_key_file" env:"OAUTH2_PROXY_JWT_KEY_FILE"`
 	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url" env:"OAUTH2_PROXY_PUBJWK_URL"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks" env:"OAUTH2_PROXY_GCP_HEALTHCHECKS"`
 
@@ -328,12 +330,30 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 	case *providers.LoginGovProvider:
 		p.AcrValues = o.AcrValues
 		p.PubJWKURL, msgs = parseURL(o.PubJWKURL, "pubjwk", msgs)
-		if o.JWTKey == "" {
+
+		// JWT key can be supplied via env variable or file in the filesystem, but not both.
+		switch {
+		case o.JWTKey != "" && o.JWTKeyFile != "":
+			msgs = append(msgs, "cannot set both jwt-key and jwt-key-file options")
+		case o.JWTKey == "" && o.JWTKeyFile == "":
 			msgs = append(msgs, "login.gov provider requires a private key for signing JWTs")
-		} else {
+		case o.JWTKey != "":
+			// The JWT Key is in the commandline argument
 			signKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(o.JWTKey))
 			if err != nil {
 				msgs = append(msgs, "could not parse RSA Private Key PEM")
+			} else {
+				p.JWTKey = signKey
+			}
+		case o.JWTKeyFile != "":
+			// The JWT key is in the filesystem
+			keyData, err := ioutil.ReadFile(o.JWTKeyFile)
+			if err != nil {
+				msgs = append(msgs, "could not read key file: "+o.JWTKeyFile)
+			}
+			signKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyData)
+			if err != nil {
+				msgs = append(msgs, "could not parse private key from PEM file:"+o.JWTKeyFile)
 			} else {
 				p.JWTKey = signKey
 			}
