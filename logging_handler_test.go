@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -16,7 +17,7 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 		Format,
 		ExpectedLogMessage string
 	}{
-		{defaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", ts.Format("02/Jan/2006:15:04:05 -0700"))},
+		{defaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0", ts.Format("02/Jan/2006:15:04:05 -0700"))},
 		{"{{.RequestMethod}}", "GET\n"},
 	}
 
@@ -35,8 +36,8 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 		h.ServeHTTP(httptest.NewRecorder(), r)
 
 		actual := buf.String()
-		if actual != test.ExpectedLogMessage {
-			t.Errorf("Log message was\n%s\ninstead of expected \n%s", actual, test.ExpectedLogMessage)
+		if !strings.Contains(actual, test.ExpectedLogMessage) {
+			t.Errorf("Log message was\n%s\ninstead of matching \n%s", actual, test.ExpectedLogMessage)
 		}
 	}
 }
