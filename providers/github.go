@@ -203,6 +203,7 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 
 	var emails []struct {
 		Email    string `json:"email"`
+		Primary  bool   `json:"primary"`
 		Verified bool   `json:"verified"`
 	}
 
@@ -248,7 +249,7 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 	}
 
 	for _, email := range emails {
-		if email.Verified {
+		if email.Primary && email.Verified {
 			return email.Email, nil
 		}
 	}
