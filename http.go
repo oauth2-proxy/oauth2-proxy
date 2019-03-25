@@ -24,9 +24,15 @@ func (s *Server) ListenAndServe() {
 	}
 }
 
-// gcpHealthcheck handles healthcheck queries from GCP
+// Used with gcpHealthcheck()
+const userAgentHeader = "User-Agent"
+const googleHealthCheckUserAgent = "GoogleHC/1.0"
+const rootPath = "/"
+
+// gcpHealthcheck handles healthcheck queries from GCP.
 func gcpHealthcheck(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check for liveness and readiness:  used for Google App Engine
 		if r.URL.EscapedPath() == "/liveness_check" {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
@@ -37,6 +43,22 @@ func gcpHealthcheck(h http.Handler) http.Handler {
 			w.Write([]byte("OK"))
 			return
 		}
+
+		// Check for GKE ingress healthcheck:  The ingress requires the root
+		// path of the target to return a 200 (OK) to indicate the service's good health. This can be quite a challenging demand
+		// depending on the application's path structure. This middleware filters out the requests from the health check by
+		//
+		// 1. checking that the request path is indeed the root path
+		// 2. ensuring that the User-Agent is "GoogleHC/1.0", the health checker
+		// 3. ensuring the request method is "GET"
+		if r.URL.Path == rootPath &&
+			r.Header.Get(userAgentHeader) == googleHealthCheckUserAgent &&
+			r.Method == http.MethodGet {
+
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		h.ServeHTTP(w, r)
 	})
 }
