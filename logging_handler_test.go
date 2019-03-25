@@ -24,6 +24,11 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 	for _, test := range tests {
 		buf := bytes.NewBuffer(nil)
 		handler := func(w http.ResponseWriter, req *http.Request) {
+			_, ok := w.(http.Hijacker)
+			if !ok {
+				t.Error("http.Hijacker is not available")
+			}
+
 			w.Write([]byte("test"))
 		}
 
