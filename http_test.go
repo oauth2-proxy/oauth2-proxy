@@ -87,3 +87,19 @@ func TestGCPHealthcheckNotIngress(t *testing.T) {
 
 	assert.Equal(t, "test", rw.Body.String())
 }
+
+func TestGCPHealthcheckNotIngressPut(t *testing.T) {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		w.Write([]byte("test"))
+	}
+
+	h := gcpHealthcheck(http.HandlerFunc(handler))
+	rw := httptest.NewRecorder()
+	r, _ := http.NewRequest("PUT", "/", nil)
+	r.RemoteAddr = "127.0.0.1"
+	r.Host = "test-server"
+	r.Header.Set(userAgentHeader, googleHealthCheckUserAgent)
+	h.ServeHTTP(rw, r)
+
+	assert.Equal(t, "test", rw.Body.String())
+}
