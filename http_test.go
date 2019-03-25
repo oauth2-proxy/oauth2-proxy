@@ -47,7 +47,7 @@ func TestGCPHealthcheckNotHealthcheck(t *testing.T) {
 
 	h := gcpHealthcheck(http.HandlerFunc(handler))
 	rw := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "/NOT_any_check", nil)
+	r, _ := http.NewRequest("GET", "/not_any_check", nil)
 	r.RemoteAddr = "127.0.0.1"
 	r.Host = "test-server"
 	h.ServeHTTP(rw, r)
