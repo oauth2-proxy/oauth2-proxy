@@ -93,7 +93,7 @@ func main() {
 	flagSet.String("acr-values", "http://idmanagement.gov/ns/assurance/loa/1", "acr values string:  optional, used by login.gov")
 	flagSet.String("jwt-key", "", "private key used to sign JWT: required by login.gov")
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
-	flagSet.Bool("gcp-healthchecks", false, "Enable GCP healthcheck endpoints")
+	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
 	flagSet.Parse(os.Args[1:])
 
