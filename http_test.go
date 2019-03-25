@@ -40,32 +40,17 @@ func TestGCPHealthcheckReadiness(t *testing.T) {
 	assert.Equal(t, "OK", rw.Body.String())
 }
 
-func TestGCPHealthcheckNotReadiness(t *testing.T) {
+func TestGCPHealthcheckNotHealthcheck(t *testing.T) {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("test"))
 	}
 
 	h := gcpHealthcheck(http.HandlerFunc(handler))
 	rw := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "/NOT_readiness_check", nil)
+	r, _ := http.NewRequest("GET", "/NOT_any_check", nil)
 	r.RemoteAddr = "127.0.0.1"
 	r.Host = "test-server"
 	h.ServeHTTP(rw, r)
 
-	assert.NotEqual(t, "OK", rw.Body.String())
-}
-
-func TestGCPHealthcheckNotLiveness(t *testing.T) {
-	handler := func(w http.ResponseWriter, req *http.Request) {
-		w.Write([]byte("test"))
-	}
-
-	h := gcpHealthcheck(http.HandlerFunc(handler))
-	rw := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "/NOT_liveness_check", nil)
-	r.RemoteAddr = "127.0.0.1"
-	r.Host = "test-server"
-	h.ServeHTTP(rw, r)
-
-	assert.NotEqual(t, "OK", rw.Body.String())
+	assert.Equal(t, "test", rw.Body.String())
 }
