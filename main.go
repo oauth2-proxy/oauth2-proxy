@@ -141,14 +141,14 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	var myhandler http.Handler
+	var handler http.Handler
 	if opts.GCPHealthChecks {
-		myhandler = gcpHealthcheck(LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat))
+		handler = gcpHealthcheck(LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat))
 	} else {
-		myhandler = LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat)
+		handler = LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat)
 	}
 	s := &Server{
-		Handler: myhandler,
+		Handler: handler,
 		Opts:    opts,
 	}
 	s.ListenAndServe()
