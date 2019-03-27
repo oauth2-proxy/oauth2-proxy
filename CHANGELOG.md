@@ -2,6 +2,7 @@
 
 ## Changes since v3.1.0
 
+- [#110](https://github.com/pusher/oauth2_proxy/pull/110) Added GCP healthcheck option (@timothy-spencer)
 - [#112](https://github.com/pusher/oauth2_proxy/pull/112) Improve websocket support (@gyson)
 - [#63](https://github.com/pusher/oauth2_proxy/pull/63) Use encoding/json for SessionState serialization (@yaegashi)
   - Use JSON to encode session state to be stored in browser cookies
