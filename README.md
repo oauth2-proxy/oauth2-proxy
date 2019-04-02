@@ -166,26 +166,6 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
     -cookie-secure=false
     -email-domain example.com
 
-#### Skip OIDC discovery
-
-Some providers do not support OIDC discovery via their issuer URL, so oauth2_proxy cannot simply grab the authorization, token and jwks URI endpoints from the provider's metadata.
-
-In this case, you can set the `-skip-oidc-discovery` option, and supply those required endpoints manually:
-
-```
-    -provider oidc
-    -client-id oauth2_proxy
-    -client-secret proxy
-    -redirect-url http://127.0.0.1:4180/oauth2/callback
-    -oidc-issuer-url http://127.0.0.1:5556
-    -skip-oidc-discovery
-    -login-url http://127.0.0.1:5556/authorize
-    -redeem-url http://127.0.0.1:5556/token
-    -oidc-jwks-url http://127.0.0.1:5556/keys
-    -cookie-secure=false
-    -email-domain example.com
-```
-
 ## Email Authentication
 
 To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresses use `--email-domain=*`.
@@ -233,7 +213,6 @@ Usage of oauth2_proxy:
   -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
   -login-url string: Authentication endpoint
   -oidc-issuer-url: the OpenID Connect issuer URL. ie: "https://accounts.google.com"
-  -oidc-jwks-url string: OIDC JWKS URI for token verification; required if OIDC discovery is disabled
   -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
   -pass-authorization-header: pass OIDC IDToken to upstream via Authorization Bearer header
   -pass-basic-auth: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
@@ -253,7 +232,6 @@ Usage of oauth2_proxy:
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
   -skip-auth-preflight: will skip authentication for OPTIONS requests
   -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
-  -skip-oidc-discovery: bypass OIDC endpoint discovery. login-url, redeem-url and oidc-jwks-url must be configured in this case
   -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
   -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
   -tls-cert string: path to certificate file

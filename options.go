@@ -71,8 +71,6 @@ type Options struct {
 	// potential overrides.
 	Provider          string `flag:"provider" cfg:"provider"`
 	OIDCIssuerURL     string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
-	SkipOIDCDiscovery bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
-	OIDCJwksURL       string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	LoginURL          string `flag:"login-url" cfg:"login_url"`
 	RedeemURL         string `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL        string `flag:"profile-url" cfg:"profile_url"`
@@ -123,7 +121,6 @@ func NewOptions() *Options {
 		PassAuthorization:    false,
 		ApprovalPrompt:       "force",
 		RequestLogging:       true,
-		SkipOIDCDiscovery:    false,
 		RequestLoggingFormat: defaultRequestLoggingFormat,
 	}
 }
@@ -164,40 +161,16 @@ func (o *Options) Validate() error {
 	}
 
 	if o.OIDCIssuerURL != "" {
-
-		ctx := context.Background()
-
-		// Construct a manual IDTokenVerifier from issuer URL & JWKS URI
-		// instead of metadata discovery if we enable -skip-oidc-discovery.
-		// In this case we need to make sure the required endpoints for
-		// the provider are configured.
-		if o.SkipOIDCDiscovery {
-			if o.LoginURL == "" {
-				msgs = append(msgs, "missing setting: login-url")
-			}
-			if o.RedeemURL == "" {
-				msgs = append(msgs, "missing setting: redeem-url")
-			}
-			if o.OIDCJwksURL == "" {
-				msgs = append(msgs, "missing setting: oidc-jwks-url")
-			}
-			keySet := oidc.NewRemoteKeySet(ctx, o.OIDCJwksURL)
-			o.oidcVerifier = oidc.NewVerifier(o.OIDCIssuerURL, keySet, &oidc.Config{
-				ClientID: o.ClientID,
-			})
-		} else {
-			// Configure discoverable provider data.
-			provider, err := oidc.NewProvider(ctx, o.OIDCIssuerURL)
-			if err != nil {
-				return err
-			}
-			o.oidcVerifier = provider.Verifier(&oidc.Config{
-				ClientID: o.ClientID,
-			})
-
-			o.LoginURL = provider.Endpoint().AuthURL
-			o.RedeemURL = provider.Endpoint().TokenURL
+		// Configure discoverable provider data.
+		provider, err := oidc.NewProvider(context.Background(), o.OIDCIssuerURL)
+		if err != nil {
+			return err
 		}
+		o.oidcVerifier = provider.Verifier(&oidc.Config{
+			ClientID: o.ClientID,
+		})
+		o.LoginURL = provider.Endpoint().AuthURL
+		o.RedeemURL = provider.Endpoint().TokenURL
 		if o.Scope == "" {
 			o.Scope = "openid email profile"
 		}

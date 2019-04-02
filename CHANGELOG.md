@@ -3,7 +3,6 @@
 ## Changes since v3.1.0
 
 - [#68](https://github.com/pusher/oauth2_proxy/pull/68) forward X-Auth-Access-Token header (@davidholsgrove)
-- [#41](https://github.com/pusher/oauth2_proxy/pull/41) Added option to manually specify OIDC endpoints instead of relying on discovery
 
 # v3.1.0
 
