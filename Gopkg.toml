@@ -13,7 +13,7 @@
 
 [[constraint]]
   branch = "v2"
-  name = "github.com/coreos/go-oidc"
+  name = "github.com/MXClyde/go-oidc"
 
 [[constraint]]
   branch = "master"

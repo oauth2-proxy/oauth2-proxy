@@ -9,7 +9,7 @@ WORKDIR $GOPATH/src/github.com/pusher/oauth2_proxy
 COPY . .
 
 # Fetch dependencies
-RUN dep ensure --vendor-only
+RUN dep ensure
 
 # Build binary
 RUN ./configure && make build
