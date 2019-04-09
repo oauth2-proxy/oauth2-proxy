@@ -187,15 +187,15 @@ func DecodeSessionState(v string, c *cookie.Cipher) (*SessionState, error) {
 	} else {
 		// Backward compatibility with using unecrypted Email
 		if ss.Email != "" {
-			decryptedEmail, err := c.Decrypt(ss.Email)
-			if err == nil {
+			decryptedEmail, errEmail := c.Decrypt(ss.Email)
+			if errEmail == nil {
 				ss.Email = decryptedEmail
 			}
 		}
 		// Backward compatibility with using unecrypted User
 		if ss.User != "" {
-			decryptedUser, err := c.Decrypt(ss.User)
-			if err == nil {
+			decryptedUser, errUser := c.Decrypt(ss.User)
+			if errUser == nil {
 				ss.User = decryptedUser
 			}
 		}
