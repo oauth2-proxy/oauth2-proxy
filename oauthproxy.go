@@ -601,6 +601,17 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	}
 
 	redirect = req.Form.Get("rd")
+
+	// traefik forward auth
+	if proto := req.Header.Get("X-Forwarded-Proto"); proto != "" {
+		redirect = fmt.Sprintf(
+			"%s://%s%s",
+			proto,
+			req.Header.Get("X-Forwarded-Host"),
+			req.Header.Get("X-Forwarded-Uri"),
+		)
+	}
+
 	if !p.IsValidRedirect(redirect) {
 		redirect = req.URL.Path
 		if strings.HasPrefix(redirect, p.ProxyPrefix) {
