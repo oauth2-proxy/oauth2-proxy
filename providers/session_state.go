@@ -62,6 +62,19 @@ func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
 	} else {
 		ss = *s
 		var err error
+		// Encrypt also Email and User when cipher is provided
+		if ss.Email != "" {
+			ss.Email, err = c.Encrypt(ss.Email)
+			if err != nil {
+				return "", err
+			}
+		}
+		if ss.User != "" {
+			ss.User, err = c.Encrypt(ss.User)
+			if err != nil {
+				return "", err
+			}
+		}
 		if ss.AccessToken != "" {
 			ss.AccessToken, err = c.Encrypt(ss.AccessToken)
 			if err != nil {
@@ -172,6 +185,20 @@ func DecodeSessionState(v string, c *cookie.Cipher) (*SessionState, error) {
 			User:  ss.User,
 		}
 	} else {
+		// Backward compatibility with using unecrypted Email
+		if ss.Email != "" {
+			decryptedEmail, err := c.Decrypt(ss.Email)
+			if err == nil {
+				ss.Email = decryptedEmail
+			}
+		}
+		// Backward compatibility with using unecrypted User
+		if ss.User != "" {
+			decryptedUser, err := c.Decrypt(ss.User)
+			if err == nil {
+				ss.User = decryptedUser
+			}
+		}
 		if ss.AccessToken != "" {
 			ss.AccessToken, err = c.Decrypt(ss.AccessToken)
 			if err != nil {
