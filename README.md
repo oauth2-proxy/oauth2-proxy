@@ -172,12 +172,12 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
 login.gov is an OIDC provider for the US Government.
 If you are a US Government agency, you can contact the login.gov team through the contact information
 that you can find on https://login.gov/developers/ and work with them to understand how to get login.gov
-accounts for integration/test and production access.  
+accounts for integration/test and production access.
 
 A developer guide is available here: https://developers.login.gov/, though this proxy handles everything
 but the data you need to create to register your application in the login.gov dashboard.
 
-As a demo, we will assume that you are running your application that you want to secure locally on 
+As a demo, we will assume that you are running your application that you want to secure locally on
 http://localhost:3000/, that you will be starting your proxy up on http://localhost:4180/, and that
 you have an agency integration account for testing.
 
@@ -261,6 +261,7 @@ Usage of oauth2_proxy:
   -client-secret string: the OAuth Client Secret
   -config string: path to config file
   -cookie-domain string: an optional cookie domain to force cookies to (ie: .yourcompany.com)
+  -cookie-path string: an optional cookie path to force cookies to (ie: .yourcompany.com/foo)
   -cookie-expire duration: expire timeframe for cookie (default 168h0m0s)
   -cookie-httponly: set HttpOnly cookie flag (default true)
   -cookie-name string: the name of the cookie that the oauth_proxy creates (default "_oauth2_proxy")
@@ -336,6 +337,7 @@ The following environment variables can be used in place of the corresponding co
 - `OAUTH2_PROXY_COOKIE_NAME`
 - `OAUTH2_PROXY_COOKIE_SECRET`
 - `OAUTH2_PROXY_COOKIE_DOMAIN`
+- `OAUTH2_PROXY_COOKIE_PATH`
 - `OAUTH2_PROXY_COOKIE_EXPIRE`
 - `OAUTH2_PROXY_COOKIE_REFRESH`
 - `OAUTH2_PROXY_SIGNATURE_KEY`
@@ -412,7 +414,7 @@ The command line to run `oauth2_proxy` in this configuration would look like thi
 OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated. The `/oauth2` prefix can be changed with the `--proxy-prefix` config variable.
 
 - /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
-- /ping - returns a 200 OK response, which is intended for use with health checks  
+- /ping - returns a 200 OK response, which is intended for use with health checks
 - /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 - /oauth2/start - a URL that will redirect to start the OAuth cycle
 - /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
