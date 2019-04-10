@@ -62,7 +62,6 @@ func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
 	} else {
 		ss = *s
 		var err error
-		// Encrypt also Email and User when cipher is provided
 		if ss.Email != "" {
 			ss.Email, err = c.Encrypt(ss.Email)
 			if err != nil {
