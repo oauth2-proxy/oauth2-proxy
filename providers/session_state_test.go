@@ -41,8 +41,8 @@ func TestSessionStateSerialization(t *testing.T) {
 	ss, err = DecodeSessionState(encoded, c2)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user", ss.User)
-	assert.Equal(t, s.Email, ss.Email)
+	assert.NotEqual(t, "user", ss.User)
+	assert.NotEqual(t, s.Email, ss.Email)
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
 	assert.NotEqual(t, s.IDToken, ss.IDToken)
@@ -77,8 +77,8 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	ss, err = DecodeSessionState(encoded, c2)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, s.User, ss.User)
-	assert.Equal(t, s.Email, ss.Email)
+	assert.NotEqual(t, s.User, ss.User)
+	assert.NotEqual(t, s.Email, ss.Email)
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
 	assert.NotEqual(t, s.RefreshToken, ss.RefreshToken)
@@ -229,7 +229,7 @@ func TestDecodeSessionState(t *testing.T) {
 				ExpiresOn:    e,
 				RefreshToken: "refresh4321",
 			},
-			Encoded: fmt.Sprintf(`{"Email":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","ExpiresOn":%s}`, eString),
+			Encoded: fmt.Sprintf(`{"Email":"FsKKYrTWZWrxSOAqA/fTNAUZS5QWCqOBjuAbBlbVOw==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw==","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","ExpiresOn":%s}`, eString),
 			Cipher:  c,
 		},
 		{
@@ -237,7 +237,7 @@ func TestDecodeSessionState(t *testing.T) {
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+			Encoded: `{"Email":"EGTllJcOFC16b7LBYzLekaHAC5SMMSPdyUrg8hd25g==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw=="}`,
 			Cipher:  c,
 		},
 		{
