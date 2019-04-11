@@ -268,3 +268,9 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 
 	assert.Equal(t, nil, o.Validate())
 }
+
+func TestGCPHealthcheck(t *testing.T) {
+	o := testOptions()
+	o.GCPHealthChecks = true
+	assert.Equal(t, nil, o.Validate())
+}
