@@ -97,7 +97,7 @@ func TestGitHubProviderOverrides(t *testing.T) {
 }
 
 func TestGitHubProviderGetEmailAddress(t *testing.T) {
-	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "primary": true} ]`})
+	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -109,10 +109,23 @@ func TestGitHubProviderGetEmailAddress(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
 
+func TestGitHubProviderGetEmailAddressNotVerified(t *testing.T) {
+	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "verified": false, "primary": true} ]`})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+
+	session := &SessionState{AccessToken: "imaginary_access_token"}
+	email, err := p.GetEmailAddress(session)
+	assert.Equal(t, nil, err)
+	assert.Empty(t, "", email)
+}
+
 func TestGitHubProviderGetEmailAddressWithOrg(t *testing.T) {
 	b := testGitHubBackend([]string{
-		`[ {"email": "michael.bland@gsa.gov", "primary": true, "login":"testorg"} ]`,
-		`[ {"email": "michael.bland1@gsa.gov", "primary": true, "login":"testorg1"} ]`,
+		`[ {"email": "michael.bland@gsa.gov", "primary": true, "verified": true, "login":"testorg"} ]`,
+		`[ {"email": "michael.bland1@gsa.gov", "primary": true, "verified": true, "login":"testorg1"} ]`,
 		`[ ]`,
 	})
 	defer b.Close()
