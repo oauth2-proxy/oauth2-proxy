@@ -81,7 +81,7 @@ check_for() {
 check_go_version() {
   echo -n "Checking go version... "
   GO_VERSION=$(${tools[go]} version | ${tools[awk]} '{where = match($0, /[0-9]\.[0-9]+\.[0-9]*/); if (where != 0) print substr($0, RSTART, RLENGTH)}')
-  vercomp $GO_VERSION 1.10
+  vercomp $GO_VERSION 1.11
   case $? in
     0) ;&
     1)
@@ -91,7 +91,7 @@ check_go_version() {
       ;;
     2)
       printf "${RED}"
-      echo "$GO_VERSION < 1.10"
+      echo "$GO_VERSION < 1.11"
       exit 1
       ;;
   esac
