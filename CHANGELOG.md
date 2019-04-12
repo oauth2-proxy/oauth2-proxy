@@ -54,6 +54,7 @@ instead of returning an error
 - [#122](https://github.com/pusher/oauth2_proxy/pull/122) Expose -cookie-path as configuration parameter (@costelmoraru)
 - [#124](https://github.com/pusher/oauth2_proxy/pull/124) Use Go 1.12 for testing and build environments (@syscll)
 
+
 # v3.1.0
 
 ## Release highlights
