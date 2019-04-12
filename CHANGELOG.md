@@ -1,5 +1,22 @@
 # Vx.x.x (Pre-release)
 
+## Changes since v3.2.0
+
+# v3.2.0
+
+## Release highlights
+- Internal restructure of session state storage to use JSON rather than proprietary scheme
+- Added health check options for running on GCP behind a load balancer
+- Improved support for protecting websockets
+- Added provider for login.gov
+- Allow manual configuration of OIDC providers
+
+## Important notes
+- Dockerfile user is now non-root, this may break your existing deployment
+- In the OIDC provider, when no email is returned, the ID Token subject will be used
+instead of returning an error
+- GitHub user emails must now be primary and verified before authenticating
+
 ## Changes since v3.1.0
 
 - [#96](https://github.com/bitly/oauth2_proxy/pull/96) Check if email is verified on GitHub (@caarlos0)
