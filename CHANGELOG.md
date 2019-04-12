@@ -21,6 +21,7 @@
 - [#83](https://github.com/pusher/oauth2_proxy/pull/83) Add `id_token` refresh to Google provider (@leki75)
 - [#10](https://github.com/pusher/oauth2_proxy/pull/10) fix redirect url param handling (@dt-rush)
 - [#122](https://github.com/pusher/oauth2_proxy/pull/122) Expose -cookie-path as configuration parameter (@costelmoraru)
+- [#124](https://github.com/pusher/oauth2_proxy/pull/124) Use Go 1.12 for testing and build environments (@syscll)
 
 # v3.1.0
 
