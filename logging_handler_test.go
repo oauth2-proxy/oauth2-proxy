@@ -19,7 +19,7 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 		Format,
 		ExpectedLogMessage string
 	}{
-		{defaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0", ts.Format("02/Jan/2006:15:04:05 -0700"))},
+		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts))},
 		{"{{.RequestMethod}}", "GET\n"},
 	}
 

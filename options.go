@@ -87,18 +87,18 @@ type Options struct {
 	ApprovalPrompt    string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"`
 
 	// Configuration values for logging
-	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename"`
-	LoggingMaxSize        int    `flag:"logging-max-size" cfg:"logging_max_size"`
-	LoggingMaxAge         int    `flag:"logging-max-age" cfg:"logging_max_age"`
-	LoggingMaxBackups     int    `flag:"logging-max-backups" cfg:"logging_max_backups"`
-	LoggingLocalTime      bool   `flag:"logging-local-time" cfg:"logging_local_time"`
-	LoggingCompress       bool   `flag:"logging-compress" cfg:"logging_compress"`
-	StandardLogging       bool   `flag:"standard-logging" cfg:"standard_logging"`
-	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format"`
-	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging"`
-	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format"`
-	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging"`
-	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format"`
+	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_LOGGING_FILENAME"`
+	LoggingMaxSize        int    `flag:"logging-max-size" cfg:"logging_max_size" env:"OAUTH2_LOGGING_MAX_SIZE"`
+	LoggingMaxAge         int    `flag:"logging-max-age" cfg:"logging_max_age" env:"OAUTH2_LOGGING_MAX_AGE"`
+	LoggingMaxBackups     int    `flag:"logging-max-backups" cfg:"logging_max_backups" env:"OAUTH2_LOGGING_MAX_BACKUPS"`
+	LoggingLocalTime      bool   `flag:"logging-local-time" cfg:"logging_local_time" env:"OAUTH2_LOGGING_LOCAL_TIME"`
+	LoggingCompress       bool   `flag:"logging-compress" cfg:"logging_compress" env:"OAUTH2_LOGGING_COMPRESS"`
+	StandardLogging       bool   `flag:"standard-logging" cfg:"standard_logging" env:"OAUTH2_STANDARD_LOGGING"`
+	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format" env:"OAUTH2_STANDARD_LOGGING_FORMAT"`
+	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging" env:"OAUTH2_REQUEST_LOGGING"`
+	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format" env:"OAUTH2_REQUEST_LOGGING_FORMAT"`
+	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging" env:"OAUTH2_LOGGING_AUTH_LOGGING"`
+	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format" env:"OAUTH2_AUTH_LOGGING_FORMAT"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 	AcrValues       string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`

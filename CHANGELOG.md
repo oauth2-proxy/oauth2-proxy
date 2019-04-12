@@ -1,7 +1,7 @@
 # Vx.x.x (Pre-release)
 
 ## Changes since v3.2.0
-- [#52](https://github.com/pusher/oauth2_proxy/pull/52) Logging Improvements
+- [#52](https://github.com/pusher/oauth2_proxy/pull/52) Logging Improvements (@MisterWil)
   - Implement flags to configure file logging
     - `-logging-filename` Defines the filename to log to
     - `-logging-max-size` Defines the maximum
