@@ -185,23 +185,10 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		path := u.Path
 		switch u.Scheme {
 		case httpScheme, httpsScheme:
-<<<<<<< HEAD
-			log.Printf("mapping path %q => upstream %q", path, u)
+			logger.Printf("mapping path %q => upstream %q", path, u)
 			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
 			serveMux.Handle(path, proxy)
 
-=======
-			u.Path = ""
-			logger.Printf("mapping path %q => upstream %q", path, u)
-			proxy := NewReverseProxy(u, opts.FlushInterval)
-			if !opts.PassHostHeader {
-				setProxyUpstreamHostHeader(proxy, u)
-			} else {
-				setProxyDirector(proxy)
-			}
-			serveMux.Handle(path,
-				&UpstreamProxy{u.Host, proxy, auth})
->>>>>>> Auth and standard logging with file rolling
 		case "file":
 			if u.Fragment != "" {
 				path = u.Fragment
@@ -228,11 +215,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
 	}
 
-<<<<<<< HEAD
-	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s path:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, opts.CookiePath, refresh)
-=======
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, refresh)
->>>>>>> Auth and standard logging with file rolling
+	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s path:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, opts.CookiePath, refresh)
 
 	var cipher *cookie.Cipher
 	if opts.PassAccessToken || opts.SetAuthorization || opts.PassAuthorization || (opts.CookieRefresh != time.Duration(0)) {

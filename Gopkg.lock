@@ -222,6 +222,7 @@
     "github.com/mreiferson/go-options",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
+    "github.com/yhat/wsutil",
     "golang.org/x/crypto/bcrypt",
     "golang.org/x/net/websocket",
     "golang.org/x/oauth2",

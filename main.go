@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	options "github.com/mreiferson/go-options"
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
 
 	emailDomains := StringArray{}
-	whitelistDomains := StringArray{}
+	whitelistandardomains := StringArray{}
 	upstreams := StringArray{}
 	skipAuthRegex := StringArray{}
 	googleGroups := StringArray{}
@@ -49,7 +49,7 @@ func main() {
 	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
-	flagSet.Var(&whitelistDomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
+	flagSet.Var(&whitelistandardomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
@@ -158,16 +158,12 @@ func main() {
 
 	var handler http.Handler
 	if opts.GCPHealthChecks {
-		handler = gcpHealthcheck(LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat))
+		handler = gcpHealthcheck(LoggingHandler(oauthproxy))
 	} else {
-		handler = LoggingHandler(os.Stdout, oauthproxy, opts.RequestLogging, opts.RequestLoggingFormat)
+		handler = LoggingHandler(oauthproxy)
 	}
 	s := &Server{
-<<<<<<< HEAD
 		Handler: handler,
-=======
-		Handler: LoggingHandler(oauthproxy),
->>>>>>> Auth and standard logging with file rolling
 		Opts:    opts,
 	}
 	s.ListenAndServe()
