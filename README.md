@@ -125,8 +125,8 @@ The GitHub auth provider supports two additional parameters to restrict authenti
 
     -github-org="": restrict logins to members of this organisation
     -github-team="": restrict logins to members of any of these teams (slug), separated by a comma
-    -github-repo="": restrict logins to collaborators of these repos, separated by a comma
-    -github-owner-token="": owner token that has access to check collaborators of github-repo    
+    -github-repos="": restrict logins to collaborators of these repos, separated by a comma
+    -github-owner-token="": owner token that has access to check collaborators of github-repos
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 

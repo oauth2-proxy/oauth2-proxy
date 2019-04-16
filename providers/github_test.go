@@ -183,18 +183,6 @@ func TestGitHubProviderGetUserName(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "mbland", email)
 }
-
-func TestGitHubProviderValidateUserPanicsWhenNoOwnerToken(t *testing.T) {
-	b := testGitHubBackend([]string{})
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host)
-	p.Repo = "repo1"
-
-	assert.Panics(t, func() { p.ValidateUser("mbland") })
-}
-
 func TestGitHubProviderValidateUserReturnsTrueWhenNoRepo(t *testing.T) {
 	b := testGitHubBackend([]string{})
 	defer b.Close()

@@ -274,3 +274,12 @@ func TestGCPHealthcheck(t *testing.T) {
 	o.GCPHealthChecks = true
 	assert.Equal(t, nil, o.Validate())
 }
+
+func TestGitHubReposRequiresGitHubOwnerToken(t *testing.T) {
+	o := testOptions()
+	o.Provider = "github"
+	o.GitHubRepos = "repo1"
+	err := o.Validate()
+	assert.Equal(t, "Invalid configuration:\n"+
+		fmt.Sprintf("  github-repos requires github-owner-token"), err.Error())
+}

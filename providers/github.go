@@ -17,7 +17,7 @@ type GitHubProvider struct {
 	*ProviderData
 	Org        string
 	Team       string
-	Repo       string
+	Repos      string
 	OwnerToken string
 }
 
@@ -61,9 +61,9 @@ func (p *GitHubProvider) SetOrgTeam(org, team string) {
 	}
 }
 
-// SetCollaborationRepo requires repo read. The repo owner must provide a token
-func (p *GitHubProvider) SetCollaborationRepo(repo, ownerToken string) {
-	p.Repo = repo
+// SetCollaborationRepos requires repo read. The repo owner must provide a token
+func (p *GitHubProvider) SetCollaborationRepos(repos, ownerToken string) {
+	p.Repos = repos
 	p.OwnerToken = ownerToken
 }
 
@@ -206,23 +206,19 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 	return false, nil
 }
 
-// ValidateUser validates that the user exists as a collaborator on the specified repo
+// ValidateUser validates that the user exists as a collaborator on the specified repos
 func (p *GitHubProvider) ValidateUser(user string) bool {
 	//https://developer.github.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
 
-	if p.Repo == "" {
+	if p.Repos == "" {
 		return true
-	}
-
-	if p.OwnerToken == "" {
-		panic("OwnerToken must be provided to check repo collaboration")
 	}
 
 	return p.hasRepoCollaboration(user)
 }
 
 func (p *GitHubProvider) hasRepoCollaboration(user string) bool {
-	repos := strings.Split(p.Repo, ",")
+	repos := strings.Split(p.Repos, ",")
 	for _, repo := range repos {
 
 		endpoint := &url.URL{
@@ -230,12 +226,21 @@ func (p *GitHubProvider) hasRepoCollaboration(user string) bool {
 			Host:   p.ValidateURL.Host,
 			Path:   path.Join(p.ValidateURL.Path, fmt.Sprintf("/repos/%s/collaborators/%s", repo, user)),
 		}
-		req, _ := http.NewRequest("GET", endpoint.String(), nil)
+		req, err := http.NewRequest("GET", endpoint.String(), nil)
+		if err != nil {
+			log.Printf("could not create new GET request: %v", err)
+			return false
+		}
 		req.Header.Set("Accept", "application/vnd.github.v3+json")
 		req.Header.Set("Authorization", fmt.Sprintf("token %s", p.OwnerToken))
 		resp, err := http.DefaultClient.Do(req)
 
-		if err == nil && resp.StatusCode == 204 {
+		if err != nil {
+			log.Printf("error executing request: %s %s %s", req.Method, req.URL, err)
+			return false
+		}
+		if resp.StatusCode == 204 {
+			log.Printf("User %s is collaborator on repo: %s ", user, repo)
 			return true
 		}
 	}
