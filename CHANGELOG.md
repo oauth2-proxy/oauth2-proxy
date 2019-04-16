@@ -19,6 +19,9 @@
 
 - [#111](https://github.com/pusher/oauth2_proxy/pull/111) Add option for telling where to find a login.gov JWT key file (@timothy-spencer)
 
+- [#141](https://github.com/pusher/oauth2_proxy/pull/141) Check google group membership based on email address (@bchess)
+  - Google Group membership is additionally checked via email address, allowing users outside a GSuite domain to be authorized.
+
 # v3.2.0
 
 ## Release highlights
