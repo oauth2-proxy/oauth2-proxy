@@ -775,7 +775,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) && p.provider.ValidateUser(session.User) {
+	if (p.Validator(session.Email) && p.provider.ValidateGroup(session.Email)) || p.provider.ValidateUser(session.User) {
 		log.Printf("%s authentication complete %s", remoteAddr, session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -860,7 +860,7 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		}
 	}
 
-	if session != nil && session.Email != "" && !p.Validator(session.Email) {
+	if session != nil && session.Email != "" && !p.Validator(session.Email) && !p.provider.ValidateUser(session.User) {
 		log.Printf("%s Permission Denied: removing session %s", remoteAddr, session)
 		session = nil
 		saveSession = false
