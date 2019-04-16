@@ -121,7 +121,7 @@ func (p *ProviderData) ValidateGroup(email string) bool {
 
 // ValidateUser validates that the user has some required characteristic
 func (p *ProviderData) ValidateUser(user string) bool {
-	return true
+	return false
 }
 
 // ValidateSessionState validates the AccessToken
