@@ -208,7 +208,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 
 // ValidateUser validates that the user exists as a collaborator on the specified repos
 func (p *GitHubProvider) ValidateUser(user string) bool {
-	//https://developer.github.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
+	// https://developer.github.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
 
 	if p.Repos == "" {
 		return true
