@@ -15,8 +15,10 @@ import (
 // GitHubProvider represents an GitHub based Identity Provider
 type GitHubProvider struct {
 	*ProviderData
-	Org  string
-	Team string
+	Org        string
+	Team       string
+	Repo       string
+	OwnerToken string
 }
 
 // NewGitHubProvider initiates a new GitHubProvider
@@ -57,6 +59,12 @@ func (p *GitHubProvider) SetOrgTeam(org, team string) {
 	if org != "" || team != "" {
 		p.Scope += " read:org"
 	}
+}
+
+// SetCollaborationRepo requires repo read. The repo owner must provide a token
+func (p *GitHubProvider) SetCollaborationRepo(repo, ownerToken string) {
+	p.Repo = repo
+	p.OwnerToken = ownerToken
 }
 
 func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
@@ -196,6 +204,43 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 		log.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
 	}
 	return false, nil
+}
+
+// ValidateUser validates that the user exists as a collaborator on the specified repo
+func (p *GitHubProvider) ValidateUser(user string) bool {
+	//https://developer.github.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
+
+	if p.Repo == "" {
+		return true
+	}
+
+	if p.OwnerToken == "" {
+		panic("OwnerToken must be provided to check repo collaboration")
+	}
+
+	return p.hasRepoCollaboration(user)
+}
+
+func (p *GitHubProvider) hasRepoCollaboration(user string) bool {
+	repos := strings.Split(p.Repo, ",")
+	for _, repo := range repos {
+
+		endpoint := &url.URL{
+			Scheme: p.ValidateURL.Scheme,
+			Host:   p.ValidateURL.Host,
+			Path:   path.Join(p.ValidateURL.Path, fmt.Sprintf("/repos/%s/collaborators/%s", repo, user)),
+		}
+		req, _ := http.NewRequest("GET", endpoint.String(), nil)
+		req.Header.Set("Accept", "application/vnd.github.v3+json")
+		req.Header.Set("Authorization", fmt.Sprintf("token %s", p.OwnerToken))
+		resp, err := http.DefaultClient.Do(req)
+
+		if err == nil && resp.StatusCode == 204 {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetEmailAddress returns the Account email address

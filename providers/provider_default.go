@@ -119,6 +119,11 @@ func (p *ProviderData) ValidateGroup(email string) bool {
 	return true
 }
 
+// ValidateUser validates that the user has some required characteristic
+func (p *ProviderData) ValidateUser(user string) bool {
+	return true
+}
+
 // ValidateSessionState validates the AccessToken
 func (p *ProviderData) ValidateSessionState(s *SessionState) bool {
 	return validateToken(p, s.AccessToken, nil)

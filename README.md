@@ -125,6 +125,8 @@ The GitHub auth provider supports two additional parameters to restrict authenti
 
     -github-org="": restrict logins to members of this organisation
     -github-team="": restrict logins to members of any of these teams (slug), separated by a comma
+    -github-repo="": restrict logins to collaborators of these repos, separated by a comma
+    -github-owner-token="": owner token that has access to check collaborators of github-repo    
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 
@@ -284,6 +286,8 @@ Usage of oauth2_proxy:
   -gcp-healthchecks: will enable /liveness_check, /readiness_check, and / (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses (default false)
   -github-org string: restrict logins to members of this organisation
   -github-team string: restrict logins to members of any of these teams (slug), separated by a comma
+  -github-repo string: restrict logins to collaborators of these repos, separated by a comma
+  -github-owner-token string: owner token that has access to check collaborators of github-repo
   -google-admin-email string: the google admin to impersonate for api calls
   -google-group value: restrict logins to members of this google group (may be given multiple times).
   -google-service-account-json string: the path to the service account json credentials
