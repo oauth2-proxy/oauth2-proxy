@@ -2,6 +2,8 @@
 
 ## Changes since v3.2.0
 
+- [#111](https://github.com/pusher/oauth2_proxy/pull/111) Add option for telling where to find a login.gov JWT key file (@timothy-spencer)
+
 # v3.2.0
 
 ## Release highlights

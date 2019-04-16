@@ -216,6 +216,13 @@ Now start the proxy up with the following options:
   -jwt-key="${OAUTH2_PROXY_JWT_KEY}"
 ```
 You can also set all these options with environment variables, for use in cloud/docker environments.
+One tricky thing that you may encounter is that some cloud environments will pass in environment
+variables in a docker env-file, which does not allow multiline variables like a PEM file.
+If you encounter this, then you can create a `jwt_signing_key.pem` file in the top level
+directory of the repo which contains the key in PEM format and then do your docker build.
+The docker build process will copy that file into your image which you can then access by
+setting the `OAUTH2_PROXY_JWT_KEY_FILE=/etc/ssl/private/jwt_signing_key.pem`
+environment variable, or by setting `-jwt-key-file=/etc/ssl/private/jwt_signing_key.pem` on the commandline.
 
 Once it is running, you should be able to go to `http://localhost:4180/` in your browser,
 get authenticated by the login.gov integration server, and then get proxied on to your
@@ -261,6 +268,7 @@ An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is i
 
 ```
 Usage of oauth2_proxy:
+  -acr-values string:  optional, used by login.gov (default "http://idmanagement.gov/ns/assurance/loa/1")
   -approval-prompt string: OAuth approval_prompt (default "force")
   -authenticated-emails-file string: authenticate against emails via file (one per line)
   -azure-tenant string: go to a tenant-specific or common (tenant-independent) endpoint. (default "common")
@@ -269,10 +277,10 @@ Usage of oauth2_proxy:
   -client-secret string: the OAuth Client Secret
   -config string: path to config file
   -cookie-domain string: an optional cookie domain to force cookies to (ie: .yourcompany.com)
-  -cookie-path string: an optional cookie path to force cookies to (ie: /foo)
   -cookie-expire duration: expire timeframe for cookie (default 168h0m0s)
   -cookie-httponly: set HttpOnly cookie flag (default true)
   -cookie-name string: the name of the cookie that the oauth_proxy creates (default "_oauth2_proxy")
+  -cookie-path string: an optional cookie path to force cookies to (ie: /poc/)* (default "/")
   -cookie-refresh duration: refresh the cookie after this duration; 0 to disable
   -cookie-secret string: the seed string for secure cookies (optionally base64 encoded)
   -cookie-secure: set secure (HTTPS) cookie flag (default true)
@@ -290,6 +298,8 @@ Usage of oauth2_proxy:
   -htpasswd-file string: additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
   -http-address string: [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients (default "127.0.0.1:4180")
   -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
+  -jwt-key string: private key in PEM format used to sign JWT, so that you can say something like -jwt-key="${OAUTH2_PROXY_JWT_KEY}": required by login.gov
+  -jwt-key-file string: path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov
   -login-url string: Authentication endpoint
   -oidc-issuer-url: the OpenID Connect issuer URL. ie: "https://accounts.google.com"
   -oidc-jwks-url string: OIDC JWKS URI for token verification; required if OIDC discovery is disabled
@@ -302,6 +312,7 @@ Usage of oauth2_proxy:
   -provider string: OAuth provider (default "google")
   -proxy-prefix string: the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in) (default "/oauth2")
   -proxy-websockets: enables WebSocket proxying (default true)
+  -pubjwk-url string: JWK pubkey access endpoint: required by login.gov
   -redeem-url string: Token redemption endpoint
   -redirect-url string: the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
   -request-logging: Log requests to stdout (default true)
