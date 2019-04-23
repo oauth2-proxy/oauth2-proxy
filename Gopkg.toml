@@ -17,6 +17,10 @@
 
 [[constraint]]
   branch = "master"
+  name = "github.com/go-redis/redis"
+
+[[constraint]]
+  branch = "master"
   name = "github.com/mreiferson/go-options"
 
 [[constraint]]

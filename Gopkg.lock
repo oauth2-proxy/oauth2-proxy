@@ -51,6 +51,22 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:edab2b668c427fadca75b629ba1cba5a759893cfc734a7210a2a26745e0a86ac"
+  name = "github.com/go-redis/redis"
+  packages = [
+    ".",
+    "internal",
+    "internal/consistenthash",
+    "internal/hashtag",
+    "internal/pool",
+    "internal/proto",
+    "internal/util",
+  ]
+  pruneopts = ""
+  revision = "4b1665dfdc17efd2d1f450a6661a472d121364b1"
+
+[[projects]]
+  branch = "master"
   digest = "1:3b760d3b93f994df8eb1d9ebfad17d3e9e37edcb7f7efaa15b427c0d7a64f4e4"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
@@ -218,6 +234,7 @@
     "github.com/bitly/go-simplejson",
     "github.com/coreos/go-oidc",
     "github.com/dgrijalva/jwt-go",
+    "github.com/go-redis/redis",
     "github.com/mbland/hmacauth",
     "github.com/mreiferson/go-options",
     "github.com/stretchr/testify/assert",

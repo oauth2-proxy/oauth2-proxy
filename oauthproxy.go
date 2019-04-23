@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/logger"
@@ -93,6 +94,7 @@ type OAuthProxy struct {
 	compiledRegex       []*regexp.Regexp
 	templates           *template.Template
 	Footer              string
+	CookiesStore        cookie.ServerCookiesStore
 }
 
 // UpstreamProxy represents an upstream server to proxy to
@@ -226,6 +228,17 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		}
 	}
 
+	var cookiesStore cookie.ServerCookiesStore
+	if opts.RedisConnectionURL != "" {
+		var err error
+		cookiesStore, err = cookie.NewRedisCookieStore(opts.RedisConnectionURL, opts.CookieName, cipher.Block)
+		if err != nil {
+			logger.Fatal("redis-cookie-store: ", err)
+		}
+		parsed, _ := redis.ParseURL(opts.RedisConnectionURL)
+		logger.Printf("Redis Cookie Store enabled at %v/%v, oauth2_proxy issuing cookie tickets", parsed.Addr, parsed.DB)
+	}
+
 	return &OAuthProxy{
 		CookieName:     opts.CookieName,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.CookieName, "csrf"),
@@ -265,6 +278,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		CookieCipher:       cipher,
 		templates:          loadTemplates(opts.CustomTemplatesDir),
 		Footer:             opts.Footer,
+		CookiesStore:       cookiesStore,
 	}
 }
 
@@ -322,6 +336,26 @@ func (p *OAuthProxy) MakeSessionCookie(req *http.Request, value string, expirati
 		value = cookie.SignedValue(p.CookieSeed, p.CookieName, value, now)
 	}
 	c := p.makeCookie(req, p.CookieName, value, expiration, now)
+	if p.CookiesStore != nil {
+		// Proactively cleanup old cookies that might be hanging around
+		for _, requestCookie := range req.Cookies() {
+			if requestCookie.Name == p.CookieName {
+				_, err := p.CookiesStore.Clear(requestCookie)
+				if err != nil {
+					logger.Printf("Unable to clear cookies: %s", err)
+				}
+			}
+		}
+
+		// Store new cookie. Pass the old cookie along just in case
+		requestCookie, _ := req.Cookie(p.CookieName)
+		newCookieValue, err := p.CookiesStore.Store(c, requestCookie)
+		if err != nil {
+			logger.Printf("Unable to load cookie: %s", err)
+		}
+		responseCookie := p.makeCookie(req, p.CookieName, newCookieValue, p.CookieExpire, now)
+		return []*http.Cookie{responseCookie}
+	}
 	if len(c.Value) > 4096-len(p.CookieName) {
 		return splitCookie(c)
 	}
@@ -460,6 +494,12 @@ func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Reques
 	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", p.CookieName))
 
 	for _, c := range req.Cookies() {
+		if p.CookiesStore != nil && c.Name == p.CookieName {
+			_, err := p.CookiesStore.Clear(c)
+			if err != nil {
+				logger.Printf("Unable to clear cookie: %s", err)
+			}
+		}
 		if cookieNameRegex.MatchString(c.Name) {
 			clearCookie := p.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
 
@@ -491,6 +531,15 @@ func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*providers.SessionSt
 		// always http.ErrNoCookie
 		return nil, age, fmt.Errorf("Cookie %q not present", p.CookieName)
 	}
+
+	if p.CookiesStore != nil {
+		// If using a cookie store, load the actual value
+		c.Value, err = p.CookiesStore.Load(c)
+		if err != nil {
+			return nil, age, fmt.Errorf("Unable to load cookie: %s", err)
+		}
+	}
+
 	val, timestamp, err := cookie.Validate(c, p.CookieSeed, p.CookieExpire)
 	if err != nil {
 		return nil, age, errors.New("Cookie Signature not valid")

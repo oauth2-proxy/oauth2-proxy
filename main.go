@@ -47,6 +47,7 @@ func main() {
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS")
 	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
+	flagSet.String("redis-connection-url", "", "connection url for redis (activates server-side cookies with redis backend)")
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.Var(&whitelistDomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")

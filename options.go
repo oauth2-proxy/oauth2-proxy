@@ -16,6 +16,7 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-redis/redis"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/providers"
@@ -44,6 +45,7 @@ type Options struct {
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group" env:"OAUTH2_PROXY_GOOGLE_GROUPS"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email" env:"OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json" env:"OAUTH2_PROXY_GOOGLE_SERVICE_ACCOUNT_JSON"`
+	RedisConnectionURL       string   `flag:"redis-connection-url" cfg:"redis_connection_url"`
 	HtpasswdFile             string   `flag:"htpasswd-file" cfg:"htpasswd_file" env:"OAUTH2_PROXY_HTPASSWD_FILE"`
 	DisplayHtpasswdForm      bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form" env:"OAUTH2_PROXY_DISPLAY_HTPASSWD_FORM"`
 	CustomTemplatesDir       string   `flag:"custom-templates-dir" cfg:"custom_templates_dir" env:"OAUTH2_PROXY_CUSTOM_TEMPLATES_DIR"`
@@ -283,6 +285,13 @@ func (o *Options) Validate() error {
 					"pass_access_token == true or "+
 					"cookie_refresh != 0, but is %d bytes.%s",
 				len(secretBytes(o.CookieSecret)), suffix))
+		}
+	}
+
+	if o.RedisConnectionURL != "" {
+		_, err := redis.ParseURL(o.RedisConnectionURL)
+		if err != nil {
+			msgs = append(msgs, fmt.Sprintf("unable to parse redis url: %s", err))
 		}
 	}
 
