@@ -1,6 +1,7 @@
 # Vx.x.x (Pre-release)
 
 ## Changes since v3.2.0
+
 - [#52](https://github.com/pusher/oauth2_proxy/pull/52) Logging Improvements (@MisterWil)
   - Implement flags to configure file logging
     - `-logging-filename` Defines the filename to log to
@@ -55,7 +56,6 @@ instead of returning an error
 - [#10](https://github.com/pusher/oauth2_proxy/pull/10) fix redirect url param handling (@dt-rush)
 - [#122](https://github.com/pusher/oauth2_proxy/pull/122) Expose -cookie-path as configuration parameter (@costelmoraru)
 - [#124](https://github.com/pusher/oauth2_proxy/pull/124) Use Go 1.12 for testing and build environments (@syscll)
-
 
 # v3.1.0
 
