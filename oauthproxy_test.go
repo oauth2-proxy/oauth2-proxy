@@ -3,6 +3,7 @@ package main
 import (
 	"crypto"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -1131,4 +1132,66 @@ func TestClearSingleCookie(t *testing.T) {
 	header := rw.Header()
 
 	assert.Equal(t, 1, len(header["Set-Cookie"]), "should have 1 set-cookie header entries")
+}
+
+func TestFindJwtBearerToken(t *testing.T) {
+	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
+	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: "example.com"}}
+
+	validToken := "eyJfoobar.eyJfoobar.12345asdf"
+	var token string
+
+	// Bearer
+	getReq.Header = map[string][]string{
+		"Authorization": {fmt.Sprintf("Bearer %s", validToken)},
+	}
+
+	token, _ = p.findBearerToken(getReq)
+	assert.Equal(t, validToken, token)
+
+	// Basic - no password
+	getReq.SetBasicAuth(token, "")
+	token, _ = p.findBearerToken(getReq)
+	assert.Equal(t, validToken, token)
+
+	// Basic - sentinel password
+	getReq.SetBasicAuth(token, "x-oauth-basic")
+	token, _ = p.findBearerToken(getReq)
+	assert.Equal(t, validToken, token)
+
+	// Basic - any username, password matching jwt pattern
+	getReq.SetBasicAuth("any-username-you-could-wish-for", token)
+	token, _ = p.findBearerToken(getReq)
+	assert.Equal(t, validToken, token)
+
+	failures := []string{
+		// Too many parts
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
+		// Not enough parts
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA",
+		// Invalid encrypted key
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.//////.dGVzdA.dGVzdA.dGVzdA",
+		// Invalid IV
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.//////.dGVzdA.dGVzdA",
+		// Invalid ciphertext
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.//////.dGVzdA",
+		// Invalid tag
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA.//////",
+		// Invalid header
+		"W10.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
+		// Invalid header
+		"######.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
+		// Missing alc/enc params
+		"e30.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
+	}
+
+	for _, failure := range failures {
+		getReq.Header = map[string][]string{
+			"Authorization": {fmt.Sprintf("Bearer %s", failure)},
+		}
+		_, err := p.findBearerToken(getReq)
+		assert.Error(t, err)
+	}
+
+	fmt.Printf("%s", token)
 }
