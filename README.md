@@ -121,7 +121,7 @@ Note: The user is checked against the group members list on initial authenticati
 1.  Create a new project: https://github.com/settings/developers
 2.  Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
 
-The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
+The GitHub auth provider supports two additional parameters to restrict authorization to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
 
     -github-org="": restrict logins to members of this organisation
     -github-team="": restrict logins to members of any of these teams (slug), separated by a comma
@@ -140,7 +140,11 @@ If you are using self-hosted GitLab, make sure you set the following to the appr
 
     -login-url="<your gitlab url>/oauth/authorize"
     -redeem-url="<your gitlab url>/oauth/token"
-    -validate-url="<your gitlab url>/api/v4/user"
+    -validate-url="<your gitlab url>/api/v4"
+
+The GitLub auth provider supports an additional parameter to restrict authorization to group level access.
+
+    -gitlab-group="": restrict logins to members of this group
 
 ### LinkedIn Auth Provider
 

@@ -2,6 +2,9 @@
 
 ## Changes since v3.2.0
 
+- *BC: when using gitlab provider, the `validate-url` has to point the the `api/v4` endpoint instead of the `api/v4/user` endpoint*
+- Add support for `email-domain` to gitlab provider (also searches additional emails)
+- Add option `gitlab-group`, to only authorize users of a certain gitlab group
 - [#111](https://github.com/pusher/oauth2_proxy/pull/111) Add option for telling where to find a login.gov JWT key file (@timothy-spencer)
 
 # v3.2.0
