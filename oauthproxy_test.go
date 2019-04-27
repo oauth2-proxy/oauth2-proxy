@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"crypto"
 	"encoding/base64"
 	"fmt"
+	"github.com/coreos/go-oidc"
 	"io"
 	"io/ioutil"
 	"net"
@@ -1132,6 +1134,53 @@ func TestClearSingleCookie(t *testing.T) {
 	header := rw.Header()
 
 	assert.Equal(t, 1, len(header["Set-Cookie"]), "should have 1 set-cookie header entries")
+}
+
+type NoOpKeySet struct {
+}
+
+func (NoOpKeySet) VerifySignature(ctx context.Context, jwt string) (payload []byte, err error) {
+	splitStrings := strings.Split(jwt, ".")
+	payloadString := splitStrings[1]
+	jsonString, err := base64.RawURLEncoding.DecodeString(payloadString)
+	return []byte(jsonString), err
+}
+
+func TestGetJwtSession(t *testing.T) {
+	/* token payload:
+	{
+	  "sub": "1234567890",
+	  "aud": "https://test.myapp.com",
+	  "name": "John Doe",
+	  "email": "john@example.com",
+	  "iss": "https://issuer.example.com",
+	  "iat": 1553691215,
+	  "exp": 1912151821
+	}
+	*/
+	goodJwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+		"eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoiaHR0cHM6Ly90ZXN0Lm15YXBwLmNvbSIsIm5hbWUiOiJKb2huIERvZSIsImVtY" +
+		"WlsIjoiam9obkBleGFtcGxlLmNvbSIsImlzcyI6Imh0dHBzOi8vaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNTUzNjkxMj" +
+		"E1LCJleHAiOjE5MTIxNTE4MjF9." +
+		"rLVyzOnEldUq_pNkfa-WiV8TVJYWyZCaM2Am_uo8FGg11zD7l-qmz3x1seTvqpH6Y0Ty00fmv6dJnGnC8WMnPXQiodRTfhBSe" +
+		"OKZMu0HkMD2sg52zlKkbfLTO6ic5VnbVgwjjrB8am_Ta6w7kyFUaB5C1BsIrrLMldkWEhynbb8"
+
+	keyset := NoOpKeySet{}
+	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
+		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+	p := OAuthProxy{}
+	p.jwtBearerVerifiers = append(p.jwtBearerVerifiers, verifier)
+	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: "example.com"}}
+
+	// Bearer
+	getReq.Header = map[string][]string{
+		"Authorization": {fmt.Sprintf("Bearer %s", goodJwt)},
+	}
+	session, _ := p.GetJwtSession(getReq)
+	assert.Equal(t, session.User, "john")
+	assert.Equal(t, session.Email, "john@example.com")
+	assert.Equal(t, session.ExpiresOn, time.Unix(1912151821, 0))
+	assert.Equal(t, session.IDToken, goodJwt)
 }
 
 func TestFindJwtBearerToken(t *testing.T) {
