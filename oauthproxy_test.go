@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"encoding/base64"
 	"fmt"
-	"github.com/coreos/go-oidc"
 	"io"
 	"io/ioutil"
 	"net"
@@ -17,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
