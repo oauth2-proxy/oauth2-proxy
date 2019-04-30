@@ -1170,17 +1170,67 @@ func TestGetJwtSession(t *testing.T) {
 		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
 	p := OAuthProxy{}
 	p.jwtBearerVerifiers = append(p.jwtBearerVerifiers, verifier)
-	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: "example.com"}}
+
+	req, _ := http.NewRequest("GET", "/", strings.NewReader(""))
+	authHeader := fmt.Sprintf("Bearer %s", goodJwt)
+	req.Header = map[string][]string{
+		"Authorization": {authHeader},
+	}
 
 	// Bearer
-	getReq.Header = map[string][]string{
-		"Authorization": {fmt.Sprintf("Bearer %s", goodJwt)},
-	}
-	session, _ := p.GetJwtSession(getReq)
+	session, _ := p.GetJwtSession(req)
 	assert.Equal(t, session.User, "john")
 	assert.Equal(t, session.Email, "john@example.com")
 	assert.Equal(t, session.ExpiresOn, time.Unix(1912151821, 0))
 	assert.Equal(t, session.IDToken, goodJwt)
+
+	jwtProviderServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%#v", r)
+		var payload string
+		payload = r.Header.Get("Authorization")
+		if payload == "" {
+			payload = "No Authorization header found."
+		}
+		w.WriteHeader(200)
+		w.Write([]byte(payload))
+	}))
+
+	opts := NewOptions()
+	opts.Upstreams = append(opts.Upstreams, jwtProviderServer.URL)
+	opts.PassAuthorization = true
+	opts.SetAuthorization = true
+	opts.SetXAuthRequest = true
+	opts.CookieSecret = "0123456789abcdef0123"
+	opts.SkipJwtBearerTokens = true
+	opts.Validate()
+
+	// We can't actually use opts.Validate() because it will attempt to find a jwks URI
+	opts.jwtBearerVerifiers = append(opts.jwtBearerVerifiers, verifier)
+
+	providerURL, _ := url.Parse(jwtProviderServer.URL)
+	const emailAddress = "john@example.com"
+
+	opts.provider = NewTestProvider(providerURL, emailAddress)
+	jwtTestProxy := NewOAuthProxy(opts, func(email string) bool {
+		return email == emailAddress
+	})
+
+	rw := httptest.NewRecorder()
+	jwtTestProxy.ServeHTTP(rw, req)
+	if rw.Code >= 400 {
+		t.Fatalf("expected 3xx got %d", rw.Code)
+	}
+
+	// Check PassAuthorization, should overwrite Basic header
+	assert.Equal(t, req.Header.Get("Authorization"), authHeader)
+	assert.Equal(t, req.Header.Get("X-Forwarded-User"), "john")
+	assert.Equal(t, req.Header.Get("X-Forwarded-Email"), "john@example.com")
+
+	// SetAuthorization and SetXAuthRequest
+	assert.Equal(t, rw.Header().Get("Authorization"), authHeader)
+	assert.Equal(t, rw.Header().Get("X-Auth-Request-User"), "john")
+	assert.Equal(t, rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
+
 }
 
 func TestFindJwtBearerToken(t *testing.T) {
