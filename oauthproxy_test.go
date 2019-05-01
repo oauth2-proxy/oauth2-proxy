@@ -1185,7 +1185,7 @@ func TestGetJwtSession(t *testing.T) {
 	assert.Equal(t, session.IDToken, goodJwt)
 
 	jwtProviderServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%#v", r)
+		logger.Printf("%#v", r)
 		var payload string
 		payload = r.Header.Get("Authorization")
 		if payload == "" {
