@@ -119,7 +119,6 @@ type Options struct {
 	sessionStore       sessionsapi.SessionStore
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
-	jwtIssuers         [][]string
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
 }
 
@@ -170,6 +169,12 @@ func NewOptions() *Options {
 		AuthLogging:           true,
 		AuthLoggingFormat:     logger.DefaultAuthLoggingFormat,
 	}
+}
+
+// JwtIssuer hold parsed JWT issuer info that's used to construct a verifier.
+type JwtIssuer struct {
+	issuerURI string
+	audience  string
 }
 
 func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string) {
@@ -255,25 +260,12 @@ func (o *Options) Validate() error {
 		}
 		// Configure extra issuers
 		if len(o.ExtraJwtIssuers) > 0 {
-			msgs = parseJwtIssuers(o, msgs)
-			for _, pair := range o.jwtIssuers {
-				issuer, audience := pair[0], pair[1]
-				config := &oidc.Config{
-					ClientID: audience,
-				}
-				// Try as an OpenID Connect Provider first
-				var verifier *oidc.IDTokenVerifier
-				provider, err := oidc.NewProvider(context.Background(), issuer)
+			var jwtIssuers []JwtIssuer
+			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
+			for _, jwtIssuer := range jwtIssuers {
+				verifier, err := newVerifierFromJwtIssuer(jwtIssuer)
 				if err != nil {
-					// Try as JWKS URI
-					jwksURI := strings.TrimSuffix(issuer, "/") + "/.well-known/jwks.json"
-					_, err := http.NewRequest("GET", jwksURI, nil)
-					if err != nil {
-						return err
-					}
-					verifier = oidc.NewVerifier(issuer, oidc.NewRemoteKeySet(context.Background(), jwksURI), config)
-				} else {
-					verifier = provider.Verifier(config)
+					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
 				}
 				o.jwtBearerVerifiers = append(o.jwtBearerVerifiers, verifier)
 			}
@@ -466,17 +458,43 @@ func parseSignatureKey(o *Options, msgs []string) []string {
 	return msgs
 }
 
-func parseJwtIssuers(o *Options, msgs []string) []string {
-	for _, jwtVerifier := range o.ExtraJwtIssuers {
+// parseJwtIssuers takes in an array of strings in the form of issuer=audience
+// and parses to an array of JwtIssuer structs.
+func parseJwtIssuers(issuers []string, msgs []string) ([]JwtIssuer, []string) {
+	var parsedIssuers []JwtIssuer
+	for _, jwtVerifier := range issuers {
 		components := strings.Split(jwtVerifier, "=")
 		if len(components) < 2 {
-			return append(msgs, "invalid jwt verifier uri=audience spec: "+
-				jwtVerifier)
+			msgs = append(msgs, fmt.Sprintf("invalid jwt verifier uri=audience spec: %s", jwtVerifier))
+			continue
 		}
 		uri, audience := components[0], strings.Join(components[1:], "=")
-		o.jwtIssuers = append(o.jwtIssuers, []string{uri, audience})
+		parsedIssuers = append(parsedIssuers, JwtIssuer{issuerURI: uri, audience: audience})
 	}
-	return msgs
+	return parsedIssuers, msgs
+}
+
+// newVerifierFromJwtIssuer takes in issuer information in JwtIssuer info and returns
+// a verifier for that issuer.
+func newVerifierFromJwtIssuer(jwtIssuer JwtIssuer) (*oidc.IDTokenVerifier, error) {
+	config := &oidc.Config{
+		ClientID: jwtIssuer.audience,
+	}
+	// Try as an OpenID Connect Provider first
+	var verifier *oidc.IDTokenVerifier
+	provider, err := oidc.NewProvider(context.Background(), jwtIssuer.issuerURI)
+	if err != nil {
+		// Try as JWKS URI
+		jwksURI := strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
+		_, err := http.NewRequest("GET", jwksURI, nil)
+		if err != nil {
+			return nil, err
+		}
+		verifier = oidc.NewVerifier(jwtIssuer.issuerURI, oidc.NewRemoteKeySet(context.Background(), jwksURI), config)
+	} else {
+		verifier = provider.Verifier(config)
+	}
+	return verifier, nil
 }
 
 func validateCookieName(o *Options, msgs []string) []string {
