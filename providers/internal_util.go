@@ -2,11 +2,11 @@ package providers
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/pusher/oauth2_proxy/api"
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 // stripToken is a helper function to obfuscate "access_token"
@@ -24,14 +24,14 @@ func stripToken(endpoint string) string {
 func stripParam(param, endpoint string) string {
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		log.Printf("error attempting to strip %s: %s", param, err)
+		logger.Printf("error attempting to strip %s: %s", param, err)
 		return endpoint
 	}
 
 	if u.RawQuery != "" {
 		values, err := url.ParseQuery(u.RawQuery)
 		if err != nil {
-			log.Printf("error attempting to strip %s: %s", param, err)
+			logger.Printf("error attempting to strip %s: %s", param, err)
 			return u.String()
 		}
 
@@ -57,18 +57,18 @@ func validateToken(p Provider, accessToken string, header http.Header) bool {
 	}
 	resp, err := api.RequestUnparsedResponse(endpoint, header)
 	if err != nil {
-		log.Printf("GET %s", stripToken(endpoint))
-		log.Printf("token validation request failed: %s", err)
+		logger.Printf("GET %s", stripToken(endpoint))
+		logger.Printf("token validation request failed: %s", err)
 		return false
 	}
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
-	log.Printf("%d GET %s %s", resp.StatusCode, stripToken(endpoint), body)
+	logger.Printf("%d GET %s %s", resp.StatusCode, stripToken(endpoint), body)
 
 	if resp.StatusCode == 200 {
 		return true
 	}
-	log.Printf("token validation request failed: status %d - %s", resp.StatusCode, body)
+	logger.Printf("token validation request failed: status %d - %s", resp.StatusCode, body)
 	return false
 }

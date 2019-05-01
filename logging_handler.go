@@ -6,17 +6,11 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
-	"io"
 	"net"
 	"net/http"
-	"net/url"
-	"text/template"
 	"time"
-)
 
-const (
-	defaultRequestLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 // responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP status
@@ -92,93 +86,22 @@ func (l *responseLogger) Flush() {
 	}
 }
 
-// logMessageData is the container for all values that are available as variables in the request logging format.
-// All values are pre-formatted strings so it is easy to use them in the format string.
-type logMessageData struct {
-	Client,
-	Host,
-	Protocol,
-	RequestDuration,
-	RequestMethod,
-	RequestURI,
-	ResponseSize,
-	StatusCode,
-	Timestamp,
-	Upstream,
-	UserAgent,
-	Username string
-}
-
 // loggingHandler is the http.Handler implementation for LoggingHandlerTo and its friends
 type loggingHandler struct {
-	writer      io.Writer
-	handler     http.Handler
-	enabled     bool
-	logTemplate *template.Template
+	handler http.Handler
 }
 
 // LoggingHandler provides an http.Handler which logs requests to the HTTP server
-func LoggingHandler(out io.Writer, h http.Handler, v bool, requestLoggingTpl string) http.Handler {
+func LoggingHandler(h http.Handler) http.Handler {
 	return loggingHandler{
-		writer:      out,
-		handler:     h,
-		enabled:     v,
-		logTemplate: template.Must(template.New("request-log").Parse(requestLoggingTpl)),
+		handler: h,
 	}
 }
 
 func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	t := time.Now()
 	url := *req.URL
-	logger := &responseLogger{w: w}
-	h.handler.ServeHTTP(logger, req)
-	if !h.enabled {
-		return
-	}
-	h.writeLogLine(logger.authInfo, logger.upstream, req, url, t, logger.Status(), logger.Size())
-}
-
-// Log entry for req similar to Apache Common Log Format.
-// ts is the timestamp with which the entry should be logged.
-// status, size are used to provide the response HTTP status and size.
-func (h loggingHandler) writeLogLine(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) {
-	if username == "" {
-		username = "-"
-	}
-	if upstream == "" {
-		upstream = "-"
-	}
-	if url.User != nil && username == "-" {
-		if name := url.User.Username(); name != "" {
-			username = name
-		}
-	}
-
-	client := req.Header.Get("X-Real-IP")
-	if client == "" {
-		client = req.RemoteAddr
-	}
-
-	if c, _, err := net.SplitHostPort(client); err == nil {
-		client = c
-	}
-
-	duration := float64(time.Now().Sub(ts)) / float64(time.Second)
-
-	h.logTemplate.Execute(h.writer, logMessageData{
-		Client:          client,
-		Host:            req.Host,
-		Protocol:        req.Proto,
-		RequestDuration: fmt.Sprintf("%0.3f", duration),
-		RequestMethod:   req.Method,
-		RequestURI:      fmt.Sprintf("%q", url.RequestURI()),
-		ResponseSize:    fmt.Sprintf("%d", size),
-		StatusCode:      fmt.Sprintf("%d", status),
-		Timestamp:       ts.Format("02/Jan/2006:15:04:05 -0700"),
-		Upstream:        upstream,
-		UserAgent:       fmt.Sprintf("%q", req.UserAgent()),
-		Username:        username,
-	})
-
-	h.writer.Write([]byte("\n"))
+	responseLogger := &responseLogger{w: w}
+	h.handler.ServeHTTP(responseLogger, req)
+	logger.PrintReq(responseLogger.authInfo, responseLogger.upstream, req, url, t, responseLogger.Status(), responseLogger.Size())
 }

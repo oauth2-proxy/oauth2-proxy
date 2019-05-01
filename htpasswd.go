@@ -5,9 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"io"
-	"log"
 	"os"
 
+	"github.com/pusher/oauth2_proxy/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -67,6 +67,6 @@ func (h *HtpasswdFile) Validate(user string, password string) bool {
 		return bcrypt.CompareHashAndPassword([]byte(realPassword), []byte(password)) == nil
 	}
 
-	log.Printf("Invalid htpasswd entry for %s. Must be a SHA or bcrypt entry.", user)
+	logger.Printf("Invalid htpasswd entry for %s. Must be a SHA or bcrypt entry.", user)
 	return false
 }
