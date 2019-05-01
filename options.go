@@ -61,8 +61,8 @@ type Options struct {
 
 	Upstreams             []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex         []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
-	SkipJwtBearerTokens   bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
-	ExtraJwtIssuers       []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
+	SkipJwtBearerTokens   bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
+	ExtraJwtIssuers       []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth         bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
 	BasicAuthPassword     string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken       bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
