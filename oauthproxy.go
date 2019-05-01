@@ -901,6 +901,7 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		}
 
 		var claims struct {
+			Subject  string `json:"sub"`
 			Email    string `json:"email"`
 			Verified *bool  `json:"email_verified"`
 		}
@@ -910,7 +911,7 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		}
 
 		if claims.Email == "" {
-			return nil, fmt.Errorf("id_token did not contain an email")
+			claims.Email = claims.Subject
 		}
 
 		if claims.Verified != nil && !*claims.Verified {
