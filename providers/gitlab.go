@@ -61,7 +61,7 @@ func (p *GitLabProvider) GetEmailAddress(s *SessionState) (string, error) {
 			}
 		}
 		if !groupsValid {
-			return "", fmt.Errorf("user has no acces to group %s", p.Group)
+			return "", fmt.Errorf("user has no access to group %s", p.Group)
 		}
 	}
 
