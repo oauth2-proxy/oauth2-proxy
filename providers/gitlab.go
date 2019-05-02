@@ -88,7 +88,7 @@ func (p *GitLabProvider) GetEmailAddress(s *SessionState) (string, error) {
 	for i := range secondaryUserEmailsJSON.MustArray() {
 		secondaryUserEmail, secondaryUserEmailError := secondaryUserEmailsJSON.GetIndex(i).Get("email").String()
 		if secondaryUserEmailError == nil {
-			emailCandidates = append(emailCandidates, secondaryUserEmail)
+			userEmailCandidates = append(userEmailCandidates, secondaryUserEmail)
 		}
 	}
 	for _, userEmailCandidate := range userEmailCandidates {
