@@ -65,40 +65,40 @@ func (p *GitLabProvider) GetEmailAddress(s *SessionState) (string, error) {
 		}
 	}
 
-	singlemailJSON, singlemailJSONError := data(p.ValidateURL.String()+"/user?access_token="+s.AccessToken, s)
-	if singlemailJSONError != nil {
-		return "", singlemailJSONError
+	primaryUserEmailJSON, primaryUserEmailJSONError := data(p.ValidateURL.String()+"/user?access_token="+s.AccessToken, s)
+	if primaryUserEmailJSONError != nil {
+		return "", primaryUserEmailJSONError
 	}
-	singlemail, singlemailError := singlemailJSON.Get("email").String()
-	if singlemailError != nil {
-		return "", singlemailError
+	primaryUserEmail, primaryUserEmailError := primaryUserEmailJSON.Get("email").String()
+	if primaryUserEmailError != nil {
+		return "", primaryUserEmailError
 	}
 
 	if (len(p.EmailDomains) == 0) || (p.EmailDomains[0] == "*") {
-		return singlemail, nil
+		return primaryUserEmail, nil
 	}
 
-	emailCandidates := []string{
-		singlemail,
+	userEmailCandidates := []string{
+		primaryUserEmail,
 	}
-	emailsJSON, emailsError := data(p.ValidateURL.String()+"/user/emails?access_token="+s.AccessToken, s)
-	if emailsError != nil {
-		return "", emailsError
+	secondaryUserEmailsJSON, secondaryUserEmailsJSONError := data(p.ValidateURL.String()+"/user/emails?access_token="+s.AccessToken, s)
+	if secondaryUserEmailsJSONError != nil {
+		return "", secondaryUserEmailsJSONError
 	}
-	for i := range emailsJSON.MustArray() {
-		objmail, objmailError := emailsJSON.GetIndex(i).Get("email").String()
-		if objmailError == nil {
-			emailCandidates = append(emailCandidates, objmail)
+	for i := range secondaryUserEmailsJSON.MustArray() {
+		secondaryUserEmail, secondaryUserEmailError := secondaryUserEmailsJSON.GetIndex(i).Get("email").String()
+		if secondaryUserEmailError == nil {
+			emailCandidates = append(emailCandidates, secondaryUserEmail)
 		}
 	}
-	for _, emailCandidate := range emailCandidates {
+	for _, userEmailCandidate := range userEmailCandidates {
 		for _, domain := range p.EmailDomains {
-			if strings.HasSuffix(emailCandidate, domain) {
-				return emailCandidate, nil
+			if strings.HasSuffix(userEmailCandidate, domain) {
+				return userEmailCandidate, nil
 			}
 		}
 	}
-	return emailCandidates[0], nil
+	return userEmailCandidates[0], nil
 }
 
 // SetGroup adds api scope to the oidc scopes
