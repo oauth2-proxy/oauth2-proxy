@@ -5,6 +5,21 @@
 - *BC: when using gitlab provider, the `validate-url` has to point the the `api/v4` endpoint instead of the `api/v4/user` endpoint*
 - Add support for `email-domain` to gitlab provider (also searches additional emails)
 - Add option `gitlab-group`, to only authorize users of a certain gitlab group
+- [#52](https://github.com/pusher/oauth2_proxy/pull/52) Logging Improvements (@MisterWil)
+  - Implement flags to configure file logging
+    - `-logging-filename` Defines the filename to log to
+    - `-logging-max-size` Defines the maximum
+    - `-logging-max-age` Defines the maximum age of backups to retain
+    - `-logging-max-backups` Defines the maximum number of rollover log files to retain
+    - `-logging-compress` Defines if rollover log files should be compressed
+    - `-logging-local-time` Defines if logging date and time should be local or UTC
+  - Implement two new flags to enable or disable specific logging types
+    - `-standard-logging` Enables or disables standard (not request or auth) logging
+    - `-auth-logging` Enables or disables auth logging
+  - Implement two new flags to customize the logging format
+    - `-standard-logging-format` Sets the format for standard logging
+    - `-auth-logging-format` Sets the format for auth logging
+
 - [#111](https://github.com/pusher/oauth2_proxy/pull/111) Add option for telling where to find a login.gov JWT key file (@timothy-spencer)
 
 # v3.2.0

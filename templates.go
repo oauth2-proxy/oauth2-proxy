@@ -2,18 +2,19 @@ package main
 
 import (
 	"html/template"
-	"log"
 	"path"
+
+	"github.com/pusher/oauth2_proxy/logger"
 )
 
 func loadTemplates(dir string) *template.Template {
 	if dir == "" {
 		return getTemplates()
 	}
-	log.Printf("using custom template directory %q", dir)
+	logger.Printf("using custom template directory %q", dir)
 	t, err := template.New("").ParseFiles(path.Join(dir, "sign_in.html"), path.Join(dir, "error.html"))
 	if err != nil {
-		log.Fatalf("failed parsing template %s", err)
+		logger.Fatalf("failed parsing template %s", err)
 	}
 	return t
 }
@@ -151,7 +152,7 @@ func getTemplates() *template.Template {
 </html>
 {{end}}`)
 	if err != nil {
-		log.Fatalf("failed parsing template %s", err)
+		logger.Fatalf("failed parsing template %s", err)
 	}
 
 	t, err = t.Parse(`{{define "error.html"}}
@@ -169,7 +170,7 @@ func getTemplates() *template.Template {
 </body>
 </html>{{end}}`)
 	if err != nil {
-		log.Fatalf("failed parsing template %s", err)
+		logger.Fatalf("failed parsing template %s", err)
 	}
 	return t
 }
