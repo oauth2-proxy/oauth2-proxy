@@ -1,4 +1,4 @@
-FROM golang:1.11-stretch AS builder
+FROM golang:1.12-stretch AS builder
 
 # Download tools
 RUN wget -O $GOPATH/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
