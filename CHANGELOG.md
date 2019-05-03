@@ -2,6 +2,7 @@
 
 ## Changes since v3.2.0
 
+- [#144](https://github.com/pusher/oauth2_proxy/pull/144) Use GO 1.12 for ARM builds (@kskewes)
 - [#142](https://github.com/pusher/oauth2_proxy/pull/142) ARM Docker USER fix (@kskewes)
 - [#52](https://github.com/pusher/oauth2_proxy/pull/52) Logging Improvements (@MisterWil)
   - Implement flags to configure file logging
