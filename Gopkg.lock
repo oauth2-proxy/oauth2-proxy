@@ -231,6 +231,7 @@
     "google.golang.org/api/googleapi",
     "gopkg.in/fsnotify/fsnotify.v1",
     "gopkg.in/natefinch/lumberjack.v2",
+    "gopkg.in/square/go-jose.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
