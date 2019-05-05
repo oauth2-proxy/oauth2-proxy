@@ -18,6 +18,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	"github.com/pusher/oauth2_proxy/providers"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -49,14 +50,8 @@ type Options struct {
 	CustomTemplatesDir       string   `flag:"custom-templates-dir" cfg:"custom_templates_dir" env:"OAUTH2_PROXY_CUSTOM_TEMPLATES_DIR"`
 	Footer                   string   `flag:"footer" cfg:"footer" env:"OAUTH2_PROXY_FOOTER"`
 
-	CookieName     string        `flag:"cookie-name" cfg:"cookie_name" env:"OAUTH2_PROXY_COOKIE_NAME"`
-	CookieSecret   string        `flag:"cookie-secret" cfg:"cookie_secret" env:"OAUTH2_PROXY_COOKIE_SECRET"`
-	CookieDomain   string        `flag:"cookie-domain" cfg:"cookie_domain" env:"OAUTH2_PROXY_COOKIE_DOMAIN"`
-	CookiePath     string        `flag:"cookie-path" cfg:"cookie_path" env:"OAUTH2_PROXY_COOKIE_PATH"`
-	CookieExpire   time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"OAUTH2_PROXY_COOKIE_EXPIRE"`
-	CookieRefresh  time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
-	CookieSecure   bool          `flag:"cookie-secure" cfg:"cookie_secure" env:"OAUTH2_PROXY_COOKIE_SECURE"`
-	CookieHTTPOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly" env:"OAUTH2_PROXY_COOKIE_HTTPONLY"`
+	// Embed CookieOptions
+	options.CookieOptions
 
 	Upstreams             []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex         []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
@@ -126,16 +121,18 @@ type SignatureData struct {
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:           "/oauth2",
-		ProxyWebSockets:       true,
-		HTTPAddress:           "127.0.0.1:4180",
-		HTTPSAddress:          ":443",
-		DisplayHtpasswdForm:   true,
-		CookieName:            "_oauth2_proxy",
-		CookieSecure:          true,
-		CookieHTTPOnly:        true,
-		CookieExpire:          time.Duration(168) * time.Hour,
-		CookieRefresh:         time.Duration(0),
+		ProxyPrefix:         "/oauth2",
+		ProxyWebSockets:     true,
+		HTTPAddress:         "127.0.0.1:4180",
+		HTTPSAddress:        ":443",
+		DisplayHtpasswdForm: true,
+		CookieOptions: options.CookieOptions{
+			CookieName:     "_oauth2_proxy",
+			CookieSecure:   true,
+			CookieHTTPOnly: true,
+			CookieExpire:   time.Duration(168) * time.Hour,
+			CookieRefresh:  time.Duration(0),
+		},
 		SetXAuthRequest:       false,
 		SkipAuthPreflight:     false,
 		PassBasicAuth:         true,
