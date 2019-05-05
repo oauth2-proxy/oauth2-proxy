@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 )
 
 // GitHubProvider represents an GitHub based Identity Provider
@@ -200,7 +201,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
+func (p *GitHubProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
 
 	var emails []struct {
 		Email    string `json:"email"`
@@ -259,7 +260,7 @@ func (p *GitHubProvider) GetEmailAddress(s *SessionState) (string, error) {
 }
 
 // GetUserName returns the Account user name
-func (p *GitHubProvider) GetUserName(s *SessionState) (string, error) {
+func (p *GitHubProvider) GetUserName(s *sessions.SessionState) (string, error) {
 	var user struct {
 		Login string `json:"login"`
 		Email string `json:"email"`

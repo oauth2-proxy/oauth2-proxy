@@ -6,6 +6,7 @@ import (
 
 	"github.com/pusher/oauth2_proxy/api"
 	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 )
 
 // GitLabProvider represents an GitLab based Identity Provider
@@ -44,7 +45,7 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitLabProvider) GetEmailAddress(s *SessionState) (string, error) {
+func (p *GitLabProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
 
 	req, err := http.NewRequest("GET",
 		p.ValidateURL.String()+"?access_token="+s.AccessToken, nil)

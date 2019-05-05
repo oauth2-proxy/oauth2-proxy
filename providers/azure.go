@@ -9,6 +9,7 @@ import (
 	"github.com/bitly/go-simplejson"
 	"github.com/pusher/oauth2_proxy/api"
 	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 )
 
 // AzureProvider represents an Azure based Identity Provider
@@ -88,7 +89,7 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
+func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
 	var email string
 	var err error
 
