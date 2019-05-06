@@ -2,6 +2,7 @@ package sessions_test
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
 )
@@ -23,16 +25,14 @@ var _ = Describe("NewSessionStore", func() {
 	var cookieOpts *options.CookieOptions
 
 	var request *http.Request
-	var response http.ResponseWriter
+	var response *httptest.ResponseRecorder
 	var session *sessionsapi.SessionState
 
 	CheckCookieOptions := func() {
 		Context("the cookies returned", func() {
 			var cookies []*http.Cookie
 			BeforeEach(func() {
-				req := http.Request{}
-				req.Header.Add("Cookie", response.Header().Get("Set-Cookie"))
-				cookies = req.Cookies()
+				cookies = response.Result().Cookies()
 			})
 
 			It("have the correct name set", func() {
@@ -97,6 +97,17 @@ var _ = Describe("NewSessionStore", func() {
 
 			Context("when ClearSession is called", func() {
 				BeforeEach(func() {
+					cookie := cookies.MakeCookie(request,
+						cookieOpts.CookieName,
+						"foo",
+						cookieOpts.CookiePath,
+						cookieOpts.CookieDomain,
+						cookieOpts.CookieHTTPOnly,
+						cookieOpts.CookieSecure,
+						cookieOpts.CookieExpire,
+						time.Now(),
+					)
+					request.AddCookie(cookie)
 					err := ss.ClearSession(response, request)
 					Expect(err).ToNot(HaveOccurred())
 				})
@@ -166,6 +177,9 @@ var _ = Describe("NewSessionStore", func() {
 			CookieSecure:   true,
 			CookieHTTPOnly: true,
 		}
+
+		request = httptest.NewRequest("GET", "http://example.com/", nil)
+		response = httptest.NewRecorder()
 	})
 
 	Context("with type 'cookie'", func() {

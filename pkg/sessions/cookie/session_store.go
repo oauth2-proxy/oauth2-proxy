@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
@@ -19,10 +21,14 @@ var _ sessions.SessionStore = &SessionStore{}
 // SessionStore is an implementation of the sessions.SessionStore
 // interface that stores sessions in client side cookies
 type SessionStore struct {
-	CookieCipher *cookie.Cipher
-	CookieExpire time.Duration
-	CookieName   string
-	CookieSecret string
+	CookieCipher   *cookie.Cipher
+	CookieDomain   string
+	CookieExpire   time.Duration
+	CookieHTTPOnly bool
+	CookieName     string
+	CookiePath     string
+	CookieSecret   string
+	CookieSecure   bool
 }
 
 // SaveSession takes a sessions.SessionState and stores the information from it
@@ -54,7 +60,35 @@ func (s *SessionStore) LoadSession(req *http.Request) (*sessions.SessionState, e
 // ClearSession clears any saved session information by writing a cookie to
 // clear the session
 func (s *SessionStore) ClearSession(rw http.ResponseWriter, req *http.Request) error {
-	return fmt.Errorf("method not implemented")
+	var cookies []*http.Cookie
+
+	// matches CookieName, CookieName_<number>
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieName))
+
+	for _, c := range req.Cookies() {
+		if cookieNameRegex.MatchString(c.Name) {
+			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1)
+
+			http.SetCookie(rw, clearCookie)
+			cookies = append(cookies, clearCookie)
+		}
+	}
+
+	return nil
+}
+
+func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration) *http.Cookie {
+	return cookies.MakeCookie(
+		req,
+		name,
+		value,
+		s.CookiePath,
+		s.CookieDomain,
+		s.CookieHTTPOnly,
+		s.CookieSecure,
+		expiration,
+		time.Now(),
+	)
 }
 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
@@ -70,10 +104,14 @@ func NewCookieSessionStore(opts options.CookieStoreOptions, cookieOpts *options.
 	}
 
 	return &SessionStore{
-		CookieCipher: cipher,
-		CookieExpire: cookieOpts.CookieExpire,
-		CookieName:   cookieOpts.CookieName,
-		CookieSecret: cookieOpts.CookieSecret,
+		CookieCipher:   cipher,
+		CookieDomain:   cookieOpts.CookieDomain,
+		CookieExpire:   cookieOpts.CookieExpire,
+		CookieHTTPOnly: cookieOpts.CookieHTTPOnly,
+		CookieName:     cookieOpts.CookieName,
+		CookiePath:     cookieOpts.CookiePath,
+		CookieSecret:   cookieOpts.CookieSecret,
+		CookieSecure:   cookieOpts.CookieSecure,
 	}, nil
 }
 
