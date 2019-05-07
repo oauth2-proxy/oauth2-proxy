@@ -1,6 +1,8 @@
 package sessions_test
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -133,7 +135,16 @@ var _ = Describe("NewSessionStore", func() {
 					Expect(loadedSession.User).To(Equal(session.User))
 				} else {
 					// All fields stored in session if encrypted
-					Expect(loadedSession).To(Equal(session))
+
+					// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
+					l := *loadedSession
+					l.ExpiresOn = time.Time{}
+					s := *session
+					s.ExpiresOn = time.Time{}
+					Expect(l).To(Equal(s))
+
+					// Compare time.Time separately
+					Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
 				}
 			})
 		})
@@ -163,6 +174,20 @@ var _ = Describe("NewSessionStore", func() {
 				}
 
 				var err error
+				ss, err = sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			SessionStoreInterfaceTests()
+		})
+
+		Context("with a cookie-secret set", func() {
+			BeforeEach(func() {
+				secret := make([]byte, 32)
+				_, err := rand.Read(secret)
+				Expect(err).ToNot(HaveOccurred())
+				cookieOpts.CookieSecret = base64.URLEncoding.EncodeToString(secret)
+
 				ss, err = sessions.NewSessionStore(opts, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 			})
