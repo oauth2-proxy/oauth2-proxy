@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
@@ -72,7 +73,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 		return
 	}
 	if a := v.Get("access_token"); a != "" {
-		s = &sessions.SessionState{AccessToken: a}
+		s = &sessions.SessionState{AccessToken: a, CreatedAt: time.Now()}
 	} else {
 		err = fmt.Errorf("no access token found %s", body)
 	}
