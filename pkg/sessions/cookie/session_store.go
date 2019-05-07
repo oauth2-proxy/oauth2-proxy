@@ -126,7 +126,7 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 // the configuration given
 func NewCookieSessionStore(opts options.CookieStoreOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
 	var cipher *cookie.Cipher
-	if len(cookieOpts.CookieSecret) > 0 {
+	if opts.EnableCipher {
 		var err error
 		cipher, err = cookie.NewCipher(utils.SecretBytes(cookieOpts.CookieSecret))
 		if err != nil {

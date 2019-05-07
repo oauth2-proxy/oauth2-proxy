@@ -181,18 +181,32 @@ var _ = Describe("NewSessionStore", func() {
 			SessionStoreInterfaceTests()
 		})
 
-		Context("with a cookie-secret set", func() {
+		Context("with encryption enabled", func() {
 			BeforeEach(func() {
 				secret := make([]byte, 32)
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.CookieSecret = base64.URLEncoding.EncodeToString(secret)
+				opts.EnableCipher = true
 
 				ss, err = sessions.NewSessionStore(opts, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			SessionStoreInterfaceTests()
+		})
+
+		Context("with encryption enabled, but no secret", func() {
+			BeforeEach(func() {
+				opts.EnableCipher = true
+			})
+
+			It("returns an error", func() {
+				ss, err := sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("unable to create cipher: crypto/aes: invalid key size 0"))
+				Expect(ss).To(BeNil())
+			})
 		})
 	}
 
