@@ -110,6 +110,33 @@ var _ = Describe("NewSessionStore", func() {
 
 			CheckCookieOptions()
 		})
+
+		Context("when LoadSession is called", func() {
+			var loadedSession *sessionsapi.SessionState
+			BeforeEach(func() {
+				req := httptest.NewRequest("GET", "http://example.com/", nil)
+				resp := httptest.NewRecorder()
+				err := ss.SaveSession(resp, req, session)
+				Expect(err).ToNot(HaveOccurred())
+
+				for _, cookie := range resp.Result().Cookies() {
+					request.AddCookie(cookie)
+				}
+				loadedSession, err = ss.LoadSession(request)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("loads a session equal to the original session", func() {
+				if cookieOpts.CookieSecret == "" {
+					// Only Email and User stored in session when encrypted
+					Expect(loadedSession.Email).To(Equal(session.Email))
+					Expect(loadedSession.User).To(Equal(session.User))
+				} else {
+					// All fields stored in session if encrypted
+					Expect(loadedSession).To(Equal(session))
+				}
+			})
+		})
 	}
 
 	RunCookieTests := func() {
@@ -141,7 +168,6 @@ var _ = Describe("NewSessionStore", func() {
 			})
 
 			SessionStoreInterfaceTests()
-
 		})
 	}
 
