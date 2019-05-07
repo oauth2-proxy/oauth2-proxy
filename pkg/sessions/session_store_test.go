@@ -27,6 +27,7 @@ var _ = Describe("NewSessionStore", func() {
 	var request *http.Request
 	var response *httptest.ResponseRecorder
 	var session *sessionsapi.SessionState
+	var ss sessionsapi.SessionStore
 
 	CheckCookieOptions := func() {
 		Context("the cookies returned", func() {
@@ -72,9 +73,46 @@ var _ = Describe("NewSessionStore", func() {
 		})
 	}
 
-	RunCookieTests := func() {
-		var ss sessionsapi.SessionStore
+	SessionStoreInterfaceTests := func() {
+		Context("when SaveSession is called", func() {
+			BeforeEach(func() {
+				err := ss.SaveSession(response, request, session)
+				Expect(err).ToNot(HaveOccurred())
+			})
 
+			It("sets a `set-cookie` header in the response", func() {
+				Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
+			})
+
+			CheckCookieOptions()
+		})
+
+		Context("when ClearSession is called", func() {
+			BeforeEach(func() {
+				cookie := cookies.MakeCookie(request,
+					cookieOpts.CookieName,
+					"foo",
+					cookieOpts.CookiePath,
+					cookieOpts.CookieDomain,
+					cookieOpts.CookieHTTPOnly,
+					cookieOpts.CookieSecure,
+					cookieOpts.CookieExpire,
+					time.Now(),
+				)
+				request.AddCookie(cookie)
+				err := ss.ClearSession(response, request)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("sets a `set-cookie` header in the response", func() {
+				Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
+			})
+
+			CheckCookieOptions()
+		})
+	}
+
+	RunCookieTests := func() {
 		Context("with default options", func() {
 			BeforeEach(func() {
 				var err error
@@ -82,42 +120,7 @@ var _ = Describe("NewSessionStore", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			Context("when SaveSession is called", func() {
-				BeforeEach(func() {
-					err := ss.SaveSession(response, request, session)
-					Expect(err).ToNot(HaveOccurred())
-				})
-
-				It("sets a `set-cookie` header in the response", func() {
-					Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
-				})
-
-				CheckCookieOptions()
-			})
-
-			Context("when ClearSession is called", func() {
-				BeforeEach(func() {
-					cookie := cookies.MakeCookie(request,
-						cookieOpts.CookieName,
-						"foo",
-						cookieOpts.CookiePath,
-						cookieOpts.CookieDomain,
-						cookieOpts.CookieHTTPOnly,
-						cookieOpts.CookieSecure,
-						cookieOpts.CookieExpire,
-						time.Now(),
-					)
-					request.AddCookie(cookie)
-					err := ss.ClearSession(response, request)
-					Expect(err).ToNot(HaveOccurred())
-				})
-
-				It("sets a `set-cookie` header in the response", func() {
-					Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
-				})
-
-				CheckCookieOptions()
-			})
+			SessionStoreInterfaceTests()
 		})
 
 		Context("with non-default options", func() {
@@ -137,46 +140,13 @@ var _ = Describe("NewSessionStore", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			Context("when SaveSession is called", func() {
-				BeforeEach(func() {
-					err := ss.SaveSession(response, request, session)
-					Expect(err).ToNot(HaveOccurred())
-				})
+			SessionStoreInterfaceTests()
 
-				It("sets a `set-cookie` header in the response", func() {
-					Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
-				})
-
-				CheckCookieOptions()
-			})
-
-			Context("when ClearSession is called", func() {
-				BeforeEach(func() {
-					cookie := cookies.MakeCookie(request,
-						cookieOpts.CookieName,
-						"foo",
-						cookieOpts.CookiePath,
-						cookieOpts.CookieDomain,
-						cookieOpts.CookieHTTPOnly,
-						cookieOpts.CookieSecure,
-						cookieOpts.CookieExpire,
-						time.Now(),
-					)
-					request.AddCookie(cookie)
-					err := ss.ClearSession(response, request)
-					Expect(err).ToNot(HaveOccurred())
-				})
-
-				It("sets a `set-cookie` header in the response", func() {
-					Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
-				})
-
-				CheckCookieOptions()
-			})
 		})
 	}
 
 	BeforeEach(func() {
+		ss = nil
 		opts = &options.SessionOptions{}
 
 		// Set default options in CookieOptions
