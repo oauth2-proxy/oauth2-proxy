@@ -218,7 +218,7 @@ func DecodeSessionState(v string, c *cookie.Cipher) (*SessionState, error) {
 		}
 	}
 	if ss.User == "" {
-		ss.User = strings.Split(ss.Email, "@")[0]
+		ss.User = ss.Email
 	}
 	return ss, nil
 }

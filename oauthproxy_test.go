@@ -291,8 +291,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	opts.Validate()
 
 	providerURL, _ := url.Parse(providerServer.URL)
-	const emailAddress = "michael.bland@gsa.gov"
-	const username = "michael.bland"
+	const emailAddress = "john.doe@example.com"
 
 	opts.provider = NewTestProvider(providerURL, emailAddress)
 	proxy := NewOAuthProxy(opts, func(email string) bool {
@@ -335,7 +334,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	rw = httptest.NewRecorder()
 	proxy.ServeHTTP(rw, req)
 
-	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+opts.BasicAuthPassword))
+	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(emailAddress+":"+opts.BasicAuthPassword))
 	assert.Equal(t, expectedHeader, rw.Body.String())
 	providerServer.Close()
 }
@@ -654,13 +653,13 @@ func (p *ProcessCookieTest) LoadCookiedSession() (*providers.SessionState, time.
 func TestLoadCookiedSession(t *testing.T) {
 	pcTest := NewProcessCookieTestWithDefaults()
 
-	startSession := &providers.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
+	startSession := &providers.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token"}
 	pcTest.SaveSession(startSession, time.Now())
 
 	session, _, err := pcTest.LoadCookiedSession()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, startSession.Email, session.Email)
-	assert.Equal(t, "michael.bland", session.User)
+	assert.Equal(t, "john.doe@example.com", session.User)
 	assert.Equal(t, startSession.AccessToken, session.AccessToken)
 }
 
