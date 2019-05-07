@@ -11,7 +11,6 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/requests"
 
 	"golang.org/x/oauth2"
-
 )
 
 // OIDCProvider represents an OIDC based Identity Provider
@@ -135,12 +134,12 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		}
 		req.Header = getOIDCHeader(token.AccessToken)
 
-		json, err := requests.Request(req)
+		respJson, err := requests.Request(req)
 		if err != nil {
 			return nil, err
 		}
 
-		email, err := json.Get("email").String()
+		email, err := respJson.Get("email").String()
 		if err != nil {
 			return nil, fmt.Errorf("id_token nor userinfo endpoint did not contain an email")
 		}
