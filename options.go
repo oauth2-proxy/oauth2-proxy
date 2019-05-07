@@ -53,6 +53,9 @@ type Options struct {
 	// Embed CookieOptions
 	options.CookieOptions
 
+	// Embed SessionOptions
+	options.SessionOptions
+
 	Upstreams             []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex         []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
 	PassBasicAuth         bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
