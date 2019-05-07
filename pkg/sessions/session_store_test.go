@@ -150,7 +150,7 @@ var _ = Describe("NewSessionStore", func() {
 		})
 	}
 
-	RunCookieTests := func() {
+	RunSessionTests := func() {
 		Context("with default options", func() {
 			BeforeEach(func() {
 				var err error
@@ -235,7 +235,7 @@ var _ = Describe("NewSessionStore", func() {
 		})
 
 		Context("the cookie.SessionStore", func() {
-			RunCookieTests()
+			RunSessionTests()
 		})
 	})
 
