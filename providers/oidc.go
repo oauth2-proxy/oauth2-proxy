@@ -128,6 +128,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		RefreshToken: token.RefreshToken,
 		ExpiresOn:    token.Expiry,
 		Email:        claims.Email,
+		User:         claims.Subject,
 	}, nil
 }
 
