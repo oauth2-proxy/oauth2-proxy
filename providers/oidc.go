@@ -134,12 +134,12 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		}
 		req.Header = getOIDCHeader(token.AccessToken)
 
-		respJson, err := requests.Request(req)
+		respJSON, err := requests.Request(req)
 		if err != nil {
 			return nil, err
 		}
 
-		email, err := respJson.Get("email").String()
+		email, err := respJSON.Get("email").String()
 		if err != nil {
 			return nil, fmt.Errorf("id_token nor userinfo endpoint did not contain an email")
 		}
