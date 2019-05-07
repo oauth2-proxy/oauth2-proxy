@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,6 +74,16 @@ var _ = Describe("NewSessionStore", func() {
 				}
 			})
 
+			It("have a signature timestamp matching session.CreatedAt", func() {
+				for _, cookie := range cookies {
+					if cookie.Value != "" {
+						parts := strings.Split(cookie.Value, "|")
+						Expect(parts).To(HaveLen(3))
+						Expect(parts[1]).To(Equal(strconv.Itoa(int(session.CreatedAt.Unix()))))
+					}
+				}
+			})
+
 		})
 	}
 
@@ -84,6 +96,10 @@ var _ = Describe("NewSessionStore", func() {
 
 			It("sets a `set-cookie` header in the response", func() {
 				Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
+			})
+
+			It("Ensures the session CreatedAt is not zero", func() {
+				Expect(session.CreatedAt.IsZero()).To(BeFalse())
 			})
 
 			CheckCookieOptions()
@@ -138,12 +154,15 @@ var _ = Describe("NewSessionStore", func() {
 
 					// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
 					l := *loadedSession
+					l.CreatedAt = time.Time{}
 					l.ExpiresOn = time.Time{}
 					s := *session
+					s.CreatedAt = time.Time{}
 					s.ExpiresOn = time.Time{}
 					Expect(l).To(Equal(s))
 
 					// Compare time.Time separately
+					Expect(loadedSession.CreatedAt.Equal(session.CreatedAt)).To(BeTrue())
 					Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
 				}
 			})

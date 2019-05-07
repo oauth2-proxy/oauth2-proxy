@@ -456,27 +456,8 @@ func (p *OAuthProxy) SetCSRFCookie(rw http.ResponseWriter, req *http.Request, va
 
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
-func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) {
-	var cookies []*http.Cookie
-
-	// matches CookieName, CookieName_<number>
-	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", p.CookieName))
-
-	for _, c := range req.Cookies() {
-		if cookieNameRegex.MatchString(c.Name) {
-			clearCookie := p.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
-
-			http.SetCookie(rw, clearCookie)
-			cookies = append(cookies, clearCookie)
-		}
-	}
-
-	// ugly hack because default domain changed
-	if p.CookieDomain == "" && len(cookies) > 0 {
-		clr2 := *cookies[0]
-		clr2.Domain = req.Host
-		http.SetCookie(rw, &clr2)
-	}
+func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) error {
+	return p.sessionStore.Clear(rw, req)
 }
 
 // SetSessionCookie adds the user's session cookie to the response
@@ -487,35 +468,13 @@ func (p *OAuthProxy) SetSessionCookie(rw http.ResponseWriter, req *http.Request,
 }
 
 // LoadCookiedSession reads the user's authentication details from the request
-func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*sessionsapi.SessionState, time.Duration, error) {
-	var age time.Duration
-	c, err := loadCookie(req, p.CookieName)
-	if err != nil {
-		// always http.ErrNoCookie
-		return nil, age, fmt.Errorf("Cookie %q not present", p.CookieName)
-	}
-	val, timestamp, ok := cookie.Validate(c, p.CookieSeed, p.CookieExpire)
-	if !ok {
-		return nil, age, errors.New("Cookie Signature not valid")
-	}
-
-	session, err := p.provider.SessionFromCookie(val, p.CookieCipher)
-	if err != nil {
-		return nil, age, err
-	}
-
-	age = time.Now().Truncate(time.Second).Sub(timestamp)
-	return session, age, nil
+func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*sessionsapi.SessionState, error) {
+	return p.sessionStore.Load(req)
 }
 
 // SaveSession creates a new session cookie value and sets this on the response
 func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) error {
-	value, err := p.provider.CookieForSession(s, p.CookieCipher)
-	if err != nil {
-		return err
-	}
-	p.SetSessionCookie(rw, req, value)
-	return nil
+	return p.sessionStore.Save(rw, req, s)
 }
 
 // RobotsTxt disallows scraping pages from the OAuthProxy
@@ -835,12 +794,12 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	var saveSession, clearSession, revalidated bool
 	remoteAddr := getRemoteAddr(req)
 
-	session, sessionAge, err := p.LoadCookiedSession(req)
+	session, err := p.LoadCookiedSession(req)
 	if err != nil {
 		logger.Printf("Error loading cookied session: %s", err)
 	}
-	if session != nil && sessionAge > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
-		logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", sessionAge, session, p.CookieRefresh)
+	if session != nil && session.Age() > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
+		logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, p.CookieRefresh)
 		saveSession = true
 	}
 

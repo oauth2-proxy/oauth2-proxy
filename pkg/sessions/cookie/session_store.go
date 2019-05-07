@@ -40,11 +40,14 @@ type SessionStore struct {
 // Save takes a sessions.SessionState and stores the information from it
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
+	if ss.CreatedAt.IsZero() {
+		ss.CreatedAt = time.Now()
+	}
 	value, err := utils.CookieForSession(ss, s.CookieCipher)
 	if err != nil {
 		return err
 	}
-	s.setSessionCookie(rw, req, value)
+	s.setSessionCookie(rw, req, value, ss.CreatedAt)
 	return nil
 }
 
@@ -89,8 +92,8 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 }
 
 // setSessionCookie adds the user's session cookie to the response
-func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val string) {
-	for _, c := range s.makeSessionCookie(req, val, s.CookieExpire, time.Now()) {
+func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val string, created time.Time) {
+	for _, c := range s.makeSessionCookie(req, val, s.CookieExpire, created) {
 		http.SetCookie(rw, c)
 	}
 }
