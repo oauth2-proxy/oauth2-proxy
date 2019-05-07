@@ -15,6 +15,12 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
+const (
+	// Cookies are limited to 4kb including the length of the cookie name,
+	// the cookie name can be up to 256 bytes
+	maxCookieLength = 3840
+)
+
 // Ensure CookieSessionStore implements the interface
 var _ sessions.SessionStore = &SessionStore{}
 
@@ -34,7 +40,12 @@ type SessionStore struct {
 // SaveSession takes a sessions.SessionState and stores the information from it
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) SaveSession(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
-	return fmt.Errorf("method not implemented")
+	value, err := utils.CookieForSession(ss, s.CookieCipher)
+	if err != nil {
+		return err
+	}
+	s.setSessionCookie(rw, req, value)
+	return nil
 }
 
 // LoadSession reads sessions.SessionState information from Cookies within the
@@ -77,6 +88,26 @@ func (s *SessionStore) ClearSession(rw http.ResponseWriter, req *http.Request) e
 	return nil
 }
 
+// setSessionCookie adds the user's session cookie to the response
+func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val string) {
+	for _, c := range s.makeSessionCookie(req, val, s.CookieExpire, time.Now()) {
+		http.SetCookie(rw, c)
+	}
+}
+
+// makeSessionCookie creates an http.Cookie containing the authenticated user's
+// authentication details
+func (s *SessionStore) makeSessionCookie(req *http.Request, value string, expiration time.Duration, now time.Time) []*http.Cookie {
+	if value != "" {
+		value = cookie.SignedValue(s.CookieSecret, s.CookieName, value, now)
+	}
+	c := s.makeCookie(req, s.CookieName, value, expiration)
+	if len(c.Value) > 4096-len(s.CookieName) {
+		return splitCookie(c)
+	}
+	return []*http.Cookie{c}
+}
+
 func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration) *http.Cookie {
 	return cookies.MakeCookie(
 		req,
@@ -113,6 +144,33 @@ func NewCookieSessionStore(opts options.CookieStoreOptions, cookieOpts *options.
 		CookieSecret:   cookieOpts.CookieSecret,
 		CookieSecure:   cookieOpts.CookieSecure,
 	}, nil
+}
+
+// splitCookie reads the full cookie generated to store the session and splits
+// it into a slice of cookies which fit within the 4kb cookie limit indexing
+// the cookies from 0
+func splitCookie(c *http.Cookie) []*http.Cookie {
+	if len(c.Value) < maxCookieLength {
+		return []*http.Cookie{c}
+	}
+	cookies := []*http.Cookie{}
+	valueBytes := []byte(c.Value)
+	count := 0
+	for len(valueBytes) > 0 {
+		new := copyCookie(c)
+		new.Name = fmt.Sprintf("%s_%d", c.Name, count)
+		count++
+		if len(valueBytes) < maxCookieLength {
+			new.Value = string(valueBytes)
+			valueBytes = []byte{}
+		} else {
+			newValue := valueBytes[:maxCookieLength]
+			valueBytes = valueBytes[maxCookieLength:]
+			new.Value = string(newValue)
+		}
+		cookies = append(cookies, new)
+	}
+	return cookies
 }
 
 // loadCookie retreieves the sessions state cookie from the http request.

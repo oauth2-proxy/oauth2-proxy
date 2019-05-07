@@ -89,7 +89,7 @@ var _ = Describe("NewSessionStore", func() {
 				})
 
 				It("sets a `set-cookie` header in the response", func() {
-					Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
+					Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
 				})
 
 				CheckCookieOptions()
@@ -144,7 +144,7 @@ var _ = Describe("NewSessionStore", func() {
 				})
 
 				It("sets a `set-cookie` header in the response", func() {
-					Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
+					Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
 				})
 
 				CheckCookieOptions()
@@ -152,12 +152,23 @@ var _ = Describe("NewSessionStore", func() {
 
 			Context("when ClearSession is called", func() {
 				BeforeEach(func() {
+					cookie := cookies.MakeCookie(request,
+						cookieOpts.CookieName,
+						"foo",
+						cookieOpts.CookiePath,
+						cookieOpts.CookieDomain,
+						cookieOpts.CookieHTTPOnly,
+						cookieOpts.CookieSecure,
+						cookieOpts.CookieExpire,
+						time.Now(),
+					)
+					request.AddCookie(cookie)
 					err := ss.ClearSession(response, request)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
 				It("sets a `set-cookie` header in the response", func() {
-					Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
+					Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
 				})
 
 				CheckCookieOptions()
@@ -176,6 +187,15 @@ var _ = Describe("NewSessionStore", func() {
 			CookieRefresh:  time.Duration(0),
 			CookieSecure:   true,
 			CookieHTTPOnly: true,
+		}
+
+		session = &sessionsapi.SessionState{
+			AccessToken:  "AccessToken",
+			IDToken:      "IDToken",
+			ExpiresOn:    time.Now().Add(1 * time.Hour),
+			RefreshToken: "RefreshToken",
+			Email:        "john.doe@example.com",
+			User:         "john.doe",
 		}
 
 		request = httptest.NewRequest("GET", "http://example.com/", nil)
