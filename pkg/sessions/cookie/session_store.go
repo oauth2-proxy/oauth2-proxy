@@ -37,9 +37,9 @@ type SessionStore struct {
 	CookieSecure   bool
 }
 
-// SaveSession takes a sessions.SessionState and stores the information from it
+// Save takes a sessions.SessionState and stores the information from it
 // within Cookies set on the HTTP response writer
-func (s *SessionStore) SaveSession(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
+func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
 	value, err := utils.CookieForSession(ss, s.CookieCipher)
 	if err != nil {
 		return err
@@ -48,9 +48,9 @@ func (s *SessionStore) SaveSession(rw http.ResponseWriter, req *http.Request, ss
 	return nil
 }
 
-// LoadSession reads sessions.SessionState information from Cookies within the
+// Load reads sessions.SessionState information from Cookies within the
 // HTTP request object
-func (s *SessionStore) LoadSession(req *http.Request) (*sessions.SessionState, error) {
+func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 	c, err := loadCookie(req, s.CookieName)
 	if err != nil {
 		// always http.ErrNoCookie
@@ -68,9 +68,9 @@ func (s *SessionStore) LoadSession(req *http.Request) (*sessions.SessionState, e
 	return session, nil
 }
 
-// ClearSession clears any saved session information by writing a cookie to
+// Clear clears any saved session information by writing a cookie to
 // clear the session
-func (s *SessionStore) ClearSession(rw http.ResponseWriter, req *http.Request) error {
+func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	var cookies []*http.Cookie
 
 	// matches CookieName, CookieName_<number>

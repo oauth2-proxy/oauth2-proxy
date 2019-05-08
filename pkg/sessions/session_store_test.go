@@ -76,9 +76,9 @@ var _ = Describe("NewSessionStore", func() {
 	}
 
 	SessionStoreInterfaceTests := func() {
-		Context("when SaveSession is called", func() {
+		Context("when Save is called", func() {
 			BeforeEach(func() {
-				err := ss.SaveSession(response, request, session)
+				err := ss.Save(response, request, session)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -89,7 +89,7 @@ var _ = Describe("NewSessionStore", func() {
 			CheckCookieOptions()
 		})
 
-		Context("when ClearSession is called", func() {
+		Context("when Clear is called", func() {
 			BeforeEach(func() {
 				cookie := cookies.MakeCookie(request,
 					cookieOpts.CookieName,
@@ -102,7 +102,7 @@ var _ = Describe("NewSessionStore", func() {
 					time.Now(),
 				)
 				request.AddCookie(cookie)
-				err := ss.ClearSession(response, request)
+				err := ss.Clear(response, request)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -113,18 +113,18 @@ var _ = Describe("NewSessionStore", func() {
 			CheckCookieOptions()
 		})
 
-		Context("when LoadSession is called", func() {
+		Context("when Load is called", func() {
 			var loadedSession *sessionsapi.SessionState
 			BeforeEach(func() {
 				req := httptest.NewRequest("GET", "http://example.com/", nil)
 				resp := httptest.NewRecorder()
-				err := ss.SaveSession(resp, req, session)
+				err := ss.Save(resp, req, session)
 				Expect(err).ToNot(HaveOccurred())
 
 				for _, cookie := range resp.Result().Cookies() {
 					request.AddCookie(cookie)
 				}
-				loadedSession, err = ss.LoadSession(request)
+				loadedSession, err = ss.Load(request)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
