@@ -186,7 +186,7 @@ func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Serv
 func userInGroup(service *admin.Service, groups []string, email string) bool {
 	user, err := fetchUser(service, email)
 	if err != nil {
-		logger.Printf("error fetching user: %v", err)
+		logger.Printf("Warning: unable to fetch user: %v", err)
 		user = nil
 	}
 
