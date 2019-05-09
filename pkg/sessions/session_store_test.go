@@ -10,14 +10,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/sessions"
 	sessionscookie "github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
+	"github.com/pusher/oauth2_proxy/pkg/sessions/redis"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
@@ -109,22 +110,18 @@ var _ = Describe("NewSessionStore", func() {
 
 		Context("when Clear is called", func() {
 			BeforeEach(func() {
-				cookie := cookies.MakeCookie(request,
-					cookieOpts.CookieName,
-					"foo",
-					cookieOpts.CookiePath,
-					cookieOpts.CookieDomain,
-					cookieOpts.CookieHTTPOnly,
-					cookieOpts.CookieSecure,
-					cookieOpts.CookieExpire,
-					time.Now(),
-				)
-				request.AddCookie(cookie)
-				err := ss.Clear(response, request)
+				req := httptest.NewRequest("GET", "http://example.com/", nil)
+				saveResp := httptest.NewRecorder()
+				err := ss.Save(saveResp, req, session)
+				Expect(err).ToNot(HaveOccurred())
+
+				resultCookie := saveResp.Result().Cookies()[0]
+				request.AddCookie(resultCookie)
+				err = ss.Clear(response, request)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("sets a `set-cookie` header in the response", func() {
+			It("sets a `set-cookie` header in the response and session to not be loadable after clear", func() {
 				Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
 			})
 
@@ -168,6 +165,35 @@ var _ = Describe("NewSessionStore", func() {
 					Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
 				}
 			})
+		})
+	}
+
+	PersistentSessionStoreTests := func() {
+		Context("when Clear is called the session should not be recoverable", func() {
+			var loadedAfterClear *sessionsapi.SessionState
+			BeforeEach(func() {
+				req := httptest.NewRequest("GET", "http://example.com/", nil)
+				saveResp := httptest.NewRecorder()
+				err := ss.Save(saveResp, req, session)
+				Expect(err).ToNot(HaveOccurred())
+
+				resultCookie := saveResp.Result().Cookies()[0]
+				request.AddCookie(resultCookie)
+				err = ss.Clear(response, request)
+				Expect(err).ToNot(HaveOccurred())
+
+				// The following should only be for server stores
+				loadReq := httptest.NewRequest("GET", "http://example.com/", nil)
+				loadReq.AddCookie(resultCookie)
+				loadedAfterClear, err = ss.Load(loadReq)
+			})
+
+			It("sets a `set-cookie` header in the response and session to not be loadable after clear", func() {
+				Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
+				Expect(loadedAfterClear).To(BeNil())
+			})
+
+			CheckCookieOptions()
 		})
 	}
 
@@ -221,6 +247,18 @@ var _ = Describe("NewSessionStore", func() {
 		})
 	}
 
+	RunPersistentSessionStoreTests := func() {
+		Context("with default options", func() {
+			BeforeEach(func() {
+				var err error
+				ss, err = sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			PersistentSessionStoreTests()
+		})
+	}
+
 	BeforeEach(func() {
 		ss = nil
 		opts = &options.SessionOptions{}
@@ -261,6 +299,28 @@ var _ = Describe("NewSessionStore", func() {
 
 		Context("the cookie.SessionStore", func() {
 			RunSessionTests()
+		})
+	})
+
+	Context("with type 'redis'", func() {
+		BeforeEach(func() {
+			mr, err := miniredis.Run()
+			if err != nil {
+				panic(err)
+			}
+			opts.Type = options.RedisSessionStoreType
+			opts.RedisConnectionURL = "redis://" + mr.Addr()
+		})
+
+		It("creates a redis.SessionStore", func() {
+			ss, err := sessions.NewSessionStore(opts, cookieOpts)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ss).To(BeAssignableToTypeOf(&redis.SessionStore{}))
+		})
+
+		Context("the redis.SessionStore", func() {
+			RunSessionTests()
+			RunPersistentSessionStoreTests()
 		})
 	})
 
