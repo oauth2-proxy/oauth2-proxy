@@ -334,6 +334,8 @@ func TestBasicAuthPassword(t *testing.T) {
 	rw = httptest.NewRecorder()
 	proxy.ServeHTTP(rw, req)
 
+	// The username in the basic auth credentials is expected to be equal to the email address from the
+	// auth response, so we use the same variable here.
 	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(emailAddress+":"+opts.BasicAuthPassword))
 	assert.Equal(t, expectedHeader, rw.Body.String())
 	providerServer.Close()
