@@ -1,10 +1,21 @@
 # Vx.x.x (Pre-release)
 
+## Breaking Changes
+
+- [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field (@gargath)
+  - This change modifies the contents of the `X-Forwarded-User` header supplied by the proxy for users where the auth response from the IdP did not contain
+    a username.
+    In that case, this header used to only contain the local part of the user's email address (e.g. `john.doe` for `john.doe@example.com`) but now contains
+    the user's full email address instead.
+- [#137](https://github.com/pusher/oauth2_proxy/pull/137) When using gitlab provider, the `validate-url` has to point the the `api/v4` endpoint instead of the `api/v4/user` endpoint*
+
 ## Changes since v3.2.0
 
-- *BC: when using gitlab provider, the `validate-url` has to point the the `api/v4` endpoint instead of the `api/v4/user` endpoint*
-- Add support for `email-domain` to gitlab provider (also searches additional emails)
-- Add option `gitlab-group`, to only authorize users of a certain gitlab group
+- [#137](https://github.com/pusher/oauth2_proxy/pull/137) Add support for `email-domain` to gitlab provider (also searches additional emails)
+- [#137](https://github.com/pusher/oauth2_proxy/pull/137) Add option `gitlab-group`, to only authorize users of a certain gitlab group
+- [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field (@gargath)
+- [#144](https://github.com/pusher/oauth2_proxy/pull/144) Use GO 1.12 for ARM builds (@kskewes)
+- [#142](https://github.com/pusher/oauth2_proxy/pull/142) ARM Docker USER fix (@kskewes)
 - [#52](https://github.com/pusher/oauth2_proxy/pull/52) Logging Improvements (@MisterWil)
   - Implement flags to configure file logging
     - `-logging-filename` Defines the filename to log to

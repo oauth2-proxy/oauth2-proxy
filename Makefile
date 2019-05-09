@@ -75,7 +75,7 @@ docker-push-all: docker-push
 
 .PHONY: test
 test: dep lint
-	$(GO) test -v -race $(go list ./... | grep -v /vendor/)
+	$(GO) test -v -race ./...
 
 .PHONY: release
 release: lint test
