@@ -389,10 +389,9 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 	p.templates.ExecuteTemplate(rw, "error.html", t)
 }
 
-// SignInPage writes the sing in template to the response
+// SignInPage writes the sign-in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	p.ClearSessionCookie(rw, req)
-	rw.WriteHeader(code)
 
 	redirecURL := req.URL.RequestURI()
 	if req.Header.Get("X-Auth-Request-Redirect") != "" {
@@ -401,6 +400,14 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	if redirecURL == p.SignInPath {
 		redirecURL = "/"
 	}
+
+	if p.SkipProviderButton {
+		req.Form.Set("rd", redirecURL)
+		p.OAuthStart(rw, req)
+		return
+	}
+
+	rw.WriteHeader(code)
 
 	t := struct {
 		ProviderName  string
@@ -543,11 +550,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		p.SaveSession(rw, req, session)
 		http.Redirect(rw, req, redirect, 302)
 	} else {
-		if p.SkipProviderButton {
-			p.OAuthStart(rw, req)
-		} else {
-			p.SignInPage(rw, req, http.StatusOK)
-		}
+		p.SignInPage(rw, req, http.StatusOK)
 	}
 }
 
