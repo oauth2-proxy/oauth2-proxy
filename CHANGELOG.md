@@ -10,6 +10,7 @@
 
 ## Changes since v3.2.0
 
+- [#114](https://github.com/pusher/oauth2_proxy/pull/114) Documentation is now available live at our [docs website](https://pusher.github.io/oauth2_proxy/).
 - [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field (@gargath)
 - [#144](https://github.com/pusher/oauth2_proxy/pull/144) Use GO 1.12 for ARM builds (@kskewes)
 - [#142](https://github.com/pusher/oauth2_proxy/pull/142) ARM Docker USER fix (@kskewes)
