@@ -34,7 +34,7 @@ oauth2_proxy-3.2.0.linux-amd64: OK
 
 ## Docs
 
-Read the full documentation at https://pusher.github.io/oauth2_proxy
+Read the docs on our [Docs site](https://pusher.github.io/oauth2_proxy).
 
 ![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
 
