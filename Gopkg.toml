@@ -50,6 +50,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/go-redis/redis"
+  version = "v6.15.2"
 
 [[constraint]]
   name = "github.com/alicebob/miniredis"
