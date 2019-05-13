@@ -20,7 +20,7 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
-// TicketData is a structure representing a used in server session storage
+// TicketData is a structure representing the ticket used in server session storage
 type TicketData struct {
 	TicketID string
 	Secret   []byte
@@ -77,6 +77,8 @@ func NewRedisSessionStore(opts options.RedisStoreOptions, cookieOpts *options.Co
 // Save takes a sessions.SessionState and stores the information from it
 // to redies, and adds a new ticket cookie on the HTTP response writer
 func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
+	// Old sessions that we are refreshing would have a request cookie
+	// New sessions don't, so we ignore the error. storeValue will check requestCookie
 	requestCookie, _ := req.Cookie(store.CookieName)
 	value, err := s.EncodeSessionState(store.CookieCipher)
 	if err != nil {
@@ -106,7 +108,10 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 // Load reads sessions.SessionState information from a ticket
 // cookie within the HTTP request object
 func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
-	requestCookie, _ := req.Cookie(store.CookieName)
+	requestCookie, err := req.Cookie(store.CookieName)
+	if err != nil {
+		return nil, fmt.Errorf("error loading session: %s", err)
+	}
 	// No cookie validation necessary
 	session, err := store.LoadSessionFromString(requestCookie.Value)
 	if err != nil {
