@@ -149,7 +149,7 @@ If you require a different format than that, you can configure it with the `-aut
 The default format is configured as follows:
 
 ```
-{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
+{% raw %}{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}{% endraw %}
 ```
 
 Available variables for auth logging:
@@ -177,7 +177,7 @@ If you require a different format than that, you can configure it with the `-req
 The default format is configured as follows:
 
 ```
-{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
+{% raw %}{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}{% endraw %}
 ```
 
 Available variables for request logging:
@@ -207,7 +207,7 @@ All other logging that is not covered by the above two types of logging will be 
 If you require a different format than that, you can configure it with the `-standard-logging-format` flag. The default format is configured as follows:
 
 ```
-[{{.Timestamp}}] [{{.File}}] {{.Message}}
+{% raw %}[{{.Timestamp}}] [{{.File}}] {{.Message}}{% endraw %}
 ```
 
 Available variables for standard logging:

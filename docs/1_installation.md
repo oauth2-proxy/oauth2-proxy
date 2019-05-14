@@ -22,6 +22,6 @@ sha256sum -c sha256sum.txt 2>&1 | grep OK
 oauth2_proxy-3.2.0.linux-amd64: OK
 ```
 
-2.  [Select a Provider and Register an OAuth Application with a Provider](auth)
+2.  [Select a Provider and Register an OAuth Application with a Provider](auth-configuration)
 3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](configuration)
-4.  [Configure SSL or Deploy behind a SSL endpoint](tls) (example provided for Nginx)
+4.  [Configure SSL or Deploy behind a SSL endpoint](tls-configuration) (example provided for Nginx)

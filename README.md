@@ -11,10 +11,6 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
 ![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
 
-## Architecture
-
-![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
-
 ## Installation
 
 1.  Choose how to deploy:
@@ -142,7 +138,7 @@ If you are using self-hosted GitLab, make sure you set the following to the appr
     -redeem-url="<your gitlab url>/oauth/token"
     -validate-url="<your gitlab url>/api/v4"
 
-The GitLub auth provider supports an additional parameter to restrict authorization to group level access.
+The GitLab auth provider supports an additional parameter to restrict authorization to group level access.
 
     -gitlab-group="": restrict logins to members of this group
 
@@ -633,33 +629,15 @@ The command line to run `oauth2_proxy` in this configuration would look like thi
 ```
 
 ## Endpoint Documentation
+2.  [Select a Provider and Register an OAuth Application with a Provider](https://pusher.github.io/oauth2_proxy/auth-configuration)
+3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://pusher.github.io/oauth2_proxy/configuration)
+4.  [Configure SSL or Deploy behind a SSL endpoint](https://pusher.github.io/oauth2_proxy/tls-configuration) (example provided for Nginx)
 
-OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated. The `/oauth2` prefix can be changed with the `--proxy-prefix` config variable.
+## Docs
 
-- /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
-- /ping - returns a 200 OK response, which is intended for use with health checks
-- /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
-- /oauth2/start - a URL that will redirect to start the OAuth cycle
-- /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
-- /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; for use with the [Nginx `auth_request` directive](#nginx-auth-request)
+Read the docs on our [Docs site](https://pusher.github.io/oauth2_proxy).
 
-## Request signatures
-
-If `signature_key` is defined, proxied requests will be signed with the
-`GAP-Signature` header, which is a [Hash-based Message Authentication Code
-(HMAC)](https://en.wikipedia.org/wiki/Hash-based_message_authentication_code)
-of selected request information and the request body [see `SIGNATURE_HEADERS`
-in `oauthproxy.go`](./oauthproxy.go).
-
-`signature_key` must be of the form `algorithm:secretkey`, (ie: `signature_key = "sha1:secret0"`)
-
-For more information about HMAC request signature validation, read the
-following:
-
-- [Amazon Web Services: Signing and Authenticating REST
-  Requests](https://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html)
-- [rc3.org: Using HMAC to authenticate Web service
-  requests](http://rc3.org/2011/12/02/using-hmac-to-authenticate-web-service-requests/)
+![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
 
 ## Contributing
 
