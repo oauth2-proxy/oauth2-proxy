@@ -17,6 +17,7 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
+	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
@@ -267,7 +268,8 @@ func (o *Options) Validate() error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
-	if o.PassAccessToken || (o.CookieRefresh != time.Duration(0)) {
+	var cipher *cookie.Cipher
+	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.CookieRefresh != time.Duration(0)) {
 		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
 			if len(secretBytes(o.CookieSecret)) == i {
@@ -290,11 +292,15 @@ func (o *Options) Validate() error {
 					"cookie_refresh != 0, but is %d bytes.%s",
 				len(secretBytes(o.CookieSecret)), suffix))
 		} else {
-			// Enable encryption in the session store
-			o.EnableCipher = true
+			var err error
+			cipher, err = cookie.NewCipher(secretBytes(o.CookieSecret))
+			if err != nil {
+				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
+			}
 		}
 	}
 
+	o.SessionOptions.Cipher = cipher
 	sessionStore, err := sessions.NewSessionStore(&o.SessionOptions, &o.CookieOptions)
 	if err != nil {
 		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))

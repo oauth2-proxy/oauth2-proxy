@@ -85,7 +85,6 @@ type OAuthProxy struct {
 	PassAccessToken     bool
 	SetAuthorization    bool
 	PassAuthorization   bool
-	CookieCipher        *cookie.Cipher
 	skipAuthRegex       []string
 	skipAuthPreflight   bool
 	compiledRegex       []*regexp.Regexp
@@ -215,15 +214,6 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s path:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, opts.CookiePath, refresh)
 
-	var cipher *cookie.Cipher
-	if opts.PassAccessToken || opts.SetAuthorization || opts.PassAuthorization || (opts.CookieRefresh != time.Duration(0)) {
-		var err error
-		cipher, err = cookie.NewCipher(secretBytes(opts.CookieSecret))
-		if err != nil {
-			logger.Fatal("cookie-secret error: ", err)
-		}
-	}
-
 	return &OAuthProxy{
 		CookieName:     opts.CookieName,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.CookieName, "csrf"),
@@ -261,7 +251,6 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		SetAuthorization:   opts.SetAuthorization,
 		PassAuthorization:  opts.PassAuthorization,
 		SkipProviderButton: opts.SkipProviderButton,
-		CookieCipher:       cipher,
 		templates:          loadTemplates(opts.CustomTemplatesDir),
 		Footer:             opts.Footer,
 	}

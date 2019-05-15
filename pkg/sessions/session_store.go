@@ -12,9 +12,7 @@ import (
 func NewSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
 	switch opts.Type {
 	case options.CookieSessionStoreType:
-		// Ensure EnableCipher is propogated from the parent option
-		opts.CookieStoreOptions.EnableCipher = opts.EnableCipher
-		return cookie.NewCookieSessionStore(opts.CookieStoreOptions, cookieOpts)
+		return cookie.NewCookieSessionStore(opts, cookieOpts)
 	default:
 		return nil, fmt.Errorf("unknown session store type '%s'", opts.Type)
 	}

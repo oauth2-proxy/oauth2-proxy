@@ -12,11 +12,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
+	sessionscookie "github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
+	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
 func TestSessionStore(t *testing.T) {
@@ -200,32 +202,22 @@ var _ = Describe("NewSessionStore", func() {
 			SessionStoreInterfaceTests()
 		})
 
-		Context("with encryption enabled", func() {
+		Context("with a cipher", func() {
 			BeforeEach(func() {
 				secret := make([]byte, 32)
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.CookieSecret = base64.URLEncoding.EncodeToString(secret)
-				opts.EnableCipher = true
+				cipher, err := cookie.NewCipher(utils.SecretBytes(cookieOpts.CookieSecret))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cipher).ToNot(BeNil())
+				opts.Cipher = cipher
 
 				ss, err = sessions.NewSessionStore(opts, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			SessionStoreInterfaceTests()
-		})
-
-		Context("with encryption enabled, but no secret", func() {
-			BeforeEach(func() {
-				opts.EnableCipher = true
-			})
-
-			It("returns an error", func() {
-				ss, err := sessions.NewSessionStore(opts, cookieOpts)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("unable to create cipher: crypto/aes: invalid key size 0"))
-				Expect(ss).To(BeNil())
-			})
 		})
 	}
 
@@ -264,7 +256,7 @@ var _ = Describe("NewSessionStore", func() {
 		It("creates a cookie.SessionStore", func() {
 			ss, err := sessions.NewSessionStore(opts, cookieOpts)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ss).To(BeAssignableToTypeOf(&cookie.SessionStore{}))
+			Expect(ss).To(BeAssignableToTypeOf(&sessionscookie.SessionStore{}))
 		})
 
 		Context("the cookie.SessionStore", func() {
