@@ -15,7 +15,7 @@ func NewSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOpt
 	case options.CookieSessionStoreType:
 		return cookie.NewCookieSessionStore(opts, cookieOpts)
 	case options.RedisSessionStoreType:
-		return redis.NewRedisSessionStore(opts.RedisStoreOptions, cookieOpts)
+		return redis.NewRedisSessionStore(opts, cookieOpts)
 	default:
 		return nil, fmt.Errorf("unknown session store type '%s'", opts.Type)
 	}
