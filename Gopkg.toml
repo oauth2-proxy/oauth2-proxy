@@ -48,7 +48,6 @@
   version = "2.1.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/go-redis/redis"
   version = "v6.15.2"
 
