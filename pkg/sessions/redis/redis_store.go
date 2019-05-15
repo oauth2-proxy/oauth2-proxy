@@ -55,6 +55,10 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 // Save takes a sessions.SessionState and stores the information from it
 // to redies, and adds a new ticket cookie on the HTTP response writer
 func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
+	if s.CreatedAt.IsZero() {
+		s.CreatedAt = time.Now()
+	}
+
 	// Old sessions that we are refreshing would have a request cookie
 	// New sessions don't, so we ignore the error. storeValue will check requestCookie
 	requestCookie, _ := req.Cookie(store.CookieOptions.CookieName)
@@ -73,7 +77,7 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 		ticketString,
 		store.CookieOptions,
 		store.CookieOptions.CookieExpire,
-		time.Now(),
+		s.CreatedAt,
 	)
 
 	http.SetCookie(rw, ticketCookie)
