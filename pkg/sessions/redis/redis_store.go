@@ -71,11 +71,9 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 		return err
 	}
 
-	ticketCookie := cookies.MakeCookieFromOptions(
+	ticketCookie := store.makeCookie(
 		req,
-		store.CookieOptions.CookieName,
 		ticketString,
-		store.CookieOptions,
 		store.CookieOptions.CookieExpire,
 		s.CreatedAt,
 	)
@@ -91,8 +89,12 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
-	// No cookie validation necessary
-	session, err := store.LoadSessionFromString(requestCookie.Value)
+
+	val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	if !ok {
+		return nil, fmt.Errorf("Cookie Signature not valid")
+	}
+	session, err := store.LoadSessionFromString(val)
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
@@ -132,12 +134,15 @@ func (store *SessionStore) LoadSessionFromString(value string) (*sessions.Sessio
 func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	requestCookie, _ := req.Cookie(store.CookieOptions.CookieName)
 
+	val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	if !ok {
+		return fmt.Errorf("Cookie Signature not valid")
+	}
+
 	// We go ahead and clear the cookie first, always.
-	clearCookie := cookies.MakeCookieFromOptions(
+	clearCookie := store.makeCookie(
 		req,
-		store.CookieOptions.CookieName,
 		"",
-		store.CookieOptions,
 		time.Hour*-1,
 		time.Now(),
 	)
@@ -145,15 +150,29 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 
 	// We only return an error if we had an issue with redis
 	// If there's an issue decoding the ticket, ignore it
-	ticket, _ := decodeTicket(store.CookieOptions.CookieName, requestCookie.Value)
+	ticket, _ := decodeTicket(store.CookieOptions.CookieName, val)
 	if ticket != nil {
-		deleted, err := store.Client.Del(ticket.asHandle(store.CookieOptions.CookieName)).Result()
-		fmt.Println("delted %n", deleted)
+		_, err := store.Client.Del(ticket.asHandle(store.CookieOptions.CookieName)).Result()
 		if err != nil {
 			return fmt.Errorf("error clearing cookie from redis: %s", err)
 		}
 	}
 	return nil
+}
+
+// makeCookie makes a cookie, signing the value if present
+func (store *SessionStore) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
+	if value != "" {
+		value = cookie.SignedValue(store.CookieOptions.CookieSecret, store.CookieOptions.CookieName, value, now)
+	}
+	return cookies.MakeCookieFromOptions(
+		req,
+		store.CookieOptions.CookieName,
+		value,
+		store.CookieOptions,
+		expires,
+		now,
+	)
 }
 
 func (store *SessionStore) storeValue(value string, expiresOn time.Time, requestCookie *http.Cookie) (string, error) {
