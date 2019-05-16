@@ -115,8 +115,9 @@ var _ = Describe("NewSessionStore", func() {
 				err := ss.Save(saveResp, req, session)
 				Expect(err).ToNot(HaveOccurred())
 
-				resultCookie := saveResp.Result().Cookies()[0]
-				request.AddCookie(resultCookie)
+				for _, c := range saveResp.Result().Cookies() {
+					request.AddCookie(c)
+				}
 				err = ss.Clear(response, request)
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -177,14 +178,18 @@ var _ = Describe("NewSessionStore", func() {
 				err := ss.Save(saveResp, req, session)
 				Expect(err).ToNot(HaveOccurred())
 
-				resultCookie := saveResp.Result().Cookies()[0]
-				request.AddCookie(resultCookie)
+				resultCookies := saveResp.Result().Cookies()
+				for _, c := range resultCookies {
+					request.AddCookie(c)
+				}
 				err = ss.Clear(response, request)
 				Expect(err).ToNot(HaveOccurred())
 
 				// The following should only be for server stores
 				loadReq := httptest.NewRequest("GET", "http://example.com/", nil)
-				loadReq.AddCookie(resultCookie)
+				for _, c := range resultCookies {
+					loadReq.AddCookie(c)
+				}
 				loadedAfterClear, err = ss.Load(loadReq)
 			})
 
