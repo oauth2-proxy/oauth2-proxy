@@ -94,15 +94,15 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 	if !ok {
 		return nil, fmt.Errorf("Cookie Signature not valid")
 	}
-	session, err := store.LoadSessionFromString(val)
+	session, err := store.loadSessionFromString(val)
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
 	return session, nil
 }
 
-// LoadSessionFromString loads the session based on the ticket value
-func (store *SessionStore) LoadSessionFromString(value string) (*sessions.SessionState, error) {
+// loadSessionFromString loads the session based on the ticket value
+func (store *SessionStore) loadSessionFromString(value string) (*sessions.SessionState, error) {
 	ticket, err := decodeTicket(store.CookieOptions.CookieName, value)
 	if err != nil {
 		return nil, err
