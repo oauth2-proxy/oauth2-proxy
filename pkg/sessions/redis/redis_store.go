@@ -250,7 +250,6 @@ func decodeTicket(cookieName string, ticketString string) (*TicketData, error) {
 	_, err := hex.DecodeString(ticketID)
 	if err != nil {
 		return nil, fmt.Errorf("server ticket failed sanity checks")
-		// s is not a valid
 	}
 
 	secret, err := base64.RawURLEncoding.DecodeString(secretBase64)
