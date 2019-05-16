@@ -306,13 +306,17 @@ var _ = Describe("NewSessionStore", func() {
 	})
 
 	Context("with type 'redis'", func() {
+		var mr *miniredis.Miniredis
 		BeforeEach(func() {
-			mr, err := miniredis.Run()
-			if err != nil {
-				panic(err)
-			}
+			var err error
+			mr, err = miniredis.Run()
+			Expect(err).ToNot(HaveOccurred())
 			opts.Type = options.RedisSessionStoreType
 			opts.RedisConnectionURL = "redis://" + mr.Addr()
+		})
+
+		AfterEach(func() {
+			mr.Close()
 		})
 
 		It("creates a redis.SessionStore", func() {
