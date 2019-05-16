@@ -202,8 +202,8 @@ func (store *SessionStore) storeValue(value string, expiresOn time.Time, request
 	stream.XORKeyStream(ciphertext, []byte(value))
 
 	handle := ticket.asHandle(store.CookieOptions.CookieName)
-	expires := expiresOn.Sub(time.Now())
-	err = store.Client.Set(handle, ciphertext, expires).Err()
+	expiration := expiresOn.Sub(time.Now())
+	err = store.Client.Set(handle, ciphertext, expiration).Err()
 	if err != nil {
 		return "", err
 	}
