@@ -197,7 +197,7 @@ func (store *SessionStore) storeValue(value string, expiresOn time.Time, request
 		return "", fmt.Errorf("error initiating cipher block %s", err)
 	}
 
-	// Use secret as the IV too, because each entry has it's own key
+	// Use secret as the Initialization Vector too, because each entry has it's own key
 	stream := cipher.NewCFBEncrypter(block, ticket.Secret)
 	stream.XORKeyStream(ciphertext, []byte(value))
 
