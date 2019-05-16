@@ -93,36 +93,42 @@ var _ = Describe("NewSessionStore", func() {
 	// The following should only be for server stores
 	PersistentSessionStoreTests := func() {
 		Context("when Clear is called on a persistent store", func() {
-			var loadedAfterClear *sessionsapi.SessionState
+			var resultCookies []*http.Cookie
+
 			BeforeEach(func() {
 				req := httptest.NewRequest("GET", "http://example.com/", nil)
 				saveResp := httptest.NewRecorder()
 				err := ss.Save(saveResp, req, session)
 				Expect(err).ToNot(HaveOccurred())
 
-				resultCookies := saveResp.Result().Cookies()
+				resultCookies = saveResp.Result().Cookies()
 				for _, c := range resultCookies {
 					request.AddCookie(c)
 				}
 				err = ss.Clear(response, request)
 				Expect(err).ToNot(HaveOccurred())
-
-				loadReq := httptest.NewRequest("GET", "http://example.com/", nil)
-				for _, c := range resultCookies {
-					loadReq.AddCookie(c)
-				}
-
-				loadedAfterClear, err = ss.Load(loadReq)
-				// If we have cleared the session, Load should fail
-				Expect(err).To(HaveOccurred())
 			})
 
-			It("sets a `set-cookie` header in the response", func() {
-				Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
-			})
+			Context("attempting to Load", func() {
+				var loadedAfterClear *sessionsapi.SessionState
+				var loadErr error
 
-			It("attempting to Load returns an empty session", func() {
-				Expect(loadedAfterClear).To(BeNil())
+				BeforeEach(func() {
+					loadReq := httptest.NewRequest("GET", "http://example.com/", nil)
+					for _, c := range resultCookies {
+						loadReq.AddCookie(c)
+					}
+
+					loadedAfterClear, loadErr = ss.Load(loadReq)
+				})
+
+				It("returns an empty session", func() {
+					Expect(loadedAfterClear).To(BeNil())
+				})
+
+				It("returns an error", func() {
+					Expect(loadErr).To(HaveOccurred())
+				})
 			})
 
 			CheckCookieOptions()
