@@ -90,7 +90,46 @@ var _ = Describe("NewSessionStore", func() {
 		})
 	}
 
-	SessionStoreInterfaceTests := func() {
+	// The following should only be for server stores
+	PersistentSessionStoreTests := func() {
+		Context("when Clear is called on a persistent store", func() {
+			var loadedAfterClear *sessionsapi.SessionState
+			BeforeEach(func() {
+				req := httptest.NewRequest("GET", "http://example.com/", nil)
+				saveResp := httptest.NewRecorder()
+				err := ss.Save(saveResp, req, session)
+				Expect(err).ToNot(HaveOccurred())
+
+				resultCookies := saveResp.Result().Cookies()
+				for _, c := range resultCookies {
+					request.AddCookie(c)
+				}
+				err = ss.Clear(response, request)
+				Expect(err).ToNot(HaveOccurred())
+
+				loadReq := httptest.NewRequest("GET", "http://example.com/", nil)
+				for _, c := range resultCookies {
+					loadReq.AddCookie(c)
+				}
+
+				loadedAfterClear, err = ss.Load(loadReq)
+				// If we have cleared the session, Load should fail
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("sets a `set-cookie` header in the response", func() {
+				Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
+			})
+
+			It("attempting to Load returns an empty session", func() {
+				Expect(loadedAfterClear).To(BeNil())
+			})
+
+			CheckCookieOptions()
+		})
+	}
+
+	SessionStoreInterfaceTests := func(persistent bool) {
 		Context("when Save is called", func() {
 			BeforeEach(func() {
 				err := ss.Save(response, request, session)
@@ -167,48 +206,13 @@ var _ = Describe("NewSessionStore", func() {
 				}
 			})
 		})
+
+		if persistent {
+			PersistentSessionStoreTests()
+		}
 	}
 
-	// The following should only be for server stores
-	PersistentSessionStoreTests := func() {
-		Context("when Clear is called on a persistent store", func() {
-			var loadedAfterClear *sessionsapi.SessionState
-			BeforeEach(func() {
-				req := httptest.NewRequest("GET", "http://example.com/", nil)
-				saveResp := httptest.NewRecorder()
-				err := ss.Save(saveResp, req, session)
-				Expect(err).ToNot(HaveOccurred())
-
-				resultCookies := saveResp.Result().Cookies()
-				for _, c := range resultCookies {
-					request.AddCookie(c)
-				}
-				err = ss.Clear(response, request)
-				Expect(err).ToNot(HaveOccurred())
-
-				loadReq := httptest.NewRequest("GET", "http://example.com/", nil)
-				for _, c := range resultCookies {
-					loadReq.AddCookie(c)
-				}
-
-				loadedAfterClear, err = ss.Load(loadReq)
-				// If we have cleared the session, Load should fail
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("sets a `set-cookie` header in the response", func() {
-				Expect(response.Header().Get("Set-Cookie")).ToNot(BeEmpty())
-			})
-
-			It("attempting to Load returns an empty session", func() {
-				Expect(loadedAfterClear).To(BeNil())
-			})
-
-			CheckCookieOptions()
-		})
-	}
-
-	RunSessionTests := func() {
+	RunSessionTests := func(persistent bool) {
 		Context("with default options", func() {
 			BeforeEach(func() {
 				var err error
@@ -216,7 +220,7 @@ var _ = Describe("NewSessionStore", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			SessionStoreInterfaceTests()
+			SessionStoreInterfaceTests(persistent)
 		})
 
 		Context("with non-default options", func() {
@@ -236,7 +240,7 @@ var _ = Describe("NewSessionStore", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			SessionStoreInterfaceTests()
+			SessionStoreInterfaceTests(persistent)
 		})
 
 		Context("with a cipher", func() {
@@ -254,19 +258,7 @@ var _ = Describe("NewSessionStore", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			SessionStoreInterfaceTests()
-		})
-	}
-
-	RunPersistentSessionStoreTests := func() {
-		Context("with default options", func() {
-			BeforeEach(func() {
-				var err error
-				ss, err = sessions.NewSessionStore(opts, cookieOpts)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			PersistentSessionStoreTests()
+			SessionStoreInterfaceTests(persistent)
 		})
 	}
 
@@ -309,7 +301,7 @@ var _ = Describe("NewSessionStore", func() {
 		})
 
 		Context("the cookie.SessionStore", func() {
-			RunSessionTests()
+			RunSessionTests(false)
 		})
 	})
 
@@ -330,8 +322,7 @@ var _ = Describe("NewSessionStore", func() {
 		})
 
 		Context("the redis.SessionStore", func() {
-			RunSessionTests()
-			RunPersistentSessionStoreTests()
+			RunSessionTests(true)
 		})
 	})
 
