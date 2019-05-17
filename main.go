@@ -76,6 +76,7 @@ func main() {
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
+	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
 
 	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
 	flagSet.Int("logging-max-size", 100, "Maximum size in megabytes of the log file before rotation")
