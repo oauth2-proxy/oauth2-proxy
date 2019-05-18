@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Configuration
-permalink: /configuration
+permalink: /docs/configuration
+has_children: true
 nav_order: 3
 ---
 
@@ -78,6 +79,7 @@ Usage of oauth2_proxy:
   -request-logging-format: Template for request log lines (see "Logging Configuration" paragraph below)
   -resource string: The resource that is protected (Azure AD only)
   -scope string: OAuth scope specification
+  -session-store-type: Session data storage backend (default: cookie)
   -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
   -set-authorization-header: set Authorization Bearer response header (useful in Nginx auth_request mode)
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
