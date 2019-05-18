@@ -33,6 +33,7 @@ lint: $(GOMETALINTER)
 		--enable=deadcode \
 		--enable=gofmt \
 		--enable=goimports \
+		--deadline=120s \
 		--tests ./...
 
 .PHONY: dep
