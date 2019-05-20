@@ -16,6 +16,7 @@ data in one of the available session storage backends.
 
 At present the available backends are (as passed to `--session-store-type`):
 - [cookie](cookie-storage) (default)
+- [redis](redis-storage)
 
 ### Cookie Storage
 
@@ -32,3 +33,26 @@ The following should be known when using this implementation:
 - Since multiple requests can be made concurrently to the OAuth2 Proxy, this session implementation
 cannot lock sessions and while updating and refreshing sessions, there can be conflicts which force
 users to re-authenticate
+
+
+### Redis Storage
+
+The Redis Storage backend stores sessions, encrypted, in redis. Instead sending all the information
+back the the client for storage, as in the [Cookie storage](cookie-storage), a ticket is sent back
+to the user as the cookie value instead.
+
+A ticket is composed as the following:
+
+`{CookieName}-{ticketID}.{secret}`
+
+Where:
+
+- The `CookieName` is the OAuth2 cookie name (_oauth2_proxy by default)
+- The `ticketID` is a 128 bit random number, hex-encoded
+- The `secret` is a 128 bit random number, base64url encoded (no padding). The secret is unique for every session.
+- The pair of `{CookieName}-{ticketID}` comprises a ticket handle, and thus, the redis key
+to which the session is stored. The encoded session is encrypted with the secret and stored
+in redis via the `SETEX` command.
+
+Encrypting every session uniquely protects the refresh/access/id tokens stored in the session from
+disclosure.

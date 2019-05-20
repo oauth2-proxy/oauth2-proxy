@@ -14,6 +14,12 @@
 
 ## Changes since v3.2.0
 
+- [#155](https://github.com/pusher/outh2_proxy/pull/155) Add RedisSessionStore implementation (@brianv0, @JoelSpeed)
+  - Implement flags to configure the redis session store
+    -  `-redis-connection-url`
+  - Introduces the concept of a session ticket. Tickets are composed of the cookie name, a session ID, and a secret. 
+  - Sessions are stored encrypted with a per-session secret 
+  - Added Some tests for a Server based session store
 - [#168](https://github.com/pusher/outh2_proxy/pull/168) Drop Go 1.11 support in Travis (@JoelSpeed)
 - [#169](https://github.com/pusher/outh2_proxy/pull/169) Update Alpine to 3.9 (@kskewes)
 - [#148](https://github.com/pusher/outh2_proxy/pull/148) Implement SessionStore interface within proxy (@JoelSpeed)

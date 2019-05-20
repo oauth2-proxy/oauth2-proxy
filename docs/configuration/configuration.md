@@ -75,6 +75,7 @@ Usage of oauth2_proxy:
   -pubjwk-url string: JWK pubkey access endpoint: required by login.gov
   -redeem-url string: Token redemption endpoint
   -redirect-url string: the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
+  -redis-connection-url string: URL of redis server for redis session storage type (eg: redis://HOST[:PORT])
   -request-logging: Log requests to stdout (default true)
   -request-logging-format: Template for request log lines (see "Logging Configuration" paragraph below)
   -resource string: The resource that is protected (Azure AD only)
