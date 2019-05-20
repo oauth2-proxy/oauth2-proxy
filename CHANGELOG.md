@@ -10,6 +10,7 @@
 
 ## Changes since v3.2.0
 
+- [#148](https://github.com/pusher/outh2_proxy/pull/148) Implement SessionStore interface within proxy (@JoelSpeed)
 - [#147](https://github.com/pusher/outh2_proxy/pull/147) Add SessionStore interfaces and initial implementation (@JoelSpeed)
   - Allows for multiple different session storage implementations including client and server side
   - Adds tests suite for interface to ensure consistency across implementations
