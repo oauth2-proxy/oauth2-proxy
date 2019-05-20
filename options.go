@@ -17,8 +17,11 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
+	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
+	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/sessions"
 	"github.com/pusher/oauth2_proxy/providers"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -111,6 +114,7 @@ type Options struct {
 	proxyURLs     []*url.URL
 	CompiledRegex []*regexp.Regexp
 	provider      providers.Provider
+	sessionStore  sessionsapi.SessionStore
 	signatureData *SignatureData
 	oidcVerifier  *oidc.IDTokenVerifier
 }
@@ -135,6 +139,9 @@ func NewOptions() *Options {
 			CookieHTTPOnly: true,
 			CookieExpire:   time.Duration(168) * time.Hour,
 			CookieRefresh:  time.Duration(0),
+		},
+		SessionOptions: options.SessionOptions{
+			Type: "cookie",
 		},
 		SetXAuthRequest:       false,
 		SkipAuthPreflight:     false,
@@ -261,7 +268,8 @@ func (o *Options) Validate() error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
-	if o.PassAccessToken || (o.CookieRefresh != time.Duration(0)) {
+	var cipher *cookie.Cipher
+	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.CookieRefresh != time.Duration(0)) {
 		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
 			if len(secretBytes(o.CookieSecret)) == i {
@@ -283,7 +291,21 @@ func (o *Options) Validate() error {
 					"pass_access_token == true or "+
 					"cookie_refresh != 0, but is %d bytes.%s",
 				len(secretBytes(o.CookieSecret)), suffix))
+		} else {
+			var err error
+			cipher, err = cookie.NewCipher(secretBytes(o.CookieSecret))
+			if err != nil {
+				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
+			}
 		}
+	}
+
+	o.SessionOptions.Cipher = cipher
+	sessionStore, err := sessions.NewSessionStore(&o.SessionOptions, &o.CookieOptions)
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
+	} else {
+		o.sessionStore = sessionStore
 	}
 
 	if o.CookieRefresh >= o.CookieExpire {

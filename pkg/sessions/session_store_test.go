@@ -5,16 +5,20 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
+	sessionscookie "github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
+	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
 func TestSessionStore(t *testing.T) {
@@ -72,6 +76,16 @@ var _ = Describe("NewSessionStore", func() {
 				}
 			})
 
+			It("have a signature timestamp matching session.CreatedAt", func() {
+				for _, cookie := range cookies {
+					if cookie.Value != "" {
+						parts := strings.Split(cookie.Value, "|")
+						Expect(parts).To(HaveLen(3))
+						Expect(parts[1]).To(Equal(strconv.Itoa(int(session.CreatedAt.Unix()))))
+					}
+				}
+			})
+
 		})
 	}
 
@@ -84,6 +98,10 @@ var _ = Describe("NewSessionStore", func() {
 
 			It("sets a `set-cookie` header in the response", func() {
 				Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
+			})
+
+			It("Ensures the session CreatedAt is not zero", func() {
+				Expect(session.CreatedAt.IsZero()).To(BeFalse())
 			})
 
 			CheckCookieOptions()
@@ -138,12 +156,15 @@ var _ = Describe("NewSessionStore", func() {
 
 					// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
 					l := *loadedSession
+					l.CreatedAt = time.Time{}
 					l.ExpiresOn = time.Time{}
 					s := *session
+					s.CreatedAt = time.Time{}
 					s.ExpiresOn = time.Time{}
 					Expect(l).To(Equal(s))
 
 					// Compare time.Time separately
+					Expect(loadedSession.CreatedAt.Equal(session.CreatedAt)).To(BeTrue())
 					Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
 				}
 			})
@@ -181,12 +202,16 @@ var _ = Describe("NewSessionStore", func() {
 			SessionStoreInterfaceTests()
 		})
 
-		Context("with a cookie-secret set", func() {
+		Context("with a cipher", func() {
 			BeforeEach(func() {
 				secret := make([]byte, 32)
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.CookieSecret = base64.URLEncoding.EncodeToString(secret)
+				cipher, err := cookie.NewCipher(utils.SecretBytes(cookieOpts.CookieSecret))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cipher).ToNot(BeNil())
+				opts.Cipher = cipher
 
 				ss, err = sessions.NewSessionStore(opts, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
@@ -231,7 +256,7 @@ var _ = Describe("NewSessionStore", func() {
 		It("creates a cookie.SessionStore", func() {
 			ss, err := sessions.NewSessionStore(opts, cookieOpts)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ss).To(BeAssignableToTypeOf(&cookie.SessionStore{}))
+			Expect(ss).To(BeAssignableToTypeOf(&sessionscookie.SessionStore{}))
 		})
 
 		Context("the cookie.SessionStore", func() {

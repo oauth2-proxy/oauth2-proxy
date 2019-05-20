@@ -27,36 +27,33 @@ var _ sessions.SessionStore = &SessionStore{}
 // SessionStore is an implementation of the sessions.SessionStore
 // interface that stores sessions in client side cookies
 type SessionStore struct {
-	CookieCipher   *cookie.Cipher
-	CookieDomain   string
-	CookieExpire   time.Duration
-	CookieHTTPOnly bool
-	CookieName     string
-	CookiePath     string
-	CookieSecret   string
-	CookieSecure   bool
+	CookieOptions *options.CookieOptions
+	CookieCipher  *cookie.Cipher
 }
 
 // Save takes a sessions.SessionState and stores the information from it
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
+	if ss.CreatedAt.IsZero() {
+		ss.CreatedAt = time.Now()
+	}
 	value, err := utils.CookieForSession(ss, s.CookieCipher)
 	if err != nil {
 		return err
 	}
-	s.setSessionCookie(rw, req, value)
+	s.setSessionCookie(rw, req, value, ss.CreatedAt)
 	return nil
 }
 
 // Load reads sessions.SessionState information from Cookies within the
 // HTTP request object
 func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
-	c, err := loadCookie(req, s.CookieName)
+	c, err := loadCookie(req, s.CookieOptions.CookieName)
 	if err != nil {
 		// always http.ErrNoCookie
-		return nil, fmt.Errorf("Cookie %q not present", s.CookieName)
+		return nil, fmt.Errorf("Cookie %q not present", s.CookieOptions.CookieName)
 	}
-	val, _, ok := cookie.Validate(c, s.CookieSecret, s.CookieExpire)
+	val, _, ok := cookie.Validate(c, s.CookieOptions.CookieSecret, s.CookieOptions.CookieExpire)
 	if !ok {
 		return nil, errors.New("Cookie Signature not valid")
 	}
@@ -74,11 +71,11 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	var cookies []*http.Cookie
 
 	// matches CookieName, CookieName_<number>
-	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieName))
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieOptions.CookieName))
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
-			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1)
+			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
 
 			http.SetCookie(rw, clearCookie)
 			cookies = append(cookies, clearCookie)
@@ -89,60 +86,42 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 }
 
 // setSessionCookie adds the user's session cookie to the response
-func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val string) {
-	for _, c := range s.makeSessionCookie(req, val, s.CookieExpire, time.Now()) {
+func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val string, created time.Time) {
+	for _, c := range s.makeSessionCookie(req, val, created) {
 		http.SetCookie(rw, c)
 	}
 }
 
 // makeSessionCookie creates an http.Cookie containing the authenticated user's
 // authentication details
-func (s *SessionStore) makeSessionCookie(req *http.Request, value string, expiration time.Duration, now time.Time) []*http.Cookie {
+func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
 	if value != "" {
-		value = cookie.SignedValue(s.CookieSecret, s.CookieName, value, now)
+		value = cookie.SignedValue(s.CookieOptions.CookieSecret, s.CookieOptions.CookieName, value, now)
 	}
-	c := s.makeCookie(req, s.CookieName, value, expiration)
-	if len(c.Value) > 4096-len(s.CookieName) {
+	c := s.makeCookie(req, s.CookieOptions.CookieName, value, s.CookieOptions.CookieExpire, now)
+	if len(c.Value) > 4096-len(s.CookieOptions.CookieName) {
 		return splitCookie(c)
 	}
 	return []*http.Cookie{c}
 }
 
-func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration) *http.Cookie {
-	return cookies.MakeCookie(
+func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
+	return cookies.MakeCookieFromOptions(
 		req,
 		name,
 		value,
-		s.CookiePath,
-		s.CookieDomain,
-		s.CookieHTTPOnly,
-		s.CookieSecure,
+		s.CookieOptions,
 		expiration,
-		time.Now(),
+		now,
 	)
 }
 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
 // the configuration given
-func NewCookieSessionStore(opts options.CookieStoreOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
-	var cipher *cookie.Cipher
-	if len(cookieOpts.CookieSecret) > 0 {
-		var err error
-		cipher, err = cookie.NewCipher(utils.SecretBytes(cookieOpts.CookieSecret))
-		if err != nil {
-			return nil, fmt.Errorf("unable to create cipher: %v", err)
-		}
-	}
-
+func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
 	return &SessionStore{
-		CookieCipher:   cipher,
-		CookieDomain:   cookieOpts.CookieDomain,
-		CookieExpire:   cookieOpts.CookieExpire,
-		CookieHTTPOnly: cookieOpts.CookieHTTPOnly,
-		CookieName:     cookieOpts.CookieName,
-		CookiePath:     cookieOpts.CookiePath,
-		CookieSecret:   cookieOpts.CookieSecret,
-		CookieSecure:   cookieOpts.CookieSecure,
+		CookieCipher:  opts.Cipher,
+		CookieOptions: cookieOpts,
 	}, nil
 }
 

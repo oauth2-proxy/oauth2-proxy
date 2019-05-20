@@ -17,6 +17,7 @@ import (
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -600,10 +601,15 @@ type ProcessCookieTestOpts struct {
 	providerValidateCookieResponse bool
 }
 
-func NewProcessCookieTest(opts ProcessCookieTestOpts) *ProcessCookieTest {
+type OptionsModifier func(*Options)
+
+func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifier) *ProcessCookieTest {
 	var pcTest ProcessCookieTest
 
 	pcTest.opts = NewOptions()
+	for _, modifier := range modifiers {
+		modifier(pcTest.opts)
+	}
 	pcTest.opts.ClientID = "bazquux"
 	pcTest.opts.ClientSecret = "xyzzyplugh"
 	pcTest.opts.CookieSecret = "0123456789abcdefabcd"
@@ -634,32 +640,34 @@ func NewProcessCookieTestWithDefaults() *ProcessCookieTest {
 	})
 }
 
-func (p *ProcessCookieTest) MakeCookie(value string, ref time.Time) []*http.Cookie {
-	return p.proxy.MakeSessionCookie(p.req, value, p.opts.CookieExpire, ref)
+func NewProcessCookieTestWithOptionsModifiers(modifiers ...OptionsModifier) *ProcessCookieTest {
+	return NewProcessCookieTest(ProcessCookieTestOpts{
+		providerValidateCookieResponse: true,
+	}, modifiers...)
 }
 
-func (p *ProcessCookieTest) SaveSession(s *sessions.SessionState, ref time.Time) error {
-	value, err := p.proxy.provider.CookieForSession(s, p.proxy.CookieCipher)
+func (p *ProcessCookieTest) SaveSession(s *sessions.SessionState) error {
+	err := p.proxy.SaveSession(p.rw, p.req, s)
 	if err != nil {
 		return err
 	}
-	for _, c := range p.proxy.MakeSessionCookie(p.req, value, p.proxy.CookieExpire, ref) {
-		p.req.AddCookie(c)
+	for _, cookie := range p.rw.Result().Cookies() {
+		p.req.AddCookie(cookie)
 	}
 	return nil
 }
 
-func (p *ProcessCookieTest) LoadCookiedSession() (*sessions.SessionState, time.Duration, error) {
+func (p *ProcessCookieTest) LoadCookiedSession() (*sessions.SessionState, error) {
 	return p.proxy.LoadCookiedSession(p.req)
 }
 
 func TestLoadCookiedSession(t *testing.T) {
 	pcTest := NewProcessCookieTestWithDefaults()
 
-	startSession := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token"}
-	pcTest.SaveSession(startSession, time.Now())
+	startSession := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token", CreatedAt: time.Now()}
+	pcTest.SaveSession(startSession)
 
-	session, _, err := pcTest.LoadCookiedSession()
+	session, err := pcTest.LoadCookiedSession()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, startSession.Email, session.Email)
 	assert.Equal(t, "john.doe@example.com", session.User)
@@ -669,7 +677,7 @@ func TestLoadCookiedSession(t *testing.T) {
 func TestProcessCookieNoCookieError(t *testing.T) {
 	pcTest := NewProcessCookieTestWithDefaults()
 
-	session, _, err := pcTest.LoadCookiedSession()
+	session, err := pcTest.LoadCookiedSession()
 	assert.Equal(t, "Cookie \"_oauth2_proxy\" not present", err.Error())
 	if session != nil {
 		t.Errorf("expected nil session. got %#v", session)
@@ -677,29 +685,31 @@ func TestProcessCookieNoCookieError(t *testing.T) {
 }
 
 func TestProcessCookieRefreshNotSet(t *testing.T) {
-	pcTest := NewProcessCookieTestWithDefaults()
-	pcTest.proxy.CookieExpire = time.Duration(23) * time.Hour
+	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *Options) {
+		opts.CookieExpire = time.Duration(23) * time.Hour
+	})
 	reference := time.Now().Add(time.Duration(-2) * time.Hour)
 
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
-	pcTest.SaveSession(startSession, reference)
+	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	pcTest.SaveSession(startSession)
 
-	session, age, err := pcTest.LoadCookiedSession()
+	session, err := pcTest.LoadCookiedSession()
 	assert.Equal(t, nil, err)
-	if age < time.Duration(-2)*time.Hour {
-		t.Errorf("cookie too young %v", age)
+	if session.Age() < time.Duration(-2)*time.Hour {
+		t.Errorf("cookie too young %v", session.Age())
 	}
 	assert.Equal(t, startSession.Email, session.Email)
 }
 
 func TestProcessCookieFailIfCookieExpired(t *testing.T) {
-	pcTest := NewProcessCookieTestWithDefaults()
-	pcTest.proxy.CookieExpire = time.Duration(24) * time.Hour
+	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *Options) {
+		opts.CookieExpire = time.Duration(24) * time.Hour
+	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
-	pcTest.SaveSession(startSession, reference)
+	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	pcTest.SaveSession(startSession)
 
-	session, _, err := pcTest.LoadCookiedSession()
+	session, err := pcTest.LoadCookiedSession()
 	assert.NotEqual(t, nil, err)
 	if session != nil {
 		t.Errorf("expected nil session %#v", session)
@@ -707,22 +717,23 @@ func TestProcessCookieFailIfCookieExpired(t *testing.T) {
 }
 
 func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
-	pcTest := NewProcessCookieTestWithDefaults()
-	pcTest.proxy.CookieExpire = time.Duration(24) * time.Hour
+	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *Options) {
+		opts.CookieExpire = time.Duration(24) * time.Hour
+	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
-	pcTest.SaveSession(startSession, reference)
+	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	pcTest.SaveSession(startSession)
 
 	pcTest.proxy.CookieRefresh = time.Hour
-	session, _, err := pcTest.LoadCookiedSession()
+	session, err := pcTest.LoadCookiedSession()
 	assert.NotEqual(t, nil, err)
 	if session != nil {
 		t.Errorf("expected nil session %#v", session)
 	}
 }
 
-func NewAuthOnlyEndpointTest() *ProcessCookieTest {
-	pcTest := NewProcessCookieTestWithDefaults()
+func NewAuthOnlyEndpointTest(modifiers ...OptionsModifier) *ProcessCookieTest {
+	pcTest := NewProcessCookieTestWithOptionsModifiers(modifiers...)
 	pcTest.req, _ = http.NewRequest("GET",
 		pcTest.opts.ProxyPrefix+"/auth", nil)
 	return pcTest
@@ -731,8 +742,8 @@ func NewAuthOnlyEndpointTest() *ProcessCookieTest {
 func TestAuthOnlyEndpointAccepted(t *testing.T) {
 	test := NewAuthOnlyEndpointTest()
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
-	test.SaveSession(startSession, time.Now())
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
+	test.SaveSession(startSession)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusAccepted, test.rw.Code)
@@ -750,12 +761,13 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
-	test := NewAuthOnlyEndpointTest()
-	test.proxy.CookieExpire = time.Duration(24) * time.Hour
+	test := NewAuthOnlyEndpointTest(func(opts *Options) {
+		opts.CookieExpire = time.Duration(24) * time.Hour
+	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
-	test.SaveSession(startSession, reference)
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	test.SaveSession(startSession)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
@@ -766,8 +778,8 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	test := NewAuthOnlyEndpointTest()
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token"}
-	test.SaveSession(startSession, time.Now())
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
+	test.SaveSession(startSession)
 	test.validateUser = false
 
 	test.proxy.ServeHTTP(test.rw, test.req)
@@ -797,8 +809,8 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 		pcTest.opts.ProxyPrefix+"/auth", nil)
 
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token"}
-	pcTest.SaveSession(startSession, time.Now())
+		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: time.Now()}
+	pcTest.SaveSession(startSession)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
 	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
@@ -930,11 +942,11 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
 
 	state := &sessions.SessionState{
 		Email: "mbland@acm.org", AccessToken: "my_access_token"}
-	value, err := proxy.provider.CookieForSession(state, proxy.CookieCipher)
+	err = proxy.SaveSession(st.rw, req, state)
 	if err != nil {
 		panic(err)
 	}
-	for _, c := range proxy.MakeSessionCookie(req, value, proxy.CookieExpire, time.Now()) {
+	for _, c := range st.rw.Result().Cookies() {
 		req.AddCookie(c)
 	}
 	// This is used by the upstream to validate the signature.
@@ -1068,7 +1080,12 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 }
 
 func TestClearSplitCookie(t *testing.T) {
-	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
+	opts := NewOptions()
+	opts.CookieName = "oauth2"
+	opts.CookieDomain = "abc"
+	store, err := cookie.NewCookieSessionStore(&opts.SessionOptions, &opts.CookieOptions)
+	assert.Equal(t, err, nil)
+	p := OAuthProxy{CookieName: opts.CookieName, CookieDomain: opts.CookieDomain, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -1092,7 +1109,12 @@ func TestClearSplitCookie(t *testing.T) {
 }
 
 func TestClearSingleCookie(t *testing.T) {
-	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
+	opts := NewOptions()
+	opts.CookieName = "oauth2"
+	opts.CookieDomain = "abc"
+	store, err := cookie.NewCookieSessionStore(&opts.SessionOptions, &opts.CookieOptions)
+	assert.Equal(t, err, nil)
+	p := OAuthProxy{CookieName: opts.CookieName, CookieDomain: opts.CookieDomain, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 

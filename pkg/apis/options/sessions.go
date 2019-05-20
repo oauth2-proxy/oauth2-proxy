@@ -1,8 +1,13 @@
 package options
 
+import (
+	"github.com/pusher/oauth2_proxy/cookie"
+)
+
 // SessionOptions contains configuration options for the SessionStore providers.
 type SessionOptions struct {
-	Type string `flag:"session-store-type" cfg:"session_store_type" env:"OAUTH2_PROXY_SESSION_STORE_TYPE"`
+	Type   string `flag:"session-store-type" cfg:"session_store_type" env:"OAUTH2_PROXY_SESSION_STORE_TYPE"`
+	Cipher *cookie.Cipher
 	CookieStoreOptions
 }
 

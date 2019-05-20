@@ -14,6 +14,7 @@ import (
 type SessionState struct {
 	AccessToken  string    `json:",omitempty"`
 	IDToken      string    `json:",omitempty"`
+	CreatedAt    time.Time `json:"-"`
 	ExpiresOn    time.Time `json:"-"`
 	RefreshToken string    `json:",omitempty"`
 	Email        string    `json:",omitempty"`
@@ -23,6 +24,7 @@ type SessionState struct {
 // SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
 type SessionStateJSON struct {
 	*SessionState
+	CreatedAt *time.Time `json:",omitempty"`
 	ExpiresOn *time.Time `json:",omitempty"`
 }
 
@@ -34,6 +36,14 @@ func (s *SessionState) IsExpired() bool {
 	return false
 }
 
+// Age returns the age of a session
+func (s *SessionState) Age() time.Duration {
+	if !s.CreatedAt.IsZero() {
+		return time.Now().Truncate(time.Second).Sub(s.CreatedAt)
+	}
+	return 0
+}
+
 // String constructs a summary of the session state
 func (s *SessionState) String() string {
 	o := fmt.Sprintf("Session{email:%s user:%s", s.Email, s.User)
@@ -42,6 +52,9 @@ func (s *SessionState) String() string {
 	}
 	if s.IDToken != "" {
 		o += " id_token:true"
+	}
+	if !s.CreatedAt.IsZero() {
+		o += fmt.Sprintf(" created:%s", s.CreatedAt)
 	}
 	if !s.ExpiresOn.IsZero() {
 		o += fmt.Sprintf(" expires:%s", s.ExpiresOn)
@@ -95,6 +108,9 @@ func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
 	}
 	// Embed SessionState and ExpiresOn pointer into SessionStateJSON
 	ssj := &SessionStateJSON{SessionState: &ss}
+	if !ss.CreatedAt.IsZero() {
+		ssj.CreatedAt = &ss.CreatedAt
+	}
 	if !ss.ExpiresOn.IsZero() {
 		ssj.ExpiresOn = &ss.ExpiresOn
 	}
@@ -165,8 +181,11 @@ func DecodeSessionState(v string, c *cookie.Cipher) (*SessionState, error) {
 	var ss *SessionState
 	err := json.Unmarshal([]byte(v), &ssj)
 	if err == nil && ssj.SessionState != nil {
-		// Extract SessionState and ExpiresOn value from SessionStateJSON
+		// Extract SessionState and CreatedAt,ExpiresOn value from SessionStateJSON
 		ss = ssj.SessionState
+		if ssj.CreatedAt != nil {
+			ss.CreatedAt = *ssj.CreatedAt
+		}
 		if ssj.ExpiresOn != nil {
 			ss.ExpiresOn = *ssj.ExpiresOn
 		}

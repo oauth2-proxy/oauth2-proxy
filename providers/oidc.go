@@ -87,6 +87,7 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 	s.AccessToken = newSession.AccessToken
 	s.IDToken = newSession.IDToken
 	s.RefreshToken = newSession.RefreshToken
+	s.CreatedAt = newSession.CreatedAt
 	s.ExpiresOn = newSession.ExpiresOn
 	s.Email = newSession.Email
 	return
@@ -126,6 +127,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		AccessToken:  token.AccessToken,
 		IDToken:      rawIDToken,
 		RefreshToken: token.RefreshToken,
+		CreatedAt:    time.Now(),
 		ExpiresOn:    token.Expiry,
 		Email:        claims.Email,
 		User:         claims.Subject,
