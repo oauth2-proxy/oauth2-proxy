@@ -75,6 +75,8 @@ func main() {
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 
+	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
+
 	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
 	flagSet.Int("logging-max-size", 100, "Maximum size in megabytes of the log file before rotation")
 	flagSet.Int("logging-max-age", 7, "Maximum number of days to retain old log files")

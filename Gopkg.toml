@@ -35,6 +35,10 @@
   name = "gopkg.in/fsnotify/fsnotify.v1"
   version = "~1.2.0"
 
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
+
 [[constraint]]
   branch = "master"
   name = "golang.org/x/crypto"
