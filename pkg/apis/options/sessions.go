@@ -25,5 +25,8 @@ var RedisSessionStoreType = "redis"
 
 // RedisStoreOptions contains configuration options for the RedisSessionStore.
 type RedisStoreOptions struct {
-	RedisConnectionURL string `flag:"redis-connection-url" cfg:"redis_connection_url" env:"OAUTH2_PROXY_REDIS_CONNECTION_URL"`
+	RedisConnectionURL     string   `flag:"redis-connection-url" cfg:"redis_connection_url" env:"OAUTH2_PROXY_REDIS_CONNECTION_URL"`
+	UseSentinel            bool     `flag:"redis-use-sentinel" cfg:"redis_use_sentinel" env:"OAUTH2_PROXY_REDIS_USE_SENTINEL"`
+	SentinelMasterName     string   `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name" env:"OAUTH2_PROXY_REDIS_SENTINEL_MASTER_NAME"`
+	SentinelConnectionURLs []string `flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls" env:"OAUTH2_PROXY_REDIS_SENTINEL_CONNECTION_URLS"`
 }

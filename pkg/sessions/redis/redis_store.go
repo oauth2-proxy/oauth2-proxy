@@ -36,12 +36,10 @@ type SessionStore struct {
 // NewRedisSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
-	opt, err := redis.ParseURL(opts.RedisStoreOptions.RedisConnectionURL)
+	client, err := newRedisClient(opts.RedisStoreOptions)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse redis url: %s", err)
+		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
-
-	client := redis.NewClient(opt)
 
 	rs := &SessionStore{
 		Client:        client,
@@ -50,6 +48,24 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 	}
 	return rs, nil
 
+}
+
+func newRedisClient(opts options.RedisStoreOptions) (*redis.Client, error) {
+	if opts.UseSentinel {
+		client := redis.NewFailoverClient(&redis.FailoverOptions{
+			MasterName:    opts.SentinelMasterName,
+			SentinelAddrs: opts.SentinelConnectionURLs,
+		})
+		return client, nil
+	}
+
+	opt, err := redis.ParseURL(opts.RedisConnectionURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse redis url: %s", err)
+	}
+
+	client := redis.NewClient(opt)
+	return client, nil
 }
 
 // Save takes a sessions.SessionState and stores the information from it
