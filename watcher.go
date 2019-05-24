@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
 )
 

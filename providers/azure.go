@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
 )

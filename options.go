@@ -17,7 +17,7 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
-	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"

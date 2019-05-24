@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"

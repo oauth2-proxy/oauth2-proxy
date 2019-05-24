@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
 func TestLoggingHandler_ServeHTTP(t *testing.T) {
