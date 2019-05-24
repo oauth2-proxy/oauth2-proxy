@@ -1,8 +1,8 @@
 package providers
 
 import (
-	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 )
 
 // Provider represents an upstream identity provider implementation
@@ -15,8 +15,8 @@ type Provider interface {
 	ValidateSessionState(*sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)
-	SessionFromCookie(string, *cookie.Cipher) (*sessions.SessionState, error)
-	CookieForSession(*sessions.SessionState, *cookie.Cipher) (string, error)
+	SessionFromCookie(string, *encryption.Cipher) (*sessions.SessionState, error)
+	CookieForSession(*sessions.SessionState, *encryption.Cipher) (string, error)
 }
 
 // New provides a new Provider based on the configured provider string

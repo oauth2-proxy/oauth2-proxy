@@ -13,10 +13,10 @@ import (
 	"github.com/alicebob/miniredis"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 	"github.com/pusher/oauth2_proxy/pkg/sessions"
 	sessionscookie "github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/redis"
@@ -158,7 +158,7 @@ var _ = Describe("NewSessionStore", func() {
 				BeforeEach(func() {
 					By("Using a valid cookie with a different providers session encoding")
 					broken := "BrokenSessionFromADifferentSessionImplementation"
-					value := cookie.SignedValue(cookieOpts.CookieSecret, cookieOpts.CookieName, broken, time.Now())
+					value := encryption.SignedValue(cookieOpts.CookieSecret, cookieOpts.CookieName, broken, time.Now())
 					cookie := cookies.MakeCookieFromOptions(request, cookieOpts.CookieName, value, cookieOpts, cookieOpts.CookieExpire, time.Now())
 					request.AddCookie(cookie)
 
@@ -354,7 +354,7 @@ var _ = Describe("NewSessionStore", func() {
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.CookieSecret = base64.URLEncoding.EncodeToString(secret)
-				cipher, err := cookie.NewCipher(utils.SecretBytes(cookieOpts.CookieSecret))
+				cipher, err := encryption.NewCipher(utils.SecretBytes(cookieOpts.CookieSecret))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cipher).ToNot(BeNil())
 				opts.Cipher = cipher

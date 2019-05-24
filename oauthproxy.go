@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/mbland/hmacauth"
-	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/logger"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/yhat/wsutil"
 )
@@ -555,7 +555,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 
 // OAuthStart starts the OAuth2 authentication flow
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
-	nonce, err := cookie.Nonce()
+	nonce, err := encryption.Nonce()
 	if err != nil {
 		logger.Printf("Error obtaining nonce: %s", err.Error())
 		p.ErrorPage(rw, 500, "Internal Error", err.Error())

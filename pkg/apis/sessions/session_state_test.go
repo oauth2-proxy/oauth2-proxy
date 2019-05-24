@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,9 +14,9 @@ const secret = "0123456789abcdefghijklmnopqrstuv"
 const altSecret = "0000000000abcdefghijklmnopqrstuv"
 
 func TestSessionStateSerialization(t *testing.T) {
-	c, err := cookie.NewCipher([]byte(secret))
+	c, err := encryption.NewCipher([]byte(secret))
 	assert.Equal(t, nil, err)
-	c2, err := cookie.NewCipher([]byte(altSecret))
+	c2, err := encryption.NewCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
 		Email:        "user@domain.com",
@@ -54,9 +54,9 @@ func TestSessionStateSerialization(t *testing.T) {
 }
 
 func TestSessionStateSerializationWithUser(t *testing.T) {
-	c, err := cookie.NewCipher([]byte(secret))
+	c, err := encryption.NewCipher([]byte(secret))
 	assert.Equal(t, nil, err)
-	c2, err := cookie.NewCipher([]byte(altSecret))
+	c2, err := encryption.NewCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
 		User:         "just-user",
@@ -146,7 +146,7 @@ func TestExpired(t *testing.T) {
 type testCase struct {
 	sessions.SessionState
 	Encoded string
-	Cipher  *cookie.Cipher
+	Cipher  *encryption.Cipher
 	Error   bool
 }
 
@@ -203,7 +203,7 @@ func TestDecodeSessionState(t *testing.T) {
 	eString := string(eJSON)
 	eUnix := e.Unix()
 
-	c, err := cookie.NewCipher([]byte(secret))
+	c, err := encryption.NewCipher([]byte(secret))
 	assert.NoError(t, err)
 
 	testCases := []testCase{
