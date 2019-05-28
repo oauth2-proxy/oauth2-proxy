@@ -56,3 +56,12 @@ in redis via the `SETEX` command.
 
 Encrypting every session uniquely protects the refresh/access/id tokens stored in the session from
 disclosure.
+
+#### Usage
+
+When using the redis store, specify `--session-store-type=redis` as well as the Redis connection URL, via
+`--redis-connection-url=redis://host[:port][/db-number]`.
+
+You may also configure the store for Redis Sentinel. In this case, you will want to use the 
+`--redis-use-sentinel=true` flag, as well as configure the flags `--redis-sentinel-master-name` 
+and `--redis-sentinel-connection-urls` appropriately.
