@@ -23,6 +23,7 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/pusher/oauth2_proxy/pkg/sessions/redis"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/yhat/wsutil"
 )
@@ -1094,7 +1095,7 @@ func (p *OAuthProxy) findBearerToken(req *http.Request) (string, error) {
 	}
 	jwtRegex := regexp.MustCompile(`^eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`)
 	var rawBearerToken string
-	if s[0] == "Bearer" && jwtRegex.MatchString(s[1]) {
+	if s[0] == "Bearer" && (jwtRegex.MatchString(s[1]) || strings.HasPrefix(s[1], p.CookieName)) {
 		rawBearerToken = s[1]
 	} else if s[0] == "Basic" {
 		// Check if we have a Bearer token masquerading in Basic
@@ -1109,16 +1110,30 @@ func (p *OAuthProxy) findBearerToken(req *http.Request) (string, error) {
 		user, password := pair[0], pair[1]
 
 		// check user, user+password, or just password for a token
-		if jwtRegex.MatchString(user) {
+		if jwtRegex.MatchString(user) || strings.HasPrefix(user, p.CookieName) {
 			// Support blank passwords or magic `x-oauth-basic` passwords - nothing else
 			if password == "" || password == "x-oauth-basic" {
 				rawBearerToken = user
 			}
-		} else if jwtRegex.MatchString(password) {
+		}
+		if jwtRegex.MatchString(password) || strings.HasPrefix(password, p.CookieName) {
 			// support passwords and ignore user
 			rawBearerToken = password
 		}
 	}
+
+	redisStore, ok := p.sessionStore.(*redis.SessionStore)
+	// Check if this is actually a session identifier
+	if ok && strings.HasPrefix(rawBearerToken, p.CookieName){
+		session, err := redisStore.LoadSessionFromString(rawBearerToken)
+		if err != nil {
+			logger.PrintAuthf("", req, logger.AuthFailure, "error loading ticket from store: %v", err)
+		} else {
+			// Only proceed if we found a cookie in the cookie store
+			rawBearerToken = session.IDToken
+		}
+	}
+
 	if rawBearerToken == "" {
 		return "", fmt.Errorf("no valid bearer token found in authorization header")
 	}
