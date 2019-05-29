@@ -82,7 +82,7 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 	if err != nil {
 		return err
 	}
-	ticketString, err := store.storeValue(value, s.ExpiresOn, requestCookie)
+	ticketString, err := store.storeValue(value, store.CookieOptions.CookieExpire, requestCookie)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (store *SessionStore) makeCookie(req *http.Request, value string, expires t
 	)
 }
 
-func (store *SessionStore) storeValue(value string, expiresOn time.Time, requestCookie *http.Cookie) (string, error) {
+func (store *SessionStore) storeValue(value string, expiration time.Duration, requestCookie *http.Cookie) (string, error) {
 	var ticket *TicketData
 	if requestCookie != nil {
 		var err error
@@ -225,7 +225,6 @@ func (store *SessionStore) storeValue(value string, expiresOn time.Time, request
 	stream.XORKeyStream(ciphertext, []byte(value))
 
 	handle := ticket.asHandle(store.CookieOptions.CookieName)
-	expiration := expiresOn.Sub(time.Now())
 	err = store.Client.Set(handle, ciphertext, expiration).Err()
 	if err != nil {
 		return "", err
