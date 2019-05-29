@@ -137,17 +137,45 @@ var _ = Describe("NewSessionStore", func() {
 
 	SessionStoreInterfaceTests := func(persistent bool) {
 		Context("when Save is called", func() {
-			BeforeEach(func() {
-				err := ss.Save(response, request, session)
-				Expect(err).ToNot(HaveOccurred())
+			Context("with no existing session", func() {
+				BeforeEach(func() {
+					err := ss.Save(response, request, session)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("sets a `set-cookie` header in the response", func() {
+					Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
+				})
+
+				It("Ensures the session CreatedAt is not zero", func() {
+					Expect(session.CreatedAt.IsZero()).To(BeFalse())
+				})
 			})
 
-			It("sets a `set-cookie` header in the response", func() {
-				Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
-			})
+			Context("with an expired saved session", func() {
+				var err error
+				BeforeEach(func() {
+					By("saving a session")
+					req := httptest.NewRequest("GET", "http://example.com/", nil)
+					saveResp := httptest.NewRecorder()
+					err = ss.Save(saveResp, req, session)
+					Expect(err).ToNot(HaveOccurred())
 
-			It("Ensures the session CreatedAt is not zero", func() {
-				Expect(session.CreatedAt.IsZero()).To(BeFalse())
+					By("and clearing the session")
+					for _, c := range saveResp.Result().Cookies() {
+						request.AddCookie(c)
+					}
+					clearResp := httptest.NewRecorder()
+					err = ss.Clear(clearResp, request)
+					Expect(err).ToNot(HaveOccurred())
+
+					By("then saving a request with the cleared session")
+					err = ss.Save(response, request, session)
+				})
+
+				It("no error should occur", func() {
+					Expect(err).ToNot(HaveOccurred())
+				})
 			})
 
 			CheckCookieOptions()

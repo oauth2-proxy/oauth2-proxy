@@ -195,7 +195,14 @@ func (store *SessionStore) storeValue(value string, expiresOn time.Time, request
 	var ticket *TicketData
 	if requestCookie != nil {
 		var err error
-		ticket, err = decodeTicket(store.CookieOptions.CookieName, requestCookie.Value)
+		val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+		if !ok {
+			ticket, err = newTicket()
+			if err != nil {
+				return "", fmt.Errorf("error creating new ticket: %s", err)
+			}
+		}
+		ticket, err = decodeTicket(store.CookieOptions.CookieName, val)
 		if err != nil {
 			return "", err
 		}
