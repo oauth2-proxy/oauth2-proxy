@@ -16,6 +16,7 @@ import (
 	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/sessions"
 	sessionscookie "github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/redis"
@@ -140,6 +141,27 @@ var _ = Describe("NewSessionStore", func() {
 		Context("when Save is called", func() {
 			Context("with no existing session", func() {
 				BeforeEach(func() {
+					err := ss.Save(response, request, session)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("sets a `set-cookie` header in the response", func() {
+					Expect(response.Header().Get("set-cookie")).ToNot(BeEmpty())
+				})
+
+				It("Ensures the session CreatedAt is not zero", func() {
+					Expect(session.CreatedAt.IsZero()).To(BeFalse())
+				})
+			})
+
+			Context("with a broken session", func() {
+				BeforeEach(func() {
+					By("Using a valid cookie with a different providers session encoding")
+					broken := "BrokenSessionFromADifferentSessionImplementation"
+					value := cookie.SignedValue(cookieOpts.CookieSecret, cookieOpts.CookieName, broken, time.Now())
+					cookie := cookies.MakeCookieFromOptions(request, cookieOpts.CookieName, value, cookieOpts, cookieOpts.CookieExpire, time.Now())
+					request.AddCookie(cookie)
+
 					err := ss.Save(response, request, session)
 					Expect(err).ToNot(HaveOccurred())
 				})

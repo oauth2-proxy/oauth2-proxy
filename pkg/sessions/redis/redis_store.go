@@ -237,7 +237,12 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
 	}
 
 	// Valid cookie, decode the ticket
-	return decodeTicket(store.CookieOptions.CookieName, val)
+	ticket, err := decodeTicket(store.CookieOptions.CookieName, val)
+	if err != nil {
+		// If we can't decode the ticket we have to create a new one
+		return newTicket()
+	}
+	return ticket, nil
 }
 
 func newTicket() (*TicketData, error) {
