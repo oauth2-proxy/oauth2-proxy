@@ -192,26 +192,9 @@ func (store *SessionStore) makeCookie(req *http.Request, value string, expires t
 }
 
 func (store *SessionStore) storeValue(value string, expiration time.Duration, requestCookie *http.Cookie) (string, error) {
-	var ticket *TicketData
-	if requestCookie != nil {
-		var err error
-		val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
-		if !ok {
-			ticket, err = newTicket()
-			if err != nil {
-				return "", fmt.Errorf("error creating new ticket: %s", err)
-			}
-		}
-		ticket, err = decodeTicket(store.CookieOptions.CookieName, val)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		var err error
-		ticket, err = newTicket()
-		if err != nil {
-			return "", fmt.Errorf("error creating new ticket: %s", err)
-		}
+	ticket, err := store.getTicket(requestCookie)
+	if err != nil {
+		return "", fmt.Errorf("error getting ticket: %v", err)
 	}
 
 	ciphertext := make([]byte, len(value))
@@ -230,6 +213,24 @@ func (store *SessionStore) storeValue(value string, expiration time.Duration, re
 		return "", err
 	}
 	return ticket.encodeTicket(store.CookieOptions.CookieName), nil
+}
+
+// getTicket retrieves an existing ticket from the cookie if present,
+// or creates a new ticket
+func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, error) {
+	if requestCookie == nil {
+		return newTicket()
+	}
+
+	// An existing cookie exists, try to retrieve the ticket
+	val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	if !ok {
+		// Cookie is invalid, create a new ticket
+		return newTicket()
+	}
+
+	// Valid cookie, decode the ticket
+	return decodeTicket(store.CookieOptions.CookieName, val)
 }
 
 func newTicket() (*TicketData, error) {
