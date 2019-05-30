@@ -148,13 +148,6 @@ func (store *SessionStore) loadSessionFromString(value string) (*sessions.Sessio
 // Clear clears any saved session information for a given ticket cookie
 // from redis, and then clears the session
 func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
-	requestCookie, _ := req.Cookie(store.CookieOptions.CookieName)
-
-	val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
-	if !ok {
-		return fmt.Errorf("Cookie Signature not valid")
-	}
-
 	// We go ahead and clear the cookie first, always.
 	clearCookie := store.makeCookie(
 		req,
@@ -163,6 +156,20 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 		time.Now(),
 	)
 	http.SetCookie(rw, clearCookie)
+
+	// If there was an existing cookie we should clear the session in redis
+	requestCookie, err := req.Cookie(store.CookieOptions.CookieName)
+	if err != nil && err == http.ErrNoCookie {
+		// No existing cookie so can't clear redis
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("error retrieving cookie: %v", err)
+	}
+
+	val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	if !ok {
+		return fmt.Errorf("Cookie Signature not valid")
+	}
 
 	// We only return an error if we had an issue with redis
 	// If there's an issue decoding the ticket, ignore it
