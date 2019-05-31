@@ -17,10 +17,17 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 
 	tests := []struct {
 		Format,
-		ExpectedLogMessage string
+		ExpectedLogMessage,
+		Path string
+		SilentPing bool
 	}{
-		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts))},
-		{"{{.RequestMethod}}", "GET\n"},
+		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", false},
+		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", true},
+		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/ping\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/ping", false},
+		{"{{.RequestMethod}}", "GET\n", "/foo/bar", false},
+		{"{{.RequestMethod}}", "GET\n", "/foo/bar", true},
+		{"{{.RequestMethod}}", "GET\n", "/ping", false},
+		{"{{.RequestMethod}}", "", "/ping", true},
 	}
 
 	for _, test := range tests {
@@ -36,9 +43,10 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 
 		logger.SetOutput(buf)
 		logger.SetReqTemplate(test.Format)
+		logger.SetSilentPing(test.SilentPing)
 		h := LoggingHandler(http.HandlerFunc(handler))
 
-		r, _ := http.NewRequest("GET", "/foo/bar", nil)
+		r, _ := http.NewRequest("GET", test.Path, nil)
 		r.RemoteAddr = "127.0.0.1"
 		r.Host = "test-server"
 

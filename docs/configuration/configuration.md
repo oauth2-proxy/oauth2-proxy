@@ -90,6 +90,7 @@ Usage of oauth2_proxy:
   -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
   -set-authorization-header: set Authorization Bearer response header (useful in Nginx auth_request mode)
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
+  -silence-ping-logging bool: disable logging of requests to ping endpoint (default false) 
   -skip-auth-preflight: will skip authentication for OPTIONS requests
   -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
   -skip-jwt-bearer-tokens: will skip requests that have verified JWT bearer tokens
@@ -138,6 +139,8 @@ If logging to a file you can also configure the maximum file size (`-logging-max
 There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `-standard-logging`, `-auth-logging`, and `-request-logging`.
 
 Each type of logging has their own configurable format and variables. By default these formats are similar to the Apache Combined Log.
+
+Logging of requests to the `/ping` endpoint can be disabled with `-silence-ping-logging` reducing log volume.
 
 ### Auth Log Format
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:

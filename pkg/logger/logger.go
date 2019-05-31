@@ -88,6 +88,8 @@ type Logger struct {
 	stdEnabled     bool
 	authEnabled    bool
 	reqEnabled     bool
+	silentPing     bool
+	pingPath       string
 	stdLogTemplate *template.Template
 	authTemplate   *template.Template
 	reqTemplate    *template.Template
@@ -101,6 +103,8 @@ func New(flag int) *Logger {
 		stdEnabled:     true,
 		authEnabled:    true,
 		reqEnabled:     true,
+		silentPing:     false,
+		pingPath:       "/ping",
 		stdLogTemplate: template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
 		authTemplate:   template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
 		reqTemplate:    template.Must(template.New("req-log").Parse(DefaultRequestLoggingFormat)),
@@ -177,6 +181,9 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		return
 	}
 
+	if url.Path == l.pingPath && l.silentPing {
+		return
+	}
 	duration := float64(time.Now().Sub(ts)) / float64(time.Second)
 
 	if username == "" {
@@ -302,6 +309,20 @@ func (l *Logger) SetReqEnabled(e bool) {
 	l.reqEnabled = e
 }
 
+// SetPingPath sets the ping path.
+func (l *Logger) SetPingPath(s string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.pingPath = s
+}
+
+// SetSilentPing disables ping request logging.
+func (l *Logger) SetSilentPing(e bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.silentPing = e
+}
+
 // SetStandardTemplate sets the template for standard logging.
 func (l *Logger) SetStandardTemplate(t string) {
 	l.mu.Lock()
@@ -363,6 +384,17 @@ func SetAuthEnabled(e bool) {
 // standard logger.
 func SetReqEnabled(e bool) {
 	std.SetReqEnabled(e)
+}
+
+// SetPingPath sets the healthcheck endpoint path.
+// FIXME: Seems wrong to define this
+func SetPingPath(s string) {
+	std.SetPingPath(s)
+}
+
+// SetSilentPing disables request logging for the ping endpoint.
+func SetSilentPing(e bool) {
+	std.SetSilentPing(e)
 }
 
 // SetStandardTemplate sets the template for standard logging for
