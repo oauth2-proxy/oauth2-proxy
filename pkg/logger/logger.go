@@ -182,6 +182,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	if url.Path == l.excludePath {
 		return
 	}
+
 	duration := float64(time.Now().Sub(ts)) / float64(time.Second)
 
 	if username == "" {

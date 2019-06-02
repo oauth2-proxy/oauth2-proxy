@@ -24,6 +24,7 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", ""},
 		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", "/ping"},
 		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/ping\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/ping", ""},
+		{logger.DefaultRequestLoggingFormat, "", "/ping", "/ping"},
 		{"{{.RequestMethod}}", "GET\n", "/foo/bar", ""},
 		{"{{.RequestMethod}}", "GET\n", "/foo/bar", "/ping"},
 		{"{{.RequestMethod}}", "GET\n", "/ping", ""},
