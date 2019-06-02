@@ -1,7 +1,7 @@
 ## OAuth2 Proxy Config File
 ## https://github.com/pusher/oauth2_proxy
 
-## <addr>:<port> to listen on for HTTP/HTTPS clients
+## <addr>:<port> to listen on for HTTP/HTTPS clients. defaults to "127.0.0.1:4180"
 # http_address = "127.0.0.1:4180"
 # https_address = ":443"
 
@@ -10,7 +10,7 @@
 # tls_key_file = ""
 
 ## the OAuth Redirect URL.
-# defaults to the "https://" + requested host header + "/oauth2/callback"
+# defaults to "https://" + requested host header + "/oauth2/callback"
 # redirect_url = "https://internalapp.yourcompany.com/oauth2/callback"
 
 ## the http url(s) of the upstream endpoint. If multiple, routing is based on path
