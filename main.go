@@ -98,7 +98,7 @@ func main() {
 
 	flagSet.Bool("request-logging", true, "Log HTTP requests")
 	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
-	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping endpoint")
+	flagSet.String("exclude-logging-path", "", "Exclude logging requests to path (eg: /ping)")
 
 	flagSet.Bool("auth-logging", true, "Log authentication attempts")
 	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")

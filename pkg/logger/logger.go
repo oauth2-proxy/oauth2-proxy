@@ -88,8 +88,7 @@ type Logger struct {
 	stdEnabled     bool
 	authEnabled    bool
 	reqEnabled     bool
-	silentPing     bool
-	pingPath       string
+	excludePath    string
 	stdLogTemplate *template.Template
 	authTemplate   *template.Template
 	reqTemplate    *template.Template
@@ -103,8 +102,7 @@ func New(flag int) *Logger {
 		stdEnabled:     true,
 		authEnabled:    true,
 		reqEnabled:     true,
-		silentPing:     false,
-		pingPath:       "/ping",
+		excludePath:    "",
 		stdLogTemplate: template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
 		authTemplate:   template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
 		reqTemplate:    template.Must(template.New("req-log").Parse(DefaultRequestLoggingFormat)),
@@ -181,7 +179,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		return
 	}
 
-	if url.Path == l.pingPath && l.silentPing {
+	if url.Path == l.excludePath {
 		return
 	}
 	duration := float64(time.Now().Sub(ts)) / float64(time.Second)
@@ -309,18 +307,11 @@ func (l *Logger) SetReqEnabled(e bool) {
 	l.reqEnabled = e
 }
 
-// SetPingPath sets the ping path.
-func (l *Logger) SetPingPath(s string) {
+// SetExcludePath sets the path to exclude from logging.
+func (l *Logger) SetExcludePath(s string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.pingPath = s
-}
-
-// SetSilentPing disables ping request logging.
-func (l *Logger) SetSilentPing(e bool) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.silentPing = e
+	l.excludePath = s
 }
 
 // SetStandardTemplate sets the template for standard logging.
@@ -386,15 +377,9 @@ func SetReqEnabled(e bool) {
 	std.SetReqEnabled(e)
 }
 
-// SetPingPath sets the healthcheck endpoint path.
-// FIXME: Seems wrong to define this
-func SetPingPath(s string) {
-	std.SetPingPath(s)
-}
-
-// SetSilentPing disables request logging for the ping endpoint.
-func SetSilentPing(e bool) {
-	std.SetSilentPing(e)
+// SetExcludePath sets the path to exclude from logging, eg: health checks
+func SetExcludePath(s string) {
+	std.SetExcludePath(s)
 }
 
 // SetStandardTemplate sets the template for standard logging for

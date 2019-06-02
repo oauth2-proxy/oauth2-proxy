@@ -42,6 +42,7 @@ Usage of oauth2_proxy:
   -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
   -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
   -extra-jwt-issuers: if -skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)
+  -exclude-logging-path: don't log requests to this path, eg: /ping (default "" = no paths excluded)
   -flush-interval: period between flushing response buffers when streaming responses (default "1s")
   -banner string: custom banner string. Use "-" to disable default banner.
   -footer string: custom footer string. Use "-" to disable default footer.
@@ -90,7 +91,6 @@ Usage of oauth2_proxy:
   -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
   -set-authorization-header: set Authorization Bearer response header (useful in Nginx auth_request mode)
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
-  -silence-ping-logging bool: disable logging of requests to ping endpoint (default false) 
   -skip-auth-preflight: will skip authentication for OPTIONS requests
   -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
   -skip-jwt-bearer-tokens: will skip requests that have verified JWT bearer tokens
@@ -140,7 +140,7 @@ There are three different types of logging: standard, authentication, and HTTP r
 
 Each type of logging has their own configurable format and variables. By default these formats are similar to the Apache Combined Log.
 
-Logging of requests to the `/ping` endpoint can be disabled with `-silence-ping-logging` reducing log volume.
+A specific path can be excluded from request logs by setting `-exclude-logging-path`. This is useful for disabling logging of requests to the `/ping` endpoint to reduce log volume when health checking `oauth2_proxy`.
 
 ### Auth Log Format
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
