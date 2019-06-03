@@ -69,6 +69,7 @@ func main() {
 	flagSet.String("banner", "", "custom banner string. Use \"-\" to disable default banner.")
 	flagSet.String("footer", "", "custom footer string. Use \"-\" to disable default footer.")
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
+	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 
 	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
@@ -99,6 +100,7 @@ func main() {
 	flagSet.Bool("request-logging", true, "Log HTTP requests")
 	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
 	flagSet.String("exclude-logging-path", "", "Exclude logging requests to path (eg: /ping)")
+	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping endpoint")
 
 	flagSet.Bool("auth-logging", true, "Log authentication attempts")
 	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")
