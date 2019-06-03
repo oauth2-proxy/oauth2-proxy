@@ -12,7 +12,7 @@
   version = "~0.5.0"
 
 [[constraint]]
-  branch = "v2"
+  version = "^2"
   name = "github.com/coreos/go-oidc"
 
 [[constraint]]
