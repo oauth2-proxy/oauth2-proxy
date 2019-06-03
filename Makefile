@@ -15,15 +15,8 @@ clean:
 distclean: clean
 	rm -rf vendor
 
-BIN_DIR := $(GOPATH)/bin
-GOMETALINTER := $(BIN_DIR)/gometalinter
-
-$(GOMETALINTER):
-	$(GO) get -u github.com/alecthomas/gometalinter
-	gometalinter --install %> /dev/null
-
 .PHONY: lint
-lint: $(GOMETALINTER)
+lint:
 	$(GOMETALINTER) --vendor --disable-all \
 		--enable=vet \
 		--enable=vetshadow \
