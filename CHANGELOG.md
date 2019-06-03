@@ -7,6 +7,10 @@
     a username.
     In that case, this header used to only contain the local part of the user's email address (e.g. `john.doe` for `john.doe@example.com`) but now contains
     the user's full email address instead.
+- [#170](https://github.com/pusher/oauth2_proxy/pull/170) Pre-built binary tarballs changed format
+  - The pre-built binary tarballs again match the format of the [bitly](https://github.com/bitly/oauth2_proxy) repository, where the unpacked directory
+    has the same name as the tarball and the binary is always named `oauth2_proxy`. This was done to restore compatibility with third-party automation
+    recipes like https://github.com/jhoblitt/puppet-oauth2_proxy.
 
 ## Changes since v3.2.0
 
@@ -37,6 +41,7 @@
     - `-auth-logging-format` Sets the format for auth logging
 
 - [#111](https://github.com/pusher/oauth2_proxy/pull/111) Add option for telling where to find a login.gov JWT key file (@timothy-spencer)
+- [#170](https://github.com/pusher/oauth2_proxy/pull/170) Restore binary tarball contents to be compatible with bitlys original tarballs (@zeha)
 
 # v3.2.0
 
