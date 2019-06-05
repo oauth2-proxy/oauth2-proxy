@@ -16,10 +16,14 @@
 
 - [#155](https://github.com/pusher/outh2_proxy/pull/155) Add RedisSessionStore implementation (@brianv0, @JoelSpeed)
   - Implement flags to configure the redis session store
-    -  `-redis-connection-url`
-  - Introduces the concept of a session ticket. Tickets are composed of the cookie name, a session ID, and a secret. 
-  - Sessions are stored encrypted with a per-session secret 
-  - Added Some tests for a Server based session store
+    - `-session-store-type=redis` Sets the store type to redis
+    - `-redis-connection-url` Sets the Redis connection URL
+    - `-redis-use-sentinel=true` Enables Redis Sentinel support
+    - `-redis-sentinel-master-name` Sets the Sentinel master name, if sentinel is enabled
+    - `-redis-sentinel-connection-urls` Defines the Redis Sentinel Connection URLs, if sentinel is enabled
+  - Introduces the concept of a session ticket. Tickets are composed of the cookie name, a session ID, and a secret.
+  - Redis Sessions are stored encrypted with a per-session secret 
+  - Added tests for server based session stores
 - [#168](https://github.com/pusher/outh2_proxy/pull/168) Drop Go 1.11 support in Travis (@JoelSpeed)
 - [#169](https://github.com/pusher/outh2_proxy/pull/169) Update Alpine to 3.9 (@kskewes)
 - [#148](https://github.com/pusher/outh2_proxy/pull/148) Implement SessionStore interface within proxy (@JoelSpeed)
