@@ -46,3 +46,11 @@
 [[constraint]]
   name = "gopkg.in/natefinch/lumberjack.v2"
   version = "2.1.0"
+
+[[constraint]]
+  name = "github.com/go-redis/redis"
+  version = "v6.15.2"
+
+[[constraint]]
+  name = "github.com/alicebob/miniredis"
+  version = "2.7.0"
