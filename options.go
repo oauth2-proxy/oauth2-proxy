@@ -171,8 +171,8 @@ func NewOptions() *Options {
 	}
 }
 
-// JwtIssuer hold parsed JWT issuer info that's used to construct a verifier.
-type JwtIssuer struct {
+// jwtIssuer hold parsed JWT issuer info that's used to construct a verifier.
+type jwtIssuer struct {
 	issuerURI string
 	audience  string
 }
@@ -260,7 +260,7 @@ func (o *Options) Validate() error {
 		}
 		// Configure extra issuers
 		if len(o.ExtraJwtIssuers) > 0 {
-			var jwtIssuers []JwtIssuer
+			var jwtIssuers []jwtIssuer
 			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
 			for _, jwtIssuer := range jwtIssuers {
 				verifier, err := newVerifierFromJwtIssuer(jwtIssuer)
@@ -459,9 +459,9 @@ func parseSignatureKey(o *Options, msgs []string) []string {
 }
 
 // parseJwtIssuers takes in an array of strings in the form of issuer=audience
-// and parses to an array of JwtIssuer structs.
-func parseJwtIssuers(issuers []string, msgs []string) ([]JwtIssuer, []string) {
-	var parsedIssuers []JwtIssuer
+// and parses to an array of jwtIssuer structs.
+func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
+	var parsedIssuers []jwtIssuer
 	for _, jwtVerifier := range issuers {
 		components := strings.Split(jwtVerifier, "=")
 		if len(components) < 2 {
@@ -469,14 +469,14 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]JwtIssuer, []string) {
 			continue
 		}
 		uri, audience := components[0], strings.Join(components[1:], "=")
-		parsedIssuers = append(parsedIssuers, JwtIssuer{issuerURI: uri, audience: audience})
+		parsedIssuers = append(parsedIssuers, jwtIssuer{issuerURI: uri, audience: audience})
 	}
 	return parsedIssuers, msgs
 }
 
-// newVerifierFromJwtIssuer takes in issuer information in JwtIssuer info and returns
+// newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(jwtIssuer JwtIssuer) (*oidc.IDTokenVerifier, error) {
+func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error) {
 	config := &oidc.Config{
 		ClientID: jwtIssuer.audience,
 	}
