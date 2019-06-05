@@ -14,3 +14,7 @@ providers/logingov_test.go @timothy-spencer
 # Bitbucket provider
 providers/bitbucket.go @aledeganopix4d
 providers/bitbucket_test.go @aledeganopix4d
+
+# Nextcloud provider
+providers/nextcloud.go @Ramblurr
+providers/nextcloud_test.go @Ramblurr
