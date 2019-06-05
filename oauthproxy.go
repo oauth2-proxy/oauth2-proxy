@@ -725,21 +725,21 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		if err != nil {
 			logger.Printf("Error loading cookied session: %s", err)
 		}
-		if session != nil && session.Age() > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
-			logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, p.CookieRefresh)
-			saveSession = true
-		}
-	}
 
-	if session != nil {
-		var ok bool
-		if ok, err = p.provider.RefreshSessionIfNeeded(session); err != nil {
-			logger.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
-			clearSession = true
-			session = nil
-		} else if ok {
-			saveSession = true
-			revalidated = true
+		if session != nil {
+			if session.Age() > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
+				logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, p.CookieRefresh)
+				saveSession = true
+			}
+
+			if ok, err := p.provider.RefreshSessionIfNeeded(session); err != nil {
+				logger.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
+				clearSession = true
+				session = nil
+			} else if ok {
+				saveSession = true
+				revalidated = true
+			}
 		}
 	}
 
