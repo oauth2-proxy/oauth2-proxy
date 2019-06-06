@@ -14,6 +14,8 @@
 
 ## Changes since v3.2.0
 
+- [#175](https://github.com/pusher/outh2_proxy/pull/175) Bump go-oidc to v2.0.0 (@aeijdenberg).
+  - Includes fix for potential signature checking issue when OIDC discovery is skipped.
 - [#155](https://github.com/pusher/outh2_proxy/pull/155) Add RedisSessionStore implementation (@brianv0, @JoelSpeed)
   - Implement flags to configure the redis session store
     - `-session-store-type=redis` Sets the store type to redis
