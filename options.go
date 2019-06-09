@@ -29,7 +29,7 @@ import (
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix     string `flag:"proxy-prefix" cfg:"proxy-prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
+	ProxyPrefix     string `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
 	ProxyWebSockets bool   `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
 	HTTPAddress     string `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
 	HTTPSAddress    string `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
@@ -82,8 +82,8 @@ type Options struct {
 	Provider                         string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
 	OIDCIssuerURL                    string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
 	InsecureOIDCAllowUnverifiedEmail bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
-	SkipOIDCDiscovery                bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_SKIP_OIDC_DISCOVERY"`
-	OIDCJwksURL                      string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_OIDC_JWKS_URL"`
+	SkipOIDCDiscovery                bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
+	OIDCJwksURL                      string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
 	LoginURL                         string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
 	RedeemURL                        string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
 	ProfileURL                       string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
@@ -93,18 +93,18 @@ type Options struct {
 	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"`
 
 	// Configuration values for logging
-	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_LOGGING_FILENAME"`
-	LoggingMaxSize        int    `flag:"logging-max-size" cfg:"logging_max_size" env:"OAUTH2_LOGGING_MAX_SIZE"`
-	LoggingMaxAge         int    `flag:"logging-max-age" cfg:"logging_max_age" env:"OAUTH2_LOGGING_MAX_AGE"`
-	LoggingMaxBackups     int    `flag:"logging-max-backups" cfg:"logging_max_backups" env:"OAUTH2_LOGGING_MAX_BACKUPS"`
-	LoggingLocalTime      bool   `flag:"logging-local-time" cfg:"logging_local_time" env:"OAUTH2_LOGGING_LOCAL_TIME"`
-	LoggingCompress       bool   `flag:"logging-compress" cfg:"logging_compress" env:"OAUTH2_LOGGING_COMPRESS"`
-	StandardLogging       bool   `flag:"standard-logging" cfg:"standard_logging" env:"OAUTH2_STANDARD_LOGGING"`
-	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format" env:"OAUTH2_STANDARD_LOGGING_FORMAT"`
-	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging" env:"OAUTH2_REQUEST_LOGGING"`
-	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format" env:"OAUTH2_REQUEST_LOGGING_FORMAT"`
-	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging" env:"OAUTH2_LOGGING_AUTH_LOGGING"`
-	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format" env:"OAUTH2_AUTH_LOGGING_FORMAT"`
+	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
+	LoggingMaxSize        int    `flag:"logging-max-size" cfg:"logging_max_size" env:"OAUTH2_PROXY_LOGGING_MAX_SIZE"`
+	LoggingMaxAge         int    `flag:"logging-max-age" cfg:"logging_max_age" env:"OAUTH2_PROXY_LOGGING_MAX_AGE"`
+	LoggingMaxBackups     int    `flag:"logging-max-backups" cfg:"logging_max_backups" env:"OAUTH2_PROXY_LOGGING_MAX_BACKUPS"`
+	LoggingLocalTime      bool   `flag:"logging-local-time" cfg:"logging_local_time" env:"OAUTH2_PROXY_LOGGING_LOCAL_TIME"`
+	LoggingCompress       bool   `flag:"logging-compress" cfg:"logging_compress" env:"OAUTH2_PROXY_LOGGING_COMPRESS"`
+	StandardLogging       bool   `flag:"standard-logging" cfg:"standard_logging" env:"OAUTH2_PROXY_STANDARD_LOGGING"`
+	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format" env:"OAUTH2_PROXY_STANDARD_LOGGING_FORMAT"`
+	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging" env:"OAUTH2_PROXY_REQUEST_LOGGING"`
+	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format" env:"OAUTH2_PROXY_REQUEST_LOGGING_FORMAT"`
+	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging" env:"OAUTH2_PROXY_LOGGING_AUTH_LOGGING"`
+	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format" env:"OAUTH2_PROXY_AUTH_LOGGING_FORMAT"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 	AcrValues       string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`
