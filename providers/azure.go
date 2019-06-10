@@ -15,6 +15,7 @@ import (
 type AzureProvider struct {
 	*ProviderData
 	Tenant string
+	DomainHint string
 }
 
 // NewAzureProvider initiates a new AzureProvider
@@ -43,7 +44,8 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 }
 
 // Configure defaults the AzureProvider configuration options
-func (p *AzureProvider) Configure(tenant string) {
+func (p *AzureProvider) Configure(tenant string, domainhint string) {
+	p.DomainHint = domainhint
 	p.Tenant = tenant
 	if tenant == "" {
 		p.Tenant = "common"
@@ -127,3 +129,23 @@ func (p *AzureProvider) GetEmailAddress(s *SessionState) (string, error) {
 
 	return email, err
 }
+
+// GetLoginURL with typical oauth parameters
+func (p *AzureProvider)  GetLoginURL(redirectURI, state string) string {
+	var a url.URL
+	a = *p.LoginURL
+	params, _ := url.ParseQuery(a.RawQuery)
+	params.Set("redirect_uri", redirectURI)
+	params.Set("approval_prompt", p.ApprovalPrompt)
+    if p.DomainHint != "" {
+        params.Add("domain_hint", p.DomainHint)
+    }
+	params.Add("scope", p.Scope)
+	params.Set("client_id", p.ClientID)
+	params.Set("response_type", "code")
+	params.Add("state", state)
+	a.RawQuery = params.Encode()
+	return a.String()
+}
+
+
