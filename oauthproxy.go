@@ -60,13 +60,14 @@ type OAuthProxy struct {
 	CookieRefresh  time.Duration
 	Validator      func(string) bool
 
-	RobotsPath        string
-	PingPath          string
-	SignInPath        string
-	SignOutPath       string
-	OAuthStartPath    string
-	OAuthCallbackPath string
-	AuthOnlyPath      string
+	RobotsPath              string
+	PingPath                string
+	SignInPath              string
+	SignOutPath             string
+	OAuthStartPath          string
+	OAuthCallbackPath       string
+	AuthOnlyPath            string
+	AuthenticateOrStartPath string
 
 	redirectURL         *url.URL // the url to receive requests at
 	whitelistDomains    []string
@@ -226,13 +227,14 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		CookieRefresh:  opts.CookieRefresh,
 		Validator:      validator,
 
-		RobotsPath:        "/robots.txt",
-		PingPath:          "/ping",
-		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
-		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
-		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
-		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
-		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
+		RobotsPath:              "/robots.txt",
+		PingPath:                "/ping",
+		SignInPath:              fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
+		SignOutPath:             fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
+		OAuthStartPath:          fmt.Sprintf("%s/start", opts.ProxyPrefix),
+		OAuthCallbackPath:       fmt.Sprintf("%s/callback", opts.ProxyPrefix),
+		AuthOnlyPath:            fmt.Sprintf("%s/auth", opts.ProxyPrefix),
+		AuthenticateOrStartPath: fmt.Sprintf("%s/auth_or_start", opts.ProxyPrefix),
 
 		ProxyPrefix:        opts.ProxyPrefix,
 		provider:           opts.provider,
@@ -519,6 +521,8 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.OAuthCallback(rw, req)
 	case path == p.AuthOnlyPath:
 		p.AuthenticateOnly(rw, req)
+	case path == p.AuthenticateOrStartPath:
+		p.AuthenticateOrStart(rw, req)
 	default:
 		p.Proxy(rw, req)
 	}
@@ -646,6 +650,16 @@ func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request)
 		rw.WriteHeader(http.StatusAccepted)
 	} else {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+	}
+}
+
+// AuthenticateOrStart checks whether the user is currently logged in and start
+func (p *OAuthProxy) AuthenticateOrStart(rw http.ResponseWriter, req *http.Request) {
+	status := p.Authenticate(rw, req)
+	if status == http.StatusAccepted {
+		rw.WriteHeader(http.StatusOK)
+	} else {
+		p.OAuthStart(rw, req)
 	}
 }
 
