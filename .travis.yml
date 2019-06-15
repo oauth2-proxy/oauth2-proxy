@@ -1,16 +1,15 @@
 language: go
 go:
-  - 1.11.x
   - 1.12.x
 install:
   # Fetch dependencies
   - wget -O dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
   - chmod +x dep
   - mv dep $GOPATH/bin/dep
+  - go get github.com/alecthomas/gometalinter
+  - gometalinter --install
 script:
-  - ./configure
-  # Run tests
-  - make test
+  - ./configure && make test
 sudo: false
 notifications:
   email: false

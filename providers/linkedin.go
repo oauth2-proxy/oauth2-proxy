@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/pusher/oauth2_proxy/api"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 )
 
 // LinkedInProvider represents an LinkedIn based Identity Provider
@@ -50,7 +51,7 @@ func getLinkedInHeader(accessToken string) http.Header {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *LinkedInProvider) GetEmailAddress(s *SessionState) (string, error) {
+func (p *LinkedInProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
@@ -73,6 +74,6 @@ func (p *LinkedInProvider) GetEmailAddress(s *SessionState) (string, error) {
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *LinkedInProvider) ValidateSessionState(s *SessionState) bool {
+func (p *LinkedInProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	return validateToken(p, s.AccessToken, getLinkedInHeader(s.AccessToken))
 }

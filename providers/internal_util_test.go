@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,13 +20,13 @@ type ValidateSessionStateTestProvider struct {
 	*ProviderData
 }
 
-func (tp *ValidateSessionStateTestProvider) GetEmailAddress(s *SessionState) (string, error) {
+func (tp *ValidateSessionStateTestProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
 // Note that we're testing the internal validateToken() used to implement
 // several Provider's ValidateSessionState() implementations
-func (tp *ValidateSessionStateTestProvider) ValidateSessionState(s *SessionState) bool {
+func (tp *ValidateSessionStateTestProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	return false
 }
 

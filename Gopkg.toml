@@ -12,7 +12,7 @@
   version = "~0.5.0"
 
 [[constraint]]
-  branch = "v2"
+  version = "^2"
   name = "github.com/coreos/go-oidc"
 
 [[constraint]]
@@ -35,6 +35,10 @@
   name = "gopkg.in/fsnotify/fsnotify.v1"
   version = "~1.2.0"
 
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
+
 [[constraint]]
   branch = "master"
   name = "golang.org/x/crypto"
@@ -42,3 +46,11 @@
 [[constraint]]
   name = "gopkg.in/natefinch/lumberjack.v2"
   version = "2.1.0"
+
+[[constraint]]
+  name = "github.com/go-redis/redis"
+  version = "v6.15.2"
+
+[[constraint]]
+  name = "github.com/alicebob/miniredis"
+  version = "2.7.0"

@@ -17,7 +17,11 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
+	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/apis/options"
+	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/sessions"
 	"github.com/pusher/oauth2_proxy/providers"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -50,14 +54,11 @@ type Options struct {
 	CustomTemplatesDir       string   `flag:"custom-templates-dir" cfg:"custom_templates_dir" env:"OAUTH2_PROXY_CUSTOM_TEMPLATES_DIR"`
 	Footer                   string   `flag:"footer" cfg:"footer" env:"OAUTH2_PROXY_FOOTER"`
 
-	CookieName     string        `flag:"cookie-name" cfg:"cookie_name" env:"OAUTH2_PROXY_COOKIE_NAME"`
-	CookieSecret   string        `flag:"cookie-secret" cfg:"cookie_secret" env:"OAUTH2_PROXY_COOKIE_SECRET"`
-	CookieDomain   string        `flag:"cookie-domain" cfg:"cookie_domain" env:"OAUTH2_PROXY_COOKIE_DOMAIN"`
-	CookiePath     string        `flag:"cookie-path" cfg:"cookie_path" env:"OAUTH2_PROXY_COOKIE_PATH"`
-	CookieExpire   time.Duration `flag:"cookie-expire" cfg:"cookie_expire" env:"OAUTH2_PROXY_COOKIE_EXPIRE"`
-	CookieRefresh  time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
-	CookieSecure   bool          `flag:"cookie-secure" cfg:"cookie_secure" env:"OAUTH2_PROXY_COOKIE_SECURE"`
-	CookieHTTPOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly" env:"OAUTH2_PROXY_COOKIE_HTTPONLY"`
+	// Embed CookieOptions
+	options.CookieOptions
+
+	// Embed SessionOptions
+	options.SessionOptions
 
 	Upstreams             []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex         []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
@@ -114,6 +115,7 @@ type Options struct {
 	proxyURLs     []*url.URL
 	CompiledRegex []*regexp.Regexp
 	provider      providers.Provider
+	sessionStore  sessionsapi.SessionStore
 	signatureData *SignatureData
 	oidcVerifier  *oidc.IDTokenVerifier
 }
@@ -127,16 +129,21 @@ type SignatureData struct {
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:           "/oauth2",
-		ProxyWebSockets:       true,
-		HTTPAddress:           "127.0.0.1:4180",
-		HTTPSAddress:          ":443",
-		DisplayHtpasswdForm:   true,
-		CookieName:            "_oauth2_proxy",
-		CookieSecure:          true,
-		CookieHTTPOnly:        true,
-		CookieExpire:          time.Duration(168) * time.Hour,
-		CookieRefresh:         time.Duration(0),
+		ProxyPrefix:         "/oauth2",
+		ProxyWebSockets:     true,
+		HTTPAddress:         "127.0.0.1:4180",
+		HTTPSAddress:        ":443",
+		DisplayHtpasswdForm: true,
+		CookieOptions: options.CookieOptions{
+			CookieName:     "_oauth2_proxy",
+			CookieSecure:   true,
+			CookieHTTPOnly: true,
+			CookieExpire:   time.Duration(168) * time.Hour,
+			CookieRefresh:  time.Duration(0),
+		},
+		SessionOptions: options.SessionOptions{
+			Type: "cookie",
+		},
 		SetXAuthRequest:       false,
 		SkipAuthPreflight:     false,
 		PassBasicAuth:         true,
@@ -262,7 +269,8 @@ func (o *Options) Validate() error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
-	if o.PassAccessToken || (o.CookieRefresh != time.Duration(0)) {
+	var cipher *cookie.Cipher
+	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.CookieRefresh != time.Duration(0)) {
 		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
 			if len(secretBytes(o.CookieSecret)) == i {
@@ -284,7 +292,21 @@ func (o *Options) Validate() error {
 					"pass_access_token == true or "+
 					"cookie_refresh != 0, but is %d bytes.%s",
 				len(secretBytes(o.CookieSecret)), suffix))
+		} else {
+			var err error
+			cipher, err = cookie.NewCipher(secretBytes(o.CookieSecret))
+			if err != nil {
+				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
+			}
 		}
+	}
+
+	o.SessionOptions.Cipher = cipher
+	sessionStore, err := sessions.NewSessionStore(&o.SessionOptions, &o.CookieOptions)
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
+	} else {
+		o.sessionStore = sessionStore
 	}
 
 	if o.CookieRefresh >= o.CookieExpire {

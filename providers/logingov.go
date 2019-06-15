@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -173,7 +174,7 @@ func emailFromUserInfo(accessToken string, userInfoEndpoint string) (email strin
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
+func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -248,9 +249,10 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *SessionState, er
 	}
 
 	// Store the data that we found in the session state
-	s = &SessionState{
+	s = &sessions.SessionState{
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,
+		CreatedAt:   time.Now(),
 		ExpiresOn:   time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second),
 		Email:       email,
 	}

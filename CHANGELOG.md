@@ -9,11 +9,32 @@
     the user's full email address instead.
 - [#137](https://github.com/pusher/oauth2_proxy/pull/137) When using gitlab provider, the `validate-url` has to point the the `api/v4` endpoint instead of the `api/v4/user` endpoint*
 
+
 ## Changes since v3.2.0
 
 - [#137](https://github.com/pusher/oauth2_proxy/pull/137) Add support for `email-domain` to gitlab provider (also searches additional emails)
 - [#137](https://github.com/pusher/oauth2_proxy/pull/137) Add option `gitlab-group`, to only authorize users of a certain gitlab group
-- [#114](https://github.com/pusher/oauth2_proxy/pull/114), [#154](https://github.com/pusher/oauth2_proxy/pull/154) Documentation is now available live at our [docs website](https://pusher.github.io/oauth2_proxy/) (@JoelSpeed, @icelynjennings) 
+- [#180](https://github.com/pusher/outh2_proxy/pull/180) Minor refactor of core proxying path (@aeijdenberg).
+- [#175](https://github.com/pusher/outh2_proxy/pull/175) Bump go-oidc to v2.0.0 (@aeijdenberg).
+  - Includes fix for potential signature checking issue when OIDC discovery is skipped.
+- [#155](https://github.com/pusher/outh2_proxy/pull/155) Add RedisSessionStore implementation (@brianv0, @JoelSpeed)
+  - Implement flags to configure the redis session store
+    - `-session-store-type=redis` Sets the store type to redis
+    - `-redis-connection-url` Sets the Redis connection URL
+    - `-redis-use-sentinel=true` Enables Redis Sentinel support
+    - `-redis-sentinel-master-name` Sets the Sentinel master name, if sentinel is enabled
+    - `-redis-sentinel-connection-urls` Defines the Redis Sentinel Connection URLs, if sentinel is enabled
+  - Introduces the concept of a session ticket. Tickets are composed of the cookie name, a session ID, and a secret.
+  - Redis Sessions are stored encrypted with a per-session secret 
+  - Added tests for server based session stores
+- [#168](https://github.com/pusher/outh2_proxy/pull/168) Drop Go 1.11 support in Travis (@JoelSpeed)
+- [#169](https://github.com/pusher/outh2_proxy/pull/169) Update Alpine to 3.9 (@kskewes)
+- [#148](https://github.com/pusher/outh2_proxy/pull/148) Implement SessionStore interface within proxy (@JoelSpeed)
+- [#147](https://github.com/pusher/outh2_proxy/pull/147) Add SessionStore interfaces and initial implementation (@JoelSpeed)
+  - Allows for multiple different session storage implementations including client and server side
+  - Adds tests suite for interface to ensure consistency across implementations
+  - Refactor some configuration options (around cookies) into packages
+- [#114](https://github.com/pusher/oauth2_proxy/pull/114), [#154](https://github.com/pusher/oauth2_proxy/pull/154) Documentation is now available live at our [docs website](https://pusher.github.io/oauth2_proxy/) (@JoelSpeed, @icelynjennings)
 - [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field (@gargath)
 - [#144](https://github.com/pusher/oauth2_proxy/pull/144) Use GO 1.12 for ARM builds (@kskewes)
 - [#142](https://github.com/pusher/oauth2_proxy/pull/142) ARM Docker USER fix (@kskewes)
@@ -33,6 +54,11 @@
     - `-auth-logging-format` Sets the format for auth logging
 
 - [#111](https://github.com/pusher/oauth2_proxy/pull/111) Add option for telling where to find a login.gov JWT key file (@timothy-spencer)
+- [#170](https://github.com/pusher/oauth2_proxy/pull/170) Restore binary tarball contents to be compatible with bitlys original tarballs (@zeha)
+- [#185](https://github.com/pusher/oauth2_proxy/pull/185) Fix an unsupported protocol scheme error during token validation when using the Azure provider (@jonas)
+
+- [#141](https://github.com/pusher/oauth2_proxy/pull/141) Check google group membership based on email address (@bchess)
+  - Google Group membership is additionally checked via email address, allowing users outside a GSuite domain to be authorized.
 
 # v3.2.0
 

@@ -2,13 +2,15 @@ package providers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/pusher/oauth2_proxy/logger"
+
 	"github.com/bitly/go-simplejson"
 	"github.com/pusher/oauth2_proxy/api"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 )
 
 // GitLabProvider represents an GitLab based Identity Provider
@@ -19,7 +21,8 @@ type GitLabProvider struct {
 }
 
 // NewGitLabProvider initiates a new GitLabProvider
-func NewGitLabProvider(p *ProviderData) *GitLabProvider {
+func NewGitLabProvider(pd *ProviderData) *GitLabProvider {
+	p := &GitLabProvider{ProviderData: pd}
 	p.ProviderName = "GitLab"
 	if p.LoginURL == nil || p.LoginURL.String() == "" {
 		p.LoginURL = &url.URL{
@@ -42,27 +45,36 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 			Path:   "/api/v4",
 		}
 	}
-	p.Scope += " read_user"
-	return &GitLabProvider{ProviderData: p}
+	p.addScope("read_user")
+	return p
+}
+
+func (p *GitLabProvider) userInGroup(validGroup string, s *sessions.SessionState) (bool, error) {
+	if validGroup == "" {
+		return true, nil
+	}
+
+	groupsJSON, groupsJSONError := data(p.ValidateURL.String()+"/groups?access_token="+s.AccessToken, s)
+	if groupsJSONError != nil {
+		return false, groupsJSONError
+	}
+	groupsValid := false
+	for i := range groupsJSON.MustArray() {
+		group, groupJSONError := groupsJSON.GetIndex(i).Get("name").String()
+		if groupJSONError == nil {
+			groupsValid = groupsValid || (strings.ToLower(group) == validGroup)
+		}
+	}
+	if !groupsValid {
+		return false, fmt.Errorf("user has no access to group %s", validGroup)
+	}
+	return true, nil
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitLabProvider) GetEmailAddress(s *SessionState) (string, error) {
-	if p.Group != "" {
-		groupsJSON, groupsJSONError := data(p.ValidateURL.String()+"/groups?access_token="+s.AccessToken, s)
-		if groupsJSONError != nil {
-			return "", groupsJSONError
-		}
-		groupsValid := false
-		for i := range groupsJSON.MustArray() {
-			group, groupJSONError := groupsJSON.GetIndex(i).Get("name").String()
-			if groupJSONError == nil {
-				groupsValid = groupsValid || (strings.ToLower(group) == p.Group)
-			}
-		}
-		if !groupsValid {
-			return "", fmt.Errorf("user has no access to group %s", p.Group)
-		}
+func (p *GitLabProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+	if ok, userInGroupError := p.userInGroup(p.Group, s); !ok {
+		return "", userInGroupError
 	}
 
 	primaryUserEmailJSON, primaryUserEmailJSONError := data(p.ValidateURL.String()+"/user?access_token="+s.AccessToken, s)
@@ -104,7 +116,16 @@ func (p *GitLabProvider) GetEmailAddress(s *SessionState) (string, error) {
 // SetGroup adds api scope to the oidc scopes
 func (p *GitLabProvider) SetGroup(group string) {
 	p.Group = strings.ToLower(group)
-	p.Scope += " api"
+	p.addScope("api")
+}
+
+func (p *GitLabProvider) addScope(scope string) {
+	p.Scope = strings.ToLower(strings.TrimSpace(p.Scope))
+	scope = strings.ToLower(strings.TrimSpace(scope))
+	if strings.Contains(" "+p.Scope+" ", " "+scope+" ") {
+		return
+	}
+	p.Scope = strings.TrimSpace(p.Scope + " " + scope)
 }
 
 // SetEmailDomains to filter emails for
@@ -112,15 +133,15 @@ func (p *GitLabProvider) SetEmailDomains(domains []string) {
 	p.EmailDomains = domains
 }
 
-func data(url string, s *SessionState) (*simplejson.Json, error) {
+func data(url string, s *sessions.SessionState) (*simplejson.Json, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Printf("failed building request %s", err)
+		logger.Printf("failed building request %s", err)
 		return nil, err
 	}
 	json, err := api.Request(req)
 	if err != nil {
-		log.Printf("failed making request %s", err)
+		logger.Printf("failed making request %s", err)
 		return nil, err
 	}
 	return json, nil

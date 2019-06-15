@@ -8,12 +8,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/pusher/oauth2_proxy/cookie"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 )
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err error) {
+func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -59,7 +61,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 	}
 	err = json.Unmarshal(body, &jsonResponse)
 	if err == nil {
-		s = &SessionState{
+		s = &sessions.SessionState{
 			AccessToken: jsonResponse.AccessToken,
 		}
 		return
@@ -71,7 +73,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 		return
 	}
 	if a := v.Get("access_token"); a != "" {
-		s = &SessionState{AccessToken: a}
+		s = &sessions.SessionState{AccessToken: a, CreatedAt: time.Now()}
 	} else {
 		err = fmt.Errorf("no access token found %s", body)
 	}
@@ -94,22 +96,22 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 }
 
 // CookieForSession serializes a session state for storage in a cookie
-func (p *ProviderData) CookieForSession(s *SessionState, c *cookie.Cipher) (string, error) {
+func (p *ProviderData) CookieForSession(s *sessions.SessionState, c *cookie.Cipher) (string, error) {
 	return s.EncodeSessionState(c)
 }
 
 // SessionFromCookie deserializes a session from a cookie value
-func (p *ProviderData) SessionFromCookie(v string, c *cookie.Cipher) (s *SessionState, err error) {
-	return DecodeSessionState(v, c)
+func (p *ProviderData) SessionFromCookie(v string, c *cookie.Cipher) (s *sessions.SessionState, err error) {
+	return sessions.DecodeSessionState(v, c)
 }
 
 // GetEmailAddress returns the Account email address
-func (p *ProviderData) GetEmailAddress(s *SessionState) (string, error) {
+func (p *ProviderData) GetEmailAddress(s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
 // GetUserName returns the Account username
-func (p *ProviderData) GetUserName(s *SessionState) (string, error) {
+func (p *ProviderData) GetUserName(s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
@@ -120,12 +122,12 @@ func (p *ProviderData) ValidateGroup(email string) bool {
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *ProviderData) ValidateSessionState(s *SessionState) bool {
+func (p *ProviderData) ValidateSessionState(s *sessions.SessionState) bool {
 	return validateToken(p, s.AccessToken, nil)
 }
 
 // RefreshSessionIfNeeded should refresh the user's session if required and
 // do nothing if a refresh is not required
-func (p *ProviderData) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
+func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
 	return false, nil
 }

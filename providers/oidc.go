@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/oauth2"
-
 	oidc "github.com/coreos/go-oidc"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"golang.org/x/oauth2"
 )
 
 // OIDCProvider represents an OIDC based Identity Provider
@@ -24,7 +24,7 @@ func NewOIDCProvider(p *ProviderData) *OIDCProvider {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *OIDCProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
+func (p *OIDCProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
 	ctx := context.Background()
 	c := oauth2.Config{
 		ClientID:     p.ClientID,
@@ -47,7 +47,7 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *SessionState, err er
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *OIDCProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
+func (p *OIDCProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil
 	}
@@ -63,7 +63,7 @@ func (p *OIDCProvider) RefreshSessionIfNeeded(s *SessionState) (bool, error) {
 	return true, nil
 }
 
-func (p *OIDCProvider) redeemRefreshToken(s *SessionState) (err error) {
+func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) {
 	c := oauth2.Config{
 		ClientID:     p.ClientID,
 		ClientSecret: p.ClientSecret,
@@ -87,12 +87,13 @@ func (p *OIDCProvider) redeemRefreshToken(s *SessionState) (err error) {
 	s.AccessToken = newSession.AccessToken
 	s.IDToken = newSession.IDToken
 	s.RefreshToken = newSession.RefreshToken
+	s.CreatedAt = newSession.CreatedAt
 	s.ExpiresOn = newSession.ExpiresOn
 	s.Email = newSession.Email
 	return
 }
 
-func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*SessionState, error) {
+func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
 		return nil, fmt.Errorf("token response did not contain an id_token")
@@ -122,10 +123,11 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
 
-	return &SessionState{
+	return &sessions.SessionState{
 		AccessToken:  token.AccessToken,
 		IDToken:      rawIDToken,
 		RefreshToken: token.RefreshToken,
+		CreatedAt:    time.Now(),
 		ExpiresOn:    token.Expiry,
 		Email:        claims.Email,
 		User:         claims.Subject,
@@ -133,7 +135,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 }
 
 // ValidateSessionState checks that the session's IDToken is still valid
-func (p *OIDCProvider) ValidateSessionState(s *SessionState) bool {
+func (p *OIDCProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	ctx := context.Background()
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	if err != nil {

@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Configuration
-permalink: /configuration
+permalink: /docs/configuration
+has_children: true
 nav_order: 3
 ---
 
@@ -74,10 +75,15 @@ Usage of oauth2_proxy:
   -pubjwk-url string: JWK pubkey access endpoint: required by login.gov
   -redeem-url string: Token redemption endpoint
   -redirect-url string: the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
+  -redis-connection-url string: URL of redis server for redis session storage (eg: redis://HOST[:PORT])
+  -redis-sentinel-master-name string: Redis sentinel master name. Used in conjuction with --redis-use-sentinel
+  -redis-sentinel-connection-urls: List of Redis sentinel conneciton URLs (eg redis://HOST[:PORT]). Used in conjuction with --redis-use-sentinel
+  -redis-use-sentinel: Connect to redis via sentinels. Must set --redis-sentinel-master-name and --redis-sentinel-connection-urls to use this feature (default: false)
   -request-logging: Log requests to stdout (default true)
   -request-logging-format: Template for request log lines (see "Logging Configuration" paragraph below)
   -resource string: The resource that is protected (Azure AD only)
   -scope string: OAuth scope specification
+  -session-store-type: Session data storage backend (default: cookie)
   -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
   -set-authorization-header: set Authorization Bearer response header (useful in Nginx auth_request mode)
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)

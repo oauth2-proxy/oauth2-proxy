@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,7 +66,7 @@ func TestGitLabProviderDefaults(t *testing.T) {
 		p.Data().RedeemURL.String())
 	assert.Equal(t, "https://gitlab.com/api/v4",
 		p.Data().ValidateURL.String())
-	assert.Equal(t, " read_user", p.Data().Scope)
+	assert.Equal(t, "read_user", p.Data().Scope)
 }
 
 func TestGitLabProviderOverrides(t *testing.T) {
@@ -102,7 +103,7 @@ func TestGitLabProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 
-	session := &SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
@@ -120,7 +121,7 @@ func TestGitLabProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
-	session := &SessionState{AccessToken: "unexpected_access_token"}
+	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
@@ -133,7 +134,7 @@ func TestGitLabProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 
-	session := &SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
@@ -147,7 +148,7 @@ func TestGitLabProviderGetEmailAddressWithEmailDomain(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 	p.SetEmailDomains([]string{"@example2.com"})
 
-	session := &SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "ruben.wagner@example2.com", email)
@@ -159,9 +160,9 @@ func TestGitLabProviderGetEmailAddressWithGroups(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 	p.SetGroup("testgroup")
-	assert.Equal(t, " read_user api", p.Scope)
+	assert.Equal(t, "read_user api", p.Scope)
 
-	session := &SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "ruben.wagner@example.com", email)
@@ -174,9 +175,9 @@ func TestGitLabProviderGetEmailAddressWithGroupsInvalid(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 	p.SetGroup("testgroup")
-	assert.Equal(t, " read_user api", p.Scope)
+	assert.Equal(t, "read_user api", p.Scope)
 
-	session := &SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
