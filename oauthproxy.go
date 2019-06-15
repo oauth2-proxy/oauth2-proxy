@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/mbland/hmacauth"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/yhat/wsutil"
 )
