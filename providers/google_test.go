@@ -3,12 +3,15 @@ package providers
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	admin "google.golang.org/api/admin/directory/v1"
 )
 
 func newRedeemServer(body []byte) (*url.URL, *httptest.Server) {
@@ -178,4 +181,38 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 		t.Errorf("expect nill session %#v", session)
 	}
 
+}
+
+func TestGoogleProviderUserInGroup(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/users/member-by-email@example.com" {
+			fmt.Fprintln(w, "{}")
+		} else if r.URL.Path == "/users/non-member-by-email@example.com" {
+			fmt.Fprintln(w, "{}")
+		} else if r.URL.Path == "/users/member-by-id@example.com" {
+			fmt.Fprintln(w, "{\"id\": \"member-id\"}")
+		} else if r.URL.Path == "/users/non-member-by-id@example.com" {
+			fmt.Fprintln(w, "{\"id\": \"non-member-id\"}")
+		} else if r.URL.Path == "/groups/group@example.com/members" {
+			fmt.Fprintln(w, "{\"members\": [{\"email\": \"member-by-email@example.com\"}, {\"id\": \"member-id\", \"type\": \"USER\"}]}")
+		}
+	}))
+	defer ts.Close()
+
+	client := ts.Client()
+	service, err := admin.New(client)
+	service.BasePath = ts.URL
+	assert.Equal(t, nil, err)
+
+	result := userInGroup(service, []string{"group@example.com"}, "member-by-email@example.com")
+	assert.True(t, result)
+
+	result = userInGroup(service, []string{"group@example.com"}, "member-by-id@example.com")
+	assert.True(t, result)
+
+	result = userInGroup(service, []string{"group@example.com"}, "non-member-by-id@example.com")
+	assert.False(t, result)
+
+	result = userInGroup(service, []string{"group@example.com"}, "non-member-by-email@example.com")
+	assert.False(t, result)
 }

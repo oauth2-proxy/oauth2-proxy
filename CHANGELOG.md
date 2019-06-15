@@ -57,6 +57,9 @@
 - [#170](https://github.com/pusher/oauth2_proxy/pull/170) Restore binary tarball contents to be compatible with bitlys original tarballs (@zeha)
 - [#185](https://github.com/pusher/oauth2_proxy/pull/185) Fix an unsupported protocol scheme error during token validation when using the Azure provider (@jonas)
 
+- [#141](https://github.com/pusher/oauth2_proxy/pull/141) Check google group membership based on email address (@bchess)
+  - Google Group membership is additionally checked via email address, allowing users outside a GSuite domain to be authorized.
+
 # v3.2.0
 
 ## Release highlights
