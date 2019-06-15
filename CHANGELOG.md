@@ -14,6 +14,7 @@
 
 ## Changes since v3.2.0
 
+- [#180](https://github.com/pusher/outh2_proxy/pull/180) Minor refactor of core proxying path (@aeijdenberg).
 - [#175](https://github.com/pusher/outh2_proxy/pull/175) Bump go-oidc to v2.0.0 (@aeijdenberg).
   - Includes fix for potential signature checking issue when OIDC discovery is skipped.
 - [#155](https://github.com/pusher/outh2_proxy/pull/155) Add RedisSessionStore implementation (@brianv0, @JoelSpeed)

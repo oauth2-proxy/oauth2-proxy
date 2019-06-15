@@ -646,14 +646,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 // AuthenticateOnly checks whether the user is currently logged in
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
-	switch err {
-	case nil:
-		// we are authenticated
-		p.addHeadersForProxying(rw, req, session)
-		rw.WriteHeader(http.StatusAccepted)
-	default:
+	if err != nil {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+		return
 	}
+
+	// we are authenticated
+	p.addHeadersForProxying(rw, req, session)
+	rw.WriteHeader(http.StatusAccepted)
 }
 
 // Proxy proxies the user request if the user is authenticated else it prompts
