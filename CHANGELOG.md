@@ -14,10 +14,11 @@
 
 ## Changes since v3.2.0
 
-- [#180](https://github.com/pusher/outh2_proxy/pull/180) Minor refactor of core proxying path (@aeijdenberg).
-- [#175](https://github.com/pusher/outh2_proxy/pull/175) Bump go-oidc to v2.0.0 (@aeijdenberg).
+- [#150](https://github.com/pusher/oauth2_proxy/pull/150) Fix redirects on /sign_in when -skip-provider-button is set
+- [#180](https://github.com/pusher/oauth2_proxy/pull/180) Minor refactor of core proxying path (@aeijdenberg).
+- [#175](https://github.com/pusher/oauth2_proxy/pull/175) Bump go-oidc to v2.0.0 (@aeijdenberg).
   - Includes fix for potential signature checking issue when OIDC discovery is skipped.
-- [#155](https://github.com/pusher/outh2_proxy/pull/155) Add RedisSessionStore implementation (@brianv0, @JoelSpeed)
+- [#155](https://github.com/pusher/oauth2_proxy/pull/155) Add RedisSessionStore implementation (@brianv0, @JoelSpeed)
   - Implement flags to configure the redis session store
     - `-session-store-type=redis` Sets the store type to redis
     - `-redis-connection-url` Sets the Redis connection URL
@@ -25,12 +26,12 @@
     - `-redis-sentinel-master-name` Sets the Sentinel master name, if sentinel is enabled
     - `-redis-sentinel-connection-urls` Defines the Redis Sentinel Connection URLs, if sentinel is enabled
   - Introduces the concept of a session ticket. Tickets are composed of the cookie name, a session ID, and a secret.
-  - Redis Sessions are stored encrypted with a per-session secret 
+  - Redis Sessions are stored encrypted with a per-session secret
   - Added tests for server based session stores
-- [#168](https://github.com/pusher/outh2_proxy/pull/168) Drop Go 1.11 support in Travis (@JoelSpeed)
-- [#169](https://github.com/pusher/outh2_proxy/pull/169) Update Alpine to 3.9 (@kskewes)
-- [#148](https://github.com/pusher/outh2_proxy/pull/148) Implement SessionStore interface within proxy (@JoelSpeed)
-- [#147](https://github.com/pusher/outh2_proxy/pull/147) Add SessionStore interfaces and initial implementation (@JoelSpeed)
+- [#168](https://github.com/pusher/oauth2_proxy/pull/168) Drop Go 1.11 support in Travis (@JoelSpeed)
+- [#169](https://github.com/pusher/oauth2_proxy/pull/169) Update Alpine to 3.9 (@kskewes)
+- [#148](https://github.com/pusher/oauth2_proxy/pull/148) Implement SessionStore interface within proxy (@JoelSpeed)
+- [#147](https://github.com/pusher/oauth2_proxy/pull/147) Add SessionStore interfaces and initial implementation (@JoelSpeed)
   - Allows for multiple different session storage implementations including client and server side
   - Adds tests suite for interface to ensure consistency across implementations
   - Refactor some configuration options (around cookies) into packages
