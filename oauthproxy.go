@@ -47,6 +47,11 @@ var SignatureHeaders = []string{
 	"Gap-Auth",
 }
 
+var (
+	// ErrNeedsLogin means the user should be redirected to the login page
+	ErrNeedsLogin = errors.New("redirect to login page")
+)
+
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
 	CookieSeed     string
@@ -477,20 +482,19 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 }
 
 // IsWhitelistedRequest is used to check if auth should be skipped for this request
-func (p *OAuthProxy) IsWhitelistedRequest(req *http.Request) (ok bool) {
+func (p *OAuthProxy) IsWhitelistedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
 	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path)
 }
 
 // IsWhitelistedPath is used to check if the request path is allowed without auth
-func (p *OAuthProxy) IsWhitelistedPath(path string) (ok bool) {
+func (p *OAuthProxy) IsWhitelistedPath(path string) bool {
 	for _, u := range p.compiledRegex {
-		ok = u.MatchString(path)
-		if ok {
-			return
+		if u.MatchString(path) {
+			return true
 		}
 	}
-	return
+	return false
 }
 
 func getRemoteAddr(req *http.Request) (s string) {
@@ -641,36 +645,54 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 // AuthenticateOnly checks whether the user is currently logged in
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
-	status := p.Authenticate(rw, req)
-	if status == http.StatusAccepted {
-		rw.WriteHeader(http.StatusAccepted)
-	} else {
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+		return
 	}
+
+	// we are authenticated
+	p.addHeadersForProxying(rw, req, session)
+	rw.WriteHeader(http.StatusAccepted)
 }
 
 // Proxy proxies the user request if the user is authenticated else it prompts
 // them to authenticate
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
-	status := p.Authenticate(rw, req)
-	if status == http.StatusInternalServerError {
-		p.ErrorPage(rw, http.StatusInternalServerError,
-			"Internal Error", "Internal Error")
-	} else if status == http.StatusForbidden {
+	session, err := p.getAuthenticatedSession(rw, req)
+	switch err {
+	case nil:
+		// we are authenticated
+		p.addHeadersForProxying(rw, req, session)
+		p.serveMux.ServeHTTP(rw, req)
+
+	case ErrNeedsLogin:
+		// we need to send the user to a login screen
+		if isAjax(req) {
+			// no point redirecting an AJAX request
+			p.ErrorJSON(rw, http.StatusUnauthorized)
+			return
+		}
+
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
 			p.SignInPage(rw, req, http.StatusForbidden)
 		}
-	} else if status == http.StatusUnauthorized {
-		p.ErrorJSON(rw, status)
-	} else {
-		p.serveMux.ServeHTTP(rw, req)
+
+	default:
+		// unknown error
+		logger.Printf("Unexpected internal error: %s", err)
+		p.ErrorPage(rw, http.StatusInternalServerError,
+			"Internal Error", "Internal Error")
 	}
+
 }
 
-// Authenticate checks whether a user is authenticated
-func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int {
+// getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
+// Returns nil, ErrNeedsLogin if user needs to login.
+// Set-Cookie headers may be set on the response as a side-effect of calling this method.
+func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	var saveSession, clearSession, revalidated bool
 	remoteAddr := getRemoteAddr(req)
 
@@ -720,7 +742,7 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		err = p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.PrintAuthf(session.Email, req, logger.AuthError, "Save session error %s", err)
-			return http.StatusInternalServerError
+			return nil, err
 		}
 	}
 
@@ -736,15 +758,14 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	}
 
 	if session == nil {
-		// Check if is an ajax request and return unauthorized to avoid a redirect
-		// to the login page
-		if p.isAjax(req) {
-			return http.StatusUnauthorized
-		}
-		return http.StatusForbidden
+		return nil, ErrNeedsLogin
 	}
 
-	// At this point, the user is authenticated. proxy normally
+	return session, nil
+}
+
+// addHeadersForProxying adds the appropriate headers the request / response for proxying
+func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
 	if p.PassBasicAuth {
 		req.SetBasicAuth(session.User, p.BasicAuthPassword)
 		req.Header["X-Forwarded-User"] = []string{session.User}
@@ -781,7 +802,6 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	} else {
 		rw.Header().Set("GAP-Auth", session.Email)
 	}
-	return http.StatusAccepted
 }
 
 // CheckBasicAuth checks the requests Authorization header for basic auth
@@ -815,7 +835,7 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*sessionsapi.SessionStat
 }
 
 // isAjax checks if a request is an ajax request
-func (p *OAuthProxy) isAjax(req *http.Request) bool {
+func isAjax(req *http.Request) bool {
 	acceptValues, ok := req.Header["accept"]
 	if !ok {
 		acceptValues = req.Header["Accept"]
