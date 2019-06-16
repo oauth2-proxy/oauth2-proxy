@@ -90,27 +90,15 @@ func (p *GitLabProvider) GetEmailAddress(s *sessions.SessionState) (string, erro
 		return primaryUserEmail, nil
 	}
 
-	userEmailCandidates := []string{
-		primaryUserEmail,
-	}
-	secondaryUserEmailsJSON, secondaryUserEmailsJSONError := data(p.ValidateURL.String()+"/user/emails?access_token="+s.AccessToken, s)
-	if secondaryUserEmailsJSONError != nil {
-		return "", secondaryUserEmailsJSONError
-	}
-	for i := range secondaryUserEmailsJSON.MustArray() {
-		secondaryUserEmail, secondaryUserEmailError := secondaryUserEmailsJSON.GetIndex(i).Get("email").String()
-		if secondaryUserEmailError == nil {
-			userEmailCandidates = append(userEmailCandidates, secondaryUserEmail)
+	for _, domain := range p.EmailDomains {
+		if strings.HasSuffix(primaryUserEmail, domain) {
+			return primaryUserEmail, nil
 		}
 	}
-	for _, userEmailCandidate := range userEmailCandidates {
-		for _, domain := range p.EmailDomains {
-			if strings.HasSuffix(userEmailCandidate, domain) {
-				return userEmailCandidate, nil
-			}
-		}
-	}
-	return userEmailCandidates[0], nil
+
+	// https://gitlab.com/gitlab-org/gitlab-ce/issues/56779 has to be solved before using
+	// the secondary email adresses
+	return "", nil
 }
 
 // SetGroup adds api scope to the oidc scopes

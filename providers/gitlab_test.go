@@ -151,7 +151,7 @@ func TestGitLabProviderGetEmailAddressWithEmailDomain(t *testing.T) {
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "ruben.wagner@example2.com", email)
+	assert.Equal(t, "", email)
 }
 func TestGitLabProviderGetEmailAddressWithGroups(t *testing.T) {
 	b := testGitLabBackend("{\"email\": \"ruben.wagner@example.com\"}", "[{\"name\": \"testgroup\"}, {\"name\": \"testgroup2\"}]", "")
