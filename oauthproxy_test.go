@@ -1179,7 +1179,7 @@ func TestGetJwtSession(t *testing.T) {
 
 	// Bearer
 	session, _ := p.GetJwtSession(req)
-	assert.Equal(t, session.User, "john")
+	assert.Equal(t, session.User, "john@example.com")
 	assert.Equal(t, session.Email, "john@example.com")
 	assert.Equal(t, session.ExpiresOn, time.Unix(1912151821, 0))
 	assert.Equal(t, session.IDToken, goodJwt)
@@ -1223,12 +1223,12 @@ func TestGetJwtSession(t *testing.T) {
 
 	// Check PassAuthorization, should overwrite Basic header
 	assert.Equal(t, req.Header.Get("Authorization"), authHeader)
-	assert.Equal(t, req.Header.Get("X-Forwarded-User"), "john")
+	assert.Equal(t, req.Header.Get("X-Forwarded-User"), "john@example.com")
 	assert.Equal(t, req.Header.Get("X-Forwarded-Email"), "john@example.com")
 
 	// SetAuthorization and SetXAuthRequest
 	assert.Equal(t, rw.Header().Get("Authorization"), authHeader)
-	assert.Equal(t, rw.Header().Get("X-Auth-Request-User"), "john")
+	assert.Equal(t, rw.Header().Get("X-Auth-Request-User"), "john@example.com")
 	assert.Equal(t, rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
 
 }
