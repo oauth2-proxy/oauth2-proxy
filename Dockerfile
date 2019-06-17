@@ -3,13 +3,18 @@ FROM golang:1.12-stretch AS builder
 # Download tools
 RUN wget -O $GOPATH/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
 RUN chmod +x $GOPATH/bin/dep
+RUN go get github.com/alecthomas/gometalinter
+RUN gometalinter --install
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/pusher/oauth2_proxy
-COPY . .
+COPY Gopkg.lock .
+COPY Gopkg.toml .
 
 # Fetch dependencies
 RUN dep ensure --vendor-only
+
+COPY . .
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because
