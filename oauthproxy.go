@@ -917,7 +917,6 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		if claims.Verified != nil && !*claims.Verified {
 			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 		}
-		user := strings.Split(claims.Email, "@")[0]
 
 		session = &sessionsapi.SessionState{
 			AccessToken:  rawBearerToken,
@@ -925,7 +924,7 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 			RefreshToken: "",
 			ExpiresOn:    bearerToken.Expiry,
 			Email:        claims.Email,
-			User:         user,
+			User:         claims.Email,
 		}
 		return session, nil
 	}
