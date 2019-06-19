@@ -3,8 +3,7 @@ FROM golang:1.12-stretch AS builder
 # Download tools
 RUN wget -O $GOPATH/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
 RUN chmod +x $GOPATH/bin/dep
-RUN go get github.com/alecthomas/gometalinter
-RUN gometalinter --install
+RUN go get github.com/alecthomas/gometalinter && gometalinter --install
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/pusher/oauth2_proxy
