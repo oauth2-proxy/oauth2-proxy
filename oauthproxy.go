@@ -98,6 +98,7 @@ type OAuthProxy struct {
 	jwtBearerVerifiers  []*oidc.IDTokenVerifier
 	compiledRegex       []*regexp.Regexp
 	templates           *template.Template
+	Banner              string
 	Footer              string
 }
 
@@ -269,6 +270,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		PassAuthorization:   opts.PassAuthorization,
 		SkipProviderButton:  opts.SkipProviderButton,
 		templates:           loadTemplates(opts.CustomTemplatesDir),
+		Banner:              opts.Banner,
 		Footer:              opts.Footer,
 	}
 }
