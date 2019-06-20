@@ -650,7 +650,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		}
 		http.Redirect(rw, req, redirect, 302)
 	} else {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Invalid authentication via OAuth2: unauthorized")
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 	}
 }
@@ -759,11 +759,13 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	if session != nil && session.Email != "" && !p.Validator(session.Email) {
-		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
-		session = nil
-		saveSession = false
-		clearSession = true
+	if session != nil && session.Email != "" {
+		if !p.Validator(session.Email) || !p.provider.ValidateGroup(session.Email) {
+			logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+			session = nil
+			saveSession = false
+			clearSession = true
+		}
 	}
 
 	if saveSession && session != nil {
