@@ -767,6 +767,10 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
 func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
 	if p.PassBasicAuth {
+		req.Header.Del("Authorization")
+		req.Header.Del("X-Forwarded-Email")
+		req.Header.Del("X-Forwarded-User")
+
 		req.SetBasicAuth(session.User, p.BasicAuthPassword)
 		req.Header["X-Forwarded-User"] = []string{session.User}
 		if session.Email != "" {
@@ -774,12 +778,19 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		}
 	}
 	if p.PassUserHeaders {
+		req.Header.Del("X-Forwarded-Email")
+		req.Header.Del("X-Forwarded-User")
+
 		req.Header["X-Forwarded-User"] = []string{session.User}
 		if session.Email != "" {
 			req.Header["X-Forwarded-Email"] = []string{session.Email}
 		}
 	}
 	if p.SetXAuthRequest {
+		rw.Header().Del("X-Auth-Request-Access-Token")
+		rw.Header().Del("X-Auth-Request-Email")
+		rw.Header().Del("X-Auth-Request-User")
+
 		rw.Header().Set("X-Auth-Request-User", session.User)
 		if session.Email != "" {
 			rw.Header().Set("X-Auth-Request-Email", session.Email)
@@ -788,15 +799,29 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			rw.Header().Set("X-Auth-Request-Access-Token", session.AccessToken)
 		}
 	}
-	if p.PassAccessToken && session.AccessToken != "" {
-		req.Header["X-Forwarded-Access-Token"] = []string{session.AccessToken}
+	if p.PassAccessToken {
+		req.Header.Del("X-Auth-Request-Access-Token")
+
+		if session.AccessToken != "" {
+			req.Header["X-Forwarded-Access-Token"] = []string{session.AccessToken}
+		}
 	}
-	if p.PassAuthorization && session.IDToken != "" {
-		req.Header["Authorization"] = []string{fmt.Sprintf("Bearer %s", session.IDToken)}
+	if p.PassAuthorization {
+		req.Header.Del("Authorization")
+
+		if session.IDToken != "" {
+			req.Header["Authorization"] = []string{fmt.Sprintf("Bearer %s", session.IDToken)}
+		}
 	}
-	if p.SetAuthorization && session.IDToken != "" {
-		rw.Header().Set("Authorization", fmt.Sprintf("Bearer %s", session.IDToken))
+	if p.SetAuthorization {
+		rw.Header().Del("Authorization")
+
+		if session.IDToken != "" {
+			rw.Header().Set("Authorization", fmt.Sprintf("Bearer %s", session.IDToken))
+		}
 	}
+
+	rw.Header().Del("GAP-Auth")
 	if session.Email == "" {
 		rw.Header().Set("GAP-Auth", session.User)
 	} else {
