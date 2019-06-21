@@ -128,7 +128,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		IDToken:      rawIDToken,
 		RefreshToken: token.RefreshToken,
 		CreatedAt:    time.Now(),
-		ExpiresOn:    token.Expiry,
+		ExpiresOn:    idToken.Expiry,
 		Email:        claims.Email,
 		User:         claims.Subject,
 	}, nil

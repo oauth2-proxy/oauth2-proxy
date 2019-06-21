@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/logger"
@@ -92,6 +94,8 @@ type OAuthProxy struct {
 	PassAuthorization   bool
 	skipAuthRegex       []string
 	skipAuthPreflight   bool
+	skipJwtBearerTokens bool
+	jwtBearerVerifiers  []*oidc.IDTokenVerifier
 	compiledRegex       []*regexp.Regexp
 	templates           *template.Template
 	Footer              string
@@ -206,6 +210,12 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		logger.Printf("compiled skip-auth-regex => %q", u)
 	}
 
+	if opts.SkipJwtBearerTokens {
+		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.OIDCIssuerURL)
+		for _, issuer := range opts.ExtraJwtIssuers {
+			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
+		}
+	}
 	redirectURL := opts.redirectURL
 	if redirectURL.Path == "" {
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
@@ -239,25 +249,27 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 
-		ProxyPrefix:        opts.ProxyPrefix,
-		provider:           opts.provider,
-		sessionStore:       opts.sessionStore,
-		serveMux:           serveMux,
-		redirectURL:        redirectURL,
-		whitelistDomains:   opts.WhitelistDomains,
-		skipAuthRegex:      opts.SkipAuthRegex,
-		skipAuthPreflight:  opts.SkipAuthPreflight,
-		compiledRegex:      opts.CompiledRegex,
-		SetXAuthRequest:    opts.SetXAuthRequest,
-		PassBasicAuth:      opts.PassBasicAuth,
-		PassUserHeaders:    opts.PassUserHeaders,
-		BasicAuthPassword:  opts.BasicAuthPassword,
-		PassAccessToken:    opts.PassAccessToken,
-		SetAuthorization:   opts.SetAuthorization,
-		PassAuthorization:  opts.PassAuthorization,
-		SkipProviderButton: opts.SkipProviderButton,
-		templates:          loadTemplates(opts.CustomTemplatesDir),
-		Footer:             opts.Footer,
+		ProxyPrefix:         opts.ProxyPrefix,
+		provider:            opts.provider,
+		sessionStore:        opts.sessionStore,
+		serveMux:            serveMux,
+		redirectURL:         redirectURL,
+		whitelistDomains:    opts.WhitelistDomains,
+		skipAuthRegex:       opts.SkipAuthRegex,
+		skipAuthPreflight:   opts.SkipAuthPreflight,
+		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
+		jwtBearerVerifiers:  opts.jwtBearerVerifiers,
+		compiledRegex:       opts.CompiledRegex,
+		SetXAuthRequest:     opts.SetXAuthRequest,
+		PassBasicAuth:       opts.PassBasicAuth,
+		PassUserHeaders:     opts.PassUserHeaders,
+		BasicAuthPassword:   opts.BasicAuthPassword,
+		PassAccessToken:     opts.PassAccessToken,
+		SetAuthorization:    opts.SetAuthorization,
+		PassAuthorization:   opts.PassAuthorization,
+		SkipProviderButton:  opts.SkipProviderButton,
+		templates:           loadTemplates(opts.CustomTemplatesDir),
+		Footer:              opts.Footer,
 	}
 }
 
@@ -638,7 +650,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		}
 		http.Redirect(rw, req, redirect, 302)
 	} else {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Invalid authentication via OAuth2: unauthorized")
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 	}
 }
@@ -693,26 +705,42 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 // Returns nil, ErrNeedsLogin if user needs to login.
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
 func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
+	var session *sessionsapi.SessionState
+	var err error
 	var saveSession, clearSession, revalidated bool
+
+	if p.skipJwtBearerTokens && req.Header.Get("Authorization") != "" {
+		session, err = p.GetJwtSession(req)
+		if err != nil {
+			logger.Printf("Error retrieving session from token in Authorization header: %s", err)
+		}
+		if session != nil {
+			saveSession = false
+		}
+	}
+
 	remoteAddr := getRemoteAddr(req)
+	if session == nil {
+		session, err = p.LoadCookiedSession(req)
+		if err != nil {
+			logger.Printf("Error loading cookied session: %s", err)
+		}
 
-	session, err := p.LoadCookiedSession(req)
-	if err != nil {
-		logger.Printf("Error loading cookied session: %s", err)
-	}
-	if session != nil && session.Age() > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
-		logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, p.CookieRefresh)
-		saveSession = true
-	}
+		if session != nil {
+			if session.Age() > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
+				logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, p.CookieRefresh)
+				saveSession = true
+			}
 
-	var ok bool
-	if ok, err = p.provider.RefreshSessionIfNeeded(session); err != nil {
-		logger.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
-		clearSession = true
-		session = nil
-	} else if ok {
-		saveSession = true
-		revalidated = true
+			if ok, err := p.provider.RefreshSessionIfNeeded(session); err != nil {
+				logger.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
+				clearSession = true
+				session = nil
+			} else if ok {
+				saveSession = true
+				revalidated = true
+			}
+		}
 	}
 
 	if session != nil && session.IsExpired() {
@@ -731,11 +759,13 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	if session != nil && session.Email != "" && !p.Validator(session.Email) {
-		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
-		session = nil
-		saveSession = false
-		clearSession = true
+	if session != nil && session.Email != "" {
+		if !p.Validator(session.Email) || !p.provider.ValidateGroup(session.Email) {
+			logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+			session = nil
+			saveSession = false
+			clearSession = true
+		}
 	}
 
 	if saveSession && session != nil {
@@ -853,4 +883,93 @@ func isAjax(req *http.Request) bool {
 func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)
+}
+
+// GetJwtSession loads a session based on a JWT token in the authorization header.
+func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState, error) {
+	rawBearerToken, err := p.findBearerToken(req)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := context.Background()
+	var session *sessionsapi.SessionState
+	for _, verifier := range p.jwtBearerVerifiers {
+		bearerToken, err := verifier.Verify(ctx, rawBearerToken)
+
+		if err != nil {
+			logger.Printf("failed to verify bearer token: %v", err)
+			continue
+		}
+
+		var claims struct {
+			Subject  string `json:"sub"`
+			Email    string `json:"email"`
+			Verified *bool  `json:"email_verified"`
+		}
+
+		if err := bearerToken.Claims(&claims); err != nil {
+			return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
+		}
+
+		if claims.Email == "" {
+			claims.Email = claims.Subject
+		}
+
+		if claims.Verified != nil && !*claims.Verified {
+			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+		}
+
+		session = &sessionsapi.SessionState{
+			AccessToken:  rawBearerToken,
+			IDToken:      rawBearerToken,
+			RefreshToken: "",
+			ExpiresOn:    bearerToken.Expiry,
+			Email:        claims.Email,
+			User:         claims.Email,
+		}
+		return session, nil
+	}
+	return nil, fmt.Errorf("unable to verify jwt token %s", req.Header.Get("Authorization"))
+}
+
+// findBearerToken finds a valid JWT token from the Authorization header of a given request.
+func (p *OAuthProxy) findBearerToken(req *http.Request) (string, error) {
+	auth := req.Header.Get("Authorization")
+	s := strings.SplitN(auth, " ", 2)
+	if len(s) != 2 {
+		return "", fmt.Errorf("invalid authorization header %s", auth)
+	}
+	jwtRegex := regexp.MustCompile(`^eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`)
+	var rawBearerToken string
+	if s[0] == "Bearer" && jwtRegex.MatchString(s[1]) {
+		rawBearerToken = s[1]
+	} else if s[0] == "Basic" {
+		// Check if we have a Bearer token masquerading in Basic
+		b, err := b64.StdEncoding.DecodeString(s[1])
+		if err != nil {
+			return "", err
+		}
+		pair := strings.SplitN(string(b), ":", 2)
+		if len(pair) != 2 {
+			return "", fmt.Errorf("invalid format %s", b)
+		}
+		user, password := pair[0], pair[1]
+
+		// check user, user+password, or just password for a token
+		if jwtRegex.MatchString(user) {
+			// Support blank passwords or magic `x-oauth-basic` passwords - nothing else
+			if password == "" || password == "x-oauth-basic" {
+				rawBearerToken = user
+			}
+		} else if jwtRegex.MatchString(password) {
+			// support passwords and ignore user
+			rawBearerToken = password
+		}
+	}
+	if rawBearerToken == "" {
+		return "", fmt.Errorf("no valid bearer token found in authorization header")
+	}
+
+	return rawBearerToken, nil
 }
