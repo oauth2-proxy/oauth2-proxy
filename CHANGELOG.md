@@ -5,9 +5,14 @@
 - [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent
   - This PR changes configuration options so that all flags have a config counterpart
   of the same name but with underscores (`_`) in place of hyphens (`-`).
+  This change affects the following flags:
+  - The `--tls-key` flag is now `--tls-key-file` to be consistent with existing
+  file flags and the existing config and environment settings
+  - The `--tls-cert` flag is now `--tls-cert-file` to be consistent with existing
+  file flags and the existing config and environment settings
   This change affects the following existing configuration options:
   - The `proxy-prefix` option is now `proxy_prefix`.
-  - This PR changes environment variables so that all flags have an environment
+  This PR changes environment variables so that all flags have an environment
   counterpart of the same name but capitalised, with underscores (`_`) in place
   of hyphens (`-`) and with the prefix `OAUTH2_PROXY_`.
   This change affects the following existing environment variables:
