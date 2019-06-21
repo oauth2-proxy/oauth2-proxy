@@ -41,8 +41,9 @@ Usage of oauth2_proxy:
   -custom-templates-dir string: path to custom html templates
   -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
   -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
+<<<<<<< HEAD
   -extra-jwt-issuers: if -skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)
-  -exclude-logging-path: don't log requests to this path, eg: /ping (default "" = no paths excluded)
+  -exclude-logging-paths: comma separated list of paths to exclude from logging, eg: "/ping,/path2" (default "" = no paths excluded)
   -flush-interval: period between flushing response buffers when streaming responses (default "1s")
   -banner string: custom banner string. Use "-" to disable default banner.
   -footer string: custom footer string. Use "-" to disable default footer.
@@ -142,7 +143,7 @@ There are three different types of logging: standard, authentication, and HTTP r
 
 Each type of logging has their own configurable format and variables. By default these formats are similar to the Apache Combined Log.
 
-Logging of requests to the `/ping` endpoint can be disabled with `-silence-ping-logging` reducing log volume. This flag sets the `-exclude-logging-path` value to the `-ping-path` and takes precedence over any other value `-exclude-logging-path` may have been set to directly.
+Logging of requests to the `/ping` endpoint can be disabled with `-silence-ping-logging` reducing log volume. This flag appends the `-ping-path` to `-exclude-logging-paths`.
 
 ### Auth Log Format
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
