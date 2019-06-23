@@ -62,6 +62,7 @@
 - [#185](https://github.com/pusher/oauth2_proxy/pull/185) Fix an unsupported protocol scheme error during token validation when using the Azure provider (@jonas)
 - [#141](https://github.com/pusher/oauth2_proxy/pull/141) Check google group membership based on email address (@bchess)
   - Google Group membership is additionally checked via email address, allowing users outside a GSuite domain to be authorized.
+- [#XX](https://github.com/pusher/outh2_proxy/pull/XX) Switch from gometalinter to golangci-lint
 
 # v3.2.0
 

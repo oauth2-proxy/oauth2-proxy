@@ -1,0 +1,14 @@
+run:
+  deadline: 120s
+linters:
+  enable:
+    - govet
+    # TODO: Not supported by golang-ci - vetshadow
+    - golint
+    - ineffassign
+    - goconst
+    - deadcode
+    - gofmt
+    - goimports
+  enable-all: false
+  disable-all: true

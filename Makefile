@@ -17,17 +17,7 @@ distclean: clean
 
 .PHONY: lint
 lint:
-	$(GOMETALINTER) --vendor --disable-all \
-		--enable=vet \
-		--enable=vetshadow \
-		--enable=golint \
-		--enable=ineffassign \
-		--enable=goconst \
-		--enable=deadcode \
-		--enable=gofmt \
-		--enable=goimports \
-		--deadline=120s \
-		--tests ./...
+	$(GOLANGCILINT) run
 
 .PHONY: dep
 dep:
