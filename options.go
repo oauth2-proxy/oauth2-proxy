@@ -454,7 +454,7 @@ func parseSignatureKey(o *Options, msgs []string) []string {
 		return append(msgs, "unsupported signature hash algorithm: "+
 			o.SignatureKey)
 	}
-	o.signatureData = &SignatureData{hash, secretKey}
+	o.signatureData = &SignatureData{hash: hash, key: secretKey}
 	return msgs
 }
 

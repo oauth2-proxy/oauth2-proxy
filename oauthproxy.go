@@ -160,7 +160,7 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 }
 
 // NewWebSocketOrRestReverseProxy creates a reverse proxy for REST or websocket based on url
-func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.HmacAuth) (restProxy http.Handler) {
+func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.HmacAuth) http.Handler {
 	u.Path = ""
 	proxy := NewReverseProxy(u, opts.FlushInterval)
 	if !opts.PassHostHeader {
@@ -176,7 +176,12 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.Hma
 		wsURL := &url.URL{Scheme: wsScheme, Host: u.Host}
 		wsProxy = wsutil.NewSingleHostReverseProxy(wsURL)
 	}
-	return &UpstreamProxy{u.Host, proxy, wsProxy, auth}
+	return &UpstreamProxy{
+		upstream:  u.Host,
+		handler:   proxy,
+		wsHandler: wsProxy,
+		auth:      auth,
+	}
 }
 
 // NewOAuthProxy creates a new instance of OOuthProxy from the options provided
@@ -201,7 +206,13 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			}
 			logger.Printf("mapping path %q => file system %q", path, u.Path)
 			proxy := NewFileServer(path, u.Path)
-			serveMux.Handle(path, &UpstreamProxy{path, proxy, nil, nil})
+			uProxy := UpstreamProxy{
+				upstream:  path,
+				handler:   proxy,
+				wsHandler: nil,
+				auth:      nil,
+			}
+			serveMux.Handle(path, &uProxy)
 		default:
 			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
 		}
