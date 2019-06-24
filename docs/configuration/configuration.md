@@ -41,7 +41,6 @@ Usage of oauth2_proxy:
   -custom-templates-dir string: path to custom html templates
   -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
   -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
-<<<<<<< HEAD
   -extra-jwt-issuers: if -skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)
   -exclude-logging-paths: comma separated list of paths to exclude from logging, eg: "/ping,/path2" (default "" = no paths excluded)
   -flush-interval: period between flushing response buffers when streaming responses (default "1s")
