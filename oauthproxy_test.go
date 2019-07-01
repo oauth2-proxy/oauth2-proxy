@@ -163,9 +163,9 @@ func TestEncodedSlashes(t *testing.T) {
 
 func TestRobotsTxt(t *testing.T) {
 	opts := NewOptions()
-	opts.ClientID = "bazquux"
-	opts.ClientSecret = "foobar"
-	opts.CookieSecret = "xyzzyplugh"
+	opts.ClientID = "asdlkjx"
+	opts.ClientSecret = "alkgks"
+	opts.CookieSecret = "asdkugkj"
 	opts.Validate()
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return true })
@@ -178,9 +178,9 @@ func TestRobotsTxt(t *testing.T) {
 
 func TestIsValidRedirect(t *testing.T) {
 	opts := NewOptions()
-	opts.ClientID = "bazquux"
-	opts.ClientSecret = "foobar"
-	opts.CookieSecret = "xyzzyplugh"
+	opts.ClientID = "skdlfj"
+	opts.ClientSecret = "fgkdsgj"
+	opts.CookieSecret = "ljgiogbj"
 	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
 	opts.WhitelistDomains = []string{"foo.bar", ".bar.foo"}
 	opts.Validate()
@@ -298,8 +298,8 @@ func TestBasicAuthPassword(t *testing.T) {
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
 	opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
-	opts.ClientID = "bazquux"
-	opts.ClientSecret = "foobar"
+	opts.ClientID = "dlgkj"
+	opts.ClientSecret = "alkgret"
 	opts.CookieSecure = false
 	opts.PassBasicAuth = true
 	opts.PassUserHeaders = true
@@ -392,8 +392,8 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
 	t.opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
-	t.opts.ClientID = "bazquux"
-	t.opts.ClientSecret = "foobar"
+	t.opts.ClientID = "slgkj"
+	t.opts.ClientSecret = "gfjgojl"
 	t.opts.CookieSecure = false
 	t.opts.PassAccessToken = opts.PassAccessToken
 	t.opts.Validate()
@@ -518,9 +518,9 @@ func NewSignInPageTest(skipProvider bool) *SignInPageTest {
 	var sipTest SignInPageTest
 
 	sipTest.opts = NewOptions()
-	sipTest.opts.CookieSecret = "foobar"
-	sipTest.opts.ClientID = "bazquux"
-	sipTest.opts.ClientSecret = "xyzzyplugh"
+	sipTest.opts.CookieSecret = "adklsj2"
+	sipTest.opts.ClientID = "lkdgj"
+	sipTest.opts.ClientSecret = "sgiufgoi"
 	sipTest.opts.SkipProviderButton = skipProvider
 	sipTest.opts.Validate()
 
@@ -624,8 +624,8 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	for _, modifier := range modifiers {
 		modifier(pcTest.opts)
 	}
-	pcTest.opts.ClientID = "bazquux"
-	pcTest.opts.ClientSecret = "xyzzyplugh"
+	pcTest.opts.ClientID = "asdfljk"
+	pcTest.opts.ClientSecret = "lkjfdsig"
 	pcTest.opts.CookieSecret = "0123456789abcdefabcd"
 	// First, set the CookieRefresh option so proxy.AesCipher is created,
 	// needed to encrypt the access_token.
@@ -860,9 +860,9 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 
 	opts := NewOptions()
 	opts.Upstreams = append(opts.Upstreams, upstream.URL)
-	opts.ClientID = "bazquux"
-	opts.ClientSecret = "foobar"
-	opts.CookieSecret = "xyzzyplugh"
+	opts.ClientID = "aljsal"
+	opts.ClientSecret = "jglkfsdgj"
+	opts.CookieSecret = "dkfjgdls"
 	opts.SkipAuthPreflight = true
 	opts.Validate()
 
@@ -999,8 +999,8 @@ func TestNoRequestSignature(t *testing.T) {
 func TestRequestSignatureGetRequest(t *testing.T) {
 	st := NewSignatureTest()
 	defer st.Close()
-	st.opts.SignatureKey = "sha1:foobar"
-	st.MakeRequestWithExpectedKey("GET", "", "foobar")
+	st.opts.SignatureKey = "sha1:7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d"
+	st.MakeRequestWithExpectedKey("GET", "", "7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d")
 	assert.Equal(t, 200, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "signatures match")
 }
@@ -1008,9 +1008,9 @@ func TestRequestSignatureGetRequest(t *testing.T) {
 func TestRequestSignaturePostRequest(t *testing.T) {
 	st := NewSignatureTest()
 	defer st.Close()
-	st.opts.SignatureKey = "sha1:foobar"
+	st.opts.SignatureKey = "sha1:d90df39e2d19282840252612dd7c81421a372f61"
 	payload := `{ "hello": "world!" }`
-	st.MakeRequestWithExpectedKey("POST", payload, "foobar")
+	st.MakeRequestWithExpectedKey("POST", payload, "d90df39e2d19282840252612dd7c81421a372f61")
 	assert.Equal(t, 200, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "signatures match")
 }
@@ -1056,9 +1056,9 @@ type ajaxRequestTest struct {
 func newAjaxRequestTest() *ajaxRequestTest {
 	test := &ajaxRequestTest{}
 	test.opts = NewOptions()
-	test.opts.CookieSecret = "foobar"
-	test.opts.ClientID = "bazquux"
-	test.opts.ClientSecret = "xyzzyplugh"
+	test.opts.CookieSecret = "sdflsw"
+	test.opts.ClientID = "gkljfdl"
+	test.opts.ClientSecret = "sdflkjs"
 	test.opts.Validate()
 	test.proxy = NewOAuthProxy(test.opts, func(email string) bool {
 		return true
