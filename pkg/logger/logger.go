@@ -179,7 +179,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		return
 	}
 
-	if _, excludedPath := l.excludePaths[url.Path]; excludedPath {
+	if _, ok := l.excludePaths[url.Path]; ok {
 		return
 	}
 
