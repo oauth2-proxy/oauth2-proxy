@@ -126,7 +126,7 @@ check_for go
 check_go_version
 check_go_env
 check_for dep
-check_for gometalinter
+check_for golangci-lint
 
 echo
 
@@ -135,7 +135,7 @@ cat <<- EOF > .env
   GO := "${tools[go]}"
   GO_VERSION := ${tools[go_version]}
   DEP := "${tools[dep]}"
-  GOMETALINTER := "${tools[gometalinter]}"
+  GOLANGCILINT := "${tools[golangci-lint]}"
 EOF
 
 echo "Environment configuration written to .env"
