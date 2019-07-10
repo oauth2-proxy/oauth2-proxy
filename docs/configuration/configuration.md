@@ -313,3 +313,5 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
     end
   }
 ```
+
+You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
