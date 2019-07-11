@@ -213,7 +213,7 @@ func (o *Options) Validate() error {
 	}
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
-			"\n      use email-domain=* to authorize all email addresses")
+			"\n      use email-domain=* to authorize all email addresses. If using config file, this should be email_domains=[\"*\"].")
 	}
 
 	if o.OIDCIssuerURL != "" {

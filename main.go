@@ -27,7 +27,7 @@ func main() {
 	googleGroups := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
 
-	config := flagSet.String("config", "", "path to config file")
+	config := flagSet.String("config", "", "path to config file (Note when using config file, options are plural and s/-/_/: email-domain becomes email_domains and is a list)")
 	showVersion := flagSet.Bool("version", false, "print version string")
 
 	flagSet.String("http-address", "127.0.0.1:4180", "[http://]<addr>:<port> or unix://<path> to listen on for HTTP clients")
