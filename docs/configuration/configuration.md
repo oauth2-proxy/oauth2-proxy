@@ -63,6 +63,7 @@ Usage of oauth2_proxy:
   -jwt-key string: private key in PEM format used to sign JWT, so that you can say something like -jwt-key="${OAUTH2_PROXY_JWT_KEY}": required by login.gov
   -jwt-key-file string: path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov
   -login-url string: Authentication endpoint
+  -insecure-oidc-allow-unverified-email: don't fail if an email address in an id_token is not verified
   -oidc-issuer-url: the OpenID Connect issuer URL. ie: "https://accounts.google.com"
   -oidc-jwks-url string: OIDC JWKS URI for token verification; required if OIDC discovery is disabled
   -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header

@@ -64,6 +64,7 @@
   - Google Group membership is additionally checked via email address, allowing users outside a GSuite domain to be authorized.
 - [#195](https://github.com/pusher/outh2_proxy/pull/195) Add `-banner` flag for overriding the banner line that is displayed (@steakunderscore)
 - [#198](https://github.com/pusher/outh2_proxy/pull/198) Switch from gometalinter to golangci-lint (@steakunderscore)
+- [#159](https://github.com/pusher/oauth2_proxy/pull/159) Add option to skip the OIDC provider verified email check: `--insecure-oidc-allow-unverified-email`
 
 # v3.2.0
 
