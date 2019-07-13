@@ -1,8 +1,6 @@
 FROM golang:1.12-stretch AS builder
 
 # Download tools
-RUN wget -O $GOPATH/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
-RUN chmod +x $GOPATH/bin/dep
 RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.17.1
 
 # Copy sources
@@ -10,7 +8,7 @@ WORKDIR $GOPATH/src/github.com/pusher/oauth2_proxy
 COPY . .
 
 # Fetch dependencies
-RUN dep ensure --vendor-only
+RUN go mod download
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because
