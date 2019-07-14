@@ -65,6 +65,7 @@
 - [#195](https://github.com/pusher/outh2_proxy/pull/195) Add `-banner` flag for overriding the banner line that is displayed (@steakunderscore)
 - [#198](https://github.com/pusher/outh2_proxy/pull/198) Switch from gometalinter to golangci-lint (@steakunderscore)
 - [#159](https://github.com/pusher/oauth2_proxy/pull/159) Add option to skip the OIDC provider verified email check: `--insecure-oidc-allow-unverified-email`
+- [#211](https://github.com/pusher/oauth2_proxy/pull/211) Switch from dep to go modules (@steakunderscore)
 
 # v3.2.0
 
