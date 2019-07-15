@@ -2,6 +2,23 @@
 
 ## Breaking Changes
 
+- [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent
+  - This PR changes configuration options so that all flags have a config counterpart
+  of the same name but with underscores (`_`) in place of hyphens (`-`).
+  This change affects the following flags:
+  - The `--tls-key` flag is now `--tls-key-file` to be consistent with existing
+  file flags and the existing config and environment settings
+  - The `--tls-cert` flag is now `--tls-cert-file` to be consistent with existing
+  file flags and the existing config and environment settings
+  This change affects the following existing configuration options:
+  - The `proxy-prefix` option is now `proxy_prefix`.
+  This PR changes environment variables so that all flags have an environment
+  counterpart of the same name but capitalised, with underscores (`_`) in place
+  of hyphens (`-`) and with the prefix `OAUTH2_PROXY_`.
+  This change affects the following existing environment variables:
+  - The `OAUTH2_SKIP_OIDC_DISCOVERY` environment variable is now `OAUTH2_PROXY_SKIP_OIDC_DISCOVERY`.
+  - The `OAUTH2_OIDC_JWKS_URL` environment variable is now `OAUTH2_PROXY_OIDC_JWKS_URL`.
+
 - [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field (@gargath)
   - This change modifies the contents of the `X-Forwarded-User` header supplied by the proxy for users where the auth response from the IdP did not contain
     a username.
@@ -14,10 +31,11 @@
 
 ## Changes since v3.2.0
 
+- [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent (@JoelSpeed)
 - [#187](https://github.com/pusher/oauth2_proxy/pull/187) Move root packages to pkg folder (@JoelSpeed)
 - [#65](https://github.com/pusher/oauth2_proxy/pull/65) Improvements to authenticate requests with a JWT bearer token in the `Authorization` header via
-  the `-skip-jwt-bearer-token` options. 
-  - Additional verifiers can be configured via the `-extra-jwt-issuers` flag if the JWT issuers is either an OpenID provider or has a JWKS URL 
+  the `-skip-jwt-bearer-token` options.
+  - Additional verifiers can be configured via the `-extra-jwt-issuers` flag if the JWT issuers is either an OpenID provider or has a JWKS URL
   (e.g. `https://example.com/.well-known/jwks.json`).
 - [#180](https://github.com/pusher/outh2_proxy/pull/180) Minor refactor of core proxying path (@aeijdenberg).
 - [#175](https://github.com/pusher/outh2_proxy/pull/175) Bump go-oidc to v2.0.0 (@aeijdenberg).
