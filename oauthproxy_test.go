@@ -18,8 +18,8 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
-	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/stretchr/testify/assert"

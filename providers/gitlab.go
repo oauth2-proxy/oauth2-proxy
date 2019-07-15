@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pusher/oauth2_proxy/api"
-	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
 )
 
 // GitLabProvider represents an GitLab based Identity Provider
@@ -53,7 +53,7 @@ func (p *GitLabProvider) GetEmailAddress(s *sessions.SessionState) (string, erro
 		logger.Printf("failed building request %s", err)
 		return "", err
 	}
-	json, err := api.Request(req)
+	json, err := requests.Request(req)
 	if err != nil {
 		logger.Printf("failed making request %s", err)
 		return "", err

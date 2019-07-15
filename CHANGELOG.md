@@ -14,6 +14,7 @@
 
 ## Changes since v3.2.0
 
+- [#187](https://github.com/pusher/oauth2_proxy/pull/187) Move root packages to pkg folder (@JoelSpeed)
 - [#65](https://github.com/pusher/oauth2_proxy/pull/65) Improvements to authenticate requests with a JWT bearer token in the `Authorization` header via
   the `-skip-jwt-bearer-token` options. 
   - Additional verifiers can be configured via the `-extra-jwt-issuers` flag if the JWT issuers is either an OpenID provider or has a JWKS URL 
@@ -29,7 +30,7 @@
     - `-redis-sentinel-master-name` Sets the Sentinel master name, if sentinel is enabled
     - `-redis-sentinel-connection-urls` Defines the Redis Sentinel Connection URLs, if sentinel is enabled
   - Introduces the concept of a session ticket. Tickets are composed of the cookie name, a session ID, and a secret.
-  - Redis Sessions are stored encrypted with a per-session secret 
+  - Redis Sessions are stored encrypted with a per-session secret
   - Added tests for server based session stores
 - [#168](https://github.com/pusher/outh2_proxy/pull/168) Drop Go 1.11 support in Travis (@JoelSpeed)
 - [#169](https://github.com/pusher/outh2_proxy/pull/169) Update Alpine to 3.9 (@kskewes)

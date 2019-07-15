@@ -17,10 +17,10 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
-	"github.com/pusher/oauth2_proxy/cookie"
-	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/sessions"
 	"github.com/pusher/oauth2_proxy/providers"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -299,7 +299,7 @@ func (o *Options) Validate() error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
-	var cipher *cookie.Cipher
+	var cipher *encryption.Cipher
 	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.CookieRefresh != time.Duration(0)) {
 		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
@@ -324,7 +324,7 @@ func (o *Options) Validate() error {
 				len(secretBytes(o.CookieSecret)), suffix))
 		} else {
 			var err error
-			cipher, err = cookie.NewCipher(secretBytes(o.CookieSecret))
+			cipher, err = encryption.NewCipher(secretBytes(o.CookieSecret))
 			if err != nil {
 				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
 			}

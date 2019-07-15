@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pusher/oauth2_proxy/api"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
 )
 
 // LinkedInProvider represents an LinkedIn based Identity Provider
@@ -61,7 +61,7 @@ func (p *LinkedInProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 	}
 	req.Header = getLinkedInHeader(s.AccessToken)
 
-	json, err := api.Request(req)
+	json, err := requests.Request(req)
 	if err != nil {
 		return "", err
 	}

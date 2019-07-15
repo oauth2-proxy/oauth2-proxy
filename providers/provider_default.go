@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 )
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
@@ -96,12 +96,12 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 }
 
 // CookieForSession serializes a session state for storage in a cookie
-func (p *ProviderData) CookieForSession(s *sessions.SessionState, c *cookie.Cipher) (string, error) {
+func (p *ProviderData) CookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
 	return s.EncodeSessionState(c)
 }
 
 // SessionFromCookie deserializes a session from a cookie value
-func (p *ProviderData) SessionFromCookie(v string, c *cookie.Cipher) (s *sessions.SessionState, err error) {
+func (p *ProviderData) SessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState, err error) {
 	return sessions.DecodeSessionState(v, c)
 }
 

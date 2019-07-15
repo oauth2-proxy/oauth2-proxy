@@ -1,4 +1,4 @@
-package cookie
+package encryption
 
 import (
 	"encoding/base64"
