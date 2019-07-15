@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pusher/oauth2_proxy/api"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
 )
 
 // FacebookProvider represents an Facebook based Identity Provider
@@ -69,7 +69,7 @@ func (p *FacebookProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 		Email string
 	}
 	var r result
-	err = api.RequestJSON(req, &r)
+	err = requests.RequestJSON(req, &r)
 	if err != nil {
 		return "", err
 	}

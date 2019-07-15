@@ -7,9 +7,9 @@ import (
 	"net/url"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/pusher/oauth2_proxy/api"
-	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
 )
 
 // AzureProvider represents an Azure based Identity Provider
@@ -102,7 +102,7 @@ func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error
 	}
 	req.Header = getAzureHeader(s.AccessToken)
 
-	json, err := api.Request(req)
+	json, err := requests.Request(req)
 
 	if err != nil {
 		return "", err

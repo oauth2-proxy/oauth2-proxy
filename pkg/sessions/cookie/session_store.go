@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
@@ -28,7 +28,7 @@ var _ sessions.SessionStore = &SessionStore{}
 // interface that stores sessions in client side cookies
 type SessionStore struct {
 	CookieOptions *options.CookieOptions
-	CookieCipher  *cookie.Cipher
+	CookieCipher  *encryption.Cipher
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -53,7 +53,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		// always http.ErrNoCookie
 		return nil, fmt.Errorf("Cookie %q not present", s.CookieOptions.CookieName)
 	}
-	val, _, ok := cookie.Validate(c, s.CookieOptions.CookieSecret, s.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(c, s.CookieOptions.CookieSecret, s.CookieOptions.CookieExpire)
 	if !ok {
 		return nil, errors.New("Cookie Signature not valid")
 	}
@@ -96,7 +96,7 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
 	if value != "" {
-		value = cookie.SignedValue(s.CookieOptions.CookieSecret, s.CookieOptions.CookieName, value, now)
+		value = encryption.SignedValue(s.CookieOptions.CookieSecret, s.CookieOptions.CookieName, value, now)
 	}
 	c := s.makeCookie(req, s.CookieOptions.CookieName, value, s.CookieOptions.CookieExpire, now)
 	if len(c.Value) > 4096-len(s.CookieOptions.CookieName) {

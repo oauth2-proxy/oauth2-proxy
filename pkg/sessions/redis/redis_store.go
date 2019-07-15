@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 )
 
 // TicketData is a structure representing the ticket used in server session storage
@@ -28,7 +28,7 @@ type TicketData struct {
 // SessionStore is an implementation of the sessions.SessionStore
 // interface that stores sessions in redis
 type SessionStore struct {
-	CookieCipher  *cookie.Cipher
+	CookieCipher  *encryption.Cipher
 	CookieOptions *options.CookieOptions
 	Client        *redis.Client
 }
@@ -106,7 +106,7 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
 
-	val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
 	if !ok {
 		return nil, fmt.Errorf("Cookie Signature not valid")
 	}
@@ -166,7 +166,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 		return fmt.Errorf("error retrieving cookie: %v", err)
 	}
 
-	val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
 	if !ok {
 		return fmt.Errorf("Cookie Signature not valid")
 	}
@@ -186,7 +186,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 // makeCookie makes a cookie, signing the value if present
 func (store *SessionStore) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
 	if value != "" {
-		value = cookie.SignedValue(store.CookieOptions.CookieSecret, store.CookieOptions.CookieName, value, now)
+		value = encryption.SignedValue(store.CookieOptions.CookieSecret, store.CookieOptions.CookieName, value, now)
 	}
 	return cookies.MakeCookieFromOptions(
 		req,
@@ -230,7 +230,7 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
 	}
 
 	// An existing cookie exists, try to retrieve the ticket
-	val, _, ok := cookie.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
 	if !ok {
 		// Cookie is invalid, create a new ticket
 		return newTicket()

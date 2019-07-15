@@ -3,17 +3,17 @@ package utils
 import (
 	"encoding/base64"
 
-	"github.com/pusher/oauth2_proxy/cookie"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 )
 
 // CookieForSession serializes a session state for storage in a cookie
-func CookieForSession(s *sessions.SessionState, c *cookie.Cipher) (string, error) {
+func CookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
 	return s.EncodeSessionState(c)
 }
 
 // SessionFromCookie deserializes a session from a cookie value
-func SessionFromCookie(v string, c *cookie.Cipher) (s *sessions.SessionState, err error) {
+func SessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState, err error) {
 	return sessions.DecodeSessionState(v, c)
 }
 

@@ -120,17 +120,14 @@ Multiple upstreams can either be configured by supplying a comma separated list 
 
 ### Environment variables
 
-The following environment variables can be used in place of the corresponding command-line arguments:
+Every command line argument can be specified as an environment variable by
+prefixing it with `OAUTH2_PROXY_`, capitalising it, and replacing hypens (`-`)
+with underscores (`_`). This is particularly useful for storing secrets outside
+of a configuration file or the command line.
 
-- `OAUTH2_PROXY_CLIENT_ID`
-- `OAUTH2_PROXY_CLIENT_SECRET`
-- `OAUTH2_PROXY_COOKIE_NAME`
-- `OAUTH2_PROXY_COOKIE_SECRET`
-- `OAUTH2_PROXY_COOKIE_DOMAIN`
-- `OAUTH2_PROXY_COOKIE_PATH`
-- `OAUTH2_PROXY_COOKIE_EXPIRE`
-- `OAUTH2_PROXY_COOKIE_REFRESH`
-- `OAUTH2_PROXY_SIGNATURE_KEY`
+For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET` and
+the `--set-authorization-header` flag becomes `OAUTH2_PROXY_SET_AUTHORIZATION_HEADER`.
+
 
 ## Logging Configuration
 
