@@ -8,7 +8,7 @@ WORKDIR $GOPATH/src/github.com/pusher/oauth2_proxy
 
 # Fetch dependencies
 COPY go.mod go.sum ./
-RUN go mod download
+RUN GO111MODULE=on go mod download
 
 # Now pull in our code
 COPY . .
