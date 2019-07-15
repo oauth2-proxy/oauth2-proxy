@@ -5,10 +5,13 @@ RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.s
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/pusher/oauth2_proxy
-COPY . .
 
 # Fetch dependencies
+COPY go.mod go.sum ./
 RUN go mod download
+
+# Now pull in our code
+COPY . .
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because

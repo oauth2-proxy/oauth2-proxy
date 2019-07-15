@@ -112,9 +112,7 @@ check_go_env() {
 
 cd ${0%/*}
 
-if [ ! -f .env ]; then
-  rm .env
-fi
+rm -fv .env
 
 check_for make
 check_for awk
