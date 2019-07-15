@@ -14,7 +14,8 @@ import (
 type OIDCProvider struct {
 	*ProviderData
 
-	Verifier *oidc.IDTokenVerifier
+	Verifier             *oidc.IDTokenVerifier
+	AllowUnverifiedEmail bool
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
@@ -119,7 +120,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		// TODO: Try getting email from /userinfo before falling back to Subject
 		claims.Email = claims.Subject
 	}
-	if claims.Verified != nil && !*claims.Verified {
+	if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
 
@@ -128,7 +129,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		IDToken:      rawIDToken,
 		RefreshToken: token.RefreshToken,
 		CreatedAt:    time.Now(),
-		ExpiresOn:    token.Expiry,
+		ExpiresOn:    idToken.Expiry,
 		Email:        claims.Email,
 		User:         claims.Subject,
 	}, nil

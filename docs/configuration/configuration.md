@@ -41,7 +41,9 @@ Usage of oauth2_proxy:
   -custom-templates-dir string: path to custom html templates
   -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
   -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
+  -extra-jwt-issuers: if -skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)
   -flush-interval: period between flushing response buffers when streaming responses (default "1s")
+  -banner string: custom banner string. Use "-" to disable default banner.
   -footer string: custom footer string. Use "-" to disable default footer.
   -gcp-healthchecks: will enable /liveness_check, /readiness_check, and / (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses (default false)
   -github-org string: restrict logins to members of this organisation
@@ -61,6 +63,7 @@ Usage of oauth2_proxy:
   -jwt-key string: private key in PEM format used to sign JWT, so that you can say something like -jwt-key="${OAUTH2_PROXY_JWT_KEY}": required by login.gov
   -jwt-key-file string: path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov
   -login-url string: Authentication endpoint
+  -insecure-oidc-allow-unverified-email: don't fail if an email address in an id_token is not verified
   -oidc-issuer-url: the OpenID Connect issuer URL. ie: "https://accounts.google.com"
   -oidc-jwks-url string: OIDC JWKS URI for token verification; required if OIDC discovery is disabled
   -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
@@ -89,6 +92,7 @@ Usage of oauth2_proxy:
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
   -skip-auth-preflight: will skip authentication for OPTIONS requests
   -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
+  -skip-jwt-bearer-tokens: will skip requests that have verified JWT bearer tokens
   -skip-oidc-discovery: bypass OIDC endpoint discovery. login-url, redeem-url and oidc-jwks-url must be configured in this case
   -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
   -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
@@ -310,3 +314,5 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
     end
   }
 ```
+
+You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".

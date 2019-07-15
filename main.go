@@ -23,6 +23,7 @@ func main() {
 	whitelistDomains := StringArray{}
 	upstreams := StringArray{}
 	skipAuthRegex := StringArray{}
+	jwtIssuers := StringArray{}
 	googleGroups := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
 
@@ -48,6 +49,8 @@ func main() {
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS")
 	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
+	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
+	flagSet.Var(&jwtIssuers, "extra-jwt-issuers", "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.Var(&whitelistDomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
@@ -63,6 +66,7 @@ func main() {
 	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption or \"htpasswd -B\" for bcrypt encryption")
 	flagSet.Bool("display-htpasswd-form", true, "display username / password login form if an htpasswd file is provided")
 	flagSet.String("custom-templates-dir", "", "path to custom html templates")
+	flagSet.String("banner", "", "custom banner string. Use \"-\" to disable default banner.")
 	flagSet.String("footer", "", "custom footer string. Use \"-\" to disable default footer.")
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
@@ -100,6 +104,7 @@ func main() {
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
+	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("login-url", "", "Authentication endpoint")
@@ -145,7 +150,13 @@ func main() {
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 	oauthproxy := NewOAuthProxy(opts, validator)
 
-	if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
+	if len(opts.Banner) >= 1 {
+		if opts.Banner == "-" {
+			oauthproxy.SignInMessage = ""
+		} else {
+			oauthproxy.SignInMessage = opts.Banner
+		}
+	} else if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
 		if len(opts.EmailDomains) > 1 {
 			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.EmailDomains, ", "))
 		} else if opts.EmailDomains[0] != "*" {

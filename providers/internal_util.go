@@ -47,7 +47,7 @@ func stripParam(param, endpoint string) string {
 
 // validateToken returns true if token is valid
 func validateToken(p Provider, accessToken string, header http.Header) bool {
-	if accessToken == "" || p.Data().ValidateURL == nil {
+	if accessToken == "" || p.Data().ValidateURL == nil || p.Data().ValidateURL.String() == "" {
 		return false
 	}
 	endpoint := p.Data().ValidateURL.String()

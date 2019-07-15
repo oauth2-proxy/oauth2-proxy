@@ -51,6 +51,7 @@ type Options struct {
 	HtpasswdFile             string   `flag:"htpasswd-file" cfg:"htpasswd_file" env:"OAUTH2_PROXY_HTPASSWD_FILE"`
 	DisplayHtpasswdForm      bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form" env:"OAUTH2_PROXY_DISPLAY_HTPASSWD_FORM"`
 	CustomTemplatesDir       string   `flag:"custom-templates-dir" cfg:"custom_templates_dir" env:"OAUTH2_PROXY_CUSTOM_TEMPLATES_DIR"`
+	Banner                   string   `flag:"banner" cfg:"banner" env:"OAUTH2_PROXY_BANNER"`
 	Footer                   string   `flag:"footer" cfg:"footer" env:"OAUTH2_PROXY_FOOTER"`
 
 	// Embed CookieOptions
@@ -61,6 +62,8 @@ type Options struct {
 
 	Upstreams             []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex         []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
+	SkipJwtBearerTokens   bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
+	ExtraJwtIssuers       []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth         bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
 	BasicAuthPassword     string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken       bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
@@ -76,17 +79,18 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider          string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
-	OIDCIssuerURL     string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
-	SkipOIDCDiscovery bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_SKIP_OIDC_DISCOVERY"`
-	OIDCJwksURL       string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_OIDC_JWKS_URL"`
-	LoginURL          string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
-	RedeemURL         string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
-	ProfileURL        string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
-	ProtectedResource string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
-	ValidateURL       string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
-	Scope             string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
-	ApprovalPrompt    string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"`
+	Provider                         string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
+	OIDCIssuerURL                    string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
+	InsecureOIDCAllowUnverifiedEmail bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
+	SkipOIDCDiscovery                bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_SKIP_OIDC_DISCOVERY"`
+	OIDCJwksURL                      string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_OIDC_JWKS_URL"`
+	LoginURL                         string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
+	RedeemURL                        string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
+	ProfileURL                       string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
+	ProtectedResource                string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
+	ValidateURL                      string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
+	Scope                            string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
+	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"`
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_LOGGING_FILENAME"`
@@ -110,13 +114,14 @@ type Options struct {
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks" env:"OAUTH2_PROXY_GCP_HEALTHCHECKS"`
 
 	// internal values that are set after config validation
-	redirectURL   *url.URL
-	proxyURLs     []*url.URL
-	CompiledRegex []*regexp.Regexp
-	provider      providers.Provider
-	sessionStore  sessionsapi.SessionStore
-	signatureData *SignatureData
-	oidcVerifier  *oidc.IDTokenVerifier
+	redirectURL        *url.URL
+	proxyURLs          []*url.URL
+	CompiledRegex      []*regexp.Regexp
+	provider           providers.Provider
+	sessionStore       sessionsapi.SessionStore
+	signatureData      *SignatureData
+	oidcVerifier       *oidc.IDTokenVerifier
+	jwtBearerVerifiers []*oidc.IDTokenVerifier
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -143,29 +148,36 @@ func NewOptions() *Options {
 		SessionOptions: options.SessionOptions{
 			Type: "cookie",
 		},
-		SetXAuthRequest:       false,
-		SkipAuthPreflight:     false,
-		PassBasicAuth:         true,
-		PassUserHeaders:       true,
-		PassAccessToken:       false,
-		PassHostHeader:        true,
-		SetAuthorization:      false,
-		PassAuthorization:     false,
-		ApprovalPrompt:        "force",
-		SkipOIDCDiscovery:     false,
-		LoggingFilename:       "",
-		LoggingMaxSize:        100,
-		LoggingMaxAge:         7,
-		LoggingMaxBackups:     0,
-		LoggingLocalTime:      true,
-		LoggingCompress:       false,
-		StandardLogging:       true,
-		StandardLoggingFormat: logger.DefaultStandardLoggingFormat,
-		RequestLogging:        true,
-		RequestLoggingFormat:  logger.DefaultRequestLoggingFormat,
-		AuthLogging:           true,
-		AuthLoggingFormat:     logger.DefaultAuthLoggingFormat,
+		SetXAuthRequest:                  false,
+		SkipAuthPreflight:                false,
+		PassBasicAuth:                    true,
+		PassUserHeaders:                  true,
+		PassAccessToken:                  false,
+		PassHostHeader:                   true,
+		SetAuthorization:                 false,
+		PassAuthorization:                false,
+		ApprovalPrompt:                   "force",
+		InsecureOIDCAllowUnverifiedEmail: false,
+		SkipOIDCDiscovery:                false,
+		LoggingFilename:                  "",
+		LoggingMaxSize:                   100,
+		LoggingMaxAge:                    7,
+		LoggingMaxBackups:                0,
+		LoggingLocalTime:                 true,
+		LoggingCompress:                  false,
+		StandardLogging:                  true,
+		StandardLoggingFormat:            logger.DefaultStandardLoggingFormat,
+		RequestLogging:                   true,
+		RequestLoggingFormat:             logger.DefaultRequestLoggingFormat,
+		AuthLogging:                      true,
+		AuthLoggingFormat:                logger.DefaultAuthLoggingFormat,
 	}
+}
+
+// jwtIssuer hold parsed JWT issuer info that's used to construct a verifier.
+type jwtIssuer struct {
+	issuerURI string
+	audience  string
 }
 
 func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string) {
@@ -241,6 +253,25 @@ func (o *Options) Validate() error {
 		}
 		if o.Scope == "" {
 			o.Scope = "openid email profile"
+		}
+	}
+
+	if o.SkipJwtBearerTokens {
+		// If we are using an oidc provider, go ahead and add that provider to the list
+		if o.oidcVerifier != nil {
+			o.jwtBearerVerifiers = append(o.jwtBearerVerifiers, o.oidcVerifier)
+		}
+		// Configure extra issuers
+		if len(o.ExtraJwtIssuers) > 0 {
+			var jwtIssuers []jwtIssuer
+			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
+			for _, jwtIssuer := range jwtIssuers {
+				verifier, err := newVerifierFromJwtIssuer(jwtIssuer)
+				if err != nil {
+					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
+				}
+				o.jwtBearerVerifiers = append(o.jwtBearerVerifiers, verifier)
+			}
 		}
 	}
 
@@ -368,6 +399,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			}
 		}
 	case *providers.OIDCProvider:
+		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		if o.oidcVerifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {
@@ -426,8 +458,47 @@ func parseSignatureKey(o *Options, msgs []string) []string {
 		return append(msgs, "unsupported signature hash algorithm: "+
 			o.SignatureKey)
 	}
-	o.signatureData = &SignatureData{hash, secretKey}
+	o.signatureData = &SignatureData{hash: hash, key: secretKey}
 	return msgs
+}
+
+// parseJwtIssuers takes in an array of strings in the form of issuer=audience
+// and parses to an array of jwtIssuer structs.
+func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
+	var parsedIssuers []jwtIssuer
+	for _, jwtVerifier := range issuers {
+		components := strings.Split(jwtVerifier, "=")
+		if len(components) < 2 {
+			msgs = append(msgs, fmt.Sprintf("invalid jwt verifier uri=audience spec: %s", jwtVerifier))
+			continue
+		}
+		uri, audience := components[0], strings.Join(components[1:], "=")
+		parsedIssuers = append(parsedIssuers, jwtIssuer{issuerURI: uri, audience: audience})
+	}
+	return parsedIssuers, msgs
+}
+
+// newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
+// a verifier for that issuer.
+func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error) {
+	config := &oidc.Config{
+		ClientID: jwtIssuer.audience,
+	}
+	// Try as an OpenID Connect Provider first
+	var verifier *oidc.IDTokenVerifier
+	provider, err := oidc.NewProvider(context.Background(), jwtIssuer.issuerURI)
+	if err != nil {
+		// Try as JWKS URI
+		jwksURI := strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
+		_, err := http.NewRequest("GET", jwksURI, nil)
+		if err != nil {
+			return nil, err
+		}
+		verifier = oidc.NewVerifier(jwtIssuer.issuerURI, oidc.NewRemoteKeySet(context.Background(), jwksURI), config)
+	} else {
+		verifier = provider.Verifier(config)
+	}
+	return verifier, nil
 }
 
 func validateCookieName(o *Options, msgs []string) []string {

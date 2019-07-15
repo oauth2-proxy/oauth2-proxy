@@ -1,0 +1,13 @@
+run:
+  deadline: 120s
+linters:
+  enable:
+    - govet
+    - golint
+    - ineffassign
+    - goconst
+    - deadcode
+    - gofmt
+    - goimports
+  enable-all: false
+  disable-all: true
