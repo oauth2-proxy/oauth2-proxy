@@ -86,6 +86,10 @@
 - [#198](https://github.com/pusher/outh2_proxy/pull/198) Switch from gometalinter to golangci-lint (@steakunderscore)
 - [#159](https://github.com/pusher/oauth2_proxy/pull/159) Add option to skip the OIDC provider verified email check: `--insecure-oidc-allow-unverified-email`
 - [#210](https://github.com/pusher/oauth2_proxy/pull/210) Update base image from Alpine 3.9 to 3.10 (@steakunderscore)
+- [#201](https://github.com/pusher/oauth2_proxy/pull/201) Add Bitbucket as new OAuth2 provider, accepts email, team and repository permissions to determine authorization.
+  - Implement flags to enable Bitbucket authentication:
+    - `-bitbucket-repository` Restrict authorization to users that can access this repository
+    - `-bitbucket-team` Restrict authorization to users that are part of this Bitbucket team
 
 # v3.2.0
 
