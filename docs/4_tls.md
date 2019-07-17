@@ -9,7 +9,7 @@ nav_order: 4
 
 There are two recommended configurations.
 
-1.  Configure SSL Termination with OAuth2 Proxy by providing a `--tls-cert=/path/to/cert.pem` and `--tls-key=/path/to/cert.key`.
+1.  Configure SSL Termination with OAuth2 Proxy by providing a `--tls-cert-file=/path/to/cert.pem` and `--tls-key-file=/path/to/cert.key`.
 
 The command line to run `oauth2_proxy` in this configuration would look like this:
 
@@ -17,8 +17,8 @@ The command line to run `oauth2_proxy` in this configuration would look like thi
 ./oauth2_proxy \
    --email-domain="yourcompany.com"  \
    --upstream=http://127.0.0.1:8080/ \
-   --tls-cert=/path/to/cert.pem \
-   --tls-key=/path/to/cert.key \
+   --tls-cert-file=/path/to/cert.pem \
+   --tls-key-file=/path/to/cert.key \
    --cookie-secret=... \
    --cookie-secure=true \
    --provider=... \
