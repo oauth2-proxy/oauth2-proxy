@@ -13,13 +13,9 @@ for arg in "$@"; do
     "--with-go")
       desired[go]="${arg##*=}"
       ;;
-    "--with-dep")
-      desired[dep]="${arg##*=}"
-      ;;
     "--help")
       printf "${GREEN}$0${NC}\n"
       printf "  available options:\n"
-      printf "  --with-dep=${BLUE}<path_to_dep_binary>${NC}\n"
       printf "  --with-go=${BLUE}<path_to_go_binary>${NC}\n"
       exit 0
       ;;
@@ -123,7 +119,6 @@ check_for awk
 check_for go
 check_go_version
 check_go_env
-check_for dep
 check_for golangci-lint
 
 echo
@@ -132,7 +127,6 @@ cat <<- EOF > .env
 	MAKE := "${tools[make]}"
   GO := "${tools[go]}"
   GO_VERSION := ${tools[go_version]}
-  DEP := "${tools[dep]}"
   GOLANGCILINT := "${tools[golangci-lint]}"
 EOF
 
