@@ -98,8 +98,8 @@ Usage of oauth2_proxy:
   -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
   -standard-logging: Log standard runtime information (default true)
   -standard-logging-format string: Template for standard log lines (see "Logging Configuration" paragraph below)
-  -tls-cert string: path to certificate file
-  -tls-key string: path to private key file
+  -tls-cert-file string: path to certificate file
+  -tls-key-file string: path to private key file
   -upstream value: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
   -validate-url string: Access token validation endpoint
   -version: print version string
