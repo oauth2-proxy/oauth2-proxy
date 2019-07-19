@@ -141,7 +141,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 
 		email, err := respJSON.Get("email").String()
 		if err != nil {
-			return nil, fmt.Errorf("id_token nor userinfo endpoint did not contain an email")
+			return nil, fmt.Errorf("Neither id_token nor userinfo endpoint contained an email")
 		}
 
 		claims.Email = email
