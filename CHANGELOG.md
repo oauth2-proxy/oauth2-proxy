@@ -31,6 +31,7 @@
 
 ## Changes since v3.2.0
 
+- [#178](https://github.com/pusher/outh2_proxy/pull/178) Add Silence Ping Logging and Exclude Logging Paths flags (@kskewes)
 - [#209](https://github.com/pusher/outh2_proxy/pull/209) Improve docker build caching of layers (@dekimsey)
 - [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent (@JoelSpeed)
 - [#187](https://github.com/pusher/oauth2_proxy/pull/187) Move root packages to pkg folder (@JoelSpeed)

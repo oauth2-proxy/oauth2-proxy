@@ -42,6 +42,7 @@ Usage of oauth2_proxy:
   -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
   -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
   -extra-jwt-issuers: if -skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)
+  -exclude-logging-paths: comma separated list of paths to exclude from logging, eg: "/ping,/path2" (default "" = no paths excluded)
   -flush-interval: period between flushing response buffers when streaming responses (default "1s")
   -banner string: custom banner string. Use "-" to disable default banner.
   -footer string: custom footer string. Use "-" to disable default footer.
@@ -73,6 +74,7 @@ Usage of oauth2_proxy:
   -pass-user-headers: pass X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
   -profile-url string: Profile access endpoint
   -provider string: OAuth provider (default "google")
+  -ping-path string: the ping endpoint that can be used for basic health checks (default "/ping")
   -proxy-prefix string: the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in) (default "/oauth2")
   -proxy-websockets: enables WebSocket proxying (default true)
   -pubjwk-url string: JWK pubkey access endpoint: required by login.gov
@@ -90,6 +92,7 @@ Usage of oauth2_proxy:
   -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
   -set-authorization-header: set Authorization Bearer response header (useful in Nginx auth_request mode)
   -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
+  -silence-ping-logging bool: disable logging of requests to ping endpoint (default false) 
   -skip-auth-preflight: will skip authentication for OPTIONS requests
   -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
   -skip-jwt-bearer-tokens: will skip requests that have verified JWT bearer tokens
@@ -138,6 +141,8 @@ If logging to a file you can also configure the maximum file size (`-logging-max
 There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `-standard-logging`, `-auth-logging`, and `-request-logging`.
 
 Each type of logging has their own configurable format and variables. By default these formats are similar to the Apache Combined Log.
+
+Logging of requests to the `/ping` endpoint can be disabled with `-silence-ping-logging` reducing log volume. This flag appends the `-ping-path` to `-exclude-logging-paths`.
 
 ### Auth Log Format
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:

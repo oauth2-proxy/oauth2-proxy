@@ -30,6 +30,7 @@ import (
 // or Config File
 type Options struct {
 	ProxyPrefix     string `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
+	PingPath        string `flag:"ping-path" cfg:"ping_path" env:"OAUTH2_PROXY_PING_PATH"`
 	ProxyWebSockets bool   `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
 	HTTPAddress     string `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
 	HTTPSAddress    string `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
@@ -103,15 +104,16 @@ type Options struct {
 	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format" env:"OAUTH2_PROXY_STANDARD_LOGGING_FORMAT"`
 	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging" env:"OAUTH2_PROXY_REQUEST_LOGGING"`
 	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format" env:"OAUTH2_PROXY_REQUEST_LOGGING_FORMAT"`
+	ExcludeLoggingPaths   string `flag:"exclude-logging-paths" cfg:"exclude_logging_paths" env:"OAUTH2_PROXY_EXCLUDE_LOGGING_PATHS"`
+	SilencePingLogging    bool   `flag:"silence-ping-logging" cfg:"silence_ping_logging" env:"OAUTH2_PROXY_SILENCE_PING_LOGGING"`
 	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging" env:"OAUTH2_PROXY_LOGGING_AUTH_LOGGING"`
 	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format" env:"OAUTH2_PROXY_AUTH_LOGGING_FORMAT"`
-
-	SignatureKey    string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
-	AcrValues       string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`
-	JWTKey          string `flag:"jwt-key" cfg:"jwt_key" env:"OAUTH2_PROXY_JWT_KEY"`
-	JWTKeyFile      string `flag:"jwt-key-file" cfg:"jwt_key_file" env:"OAUTH2_PROXY_JWT_KEY_FILE"`
-	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url" env:"OAUTH2_PROXY_PUBJWK_URL"`
-	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks" env:"OAUTH2_PROXY_GCP_HEALTHCHECKS"`
+	SignatureKey          string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
+	AcrValues             string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`
+	JWTKey                string `flag:"jwt-key" cfg:"jwt_key" env:"OAUTH2_PROXY_JWT_KEY"`
+	JWTKeyFile            string `flag:"jwt-key-file" cfg:"jwt_key_file" env:"OAUTH2_PROXY_JWT_KEY_FILE"`
+	PubJWKURL             string `flag:"pubjwk-url" cfg:"pubjwk_url" env:"OAUTH2_PROXY_PUBJWK_URL"`
+	GCPHealthChecks       bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks" env:"OAUTH2_PROXY_GCP_HEALTHCHECKS"`
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
@@ -134,6 +136,7 @@ type SignatureData struct {
 func NewOptions() *Options {
 	return &Options{
 		ProxyPrefix:         "/oauth2",
+		PingPath:            "/ping",
 		ProxyWebSockets:     true,
 		HTTPAddress:         "127.0.0.1:4180",
 		HTTPSAddress:        ":443",
@@ -165,6 +168,8 @@ func NewOptions() *Options {
 		LoggingMaxBackups:                0,
 		LoggingLocalTime:                 true,
 		LoggingCompress:                  false,
+		ExcludeLoggingPaths:              "",
+		SilencePingLogging:               false,
 		StandardLogging:                  true,
 		StandardLoggingFormat:            logger.DefaultStandardLoggingFormat,
 		RequestLogging:                   true,
@@ -570,6 +575,14 @@ func setupLogger(o *Options, msgs []string) []string {
 	logger.SetStandardTemplate(o.StandardLoggingFormat)
 	logger.SetAuthTemplate(o.AuthLoggingFormat)
 	logger.SetReqTemplate(o.RequestLoggingFormat)
+
+	excludePaths := make([]string, 0)
+	excludePaths = append(excludePaths, strings.Split(o.ExcludeLoggingPaths, ",")...)
+	if o.SilencePingLogging {
+		excludePaths = append(excludePaths, o.PingPath)
+	}
+
+	logger.SetExcludePaths(excludePaths)
 
 	if !o.LoggingLocalTime {
 		logger.SetFlags(logger.Flags() | logger.LUTC)
