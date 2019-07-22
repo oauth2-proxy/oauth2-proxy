@@ -88,6 +88,7 @@
 - [#159](https://github.com/pusher/oauth2_proxy/pull/159) Add option to skip the OIDC provider verified email check: `--insecure-oidc-allow-unverified-email`
 - [#210](https://github.com/pusher/oauth2_proxy/pull/210) Update base image from Alpine 3.9 to 3.10 (@steakunderscore)
 - [#211](https://github.com/pusher/oauth2_proxy/pull/211) Switch from dep to go modules (@steakunderscore)
+- [#221](https://github.com/pusher/oauth2_proxy/pull/221) Add ADFS as new OAuth2 provider (@MaxFedotov)
 
 # v3.2.0
 
