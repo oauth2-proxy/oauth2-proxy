@@ -1,6 +1,8 @@
-# Default owner should be a Pusher cloud-team member unless overridden by later
-# rules in this file
+# Default owner should be a Pusher cloud-team member or another maintainer
+# unless overridden by later rules in this file
 * @pusher/cloud-team
+* @syscll
+* @steakunderscore
 
 # login.gov provider
 # Note:  If @timothy-spencer terms out of his appointment, your best bet
