@@ -1,12 +1,12 @@
 package providers
 
 import (
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"log"
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/oauth2_proxy/api"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
 )
 
 type KeycloakProvider struct {
@@ -52,19 +52,19 @@ func (p *KeycloakProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 	req, err := http.NewRequest("GET", p.ValidateURL.String(), nil)
 	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
 	if err != nil {
-		log.Printf("failed building request %s", err)
+		logger.Printf("failed building request %s", err)
 		return "", err
 	}
-	json, err := api.Request(req)
+	json, err := requests.Request(req)
 	if err != nil {
-		log.Printf("failed making request %s", err)
+		logger.Printf("failed making request %s", err)
 		return "", err
 	}
 
 	if p.Group != "" {
 		var groups, err = json.Get("groups").Array()
 		if err != nil {
-			log.Printf("groups not found %s", err)
+			logger.Printf("groups not found %s", err)
 			return "", err
 		}
 
@@ -77,7 +77,7 @@ func (p *KeycloakProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 		}
 
 		if found != true {
-			log.Printf("group not found, access denied")
+			logger.Printf("group not found, access denied")
 			return "", nil
 		}
 	}

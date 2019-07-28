@@ -94,8 +94,8 @@ func TestKeycloakProviderGetEmailAddress(t *testing.T) {
 	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\"}")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(b_url.Host, "")
+	bUrl, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bUrl.Host, "")
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
@@ -107,8 +107,8 @@ func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
 	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(b_url.Host, "test-grp1")
+	bUrl, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bUrl.Host, "test-grp1")
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
@@ -122,8 +122,8 @@ func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
 	b := testKeycloakBackend("unused payload")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(b_url.Host, "")
+	bUrl, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bUrl.Host, "")
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -138,8 +138,8 @@ func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	b := testKeycloakBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
-	b_url, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(b_url.Host, "")
+	bUrl, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bUrl.Host, "")
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
 	email, err := p.GetEmailAddress(session)
