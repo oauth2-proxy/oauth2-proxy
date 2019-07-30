@@ -49,6 +49,7 @@ type Options struct {
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group" env:"OAUTH2_PROXY_GOOGLE_GROUPS"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email" env:"OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json" env:"OAUTH2_PROXY_GOOGLE_SERVICE_ACCOUNT_JSON"`
+        OktaDomain               string   `flag:"okta-domain" cfg:"okta_domain" env:"OAUTH2_PROXY_OKTA_DOMAIN"``
 	HtpasswdFile             string   `flag:"htpasswd-file" cfg:"htpasswd_file" env:"OAUTH2_PROXY_HTPASSWD_FILE"`
 	DisplayHtpasswdForm      bool     `flag:"display-htpasswd-form" cfg:"display_htpasswd_form" env:"OAUTH2_PROXY_DISPLAY_HTPASSWD_FORM"`
 	CustomTemplatesDir       string   `flag:"custom-templates-dir" cfg:"custom_templates_dir" env:"OAUTH2_PROXY_CUSTOM_TEMPLATES_DIR"`
@@ -441,6 +442,8 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 				p.JWTKey = signKey
 			}
 		}
+        case *providers.OktaProvider:
+            p.SetOktaDomain(o.OktaDomain) 
 	}
 	return msgs
 }
