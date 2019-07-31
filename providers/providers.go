@@ -36,8 +36,8 @@ func New(provider string, p *ProviderData) Provider {
 		return NewOIDCProvider(p)
 	case "login.gov":
 		return NewLoginGovProvider(p)
-        case "okta":
-                return NewOktaProvider(p)
+	case "okta":
+		return NewOktaProvider(p)
 	default:
 		return NewGoogleProvider(p)
 	}
