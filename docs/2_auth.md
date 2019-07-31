@@ -153,7 +153,7 @@ Okta is a SSO service platform that supports OIDC.  To configure Okta, follow th
 2. Navigate to **Security** then **API**
 * Click **Add Authorization Server**, if this option is not available you may require an additiional license for a custom auth server.
 * Fill out the *Name* with something to describe the application you are protecting. 'Example App'
-* For **Audience, pick the URL of the applpication you wish to protect: https://example.corp.com
+* For **Audience**, pick the URL of the applpication you wish to protect: https://example.corp.com
 * Fill out a **Description**
 * Add any **Access Policies** you wish to configure to limit application access
 * The default settings will work for other options.
