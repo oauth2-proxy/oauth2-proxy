@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pusher/oauth2_proxy/api"
+        "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+        "github.com/pusher/oauth2_proxy/pkg/requests"
 )
 
 type OktaProvider struct {
@@ -51,7 +52,7 @@ func getOktaHeader(access_token string) http.Header {
 	return header
 }
 
-func (p *OktaProvider) GetEmailAddress(s *SessionState) (string, error) {
+func (p *OktaProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
 
 	req, err := http.NewRequest("GET",
 		p.ValidateURL.String(), nil)
@@ -60,7 +61,7 @@ func (p *OktaProvider) GetEmailAddress(s *SessionState) (string, error) {
 		return "", err
 	}
 	req.Header = getOktaHeader(s.AccessToken)
-	json, err := api.Request(req)
+	json, err := requests.Request(req)
 	if err != nil {
 		log.Printf("failed making request %s", err)
 		return "", err
