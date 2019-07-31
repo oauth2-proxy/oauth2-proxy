@@ -190,6 +190,7 @@ func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Serv
 
 func userInGroup(service *admin.Service, groups []string, email string) bool {
 	for _, group := range groups {
+		// Use the HasMember API to checking for the user's presence in each group or nested subgroups
 		req := service.Members.HasMember(group, email)
 		r, err := req.Do()
 		if err != nil {
@@ -197,14 +198,20 @@ func userInGroup(service *admin.Service, groups []string, email string) bool {
 			if ok && err.Code == 404 {
 				logger.Printf("error checking membership in group %s: group does not exist", group)
 			} else if ok && err.Code == 400 {
+				// It is possible for Members.HasMember to return false even if the email is a group member.
+				// One case that can cause this is if the user email is from a different domain than the group,
+				// e.g. "member@otherdomain.com" in the group "group@mydomain.com" will result in a 400 error
+				// from the HasMember API. In that case, attempt to query the member object directly from the group.
 				req := service.Members.Get(group, email)
 				r, err := req.Do()
 
 				if err != nil {
-					logger.Printf("error using get API to check member %s of google group %s", email, group)
+					logger.Printf("error using get API to check member %s of google group %s: user not in the group", email, group)
 					continue
 				}
 
+				// If the non-domain user is found within the group, still verify that they are "ACTIVE".
+				// Do not count the user as belonging to a group if they have another status ("ARCHIVED", "SUSPENDED", or "UNKNOWN").
 				if r.Status == "ACTIVE" {
 					return true
 				}
