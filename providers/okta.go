@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-        "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-        "github.com/pusher/oauth2_proxy/pkg/requests"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
 )
 
 type OktaProvider struct {
@@ -46,9 +46,9 @@ func NewOktaProvider(p *ProviderData) *OktaProvider {
 	return &OktaProvider{ProviderData: p}
 }
 
-func getOktaHeader(access_token string) http.Header {
+func getOktaHeader(accessToken string) http.Header {
 	header := make(http.Header)
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", access_token))
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
 }
 
