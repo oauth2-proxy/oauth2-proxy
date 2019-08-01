@@ -416,10 +416,23 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		p.Group = o.GitLabGroup
 		p.EmailDomains = o.EmailDomains
 
-		if o.oidcVerifier == nil {
-			msgs = append(msgs, "gitlab provider requires an oidc issuer URL")
-		} else {
+		if o.oidcVerifier != nil {
 			p.Verifier = o.oidcVerifier
+		} else {
+			// Initialize with default verifier for gitlab.com
+			ctx := context.Background()
+
+			provider, err := oidc.NewProvider(ctx, "https://gitlab.com")
+			if err != nil {
+				msgs = append(msgs, "failed to initialize oidc provider for gitlab.com")
+			} else {
+				p.Verifier = provider.Verifier(&oidc.Config{
+					ClientID: o.ClientID,
+				})
+
+				p.LoginURL, msgs = parseURL(provider.Endpoint().AuthURL, "login", msgs)
+				p.RedeemURL, msgs = parseURL(provider.Endpoint().TokenURL, "redeem", msgs)
+			}
 		}
 	case *providers.LoginGovProvider:
 		p.AcrValues = o.AcrValues

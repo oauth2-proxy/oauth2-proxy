@@ -28,6 +28,11 @@ type GitLabProvider struct {
 // NewGitLabProvider initiates a new GitLabProvider
 func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 	p.ProviderName = "GitLab"
+
+	if p.Scope == "" {
+		p.Scope = "openid email"
+	}
+
 	return &GitLabProvider{ProviderData: p}
 }
 
