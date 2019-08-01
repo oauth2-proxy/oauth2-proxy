@@ -20,23 +20,15 @@ type GitLabProvider struct {
 
 	Group        string
 	EmailDomains []string
-	Verifier     *oidc.IDTokenVerifier
+
+	Verifier             *oidc.IDTokenVerifier
+	AllowUnverifiedEmail bool
 }
 
 // NewGitLabProvider initiates a new GitLabProvider
 func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 	p.ProviderName = "GitLab"
 	return &GitLabProvider{ProviderData: p}
-}
-
-// SetGroup to check membership for
-func (p *GitLabProvider) SetGroup(group string) {
-	p.Group = group
-}
-
-// SetEmailDomains to filter emails for
-func (p *GitLabProvider) SetEmailDomains(domains []string) {
-	p.EmailDomains = domains
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
@@ -154,8 +146,8 @@ func (p *GitLabProvider) getUserInfo(s *sessions.SessionState) (*gitlabUserInfo,
 	return &userInfo, nil
 }
 
-func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo, validGroup string) error {
-	if validGroup == "" {
+func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
+	if p.Group == "" {
 		return nil
 	}
 
@@ -166,14 +158,28 @@ func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo, validGr
 	}
 
 	// Find a valid group that they are a member of
-	validGroups := strings.Split(validGroup, " ")
+	validGroups := strings.Split(p.Group, " ")
 	for _, validGroup := range validGroups {
 		if _, ok := membershipSet[validGroup]; ok {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("user is not a member of '%s'", validGroup)
+	return fmt.Errorf("user is not a member of '%s'", p.Group)
+}
+
+func (p *GitLabProvider) verifyEmailDomain(userInfo *gitlabUserInfo) error {
+	if len(p.EmailDomains) == 0 || p.EmailDomains[0] == "*" {
+		return nil
+	}
+
+	for _, domain := range p.EmailDomains {
+		if strings.HasSuffix(userInfo.Email, domain) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("user email is not one of the valid domains '%v'", p.EmailDomains)
 }
 
 func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
@@ -216,8 +222,19 @@ func (p *GitLabProvider) GetEmailAddress(s *sessions.SessionState) (string, erro
 		return "", fmt.Errorf("failed to retrieve user info: %v", err)
 	}
 
+	// Check if email is verified
+	if !p.AllowUnverifiedEmail && !userInfo.EmailVerified {
+		return "", fmt.Errorf("user email is not verified")
+	}
+
+	// Check if email has valid domain
+	err = p.verifyEmailDomain(userInfo)
+	if err != nil {
+		return "", fmt.Errorf("email domain check failed: %v", err)
+	}
+
 	// Check group membership
-	err = p.verifyGroupMembership(userInfo, p.Group)
+	err = p.verifyGroupMembership(userInfo)
 	if err != nil {
 		return "", fmt.Errorf("group membership check failed: %v", err)
 	}
