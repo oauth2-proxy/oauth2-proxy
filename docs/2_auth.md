@@ -144,6 +144,68 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
     -cookie-secure=false
     -email-domain example.com
 
+The OpenID Connect Provider (OIDC) can also be used to connect to other Identity Providers such as Okta. To configure the OIDC provider for Okta, perform
+the following steps:
+
+#### Configuring Okta with the OIDC Provider
+
+1. Log in to Okta using an administrative account. It is suggested you try this in preview first, `example.oktapreview.com`
+2. Navigate to **Security** then **API**
+* Click **Add Authorization Server**, if this option is not available you may require an additional license for a custom auth server.
+* Fill out the **Name** with something to describe the application you are protecting. 'Example App'
+* For **Audience**, pick the URL of the application you wish to protect: https://example.corp.com
+* Fill out a **Description**
+* Add any **Access Policies** you wish to configure to limit application access
+* The default settings will work for other options.
+3. Navigate to **Applications** then select **Add Application**.
+* Select **Web** for the **Platform** setting.
+* Select **OpenID Connect** and click **Create**
+* Pick an **Application Name** such as `Example App`
+* Set the **Login redirect URI** to `https://example.corp.com`
+* Under **General** set the **Allowed grant types** to `Authorization Code` and `Refresh Token`
+* Leave the rest as default, taking note of the `Client ID` and `Client Secret`
+* Under **Assignments** select the users or groups you wish to access your application.
+4. Create a configuration file like the following:
+
+```
+provider = "okta"
+https_address = "localhost:44301"
+tls_key_file = "/etc/ssl/server.key"
+tls_cert_file = "/etc/ssl/server.crt"
+redirect_url = "https://example.corp.com"
+oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
+login_url = "https://corp.okta.com/oauth2/abCd1234/v1/authorize"
+redeem_url = "https://corp.okta.com/oauth2/abCd1234/v1/token"
+validate_url = "https://corp.okta.com/oauth2/abCd1234/v1/userinfo"
+request_logging = true
+pass_basic_auth = true
+pass_user_headers = true
+pass_host_header = true
+upstreams = [
+    "https://example.corp.com"
+]
+email_domains = [
+    "corp.com"
+]
+client_id = "XXXXX"
+client_secret = "YYYYY"
+pass_access_token = true
+cookie_name = "_oauth2_proxy"
+cookie_secret = "ZZZZZ"
+cookie_secure = true
+cookie_httponly = true
+cookie_https_only= true
+cookie_expire = "0h10m30s"
+skip_provider_button = true
+skip_auth_regex = "/robots.txt"
+```
+
+The `oidc_issuer_url` and other URIs use the base URL from your **Authorization Server**'s **Issuer** field.
+The `client_id` and `client_secret` are configured in the application settings.
+
+Then the oauth2_proxy with `./oauth2_proxy -config /etc/example.cfg`
+
+
 ### login.gov Provider
 
 login.gov is an OIDC provider for the US Government.
