@@ -150,13 +150,16 @@ the following steps:
 #### Configuring the OIDC Provider with Okta
 
 1. Log in to Okta using an administrative account. It is suggested you try this in preview first, `example.oktapreview.com`
-2. Navigate to **Security** then select **API**
+2. (OPTIONAL) If you want to configure authorization scopes and claims to be passed on to multiple applications,
+you may wish to configure an authorization server for each application. Otherwise, the provided `default` will work.
+* Navigate to **Security** then select **API**
 * Click **Add Authorization Server**, if this option is not available you may require an additional license for a custom authorization server.
 * Fill out the **Name** with something to describe the application you are protecting. e.g. 'Example App'.
 * For **Audience**, pick the URL of the application you wish to protect: https://example.corp.com
 * Fill out a **Description**
 * Add any **Access Policies** you wish to configure to limit application access.
 * The default settings will work for other options.
+[See Okta documentation for more information on Authorization Servers](https://developer.okta.com/docs/guides/customize-authz-server/overview/)
 3. Navigate to **Applications** then select **Add Application**.
 * Select **Web** for the **Platform** setting.
 * Select **OpenID Connect** and click **Create**
@@ -169,14 +172,8 @@ the following steps:
 
 ```
 provider = "oidc"
-https_address = "localhost:44301"
-tls_key_file = "/etc/ssl/server.key"
-tls_cert_file = "/etc/ssl/server.crt"
 redirect_url = "https://example.corp.com"
 oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
-login_url = "https://corp.okta.com/oauth2/abCd1234/v1/authorize"
-redeem_url = "https://corp.okta.com/oauth2/abCd1234/v1/token"
-validate_url = "https://corp.okta.com/oauth2/abCd1234/v1/userinfo"
 request_logging = true
 pass_basic_auth = true
 pass_user_headers = true
@@ -200,8 +197,9 @@ skip_provider_button = true
 skip_auth_regex = "/robots.txt"
 ```
 
-The `oidc_issuer_url` and other URIs use the base URL from your **Authorization Server**'s **Issuer** field.
+The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com
 The `client_id` and `client_secret` are configured in the application settings.
+Generate a unique `client_secret` to encrypt the cookie.
 
 Then you can start the oauth2_proxy with `./oauth2_proxy -config /etc/example.cfg`
 
