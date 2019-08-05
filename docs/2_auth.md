@@ -150,25 +150,25 @@ the following steps:
 #### Configuring Okta with the OIDC Provider
 
 1. Log in to Okta using an administrative account. It is suggested you try this in preview first, `example.oktapreview.com`
-2. Navigate to **Security** then **API**
-* Click **Add Authorization Server**, if this option is not available you may require an additional license for a custom auth server.
-* Fill out the **Name** with something to describe the application you are protecting. 'Example App'
+2. Navigate to **Security** then select **API**
+* Click **Add Authorization Server**, if this option is not available you may require an additional license for a custom authorization server.
+* Fill out the **Name** with something to describe the application you are protecting. e.g. 'Example App'.
 * For **Audience**, pick the URL of the application you wish to protect: https://example.corp.com
 * Fill out a **Description**
-* Add any **Access Policies** you wish to configure to limit application access
+* Add any **Access Policies** you wish to configure to limit application access.
 * The default settings will work for other options.
 3. Navigate to **Applications** then select **Add Application**.
 * Select **Web** for the **Platform** setting.
 * Select **OpenID Connect** and click **Create**
-* Pick an **Application Name** such as `Example App`
-* Set the **Login redirect URI** to `https://example.corp.com`
-* Under **General** set the **Allowed grant types** to `Authorization Code` and `Refresh Token`
-* Leave the rest as default, taking note of the `Client ID` and `Client Secret`
+* Pick an **Application Name** such as `Example App`.
+* Set the **Login redirect URI** to `https://example.corp.com`.
+* Under **General** set the **Allowed grant types** to `Authorization Code` and `Refresh Token`.
+* Leave the rest as default, taking note of the `Client ID` and `Client Secret`.
 * Under **Assignments** select the users or groups you wish to access your application.
 4. Create a configuration file like the following:
 
 ```
-provider = "okta"
+provider = "oidc"
 https_address = "localhost:44301"
 tls_key_file = "/etc/ssl/server.key"
 tls_cert_file = "/etc/ssl/server.crt"
