@@ -203,7 +203,7 @@ skip_auth_regex = "/robots.txt"
 The `oidc_issuer_url` and other URIs use the base URL from your **Authorization Server**'s **Issuer** field.
 The `client_id` and `client_secret` are configured in the application settings.
 
-Then the oauth2_proxy with `./oauth2_proxy -config /etc/example.cfg`
+Then you can start the oauth2_proxy with `./oauth2_proxy -config /etc/example.cfg`
 
 
 ### login.gov Provider
