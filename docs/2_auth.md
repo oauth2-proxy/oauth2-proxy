@@ -147,7 +147,7 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
 The OpenID Connect Provider (OIDC) can also be used to connect to other Identity Providers such as Okta. To configure the OIDC provider for Okta, perform
 the following steps:
 
-#### Configuring Okta with the OIDC Provider
+#### Configuring the OIDC Provider with Okta
 
 1. Log in to Okta using an administrative account. It is suggested you try this in preview first, `example.oktapreview.com`
 2. Navigate to **Security** then select **API**
