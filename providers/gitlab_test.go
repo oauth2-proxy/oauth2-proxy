@@ -38,7 +38,7 @@ func testGitLabBackend() *httptest.Server {
 			"groups": ["foo", "bar"]
 		}
 	`
-	authHeader := "Bearer imaginary_access_token"
+	authHeader := "Bearer gitlab_access_token"
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +62,7 @@ func TestGitLabProviderBadToken(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
+	session := &sessions.SessionState{AccessToken: "unexpected_gitlab_access_token"}
 	_, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 }
@@ -74,7 +74,7 @@ func TestGitLabProviderUnverifiedEmailDenied(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	_, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 }
@@ -87,7 +87,7 @@ func TestGitLabProviderUnverifiedEmailAllowed(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 	p.AllowUnverifiedEmail = true
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "foo@bar.com", email)
@@ -101,7 +101,7 @@ func TestGitLabProviderUsername(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 	p.AllowUnverifiedEmail = true
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	username, err := p.GetUserName(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "FooBar", username)
@@ -116,7 +116,7 @@ func TestGitLabProviderGroupMembershipValid(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 	p.Group = "foo"
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "foo@bar.com", email)
@@ -131,7 +131,7 @@ func TestGitLabProviderGroupMembershipMissing(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 	p.Group = "baz"
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	_, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 }
@@ -145,7 +145,7 @@ func TestGitLabProviderEmailDomainValid(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 	p.EmailDomains = []string{"bar.com"}
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "foo@bar.com", email)
@@ -160,7 +160,7 @@ func TestGitLabProviderEmailDomainInvalid(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 	p.EmailDomains = []string{"baz.com"}
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	_, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 }
