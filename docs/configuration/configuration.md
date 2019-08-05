@@ -98,7 +98,8 @@ Usage of oauth2_proxy:
   -skip-jwt-bearer-tokens: will skip requests that have verified JWT bearer tokens
   -skip-oidc-discovery: bypass OIDC endpoint discovery. login-url, redeem-url and oidc-jwks-url must be configured in this case
   -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
-  -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
+  -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS providers
+  -ssl-upstream-insecure-skip-verify: skip validation of certificates presented when using HTTPS upstreams
   -standard-logging: Log standard runtime information (default true)
   -standard-logging-format string: Template for standard log lines (see "Logging Configuration" paragraph below)
   -tls-cert-file string: path to certificate file
