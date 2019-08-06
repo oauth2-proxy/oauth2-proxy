@@ -189,71 +189,42 @@ func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Serv
 }
 
 func userInGroup(service *admin.Service, groups []string, email string) bool {
-	user, err := fetchUser(service, email)
-	if err != nil {
-		logger.Printf("Warning: unable to fetch user: %v", err)
-		user = nil
-	}
-
 	for _, group := range groups {
-		members, err := fetchGroupMembers(service, group)
+		// Use the HasMember API to checking for the user's presence in each group or nested subgroups
+		req := service.Members.HasMember(group, email)
+		r, err := req.Do()
 		if err != nil {
-			if err, ok := err.(*googleapi.Error); ok && err.Code == 404 {
-				logger.Printf("error fetching members for group %s: group does not exist", group)
-			} else {
-				logger.Printf("error fetching group members: %v", err)
-				return false
-			}
-		}
+			err, ok := err.(*googleapi.Error)
+			if ok && err.Code == 404 {
+				logger.Printf("error checking membership in group %s: group does not exist", group)
+			} else if ok && err.Code == 400 {
+				// It is possible for Members.HasMember to return false even if the email is a group member.
+				// One case that can cause this is if the user email is from a different domain than the group,
+				// e.g. "member@otherdomain.com" in the group "group@mydomain.com" will result in a 400 error
+				// from the HasMember API. In that case, attempt to query the member object directly from the group.
+				req := service.Members.Get(group, email)
+				r, err := req.Do()
 
-		for _, member := range members {
-			if member.Email == email {
-				return true
-			}
-			if user == nil {
-				continue
-			}
-			switch member.Type {
-			case "CUSTOMER":
-				if member.Id == user.CustomerId {
+				if err != nil {
+					logger.Printf("error using get API to check member %s of google group %s: user not in the group", email, group)
+					continue
+				}
+
+				// If the non-domain user is found within the group, still verify that they are "ACTIVE".
+				// Do not count the user as belonging to a group if they have another status ("ARCHIVED", "SUSPENDED", or "UNKNOWN").
+				if r.Status == "ACTIVE" {
 					return true
 				}
-			case "USER":
-				if member.Id == user.Id {
-					return true
-				}
+			} else {
+				logger.Printf("error checking group membership: %v", err)
 			}
+			continue
+		}
+		if r.IsMember {
+			return true
 		}
 	}
 	return false
-}
-
-func fetchUser(service *admin.Service, email string) (*admin.User, error) {
-	user, err := service.Users.Get(email).Do()
-	return user, err
-}
-
-func fetchGroupMembers(service *admin.Service, group string) ([]*admin.Member, error) {
-	members := []*admin.Member{}
-	pageToken := ""
-	for {
-		req := service.Members.List(group)
-		if pageToken != "" {
-			req.PageToken(pageToken)
-		}
-		r, err := req.Do()
-		if err != nil {
-			return nil, err
-		}
-		for _, member := range r.Members {
-			members = append(members, member)
-		}
-		if r.NextPageToken == "" {
-			break
-		}
-		pageToken = r.NextPageToken
-	}
-	return members, nil
 }
 
 // ValidateGroup validates that the provided email exists in the configured Google

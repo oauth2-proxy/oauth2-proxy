@@ -49,6 +49,7 @@ Usage of oauth2_proxy:
   -gcp-healthchecks: will enable /liveness_check, /readiness_check, and / (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses (default false)
   -github-org string: restrict logins to members of this organisation
   -github-team string: restrict logins to members of any of these teams (slug), separated by a comma
+  -gitlab-group string: restrict logins to members of any of these groups (slug), separated by a comma
   -google-admin-email string: the google admin to impersonate for api calls
   -google-group value: restrict logins to members of this google group (may be given multiple times).
   -google-service-account-json string: the path to the service account json credentials
