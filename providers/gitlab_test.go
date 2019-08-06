@@ -25,104 +25,142 @@ func testGitLabProvider(hostname string) *GitLabProvider {
 		updateURL(p.Data().ProfileURL, hostname)
 		updateURL(p.Data().ValidateURL, hostname)
 	}
+
 	return p
 }
 
-func testGitLabBackend(payload string) *httptest.Server {
-	path := "/api/v4/user"
-	query := "access_token=imaginary_access_token"
+func testGitLabBackend() *httptest.Server {
+	userInfo := `
+		{
+			"nickname": "FooBar",
+			"email": "foo@bar.com",
+			"email_verified": false,
+			"groups": ["foo", "bar"]
+		}
+	`
+	authHeader := "Bearer gitlab_access_token"
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != path || r.URL.RawQuery != query {
-				w.WriteHeader(404)
+			if r.URL.Path == "/oauth/userinfo" {
+				if r.Header["Authorization"][0] == authHeader {
+					w.WriteHeader(200)
+					w.Write([]byte(userInfo))
+				} else {
+					w.WriteHeader(401)
+				}
 			} else {
-				w.WriteHeader(200)
-				w.Write([]byte(payload))
+				w.WriteHeader(404)
 			}
 		}))
 }
 
-func TestGitLabProviderDefaults(t *testing.T) {
-	p := testGitLabProvider("")
-	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "GitLab", p.Data().ProviderName)
-	assert.Equal(t, "https://gitlab.com/oauth/authorize",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://gitlab.com/oauth/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://gitlab.com/api/v4/user",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "read_user", p.Data().Scope)
-}
-
-func TestGitLabProviderOverrides(t *testing.T) {
-	p := NewGitLabProvider(
-		&ProviderData{
-			LoginURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/oauth/auth"},
-			RedeemURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/oauth/token"},
-			ValidateURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/api/v4/user"},
-			Scope: "profile"})
-	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "GitLab", p.Data().ProviderName)
-	assert.Equal(t, "https://example.com/oauth/auth",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://example.com/oauth/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://example.com/api/v4/user",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "profile", p.Data().Scope)
-}
-
-func TestGitLabProviderGetEmailAddress(t *testing.T) {
-	b := testGitLabBackend("{\"email\": \"michael.bland@gsa.gov\"}")
+func TestGitLabProviderBadToken(t *testing.T) {
+	b := testGitLabBackend()
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "unexpected_gitlab_access_token"}
+	_, err := p.GetEmailAddress(session)
+	assert.NotEqual(t, nil, err)
+}
+
+func TestGitLabProviderUnverifiedEmailDenied(t *testing.T) {
+	b := testGitLabBackend()
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitLabProvider(bURL.Host)
+
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
+	_, err := p.GetEmailAddress(session)
+	assert.NotEqual(t, nil, err)
+}
+
+func TestGitLabProviderUnverifiedEmailAllowed(t *testing.T) {
+	b := testGitLabBackend()
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitLabProvider(bURL.Host)
+	p.AllowUnverifiedEmail = true
+
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "foo@bar.com", email)
 }
 
-// Note that trying to trigger the "failed building request" case is not
-// practical, since the only way it can fail is if the URL fails to parse.
-func TestGitLabProviderGetEmailAddressFailedRequest(t *testing.T) {
-	b := testGitLabBackend("unused payload")
+func TestGitLabProviderUsername(t *testing.T) {
+	b := testGitLabBackend()
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
+	p.AllowUnverifiedEmail = true
 
-	// We'll trigger a request failure by using an unexpected access
-	// token. Alternatively, we could allow the parsing of the payload as
-	// JSON to fail.
-	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(session)
-	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
+	username, err := p.GetUserName(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "FooBar", username)
 }
 
-func TestGitLabProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
-	b := testGitLabBackend("{\"foo\": \"bar\"}")
+func TestGitLabProviderGroupMembershipValid(t *testing.T) {
+	b := testGitLabBackend()
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
+	p.AllowUnverifiedEmail = true
+	p.Group = "foo"
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	email, err := p.GetEmailAddress(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "foo@bar.com", email)
+}
+
+func TestGitLabProviderGroupMembershipMissing(t *testing.T) {
+	b := testGitLabBackend()
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitLabProvider(bURL.Host)
+	p.AllowUnverifiedEmail = true
+	p.Group = "baz"
+
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
+	_, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+}
+
+func TestGitLabProviderEmailDomainValid(t *testing.T) {
+	b := testGitLabBackend()
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitLabProvider(bURL.Host)
+	p.AllowUnverifiedEmail = true
+	p.EmailDomains = []string{"bar.com"}
+
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
+	email, err := p.GetEmailAddress(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "foo@bar.com", email)
+}
+
+func TestGitLabProviderEmailDomainInvalid(t *testing.T) {
+	b := testGitLabBackend()
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitLabProvider(bURL.Host)
+	p.AllowUnverifiedEmail = true
+	p.EmailDomains = []string{"baz.com"}
+
+	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
+	_, err := p.GetEmailAddress(session)
+	assert.NotEqual(t, nil, err)
 }
