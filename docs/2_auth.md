@@ -103,13 +103,15 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 ### GitLab Auth Provider
 
-Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](http://doc.gitlab.com/ce/integration/oauth_provider.html)
+Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](http://doc.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes.
+
+Restricting by group membership is possible with the following option:
+
+    -gitlab-group="": restrict logins to members of any of these groups (slug), separated by a comma
 
 If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
 
-    -login-url="<your gitlab url>/oauth/authorize"
-    -redeem-url="<your gitlab url>/oauth/token"
-    -validate-url="<your gitlab url>/api/v4/user"
+    -oidc-issuer-url="<your gitlab url>"
 
 ### LinkedIn Auth Provider
 

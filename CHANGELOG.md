@@ -2,6 +2,11 @@
 
 ## Breaking Changes
 
+- [#231](https://github.com/pusher/oauth2_proxy/pull/231) Rework GitLab provider (@Overv)
+  - This PR changes the configuration options for the GitLab provider to use
+  a self-hosted instance. You now need to specify a `-oidc-issuer-url` rather than
+  explicit `-login-url`, `-redeem-url` and `-validate-url` parameters.
+
 - [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent
   - This PR changes configuration options so that all flags have a config counterpart
   of the same name but with underscores (`_`) in place of hyphens (`-`).
@@ -32,6 +37,7 @@
 ## Changes since v3.2.0
 
 - [#224](https://github.com/pusher/oauth2_proxy/pull/224) Check Google group membership using hasMember to support nested groups and external users (@jpalpant)
+- [#231](https://github.com/pusher/oauth2_proxy/pull/231) Add optional group membership and email domain checks to the GitLab provider (@Overv)
 - [#178](https://github.com/pusher/outh2_proxy/pull/178) Add Silence Ping Logging and Exclude Logging Paths flags (@kskewes)
 - [#209](https://github.com/pusher/outh2_proxy/pull/209) Improve docker build caching of layers (@dekimsey)
 - [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent (@JoelSpeed)
