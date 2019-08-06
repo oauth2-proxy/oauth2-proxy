@@ -46,6 +46,7 @@ type Options struct {
 	WhitelistDomains         []string `flag:"whitelist-domain" cfg:"whitelist_domains" env:"OAUTH2_PROXY_WHITELIST_DOMAINS"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org" env:"OAUTH2_PROXY_GITHUB_ORG"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team" env:"OAUTH2_PROXY_GITHUB_TEAM"`
+	GitLabGroup              string   `flag:"gitlab-group" cfg:"gitlab_group" env:"OAUTH2_PROXY_GITLAB_GROUP"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group" env:"OAUTH2_PROXY_GOOGLE_GROUPS"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email" env:"OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json" env:"OAUTH2_PROXY_GOOGLE_SERVICE_ACCOUNT_JSON"`
@@ -409,6 +410,29 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {
 			p.Verifier = o.oidcVerifier
+		}
+	case *providers.GitLabProvider:
+		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
+		p.Group = o.GitLabGroup
+		p.EmailDomains = o.EmailDomains
+
+		if o.oidcVerifier != nil {
+			p.Verifier = o.oidcVerifier
+		} else {
+			// Initialize with default verifier for gitlab.com
+			ctx := context.Background()
+
+			provider, err := oidc.NewProvider(ctx, "https://gitlab.com")
+			if err != nil {
+				msgs = append(msgs, "failed to initialize oidc provider for gitlab.com")
+			} else {
+				p.Verifier = provider.Verifier(&oidc.Config{
+					ClientID: o.ClientID,
+				})
+
+				p.LoginURL, msgs = parseURL(provider.Endpoint().AuthURL, "login", msgs)
+				p.RedeemURL, msgs = parseURL(provider.Endpoint().TokenURL, "redeem", msgs)
+			}
 		}
 	case *providers.LoginGovProvider:
 		p.AcrValues = o.AcrValues
