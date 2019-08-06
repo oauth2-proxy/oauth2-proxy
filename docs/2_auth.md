@@ -174,10 +174,6 @@ you may wish to configure an authorization server for each application. Otherwis
 provider = "oidc"
 redirect_url = "https://example.corp.com"
 oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
-request_logging = true
-pass_basic_auth = true
-pass_user_headers = true
-pass_host_header = true
 upstreams = [
     "https://example.corp.com"
 ]
@@ -187,14 +183,8 @@ email_domains = [
 client_id = "XXXXX"
 client_secret = "YYYYY"
 pass_access_token = true
-cookie_name = "_oauth2_proxy"
 cookie_secret = "ZZZZZ"
-cookie_secure = true
-cookie_httponly = true
-cookie_https_only= true
-cookie_expire = "0h10m30s"
 skip_provider_button = true
-skip_auth_regex = "/robots.txt"
 ```
 
 The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com
