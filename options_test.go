@@ -142,11 +142,25 @@ func TestRedirectURL(t *testing.T) {
 func TestProxyURLs(t *testing.T) {
 	o := testOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8081")
+	o.Upstreams = append(o.Upstreams, "|http://127.0.0.1:8082")
+	o.Upstreams = append(o.Upstreams, "  |http://127.0.0.1:8083/x/")
+	o.Upstreams = append(o.Upstreams, "sub.domain|http://127.0.0.1:8082/abc")
+	o.Upstreams = append(o.Upstreams, " sub.domain\t | http://127.0.0.1:8083/abc/")
 	assert.Equal(t, nil, o.Validate())
-	expected := []*url.URL{
-		{Scheme: "http", Host: "127.0.0.1:8080", Path: "/"},
-		// note the '/' was added
-		{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"},
+	expected := map[string][]*url.URL{
+		"*": {
+			{Scheme: "http", Host: "127.0.0.1:8080", Path: "/"},
+			// note the '/' was added
+			{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"},
+		},
+		"": {
+			{Scheme: "http", Host: "127.0.0.1:8082", Path: "/"},
+			{Scheme: "http", Host: "127.0.0.1:8083", Path: "/x/"},
+		},
+		"sub.domain": {
+			{Scheme: "http", Host: "127.0.0.1:8082", Path: "/abc"},
+			{Scheme: "http", Host: "127.0.0.1:8083", Path: "/abc/"},
+		},
 	}
 	assert.Equal(t, expected, o.proxyURLs)
 }

@@ -95,7 +95,7 @@ type OAuthProxy struct {
 	SignInMessage        string
 	HtpasswdFile         *HtpasswdFile
 	DisplayHtpasswdForm  bool
-	serveMux             http.Handler
+	serveMuxes           map[string]http.Handler
 	SetXAuthRequest      bool
 	PassBasicAuth        bool
 	SetBasicAuth         bool
@@ -209,46 +209,56 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.Hma
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
 func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
-	serveMux := http.NewServeMux()
+	serveMuxes := map[string]http.Handler{}
 	var auth hmacauth.HmacAuth
 	if sigData := opts.signatureData; sigData != nil {
 		auth = hmacauth.NewHmacAuth(sigData.hash, []byte(sigData.key),
 			SignatureHeader, SignatureHeaders)
 	}
-	for _, u := range opts.proxyURLs {
-		path := u.Path
-		host := u.Host
-		switch u.Scheme {
-		case httpScheme, httpsScheme:
-			logger.Printf("mapping path %q => upstream %q", path, u)
-			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
-			serveMux.Handle(path, proxy)
-		case "static":
-			responseCode, err := strconv.Atoi(host)
-			if err != nil {
-				logger.Printf("unable to convert %q to int, use default \"200\"", host)
-				responseCode = 200
+	for host, urls := range opts.proxyURLs {
+		if host != "*" && len(opts.Cookie.Domains) > 0 && strings.HasPrefix(opts.Cookie.Domains[0], ".") && !strings.HasSuffix(host, opts.Cookie.Domains[0]) {
+			if host == "" {
+				host = opts.Cookie.Domains[0][1:]
+			} else {
+				host += opts.Cookie.Domains[0]
 			}
+		}
+		serveMux := http.NewServeMux()
+		serveMuxes[host] = serveMux
+		for _, u := range urls {
+			path := u.Path
+			switch u.Scheme {
+			case httpScheme, httpsScheme:
+				logger.Printf("mapping host %q path %q => upstream %q", host, path, u)
+				proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
+				serveMux.Handle(path, proxy)
+			case "static":
+				responseCode, err := strconv.Atoi(u.Host)
+				if err != nil {
+					logger.Printf("unable to convert %q to int, use default \"200\"", u.Host)
+					responseCode = 200
+				}
 
-			serveMux.HandleFunc(path, func(rw http.ResponseWriter, req *http.Request) {
-				rw.WriteHeader(responseCode)
-				fmt.Fprintf(rw, "Authenticated")
-			})
-		case "file":
-			if u.Fragment != "" {
-				path = u.Fragment
+				serveMux.HandleFunc(path, func(rw http.ResponseWriter, req *http.Request) {
+					rw.WriteHeader(responseCode)
+					fmt.Fprintf(rw, "Authenticated")
+				})
+			case "file":
+				if u.Fragment != "" {
+					path = u.Fragment
+				}
+				logger.Printf("mapping host %q path %q => file system %q", host, path, u.Path)
+				proxy := NewFileServer(path, u.Path)
+				uProxy := UpstreamProxy{
+					upstream:  path,
+					handler:   proxy,
+					wsHandler: nil,
+					auth:      nil,
+				}
+				serveMux.Handle(path, &uProxy)
+			default:
+				panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
 			}
-			logger.Printf("mapping path %q => file system %q", path, u.Path)
-			proxy := NewFileServer(path, u.Path)
-			uProxy := UpstreamProxy{
-				upstream:  path,
-				handler:   proxy,
-				wsHandler: nil,
-				auth:      nil,
-			}
-			serveMux.Handle(path, &uProxy)
-		default:
-			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
 		}
 	}
 	for _, u := range opts.compiledRegex {
@@ -300,7 +310,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		provider:             opts.provider,
 		providerNameOverride: opts.ProviderName,
 		sessionStore:         opts.sessionStore,
-		serveMux:             serveMux,
+		serveMuxes:           serveMuxes,
 		redirectURL:          redirectURL,
 		whitelistDomains:     opts.WhitelistDomains,
 		skipAuthRegex:        opts.SkipAuthRegex,
@@ -532,6 +542,9 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	if req.Form.Get("rd") != "" {
 		redirect = req.Form.Get("rd")
 	}
+	if len(p.serveMuxes) >= 2 && strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") {
+		redirect = "https://" + req.Host + redirect
+	}
 	if !p.IsValidRedirect(redirect) {
 		redirect = req.URL.Path
 		if strings.HasPrefix(redirect, p.ProxyPrefix) {
@@ -670,7 +683,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	case path == p.PingPath:
 		p.PingPage(rw)
 	case p.IsWhitelistedRequest(req):
-		p.serveMux.ServeHTTP(rw, req)
+		p.serveRequest(rw, req)
 	case path == p.SignInPath:
 		p.SignIn(rw, req)
 	case path == p.SignOutPath:
@@ -843,6 +856,25 @@ func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request)
 	rw.WriteHeader(http.StatusAccepted)
 }
 
+// serveRequest actually proxies the request to the upstream
+func (p *OAuthProxy) serveRequest(rw http.ResponseWriter, req *http.Request) {
+	domain := req.Host
+	if h, _, err := net.SplitHostPort(domain); err == nil {
+		domain = h
+	}
+	var serveMux http.Handler
+	if m, ok := p.serveMuxes[domain]; ok {
+		serveMux = m
+	} else {
+		serveMux = p.serveMuxes["*"]
+	}
+	if serveMux == nil {
+		p.ErrorPage(rw, 404, "Page not found", "Invalid Host")
+		return
+	}
+	serveMux.ServeHTTP(rw, req)
+}
+
 // Proxy proxies the user request if the user is authenticated else it prompts
 // them to authenticate
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
@@ -851,7 +883,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	case nil:
 		// we are authenticated
 		p.addHeadersForProxying(rw, req, session)
-		p.serveMux.ServeHTTP(rw, req)
+		p.serveRequest(rw, req)
 
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen

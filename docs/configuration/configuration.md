@@ -136,6 +136,19 @@ Static file paths are configured as a file:// URL. `file:///var/www/static/` wil
 
 Multiple upstreams can either be configured by supplying a comma separated list to the `-upstream` parameter, supplying the parameter multiple times or provinding a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
 
+Subdomain-based routing is possible by prepending a subdomain followed by a `|` to the upstream URL, like this:
+
+```
+test |http://127.0.0.1:8082/
+other|http://127.0.0.1:8083/
+other|http://127.0.0.1:8084/path/
+     |http://127.0.0.1:8085/
+```
+
+Assuming cookie domain is set to `.example.com`, the requests `test.example.com`, `other.example.com`, `other.example.com/path/` and `example.com` will all be routed to different upstreams. Any spacing around the `|` separator is ignored.
+
+When using subdomain-based routing, `whitelist_domains` must be configured to allow each subdomain (or the entire cookie domain, e.g. `.example.com`).
+
 ### Environment variables
 
 Every command line argument can be specified as an environment variable by

@@ -49,6 +49,7 @@
 - [#483](https://github.com/oauth2-proxy/oauth2-proxy/pull/483) Warn users when session cookies are split (@JoelSpeed)
 - [#488](https://github.com/oauth2-proxy/oauth2-proxy/pull/488) Set-Basic-Auth should default to false (@JoelSpeed)
 - [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify
+- [#204](https://github.com/oauth2-proxy/oauth2_proxy/pull/204) Add subdomain-based routing. It is now possible to route based on domain name and path.
 
 # v5.1.0
 
@@ -144,6 +145,7 @@ N/A
 - [#265](https://github.com/oauth2-proxy/oauth2-proxy/pull/265) Add upstream with static response (@cgroschupp)
 - [#317](https://github.com/oauth2-proxy/oauth2-proxy/pull/317) Add build for FreeBSD (@fnkr)
 - [#296](https://github.com/oauth2-proxy/oauth2-proxy/pull/296) Allow to override provider's name for sign-in page (@ffdybuster)
+- [#204](https://github.com/pusher/oauth2_proxy/pull/204) Add subdomain-based routing. It is now possible to route based on domain name and path.
 
 # v4.0.0
 

@@ -130,7 +130,7 @@ type Options struct {
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
-	proxyURLs          []*url.URL
+	proxyURLs          map[string][]*url.URL
 	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
 	sessionStore       sessionsapi.SessionStore
@@ -356,7 +356,14 @@ func (o *Options) Validate() error {
 
 	o.redirectURL, msgs = parseURL(o.RedirectURL, "redirect", msgs)
 
+	domainUpstreamRegex := regexp.MustCompile(`^\s*([a-z0-9._-]*)\s*\|\s*(.*)$`)
+	o.proxyURLs = map[string][]*url.URL{}
 	for _, u := range o.Upstreams {
+		subdomain := "*"
+		m := domainUpstreamRegex.FindStringSubmatch(u)
+		if m != nil {
+			subdomain, u = m[1], m[2]
+		}
 		upstreamURL, err := url.Parse(u)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("error parsing upstream: %s", err))
@@ -364,7 +371,7 @@ func (o *Options) Validate() error {
 			if upstreamURL.Path == "" {
 				upstreamURL.Path = "/"
 			}
-			o.proxyURLs = append(o.proxyURLs, upstreamURL)
+			o.proxyURLs[subdomain] = append(o.proxyURLs[subdomain], upstreamURL)
 		}
 	}
 
