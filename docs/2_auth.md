@@ -103,7 +103,7 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 ### GitLab Auth Provider
 
-Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](http://doc.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes.
+Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](https://docs.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes.
 
 Restricting by group membership is possible with the following option:
 
@@ -126,7 +126,7 @@ For LinkedIn, the registration steps are:
 
 ### Microsoft Azure AD Provider
 
-For adding an application to the Microsoft Azure AD follow [these steps to add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/).
+For adding an application to the Microsoft Azure AD follow [these steps to add an application](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app).
 
 Take note of your `TenantId` if applicable for your situation. The `TenantId` can be used to override the default `common` authorization server with a tenant specific server.
 
@@ -277,7 +277,7 @@ To authorize by email domain use `--email-domain=yourcompany.com`. To authorize 
 
 ## Adding a new Provider
 
-Follow the examples in the [`providers` package](providers/) to define a new
+Follow the examples in the [`providers` package]({{ site.gitweb }}/providers/) to define a new
 `Provider` instance. Add a new `case` to
-[`providers.New()`](providers/providers.go) to allow `oauth2_proxy` to use the
+[`providers.New()`]({{ site.gitweb }}/providers/providers.go) to allow `oauth2_proxy` to use the
 new `Provider`.
