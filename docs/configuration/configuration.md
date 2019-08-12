@@ -19,7 +19,7 @@ An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is i
 ### Command Line Options
 
 | Option | Type | Description | Default |
-| ------ | ---- | ----------- |
+| ------ | ---- | ----------- | ------- |
 | `-acr-values` | string | optional, used by login.gov | `"http://idmanagement.gov/ns/assurance/loa/1"` |
 | `-approval-prompt` | string | OAuth approval_prompt | `"force"` |
 | `-auth-logging` | bool | Log authentication attempts | true |
