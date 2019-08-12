@@ -14,7 +14,7 @@ To generate a strong cookie secret use `python -c 'import os,base64; print base6
 
 ### Config File
 
-An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2_proxy.cfg`
+An example [oauth2_proxy.cfg](https://github.com/pusher/oauth2_proxy/blob/master/contrib/oauth2_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2_proxy.cfg`
 
 ### Command Line Options
 
@@ -49,6 +49,7 @@ Usage of oauth2_proxy:
   -gcp-healthchecks: will enable /liveness_check, /readiness_check, and / (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses (default false)
   -github-org string: restrict logins to members of this organisation
   -github-team string: restrict logins to members of any of these teams (slug), separated by a comma
+  -gitlab-group string: restrict logins to members of any of these groups (slug), separated by a comma
   -google-admin-email string: the google admin to impersonate for api calls
   -google-group value: restrict logins to members of this google group (may be given multiple times).
   -google-service-account-json string: the path to the service account json credentials
@@ -98,7 +99,8 @@ Usage of oauth2_proxy:
   -skip-jwt-bearer-tokens: will skip requests that have verified JWT bearer tokens
   -skip-oidc-discovery: bypass OIDC endpoint discovery. login-url, redeem-url and oidc-jwks-url must be configured in this case
   -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
-  -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
+  -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS providers
+  -ssl-upstream-insecure-skip-verify: skip validation of certificates presented when using HTTPS upstreams
   -standard-logging: Log standard runtime information (default true)
   -standard-logging-format string: Template for standard log lines (see "Logging Configuration" paragraph below)
   -tls-cert-file string: path to certificate file
