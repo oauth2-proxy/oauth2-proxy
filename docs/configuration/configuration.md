@@ -231,7 +231,7 @@ Available variables for standard logging:
 | File | main.go:40 | The file and line number of the logging statement. |
 | Message | HTTP: listening on 127.0.0.1:4180 | The details of the log statement. |
 
-## Configuring for use with the Nginx `auth_request` directive
+## <a name="nginx-auth-request"></a>Configuring for use with the Nginx `auth_request` directive
 
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2_proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
