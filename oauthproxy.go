@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
@@ -128,9 +129,14 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // NewReverseProxy creates a new reverse proxy for proxying requests to upstream
 // servers
-func NewReverseProxy(target *url.URL, flushInterval time.Duration) (proxy *httputil.ReverseProxy) {
+func NewReverseProxy(target *url.URL, opts *Options) (proxy *httputil.ReverseProxy) {
 	proxy = httputil.NewSingleHostReverseProxy(target)
-	proxy.FlushInterval = flushInterval
+	proxy.FlushInterval = opts.FlushInterval
+	if opts.SSLUpstreamInsecureSkipVerify {
+		proxy.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
 	return proxy
 }
 
@@ -163,7 +169,7 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 // NewWebSocketOrRestReverseProxy creates a reverse proxy for REST or websocket based on url
 func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.HmacAuth) http.Handler {
 	u.Path = ""
-	proxy := NewReverseProxy(u, opts.FlushInterval)
+	proxy := NewReverseProxy(u, opts)
 	if !opts.PassHostHeader {
 		setProxyUpstreamHostHeader(proxy, u)
 	} else {
@@ -892,7 +898,7 @@ func isAjax(req *http.Request) bool {
 	return false
 }
 
-// ErrorJSON returns the error code witht an application/json mime type
+// ErrorJSON returns the error code with an application/json mime type
 func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)

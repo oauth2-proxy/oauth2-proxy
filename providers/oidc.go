@@ -3,10 +3,13 @@ package providers
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
+
 	"golang.org/x/oauth2"
 )
 
@@ -117,8 +120,31 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 	}
 
 	if claims.Email == "" {
-		// TODO: Try getting email from /userinfo before falling back to Subject
-		claims.Email = claims.Subject
+		if p.ProfileURL.String() == "" {
+			return nil, fmt.Errorf("id_token did not contain an email")
+		}
+
+		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
+		// contents at the profileURL contains the email.
+		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
+
+		req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header = getOIDCHeader(token.AccessToken)
+
+		respJSON, err := requests.Request(req)
+		if err != nil {
+			return nil, err
+		}
+
+		email, err := respJSON.Get("email").String()
+		if err != nil {
+			return nil, fmt.Errorf("Neither id_token nor userinfo endpoint contained an email")
+		}
+
+		claims.Email = email
 	}
 	if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
@@ -144,4 +170,11 @@ func (p *OIDCProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	}
 
 	return true
+}
+
+func getOIDCHeader(accessToken string) http.Header {
+	header := make(http.Header)
+	header.Set("Accept", "application/json")
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	return header
 }

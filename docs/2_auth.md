@@ -103,13 +103,15 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 ### GitLab Auth Provider
 
-Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](http://doc.gitlab.com/ce/integration/oauth_provider.html)
+Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](http://doc.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes.
+
+Restricting by group membership is possible with the following option:
+
+    -gitlab-group="": restrict logins to members of any of these groups (slug), separated by a comma
 
 If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
 
-    -login-url="<your gitlab url>/oauth/authorize"
-    -redeem-url="<your gitlab url>/oauth/token"
-    -validate-url="<your gitlab url>/api/v4/user"
+    -oidc-issuer-url="<your gitlab url>"
 
 ### LinkedIn Auth Provider
 
@@ -143,6 +145,56 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
     -oidc-issuer-url http://127.0.0.1:5556
     -cookie-secure=false
     -email-domain example.com
+
+The OpenID Connect Provider (OIDC) can also be used to connect to other Identity Providers such as Okta. To configure the OIDC provider for Okta, perform
+the following steps:
+
+#### Configuring the OIDC Provider with Okta
+
+1. Log in to Okta using an administrative account. It is suggested you try this in preview first, `example.oktapreview.com`
+2. (OPTIONAL) If you want to configure authorization scopes and claims to be passed on to multiple applications,
+you may wish to configure an authorization server for each application. Otherwise, the provided `default` will work.
+* Navigate to **Security** then select **API**
+* Click **Add Authorization Server**, if this option is not available you may require an additional license for a custom authorization server.
+* Fill out the **Name** with something to describe the application you are protecting. e.g. 'Example App'.
+* For **Audience**, pick the URL of the application you wish to protect: https://example.corp.com
+* Fill out a **Description**
+* Add any **Access Policies** you wish to configure to limit application access.
+* The default settings will work for other options.
+[See Okta documentation for more information on Authorization Servers](https://developer.okta.com/docs/guides/customize-authz-server/overview/)
+3. Navigate to **Applications** then select **Add Application**.
+* Select **Web** for the **Platform** setting.
+* Select **OpenID Connect** and click **Create**
+* Pick an **Application Name** such as `Example App`.
+* Set the **Login redirect URI** to `https://example.corp.com`.
+* Under **General** set the **Allowed grant types** to `Authorization Code` and `Refresh Token`.
+* Leave the rest as default, taking note of the `Client ID` and `Client Secret`.
+* Under **Assignments** select the users or groups you wish to access your application.
+4. Create a configuration file like the following:
+
+```
+provider = "oidc"
+redirect_url = "https://example.corp.com"
+oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
+upstreams = [
+    "https://example.corp.com"
+]
+email_domains = [
+    "corp.com"
+]
+client_id = "XXXXX"
+client_secret = "YYYYY"
+pass_access_token = true
+cookie_secret = "ZZZZZ"
+skip_provider_button = true
+```
+
+The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com
+The `client_id` and `client_secret` are configured in the application settings.
+Generate a unique `client_secret` to encrypt the cookie.
+
+Then you can start the oauth2_proxy with `./oauth2_proxy -config /etc/example.cfg`
+
 
 ### login.gov Provider
 
