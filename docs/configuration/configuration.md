@@ -133,7 +133,7 @@ For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET` and
 the `--set-authorization-header` flag becomes `OAUTH2_PROXY_SET_AUTHORIZATION_HEADER`.
 
 
-## <a anchor="logging-configuration"></a>Logging Configuration
+## Logging Configuration
 
 By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the `-logging-filename` command.
 
@@ -231,7 +231,7 @@ Available variables for standard logging:
 | File | main.go:40 | The file and line number of the logging statement. |
 | Message | HTTP: listening on 127.0.0.1:4180 | The details of the log statement. |
 
-## <a name="nginx-auth-request"></a>Configuring for use with the Nginx `auth_request` directive
+## Configuring for use with the Nginx `auth_request` directive
 
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2_proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
