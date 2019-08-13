@@ -17,6 +17,8 @@ Valid providers are :
 - [GitHub](#github-auth-provider)
 - [GitLab](#gitlab-auth-provider)
 - [LinkedIn](#linkedin-auth-provider)
+- [Microsoft](#microsoft-azure-ad-provider)
+- [OpenID](#openid-connect-provider)
 - [login.gov](#logingov-provider)
 
 The provider can be selected using the `provider` configuration value.
