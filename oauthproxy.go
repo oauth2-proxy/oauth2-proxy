@@ -898,7 +898,7 @@ func isAjax(req *http.Request) bool {
 	return false
 }
 
-// ErrorJSON returns the error code witht an application/json mime type
+// ErrorJSON returns the error code with an application/json mime type
 func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)
