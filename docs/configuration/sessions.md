@@ -15,8 +15,8 @@ The OAuth2 Proxy uses a Cookie to track user sessions and will store the session
 data in one of the available session storage backends.
 
 At present the available backends are (as passed to `--session-store-type`):
-- [cookie](cookie-storage) (default)
-- [redis](redis-storage)
+- [cookie](#cookie-storage) (default)
+- [redis](#redis-storage)
 
 ### Cookie Storage
 
