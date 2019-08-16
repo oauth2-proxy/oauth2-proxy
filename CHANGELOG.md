@@ -39,6 +39,7 @@
 - [#234](https://github.com/pusher/oauth2_proxy/pull/234) Added option `-ssl-upstream-insecure-skip-validation` to skip validation of upstream SSL certificates (@jansinger)
 - [#224](https://github.com/pusher/oauth2_proxy/pull/224) Check Google group membership using hasMember to support nested groups and external users (@jpalpant)
 - [#231](https://github.com/pusher/oauth2_proxy/pull/231) Add optional group membership and email domain checks to the GitLab provider (@Overv)
+- [#226](https://github.com/pusher/oauth2_proxy/pull/226) Made setting of proxied headers deterministic based on configuration alone (@aeijdenberg)
 - [#178](https://github.com/pusher/oauth2_proxy/pull/178) Add Silence Ping Logging and Exclude Logging Paths flags (@kskewes)
 - [#209](https://github.com/pusher/oauth2_proxy/pull/209) Improve docker build caching of layers (@dekimsey)
 - [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent (@JoelSpeed)
