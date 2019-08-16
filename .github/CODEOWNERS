@@ -10,3 +10,7 @@
 # or the public devops channel at https://chat.18f.gov/).
 providers/logingov.go @timothy-spencer
 providers/logingov_test.go @timothy-spencer
+
+# Bitbucket provider
+providers/bitbucket.go @aledeganopix4d
+providers/bitbucket_test.go @aledeganopix4d
