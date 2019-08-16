@@ -87,6 +87,9 @@ type OAuthProxy struct {
 	serveMux            http.Handler
 	SetXAuthRequest     bool
 	PassBasicAuth       bool
+	PassGroups          bool
+	GroupsDelimiter     string
+	FilterGroups        string
 	SkipProviderButton  bool
 	PassUserHeaders     bool
 	BasicAuthPassword   string
@@ -280,6 +283,9 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		compiledRegex:       opts.CompiledRegex,
 		SetXAuthRequest:     opts.SetXAuthRequest,
 		PassBasicAuth:       opts.PassBasicAuth,
+		PassGroups:          opts.PassGroups,
+		GroupsDelimiter:     opts.GroupsDelimiter,
+		FilterGroups:        opts.FilterGroups,
 		PassUserHeaders:     opts.PassUserHeaders,
 		BasicAuthPassword:   opts.BasicAuthPassword,
 		PassAccessToken:     opts.PassAccessToken,
@@ -327,7 +333,16 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *sessionsapi.SessionState,
 	}
 
 	if s.Email == "" {
-		s.Email, err = p.provider.GetEmailAddress(s)
+		userDetails, err := p.provider.GetUserDetails(s)
+		if err != nil {
+			return s, err
+		}
+		s.Email = userDetails["email"]
+		if uid, found := userDetails["uid"]; found {
+			s.ID = uid
+		} else {
+			s.ID = ""
+		}
 	}
 
 	if s.User == "" {
@@ -654,12 +669,27 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	session.IDToken = req.Form.Get("id_token")
+	if p.PassGroups && session.IDToken != "" {
+		groups, err := p.provider.GetGroups(session, p.FilterGroups)
+		if err != nil {
+			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+			return
+		}
+
+		groupNames := []string{}
+		for groupName := range groups {
+			groupNames = append(groupNames, groupName)
+		}
+		session.Groups = strings.Join(groupNames, p.GroupsDelimiter)
+	}
+
 	if !p.IsValidRedirect(redirect) {
 		redirect = "/"
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
+	if p.Validator(session.Email) && p.provider.ValidateGroupWithSession(session) {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -823,6 +853,9 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		} else {
 			req.Header.Del("X-Forwarded-Email")
 		}
+		if p.PassGroups && session.Groups != "" {
+			req.Header["X-Forwarded-Groups"] = []string{session.Groups}
+		}
 	}
 
 	if p.PassUserHeaders {
@@ -848,6 +881,9 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			} else {
 				rw.Header().Del("X-Auth-Request-Access-Token")
 			}
+		}
+		if p.PassGroups && session.Groups != "" {
+			rw.Header().Set("X-Auth-Request-Groups", session.Groups)
 		}
 	}
 

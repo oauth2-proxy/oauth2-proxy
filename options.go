@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	oidc "github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
@@ -69,6 +69,11 @@ type Options struct {
 	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
+	PassGroups                    bool          `flag:"pass-groups" cfg:"pass_groups"`
+	FilterGroups                  string        `flag:"filter-groups" cfg:"filter_groups"`
+	PermitGroups                  []string      `flag:"permit-groups" cfg:"permit_groups"`
+	GroupsDelimiter               string        `flag:"groups-delimiter" cfg:"groups_delimiter"`
+	PermitUsers                   []string      `flag:"permit-users" cfg:"permit_users"`
 	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
 	PassHostHeader                bool          `flag:"pass-host-header" cfg:"pass_host_header" env:"OAUTH2_PROXY_PASS_HOST_HEADER"`
@@ -159,6 +164,11 @@ func NewOptions() *Options {
 		SkipAuthPreflight:                false,
 		PassBasicAuth:                    true,
 		PassUserHeaders:                  true,
+		PassGroups:                       false,
+		FilterGroups:                     "",
+		GroupsDelimiter:                  "|",
+		PermitGroups:                     []string{},
+		PermitUsers:                      []string{},
 		PassAccessToken:                  false,
 		PassHostHeader:                   true,
 		SetAuthorization:                 false,
@@ -380,6 +390,7 @@ func (o *Options) Validate() error {
 }
 
 func parseProviderInfo(o *Options, msgs []string) []string {
+	var splittedGroups []string
 	p := &providers.ProviderData{
 		Scope:          o.Scope,
 		ClientID:       o.ClientID,
@@ -391,11 +402,20 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 	p.ProfileURL, msgs = parseURL(o.ProfileURL, "profile", msgs)
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
-
+	if len(o.PermitGroups) > 0 {
+		splittedGroups = strings.Split(o.PermitGroups[0], o.GroupsDelimiter)
+	}
 	o.provider = providers.New(o.Provider, p)
 	switch p := o.provider.(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.AzureTenant)
+		logger.Printf("PermitGroups %+v\n", splittedGroups)
+		if len(splittedGroups) > 0 {
+			p.SetGroupRestriction(splittedGroups)
+		}
+		if len(o.PermitUsers) > 0 {
+			p.SetGroupsExemption(o.PermitUsers)
+		}
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
 	case *providers.GoogleProvider:

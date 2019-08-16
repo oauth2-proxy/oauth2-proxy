@@ -70,7 +70,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 	var v url.Values
 	v, err = url.ParseQuery(string(body))
 	if err != nil {
-		return
+		return nil, err
 	}
 	if a := v.Get("access_token"); a != "" {
 		s = &sessions.SessionState{AccessToken: a, CreatedAt: time.Now()}
@@ -110,15 +110,38 @@ func (p *ProviderData) GetEmailAddress(s *sessions.SessionState) (string, error)
 	return "", errors.New("not implemented")
 }
 
+func (p *ProviderData) GetUserDetails(s *sessions.SessionState) (map[string]string, error) {
+	userDetails := map[string]string{}
+	email, err := p.GetEmailAddress(s)
+	if err != nil {
+		return nil, err
+	}
+	userDetails["email"] = email
+	return userDetails, nil
+}
+
 // GetUserName returns the Account username
 func (p *ProviderData) GetUserName(s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
+}
+
+func (p *ProviderData) GetGroups(s *sessions.SessionState, f string) (map[string]string, error) {
+	return map[string]string{}, errors.New("not implemented")
 }
 
 // ValidateGroup validates that the provided email exists in the configured provider
 // email group(s).
 func (p *ProviderData) ValidateGroup(email string) bool {
 	return true
+}
+
+// ValidateExemptions checks if we can allow user login dispite group membership returned failure
+func (p *ProviderData) ValidateExemptions(*sessions.SessionState) (bool, string) {
+	return false, ""
+}
+
+func (p *ProviderData) ValidateGroupWithSession(s *sessions.SessionState) bool {
+	return p.ValidateGroup(s.Email)
 }
 
 // ValidateSessionState validates the AccessToken

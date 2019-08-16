@@ -9,9 +9,13 @@ import (
 type Provider interface {
 	Data() *ProviderData
 	GetEmailAddress(*sessions.SessionState) (string, error)
+	GetUserDetails(*sessions.SessionState) (map[string]string, error)
 	GetUserName(*sessions.SessionState) (string, error)
+	GetGroups(*sessions.SessionState, string) (map[string]string, error)
 	Redeem(string, string) (*sessions.SessionState, error)
 	ValidateGroup(string) bool
+	ValidateGroupWithSession(*sessions.SessionState) bool
+	ValidateExemptions(*sessions.SessionState) (bool, string)
 	ValidateSessionState(*sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)

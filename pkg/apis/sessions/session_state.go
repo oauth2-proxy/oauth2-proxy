@@ -19,6 +19,8 @@ type SessionState struct {
 	RefreshToken string    `json:",omitempty"`
 	Email        string    `json:",omitempty"`
 	User         string    `json:",omitempty"`
+	ID           string    `json:",omitempty"`
+	Groups       string    `json:",omitempty"`
 }
 
 // SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
@@ -62,6 +64,9 @@ func (s *SessionState) String() string {
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
 	}
+	if s.Groups != "" {
+		o += fmt.Sprintf(" group:%s", s.Groups)
+	}
 	return o + "}"
 }
 
@@ -101,6 +106,18 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 		}
 		if ss.RefreshToken != "" {
 			ss.RefreshToken, err = c.Encrypt(ss.RefreshToken)
+			if err != nil {
+				return "", err
+			}
+		}
+		if ss.Groups != "" {
+			ss.Groups, err = c.Encrypt(ss.Groups)
+			if err != nil {
+				return "", err
+			}
+		}
+		if ss.ID != "" {
+			ss.ID, err = c.Encrypt(ss.ID)
 			if err != nil {
 				return "", err
 			}
@@ -231,6 +248,18 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		}
 		if ss.RefreshToken != "" {
 			ss.RefreshToken, err = c.Decrypt(ss.RefreshToken)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if ss.Groups != "" {
+			ss.Groups, err = c.Decrypt(ss.Groups)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if ss.ID != "" {
+			ss.ID, err = c.Decrypt(ss.ID)
 			if err != nil {
 				return nil, err
 			}
