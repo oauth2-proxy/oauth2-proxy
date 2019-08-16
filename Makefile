@@ -4,7 +4,7 @@ VERSION := $(shell git describe --always --dirty --tags 2>/dev/null || echo "und
 .NOTPARALLEL:
 
 .PHONY: all
-all: dep lint $(BINARY)
+all: lint $(BINARY)
 
 .PHONY: clean
 clean:
@@ -17,17 +17,13 @@ distclean: clean
 
 .PHONY: lint
 lint:
-	$(GOLANGCILINT) run
-
-.PHONY: dep
-dep:
-	$(DEP) ensure --vendor-only
+	GO111MODULE=on $(GOLANGCILINT) run
 
 .PHONY: build
 build: clean $(BINARY)
 
 $(BINARY):
-	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/pusher/oauth2_proxy
+	GO111MODULE=on CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/pusher/oauth2_proxy
 
 .PHONY: docker
 docker:
@@ -58,8 +54,8 @@ docker-push-all: docker-push
 	docker push quay.io/pusher/oauth2_proxy:${VERSION}-armv6
 
 .PHONY: test
-test: dep lint
-	$(GO) test -v -race ./...
+test: lint
+	GO111MODULE=on $(GO) test -v -race ./...
 
 .PHONY: release
 release: lint test
@@ -69,15 +65,15 @@ release: lint test
 	mkdir release/$(BINARY)-$(VERSION).linux-arm64.$(GO_VERSION)
 	mkdir release/$(BINARY)-$(VERSION).linux-armv6.$(GO_VERSION)
 	mkdir release/$(BINARY)-$(VERSION).windows-amd64.$(GO_VERSION)
-	GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
+	GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
 		-o release/$(BINARY)-$(VERSION).darwin-amd64.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	GOOS=linux GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
+	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
 		-o release/$(BINARY)-$(VERSION).linux-amd64.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	GOOS=linux GOARCH=arm64 go build -ldflags="-X main.VERSION=${VERSION}" \
+	GO111MODULE=on GOOS=linux GOARCH=arm64 go build -ldflags="-X main.VERSION=${VERSION}" \
 		-o release/$(BINARY)-$(VERSION).linux-arm64.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-X main.VERSION=${VERSION}" \
+	GO111MODULE=on GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-X main.VERSION=${VERSION}" \
 		-o release/$(BINARY)-$(VERSION).linux-armv6.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	GOOS=windows GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
+	GO111MODULE=on GOOS=windows GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
 		-o release/$(BINARY)-$(VERSION).windows-amd64.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
 	shasum -a 256 release/$(BINARY)-$(VERSION).darwin-amd64.$(GO_VERSION)/$(BINARY) > release/$(BINARY)-$(VERSION).darwin-amd64-sha256sum.txt
 	shasum -a 256 release/$(BINARY)-$(VERSION).linux-amd64.$(GO_VERSION)/$(BINARY) > release/$(BINARY)-$(VERSION).linux-amd64-sha256sum.txt

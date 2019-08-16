@@ -30,6 +30,7 @@ import (
 // or Config File
 type Options struct {
 	ProxyPrefix     string `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
+	PingPath        string `flag:"ping-path" cfg:"ping_path" env:"OAUTH2_PROXY_PING_PATH"`
 	ProxyWebSockets bool   `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
 	HTTPAddress     string `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
 	HTTPSAddress    string `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
@@ -47,6 +48,7 @@ type Options struct {
 	WhitelistDomains         []string `flag:"whitelist-domain" cfg:"whitelist_domains" env:"OAUTH2_PROXY_WHITELIST_DOMAINS"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org" env:"OAUTH2_PROXY_GITHUB_ORG"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team" env:"OAUTH2_PROXY_GITHUB_TEAM"`
+	GitLabGroup              string   `flag:"gitlab-group" cfg:"gitlab_group" env:"OAUTH2_PROXY_GITLAB_GROUP"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group" env:"OAUTH2_PROXY_GOOGLE_GROUPS"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email" env:"OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json" env:"OAUTH2_PROXY_GOOGLE_SERVICE_ACCOUNT_JSON"`
@@ -62,22 +64,23 @@ type Options struct {
 	// Embed SessionOptions
 	options.SessionOptions
 
-	Upstreams             []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
-	SkipAuthRegex         []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
-	SkipJwtBearerTokens   bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
-	ExtraJwtIssuers       []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
-	PassBasicAuth         bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
-	BasicAuthPassword     string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
-	PassAccessToken       bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
-	PassHostHeader        bool          `flag:"pass-host-header" cfg:"pass_host_header" env:"OAUTH2_PROXY_PASS_HOST_HEADER"`
-	SkipProviderButton    bool          `flag:"skip-provider-button" cfg:"skip_provider_button" env:"OAUTH2_PROXY_SKIP_PROVIDER_BUTTON"`
-	PassUserHeaders       bool          `flag:"pass-user-headers" cfg:"pass_user_headers" env:"OAUTH2_PROXY_PASS_USER_HEADERS"`
-	SSLInsecureSkipVerify bool          `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify" env:"OAUTH2_PROXY_SSL_INSECURE_SKIP_VERIFY"`
-	SetXAuthRequest       bool          `flag:"set-xauthrequest" cfg:"set_xauthrequest" env:"OAUTH2_PROXY_SET_XAUTHREQUEST"`
-	SetAuthorization      bool          `flag:"set-authorization-header" cfg:"set_authorization_header" env:"OAUTH2_PROXY_SET_AUTHORIZATION_HEADER"`
-	PassAuthorization     bool          `flag:"pass-authorization-header" cfg:"pass_authorization_header" env:"OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER"`
-	SkipAuthPreflight     bool          `flag:"skip-auth-preflight" cfg:"skip_auth_preflight" env:"OAUTH2_PROXY_SKIP_AUTH_PREFLIGHT"`
-	FlushInterval         time.Duration `flag:"flush-interval" cfg:"flush_interval" env:"OAUTH2_PROXY_FLUSH_INTERVAL"`
+	Upstreams                     []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
+	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
+	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
+	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
+	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
+	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
+	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
+	PassHostHeader                bool          `flag:"pass-host-header" cfg:"pass_host_header" env:"OAUTH2_PROXY_PASS_HOST_HEADER"`
+	SkipProviderButton            bool          `flag:"skip-provider-button" cfg:"skip_provider_button" env:"OAUTH2_PROXY_SKIP_PROVIDER_BUTTON"`
+	PassUserHeaders               bool          `flag:"pass-user-headers" cfg:"pass_user_headers" env:"OAUTH2_PROXY_PASS_USER_HEADERS"`
+	SSLInsecureSkipVerify         bool          `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify" env:"OAUTH2_PROXY_SSL_INSECURE_SKIP_VERIFY"`
+	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify" env:"OAUTH2_PROXY_SSL_UPSTREAM_INSECURE_SKIP_VERIFY"`
+	SetXAuthRequest               bool          `flag:"set-xauthrequest" cfg:"set_xauthrequest" env:"OAUTH2_PROXY_SET_XAUTHREQUEST"`
+	SetAuthorization              bool          `flag:"set-authorization-header" cfg:"set_authorization_header" env:"OAUTH2_PROXY_SET_AUTHORIZATION_HEADER"`
+	PassAuthorization             bool          `flag:"pass-authorization-header" cfg:"pass_authorization_header" env:"OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER"`
+	SkipAuthPreflight             bool          `flag:"skip-auth-preflight" cfg:"skip_auth_preflight" env:"OAUTH2_PROXY_SKIP_AUTH_PREFLIGHT"`
+	FlushInterval                 time.Duration `flag:"flush-interval" cfg:"flush_interval" env:"OAUTH2_PROXY_FLUSH_INTERVAL"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -105,15 +108,16 @@ type Options struct {
 	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format" env:"OAUTH2_PROXY_STANDARD_LOGGING_FORMAT"`
 	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging" env:"OAUTH2_PROXY_REQUEST_LOGGING"`
 	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format" env:"OAUTH2_PROXY_REQUEST_LOGGING_FORMAT"`
+	ExcludeLoggingPaths   string `flag:"exclude-logging-paths" cfg:"exclude_logging_paths" env:"OAUTH2_PROXY_EXCLUDE_LOGGING_PATHS"`
+	SilencePingLogging    bool   `flag:"silence-ping-logging" cfg:"silence_ping_logging" env:"OAUTH2_PROXY_SILENCE_PING_LOGGING"`
 	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging" env:"OAUTH2_PROXY_LOGGING_AUTH_LOGGING"`
 	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format" env:"OAUTH2_PROXY_AUTH_LOGGING_FORMAT"`
-
-	SignatureKey    string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
-	AcrValues       string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`
-	JWTKey          string `flag:"jwt-key" cfg:"jwt_key" env:"OAUTH2_PROXY_JWT_KEY"`
-	JWTKeyFile      string `flag:"jwt-key-file" cfg:"jwt_key_file" env:"OAUTH2_PROXY_JWT_KEY_FILE"`
-	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url" env:"OAUTH2_PROXY_PUBJWK_URL"`
-	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks" env:"OAUTH2_PROXY_GCP_HEALTHCHECKS"`
+	SignatureKey          string `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
+	AcrValues             string `flag:"acr-values" cfg:"acr_values" env:"OAUTH2_PROXY_ACR_VALUES"`
+	JWTKey                string `flag:"jwt-key" cfg:"jwt_key" env:"OAUTH2_PROXY_JWT_KEY"`
+	JWTKeyFile            string `flag:"jwt-key-file" cfg:"jwt_key_file" env:"OAUTH2_PROXY_JWT_KEY_FILE"`
+	PubJWKURL             string `flag:"pubjwk-url" cfg:"pubjwk_url" env:"OAUTH2_PROXY_PUBJWK_URL"`
+	GCPHealthChecks       bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks" env:"OAUTH2_PROXY_GCP_HEALTHCHECKS"`
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
@@ -136,6 +140,7 @@ type SignatureData struct {
 func NewOptions() *Options {
 	return &Options{
 		ProxyPrefix:         "/oauth2",
+		PingPath:            "/ping",
 		ProxyWebSockets:     true,
 		HTTPAddress:         "127.0.0.1:4180",
 		HTTPSAddress:        ":443",
@@ -167,6 +172,8 @@ func NewOptions() *Options {
 		LoggingMaxBackups:                0,
 		LoggingLocalTime:                 true,
 		LoggingCompress:                  false,
+		ExcludeLoggingPaths:              "",
+		SilencePingLogging:               false,
 		StandardLogging:                  true,
 		StandardLoggingFormat:            logger.DefaultStandardLoggingFormat,
 		RequestLogging:                   true,
@@ -410,6 +417,29 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		} else {
 			p.Verifier = o.oidcVerifier
 		}
+	case *providers.GitLabProvider:
+		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
+		p.Group = o.GitLabGroup
+		p.EmailDomains = o.EmailDomains
+
+		if o.oidcVerifier != nil {
+			p.Verifier = o.oidcVerifier
+		} else {
+			// Initialize with default verifier for gitlab.com
+			ctx := context.Background()
+
+			provider, err := oidc.NewProvider(ctx, "https://gitlab.com")
+			if err != nil {
+				msgs = append(msgs, "failed to initialize oidc provider for gitlab.com")
+			} else {
+				p.Verifier = provider.Verifier(&oidc.Config{
+					ClientID: o.ClientID,
+				})
+
+				p.LoginURL, msgs = parseURL(provider.Endpoint().AuthURL, "login", msgs)
+				p.RedeemURL, msgs = parseURL(provider.Endpoint().TokenURL, "redeem", msgs)
+			}
+		}
 	case *providers.LoginGovProvider:
 		p.AcrValues = o.AcrValues
 		p.PubJWKURL, msgs = parseURL(o.PubJWKURL, "pubjwk", msgs)
@@ -575,6 +605,14 @@ func setupLogger(o *Options, msgs []string) []string {
 	logger.SetStandardTemplate(o.StandardLoggingFormat)
 	logger.SetAuthTemplate(o.AuthLoggingFormat)
 	logger.SetReqTemplate(o.RequestLoggingFormat)
+
+	excludePaths := make([]string, 0)
+	excludePaths = append(excludePaths, strings.Split(o.ExcludeLoggingPaths, ",")...)
+	if o.SilencePingLogging {
+		excludePaths = append(excludePaths, o.PingPath)
+	}
+
+	logger.SetExcludePaths(excludePaths)
 
 	if !o.LoggingLocalTime {
 		logger.SetFlags(logger.Flags() | logger.LUTC)
