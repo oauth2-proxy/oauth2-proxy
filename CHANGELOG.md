@@ -1,12 +1,26 @@
 # Vx.x.x (Pre-release)
 
+## Changes since v4.0.0
+
+# v4.0.0
+
+## Release Highlights
+- Documentation is now on a [microsite](https://pusher.github.io/oauth2_proxy/)
+- Health check logging can now be disabled for quieter logs
+- Authorization Header JWTs can now be verified by the proxy to skip authentication for machine users
+- Sessions can now be stored in Redis. This reduces refresh failures and uses smaller cookies (Recommended for those using OIDC refreshing)
+- Logging overhaul allows customisable logging formats
+
+## Important Notes
+- This release includes a number of breaking changes that will require users to
+reconfigure their proxies. Please read the Breaking Changes below thoroughly.
+
 ## Breaking Changes
 
-- [#231](https://github.com/pusher/oauth2_proxy/pull/231) Rework GitLab provider (@Overv)
+- [#231](https://github.com/pusher/oauth2_proxy/pull/231) Rework GitLab provider
   - This PR changes the configuration options for the GitLab provider to use
   a self-hosted instance. You now need to specify a `-oidc-issuer-url` rather than
   explicit `-login-url`, `-redeem-url` and `-validate-url` parameters.
-
 - [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent
   - This PR changes configuration options so that all flags have a config counterpart
   of the same name but with underscores (`_`) in place of hyphens (`-`).
@@ -23,8 +37,7 @@
   This change affects the following existing environment variables:
   - The `OAUTH2_SKIP_OIDC_DISCOVERY` environment variable is now `OAUTH2_PROXY_SKIP_OIDC_DISCOVERY`.
   - The `OAUTH2_OIDC_JWKS_URL` environment variable is now `OAUTH2_PROXY_OIDC_JWKS_URL`.
-
-- [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field (@gargath)
+- [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field
   - This change modifies the contents of the `X-Forwarded-User` header supplied by the proxy for users where the auth response from the IdP did not contain
     a username.
     In that case, this header used to only contain the local part of the user's email address (e.g. `john.doe` for `john.doe@example.com`) but now contains
@@ -45,7 +58,7 @@
 - [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent (@JoelSpeed)
 - [#187](https://github.com/pusher/oauth2_proxy/pull/187) Move root packages to pkg folder (@JoelSpeed)
 - [#65](https://github.com/pusher/oauth2_proxy/pull/65) Improvements to authenticate requests with a JWT bearer token in the `Authorization` header via
-  the `-skip-jwt-bearer-token` options.
+  the `-skip-jwt-bearer-token` options. (@brianv0)
   - Additional verifiers can be configured via the `-extra-jwt-issuers` flag if the JWT issuers is either an OpenID provider or has a JWKS URL
   (e.g. `https://example.com/.well-known/jwks.json`).
 - [#180](https://github.com/pusher/oauth2_proxy/pull/180) Minor refactor of core proxying path (@aeijdenberg).
@@ -86,7 +99,6 @@
   - Implement two new flags to customize the logging format
     - `-standard-logging-format` Sets the format for standard logging
     - `-auth-logging-format` Sets the format for auth logging
-
 - [#111](https://github.com/pusher/oauth2_proxy/pull/111) Add option for telling where to find a login.gov JWT key file (@timothy-spencer)
 - [#170](https://github.com/pusher/oauth2_proxy/pull/170) Restore binary tarball contents to be compatible with bitlys original tarballs (@zeha)
 - [#185](https://github.com/pusher/oauth2_proxy/pull/185) Fix an unsupported protocol scheme error during token validation when using the Azure provider (@jonas)
@@ -94,7 +106,7 @@
   - Google Group membership is additionally checked via email address, allowing users outside a GSuite domain to be authorized.
 - [#195](https://github.com/pusher/oauth2_proxy/pull/195) Add `-banner` flag for overriding the banner line that is displayed (@steakunderscore)
 - [#198](https://github.com/pusher/oauth2_proxy/pull/198) Switch from gometalinter to golangci-lint (@steakunderscore)
-- [#159](https://github.com/pusher/oauth2_proxy/pull/159) Add option to skip the OIDC provider verified email check: `--insecure-oidc-allow-unverified-email`
+- [#159](https://github.com/pusher/oauth2_proxy/pull/159) Add option to skip the OIDC provider verified email check: `--insecure-oidc-allow-unverified-email` (@djfinlay)
 - [#210](https://github.com/pusher/oauth2_proxy/pull/210) Update base image from Alpine 3.9 to 3.10 (@steakunderscore)
 - [#201](https://github.com/pusher/oauth2_proxy/pull/201) Add Bitbucket as new OAuth2 provider, accepts email, team and repository permissions to determine authorization (@aledeganopix4d)
   - Implement flags to enable Bitbucket authentication:
