@@ -42,6 +42,8 @@ type Options struct {
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file" env:"OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE"`
 	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant" env:"OAUTH2_PROXY_AZURE_TENANT"`
+	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team" env:"OAUTH2_PROXY_BITBUCKET_TEAM"`
+	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository" env:"OAUTH2_PROXY_BITBUCKET_REPOSITORY"`
 	EmailDomains             []string `flag:"email-domain" cfg:"email_domains" env:"OAUTH2_PROXY_EMAIL_DOMAINS"`
 	WhitelistDomains         []string `flag:"whitelist-domain" cfg:"whitelist_domains" env:"OAUTH2_PROXY_WHITELIST_DOMAINS"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org" env:"OAUTH2_PROXY_GITHUB_ORG"`
@@ -405,6 +407,9 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 				p.SetGroupRestriction(o.GoogleGroups, o.GoogleAdminEmail, file)
 			}
 		}
+	case *providers.BitbucketProvider:
+		p.SetTeam(o.BitbucketTeam)
+		p.SetRepository(o.BitbucketRepository)
 	case *providers.OIDCProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		if o.oidcVerifier == nil {
