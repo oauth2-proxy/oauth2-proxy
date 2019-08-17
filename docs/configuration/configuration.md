@@ -247,6 +247,8 @@ server {
     proxy_set_header X-Real-IP               $remote_addr;
     proxy_set_header X-Scheme                $scheme;
     proxy_set_header X-Auth-Request-Redirect $request_uri;
+    # or, if you are handling multiple domains:
+    # proxy_set_header X-Auth-Request-Redirect $scheme://$host$request_uri;
   }
   location = /oauth2/auth {
     proxy_pass       http://127.0.0.1:4180;
