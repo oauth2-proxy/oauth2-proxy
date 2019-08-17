@@ -18,6 +18,7 @@ description: >- # this means to ignore newlines until "baseurl:"
   OAuth2_Proxy documentation site
 baseurl: "/oauth2_proxy" # the subpath of your site, e.g. /blog
 url: "https://pusher.github.io" # the base hostname & protocol for your site, e.g. http://example.com
+gitweb: "https://github.com/pusher/oauth2_proxy/blob/master"
 
 # Build settings
 markdown: kramdown
