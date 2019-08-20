@@ -3,10 +3,11 @@ package providers
 import (
 	"errors"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/dgrijalva/jwt-go"
 
 	"github.com/bitly/go-simplejson"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
@@ -326,9 +327,9 @@ func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
 
 func (p *AzureProvider) ValidateGroupWithSession(s *sessions.SessionState) bool {
 	if len(p.PermittedGroups) != 0 {
-		for groupName, groupId := range p.PermittedGroups {
+		for groupName, groupID := range p.PermittedGroups {
 			logger.Printf("ValidateGroup: %v", groupName)
-			if strings.Contains(s.Groups, groupId) {
+			if strings.Contains(s.Groups, groupID) {
 				return true
 			}
 		}
