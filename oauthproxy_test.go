@@ -266,6 +266,16 @@ func (tp *TestProvider) GetEmailAddress(session *sessions.SessionState) (string,
 	return tp.EmailAddress, nil
 }
 
+func (tp *TestProvider) GetUserDetails(s *sessions.SessionState) (map[string]string, error) {
+	userDetails := map[string]string{}
+	email, err := tp.GetEmailAddress(s)
+	if err != nil {
+		return nil, err
+	}
+	userDetails["email"] = email
+	return userDetails, nil
+}
+
 func (tp *TestProvider) ValidateSessionState(session *sessions.SessionState) bool {
 	return tp.ValidToken
 }
@@ -412,8 +422,7 @@ func (patTest *PassAccessTokenTest) Close() {
 	patTest.providerServer.Close()
 }
 
-func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int,
-	cookie string) {
+func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie string) {
 	rw := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "/oauth2/callback?code=callback_code&state=nonce:",
 		strings.NewReader(""))
