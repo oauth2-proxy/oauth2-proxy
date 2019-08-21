@@ -51,26 +51,28 @@ func getLinkedInHeader(accessToken string) http.Header {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *LinkedInProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *LinkedInProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	if s.AccessToken == "" {
-		return "", errors.New("missing access token")
+		return nil, errors.New("missing access token")
 	}
 	req, err := http.NewRequest("GET", p.ProfileURL.String()+"?format=json", nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header = getLinkedInHeader(s.AccessToken)
 
 	json, err := requests.Request(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	email, err := json.String()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return email, nil
+	return &UserDetails{
+		Email: email,
+	}, nil
 }
 
 // ValidateSessionState validates the AccessToken

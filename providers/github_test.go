@@ -97,7 +97,7 @@ func TestGitHubProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestGitHubProviderGetEmailAddress(t *testing.T) {
+func TestGitHubProviderGetUserDetails(t *testing.T) {
 	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`})
 	defer b.Close()
 
@@ -105,12 +105,12 @@ func TestGitHubProviderGetEmailAddress(t *testing.T) {
 	p := testGitHubProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", details.Email)
 }
 
-func TestGitHubProviderGetEmailAddressNotVerified(t *testing.T) {
+func TestGitHubProviderGetUserDetailsNotVerified(t *testing.T) {
 	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "verified": false, "primary": true} ]`})
 	defer b.Close()
 
@@ -118,12 +118,12 @@ func TestGitHubProviderGetEmailAddressNotVerified(t *testing.T) {
 	p := testGitHubProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Empty(t, "", email)
+	assert.Nil(t, details)
 }
 
-func TestGitHubProviderGetEmailAddressWithOrg(t *testing.T) {
+func TestGitHubProviderGetUserDetailsWithOrg(t *testing.T) {
 	b := testGitHubBackend([]string{
 		`[ {"email": "michael.bland@gsa.gov", "primary": true, "verified": true, "login":"testorg"} ]`,
 		`[ {"email": "michael.bland1@gsa.gov", "primary": true, "verified": true, "login":"testorg1"} ]`,
@@ -136,14 +136,14 @@ func TestGitHubProviderGetEmailAddressWithOrg(t *testing.T) {
 	p.Org = "testorg1"
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", details.Email)
 }
 
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
-func TestGitHubProviderGetEmailAddressFailedRequest(t *testing.T) {
+func TestGitHubProviderGetUserDetailsFailedRequest(t *testing.T) {
 	b := testGitHubBackend([]string{"unused payload"})
 	defer b.Close()
 
@@ -154,12 +154,12 @@ func TestGitHubProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Nil(t, details)
 }
 
-func TestGitHubProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
+func TestGitHubProviderGetUserDetailsEmailNotPresentInPayload(t *testing.T) {
 	b := testGitHubBackend([]string{"{\"foo\": \"bar\"}"})
 	defer b.Close()
 
@@ -167,9 +167,9 @@ func TestGitHubProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	p := testGitHubProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Nil(t, details)
 }
 
 func TestGitHubProviderGetUserName(t *testing.T) {

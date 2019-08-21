@@ -119,64 +119,22 @@ func getUserIDFromJSON(json *simplejson.Json) (string, error) {
 	return uid, err
 }
 
-// GetEmailAddress returns the Account email address
-func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
-	var email string
+func (p *AzureProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	var err error
 
 	if s.AccessToken == "" {
-		return "", errors.New("missing access token")
+		return nil, errors.New("missing access token")
 	}
 	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header = getAzureHeader(s.AccessToken)
 
 	json, err := requests.Request(req)
 
 	if err != nil {
-		return "", err
-	}
-
-	email, err = getEmailFromJSON(json)
-
-	if err == nil && email != "" {
-		return email, err
-	}
-
-	email, err = json.Get("userPrincipalName").String()
-
-	if err != nil {
-		logger.Printf("failed making request %s", err)
-		return "", err
-	}
-
-	if email == "" {
-		logger.Printf("failed to get email address")
-		return "", err
-	}
-
-	return email, err
-}
-
-func (p *AzureProvider) GetUserDetails(s *sessions.SessionState) (map[string]string, error) {
-	userDetails := map[string]string{}
-	var err error
-
-	if s.AccessToken == "" {
-		return userDetails, errors.New("missing access token")
-	}
-	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
-	if err != nil {
-		return userDetails, err
-	}
-	req.Header = getAzureHeader(s.AccessToken)
-
-	json, err := requests.Request(req)
-
-	if err != nil {
-		return userDetails, err
+		return nil, err
 	}
 
 	logger.Printf(" JSON: %v", json)
@@ -184,26 +142,26 @@ func (p *AzureProvider) GetUserDetails(s *sessions.SessionState) (map[string]str
 		logger.Printf("\t %20v : %v", key, value)
 	}
 	email, err := getEmailFromJSON(json)
-	userDetails["email"] = email
 
 	if err != nil {
-		logger.Printf("[GetEmailAddress] failed making request: %s", err)
-		return userDetails, err
+		logger.Printf("[GetUserDetails] failed making request: %s", err)
+		return nil, err
 	}
 
 	uid, err := getUserIDFromJSON(json)
-	userDetails["uid"] = uid
 	if err != nil {
-		logger.Printf("[GetEmailAddress] failed to get User ID: %s", err)
+		logger.Printf("[GetUserDetails] failed to get User ID: %s", err)
 	}
 
 	if email == "" {
 		logger.Printf("failed to get email address")
-		return userDetails, errors.New("Client email not found")
+		return nil, errors.New("Client email not found")
 	}
-	logger.Printf("[GetEmailAddress] Chosen email address: '%s'", email)
-
-	return userDetails, nil
+	logger.Printf("[GetUserDetails] Chosen email address: '%s'", email)
+	return &UserDetails{
+		Email: email,
+		UID:   uid,
+	}, nil
 }
 
 // Get list of groups user belong to. Filter the desired names of groups (in case of huge group set)

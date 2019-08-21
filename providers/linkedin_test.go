@@ -91,7 +91,7 @@ func TestLinkedInProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestLinkedInProviderGetEmailAddress(t *testing.T) {
+func TestLinkedInProviderGetUserDetails(t *testing.T) {
 	b := testLinkedInBackend(`"user@linkedin.com"`)
 	defer b.Close()
 
@@ -99,12 +99,12 @@ func TestLinkedInProviderGetEmailAddress(t *testing.T) {
 	p := testLinkedInProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@linkedin.com", email)
+	assert.Equal(t, "user@linkedin.com", details.Email)
 }
 
-func TestLinkedInProviderGetEmailAddressFailedRequest(t *testing.T) {
+func TestLinkedInProviderGetUserDetailsFailedRequest(t *testing.T) {
 	b := testLinkedInBackend("unused payload")
 	defer b.Close()
 
@@ -115,12 +115,12 @@ func TestLinkedInProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Nil(t, details)
 }
 
-func TestLinkedInProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
+func TestLinkedInProviderGetUserDetailsEmailNotPresentInPayload(t *testing.T) {
 	b := testLinkedInBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
@@ -128,7 +128,7 @@ func TestLinkedInProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	p := testLinkedInProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Nil(t, details)
 }

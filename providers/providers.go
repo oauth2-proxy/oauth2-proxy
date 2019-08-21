@@ -9,7 +9,7 @@ import (
 type Provider interface {
 	Data() *ProviderData
 	GetEmailAddress(*sessions.SessionState) (string, error)
-	GetUserDetails(*sessions.SessionState) (map[string]string, error)
+	GetUserDetails(*sessions.SessionState) (*UserDetails, error)
 	GetUserName(*sessions.SessionState) (string, error)
 	GetGroups(*sessions.SessionState, string) (map[string]string, error)
 	Redeem(string, string) (*sessions.SessionState, error)
@@ -21,6 +21,11 @@ type Provider interface {
 	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)
 	SessionFromCookie(string, *encryption.Cipher) (*sessions.SessionState, error)
 	CookieForSession(*sessions.SessionState, *encryption.Cipher) (string, error)
+}
+
+type UserDetails struct {
+	Email string
+	UID   string
 }
 
 // New provides a new Provider based on the configured provider string

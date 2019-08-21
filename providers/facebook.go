@@ -55,13 +55,13 @@ func getFacebookHeader(accessToken string) http.Header {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *FacebookProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *FacebookProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	if s.AccessToken == "" {
-		return "", errors.New("missing access token")
+		return nil, errors.New("missing access token")
 	}
 	req, err := http.NewRequest("GET", p.ProfileURL.String()+"?fields=name,email", nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header = getFacebookHeader(s.AccessToken)
 
@@ -71,12 +71,14 @@ func (p *FacebookProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 	var r result
 	err = requests.RequestJSON(req, &r)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if r.Email == "" {
-		return "", errors.New("no email")
+		return nil, errors.New("no email")
 	}
-	return r.Email, nil
+	return &UserDetails{
+		Email: r.Email,
+	}, nil
 }
 
 // ValidateSessionState validates the AccessToken

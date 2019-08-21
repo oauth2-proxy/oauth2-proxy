@@ -233,6 +233,10 @@ func (p *GoogleProvider) ValidateGroup(email string) bool {
 	return p.GroupValidator(email)
 }
 
+func (p *GoogleProvider) ValidateGroupWithSession(s *sessions.SessionState) bool {
+	return p.ValidateGroup(s.Email)
+}
+
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
 func (p *GoogleProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {

@@ -112,7 +112,7 @@ func TestBitbucketProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestBitbucketProviderGetEmailAddress(t *testing.T) {
+func TestBitbucketProviderGetUserDetails(t *testing.T) {
 	b := testBitbucketBackend("{\"values\": [ { \"email\": \"michael.bland@gsa.gov\", \"is_primary\": true } ] }")
 	defer b.Close()
 
@@ -120,12 +120,12 @@ func TestBitbucketProviderGetEmailAddress(t *testing.T) {
 	p := testBitbucketProvider(bURL.Host, "", "")
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", details.Email)
 }
 
-func TestBitbucketProviderGetEmailAddressAndGroup(t *testing.T) {
+func TestBitbucketProviderGetUserDetailsAndGroup(t *testing.T) {
 	b := testBitbucketBackend("{\"values\": [ { \"email\": \"michael.bland@gsa.gov\", \"is_primary\": true, \"username\": \"bioinformatics\" } ] }")
 	defer b.Close()
 
@@ -133,14 +133,14 @@ func TestBitbucketProviderGetEmailAddressAndGroup(t *testing.T) {
 	p := testBitbucketProvider(bURL.Host, "bioinformatics", "")
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", details.Email)
 }
 
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
-func TestBitbucketProviderGetEmailAddressFailedRequest(t *testing.T) {
+func TestBitbucketProviderGetUserDetailsFailedRequest(t *testing.T) {
 	b := testBitbucketBackend("unused payload")
 	defer b.Close()
 
@@ -151,12 +151,12 @@ func TestBitbucketProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Nil(t, details)
 }
 
-func TestBitbucketProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
+func TestBitbucketProviderGetUserDetailsEmailNotPresentInPayload(t *testing.T) {
 	b := testBitbucketBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
@@ -164,7 +164,7 @@ func TestBitbucketProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) 
 	p := testBitbucketProvider(bURL.Host, "", "")
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
-	assert.Equal(t, "", email)
+	details, err := p.GetUserDetails(session)
+	assert.Nil(t, details)
 	assert.Equal(t, nil, err)
 }

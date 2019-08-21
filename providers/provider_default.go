@@ -110,14 +110,8 @@ func (p *ProviderData) GetEmailAddress(s *sessions.SessionState) (string, error)
 	return "", errors.New("not implemented")
 }
 
-func (p *ProviderData) GetUserDetails(s *sessions.SessionState) (map[string]string, error) {
-	userDetails := map[string]string{}
-	email, err := p.GetEmailAddress(s)
-	if err != nil {
-		return nil, err
-	}
-	userDetails["email"] = email
-	return userDetails, nil
+func (p *ProviderData) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
+	return nil, NewNotImplementedError("")
 }
 
 // GetUserName returns the Account username

@@ -201,8 +201,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitHubProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
-
+func (p *GitHubProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	var emails []struct {
 		Email    string `json:"email"`
 		Primary  bool   `json:"primary"`
@@ -213,11 +212,11 @@ func (p *GitHubProvider) GetEmailAddress(s *sessions.SessionState) (string, erro
 	if p.Org != "" {
 		if p.Team != "" {
 			if ok, err := p.hasOrgAndTeam(s.AccessToken); err != nil || !ok {
-				return "", err
+				return nil, err
 			}
 		} else {
 			if ok, err := p.hasOrg(s.AccessToken); err != nil || !ok {
-				return "", err
+				return nil, err
 			}
 		}
 	}
@@ -231,32 +230,34 @@ func (p *GitHubProvider) GetEmailAddress(s *sessions.SessionState) (string, erro
 	req.Header.Set("Authorization", fmt.Sprintf("token %s", s.AccessToken))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("got %d from %q %s",
+		return nil, fmt.Errorf("got %d from %q %s",
 			resp.StatusCode, endpoint.String(), body)
 	}
 
 	logger.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
 
 	if err := json.Unmarshal(body, &emails); err != nil {
-		return "", fmt.Errorf("%s unmarshaling %s", err, body)
+		return nil, fmt.Errorf("%s unmarshaling %s", err, body)
 	}
 
 	for _, email := range emails {
 		if email.Primary && email.Verified {
-			return email.Email, nil
+			return &UserDetails{
+				Email: email.Email,
+			}, nil
 		}
 	}
 
-	return "", nil
+	return nil, nil
 }
 
 // GetUserName returns the Account user name

@@ -121,7 +121,7 @@ func testAzureBackend(payload string) *httptest.Server {
 		}))
 }
 
-func TestAzureProviderGetEmailAddress(t *testing.T) {
+func TestAzureProviderGetUserDetails(t *testing.T) {
 	b := testAzureBackend(`{ "mail": "user@windows.net" }`)
 	defer b.Close()
 
@@ -129,12 +129,12 @@ func TestAzureProviderGetEmailAddress(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", details.Email)
 }
 
-func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
+func TestAzureProviderGetUserDetailsMailNull(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": ["user@windows.net", "altuser@windows.net"] }`)
 	defer b.Close()
 
@@ -142,12 +142,12 @@ func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", details.Email)
 }
 
-func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
+func TestAzureProviderGetUserDetailsGetUserPrincipalName(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": "user@windows.net" }`)
 	defer b.Close()
 
@@ -155,12 +155,12 @@ func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", details.Email)
 }
 
-func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
+func TestAzureProviderGetUserDetailsFailToGetEmailAddress(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": null }`)
 	defer b.Close()
 
@@ -168,12 +168,12 @@ func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
-	assert.Equal(t, "", email)
+	assert.Nil(t, details)
 }
 
-func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
+func TestAzureProviderGetUserDetailsEmptyUserPrincipalName(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": "" }`)
 	defer b.Close()
 
@@ -181,12 +181,12 @@ func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "", email)
+	details, err := p.GetUserDetails(session)
+	assert.Equal(t, "Client email not found", err.Error())
+	assert.Nil(t, details)
 }
 
-func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
+func TestAzureProviderGetUserDetailsIncorrectOtherMails(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": "", "userPrincipalName": null }`)
 	defer b.Close()
 
@@ -194,7 +194,7 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	details, err := p.GetUserDetails(session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
-	assert.Equal(t, "", email)
+	assert.Nil(t, details)
 }

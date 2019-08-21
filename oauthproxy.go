@@ -335,11 +335,11 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *sessionsapi.SessionState,
 	if s.Email == "" {
 		userDetails, err := p.provider.GetUserDetails(s)
 		if err != nil {
-			return s, err
+			return nil, err
 		}
-		s.Email = userDetails["email"]
-		if uid, found := userDetails["uid"]; found {
-			s.ID = uid
+		s.Email = userDetails.Email
+		if userDetails.UID != "" {
+			s.ID = userDetails.UID
 		} else {
 			s.ID = ""
 		}

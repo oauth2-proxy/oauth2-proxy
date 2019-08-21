@@ -220,31 +220,32 @@ func (p *GitLabProvider) ValidateSessionState(s *sessions.SessionState) bool {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitLabProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *GitLabProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	// Retrieve user info
 	userInfo, err := p.getUserInfo(s)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve user info: %v", err)
+		return nil, fmt.Errorf("failed to retrieve user info: %v", err)
 	}
 
 	// Check if email is verified
 	if !p.AllowUnverifiedEmail && !userInfo.EmailVerified {
-		return "", fmt.Errorf("user email is not verified")
+		return nil, fmt.Errorf("user email is not verified")
 	}
 
 	// Check if email has valid domain
 	err = p.verifyEmailDomain(userInfo)
 	if err != nil {
-		return "", fmt.Errorf("email domain check failed: %v", err)
+		return nil, fmt.Errorf("email domain check failed: %v", err)
 	}
 
 	// Check group membership
 	err = p.verifyGroupMembership(userInfo)
 	if err != nil {
-		return "", fmt.Errorf("group membership check failed: %v", err)
+		return nil, fmt.Errorf("group membership check failed: %v", err)
 	}
-
-	return userInfo.Email, nil
+	return &UserDetails{
+		Email: userInfo.Email,
+	}, nil
 }
 
 // GetUserName returns the Account user name

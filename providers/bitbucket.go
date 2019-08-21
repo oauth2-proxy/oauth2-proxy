@@ -64,8 +64,7 @@ func (p *BitbucketProvider) SetRepository(repository string) {
 }
 
 // GetEmailAddress returns the email of the authenticated user
-func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
-
+func (p *BitbucketProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	var emails struct {
 		Values []struct {
 			Email   string `json:"email"`
@@ -86,12 +85,12 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 		p.ValidateURL.String()+"?access_token="+s.AccessToken, nil)
 	if err != nil {
 		logger.Printf("failed building request %s", err)
-		return "", err
+		return nil, err
 	}
 	err = requests.RequestJSON(req, &emails)
 	if err != nil {
 		logger.Printf("failed making request %s", err)
-		return "", err
+		return nil, err
 	}
 
 	if p.Team != "" {
@@ -102,12 +101,12 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 			teamURL.String()+"?role=member&access_token="+s.AccessToken, nil)
 		if err != nil {
 			logger.Printf("failed building request %s", err)
-			return "", err
+			return nil, err
 		}
 		err = requests.RequestJSON(req, &teams)
 		if err != nil {
 			logger.Printf("failed requesting teams membership %s", err)
-			return "", err
+			return nil, err
 		}
 		var found = false
 		for _, team := range teams.Values {
@@ -118,7 +117,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 		}
 		if found != true {
 			logger.Print("team membership test failed, access denied")
-			return "", nil
+			return nil, nil
 		}
 	}
 
@@ -133,12 +132,12 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 			nil)
 		if err != nil {
 			logger.Printf("failed building request %s", err)
-			return "", err
+			return nil, err
 		}
 		err = requests.RequestJSON(req, &repositories)
 		if err != nil {
 			logger.Printf("failed checking repository access %s", err)
-			return "", err
+			return nil, err
 		}
 		var found = false
 		for _, repository := range repositories.Values {
@@ -149,15 +148,17 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 		}
 		if found != true {
 			logger.Print("repository access test failed, access denied")
-			return "", nil
+			return nil, nil
 		}
 	}
 
 	for _, email := range emails.Values {
 		if email.Primary {
-			return email.Email, nil
+			return &UserDetails{
+				Email: email.Email,
+			}, nil
 		}
 	}
 
-	return "", nil
+	return nil, nil
 }
