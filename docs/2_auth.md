@@ -67,17 +67,20 @@ Note: The user is checked against the group members list on initial authenticati
 ### Azure Auth Provider
 
 1. Add an application: go to [https://portal.azure.com](https://portal.azure.com), choose **"Azure Active Directory"** in the left menu, select **"App registrations"** and then click on **"New app registration"**.
-2. Pick a name and choose **"Webapp / API"** as application type. Use `https://internal.yourcompany.com` as Sign-on URL. Click **"Create"**.
-3. On the **"Settings"** / **"Properties"** page of the app, pick a logo and select **"Multi-tenanted"** if you want to allow users from multiple organizations to access your app. Note down the application ID. Click **"Save"**.
-4. On the **"Settings"** / **"Required Permissions"** page of the app, click on **"Windows Azure Active Directory"** and then on **"Access the directory as the signed in user"**. Hit **"Save"** and then then on **"Grant permissions"** (you might need another admin to do this).
-5. On the **"Settings"** / **"Reply URLs"** page of the app, add `https://internal.yourcompanycom/oauth2/callback` for each host that you want to protect by the oauth2 proxy. Click **"Save"**.
-6. On the **"Settings"** / **"Keys"** page of the app, add a new key and note down the value after hitting **"Save"**.
-7. Configure the proxy with
+1. Pick a name and choose **"Webapp / API"** as application type. Use `https://internal.yourcompany.com` as Sign-on URL. Click **"Create"**.
+1. On the **"Overview"** page of the app read `client id (application id)` and `tenant id` 
+1. On the **"Manage"** / **"Authentication"** page of the app, pick a logo and select **"Multi-tenanted"** if you want to allow users from multiple organizations to access your app. Note down the application ID. Click **"Save"**.
+1. On the **"Manage"** / **"Authentication"** page of the app, add `https://internal.yourcompanycom/oauth2/callback` for each host that you want to protect by the oauth2 proxy. Click **"Save"**.
+1. On the **"Manage"** / **"API Permissions"** page of the app, click on **"Add a permission"** and then on **"Microsoft Graph"**/**"Delegated permissions"**/**"User"**/**"User.Read"**. Hit **"Add permissions"**.
+1. On the **"Manage"** / **"Certificates & secret"** page of the app, add a new client secret, select expiration date and note down the value after hitting **"Add"** (it won't be readable after page reloads).
+1. On the **"Manage"** / **"Manifest"** set `groupMembershipClaims` property to `SecurityGroup`
+1. Configure the proxy with
 
 ```
    --provider=azure
    --client-id=<application ID from step 3>
    --client-secret=<value from step 6>
+   --azure-tenant=<tenant ID from step 3 >
 ```
 
 ### Facebook Auth Provider
