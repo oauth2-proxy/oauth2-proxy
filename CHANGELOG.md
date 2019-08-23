@@ -1,18 +1,83 @@
 # Vx.x.x (Pre-release)
 
+## Changes since v4.0.0
+
+# v4.0.0
+
+## Release Highlights
+- Documentation is now on a [microsite](https://pusher.github.io/oauth2_proxy/)
+- Health check logging can now be disabled for quieter logs
+- Authorization Header JWTs can now be verified by the proxy to skip authentication for machine users
+- Sessions can now be stored in Redis. This reduces refresh failures and uses smaller cookies (Recommended for those using OIDC refreshing)
+- Logging overhaul allows customisable logging formats
+
+## Important Notes
+- This release includes a number of breaking changes that will require users to
+reconfigure their proxies. Please read the Breaking Changes below thoroughly.
+
 ## Breaking Changes
 
-- [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field (@gargath)
+- [#231](https://github.com/pusher/oauth2_proxy/pull/231) Rework GitLab provider
+  - This PR changes the configuration options for the GitLab provider to use
+  a self-hosted instance. You now need to specify a `-oidc-issuer-url` rather than
+  explicit `-login-url`, `-redeem-url` and `-validate-url` parameters.
+- [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent
+  - This PR changes configuration options so that all flags have a config counterpart
+  of the same name but with underscores (`_`) in place of hyphens (`-`).
+  This change affects the following flags:
+  - The `--tls-key` flag is now `--tls-key-file` to be consistent with existing
+  file flags and the existing config and environment settings
+  - The `--tls-cert` flag is now `--tls-cert-file` to be consistent with existing
+  file flags and the existing config and environment settings
+  This change affects the following existing configuration options:
+  - The `proxy-prefix` option is now `proxy_prefix`.
+  This PR changes environment variables so that all flags have an environment
+  counterpart of the same name but capitalised, with underscores (`_`) in place
+  of hyphens (`-`) and with the prefix `OAUTH2_PROXY_`.
+  This change affects the following existing environment variables:
+  - The `OAUTH2_SKIP_OIDC_DISCOVERY` environment variable is now `OAUTH2_PROXY_SKIP_OIDC_DISCOVERY`.
+  - The `OAUTH2_OIDC_JWKS_URL` environment variable is now `OAUTH2_PROXY_OIDC_JWKS_URL`.
+- [#146](https://github.com/pusher/oauth2_proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field
   - This change modifies the contents of the `X-Forwarded-User` header supplied by the proxy for users where the auth response from the IdP did not contain
     a username.
     In that case, this header used to only contain the local part of the user's email address (e.g. `john.doe` for `john.doe@example.com`) but now contains
     the user's full email address instead.
+- [#170](https://github.com/pusher/oauth2_proxy/pull/170) Pre-built binary tarballs changed format
+  - The pre-built binary tarballs again match the format of the [bitly](https://github.com/bitly/oauth2_proxy) repository, where the unpacked directory
+    has the same name as the tarball and the binary is always named `oauth2_proxy`. This was done to restore compatibility with third-party automation
+    recipes like https://github.com/jhoblitt/puppet-oauth2_proxy.
 
 ## Changes since v3.2.0
 
-- [#169](https://github.com/pusher/outh2_proxy/pull/169) Update Alpine to 3.9 (@kskewes)
-- [#148](https://github.com/pusher/outh2_proxy/pull/148) Implement SessionStore interface within proxy (@JoelSpeed)
-- [#147](https://github.com/pusher/outh2_proxy/pull/147) Add SessionStore interfaces and initial implementation (@JoelSpeed)
+- [#234](https://github.com/pusher/oauth2_proxy/pull/234) Added option `-ssl-upstream-insecure-skip-validation` to skip validation of upstream SSL certificates (@jansinger)
+- [#224](https://github.com/pusher/oauth2_proxy/pull/224) Check Google group membership using hasMember to support nested groups and external users (@jpalpant)
+- [#231](https://github.com/pusher/oauth2_proxy/pull/231) Add optional group membership and email domain checks to the GitLab provider (@Overv)
+- [#226](https://github.com/pusher/oauth2_proxy/pull/226) Made setting of proxied headers deterministic based on configuration alone (@aeijdenberg)
+- [#178](https://github.com/pusher/oauth2_proxy/pull/178) Add Silence Ping Logging and Exclude Logging Paths flags (@kskewes)
+- [#209](https://github.com/pusher/oauth2_proxy/pull/209) Improve docker build caching of layers (@dekimsey)
+- [#186](https://github.com/pusher/oauth2_proxy/pull/186) Make config consistent (@JoelSpeed)
+- [#187](https://github.com/pusher/oauth2_proxy/pull/187) Move root packages to pkg folder (@JoelSpeed)
+- [#65](https://github.com/pusher/oauth2_proxy/pull/65) Improvements to authenticate requests with a JWT bearer token in the `Authorization` header via
+  the `-skip-jwt-bearer-token` options. (@brianv0)
+  - Additional verifiers can be configured via the `-extra-jwt-issuers` flag if the JWT issuers is either an OpenID provider or has a JWKS URL
+  (e.g. `https://example.com/.well-known/jwks.json`).
+- [#180](https://github.com/pusher/oauth2_proxy/pull/180) Minor refactor of core proxying path (@aeijdenberg).
+- [#175](https://github.com/pusher/oauth2_proxy/pull/175) Bump go-oidc to v2.0.0 (@aeijdenberg).
+  - Includes fix for potential signature checking issue when OIDC discovery is skipped.
+- [#155](https://github.com/pusher/oauth2_proxy/pull/155) Add RedisSessionStore implementation (@brianv0, @JoelSpeed)
+  - Implement flags to configure the redis session store
+    - `-session-store-type=redis` Sets the store type to redis
+    - `-redis-connection-url` Sets the Redis connection URL
+    - `-redis-use-sentinel=true` Enables Redis Sentinel support
+    - `-redis-sentinel-master-name` Sets the Sentinel master name, if sentinel is enabled
+    - `-redis-sentinel-connection-urls` Defines the Redis Sentinel Connection URLs, if sentinel is enabled
+  - Introduces the concept of a session ticket. Tickets are composed of the cookie name, a session ID, and a secret.
+  - Redis Sessions are stored encrypted with a per-session secret
+  - Added tests for server based session stores
+- [#168](https://github.com/pusher/oauth2_proxy/pull/168) Drop Go 1.11 support in Travis (@JoelSpeed)
+- [#169](https://github.com/pusher/oauth2_proxy/pull/169) Update Alpine to 3.9 (@kskewes)
+- [#148](https://github.com/pusher/oauth2_proxy/pull/148) Implement SessionStore interface within proxy (@JoelSpeed)
+- [#147](https://github.com/pusher/oauth2_proxy/pull/147) Add SessionStore interfaces and initial implementation (@JoelSpeed)
   - Allows for multiple different session storage implementations including client and server side
   - Adds tests suite for interface to ensure consistency across implementations
   - Refactor some configuration options (around cookies) into packages
@@ -34,8 +99,21 @@
   - Implement two new flags to customize the logging format
     - `-standard-logging-format` Sets the format for standard logging
     - `-auth-logging-format` Sets the format for auth logging
-
 - [#111](https://github.com/pusher/oauth2_proxy/pull/111) Add option for telling where to find a login.gov JWT key file (@timothy-spencer)
+- [#170](https://github.com/pusher/oauth2_proxy/pull/170) Restore binary tarball contents to be compatible with bitlys original tarballs (@zeha)
+- [#185](https://github.com/pusher/oauth2_proxy/pull/185) Fix an unsupported protocol scheme error during token validation when using the Azure provider (@jonas)
+- [#141](https://github.com/pusher/oauth2_proxy/pull/141) Check google group membership based on email address (@bchess)
+  - Google Group membership is additionally checked via email address, allowing users outside a GSuite domain to be authorized.
+- [#195](https://github.com/pusher/oauth2_proxy/pull/195) Add `-banner` flag for overriding the banner line that is displayed (@steakunderscore)
+- [#198](https://github.com/pusher/oauth2_proxy/pull/198) Switch from gometalinter to golangci-lint (@steakunderscore)
+- [#159](https://github.com/pusher/oauth2_proxy/pull/159) Add option to skip the OIDC provider verified email check: `--insecure-oidc-allow-unverified-email` (@djfinlay)
+- [#210](https://github.com/pusher/oauth2_proxy/pull/210) Update base image from Alpine 3.9 to 3.10 (@steakunderscore)
+- [#201](https://github.com/pusher/oauth2_proxy/pull/201) Add Bitbucket as new OAuth2 provider, accepts email, team and repository permissions to determine authorization (@aledeganopix4d)
+  - Implement flags to enable Bitbucket authentication:
+    - `-bitbucket-repository` Restrict authorization to users that can access this repository
+    - `-bitbucket-team` Restrict authorization to users that are part of this Bitbucket team
+- [#211](https://github.com/pusher/oauth2_proxy/pull/211) Switch from dep to go modules (@steakunderscore)
+- [#145](https://github.com/pusher/oauth2_proxy/pull/145) Add support for OIDC UserInfo endpoint email verification (@rtluckie)
 
 # v3.2.0
 

@@ -13,13 +13,9 @@ for arg in "$@"; do
     "--with-go")
       desired[go]="${arg##*=}"
       ;;
-    "--with-dep")
-      desired[dep]="${arg##*=}"
-      ;;
     "--help")
       printf "${GREEN}$0${NC}\n"
       printf "  available options:\n"
-      printf "  --with-dep=${BLUE}<path_to_dep_binary>${NC}\n"
       printf "  --with-go=${BLUE}<path_to_go_binary>${NC}\n"
       exit 0
       ;;
@@ -81,7 +77,7 @@ check_for() {
 check_go_version() {
   echo -n "Checking go version... "
   GO_VERSION=$(${tools[go]} version | ${tools[awk]} '{where = match($0, /[0-9]\.[0-9]+\.[0-9]*/); if (where != 0) print substr($0, RSTART, RLENGTH)}')
-  vercomp $GO_VERSION 1.11
+  vercomp $GO_VERSION 1.12
   case $? in
     0) ;&
     1)
@@ -91,7 +87,7 @@ check_go_version() {
       ;;
     2)
       printf "${RED}"
-      echo "$GO_VERSION < 1.11"
+      echo "$GO_VERSION < 1.12"
       exit 1
       ;;
   esac
@@ -116,16 +112,14 @@ check_go_env() {
 
 cd ${0%/*}
 
-if [ ! -f .env ]; then
-  rm .env
-fi
+rm -fv .env
 
 check_for make
 check_for awk
 check_for go
 check_go_version
 check_go_env
-check_for dep
+check_for golangci-lint
 
 echo
 
@@ -133,7 +127,7 @@ cat <<- EOF > .env
 	MAKE := "${tools[make]}"
   GO := "${tools[go]}"
   GO_VERSION := ${tools[go_version]}
-  DEP := "${tools[dep]}"
+  GOLANGCILINT := "${tools[golangci-lint]}"
 EOF
 
 echo "Environment configuration written to .env"

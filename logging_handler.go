@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
 // responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP status
@@ -75,18 +75,19 @@ func (l *responseLogger) Status() int {
 	return l.status
 }
 
-// Size returns teh response size
+// Size returns the response size
 func (l *responseLogger) Size() int {
 	return l.size
 }
 
+// Flush sends any buffered data to the client
 func (l *responseLogger) Flush() {
 	if flusher, ok := l.w.(http.Flusher); ok {
 		flusher.Flush()
 	}
 }
 
-// loggingHandler is the http.Handler implementation for LoggingHandlerTo and its friends
+// loggingHandler is the http.Handler implementation for LoggingHandler
 type loggingHandler struct {
 	handler http.Handler
 }

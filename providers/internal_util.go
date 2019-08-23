@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pusher/oauth2_proxy/api"
-	"github.com/pusher/oauth2_proxy/logger"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
 )
 
 // stripToken is a helper function to obfuscate "access_token"
@@ -47,7 +47,7 @@ func stripParam(param, endpoint string) string {
 
 // validateToken returns true if token is valid
 func validateToken(p Provider, accessToken string, header http.Header) bool {
-	if accessToken == "" || p.Data().ValidateURL == nil {
+	if accessToken == "" || p.Data().ValidateURL == nil || p.Data().ValidateURL.String() == "" {
 		return false
 	}
 	endpoint := p.Data().ValidateURL.String()
@@ -55,7 +55,7 @@ func validateToken(p Provider, accessToken string, header http.Header) bool {
 		params := url.Values{"access_token": {accessToken}}
 		endpoint = endpoint + "?" + params.Encode()
 	}
-	resp, err := api.RequestUnparsedResponse(endpoint, header)
+	resp, err := requests.RequestUnparsedResponse(endpoint, header)
 	if err != nil {
 		logger.Printf("GET %s", stripToken(endpoint))
 		logger.Printf("token validation request failed: %s", err)

@@ -88,6 +88,7 @@ type Logger struct {
 	stdEnabled     bool
 	authEnabled    bool
 	reqEnabled     bool
+	excludePaths   map[string]struct{}
 	stdLogTemplate *template.Template
 	authTemplate   *template.Template
 	reqTemplate    *template.Template
@@ -101,6 +102,7 @@ func New(flag int) *Logger {
 		stdEnabled:     true,
 		authEnabled:    true,
 		reqEnabled:     true,
+		excludePaths:   nil,
 		stdLogTemplate: template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
 		authTemplate:   template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
 		reqTemplate:    template.Must(template.New("req-log").Parse(DefaultRequestLoggingFormat)),
@@ -174,6 +176,10 @@ func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus
 // of every message.
 func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) {
 	if !l.reqEnabled {
+		return
+	}
+
+	if _, ok := l.excludePaths[url.Path]; ok {
 		return
 	}
 
@@ -302,6 +308,16 @@ func (l *Logger) SetReqEnabled(e bool) {
 	l.reqEnabled = e
 }
 
+// SetExcludePaths sets the paths to exclude from logging.
+func (l *Logger) SetExcludePaths(s []string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.excludePaths = make(map[string]struct{})
+	for _, p := range s {
+		l.excludePaths[p] = struct{}{}
+	}
+}
+
 // SetStandardTemplate sets the template for standard logging.
 func (l *Logger) SetStandardTemplate(t string) {
 	l.mu.Lock()
@@ -363,6 +379,11 @@ func SetAuthEnabled(e bool) {
 // standard logger.
 func SetReqEnabled(e bool) {
 	std.SetReqEnabled(e)
+}
+
+// SetExcludePaths sets the path to exclude from logging, eg: health checks
+func SetExcludePaths(s []string) {
+	std.SetExcludePaths(s)
 }
 
 // SetStandardTemplate sets the template for standard logging for

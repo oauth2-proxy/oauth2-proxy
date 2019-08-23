@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"crypto"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -14,9 +16,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
-	"github.com/pusher/oauth2_proxy/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/stretchr/testify/assert"
@@ -119,7 +122,7 @@ func TestNewReverseProxy(t *testing.T) {
 	backendHost := net.JoinHostPort(backendHostname, backendPort)
 	proxyURL, _ := url.Parse(backendURL.Scheme + "://" + backendHost + "/")
 
-	proxyHandler := NewReverseProxy(proxyURL, time.Second)
+	proxyHandler := NewReverseProxy(proxyURL, &Options{FlushInterval: time.Second})
 	setProxyUpstreamHostHeader(proxyHandler, proxyURL)
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
@@ -141,7 +144,7 @@ func TestEncodedSlashes(t *testing.T) {
 	defer backend.Close()
 
 	b, _ := url.Parse(backend.URL)
-	proxyHandler := NewReverseProxy(b, time.Second)
+	proxyHandler := NewReverseProxy(b, &Options{FlushInterval: time.Second})
 	setProxyDirector(proxyHandler)
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
@@ -160,9 +163,9 @@ func TestEncodedSlashes(t *testing.T) {
 
 func TestRobotsTxt(t *testing.T) {
 	opts := NewOptions()
-	opts.ClientID = "bazquux"
-	opts.ClientSecret = "foobar"
-	opts.CookieSecret = "xyzzyplugh"
+	opts.ClientID = "asdlkjx"
+	opts.ClientSecret = "alkgks"
+	opts.CookieSecret = "asdkugkj"
 	opts.Validate()
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return true })
@@ -175,9 +178,9 @@ func TestRobotsTxt(t *testing.T) {
 
 func TestIsValidRedirect(t *testing.T) {
 	opts := NewOptions()
-	opts.ClientID = "bazquux"
-	opts.ClientSecret = "foobar"
-	opts.CookieSecret = "xyzzyplugh"
+	opts.ClientID = "skdlfj"
+	opts.ClientSecret = "fgkdsgj"
+	opts.CookieSecret = "ljgiogbj"
 	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
 	opts.WhitelistDomains = []string{"foo.bar", ".bar.foo"}
 	opts.Validate()
@@ -226,8 +229,9 @@ func TestIsValidRedirect(t *testing.T) {
 
 type TestProvider struct {
 	*providers.ProviderData
-	EmailAddress string
-	ValidToken   bool
+	EmailAddress   string
+	ValidToken     bool
+	GroupValidator func(string) bool
 }
 
 func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
@@ -252,6 +256,9 @@ func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 			Scope: "profile.email",
 		},
 		EmailAddress: emailAddress,
+		GroupValidator: func(s string) bool {
+			return true
+		},
 	}
 }
 
@@ -261,6 +268,13 @@ func (tp *TestProvider) GetEmailAddress(session *sessions.SessionState) (string,
 
 func (tp *TestProvider) ValidateSessionState(session *sessions.SessionState) bool {
 	return tp.ValidToken
+}
+
+func (tp *TestProvider) ValidateGroup(email string) bool {
+	if tp.GroupValidator != nil {
+		return tp.GroupValidator(email)
+	}
+	return true
 }
 
 func TestBasicAuthPassword(t *testing.T) {
@@ -284,8 +298,8 @@ func TestBasicAuthPassword(t *testing.T) {
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
 	opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
-	opts.ClientID = "bazquux"
-	opts.ClientSecret = "foobar"
+	opts.ClientID = "dlgkj"
+	opts.ClientSecret = "alkgret"
 	opts.CookieSecure = false
 	opts.PassBasicAuth = true
 	opts.PassUserHeaders = true
@@ -378,8 +392,8 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
 	t.opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
-	t.opts.ClientID = "bazquux"
-	t.opts.ClientSecret = "foobar"
+	t.opts.ClientID = "slgkj"
+	t.opts.ClientSecret = "gfjgojl"
 	t.opts.CookieSecure = false
 	t.opts.PassAccessToken = opts.PassAccessToken
 	t.opts.Validate()
@@ -504,9 +518,9 @@ func NewSignInPageTest(skipProvider bool) *SignInPageTest {
 	var sipTest SignInPageTest
 
 	sipTest.opts = NewOptions()
-	sipTest.opts.CookieSecret = "foobar"
-	sipTest.opts.ClientID = "bazquux"
-	sipTest.opts.ClientSecret = "xyzzyplugh"
+	sipTest.opts.CookieSecret = "adklsj2"
+	sipTest.opts.ClientID = "lkdgj"
+	sipTest.opts.ClientSecret = "sgiufgoi"
 	sipTest.opts.SkipProviderButton = skipProvider
 	sipTest.opts.Validate()
 
@@ -610,8 +624,8 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	for _, modifier := range modifiers {
 		modifier(pcTest.opts)
 	}
-	pcTest.opts.ClientID = "bazquux"
-	pcTest.opts.ClientSecret = "xyzzyplugh"
+	pcTest.opts.ClientID = "asdfljk"
+	pcTest.opts.ClientSecret = "lkjfdsig"
 	pcTest.opts.CookieSecret = "0123456789abcdefabcd"
 	// First, set the CookieRefresh option so proxy.AesCipher is created,
 	// needed to encrypt the access_token.
@@ -788,6 +802,25 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
 }
 
+func TestAuthOnlyEndpointUnauthorizedOnProviderGroupValidationFailure(t *testing.T) {
+	test := NewAuthOnlyEndpointTest()
+	startSession := &sessions.SessionState{
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
+	test.SaveSession(startSession)
+	provider := &TestProvider{
+		ValidToken: true,
+		GroupValidator: func(s string) bool {
+			return false
+		},
+	}
+
+	test.proxy.provider = provider
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+}
+
 func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	var pcTest ProcessCookieTest
 
@@ -827,9 +860,9 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 
 	opts := NewOptions()
 	opts.Upstreams = append(opts.Upstreams, upstream.URL)
-	opts.ClientID = "bazquux"
-	opts.ClientSecret = "foobar"
-	opts.CookieSecret = "xyzzyplugh"
+	opts.ClientID = "aljsal"
+	opts.ClientSecret = "jglkfsdgj"
+	opts.CookieSecret = "dkfjgdls"
 	opts.SkipAuthPreflight = true
 	opts.Validate()
 
@@ -966,8 +999,8 @@ func TestNoRequestSignature(t *testing.T) {
 func TestRequestSignatureGetRequest(t *testing.T) {
 	st := NewSignatureTest()
 	defer st.Close()
-	st.opts.SignatureKey = "sha1:foobar"
-	st.MakeRequestWithExpectedKey("GET", "", "foobar")
+	st.opts.SignatureKey = "sha1:7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d"
+	st.MakeRequestWithExpectedKey("GET", "", "7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d")
 	assert.Equal(t, 200, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "signatures match")
 }
@@ -975,9 +1008,9 @@ func TestRequestSignatureGetRequest(t *testing.T) {
 func TestRequestSignaturePostRequest(t *testing.T) {
 	st := NewSignatureTest()
 	defer st.Close()
-	st.opts.SignatureKey = "sha1:foobar"
+	st.opts.SignatureKey = "sha1:d90df39e2d19282840252612dd7c81421a372f61"
 	payload := `{ "hello": "world!" }`
-	st.MakeRequestWithExpectedKey("POST", payload, "foobar")
+	st.MakeRequestWithExpectedKey("POST", payload, "d90df39e2d19282840252612dd7c81421a372f61")
 	assert.Equal(t, 200, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "signatures match")
 }
@@ -1023,9 +1056,9 @@ type ajaxRequestTest struct {
 func newAjaxRequestTest() *ajaxRequestTest {
 	test := &ajaxRequestTest{}
 	test.opts = NewOptions()
-	test.opts.CookieSecret = "foobar"
-	test.opts.ClientID = "bazquux"
-	test.opts.ClientSecret = "xyzzyplugh"
+	test.opts.CookieSecret = "sdflsw"
+	test.opts.ClientID = "gkljfdl"
+	test.opts.ClientSecret = "sdflkjs"
 	test.opts.Validate()
 	test.proxy = NewOAuthProxy(test.opts, func(email string) bool {
 		return true
@@ -1131,4 +1164,174 @@ func TestClearSingleCookie(t *testing.T) {
 	header := rw.Header()
 
 	assert.Equal(t, 1, len(header["Set-Cookie"]), "should have 1 set-cookie header entries")
+}
+
+type NoOpKeySet struct {
+}
+
+func (NoOpKeySet) VerifySignature(ctx context.Context, jwt string) (payload []byte, err error) {
+	splitStrings := strings.Split(jwt, ".")
+	payloadString := splitStrings[1]
+	jsonString, err := base64.RawURLEncoding.DecodeString(payloadString)
+	return []byte(jsonString), err
+}
+
+func TestGetJwtSession(t *testing.T) {
+	/* token payload:
+	{
+	  "sub": "1234567890",
+	  "aud": "https://test.myapp.com",
+	  "name": "John Doe",
+	  "email": "john@example.com",
+	  "iss": "https://issuer.example.com",
+	  "iat": 1553691215,
+	  "exp": 1912151821
+	}
+	*/
+	goodJwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+		"eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoiaHR0cHM6Ly90ZXN0Lm15YXBwLmNvbSIsIm5hbWUiOiJKb2huIERvZSIsImVtY" +
+		"WlsIjoiam9obkBleGFtcGxlLmNvbSIsImlzcyI6Imh0dHBzOi8vaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNTUzNjkxMj" +
+		"E1LCJleHAiOjE5MTIxNTE4MjF9." +
+		"rLVyzOnEldUq_pNkfa-WiV8TVJYWyZCaM2Am_uo8FGg11zD7l-qmz3x1seTvqpH6Y0Ty00fmv6dJnGnC8WMnPXQiodRTfhBSe" +
+		"OKZMu0HkMD2sg52zlKkbfLTO6ic5VnbVgwjjrB8am_Ta6w7kyFUaB5C1BsIrrLMldkWEhynbb8"
+
+	keyset := NoOpKeySet{}
+	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
+		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+
+	test := NewAuthOnlyEndpointTest(func(opts *Options) {
+		opts.PassAuthorization = true
+		opts.SetAuthorization = true
+		opts.SetXAuthRequest = true
+		opts.SkipJwtBearerTokens = true
+		opts.jwtBearerVerifiers = append(opts.jwtBearerVerifiers, verifier)
+	})
+	tp, _ := test.proxy.provider.(*TestProvider)
+	tp.GroupValidator = func(s string) bool {
+		return true
+	}
+
+	authHeader := fmt.Sprintf("Bearer %s", goodJwt)
+	test.req.Header = map[string][]string{
+		"Authorization": {authHeader},
+	}
+
+	// Bearer
+	session, _ := test.proxy.GetJwtSession(test.req)
+	assert.Equal(t, session.User, "john@example.com")
+	assert.Equal(t, session.Email, "john@example.com")
+	assert.Equal(t, session.ExpiresOn, time.Unix(1912151821, 0))
+	assert.Equal(t, session.IDToken, goodJwt)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	if test.rw.Code >= 400 {
+		t.Fatalf("expected 3xx got %d", test.rw.Code)
+	}
+
+	// Check PassAuthorization, should overwrite Basic header
+	assert.Equal(t, test.req.Header.Get("Authorization"), authHeader)
+	assert.Equal(t, test.req.Header.Get("X-Forwarded-User"), "john@example.com")
+	assert.Equal(t, test.req.Header.Get("X-Forwarded-Email"), "john@example.com")
+
+	// SetAuthorization and SetXAuthRequest
+	assert.Equal(t, test.rw.Header().Get("Authorization"), authHeader)
+	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-User"), "john@example.com")
+	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
+}
+
+func TestJwtUnauthorizedOnGroupValidationFailure(t *testing.T) {
+	goodJwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+		"eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoiaHR0cHM6Ly90ZXN0Lm15YXBwLmNvbSIsIm5hbWUiOiJKb2huIERvZSIsImVtY" +
+		"WlsIjoiam9obkBleGFtcGxlLmNvbSIsImlzcyI6Imh0dHBzOi8vaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNTUzNjkxMj" +
+		"E1LCJleHAiOjE5MTIxNTE4MjF9." +
+		"rLVyzOnEldUq_pNkfa-WiV8TVJYWyZCaM2Am_uo8FGg11zD7l-qmz3x1seTvqpH6Y0Ty00fmv6dJnGnC8WMnPXQiodRTfhBSe" +
+		"OKZMu0HkMD2sg52zlKkbfLTO6ic5VnbVgwjjrB8am_Ta6w7kyFUaB5C1BsIrrLMldkWEhynbb8"
+
+	keyset := NoOpKeySet{}
+	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
+		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+
+	test := NewAuthOnlyEndpointTest(func(opts *Options) {
+		opts.PassAuthorization = true
+		opts.SetAuthorization = true
+		opts.SetXAuthRequest = true
+		opts.SkipJwtBearerTokens = true
+		opts.jwtBearerVerifiers = append(opts.jwtBearerVerifiers, verifier)
+	})
+	tp, _ := test.proxy.provider.(*TestProvider)
+	// Verify ValidateGroup fails JWT authorization
+	tp.GroupValidator = func(s string) bool {
+		return false
+	}
+
+	authHeader := fmt.Sprintf("Bearer %s", goodJwt)
+	test.req.Header = map[string][]string{
+		"Authorization": {authHeader},
+	}
+	test.proxy.ServeHTTP(test.rw, test.req)
+	if test.rw.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 got %d", test.rw.Code)
+	}
+}
+
+func TestFindJwtBearerToken(t *testing.T) {
+	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
+	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: "example.com"}}
+
+	validToken := "eyJfoobar.eyJfoobar.12345asdf"
+	var token string
+
+	// Bearer
+	getReq.Header = map[string][]string{
+		"Authorization": {fmt.Sprintf("Bearer %s", validToken)},
+	}
+
+	token, _ = p.findBearerToken(getReq)
+	assert.Equal(t, validToken, token)
+
+	// Basic - no password
+	getReq.SetBasicAuth(token, "")
+	token, _ = p.findBearerToken(getReq)
+	assert.Equal(t, validToken, token)
+
+	// Basic - sentinel password
+	getReq.SetBasicAuth(token, "x-oauth-basic")
+	token, _ = p.findBearerToken(getReq)
+	assert.Equal(t, validToken, token)
+
+	// Basic - any username, password matching jwt pattern
+	getReq.SetBasicAuth("any-username-you-could-wish-for", token)
+	token, _ = p.findBearerToken(getReq)
+	assert.Equal(t, validToken, token)
+
+	failures := []string{
+		// Too many parts
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
+		// Not enough parts
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA",
+		// Invalid encrypted key
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.//////.dGVzdA.dGVzdA.dGVzdA",
+		// Invalid IV
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.//////.dGVzdA.dGVzdA",
+		// Invalid ciphertext
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.//////.dGVzdA",
+		// Invalid tag
+		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA.//////",
+		// Invalid header
+		"W10.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
+		// Invalid header
+		"######.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
+		// Missing alc/enc params
+		"e30.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
+	}
+
+	for _, failure := range failures {
+		getReq.Header = map[string][]string{
+			"Authorization": {fmt.Sprintf("Bearer %s", failure)},
+		}
+		_, err := p.findBearerToken(getReq)
+		assert.Error(t, err)
+	}
+
+	fmt.Printf("%s", token)
 }

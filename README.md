@@ -15,7 +15,7 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v3.2.0`)
+    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v4.0.0`)
 
     b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 
@@ -25,7 +25,7 @@ Prebuilt binaries can be validated by extracting the file and verifying it again
 
 ```
 sha256sum -c sha256sum.txt 2>&1 | grep OK
-oauth2_proxy-3.2.0.linux-amd64: OK
+oauth2_proxy-4.0.0.linux-amd64: OK
 ```
 
 2.  [Select a Provider and Register an OAuth Application with a Provider](https://pusher.github.io/oauth2_proxy/auth-configuration)
@@ -37,6 +37,10 @@ oauth2_proxy-3.2.0.linux-amd64: OK
 Read the docs on our [Docs site](https://pusher.github.io/oauth2_proxy).
 
 ![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
+
+## Getting Involved
+
+If you would like to reach out to the maintainers, come talk to us in the `#oauth2_proxy` channel in the [Gophers slack](http://gophers.slack.com/).
 
 ## Contributing
 

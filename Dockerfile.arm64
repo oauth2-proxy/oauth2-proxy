@@ -1,15 +1,17 @@
 FROM golang:1.12-stretch AS builder
 
 # Download tools
-RUN wget -O $GOPATH/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64
-RUN chmod +x $GOPATH/bin/dep
+RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.17.1
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/pusher/oauth2_proxy
-COPY . .
 
 # Fetch dependencies
-RUN dep ensure --vendor-only
+COPY go.mod go.sum ./
+RUN GO111MODULE=on go mod download
+
+# Now pull in our code
+COPY . .
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because
@@ -20,7 +22,7 @@ RUN dep ensure --vendor-only
 RUN ./configure && GOARCH=arm64 make build && touch jwt_signing_key.pem
 
 # Copy binary to alpine
-FROM arm64v8/alpine:3.9
+FROM arm64v8/alpine:3.10
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
 COPY --from=builder /go/src/github.com/pusher/oauth2_proxy/jwt_signing_key.pem /etc/ssl/private/jwt_signing_key.pem
