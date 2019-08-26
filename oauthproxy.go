@@ -414,6 +414,21 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 	p.templates.ExecuteTemplate(rw, "error.html", t)
 }
 
+// ErrorPage writes an error response
+func (p *OAuthProxy) CarolErrorPage(rw http.ResponseWriter, code int, title string, message string) {
+	rw.WriteHeader(code)
+	t := struct {
+		Title       string
+		Message     string
+		ProxyPrefix string
+	}{
+		Title:       fmt.Sprintf("%d %s", code, title),
+		Message:     message,
+		ProxyPrefix: p.ProxyPrefix,
+	}
+	p.templates.ExecuteTemplate(rw, "carol-error.html", t)
+}
+
 // SignInPage writes the sing in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	p.ClearSessionCookie(rw, req)
@@ -549,7 +564,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	case path == p.AuthOnlyPath:
 		p.AuthenticateOnly(rw, req)
 	default:
-		p.Proxy(rw, req)
+		p.CarolProxy(rw, req)
 	}
 }
 
@@ -712,6 +727,83 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 			"Internal Error", "Internal Error")
 	}
 
+}
+
+// Proxy proxies the user request if the user is authenticated else it prompts
+// them to authenticate
+func (p *OAuthProxy) CarolProxy(rw http.ResponseWriter, req *http.Request) {
+	var session *sessionsapi.SessionState
+	var err error
+	/*var org, tenant string
+
+	org, tenant, err = p.getOrgTenant(req)*/
+	var tenant string
+
+	logger.Printf("Req info: host:%s path:%s header:%s", req.URL.Host, req.URL.Path, req.Header.Get("Cookie"))
+
+	req.URL.Host = "mendes-fmendes-totvs-com-br.jupyters.karol.ai"
+
+	tenant, err = p.getOrgTenant(req)
+
+	logger.Printf("Req info: tenant:%s", tenant)
+
+	if session == nil {
+		//session, err = p.sessionStore.LoadCarolCookie(req, org, tenant)
+		session, err = p.sessionStore.LoadCarolCookie(req, tenant)
+		if err != nil {
+			logger.Printf("Error loading cookied session: %s", err)
+		}
+	}
+
+	if session != nil && session.AccessToken != "" {
+		if !p.provider.ValidateSessionState(session) {
+			logger.Printf("Removing session: error validating %s", session)
+			session = nil
+		}
+	}
+
+	if session == nil {
+		//http.Redirect(rw, req, "/", 302)
+		p.CarolErrorPage(rw, 401, "Unauthorized", "Unauthorized")
+	} else {
+		// we are authenticated
+		//rw.WriteHeader(http.StatusFound)
+		//req.URL.Host = "https://espacolaser-rafael-rui-totvs-com-br.jupyters.carol.ai/"
+		//p.serveMux.ServeHTTP(rw, req)
+		redirect, err := p.GetRedirect(req)
+		if err != nil {
+			logger.Printf("Error obtaining redirect: %s", err.Error())
+			p.ErrorPage(rw, 500, "Internal Error", err.Error())
+			return
+		}
+		http.Redirect(rw, req, redirect, 302)
+	}
+}
+
+func (p *OAuthProxy) getOrgTenant(req *http.Request) (string, error) {
+	//func (p *OAuthProxy) getOrgTenant(req *http.Request) (string, string, error) {
+
+	parts := strings.Split(req.URL.Host, ".")
+	if len(parts) != 4 {
+		return "", errors.New("URL doesn't have the necessary information")
+	}
+
+	env := parts[2]
+
+	subdomainParts := strings.Split(parts[0], "-")
+	//if len(subdomainParts) < 3 {
+	if len(subdomainParts) < 2 {
+		return "", errors.New("URL doesn't have the necessary information")
+	}
+
+	/*org = subdomainParts[0]
+	tenant = subdomainParts[1]
+	p.provider.Data().ValidateURL.Host = fmt.Sprintf(p.provider.Data().ValidateURL.Host, org, tenant, env)*/
+	tenant := strings.Replace(subdomainParts[0], "https://", "", -1)
+	p.provider.Data().ValidateURL.Host = fmt.Sprintf(p.provider.Data().ValidateURL.Host, tenant, env)
+
+	//return org, tenant, nil
+	return tenant, nil
 }
 
 // getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so

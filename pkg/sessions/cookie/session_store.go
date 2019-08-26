@@ -12,6 +12,7 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
@@ -59,6 +60,43 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 	}
 
 	session, err := utils.SessionFromCookie(val, s.CookieCipher)
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+// Load reads sessions.SessionState information from Cookies within the
+// HTTP request object
+/*func (s *SessionStore) LoadCarolCookie(req *http.Request, org string, tenant string) (*sessions.SessionState, error) {
+	var cookieName = fmt.Sprintf(s.CookieOptions.CookieName, org, tenant)
+	c, err := loadCookie(req, cookieName)
+	if err != nil {
+		// always http.ErrNoCookie
+		return nil, fmt.Errorf("Cookie %q not present", s.CookieOptions.CookieName)
+	}
+
+	session, err := sessions.SessionFromCookie(c.Value)
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
+}*/
+
+// LoadCarolCookie reads sessions.SessionState information from Cookies within the
+func (s *SessionStore) LoadCarolCookie(req *http.Request, tenant string) (*sessions.SessionState, error) {
+	var cookieName = fmt.Sprintf(s.CookieOptions.CookieName, tenant)
+	logger.Printf("Cookiename: %s", cookieName)
+	c, err := loadCookie(req, cookieName)
+	if err != nil {
+		// always http.ErrNoCookie
+		logger.Printf("Cookie %q not present", s.CookieOptions.CookieName)
+		return nil, fmt.Errorf("Cookie %q not present", s.CookieOptions.CookieName)
+	}
+
+	logger.Printf("Cookie value: %s", c.Value)
+
+	session, err := sessions.SessionFromCookie(c.Value)
 	if err != nil {
 		return nil, err
 	}

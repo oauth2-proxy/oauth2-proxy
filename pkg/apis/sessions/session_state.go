@@ -241,3 +241,17 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 	}
 	return ss, nil
 }
+
+// DecodeSessionState decodes the session cookie string into a SessionState
+func SessionFromCookie(v string) (*SessionState, error) {
+	var ss *SessionState
+
+	/*if len(v) != 32 {
+		return nil, errors.New("Invalid access token")
+	}*/
+
+	ss = &SessionState{
+		AccessToken: v,
+	}
+	return ss, nil
+}

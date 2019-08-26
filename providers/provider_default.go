@@ -126,6 +126,11 @@ func (p *ProviderData) ValidateSessionState(s *sessions.SessionState) bool {
 	return validateToken(p, s.AccessToken, nil)
 }
 
+// GetClientID returns the Account Client ID
+func (p *ProviderData) GetClientID(s *sessions.SessionState) (string, error) {
+	return "", errors.New("not implemented")
+}
+
 // RefreshSessionIfNeeded should refresh the user's session if required and
 // do nothing if a refresh is not required
 func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {

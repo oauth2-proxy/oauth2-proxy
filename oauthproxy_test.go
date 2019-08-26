@@ -161,6 +161,51 @@ func TestEncodedSlashes(t *testing.T) {
 	}
 }
 
+func TestCarol(t *testing.T) {
+	opts := NewOptions()
+	opts.Provider = "carol"
+	//opts.CookieName = "accessToken_{}_{}"
+	opts.CookieName = "accessToken_%s"
+	opts.Validate()
+
+	proxy := NewOAuthProxy(opts, func(string) bool { return true })
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.URL.Scheme = "https"
+	req.URL.Path = "/"
+	req.Host = "espacolaser-rafael-rui-totvs-com-br.jupyters.carol.ai"
+	req.URL.Host = "mendes-rafael-rui-totvs-com-br.jupyters.karol.ai"
+	req.AddCookie(&http.Cookie{
+		Name:  "accessToken_mendes",
+		Value: "0432c2e0c54d11e99ad442010a80101a",
+	})
+	proxy.ServeHTTP(rw, req)
+	assert.Equal(t, 302, rw.Code)
+	var body = rw.Body.String()
+	fmt.Printf(body)
+	//assert.Equal(t, "User-agent: *\nDisallow: /", rw.Body.String())
+}
+
+func TestCarolFailed(t *testing.T) {
+	opts := NewOptions()
+	opts.Provider = "carol"
+	//opts.CookieName = "accessToken_{}_{}"
+	opts.CookieName = "accessToken_%s"
+	opts.Validate()
+
+	proxy := NewOAuthProxy(opts, func(string) bool { return true })
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.URL.Host = "https://mendes-rafael-rui-totvs-com-br.jupyters.carol.ai/"
+	req.AddCookie(&http.Cookie{
+		Name:  "accessToken_mendes",
+		Value: "6a182fc0afa711e9a01342010a801fde",
+	})
+	proxy.ServeHTTP(rw, req)
+	assert.Equal(t, 401, rw.Code)
+	assert.Equal(t, proxy.templates.Lookup("carol-error.html").Tree.Root.String(), rw.Body.String())
+}
+
 func TestRobotsTxt(t *testing.T) {
 	opts := NewOptions()
 	opts.ClientID = "asdlkjx"
