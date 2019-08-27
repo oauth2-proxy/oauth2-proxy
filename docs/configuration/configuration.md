@@ -126,12 +126,14 @@ Multiple upstreams can either be configured by supplying a comma separated list 
 
 Every command line argument can be specified as an environment variable by
 prefixing it with `OAUTH2_PROXY_`, capitalising it, and replacing hypens (`-`)
-with underscores (`_`). This is particularly useful for storing secrets outside
-of a configuration file or the command line.
+with underscores (`_`). If the argument can be specified multiple times, the
+environment variable should be plural (trailing `S`).
 
-For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET` and
-the `--set-authorization-header` flag becomes `OAUTH2_PROXY_SET_AUTHORIZATION_HEADER`.
+This is particularly useful for storing secrets outside of a configuration file
+or the command line.
 
+For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET`,
+and the `--email-domain` flag becomes `OAUTH2_PROXY_EMAIL_DOMAINS`.
 
 ## Logging Configuration
 
