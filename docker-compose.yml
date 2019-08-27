@@ -1,0 +1,29 @@
+version: '3.7'
+services:
+  oauth:
+    build: .
+    environment:
+      OAUTH2_PROXY_PROVIDER: 'carol'
+      OAUTH2_PROXY_COOKIE_SECRET: 'carol'
+      OAUTH2_PROXY_CLIENT_SECRET: 'carol'
+      OAUTH2_PROXY_CLIENT_ID: 'carol'
+      OAUTH2_PROXY_EMAIL_DOMAINS: 'totvs.com.br'
+      OAUTH2_PROXY_COOKIE_NAME: 'accessToken_mendes'
+      OAUTH2_PROXY_HTTP_ADDRESS: '0.0.0.0:4180'
+      OAUTH2_PROXY_UPSTREAM: '127.0.01:8080'
+    ports:
+      - "4180:4180"
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - type: bind
+        source: ./conf.d/default.conf
+        target: /etc/nginx/conf.d/default.conf
+    links:
+      - "oauth:proxy"
+    depends_on:
+      - oauth
+
+
