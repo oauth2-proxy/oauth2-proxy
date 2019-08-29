@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"encoding/json"
+	"io/ioutil"
+	"bytes"
+	"time"
 
 	"github.com/bitly/go-simplejson"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
@@ -63,6 +67,67 @@ func (p *AzureProvider) Configure(tenant string) {
 			Path:   "/" + p.Tenant + "/oauth2/token",
 		}
 	}
+}
+
+func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+	if code == "" {
+		err = errors.New("missing code")
+		return
+	}
+
+	params := url.Values{}
+	params.Add("redirect_uri", redirectURL)
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", p.ClientSecret)
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		params.Add("resource", p.ProtectedResource.String())
+	}
+
+	var req *http.Request
+	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	var resp *http.Response
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	var body []byte
+	body, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
+		return
+	}
+
+	var jsonResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresOn    int64  `json:"expires_on,string"`
+		IDToken      string `json:"id_token"`
+	}
+	err = json.Unmarshal(body, &jsonResponse)
+	if err != nil {
+		return
+	}
+	
+	s = &sessions.SessionState{
+		AccessToken:  jsonResponse.AccessToken,
+		IDToken:      jsonResponse.IDToken,
+		CreatedAt:    time.Now(),
+		ExpiresOn:    time.Unix(jsonResponse.ExpiresOn, 0),
+		RefreshToken: jsonResponse.RefreshToken,
+	}
+	return
 }
 
 func getAzureHeader(accessToken string) http.Header {
