@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
@@ -205,7 +206,8 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 }
 
 func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
-	b := testAzureBackend(`{ "id_token": "testtoken1234" }`)
+	b := testAzureBackend(`{ "id_token": "testtoken1234", "expires_on": "1136239445", "refresh_token": "refresh1234" }`)
+	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -214,4 +216,6 @@ func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
 	s, err := p.Redeem("https://localhost", "1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "testtoken1234", s.IDToken)
+	assert.Equal(t, timestamp, s.ExpiresOn.UTC())
+	assert.Equal(t, "refresh1234", s.RefreshToken)
 }
