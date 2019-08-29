@@ -1,13 +1,13 @@
 package providers
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"encoding/json"
-	"io/ioutil"
-	"bytes"
 	"time"
 
 	"github.com/bitly/go-simplejson"
@@ -119,7 +119,7 @@ func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionSta
 	if err != nil {
 		return
 	}
-	
+
 	s = &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,

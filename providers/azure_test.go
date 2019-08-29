@@ -207,8 +207,9 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 
 func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
 	b := testAzureBackend(`{ "id_token": "testtoken1234", "expires_on": "1136239445", "refresh_token": "refresh1234" }`)
-	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
 	defer b.Close()
+	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
+	assert.Equal(t, nil, err)
 
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
