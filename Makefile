@@ -1,6 +1,6 @@
 include .env
 BINARY := oauth2_proxy
-REPOSITORY := quay.io/pusher
+REPOSITORY ?= quay.io/pusher
 VERSION := $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 .NOTPARALLEL:
 

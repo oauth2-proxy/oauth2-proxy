@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"time"
@@ -27,17 +26,6 @@ type LoginGovProvider struct {
 	AcrValues string
 	JWTKey    *rsa.PrivateKey
 	PubJWKURL *url.URL
-}
-
-// For generating a nonce
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func randSeq(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
 }
 
 // NewLoginGovProvider initiates a new LoginGovProvider

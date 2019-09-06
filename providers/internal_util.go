@@ -13,16 +13,6 @@ type NotImplementedError struct {
 	message string
 }
 
-func NewNotImplementedError(message string) *NotImplementedError {
-	return &NotImplementedError{
-		message: "Not implemented: " + message,
-	}
-}
-
-func (e *NotImplementedError) Error() string {
-	return e.message
-}
-
 // stripToken is a helper function to obfuscate "access_token"
 // query parameters
 func stripToken(endpoint string) string {

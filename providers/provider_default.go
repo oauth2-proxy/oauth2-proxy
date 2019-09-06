@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"time"
@@ -95,6 +96,17 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	return a.String()
 }
 
+// For generating a nonce
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
 // CookieForSession serializes a session state for storage in a cookie
 func (p *ProviderData) CookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
 	return s.EncodeSessionState(c)
@@ -111,7 +123,7 @@ func (p *ProviderData) GetEmailAddress(s *sessions.SessionState) (string, error)
 }
 
 func (p *ProviderData) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
-	return nil, NewNotImplementedError("")
+	return nil, errors.New("not implemented")
 }
 
 // GetUserName returns the Account username

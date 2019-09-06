@@ -47,8 +47,6 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 	if p.ApprovalPrompt == "force" {
 		p.ApprovalPrompt = "consent"
 	}
-	logger.Printf("Approval prompt: '%s'", p.ApprovalPrompt)
-
 	return &AzureProvider{ProviderData: p}
 }
 
@@ -115,7 +113,6 @@ func getUserIDFromJSON(json *simplejson.Json) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return uid, err
 }
 
@@ -132,32 +129,20 @@ func (p *AzureProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, 
 	req.Header = getAzureHeader(s.AccessToken)
 
 	json, err := requests.Request(req)
-
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Printf(" JSON: %v", json)
-	for key, value := range json.Interface().(map[string]interface{}) {
-		logger.Printf("\t %20v : %v", key, value)
-	}
 	email, err := getEmailFromJSON(json)
-
 	if err != nil {
-		logger.Printf("[GetUserDetails] failed making request: %s", err)
 		return nil, err
 	}
 
-	uid, err := getUserIDFromJSON(json)
-	if err != nil {
-		logger.Printf("[GetUserDetails] failed to get User ID: %s", err)
-	}
+	uid, _ := getUserIDFromJSON(json)
 
 	if email == "" {
-		logger.Printf("failed to get email address")
 		return nil, errors.New("Client email not found")
 	}
-	logger.Printf("[GetUserDetails] Chosen email address: '%s'", email)
 	return &UserDetails{
 		Email: email,
 		UID:   uid,
@@ -192,10 +177,8 @@ func (p *AzureProvider) GetGroups(s *sessions.SessionState, f string) (map[strin
 
 // ValidateExemptions checks if we can allow user login dispite group membership returned failure
 func (p *AzureProvider) ValidateExemptions(s *sessions.SessionState) (bool, string) {
-	logger.Printf("ValidateExemptions: validating for %v : %v", s.Email, s.ID)
 	for eAccount, eGroup := range p.ExemptedUsers {
 		if eAccount == s.Email || eAccount == s.Email+":"+s.ID {
-			logger.Printf("ValidateExemptions: \t found '%v' user in exemption list. Returning '%v' group membership", eAccount, eGroup)
 			return true, eGroup
 		}
 	}
@@ -213,7 +196,7 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 	params.Add("scope", p.Scope)
 	params.Add("state", state)
 	params.Set("prompt", p.ApprovalPrompt)
-	params.Set("nonce", "FIXME")
+	params.Set("nonce", randSeq(32))
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}
@@ -230,25 +213,16 @@ func (p *AzureProvider) SetGroupRestriction(groups []string) {
 	if len(groups) == 0 {
 		return
 	}
-	logger.Printf("Set group restrictions. Allowed groups are:")
-	logger.Printf("\t                *GROUP NAME*      : *GROUP ID*")
 	for _, pGroup := range groups {
 		splittedGroup := strings.Split(pGroup, ":")
-		var groupName string
-		var groupID string
-
 		if len(splittedGroup) == 1 {
-			groupName, groupID = splittedGroup[0], ""
 			p.PermittedGroups[splittedGroup[0]] = ""
-		} else if len(splittedGroup) > 2 {
-			logger.Fatalf("failed to parse '%v'. Too many ':' separators", pGroup)
-		} else {
-			groupName, groupID = splittedGroup[0], splittedGroup[1]
+		} else if len(splittedGroup) == 2 {
 			p.PermittedGroups[splittedGroup[0]] = splittedGroup[1]
+		} else {
+			logger.Printf("Warning: failed to parse '%v'. Too many ':' separators", pGroup)
 		}
-		logger.Printf("\t - %-30s   %s", groupName, groupID)
 	}
-	logger.Printf("")
 }
 
 func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
@@ -262,8 +236,6 @@ func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
 
 	var userRecord string
 	var groupName string
-	logger.Printf("Configure user exemption list:")
-	logger.Printf("\t                    *USER NAME*:*USER ID*                            : *DEFAULT GROUP*")
 	for _, pRecord := range exemptions {
 		splittedRecord := strings.Split(pRecord, ":")
 
@@ -271,30 +243,24 @@ func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
 			userRecord, groupName = splittedRecord[0], ""
 		} else if len(splittedRecord) == 2 {
 			userRecord, groupName = splittedRecord[0], splittedRecord[1]
-		} else if len(splittedRecord) > 3 {
-			logger.Fatalf("failed to parse '%v'. Too many ':' separators", pRecord)
 		} else {
 			userRecord = splittedRecord[0] + ":" + splittedRecord[1]
 			groupName = splittedRecord[2]
 		}
 		p.ExemptedUsers[userRecord] = groupName
-		logger.Printf("\t - %-65s    %s", userRecord, groupName)
 	}
-	logger.Printf("")
 }
 
 func (p *AzureProvider) ValidateGroupWithSession(s *sessions.SessionState) bool {
-	if len(p.PermittedGroups) != 0 {
-		for groupName, groupID := range p.PermittedGroups {
-			logger.Printf("ValidateGroup: %v", groupName)
-			if strings.Contains(s.Groups, groupID) {
-				return true
-			}
-		}
-		logger.Printf("Returning False from ValidateGroup")
-		return false
+	if len(p.PermittedGroups) == 0 {
+		return true
 	}
-	return true
+	for _, groupID := range p.PermittedGroups {
+		if strings.Contains(s.Groups, groupID) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *AzureProvider) GroupPermitted(gName *string, gID *string) bool {
@@ -306,15 +272,11 @@ func (p *AzureProvider) GroupPermitted(gName *string, gID *string) bool {
 	if len(p.PermittedGroups) != 0 {
 		for pGroupName, pGroupID := range p.PermittedGroups {
 			if pGroupName == *gName {
-				logger.Printf("ValidateGroup: %v : %v", pGroupName, pGroupID)
 				if pGroupID == "" || gID == nil {
-					logger.Printf("ValidateGroup: %v : %v : no Group ID defined for permitted group. Approving", pGroupName, pGroupID)
 					return true
 				} else if pGroupID == *gID {
-					logger.Printf("ValidateGroup: %v : %v : Group ID matches defined in permitted group. Approving", pGroupName, pGroupID)
 					return true
 				}
-				logger.Printf("ValidateGroup: %v : %v != %v Group IDs didn't match", pGroupName, pGroupID, *gID)
 			}
 		}
 		return false
