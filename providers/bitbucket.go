@@ -63,7 +63,7 @@ func (p *BitbucketProvider) SetRepository(repository string) {
 	}
 }
 
-// GetEmailAddress returns the email of the authenticated user
+// GetUserDetails returns the email of the authenticated user
 func (p *BitbucketProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	var emails struct {
 		Values []struct {
