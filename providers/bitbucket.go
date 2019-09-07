@@ -50,7 +50,7 @@ func NewBitbucketProvider(p *ProviderData) *BitbucketProvider {
 // SetTeam defines the Bitbucket team the user must be part of
 func (p *BitbucketProvider) SetTeam(team string) {
 	p.Team = team
-	if !strings.Contains(p.Scope, "team") {
+	if team != "" && !strings.Contains(p.Scope, "team") {
 		p.Scope += " team"
 	}
 }
@@ -58,7 +58,7 @@ func (p *BitbucketProvider) SetTeam(team string) {
 // SetRepository defines the repository the user must have access to
 func (p *BitbucketProvider) SetRepository(repository string) {
 	p.Repository = repository
-	if !strings.Contains(p.Scope, "repository") {
+	if repository != "" && !strings.Contains(p.Scope, "repository") {
 		p.Scope += " repository"
 	}
 }

@@ -22,13 +22,8 @@ func testBitbucketProvider(hostname, team string, repository string) *BitbucketP
 			ValidateURL:  &url.URL{},
 			Scope:        ""})
 
-	if team != "" {
-		p.SetTeam(team)
-	}
-
-	if repository != "" {
-		p.SetRepository(repository)
-	}
+	p.SetTeam(team)
+	p.SetRepository(repository)
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
