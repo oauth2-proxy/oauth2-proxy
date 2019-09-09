@@ -219,7 +219,7 @@ func (p *GitLabProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	return true
 }
 
-// GetEmailAddress returns the Account email address
+// GetUserDetails returns the Account email address
 func (p *GitLabProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	// Retrieve user info
 	userInfo, err := p.getUserInfo(s)

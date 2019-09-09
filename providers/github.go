@@ -200,7 +200,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 	return false, nil
 }
 
-// GetEmailAddress returns the Account email address
+// GetUserDetails returns the Account email address
 func (p *GitHubProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	var emails []struct {
 		Email    string `json:"email"`

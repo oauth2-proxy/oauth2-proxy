@@ -12,15 +12,16 @@ import (
 
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	AccessToken  string    `json:",omitempty"`
-	IDToken      string    `json:",omitempty"`
-	CreatedAt    time.Time `json:"-"`
-	ExpiresOn    time.Time `json:"-"`
-	RefreshToken string    `json:",omitempty"`
-	Email        string    `json:",omitempty"`
-	User         string    `json:",omitempty"`
-	ID           string    `json:",omitempty"`
-	Groups       string    `json:",omitempty"`
+	AccessToken   string    `json:",omitempty"`
+	IDToken       string    `json:",omitempty"`
+	CreatedAt     time.Time `json:"-"`
+	ExpiresOn     time.Time `json:"-"`
+	RefreshToken  string    `json:",omitempty"`
+	Email         string    `json:",omitempty"`
+	User          string    `json:",omitempty"`
+	ID            string    `json:",omitempty"`
+	Groups        []string  `json:",omitempty"`
+	EncodedGroups string    `json:",omitempty"`
 }
 
 // SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
@@ -64,8 +65,8 @@ func (s *SessionState) String() string {
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
 	}
-	if s.Groups != "" {
-		o += fmt.Sprintf(" group:%s", s.Groups)
+	if len(s.Groups) != 0 {
+		o += fmt.Sprintf(" group:%s", strings.Join(s.Groups, ","))
 	}
 	return o + "}"
 }
@@ -110,11 +111,12 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 				return "", err
 			}
 		}
-		if ss.Groups != "" {
-			ss.Groups, err = c.Encrypt(ss.Groups)
+		if len(ss.Groups) != 0 {
+			ss.EncodedGroups, err = c.Encrypt(strings.Join(ss.Groups, ","))
 			if err != nil {
 				return "", err
 			}
+			ss.Groups = nil
 		}
 		if ss.ID != "" {
 			ss.ID, err = c.Encrypt(ss.ID)
@@ -252,11 +254,12 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 				return nil, err
 			}
 		}
-		if ss.Groups != "" {
-			ss.Groups, err = c.Decrypt(ss.Groups)
+		if ss.EncodedGroups != "" {
+			groupsString, err := c.Decrypt(ss.EncodedGroups)
 			if err != nil {
 				return nil, err
 			}
+			ss.Groups = strings.Split(groupsString, ",")
 		}
 		if ss.ID != "" {
 			ss.ID, err = c.Decrypt(ss.ID)

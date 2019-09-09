@@ -54,7 +54,7 @@ func getFacebookHeader(accessToken string) http.Header {
 	return header
 }
 
-// GetEmailAddress returns the Account email address
+// GetUserDetails returns the Account email address
 func (p *FacebookProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	if s.AccessToken == "" {
 		return nil, errors.New("missing access token")

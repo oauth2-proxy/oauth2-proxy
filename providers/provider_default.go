@@ -117,11 +117,6 @@ func (p *ProviderData) SessionFromCookie(v string, c *encryption.Cipher) (s *ses
 	return sessions.DecodeSessionState(v, c)
 }
 
-// GetEmailAddress returns the Account email address
-func (p *ProviderData) GetEmailAddress(s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
-}
-
 func (p *ProviderData) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	return nil, errors.New("not implemented")
 }
@@ -141,7 +136,7 @@ func (p *ProviderData) ValidateGroup(email string) bool {
 	return true
 }
 
-// ValidateExemptions checks if we can allow user login dispite group membership returned failure
+// ValidateExemptions checks if we can allow user login despite group membership returned failure
 func (p *ProviderData) ValidateExemptions(*sessions.SessionState) (bool, string) {
 	return false, ""
 }

@@ -673,11 +673,9 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		groupNames := []string{}
 		for groupName := range groups {
-			groupNames = append(groupNames, groupName)
+			session.Groups = append(session.Groups, groupName)
 		}
-		session.Groups = strings.Join(groupNames, p.GroupsDelimiter)
 	}
 
 	if !p.IsValidRedirect(redirect) {
@@ -849,8 +847,8 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		} else {
 			req.Header.Del("X-Forwarded-Email")
 		}
-		if p.PassGroups && session.Groups != "" {
-			req.Header["X-Forwarded-Groups"] = []string{session.Groups}
+		if p.PassGroups && len(session.Groups) != 0 {
+			req.Header["X-Forwarded-Groups"] = []string{strings.Join(session.Groups, p.GroupsDelimiter)}
 		}
 	}
 
@@ -878,8 +876,8 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 				rw.Header().Del("X-Auth-Request-Access-Token")
 			}
 		}
-		if p.PassGroups && session.Groups != "" {
-			rw.Header().Set("X-Auth-Request-Groups", session.Groups)
+		if p.PassGroups && len(session.Groups) != 0 {
+			rw.Header().Set("X-Auth-Request-Groups", strings.Join(session.Groups, p.GroupsDelimiter))
 		}
 	}
 

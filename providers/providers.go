@@ -8,7 +8,6 @@ import (
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
-	GetEmailAddress(*sessions.SessionState) (string, error)
 	GetUserDetails(*sessions.SessionState) (*UserDetails, error)
 	GetUserName(*sessions.SessionState) (string, error)
 	GetGroups(*sessions.SessionState, string) (map[string]string, error)

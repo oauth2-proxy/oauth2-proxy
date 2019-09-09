@@ -255,9 +255,11 @@ func (p *AzureProvider) ValidateGroupWithSession(s *sessions.SessionState) bool 
 	if len(p.PermittedGroups) == 0 {
 		return true
 	}
-	for _, groupID := range p.PermittedGroups {
-		if strings.Contains(s.Groups, groupID) {
-			return true
+	for _, group := range s.Groups {
+		for _, groupID := range p.PermittedGroups {
+			if strings.Contains(group, groupID) {
+				return true
+			}
 		}
 	}
 	return false

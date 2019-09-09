@@ -50,7 +50,7 @@ func getLinkedInHeader(accessToken string) http.Header {
 	return header
 }
 
-// GetEmailAddress returns the Account email address
+// GetUserDetails returns the Account email address
 func (p *LinkedInProvider) GetUserDetails(s *sessions.SessionState) (*UserDetails, error) {
 	if s.AccessToken == "" {
 		return nil, errors.New("missing access token")
