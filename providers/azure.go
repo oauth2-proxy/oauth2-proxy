@@ -155,7 +155,7 @@ func (p *AzureProvider) GetGroups(s *sessions.SessionState, f string) (map[strin
 	// This option is available through ARM template only.
 	// For details refer to: https://docs.microsoft.com/pl-pl/azure/active-directory/develop/reference-app-manifest
 	if s.IDToken == "" {
-		return map[string]string{}, errors.New("missing id token")
+		return map[string]string{}, nil
 	}
 
 	type GroupClaims struct {
