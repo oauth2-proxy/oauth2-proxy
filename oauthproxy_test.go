@@ -279,6 +279,10 @@ func (tp *TestProvider) ValidateGroup(email string) bool {
 	return true
 }
 
+func (tp *TestProvider) ValidateGroupWithSession(session *sessions.SessionState) bool {
+	return tp.ValidateGroup(session.Email)
+}
+
 func TestBasicAuthPassword(t *testing.T) {
 	providerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Printf("%#v", r)
