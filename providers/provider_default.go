@@ -136,11 +136,6 @@ func (p *ProviderData) ValidateGroup(email string) bool {
 	return true
 }
 
-// ValidateExemptions checks if we can allow user login despite group membership returned failure
-func (p *ProviderData) ValidateExemptions(*sessions.SessionState) (bool, string) {
-	return false, ""
-}
-
 func (p *ProviderData) ValidateGroupWithSession(s *sessions.SessionState) bool {
 	return p.ValidateGroup(s.Email)
 }

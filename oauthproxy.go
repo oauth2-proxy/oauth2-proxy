@@ -803,7 +803,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	if session != nil && session.Email != "" {
-		if !p.Validator(session.Email) || !p.provider.ValidateGroup(session.Email) {
+		if !p.Validator(session.Email) || !p.provider.ValidateGroupWithSession(session) {
 			logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
 			session = nil
 			saveSession = false

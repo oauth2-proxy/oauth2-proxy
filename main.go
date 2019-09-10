@@ -26,7 +26,6 @@ func main() {
 	jwtIssuers := StringArray{}
 	googleGroups := StringArray{}
 	permittedGroups := StringArray{}
-	exemptedUsers := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
 
 	config := flagSet.String("config", "", "path to config file")
@@ -45,7 +44,6 @@ func main() {
 	flagSet.String("filter-groups", "", "exclude groups that do not contain this value in its 'displayName' (Azure only)")
 	flagSet.Var(&permittedGroups, "permit-groups", "restrict logins to members of this group (may be given multiple times; Azure).")
 	flagSet.String("groups-delimiter", "|", "delimiter between group names if more than one found. By default it is '|' symbol")
-	flagSet.Var(&exemptedUsers, "permit-users", "let these users in if azure call to check group membership fails (may be given multiple times; Azure).")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
 	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")

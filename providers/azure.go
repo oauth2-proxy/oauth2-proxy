@@ -175,16 +175,6 @@ func (p *AzureProvider) GetGroups(s *sessions.SessionState, f string) (map[strin
 	return groupsMap, nil
 }
 
-// ValidateExemptions checks if we can allow user login dispite group membership returned failure
-func (p *AzureProvider) ValidateExemptions(s *sessions.SessionState) (bool, string) {
-	for eAccount, eGroup := range p.ExemptedUsers {
-		if eAccount == s.Email || eAccount == s.Email+":"+s.ID {
-			return true, eGroup
-		}
-	}
-	return false, ""
-}
-
 func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 	var a url.URL
 	a = *p.LoginURL
@@ -263,25 +253,4 @@ func (p *AzureProvider) ValidateGroupWithSession(s *sessions.SessionState) bool 
 		}
 	}
 	return false
-}
-
-func (p *AzureProvider) GroupPermitted(gName *string, gID *string) bool {
-	// Validate provided group
-	// if "PermitGroups" are defined, for each user group membership, include only those groups that
-	// marked in list
-	//
-	// NOTE: if group in "PermitGroups" does not have group_id defined, this parameter is ignored
-	if len(p.PermittedGroups) != 0 {
-		for pGroupName, pGroupID := range p.PermittedGroups {
-			if pGroupName == *gName {
-				if pGroupID == "" || gID == nil {
-					return true
-				} else if pGroupID == *gID {
-					return true
-				}
-			}
-		}
-		return false
-	}
-	return true
 }

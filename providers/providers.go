@@ -14,7 +14,6 @@ type Provider interface {
 	Redeem(string, string) (*sessions.SessionState, error)
 	ValidateGroup(string) bool
 	ValidateGroupWithSession(*sessions.SessionState) bool
-	ValidateExemptions(*sessions.SessionState) (bool, string)
 	ValidateSessionState(*sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)
