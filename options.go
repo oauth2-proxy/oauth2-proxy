@@ -168,6 +168,7 @@ func NewOptions() *Options {
 		FilterGroups:                     "",
 		GroupsDelimiter:                  "|",
 		PermitGroups:                     []string{},
+		PermitUsers:                      []string{},
 		PassAccessToken:                  false,
 		PassHostHeader:                   true,
 		SetAuthorization:                 false,

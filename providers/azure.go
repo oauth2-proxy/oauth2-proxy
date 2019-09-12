@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -157,17 +158,21 @@ func (p *AzureProvider) GetGroups(s *sessions.SessionState, f string) (map[strin
 	if s.IDToken == "" {
 		return map[string]string{}, nil
 	}
+	parts := strings.Split(s.IDToken, ".")
+	if len(parts) != 3 {
+		return map[string]string{}, nil
+	}
+	rawJSON, err := jwt.DecodeSegment(parts[1])
+	if err != nil {
+		return map[string]string{}, err
+	}
 
 	type GroupClaims struct {
 		Groups []string `json:"groups"`
-		jwt.StandardClaims
 	}
-
 	claims := &GroupClaims{}
-	jwt.ParseWithClaims(s.IDToken, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte("empty"), nil
-	})
 
+	json.Unmarshal(rawJSON, &claims)
 	groupsMap := make(map[string]string)
 	for _, s := range claims.Groups {
 		groupsMap[s] = s
