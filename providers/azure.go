@@ -199,6 +199,7 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 
 	return a.String()
 }
+
 // Get list of groups (optionally with Group IDs) that ONLY allowed for user
 // That means even if user has wider group membership, only membership in those groups will be forwarded
 func (p *AzureProvider) SetGroupRestriction(groups []string) {
@@ -217,6 +218,7 @@ func (p *AzureProvider) SetGroupRestriction(groups []string) {
 		}
 	}
 }
+
 // Get list of users (optionally with User IDs) that could still be allowed to login
 // when group membership calls fail (e.g. insufficient permissions)
 func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
@@ -226,19 +228,19 @@ func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
 	}
 
 	var userName string
-	var userId string
+	var userID string
 	for _, pRecord := range exemptions {
 		splittedRecord := strings.Split(pRecord, ":")
 
 		if len(splittedRecord) == 1 {
-			userName, userId = splittedRecord[0], ""
+			userName, userID = splittedRecord[0], ""
 		} else if len(splittedRecord) == 2 {
-			userName, userId = splittedRecord[0], splittedRecord[1]
+			userName, userID = splittedRecord[0], splittedRecord[1]
 		} else {
 			userName = splittedRecord[0] + ":" + splittedRecord[1]
-			userId = splittedRecord[2]
+			userID = splittedRecord[2]
 		}
-		p.ExemptedUsers[userName] = userId
+		p.ExemptedUsers[userName] = userID
 	}
 }
 
@@ -248,7 +250,7 @@ func (p *AzureProvider) ValidateGroupWithSession(s *sessions.SessionState) bool 
 		return true
 	}
 	// return true if user listed in exemptions
-	for userName, _ := range p.ExemptedUsers {
+	for userName := range p.ExemptedUsers {
 		if s.Email == userName {
 			return true
 		}

@@ -72,8 +72,7 @@ type Options struct {
 	PassGroups                    bool          `flag:"pass-groups" cfg:"pass_groups" env:"OAUTH2_PROXY_PASS_GROUPS"`
 	FilterGroups                  string        `flag:"filter-groups" cfg:"filter_groups" env:"OAUTH2_PROXY_FILTER_GROUPS"`
 	PermitGroups                  []string      `flag:"permit-groups" cfg:"permit_groups" env:"OAUTH2_PROXY_PERMIT_GROUPS"`
-	GroupsDelimiter               string        `flag:"groups-delimiter" cfg:"groups_delimiter" env:"OAUTH2_PROXY_GROUPS_DELIMITER"`
-	PermitUsers                   []string      `flag:"permit-users" cfg:"permit_users"`
+	PermitUsers                   []string      `flag:"permit-users" cfg:"permit_users" env:"OAUTH2_PROXY_PERMIT_USERS"`
 	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
 	PassHostHeader                bool          `flag:"pass-host-header" cfg:"pass_host_header" env:"OAUTH2_PROXY_PASS_HOST_HEADER"`
@@ -166,7 +165,6 @@ func NewOptions() *Options {
 		PassUserHeaders:                  true,
 		PassGroups:                       false,
 		FilterGroups:                     "",
-		GroupsDelimiter:                  "|",
 		PermitGroups:                     []string{},
 		PermitUsers:                      []string{},
 		PassAccessToken:                  false,

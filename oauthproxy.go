@@ -88,7 +88,6 @@ type OAuthProxy struct {
 	SetXAuthRequest     bool
 	PassBasicAuth       bool
 	PassGroups          bool
-	GroupsDelimiter     string
 	FilterGroups        string
 	SkipProviderButton  bool
 	PassUserHeaders     bool
@@ -284,7 +283,6 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		SetXAuthRequest:     opts.SetXAuthRequest,
 		PassBasicAuth:       opts.PassBasicAuth,
 		PassGroups:          opts.PassGroups,
-		GroupsDelimiter:     opts.GroupsDelimiter,
 		FilterGroups:        opts.FilterGroups,
 		PassUserHeaders:     opts.PassUserHeaders,
 		BasicAuthPassword:   opts.BasicAuthPassword,
@@ -848,7 +846,7 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			req.Header.Del("X-Forwarded-Email")
 		}
 		if p.PassGroups && len(session.Groups) != 0 {
-			req.Header["X-Forwarded-Groups"] = []string{strings.Join(session.Groups, p.GroupsDelimiter)}
+			req.Header["X-Forwarded-Groups"] = []string{strings.Join(session.Groups, ",")}
 		}
 	}
 
@@ -877,7 +875,7 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			}
 		}
 		if p.PassGroups && len(session.Groups) != 0 {
-			rw.Header().Set("X-Auth-Request-Groups", strings.Join(session.Groups, p.GroupsDelimiter))
+			rw.Header().Set("X-Auth-Request-Groups", strings.Join(session.Groups, ","))
 		}
 	}
 
