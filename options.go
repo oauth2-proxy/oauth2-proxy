@@ -390,7 +390,6 @@ func (o *Options) Validate() error {
 }
 
 func parseProviderInfo(o *Options, msgs []string) []string {
-	var splittedGroups []string
 	p := &providers.ProviderData{
 		Scope:          o.Scope,
 		ClientID:       o.ClientID,
@@ -402,15 +401,13 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 	p.ProfileURL, msgs = parseURL(o.ProfileURL, "profile", msgs)
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
-	if len(o.PermitGroups) > 0 {
-		splittedGroups = strings.Split(o.PermitGroups[0], o.GroupsDelimiter)
-	}
+
 	o.provider = providers.New(o.Provider, p)
 	switch p := o.provider.(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.AzureTenant)
-		if len(splittedGroups) > 0 {
-			p.SetGroupRestriction(splittedGroups)
+		if len(o.PermitGroups) > 0 {
+			p.SetGroupRestriction(o.PermitGroups)
 		}
 		if len(o.PermitUsers) > 0 {
 			p.SetGroupsExemption(o.PermitUsers)

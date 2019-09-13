@@ -199,11 +199,9 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 
 	return a.String()
 }
-
+// Get list of groups (optionally with Group IDs) that ONLY allowed for user
+// That means even if user has wider group membership, only membership in those groups will be forwarded
 func (p *AzureProvider) SetGroupRestriction(groups []string) {
-	// Get list of groups (optionally with Group IDs) that ONLY allowed for user
-	// That means even if user has wider group membership, only membership in those groups will be forwarded
-
 	p.PermittedGroups = make(map[string]string)
 	if len(groups) == 0 {
 		return
@@ -219,37 +217,43 @@ func (p *AzureProvider) SetGroupRestriction(groups []string) {
 		}
 	}
 }
-
+// Get list of users (optionally with User IDs) that could still be allowed to login
+// when group membership calls fail (e.g. insufficient permissions)
 func (p *AzureProvider) SetGroupsExemption(exemptions []string) {
-	// Get list of users (optionally with User IDs) that could still be allowed to login
-	// when group membership calls fail (e.g. insufficient permissions)
-
 	p.ExemptedUsers = make(map[string]string)
 	if len(exemptions) == 0 {
 		return
 	}
 
-	var userRecord string
-	var groupName string
+	var userName string
+	var userId string
 	for _, pRecord := range exemptions {
 		splittedRecord := strings.Split(pRecord, ":")
 
 		if len(splittedRecord) == 1 {
-			userRecord, groupName = splittedRecord[0], ""
+			userName, userId = splittedRecord[0], ""
 		} else if len(splittedRecord) == 2 {
-			userRecord, groupName = splittedRecord[0], splittedRecord[1]
+			userName, userId = splittedRecord[0], splittedRecord[1]
 		} else {
-			userRecord = splittedRecord[0] + ":" + splittedRecord[1]
-			groupName = splittedRecord[2]
+			userName = splittedRecord[0] + ":" + splittedRecord[1]
+			userId = splittedRecord[2]
 		}
-		p.ExemptedUsers[userRecord] = groupName
+		p.ExemptedUsers[userName] = userId
 	}
 }
 
 func (p *AzureProvider) ValidateGroupWithSession(s *sessions.SessionState) bool {
+	// return true if not PermittedGroups not set
 	if len(p.PermittedGroups) == 0 {
 		return true
 	}
+	// return true if user listed in exemptions
+	for userName, _ := range p.ExemptedUsers {
+		if s.Email == userName {
+			return true
+		}
+	}
+	// check if user groups match allowed groups, any matching group is letting user in
 	for _, group := range s.Groups {
 		for _, groupID := range p.PermittedGroups {
 			if strings.Contains(group, groupID) {
