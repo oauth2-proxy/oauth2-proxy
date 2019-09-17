@@ -379,9 +379,9 @@ func (tp *TestProvider) ValidateSessionState(session *sessions.SessionState) boo
 	return tp.ValidToken
 }
 
-func (tp *TestProvider) ValidateGroup(email string) bool {
+func (tp *TestProvider) ValidateGroup(session *sessions.SessionState) bool {
 	if tp.GroupValidator != nil {
-		return tp.GroupValidator(email)
+		return tp.GroupValidator(session.Email)
 	}
 	return true
 }

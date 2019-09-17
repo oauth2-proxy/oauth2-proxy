@@ -25,6 +25,8 @@ func main() {
 	skipAuthRegex := StringArray{}
 	jwtIssuers := StringArray{}
 	googleGroups := StringArray{}
+	azureOidcGroups := StringArray{}
+	azureOidcExemptedEmails := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
 	redisClusterConnectionURLs := StringArray{}
 
@@ -60,6 +62,8 @@ func main() {
 	flagSet.Var(&whitelistDomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
 	flagSet.String("keycloak-group", "", "restrict login to members of this group.")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
+	flagSet.Var(&azureOidcGroups, "azure-permitted-groups", "restrict logins to member of this azure groups")
+	flagSet.Var(&azureOidcExemptedEmails, "azure-exempted-emails", "logins that don't have pass group restrictions, required 'azure-permitted-groups` option to be set")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
@@ -122,6 +126,7 @@ func main() {
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
+	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer is matching OIDC discovery URL")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("login-url", "", "Authentication endpoint")

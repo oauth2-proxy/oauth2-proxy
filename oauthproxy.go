@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc"
+
 	"github.com/mbland/hmacauth"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
@@ -764,7 +765,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
+	if p.Validator(session.Email) && p.provider.ValidateGroup(session) {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -884,7 +885,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	if session != nil && session.Email != "" {
-		if !p.Validator(session.Email) || !p.provider.ValidateGroup(session.Email) {
+		if !p.Validator(session.Email) || !p.provider.ValidateGroup(session) {
 			logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
 			session = nil
 			saveSession = false

@@ -230,8 +230,8 @@ func userInGroup(service *admin.Service, groups []string, email string) bool {
 
 // ValidateGroup validates that the provided email exists in the configured Google
 // group(s).
-func (p *GoogleProvider) ValidateGroup(email string) bool {
-	return p.GroupValidator(email)
+func (p *GoogleProvider) ValidateGroup(session *sessions.SessionState) bool {
+	return p.GroupValidator(session.Email)
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -247,7 +247,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool,
 	}
 
 	// re-check that the user is in the proper google group(s)
-	if !p.ValidateGroup(s.Email) {
+	if !p.ValidateGroup(s) {
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 

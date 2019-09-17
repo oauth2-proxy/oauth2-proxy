@@ -11,7 +11,7 @@ type Provider interface {
 	GetEmailAddress(*sessions.SessionState) (string, error)
 	GetUserName(*sessions.SessionState) (string, error)
 	Redeem(string, string) (*sessions.SessionState, error)
-	ValidateGroup(string) bool
+	ValidateGroup(*sessions.SessionState) bool
 	ValidateSessionState(*sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)
@@ -32,6 +32,8 @@ func New(provider string, p *ProviderData) Provider {
 		return NewKeycloakProvider(p)
 	case "azure":
 		return NewAzureProvider(p)
+	case "azure-oidc":
+		return NewAzureOIDCProvider(p)
 	case "gitlab":
 		return NewGitLabProvider(p)
 	case "oidc":

@@ -1,9 +1,13 @@
 package providers
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
@@ -71,4 +75,24 @@ func validateToken(p Provider, accessToken string, header http.Header) bool {
 	}
 	logger.Printf("token validation request failed: status %d - %s", resp.StatusCode, body)
 	return false
+}
+
+func getOIDCHeader(accessToken string) http.Header {
+	header := make(http.Header)
+	header.Set("Accept", "application/json")
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	return header
+}
+
+// getClaimFromToken decodes token and reads claims
+func getClaimFromToken(token string, claims interface{}) error {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return fmt.Errorf("oidc: malformed jwt, expected 3 parts got %d", len(parts))
+	}
+	data, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return fmt.Errorf("oidc: malformed jwt payload: %v", err)
+	}
+	return json.Unmarshal(data, claims)
 }

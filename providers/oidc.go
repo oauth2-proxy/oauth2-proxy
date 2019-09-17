@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	oidc "github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
 
@@ -20,6 +20,12 @@ type OIDCProvider struct {
 
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
+}
+
+type OIDCClaims struct {
+	Subject  string `json:"sub"`
+	Email    string `json:"email"`
+	Verified *bool  `json:"email_verified"`
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
@@ -38,6 +44,7 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *sessions.SessionStat
 			TokenURL: p.RedeemURL.String(),
 		},
 		RedirectURL: redirectURL,
+		Scopes:      strings.Split(p.Scope, " "),
 	}
 	token, err := c.Exchange(ctx, code)
 	if err != nil {
@@ -176,13 +183,6 @@ func (p *OIDCProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	return true
 }
 
-func getOIDCHeader(accessToken string) http.Header {
-	header := make(http.Header)
-	header.Set("Accept", "application/json")
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	return header
-}
-
 func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
 
 	// Extract custom claims.
@@ -220,10 +220,4 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 	}
 
 	return claims, nil
-}
-
-type OIDCClaims struct {
-	Subject  string `json:"sub"`
-	Email    string `json:"email"`
-	Verified *bool  `json:"email_verified"`
 }

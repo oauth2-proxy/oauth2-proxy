@@ -10,10 +10,11 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
 
 	admin "google.golang.org/api/admin/directory/v1"
-	option "google.golang.org/api/option"
+	"google.golang.org/api/option"
 )
 
 func newRedeemServer(body []byte) (*url.URL, *httptest.Server) {
@@ -115,16 +116,22 @@ func TestGoogleProviderValidateGroup(t *testing.T) {
 	p.GroupValidator = func(email string) bool {
 		return email == "michael.bland@gsa.gov"
 	}
-	assert.Equal(t, true, p.ValidateGroup("michael.bland@gsa.gov"))
+	session := sessions.SessionState{
+		Email: "michael.bland@gsa.gov",
+	}
+	assert.Equal(t, true, p.ValidateGroup(&session))
 	p.GroupValidator = func(email string) bool {
 		return email != "michael.bland@gsa.gov"
 	}
-	assert.Equal(t, false, p.ValidateGroup("michael.bland@gsa.gov"))
+	assert.Equal(t, false, p.ValidateGroup(&session))
 }
 
 func TestGoogleProviderWithoutValidateGroup(t *testing.T) {
 	p := newGoogleProvider()
-	assert.Equal(t, true, p.ValidateGroup("michael.bland@gsa.gov"))
+	session := sessions.SessionState{
+		Email: "",
+	}
+	assert.Equal(t, true, p.ValidateGroup(&session))
 }
 
 //
