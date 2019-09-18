@@ -12,6 +12,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -207,6 +208,16 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
 			serveMux.Handle(path, proxy)
 
+		case "static":
+			serveMux.HandleFunc("/", func(rw http.ResponseWriter, req *http.Request) {
+				responseCode, err := strconv.Atoi(u.Host)
+				if err != nil {
+					logger.Printf("unable to convert %q to int, use default \"200\"", u.Host)
+					responseCode = 200
+				}
+				rw.WriteHeader(responseCode)
+				fmt.Fprintf(rw, "Authenticated")
+			})
 		case "file":
 			if u.Fragment != "" {
 				path = u.Fragment
