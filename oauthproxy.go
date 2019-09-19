@@ -202,17 +202,17 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	}
 	for _, u := range opts.proxyURLs {
 		path := u.Path
+		host := u.Host
 		switch u.Scheme {
 		case httpScheme, httpsScheme:
 			logger.Printf("mapping path %q => upstream %q", path, u)
 			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
 			serveMux.Handle(path, proxy)
-
 		case "static":
-			serveMux.HandleFunc("/", func(rw http.ResponseWriter, req *http.Request) {
-				responseCode, err := strconv.Atoi(u.Host)
+			serveMux.HandleFunc(path, func(rw http.ResponseWriter, req *http.Request) {
+				responseCode, err := strconv.Atoi(host)
 				if err != nil {
-					logger.Printf("unable to convert %q to int, use default \"200\"", u.Host)
+					logger.Printf("unable to convert %q to int, use default \"200\"", host)
 					responseCode = 200
 				}
 				rw.WriteHeader(responseCode)

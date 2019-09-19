@@ -365,6 +365,7 @@ type PassAccessTokenTest struct {
 
 type PassAccessTokenTestOptions struct {
 	PassAccessToken bool
+	ProxyUpstream   string
 }
 
 func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTest {
@@ -372,7 +373,6 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 
 	t.providerServer = httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger.Printf("%#v", r)
 			var payload string
 			switch r.URL.Path {
 			case "/oauth/token":
@@ -389,6 +389,9 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 
 	t.opts = NewOptions()
 	t.opts.Upstreams = append(t.opts.Upstreams, t.providerServer.URL)
+	if opts.ProxyUpstream != "" {
+		t.opts.Upstreams = append(t.opts.Upstreams, opts.ProxyUpstream)
+	}
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
 	t.opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
@@ -459,6 +462,39 @@ func (patTest *PassAccessTokenTest) getRootEndpoint(cookie string) (httpCode int
 	return rw.Code, rw.Body.String()
 }
 
+func (patTest *PassAccessTokenTest) getProxyEndpoint(cookie string) (httpCode int, accessToken string) {
+	cookieName := patTest.proxy.CookieName
+	var value string
+	keyPrefix := cookieName + "="
+
+	for _, field := range strings.Split(cookie, "; ") {
+		value = strings.TrimPrefix(field, keyPrefix)
+		if value != field {
+			break
+		} else {
+			value = ""
+		}
+	}
+	if value == "" {
+		return 0, ""
+	}
+
+	req, err := http.NewRequest("GET", "/static-proxy", strings.NewReader(""))
+	if err != nil {
+		return 0, ""
+	}
+	req.AddCookie(&http.Cookie{
+		Name:     cookieName,
+		Value:    value,
+		Path:     "/",
+		Expires:  time.Now().Add(time.Duration(24)),
+		HttpOnly: true,
+	})
+	rw := httptest.NewRecorder()
+	patTest.proxy.ServeHTTP(rw, req)
+	return rw.Code, rw.Body.String()
+}
+
 func TestForwardAccessTokenUpstream(t *testing.T) {
 	patTest := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
@@ -480,6 +516,28 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 		t.Fatalf("expected 200; got %d", code)
 	}
 	assert.Equal(t, "my_auth_token", payload)
+}
+
+func TestStaticProxyUpstream(t *testing.T) {
+	patTest := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		PassAccessToken: true,
+		ProxyUpstream:   "static://200/static-proxy",
+	})
+
+	defer patTest.Close()
+
+	// A successful validation will redirect and set the auth cookie.
+	code, cookie := patTest.getCallbackEndpoint()
+	if code != 302 {
+		t.Fatalf("expected 302; got %d", code)
+	}
+	assert.NotEqual(t, nil, cookie)
+
+	code, payload := patTest.getProxyEndpoint(cookie)
+	if code != 200 {
+		t.Fatalf("expected 200; got %d", code)
+	}
+	assert.Equal(t, "Authenticated", payload)
 }
 
 func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
