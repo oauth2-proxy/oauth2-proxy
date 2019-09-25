@@ -2,7 +2,7 @@
 
 ## Changes since v4.0.0
 
-- [#226](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
+- [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
 
 # v4.0.0
 
@@ -51,8 +51,6 @@ reconfigure their proxies. Please read the Breaking Changes below thoroughly.
 
 ## Changes since v3.2.0
 
-- [#178](https://github.com/pusher/outh2_proxy/pull/178) Add Silence Ping Logging and Exclude Logging Paths flags (@kskewes)
-- [#209](https://github.com/pusher/outh2_proxy/pull/209) Improve docker build caching of layers (@dekimsey)
 - [#234](https://github.com/pusher/oauth2_proxy/pull/234) Added option `-ssl-upstream-insecure-skip-validation` to skip validation of upstream SSL certificates (@jansinger)
 - [#224](https://github.com/pusher/oauth2_proxy/pull/224) Check Google group membership using hasMember to support nested groups and external users (@jpalpant)
 - [#231](https://github.com/pusher/oauth2_proxy/pull/231) Add optional group membership and email domain checks to the GitLab provider (@Overv)
