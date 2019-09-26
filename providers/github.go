@@ -138,7 +138,8 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 			Login string `json:"login"`
 		} `json:"organization"`
 	}
-
+	// for v3 api.
+	// https://developer.github.com/v3/#pagination
 	params := url.Values{
 		"per_page": {"100"},
 	}
