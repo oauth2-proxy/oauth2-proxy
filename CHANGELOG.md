@@ -6,6 +6,8 @@
 
 # v4.0.0
 
+- [#248](https://github.com/pusher/oauth2_proxy/pull/248) Fix issue with X-Auth-Request-Redirect header being ignored
+
 ## Release Highlights
 - Documentation is now on a [microsite](https://pusher.github.io/oauth2_proxy/)
 - Health check logging can now be disabled for quieter logs
