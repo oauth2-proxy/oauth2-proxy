@@ -39,6 +39,7 @@ type Options struct {
 	ClientSecret    string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
 	TLSCertFile     string `flag:"tls-cert-file" cfg:"tls_cert_file" env:"OAUTH2_PROXY_TLS_CERT_FILE"`
 	TLSKeyFile      string `flag:"tls-key-file" cfg:"tls_key_file" env:"OAUTH2_PROXY_TLS_KEY_FILE"`
+	ProxyTimeOut    time.Duration    `flag:"proxy-time-out" cfg:"proxy_time_out" env:"OAUTH2_PROXY_PROXY_TIME_OUT"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file" env:"OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group" env:"OAUTH2_PROXY_KEYCLOAK_GROUP"`
@@ -145,6 +146,7 @@ func NewOptions() *Options {
 		ProxyWebSockets:     true,
 		HTTPAddress:         "127.0.0.1:4180",
 		HTTPSAddress:        ":443",
+		ProxyTimeOut:        30, //TIME_OUT in seconds
 		DisplayHtpasswdForm: true,
 		CookieOptions: options.CookieOptions{
 			CookieName:     "_oauth2_proxy",

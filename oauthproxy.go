@@ -130,7 +130,20 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // NewReverseProxy creates a new reverse proxy for proxying requests to upstream
 // servers
 func NewReverseProxy(target *url.URL, opts *Options) (proxy *httputil.ReverseProxy) {
+
 	proxy = httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   time.Duration(opts.ProxyTimeOut) * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 	proxy.FlushInterval = opts.FlushInterval
 	if opts.SSLUpstreamInsecureSkipVerify {
 		proxy.Transport = &http.Transport{
