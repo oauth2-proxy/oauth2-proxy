@@ -75,8 +75,8 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 	pn := 1
 	for {
 		params := url.Values{
-			"limit": {"200"},
-			"page":  {strconv.Itoa(pn)},
+			"per_page": {"100"},
+			"page":     {strconv.Itoa(pn)},
 		}
 
 		endpoint := &url.URL{
@@ -139,36 +139,56 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 		} `json:"organization"`
 	}
 
-	params := url.Values{
-		"limit": {"200"},
+	type teamsPage []struct {
+		Name string `json:"name"`
+		Slug string `json:"slug"`
+		Org  struct {
+			Login string `json:"login"`
+		} `json:"organization"`
 	}
 
-	endpoint := &url.URL{
-		Scheme:   p.ValidateURL.Scheme,
-		Host:     p.ValidateURL.Host,
-		Path:     path.Join(p.ValidateURL.Path, "/user/teams"),
-		RawQuery: params.Encode(),
-	}
-	req, _ := http.NewRequest("GET", endpoint.String(), nil)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return false, err
-	}
+	pn := 1
+	for {
+		params := url.Values{
+			"per_page": {"100"},
+			"page":     {strconv.Itoa(pn)},
+		}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return false, err
-	}
-	if resp.StatusCode != 200 {
-		return false, fmt.Errorf(
-			"got %d from %q %s", resp.StatusCode, endpoint.String(), body)
-	}
+		endpoint := &url.URL{
+			Scheme:   p.ValidateURL.Scheme,
+			Host:     p.ValidateURL.Host,
+			Path:     path.Join(p.ValidateURL.Path, "/user/teams"),
+			RawQuery: params.Encode(),
+		}
 
-	if err := json.Unmarshal(body, &teams); err != nil {
-		return false, fmt.Errorf("%s unmarshaling %s", err, body)
+		req, _ := http.NewRequest("GET", endpoint.String(), nil)
+		req.Header.Set("Accept", "application/vnd.github.v3+json")
+		req.Header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return false, err
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return false, err
+		}
+		if resp.StatusCode != 200 {
+			return false, fmt.Errorf(
+				"got %d from %q %s", resp.StatusCode, endpoint.String(), body)
+		}
+
+		var tp teamsPage
+		if err := json.Unmarshal(body, &tp); err != nil {
+			return false, fmt.Errorf("%s unmarshaling %s", err, body)
+		}
+		if len(tp) == 0 {
+			break
+		}
+
+		teams = append(teams, tp...)
+		pn++
 	}
 
 	var hasOrg bool
