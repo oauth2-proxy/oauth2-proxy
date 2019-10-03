@@ -81,7 +81,7 @@ Note: The user is checked against the group members list on initial authenticati
    --client-secret=<value from step 6>
 ```
 
-Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the redis session storage (see https://pusher.github.io/oauth2_proxy/configuration#redis-storage) should resolve this.
+Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](configuration#redis-storage) should resolve this.
 
 ### Facebook Auth Provider
 
