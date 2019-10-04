@@ -428,7 +428,9 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int,
 	return rw.Code, rw.HeaderMap["Set-Cookie"][1]
 }
 
-func (patTest *PassAccessTokenTest) getRootEndpoint(cookie string) (httpCode int, accessToken string) {
+// getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
+// and cookie and returns body and status code.
+func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
 	cookieName := patTest.proxy.CookieName
 	var value string
 	keyPrefix := cookieName + "="
@@ -445,7 +447,7 @@ func (patTest *PassAccessTokenTest) getRootEndpoint(cookie string) (httpCode int
 		return 0, ""
 	}
 
-	req, err := http.NewRequest("GET", "/", strings.NewReader(""))
+	req, err := http.NewRequest("GET", endpoint, strings.NewReader(""))
 	if err != nil {
 		return 0, ""
 	}
@@ -457,39 +459,6 @@ func (patTest *PassAccessTokenTest) getRootEndpoint(cookie string) (httpCode int
 		HttpOnly: true,
 	})
 
-	rw := httptest.NewRecorder()
-	patTest.proxy.ServeHTTP(rw, req)
-	return rw.Code, rw.Body.String()
-}
-
-func (patTest *PassAccessTokenTest) getProxyEndpoint(cookie string) (httpCode int, accessToken string) {
-	cookieName := patTest.proxy.CookieName
-	var value string
-	keyPrefix := cookieName + "="
-
-	for _, field := range strings.Split(cookie, "; ") {
-		value = strings.TrimPrefix(field, keyPrefix)
-		if value != field {
-			break
-		} else {
-			value = ""
-		}
-	}
-	if value == "" {
-		return 0, ""
-	}
-
-	req, err := http.NewRequest("GET", "/static-proxy", strings.NewReader(""))
-	if err != nil {
-		return 0, ""
-	}
-	req.AddCookie(&http.Cookie{
-		Name:     cookieName,
-		Value:    value,
-		Path:     "/",
-		Expires:  time.Now().Add(time.Duration(24)),
-		HttpOnly: true,
-	})
 	rw := httptest.NewRecorder()
 	patTest.proxy.ServeHTTP(rw, req)
 	return rw.Code, rw.Body.String()
@@ -511,7 +480,7 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 	// Now we make a regular request; the access_token from the cookie is
 	// forwarded as the "X-Forwarded-Access-Token" header. The token is
 	// read by the test provider server and written in the response body.
-	code, payload := patTest.getRootEndpoint(cookie)
+	code, payload := patTest.getEndpointWithCookie(cookie, "/")
 	if code != 200 {
 		t.Fatalf("expected 200; got %d", code)
 	}
@@ -533,7 +502,9 @@ func TestStaticProxyUpstream(t *testing.T) {
 	}
 	assert.NotEqual(t, nil, cookie)
 
-	code, payload := patTest.getProxyEndpoint(cookie)
+	// Now we make a regular request againts the upstream proxy; And validate
+	// the returned status code through the static proxy.
+	code, payload := patTest.getEndpointWithCookie(cookie, "/static-proxy")
 	if code != 200 {
 		t.Fatalf("expected 200; got %d", code)
 	}
@@ -555,7 +526,7 @@ func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 
 	// Now we make a regular request, but the access token header should
 	// not be present.
-	code, payload := patTest.getRootEndpoint(cookie)
+	code, payload := patTest.getEndpointWithCookie(cookie, "/")
 	if code != 200 {
 		t.Fatalf("expected 200; got %d", code)
 	}
