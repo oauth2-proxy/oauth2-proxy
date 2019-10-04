@@ -209,12 +209,13 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
 			serveMux.Handle(path, proxy)
 		case "static":
+			responseCode, err := strconv.Atoi(host)
+			if err != nil {
+				logger.Printf("unable to convert %q to int, use default \"200\"", host)
+				responseCode = 200
+			}
+
 			serveMux.HandleFunc(path, func(rw http.ResponseWriter, req *http.Request) {
-				responseCode, err := strconv.Atoi(host)
-				if err != nil {
-					logger.Printf("unable to convert %q to int, use default \"200\"", host)
-					responseCode = 200
-				}
 				rw.WriteHeader(responseCode)
 				fmt.Fprintf(rw, "Authenticated")
 			})
