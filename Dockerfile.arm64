@@ -1,4 +1,4 @@
-FROM golang:1.12-stretch AS builder
+FROM golang:1.13-stretch AS builder
 
 # Download tools
 RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.17.1
