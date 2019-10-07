@@ -3,6 +3,7 @@
 ## Changes since v4.0.0
 
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
+- [#271](https://github.com/pusher/oauth2_proxy/pull/271) Support Go 1.13 (@dio)
 
 # v4.0.0
 
