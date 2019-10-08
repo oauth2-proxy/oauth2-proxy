@@ -4,6 +4,7 @@
 
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
 - [#271](https://github.com/pusher/oauth2_proxy/pull/271) Support Go 1.13 (@dio)
+- [#275](https://github.com/pusher/oauth2_proxy/pull/275) docker: build from debian buster (@syscll)
 
 # v4.0.0
 
