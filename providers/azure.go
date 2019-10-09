@@ -1,12 +1,17 @@
 package providers
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/bitly/go-simplejson"
+	oidc "github.com/coreos/go-oidc"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
@@ -15,7 +20,8 @@ import (
 // AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
 	*ProviderData
-	Tenant string
+	Verifier *oidc.IDTokenVerifier
+	Tenant   string
 }
 
 // NewAzureProvider initiates a new AzureProvider
@@ -35,6 +41,9 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 			Scheme: "https",
 			Host:   "graph.windows.net",
 		}
+	}
+	if p.ValidateURL == nil || p.ValidateURL.String() == "" {
+		p.ValidateURL = p.ProfileURL
 	}
 	if p.Scope == "" {
 		p.Scope = "openid"
@@ -92,7 +101,6 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
 	var email string
 	var err error
-
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
@@ -107,7 +115,6 @@ func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error
 	if err != nil {
 		return "", err
 	}
-
 	email, err = getEmailFromJSON(json)
 
 	if err == nil && email != "" {
@@ -127,4 +134,139 @@ func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error
 	}
 
 	return email, err
+}
+
+// Redeem exchanges the OAuth2 authentication token for an ID token
+func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+	if code == "" {
+		err = errors.New("missing code")
+		return
+	}
+
+	params := url.Values{}
+	params.Add("redirect_uri", redirectURL)
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", p.ClientSecret)
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		params.Add("resource", p.ProtectedResource.String())
+	}
+
+	var req *http.Request
+	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	var resp *http.Response
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	var body []byte
+	body, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
+		return
+	}
+
+	// blindly try json and x-www-form-urlencoded
+	var jsonResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in,string"`
+		IDToken      string `json:"id_token"`
+	}
+	err = json.Unmarshal(body, &jsonResponse)
+	if err != nil {
+		return
+	}
+
+	s = &sessions.SessionState{
+		AccessToken:  jsonResponse.AccessToken,
+		IDToken:      jsonResponse.IDToken,
+		CreatedAt:    time.Now(),
+		ExpiresOn:    time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second),
+		RefreshToken: jsonResponse.RefreshToken,
+	}
+	return
+
+}
+
+// RefreshSessionIfNeeded checks if the session has expired and uses the
+// RefreshToken to fetch a new ID token if required
+func (p *AzureProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
+	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+		return false, nil
+	}
+
+	newToken, newIDToken, duration, err := p.redeemRefreshToken(s.RefreshToken)
+	if err != nil {
+		return false, err
+	}
+
+	origExpiration := s.ExpiresOn
+	s.AccessToken = newToken
+	s.IDToken = newIDToken
+	s.ExpiresOn = time.Now().Add(duration).Truncate(time.Second)
+	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
+	return true, nil
+}
+
+func (p *AzureProvider) redeemRefreshToken(refreshToken string) (token string, idToken string, expires time.Duration, err error) {
+	params := url.Values{}
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", p.ClientSecret)
+	params.Add("refresh_token", refreshToken)
+	params.Add("grant_type", "refresh_token")
+	var req *http.Request
+	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
+	var body []byte
+	body, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
+		return
+	}
+
+	var data struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int64  `json:"expires_in,string"`
+		IDToken     string `json:"id_token"`
+	}
+
+	err = json.Unmarshal(body, &data)
+
+	if err != nil {
+		return
+	}
+	token = data.AccessToken
+	idToken = data.IDToken
+	expires = time.Duration(data.ExpiresIn) * time.Second
+	return
+}
+
+// ValidateSessionState validates the AccessToken
+func (p *AzureProvider) ValidateSessionState(s *sessions.SessionState) bool {
+	return validateToken(p, s.AccessToken, getAzureHeader(s.AccessToken))
 }
