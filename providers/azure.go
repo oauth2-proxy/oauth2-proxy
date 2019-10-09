@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	oidc "github.com/coreos/go-oidc"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
@@ -20,8 +19,7 @@ import (
 // AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
 	*ProviderData
-	Verifier *oidc.IDTokenVerifier
-	Tenant   string
+	Tenant string
 }
 
 // NewAzureProvider initiates a new AzureProvider
