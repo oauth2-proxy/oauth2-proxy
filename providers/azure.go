@@ -205,24 +205,24 @@ func (p *AzureProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, 
 		return false, nil
 	}
 
-	newToken, newIDToken, duration, err := p.redeemRefreshToken(s.RefreshToken)
+	origExpiration := s.ExpiresOn
+
+	err := p.redeemRefreshToken(s)
+	logger.Printf("Refresh token: %s", s.RefreshToken)
+
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
-	origExpiration := s.ExpiresOn
-	s.AccessToken = newToken
-	s.IDToken = newIDToken
-	s.ExpiresOn = time.Now().Add(duration).Truncate(time.Second)
-	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
+	fmt.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
 	return true, nil
 }
 
-func (p *AzureProvider) redeemRefreshToken(refreshToken string) (token string, idToken string, expires time.Duration, err error) {
+func (p *AzureProvider) redeemRefreshToken(s *sessions.SessionState) (err error) {
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", p.ClientSecret)
-	params.Add("refresh_token", refreshToken)
+	params.Add("refresh_token", s.RefreshToken)
 	params.Add("grant_type", "refresh_token")
 	var req *http.Request
 	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
@@ -248,9 +248,10 @@ func (p *AzureProvider) redeemRefreshToken(refreshToken string) (token string, i
 	}
 
 	var data struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int64  `json:"expires_in,string"`
-		IDToken     string `json:"id_token"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in,string"`
+		IDToken      string `json:"id_token"`
 	}
 
 	err = json.Unmarshal(body, &data)
@@ -258,9 +259,11 @@ func (p *AzureProvider) redeemRefreshToken(refreshToken string) (token string, i
 	if err != nil {
 		return
 	}
-	token = data.AccessToken
-	idToken = data.IDToken
-	expires = time.Duration(data.ExpiresIn) * time.Second
+
+	s.AccessToken = data.AccessToken
+	s.IDToken = data.IDToken
+	s.RefreshToken = data.RefreshToken
+	s.ExpiresOn = time.Now().Add(time.Duration(data.ExpiresIn) * time.Second).Truncate(time.Second)
 	return
 }
 
