@@ -505,7 +505,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 			return false
 		}
 		for _, domain := range p.whitelistDomains {
-			if (redirectURL.Host == domain) || (strings.HasPrefix(domain, ".") && strings.HasSuffix(redirectURL.Host, domain)) {
+			if (redirectURL.Hostname() == domain) || (strings.HasPrefix(domain, ".") && strings.HasSuffix(redirectURL.Hostname(), domain)) {
 				return true
 			}
 		}

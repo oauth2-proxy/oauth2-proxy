@@ -225,6 +225,12 @@ func TestIsValidRedirect(t *testing.T) {
 
 	invalidHTTPS2 := proxy.IsValidRedirect("https://evil.corp/redirect?rd=foo.bar")
 	assert.Equal(t, false, invalidHTTPS2)
+
+	validPort := proxy.IsValidRedirect("http://foo.bar:3838/redirect")
+	assert.Equal(t, true, validPort)
+
+	validPortSubdomain := proxy.IsValidRedirect("http://baz.bar.foo:3838/redirect")
+	assert.Equal(t, true, validPortSubdomain)
 }
 
 type TestProvider struct {
