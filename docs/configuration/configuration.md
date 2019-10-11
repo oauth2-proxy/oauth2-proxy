@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Configuration
-permalink: /docs/configuration
+permalink: /configuration
 has_children: true
 nav_order: 3
 ---
@@ -249,6 +249,8 @@ server {
     proxy_set_header X-Real-IP               $remote_addr;
     proxy_set_header X-Scheme                $scheme;
     proxy_set_header X-Auth-Request-Redirect $request_uri;
+    # or, if you are handling multiple domains:
+    # proxy_set_header X-Auth-Request-Redirect $scheme://$host$request_uri;
   }
   location = /oauth2/auth {
     proxy_pass       http://127.0.0.1:4180;
@@ -308,7 +310,7 @@ If you use ingress-nginx in Kubernetes (which includes the Lua module), you also
 
 ```yaml
 nginx.ingress.kubernetes.io/auth-response-headers: Authorization
-nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=$request_uri
+nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=$escaped_request_uri
 nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
 nginx.ingress.kubernetes.io/configuration-snippet: |
   auth_request_set $name_upstream_1 $upstream_cookie_name_1;

@@ -119,7 +119,7 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Header.Set("GAP-Auth", w.Header().Get("GAP-Auth"))
 		u.auth.SignRequest(r)
 	}
-	if u.wsHandler != nil && strings.ToLower(r.Header.Get("Connection")) == "upgrade" && r.Header.Get("Upgrade") == "websocket" {
+	if u.wsHandler != nil && strings.EqualFold(r.Header.Get("Connection"), "upgrade") && r.Header.Get("Upgrade") == "websocket" {
 		u.wsHandler.ServeHTTP(w, r)
 	} else {
 		u.handler.ServeHTTP(w, r)
@@ -480,7 +480,10 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 		return
 	}
 
-	redirect = req.Form.Get("rd")
+	redirect = req.Header.Get("X-Auth-Request-Redirect")
+	if req.Form.Get("rd") != "" {
+		redirect = req.Form.Get("rd")
+	}
 	if !p.IsValidRedirect(redirect) {
 		redirect = req.URL.Path
 		if strings.HasPrefix(redirect, p.ProxyPrefix) {

@@ -15,6 +15,7 @@ Valid providers are :
 - [Azure](#azure-auth-provider)
 - [Facebook](#facebook-auth-provider)
 - [GitHub](#github-auth-provider)
+- [Keycloak](#keycloak-auth-provider)
 - [GitLab](#gitlab-auth-provider)
 - [LinkedIn](#linkedin-auth-provider)
 - [login.gov](#logingov-provider)
@@ -100,6 +101,20 @@ If you are using GitHub enterprise, make sure you set the following to the appro
     -login-url="http(s)://<enterprise github host>/login/oauth/authorize"
     -redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
     -validate-url="http(s)://<enterprise github host>/api/v3"
+
+### Keycloak Auth Provider
+
+1.  Create new client in your Keycloak with **Access Type** 'confidental'.
+2.  Create a mapper with **Mapper Type** 'Group Membership'.
+
+Make sure you set the following to the appropriate url:
+
+    -provider=keycloak
+    -client-id=<client you have created>
+    -client-secret=<your client's secret>
+    -login-url="http(s)://<keycloak host>/realms/<your realm>/protocol/openid-connect/auth"
+    -redeem-url="http(s)://<keycloak host>/realms/master/<your realm>/openid-connect/auth/token"
+    -validate-url="http(s)://<keycloak host>/realms/master/<your realm>/openid-connect/userinfo"
 
 ### GitLab Auth Provider
 
