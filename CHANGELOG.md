@@ -2,6 +2,8 @@
 
 ## Changes since v4.0.0
 
+- [#274](https://github.com/pusher/oauth2_proxy/pull/274)  Supports many github teams with api pagination support (@toshi-miura ,@apratina)
+
 # v4.0.0
 
 ## Release Highlights
