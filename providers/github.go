@@ -171,8 +171,6 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 			return false, err
 		}
 
-		body, err := ioutil.ReadAll(resp.Body)
-
 		if last == 0 {
 			// link header may not be obtained
 			// When paging is not required and all data can be retrieved with a single call
@@ -196,10 +194,13 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 			}
 		}
 
-		resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
+			resp.Body.Close()
 			return false, err
 		}
+		resp.Body.Close()
+
 		if resp.StatusCode != 200 {
 			return false, fmt.Errorf(
 				"got %d from %q %s", resp.StatusCode, endpoint.String(), body)
