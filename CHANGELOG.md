@@ -5,7 +5,7 @@
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
 - [#273](https://github.com/pusher/oauth2_proxy/pull/273) Support Go 1.13 (@dio)
 - [#275](https://github.com/pusher/oauth2_proxy/pull/275) docker: build from debian buster (@syscll)
-- [#274](https://github.com/pusher/oauth2_proxy/pull/274)  Supports many github teams with api pagination support (@toshi-miura ,@apratina)
+- [#274](https://github.com/pusher/oauth2_proxy/pull/274) Supports many github teams with api pagination support (@toshi-miura,@apratina)
 
 # v4.0.0
 
