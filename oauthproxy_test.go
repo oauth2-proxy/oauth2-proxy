@@ -182,7 +182,7 @@ func TestIsValidRedirect(t *testing.T) {
 	opts.ClientSecret = "fgkdsgj"
 	opts.CookieSecret = "ljgiogbj"
 	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
-	opts.WhitelistDomains = []string{"foo.bar", ".bar.foo"}
+	opts.WhitelistDomains = []string{"foo.bar", ".bar.foo", "port.bar:8080", ".sub.port.bar:8080"}
 	opts.Validate()
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return true })
@@ -226,11 +226,26 @@ func TestIsValidRedirect(t *testing.T) {
 	invalidHTTPS2 := proxy.IsValidRedirect("https://evil.corp/redirect?rd=foo.bar")
 	assert.Equal(t, false, invalidHTTPS2)
 
-	validPort := proxy.IsValidRedirect("http://foo.bar:3838/redirect")
-	assert.Equal(t, true, validPort)
+	invalidPort := proxy.IsValidRedirect("https://evil.corp:3838/redirect")
+	assert.Equal(t, false, invalidPort)
 
-	validPortSubdomain := proxy.IsValidRedirect("http://baz.bar.foo:3838/redirect")
-	assert.Equal(t, true, validPortSubdomain)
+	validAnyPort := proxy.IsValidRedirect("http://foo.bar:3838/redirect")
+	assert.Equal(t, true, validAnyPort)
+
+	validAnyPortSubdomain := proxy.IsValidRedirect("http://baz.bar.foo:3838/redirect")
+	assert.Equal(t, true, validAnyPortSubdomain)
+
+	validSpecificPort := proxy.IsValidRedirect("http://port.bar:8080/redirect")
+	assert.Equal(t, true, validSpecificPort)
+
+	invalidSpecificPort := proxy.IsValidRedirect("http://port.bar:3838/redirect")
+	assert.Equal(t, false, invalidSpecificPort)
+
+	validSpecificPortSubdomain := proxy.IsValidRedirect("http://foo.sub.port.bar:8080/redirect")
+	assert.Equal(t, true, validSpecificPortSubdomain)
+
+	invalidSpecificPortSubdomain := proxy.IsValidRedirect("http://foo.sub.port.bar:3838/redirect")
+	assert.Equal(t, false, invalidSpecificPortSubdomain)
 }
 
 type TestProvider struct {

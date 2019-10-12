@@ -504,11 +504,27 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 		if err != nil {
 			return false
 		}
+		redirectHostname := redirectURL.Hostname()
+
 		for _, domain := range p.whitelistDomains {
-			if (redirectURL.Hostname() == domain) || (strings.HasPrefix(domain, ".") && strings.HasSuffix(redirectURL.Hostname(), domain)) {
-				return true
+			domainURL := url.URL{
+				Host: strings.TrimLeft(domain, "."),
+			}
+			domainHostname := domainURL.Hostname()
+			if domainHostname == "" {
+				continue
+			}
+
+			if (redirectHostname == domainHostname) || (strings.HasPrefix(domain, ".") && strings.HasSuffix(redirectHostname, domainHostname)) {
+				// if the domain has a port, only allow that port
+				// otherwise allow any port
+				domainPort := domainURL.Port()
+				if (domainPort == "") || (domainPort == redirectURL.Port()) {
+					return true
+				}
 			}
 		}
+
 		return false
 	default:
 		return false
