@@ -26,6 +26,7 @@ func main() {
 	jwtIssuers := StringArray{}
 	googleGroups := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
+	exportClaims := StringArray{"sub:User", "Email"}
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -86,6 +87,7 @@ func main() {
 	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
+	flagSet.Var(&exportClaims, "export-claim", "list of claims to export (eg `sub:user email`)")
 
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")

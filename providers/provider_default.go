@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/mozillazg/go-httpheader"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
 )
@@ -130,4 +131,14 @@ func (p *ProviderData) ValidateSessionState(s *sessions.SessionState) bool {
 // do nothing if a refresh is not required
 func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
 	return false, nil
+}
+
+// HeadersToInject returns an httpheader.Header object with serialized headers to pass to the upstream.
+func (p *ProviderData) HeadersToInject(s *sessions.SessionState) (*http.Header, error) {
+	c := StandardClaims{Subject: s.User}
+	if s.Email != "" {
+		c.Email = &s.Email
+	}
+	h, err := httpheader.Header(c)
+	return &h, err
 }

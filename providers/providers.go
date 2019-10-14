@@ -3,6 +3,7 @@ package providers
 import (
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"net/http"
 )
 
 // Provider represents an upstream identity provider implementation
@@ -17,6 +18,7 @@ type Provider interface {
 	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)
 	SessionFromCookie(string, *encryption.Cipher) (*sessions.SessionState, error)
 	CookieForSession(*sessions.SessionState, *encryption.Cipher) (string, error)
+	HeadersToInject(*sessions.SessionState) (*http.Header, error)
 }
 
 // New provides a new Provider based on the configured provider string

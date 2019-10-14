@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc"
+	//"github.com/davecgh/go-spew/spew"
 	"github.com/mbland/hmacauth"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
@@ -78,6 +80,7 @@ type OAuthProxy struct {
 	OAuthCallbackPath string
 	AuthOnlyPath      string
 	UserInfoPath      string
+	exportClaims      map[string]string
 
 	redirectURL          *url.URL // the url to receive requests at
 	whitelistDomains     []string
@@ -200,6 +203,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	serveMux := http.NewServeMux()
 	var auth hmacauth.HmacAuth
 	if sigData := opts.signatureData; sigData != nil {
+		// TODO: Include exportClaims headers in HMAC!
 		auth = hmacauth.NewHmacAuth(sigData.hash, []byte(sigData.key),
 			SignatureHeader, SignatureHeaders)
 	}
@@ -282,6 +286,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
+		exportClaims:      opts.exportClaims,
 
 		ProxyPrefix:          opts.ProxyPrefix,
 		provider:             opts.provider,
@@ -864,60 +869,63 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
 	if p.PassBasicAuth {
 		req.SetBasicAuth(session.User, p.BasicAuthPassword)
-		req.Header["X-Forwarded-User"] = []string{session.User}
-		if session.Email != "" {
-			req.Header["X-Forwarded-Email"] = []string{session.Email}
-		} else {
-			req.Header.Del("X-Forwarded-Email")
-		}
 	}
+	headers, err := p.provider.HeadersToInject(session)
 
-	if p.PassUserHeaders {
-		req.Header["X-Forwarded-User"] = []string{session.User}
-		if session.Email != "" {
-			req.Header["X-Forwarded-Email"] = []string{session.Email}
-		} else {
-			req.Header.Del("X-Forwarded-Email")
+	if err != nil {
+		log.Printf("Unable to inject headers: %v", err)
+	} else {
+		if p.PassUserHeaders {
+			_, exportEverything := p.exportClaims["*"]
+			for k, vv := range *headers {
+				rename, ok := p.exportClaims[strings.ToLower(k)]
+				if !ok && !exportEverything {
+					continue
+				}
+				headerName := "X-Forwarded-" + k
+				if rename != "" {
+					headerName = "X-Forwarded-" + rename
+				}
+				req.Header.Del(headerName)
+				for i := range vv {
+					req.Header.Add(headerName, vv[i])
+				}
+			}
 		}
-	}
-
-	if p.SetXAuthRequest {
-		rw.Header().Set("X-Auth-Request-User", session.User)
-		if session.Email != "" {
-			rw.Header().Set("X-Auth-Request-Email", session.Email)
-		} else {
-			rw.Header().Del("X-Auth-Request-Email")
-		}
-
-		if p.PassAccessToken {
-			if session.AccessToken != "" {
-				rw.Header().Set("X-Auth-Request-Access-Token", session.AccessToken)
-			} else {
-				rw.Header().Del("X-Auth-Request-Access-Token")
+		if p.SetXAuthRequest {
+			_, exportEverything := p.exportClaims["*"]
+			for k, vv := range *headers {
+				rename, ok := p.exportClaims[strings.ToLower(k)]
+				if !ok && !exportEverything {
+					continue
+				}
+				headerName := "X-Auth-Request-" + k
+				if rename != "" {
+					headerName = "X-Auth-Request-" + rename
+				}
+				rw.Header().Del(headerName)
+				for i := range vv {
+					rw.Header().Add(headerName, vv[i])
+				}
 			}
 		}
 	}
-
 	if p.PassAccessToken {
 		if session.AccessToken != "" {
 			req.Header["X-Forwarded-Access-Token"] = []string{session.AccessToken}
+			rw.Header().Set("X-Auth-Request-Access-Token", session.AccessToken)
+
 		} else {
 			req.Header.Del("X-Forwarded-Access-Token")
+			rw.Header().Del("X-Auth-Request-Access-Token")
 		}
 	}
 
-	if p.PassAuthorization {
+	if p.PassAuthorization || p.SetAuthorization {
 		if session.IDToken != "" {
 			req.Header["Authorization"] = []string{fmt.Sprintf("Bearer %s", session.IDToken)}
 		} else {
 			req.Header.Del("Authorization")
-		}
-	}
-	if p.SetAuthorization {
-		if session.IDToken != "" {
-			rw.Header().Set("Authorization", fmt.Sprintf("Bearer %s", session.IDToken))
-		} else {
-			rw.Header().Del("Authorization")
 		}
 	}
 
@@ -926,6 +934,7 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	} else {
 		rw.Header().Set("GAP-Auth", session.Email)
 	}
+	return
 }
 
 // CheckBasicAuth checks the requests Authorization header for basic auth

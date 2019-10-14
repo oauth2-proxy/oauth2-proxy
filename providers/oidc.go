@@ -7,6 +7,7 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
+	"github.com/mozillazg/go-httpheader"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
 
@@ -177,4 +178,20 @@ func getOIDCHeader(accessToken string) http.Header {
 	header.Set("Accept", "application/json")
 	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
+}
+
+func (p *OIDCProvider) HeadersToInject(s *sessions.SessionState) (*http.Header, error) {
+	ctx := context.Background()
+	if s.IDToken == "" {
+		// TODO: IDToken is not set likely because there is no Cipher set in the Session. fallback to previous behavior of passing user & email.
+		return p.ProviderData.HeadersToInject(s)
+	}
+	token, err := p.Verifier.Verify(ctx, s.IDToken)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to verify session token: %v", err)
+	}
+	claims := StandardClaims{}
+	token.Claims(&claims)
+	h, err := httpheader.Header(claims)
+	return &h, err
 }
