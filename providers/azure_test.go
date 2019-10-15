@@ -1,10 +1,13 @@
 package providers
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
@@ -44,7 +47,7 @@ func TestAzureProviderDefaults(t *testing.T) {
 		p.Data().ProfileURL.String())
 	assert.Equal(t, "https://graph.windows.net",
 		p.Data().ProtectedResource.String())
-	assert.Equal(t, "",
+	assert.Equal(t, "https://graph.windows.net/me?api-version=1.6",
 		p.Data().ValidateURL.String())
 	assert.Equal(t, "openid", p.Data().Scope)
 }
@@ -100,7 +103,7 @@ func TestAzureSetTenant(t *testing.T) {
 		p.Data().ProfileURL.String())
 	assert.Equal(t, "https://graph.windows.net",
 		p.Data().ProtectedResource.String())
-	assert.Equal(t, "",
+	assert.Equal(t, "https://graph.windows.net/me?api-version=1.6",
 		p.Data().ValidateURL.String())
 	assert.Equal(t, "openid", p.Data().Scope)
 }
@@ -114,6 +117,22 @@ func testAzureBackend(payload string) *httptest.Server {
 			if r.URL.Path != path || r.URL.RawQuery != query {
 				w.WriteHeader(404)
 			} else if r.Header.Get("Authorization") != "Bearer imaginary_access_token" {
+				w.WriteHeader(403)
+			} else {
+				w.WriteHeader(200)
+				w.Write([]byte(payload))
+			}
+		}))
+}
+
+func testAzureRedeemBackend(payload string) *httptest.Server {
+	query := "client_id=&client_secret=&code=code1234&grant_type=authorization_code&redirect_uri=http%3A%2F%2Fredirect%2F"
+	queryRefresh := "client_id=&client_secret=&grant_type=refresh_token&refresh_token=some_refresh_token"
+
+	return httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			body, _ := ioutil.ReadAll(r.Body)
+			if !strings.Contains(string(body), query) && !strings.Contains(string(body), queryRefresh) {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
@@ -198,4 +217,46 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
 	assert.Equal(t, "", email)
+}
+
+func TestAzureProviderGetsRefreshTokenInRedeem(t *testing.T) {
+	b := testAzureRedeemBackend(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_in": "3600", "id_token": "some_id_token" }`)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+
+	session, err := p.Redeem("http://redirect/", "code1234")
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+	assert.Equal(t, "some_access_token", session.AccessToken)
+	assert.Equal(t, "some_refresh_token", session.RefreshToken)
+	assert.Equal(t, "some_id_token", session.IDToken)
+	assert.True(t, session.ExpiresOn.After(time.Now()))
+}
+
+func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
+	p := testAzureProvider("")
+
+	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: time.Now().Add(time.Duration(1) * time.Hour)}
+	refreshNeeded, err := p.RefreshSessionIfNeeded(session)
+	assert.Equal(t, nil, err)
+	assert.False(t, refreshNeeded)
+}
+
+func TestAzureProviderRefreshWhenExpired(t *testing.T) {
+	b := testAzureRedeemBackend(`{ "access_token": "new_some_access_token", "refresh_token": "new_some_refresh_token", "expires_in": "3600", "id_token": "new_some_id_token" }`)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+
+	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: time.Now().Add(time.Duration(-1) * time.Hour)}
+	_, err := p.RefreshSessionIfNeeded(session)
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+	assert.Equal(t, "new_some_access_token", session.AccessToken)
+	assert.Equal(t, "new_some_refresh_token", session.RefreshToken)
+	assert.Equal(t, "new_some_id_token", session.IDToken)
+	assert.True(t, session.ExpiresOn.After(time.Now()))
 }

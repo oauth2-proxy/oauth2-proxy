@@ -3,6 +3,7 @@
 ## Changes since v4.0.0
 
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
+- [#278](https://github.com/pusher/oauth2_proxy/pull/278) Adding cookie refresh functionality for azure provider
 
 # v4.0.0
 
