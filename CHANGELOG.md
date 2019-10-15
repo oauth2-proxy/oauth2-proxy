@@ -3,7 +3,9 @@
 ## Changes since v4.0.0
 
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
-- [#278](https://github.com/pusher/oauth2_proxy/pull/278) Adding cookie refresh functionality for azure provider
+- [#273](https://github.com/pusher/oauth2_proxy/pull/273) Support Go 1.13 (@dio)
+- [#275](https://github.com/pusher/oauth2_proxy/pull/275) docker: build from debian buster (@syscll)
+- [#278](https://github.com/pusher/oauth2_proxy/pull/278) Adding cookie refresh functionality for azure provider (@m-wcislo)
 
 # v4.0.0
 

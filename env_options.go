@@ -40,7 +40,7 @@ func (cfg EnvOptions) LoadEnvForStruct(options interface{}) {
 		envName := field.Tag.Get("env")
 		cfgName := field.Tag.Get("cfg")
 		if cfgName == "" && flagName != "" {
-			cfgName = strings.Replace(flagName, "-", "_", -1)
+			cfgName = strings.ReplaceAll(flagName, "-", "_")
 		}
 		if envName == "" || cfgName == "" {
 			// resolvable fields must have the `env` and `cfg` struct tag

@@ -3,14 +3,14 @@
 To develop on this project, please fork the repo and clone into your `$GOPATH`.
 
 Dependencies are **not** checked in so please download those separately.
-Download the dependencies using [`dep`](https://github.com/golang/dep).
+Download the dependencies using `go mod download`.
 
 ```bash
 cd $GOPATH/src/github.com # Create this directory if it doesn't exist
 git clone git@github.com:<YOUR_FORK>/oauth2_proxy pusher/oauth2_proxy
 cd pusher/oauth2_proxy
 ./configure # Setup your environment variables
-make dep
+go mod download
 ```
 
 ## Pull Requests and Issues
