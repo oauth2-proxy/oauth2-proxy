@@ -155,7 +155,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 
 func redirectToHTTPS(opts *Options, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if opts.ForceHTTPS {
+		if opts.ForceHTTPS && r.TLS == nil {
 			http.Redirect(w, r, opts.HTTPSAddress, http.StatusPermanentRedirect)
 		}
 
