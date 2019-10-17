@@ -152,3 +152,13 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	tc.SetKeepAlivePeriod(3 * time.Minute)
 	return tc, nil
 }
+
+func redirectToHTTPS(opts *Options, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if opts.ForceHTTPS {
+			http.Redirect(w, r, opts.HTTPSAddress, http.StatusPermanentRedirect)
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}

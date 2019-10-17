@@ -186,9 +186,9 @@ func main() {
 
 	var handler http.Handler
 	if opts.GCPHealthChecks {
-		handler = gcpHealthcheck(LoggingHandler(oauthproxy))
+		handler = redirectToHTTPS(opts, gcpHealthcheck(LoggingHandler(oauthproxy)))
 	} else {
-		handler = LoggingHandler(oauthproxy)
+		handler = redirectToHTTPS(opts, LoggingHandler(oauthproxy))
 	}
 	s := &Server{
 		Handler: handler,
