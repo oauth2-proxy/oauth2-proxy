@@ -3,11 +3,11 @@ package requests
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/bitly/go-simplejson"
+	"github.com/pkg/errors"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/bitly/go-simplejson"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
 // Request parses the request body into a simplejson.Json object
@@ -18,17 +18,23 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 		return nil, err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	logger.Printf("%d %s %s %s", resp.StatusCode, req.Method, req.URL, body)
-	if err != nil {
-		return nil, err
+	if body != nil {
+		defer resp.Body.Close()
 	}
+
+	logger.Printf("%d %s %s %s", resp.StatusCode, req.Method, req.URL, body)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "problem reading http request body")
+	}
+
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("got %d %s", resp.StatusCode, body)
 	}
+
 	data, err := simplejson.NewJson(body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error unmarshalling json")
 	}
 	return data, nil
 }
@@ -41,10 +47,13 @@ func RequestJSON(req *http.Request, v interface{}) error {
 		return err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	if body != nil {
+		resp.Body.Close()
+	}
+
 	logger.Printf("%d %s %s %s", resp.StatusCode, req.Method, req.URL, body)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error reading body from http response")
 	}
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("got %d %s", resp.StatusCode, body)
@@ -56,7 +65,7 @@ func RequestJSON(req *http.Request, v interface{}) error {
 func RequestUnparsedResponse(url string, header http.Header) (resp *http.Response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error performing get request")
 	}
 	req.Header = header
 

@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -12,16 +13,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testBackend(responseCode int, payload string) *httptest.Server {
+func testBackend(responseCode int, payload string, t *testing.T) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(responseCode)
-			w.Write([]byte(payload))
+			_, err := w.Write([]byte(payload))
+			require.NoError(t, err)
 		}))
 }
 
 func TestRequest(t *testing.T) {
-	backend := testBackend(200, "{\"foo\": \"bar\"}")
+	backend := testBackend(200, "{\"foo\": \"bar\"}", t)
 	defer backend.Close()
 
 	req, _ := http.NewRequest("GET", backend.URL, nil)
@@ -35,7 +37,7 @@ func TestRequest(t *testing.T) {
 func TestRequestFailure(t *testing.T) {
 	// Create a backend to generate a test URL, then close it to cause a
 	// connection error.
-	backend := testBackend(200, "{\"foo\": \"bar\"}")
+	backend := testBackend(200, "{\"foo\": \"bar\"}", t)
 	backend.Close()
 
 	req, err := http.NewRequest("GET", backend.URL, nil)
@@ -49,7 +51,7 @@ func TestRequestFailure(t *testing.T) {
 }
 
 func TestHttpErrorCode(t *testing.T) {
-	backend := testBackend(404, "{\"foo\": \"bar\"}")
+	backend := testBackend(404, "{\"foo\": \"bar\"}", t)
 	defer backend.Close()
 
 	req, err := http.NewRequest("GET", backend.URL, nil)
@@ -60,7 +62,7 @@ func TestHttpErrorCode(t *testing.T) {
 }
 
 func TestJsonParsingError(t *testing.T) {
-	backend := testBackend(200, "not well-formed JSON")
+	backend := testBackend(200, "not well-formed JSON", t)
 	defer backend.Close()
 
 	req, err := http.NewRequest("GET", backend.URL, nil)
@@ -95,7 +97,7 @@ func TestRequestUnparsedResponseUsingAccessTokenParameter(t *testing.T) {
 }
 
 func TestRequestUnparsedResponseUsingAccessTokenParameterFailedResponse(t *testing.T) {
-	backend := testBackend(200, "some payload")
+	backend := testBackend(200, "some payload", t)
 	// Close the backend now to force a request failure.
 	backend.Close()
 
