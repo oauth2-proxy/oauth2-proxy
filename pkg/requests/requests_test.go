@@ -79,7 +79,8 @@ func TestRequestUnparsedResponseUsingAccessTokenParameter(t *testing.T) {
 			token := r.FormValue("access_token")
 			if r.URL.Path == "/" && token == "my_token" {
 				w.WriteHeader(200)
-				w.Write([]byte("some payload"))
+				_, err := w.Write([]byte("some payload"))
+				require.NoError(t, err)
 			} else {
 				w.WriteHeader(403)
 			}
