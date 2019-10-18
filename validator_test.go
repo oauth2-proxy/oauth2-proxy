@@ -50,7 +50,7 @@ func (vt *ValidatorTest) WriteEmails(t *testing.T, emails []string) {
 		t.Fatalf("failed to open auth email file: %v", err)
 	}
 
-	if err := f.WriteString(strings.Join(emails, "\n")); err != nil {
+	if _, err := f.WriteString(strings.Join(emails, "\n")); err != nil {
 		t.Fatalf("failed to write emails to auth email file: %v", err)
 	}
 
