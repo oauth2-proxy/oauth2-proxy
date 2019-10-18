@@ -1,11 +1,9 @@
 package providers
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -129,22 +127,6 @@ func testAzureBackend(payload string) *httptest.Server {
 		}))
 }
 
-func testAzureRedeemBackend(payload string) *httptest.Server {
-	query := "client_id=&client_secret=&code=code1234&grant_type=authorization_code&redirect_uri=http%3A%2F%2Fredirect%2F"
-	queryRefresh := "client_id=&client_secret=&grant_type=refresh_token&refresh_token=some_refresh_token"
-
-	return httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			body, _ := ioutil.ReadAll(r.Body)
-			if !strings.Contains(string(body), query) && !strings.Contains(string(body), queryRefresh) {
-				w.WriteHeader(403)
-			} else {
-				w.WriteHeader(200)
-				w.Write([]byte(payload))
-			}
-		}))
-}
-
 func TestAzureProviderGetEmailAddress(t *testing.T) {
 	b := testAzureBackend(`{ "mail": "user@windows.net" }`)
 	defer b.Close()
@@ -223,10 +205,10 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	assert.Equal(t, "", email)
 }
 
-func TestAzureProviderGetsRefreshTokenInRedeem(t *testing.T) {
-	b := testAzureRedeemBackend(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_in": "3600", "id_token": "some_id_token" }`)
+func TestAzureProviderGetsTokensInRedeem(t *testing.T) {
+	b := testAzureBackend(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_on": "1136239445", "id_token": "some_id_token" }`)
 	defer b.Close()
-
+	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
@@ -236,7 +218,7 @@ func TestAzureProviderGetsRefreshTokenInRedeem(t *testing.T) {
 	assert.Equal(t, "some_access_token", session.AccessToken)
 	assert.Equal(t, "some_refresh_token", session.RefreshToken)
 	assert.Equal(t, "some_id_token", session.IDToken)
-	assert.True(t, session.ExpiresOn.After(time.Now()))
+	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
 }
 
 func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
@@ -249,34 +231,18 @@ func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
 }
 
 func TestAzureProviderRefreshWhenExpired(t *testing.T) {
-	b := testAzureRedeemBackend(`{ "access_token": "new_some_access_token", "refresh_token": "new_some_refresh_token", "expires_in": "3600", "id_token": "new_some_id_token" }`)
+	b := testAzureBackend(`{ "access_token": "new_some_access_token", "refresh_token": "new_some_refresh_token", "expires_on": "32693148245", "id_token": "new_some_id_token" }`)
 	defer b.Close()
-
+	timestamp, err := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: time.Now().Add(time.Duration(-1) * time.Hour)}
-	_, err := p.RefreshSessionIfNeeded(session)
+	_, err = p.RefreshSessionIfNeeded(session)
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "new_some_access_token", session.AccessToken)
 	assert.Equal(t, "new_some_refresh_token", session.RefreshToken)
 	assert.Equal(t, "new_some_id_token", session.IDToken)
-	assert.True(t, session.ExpiresOn.After(time.Now()))
-
-func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
-	b := testAzureBackend(`{ "id_token": "testtoken1234", "expires_on": "1136239445", "refresh_token": "refresh1234" }`)
-	defer b.Close()
-	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
-	assert.Equal(t, nil, err)
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-	p.Data().RedeemURL.Path = "/common/oauth2/token"
-	s, err := p.Redeem("https://localhost", "1234")
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "testtoken1234", s.IDToken)
-	assert.Equal(t, timestamp, s.ExpiresOn.UTC())
-	assert.Equal(t, "refresh1234", s.RefreshToken)
-
+	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
 }
