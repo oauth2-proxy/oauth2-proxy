@@ -208,7 +208,7 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 func TestAzureProviderGetsTokensInRedeem(t *testing.T) {
 	b := testAzureBackend(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_on": "1136239445", "id_token": "some_id_token" }`)
 	defer b.Close()
-	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
+	timestamp, _ := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
@@ -233,12 +233,12 @@ func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
 func TestAzureProviderRefreshWhenExpired(t *testing.T) {
 	b := testAzureBackend(`{ "access_token": "new_some_access_token", "refresh_token": "new_some_refresh_token", "expires_on": "32693148245", "id_token": "new_some_id_token" }`)
 	defer b.Close()
-	timestamp, err := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
+	timestamp, _ := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: time.Now().Add(time.Duration(-1) * time.Hour)}
-	_, err = p.RefreshSessionIfNeeded(session)
+	_, err := p.RefreshSessionIfNeeded(session)
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "new_some_access_token", session.AccessToken)
