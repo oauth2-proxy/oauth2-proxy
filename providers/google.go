@@ -23,7 +23,7 @@ import (
 
 // GoogleProvider represents an Google based Identity Provider
 type GoogleProvider struct {
-	*ProviderData
+	DefaultProvider
 	RedeemRefreshURL *url.URL
 	// GroupValidator is a function that determines if the passed email is in
 	// the configured Google group.
@@ -62,7 +62,7 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	}
 
 	return &GoogleProvider{
-		ProviderData: p,
+		DefaultProvider: DefaultProvider{ProviderData: p},
 		// Set a default GroupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
 		GroupValidator: func(email string) bool {

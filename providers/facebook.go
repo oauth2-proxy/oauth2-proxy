@@ -12,7 +12,7 @@ import (
 
 // FacebookProvider represents an Facebook based Identity Provider
 type FacebookProvider struct {
-	*ProviderData
+	DefaultProvider
 }
 
 // NewFacebookProvider initiates a new FacebookProvider
@@ -43,7 +43,8 @@ func NewFacebookProvider(p *ProviderData) *FacebookProvider {
 	if p.Scope == "" {
 		p.Scope = "public_profile email"
 	}
-	return &FacebookProvider{ProviderData: p}
+
+	return &FacebookProvider{DefaultProvider{ProviderData: p}}
 }
 
 func getFacebookHeader(accessToken string) http.Header {

@@ -16,7 +16,7 @@ import (
 
 // GitLabProvider represents a GitLab based Identity Provider
 type GitLabProvider struct {
-	*ProviderData
+	DefaultProvider
 
 	Group        string
 	EmailDomains []string
@@ -33,7 +33,7 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 		p.Scope = "openid email"
 	}
 
-	return &GitLabProvider{ProviderData: p}
+	return &GitLabProvider{DefaultProvider: DefaultProvider{ProviderData: p}}
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token

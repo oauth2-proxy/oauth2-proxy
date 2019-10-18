@@ -17,7 +17,7 @@ func updateURL(url *url.URL, hostname string) {
 }
 
 type ValidateSessionStateTestProvider struct {
-	*ProviderData
+	DefaultProvider
 }
 
 func (tp *ValidateSessionStateTestProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
@@ -68,11 +68,13 @@ func NewValidateSessionStateTest() *ValidateSessionStateTest {
 		}))
 	backendURL, _ := url.Parse(vtTest.backend.URL)
 	vtTest.provider = &ValidateSessionStateTestProvider{
-		ProviderData: &ProviderData{
-			ValidateURL: &url.URL{
-				Scheme: "http",
-				Host:   backendURL.Host,
-				Path:   "/oauth/tokeninfo",
+		DefaultProvider: DefaultProvider{
+			ProviderData: &ProviderData{
+				ValidateURL: &url.URL{
+					Scheme: "http",
+					Host:   backendURL.Host,
+					Path:   "/oauth/tokeninfo",
+				},
 			},
 		},
 	}

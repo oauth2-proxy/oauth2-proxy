@@ -16,7 +16,7 @@ import (
 
 // GitHubProvider represents an GitHub based Identity Provider
 type GitHubProvider struct {
-	*ProviderData
+	DefaultProvider
 	Org  string
 	Team string
 }
@@ -49,7 +49,7 @@ func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 	if p.Scope == "" {
 		p.Scope = "user:email"
 	}
-	return &GitHubProvider{ProviderData: p}
+	return &GitHubProvider{DefaultProvider: DefaultProvider{ProviderData: p}}
 }
 
 // SetOrgTeam adds GitHub org reading parameters to the OAuth2 scope

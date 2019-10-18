@@ -15,7 +15,7 @@ import (
 
 // OIDCProvider represents an OIDC based Identity Provider
 type OIDCProvider struct {
-	*ProviderData
+	DefaultProvider
 
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
@@ -24,7 +24,7 @@ type OIDCProvider struct {
 // NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData) *OIDCProvider {
 	p.ProviderName = "OpenID Connect"
-	return &OIDCProvider{ProviderData: p}
+	return &OIDCProvider{DefaultProvider: DefaultProvider{ProviderData: p}}
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token

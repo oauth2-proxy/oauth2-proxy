@@ -9,7 +9,7 @@ import (
 )
 
 func TestRefresh(t *testing.T) {
-	p := &ProviderData{}
+	p := &DefaultProvider{}
 	refreshed, err := p.RefreshSessionIfNeeded(&sessions.SessionState{
 		ExpiresOn: time.Now().Add(time.Duration(-11) * time.Minute),
 	})

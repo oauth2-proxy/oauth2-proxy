@@ -12,7 +12,7 @@ import (
 
 // BitbucketProvider represents an Bitbucket based Identity Provider
 type BitbucketProvider struct {
-	*ProviderData
+	DefaultProvider
 	Team       string
 	Repository string
 }
@@ -44,7 +44,7 @@ func NewBitbucketProvider(p *ProviderData) *BitbucketProvider {
 	if p.Scope == "" {
 		p.Scope = "email"
 	}
-	return &BitbucketProvider{ProviderData: p}
+	return &BitbucketProvider{DefaultProvider: DefaultProvider{ProviderData: p}}
 }
 
 // SetTeam defines the Bitbucket team the user must be part of

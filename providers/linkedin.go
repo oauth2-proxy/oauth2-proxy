@@ -12,7 +12,7 @@ import (
 
 // LinkedInProvider represents an LinkedIn based Identity Provider
 type LinkedInProvider struct {
-	*ProviderData
+	DefaultProvider
 }
 
 // NewLinkedInProvider initiates a new LinkedInProvider
@@ -39,7 +39,7 @@ func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
 	if p.Scope == "" {
 		p.Scope = "r_emailaddress r_basicprofile"
 	}
-	return &LinkedInProvider{ProviderData: p}
+	return &LinkedInProvider{DefaultProvider{ProviderData: p}}
 }
 
 func getLinkedInHeader(accessToken string) http.Header {

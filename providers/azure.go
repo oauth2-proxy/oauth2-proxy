@@ -1,24 +1,22 @@
 package providers
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/bitly/go-simplejson"
+	oidc "github.com/coreos/go-oidc"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
+	"golang.org/x/oauth2"
 )
 
 // AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
-	*ProviderData
+	DefaultProvider
 	Tenant string
 }
 
@@ -47,7 +45,11 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 		p.Scope = "openid"
 	}
 
-	return &AzureProvider{ProviderData: p}
+	newProvider := &AzureProvider{DefaultProvider: DefaultProvider{ProviderData: p}}
+	newProvider.Redeemer = newProvider
+	newProvider.ClaimExporter = newProvider
+	newProvider.UserInfoFiller = newProvider
+	return newProvider
 }
 
 // Configure defaults the AzureProvider configuration options
@@ -70,43 +72,30 @@ func (p *AzureProvider) Configure(tenant string) {
 			Path:   "/" + p.Tenant + "/oauth2/token",
 		}
 	}
-}
+	ctx := context.Background()
+	keySet := oidc.NewRemoteKeySet(ctx, "https://sts.windows.net/common/discovery/keys")
+	p.Verifier = oidc.NewVerifier("https://sts.windows.net/"+p.Tenant+"/", keySet, &oidc.Config{
+		ClientID: p.ClientID,
+	})
 
-func getAzureHeader(accessToken string) http.Header {
-	header := make(http.Header)
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	return header
-}
-
-func getEmailFromJSON(json *simplejson.Json) (string, error) {
-	var email string
-	var err error
-
-	email, err = json.Get("mail").String()
-
-	if err != nil || email == "" {
-		otherMails, otherMailsErr := json.Get("otherMails").Array()
-		if len(otherMails) > 0 {
-			email = otherMails[0].(string)
-		}
-		err = otherMailsErr
-	}
-
-	return email, err
 }
 
 // GetEmailAddress returns the Account email address
 func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+	return p.fillEmail(&oauth2.Token{AccessToken: s.AccessToken})
+}
+
+func (p *AzureProvider) fillEmail(token *oauth2.Token) (string, error) {
 	var email string
 	var err error
-	if s.AccessToken == "" {
+	if token.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
 	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header = getAzureHeader(s.AccessToken)
+	req.Header = getAuthHeader(token.AccessToken)
 
 	json, err := requests.Request(req)
 
@@ -134,139 +123,52 @@ func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error
 	return email, err
 }
 
-// Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
-	if code == "" {
-		err = errors.New("missing code")
-		return
+func getEmailFromJSON(json *simplejson.Json) (string, error) {
+	var email string
+	var err error
+
+	email, err = json.Get("mail").String()
+
+	if err != nil || email == "" {
+		otherMails, otherMailsErr := json.Get("otherMails").Array()
+		if len(otherMails) > 0 {
+			email = otherMails[0].(string)
+		}
+		err = otherMailsErr
 	}
 
-	params := url.Values{}
-	params.Add("redirect_uri", redirectURL)
-	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", p.ClientSecret)
-	params.Add("code", code)
-	params.Add("grant_type", "authorization_code")
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		params.Add("resource", p.ProtectedResource.String())
-	}
+	return email, err
+}
 
-	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+func (p *AzureProvider) fillUser(*GenericClaims, *oauth2.Token) string {
+	return ""
+}
 
-	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
+func (p *AzureProvider) getAuthFlowConfig() (c *oauth2.Config) {
 
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
-	}
-
-	// blindly try json and x-www-form-urlencoded
-	var jsonResponse struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		ExpiresOn    int64  `json:"expires_on,string"`
-		IDToken      string `json:"id_token"`
-	}
-	err = json.Unmarshal(body, &jsonResponse)
-	if err != nil {
-		return
-	}
-
-	s = &sessions.SessionState{
-		AccessToken:  jsonResponse.AccessToken,
-		IDToken:      jsonResponse.IDToken,
-		CreatedAt:    time.Now(),
-		ExpiresOn:    time.Unix(jsonResponse.ExpiresOn, 0),
-		RefreshToken: jsonResponse.RefreshToken,
+	c = &oauth2.Config{
+		ClientID:     p.ClientID,
+		ClientSecret: p.ClientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL:  p.RedeemURL.String(),
+			AuthStyle: oauth2.AuthStyleInParams,
+		},
 	}
 	return
-
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
-func (p *AzureProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
-	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
-		return false, nil
-	}
-
-	origExpiration := s.ExpiresOn
-
-	err := p.redeemRefreshToken(s)
-
-	if err != nil {
-		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
-	}
-
-	fmt.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
-	return true, nil
+func (p *AzureProvider) getAuthFlowConfigWithRedirect(redirectURL string) (c *oauth2.Config) {
+	c = p.getAuthFlowConfig()
+	c.RedirectURL = redirectURL
+	return
 }
 
-func (p *AzureProvider) redeemRefreshToken(s *sessions.SessionState) (err error) {
-	params := url.Values{}
-	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", p.ClientSecret)
-	params.Add("refresh_token", s.RefreshToken)
-	params.Add("grant_type", "refresh_token")
-	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
-	}
-
-	var data struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		ExpiresOn    int64  `json:"expires_on,string"`
-		IDToken      string `json:"id_token"`
-	}
-
-	err = json.Unmarshal(body, &data)
-
-	if err != nil {
-		return
-	}
-
-	s.AccessToken = data.AccessToken
-	s.IDToken = data.IDToken
-	s.RefreshToken = data.RefreshToken
-	s.ExpiresOn = time.Unix(data.ExpiresOn, 0)
+func (p *AzureProvider) exchangeCodeForToken(ctx context.Context, authConfig *oauth2.Config, code string) (token *oauth2.Token, err error) {
+	token, err = authConfig.Exchange(ctx, code, oauth2.SetAuthURLParam("resource", "https://graph.windows.net"))
 	return
 }
 
 // ValidateSessionState validates the AccessToken
 func (p *AzureProvider) ValidateSessionState(s *sessions.SessionState) bool {
-	return validateToken(p, s.AccessToken, getAzureHeader(s.AccessToken))
+	return validateToken(p, s.AccessToken, getAuthHeader(s.AccessToken))
 }

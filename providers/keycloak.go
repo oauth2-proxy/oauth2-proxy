@@ -10,7 +10,7 @@ import (
 )
 
 type KeycloakProvider struct {
-	*ProviderData
+	DefaultProvider
 	Group string
 }
 
@@ -40,7 +40,7 @@ func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 	if p.Scope == "" {
 		p.Scope = "api"
 	}
-	return &KeycloakProvider{ProviderData: p}
+	return &KeycloakProvider{DefaultProvider: DefaultProvider{ProviderData: p}}
 }
 
 func (p *KeycloakProvider) SetGroup(group string) {

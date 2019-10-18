@@ -19,7 +19,7 @@ import (
 
 // LoginGovProvider represents an OIDC based Identity Provider
 type LoginGovProvider struct {
-	*ProviderData
+	DefaultProvider
 
 	// TODO (@timothy-spencer): Ideally, the nonce would be in the session state, but the session state
 	// is created only upon code redemption, not during the auth, when this must be supplied.
@@ -70,8 +70,8 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 	}
 
 	return &LoginGovProvider{
-		ProviderData: p,
-		Nonce:        randSeq(32),
+		DefaultProvider: DefaultProvider{ProviderData: p},
+		Nonce:           randSeq(32),
 	}
 }
 
