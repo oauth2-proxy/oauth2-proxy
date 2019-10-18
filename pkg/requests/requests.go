@@ -48,7 +48,7 @@ func RequestJSON(req *http.Request, v interface{}) error {
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if body != nil {
-		resp.Body.Close()
+		defer resp.Body.Close()
 	}
 
 	logger.Printf("%d %s %s %s", resp.StatusCode, req.Method, req.URL, body)
