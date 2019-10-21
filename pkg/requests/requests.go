@@ -3,11 +3,12 @@ package requests
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/bitly/go-simplejson"
 	"github.com/pkg/errors"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
-	"io/ioutil"
-	"net/http"
 )
 
 // Request parses the request body into a simplejson.Json object
@@ -48,7 +49,7 @@ func RequestJSON(req *http.Request, v interface{}) error {
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if body != nil {
-		resp.Body.Close()
+		defer resp.Body.Close()
 	}
 
 	logger.Printf("%d %s %s %s", resp.StatusCode, req.Method, req.URL, body)
