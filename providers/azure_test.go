@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 			ValidateURL:       &url.URL{},
 			ProtectedResource: &url.URL{},
 			Scope:             ""})
+
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
 		updateURL(p.Data().RedeemURL, hostname)
@@ -111,8 +113,11 @@ func testAzureBackend(payload string) *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != path || r.URL.RawQuery != query {
+			if (r.URL.Path != path || r.URL.RawQuery != query) && r.Method != "POST" {
 				w.WriteHeader(404)
+			} else if r.Method == "POST" && r.Body != nil {
+				w.WriteHeader(200)
+				w.Write([]byte(payload))
 			} else if r.Header.Get("Authorization") != "Bearer imaginary_access_token" {
 				w.WriteHeader(403)
 			} else {
@@ -198,4 +203,20 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
 	assert.Equal(t, "", email)
+}
+
+func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
+	b := testAzureBackend(`{ "id_token": "testtoken1234", "expires_on": "1136239445", "refresh_token": "refresh1234" }`)
+	defer b.Close()
+	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
+	assert.Equal(t, nil, err)
+
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+	p.Data().RedeemURL.Path = "/common/oauth2/token"
+	s, err := p.Redeem("https://localhost", "1234")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "testtoken1234", s.IDToken)
+	assert.Equal(t, timestamp, s.ExpiresOn.UTC())
+	assert.Equal(t, "refresh1234", s.RefreshToken)
 }
