@@ -54,7 +54,10 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *sessions.SessionStat
 	}
 
 	if p.ProfileURL.String() != "" {
-		p.getUserInfo(ctx, token, s)
+		err := p.getUserInfo(ctx, token, s)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get userinfo: %v", err)
+		}
 	}
 
 	return
@@ -98,6 +101,14 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 	newSession, err := p.createSessionState(ctx, token)
 	if err != nil {
 		return fmt.Errorf("unable to update session: %v", err)
+	}
+
+	if p.ProfileURL.String() != "" {
+		err := p.getUserInfo(ctx, token, newSession)
+		if err != nil {
+			return fmt.Errorf("unable to get userinfo during refresh: %v", err)
+		}
+		s.UserInfo = newSession.UserInfo
 	}
 
 	s.AccessToken = newSession.AccessToken
