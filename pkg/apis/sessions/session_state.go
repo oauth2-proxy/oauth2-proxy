@@ -14,6 +14,7 @@ import (
 type SessionState struct {
 	AccessToken  string    `json:",omitempty"`
 	IDToken      string    `json:",omitempty"`
+	UserInfo     string    `json:",omitempty"`
 	CreatedAt    time.Time `json:"-"`
 	ExpiresOn    time.Time `json:"-"`
 	RefreshToken string    `json:",omitempty"`
@@ -52,6 +53,9 @@ func (s *SessionState) String() string {
 	}
 	if s.IDToken != "" {
 		o += " id_token:true"
+	}
+	if s.UserInfo != "" {
+		o += " user_info:true"
 	}
 	if !s.CreatedAt.IsZero() {
 		o += fmt.Sprintf(" created:%s", s.CreatedAt)
@@ -95,6 +99,12 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 		}
 		if ss.IDToken != "" {
 			ss.IDToken, err = c.Encrypt(ss.IDToken)
+			if err != nil {
+				return "", err
+			}
+		}
+		if ss.UserInfo != "" {
+			ss.UserInfo, err = c.Encrypt(ss.UserInfo)
 			if err != nil {
 				return "", err
 			}
@@ -225,6 +235,12 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		}
 		if ss.IDToken != "" {
 			ss.IDToken, err = c.Decrypt(ss.IDToken)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if ss.UserInfo != "" {
+			ss.UserInfo, err = c.Decrypt(ss.UserInfo)
 			if err != nil {
 				return nil, err
 			}

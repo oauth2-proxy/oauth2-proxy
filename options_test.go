@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto"
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strings"
@@ -14,7 +15,7 @@ import (
 func testOptions() *Options {
 	o := NewOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
-	o.CookieSecret = "foobar"
+	o.CookieSecret = base64.StdEncoding.EncodeToString([]byte(`16b legit secret`))
 	o.ClientID = "bazquux"
 	o.ClientSecret = "xyzzyplugh"
 	o.EmailDomains = []string{"*"}

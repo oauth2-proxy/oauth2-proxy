@@ -964,7 +964,8 @@ type SignatureTest struct {
 
 func NewSignatureTest() *SignatureTest {
 	opts := NewOptions()
-	opts.CookieSecret = "cookie secret"
+	//opts.CookieSecret = "Y29va2llIHNlY3JldCBnZw=="  // "cookie secret gg"
+	opts.CookieSecret = base64.StdEncoding.EncodeToString([]byte(`cookie secret gg`))
 	opts.ClientID = "client ID"
 	opts.ClientSecret = "client secret"
 	opts.EmailDomains = []string{"acm.org"}

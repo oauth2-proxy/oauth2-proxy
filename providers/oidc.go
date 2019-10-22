@@ -47,6 +47,11 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *sessions.SessionStat
 	if err != nil {
 		return nil, fmt.Errorf("unable to update session: %v", err)
 	}
+
+	if p.ProfileURL.String() != "" {
+		p.getUserInfo(ctx, token, s)
+	}
+
 	return
 }
 
@@ -89,6 +94,7 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 	if err != nil {
 		return fmt.Errorf("unable to update session: %v", err)
 	}
+
 	s.AccessToken = newSession.AccessToken
 	s.IDToken = newSession.IDToken
 	s.RefreshToken = newSession.RefreshToken
@@ -96,6 +102,45 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 	s.ExpiresOn = newSession.ExpiresOn
 	s.Email = newSession.Email
 	return
+}
+
+func (p *OIDCProvider) getUserInfo(ctx context.Context, token *oauth2.Token, s *sessions.SessionState) error {
+	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
+	if err != nil {
+		return err
+	}
+	token.SetAuthHeader(req)
+	//req.Header = getOIDCHeader(token.AccessToken)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	claims := StandardClaims{}
+	err = json.Unmarshal(body, &claims)
+	if err != nil {
+		return err
+	}
+	s.UserInfo = string(body)
+
+	// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
+	// contents at the profileURL contains the email.
+	// Make a query to the userinfo endpoint, and attempt to locate the email from there.
+	if s.Email == "" {
+		if claims.Email != nil {
+			return fmt.Errorf("userinfo did not have email: %v", err)
+		}
+		s.Email = *claims.Email
+	}
+
+	if !p.AllowUnverifiedEmail && (claims.EmailVerified == nil || !*claims.EmailVerified) {
+		return fmt.Errorf("email in id_token (%s) isn't verified", *claims.Email)
+	}
+	return nil
 }
 
 func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
@@ -110,55 +155,25 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		return nil, fmt.Errorf("could not verify id_token: %v", err)
 	}
 
-	// Extract custom claims.
-	var claims struct {
-		Subject  string `json:"sub"`
-		Email    string `json:"email"`
-		Verified *bool  `json:"email_verified"`
-	}
+	// Extract standard claims.
+	claims := StandardClaims{}
 	if err := idToken.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
 	}
 
-	if claims.Email == "" {
-		if p.ProfileURL.String() == "" {
-			return nil, fmt.Errorf("id_token did not contain an email")
-		}
-
-		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
-		// contents at the profileURL contains the email.
-		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
-
-		req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header = getOIDCHeader(token.AccessToken)
-
-		respJSON, err := requests.Request(req)
-		if err != nil {
-			return nil, err
-		}
-
-		email, err := respJSON.Get("email").String()
-		if err != nil {
-			return nil, fmt.Errorf("Neither id_token nor userinfo endpoint contained an email")
-		}
-
-		claims.Email = email
+	// Technically, email is optional.
+	email := ""
+	if claims.Email != nil && *claims.Email != "" {
+		email = *claims.Email
 	}
-	if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-	}
-
 	return &sessions.SessionState{
 		AccessToken:  token.AccessToken,
 		IDToken:      rawIDToken,
 		RefreshToken: token.RefreshToken,
 		CreatedAt:    time.Now(),
 		ExpiresOn:    idToken.Expiry,
-		Email:        claims.Email,
-		User:         claims.Subject,
+		Email:        email,
+		User:         idToken.Subject,
 	}, nil
 }
 

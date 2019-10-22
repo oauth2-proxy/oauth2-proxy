@@ -316,7 +316,7 @@ func (o *Options) Validate() error {
 	msgs = parseProviderInfo(o, msgs)
 
 	var cipher *encryption.Cipher
-	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.CookieRefresh != time.Duration(0)) {
+	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || o.CookieSecret != "" || (o.CookieRefresh != time.Duration(0)) {
 		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
 			if len(secretBytes(o.CookieSecret)) == i {
