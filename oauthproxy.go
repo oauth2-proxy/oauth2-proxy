@@ -871,9 +871,8 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		req.SetBasicAuth(session.User, p.BasicAuthPassword)
 	}
 	headers, err := p.provider.HeadersToInject(session)
-
 	if err != nil {
-		log.Printf("Unable to inject headers: %v", err)
+		log.Printf("Unable to export identity headers: %v", err)
 	} else {
 		if p.PassUserHeaders {
 			_, exportEverything := p.exportClaims["*"]
@@ -888,6 +887,7 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 				}
 				req.Header.Del(headerName)
 				for i := range vv {
+					//log.Printf("%s[%d] = %s", headerName, i, vv[i])
 					req.Header.Add(headerName, vv[i])
 				}
 			}
@@ -905,6 +905,7 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 				}
 				rw.Header().Del(headerName)
 				for i := range vv {
+					//log.Printf("%s[%d] = %s", headerName, i, vv[i])
 					rw.Header().Add(headerName, vv[i])
 				}
 			}
@@ -923,9 +924,12 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 
 	if p.PassAuthorization || p.SetAuthorization {
 		if session.IDToken != "" {
-			req.Header["Authorization"] = []string{fmt.Sprintf("Bearer %s", session.IDToken)}
+			bearer := fmt.Sprintf("Bearer %s", session.IDToken)
+			req.Header.Set("Authorization", bearer)
+			rw.Header().Set("Authorization", bearer)
 		} else {
 			req.Header.Del("Authorization")
+			rw.Header().Del("Authorization")
 		}
 	}
 
