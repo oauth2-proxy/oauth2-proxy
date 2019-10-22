@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/pkg/errors"
+
 	"github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
@@ -26,7 +26,7 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 	logger.Printf("%d %s %s %s", resp.StatusCode, req.Method, req.URL, body)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "problem reading http request body")
+		return nil, fmt.Errorf("problem reading http request body: %w", err)
 	}
 
 	if resp.StatusCode != 200 {
@@ -35,7 +35,7 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 
 	data, err := simplejson.NewJson(body)
 	if err != nil {
-		return nil, errors.Wrap(err, "error unmarshalling json")
+		return nil, fmt.Errorf("error unmarshalling json: %w", err)
 	}
 	return data, nil
 }
@@ -54,7 +54,7 @@ func RequestJSON(req *http.Request, v interface{}) error {
 
 	logger.Printf("%d %s %s %s", resp.StatusCode, req.Method, req.URL, body)
 	if err != nil {
-		return errors.Wrap(err, "error reading body from http response")
+		return fmt.Errorf("error reading body from http response: %w", err)
 	}
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("got %d %s", resp.StatusCode, body)
@@ -66,7 +66,7 @@ func RequestJSON(req *http.Request, v interface{}) error {
 func RequestUnparsedResponse(url string, header http.Header) (resp *http.Response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "error performing get request")
+		return nil, fmt.Errorf("error performing get request")
 	}
 	req.Header = header
 

@@ -17,7 +17,6 @@ require (
 	github.com/mreiferson/go-options v0.0.0-20190302064952-20ba7d382d05
 	github.com/onsi/ginkgo v1.10.2
 	github.com/onsi/gomega v1.7.0
-	github.com/pkg/errors v0.8.1
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/yhat/wsutil v0.0.0-20170731153501-1d66fa95c997
