@@ -467,7 +467,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		ProxyPrefix:   p.ProxyPrefix,
 		Footer:        template.HTML(p.Footer),
 	}
-	if (p.providerNameOverride != "") {
+	if p.providerNameOverride != "" {
 		t.ProviderName = p.providerNameOverride
 	}
 	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
