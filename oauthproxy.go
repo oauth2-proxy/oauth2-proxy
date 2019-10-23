@@ -494,6 +494,43 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	return
 }
 
+// splitHostPort separates host and port. If the port is not valid, it returns
+// the entire input as host, and it doesn't check the validity of the host.
+// Unlike net.SplitHostPort, but per RFC 3986, it requires ports to be numeric.
+// *** taken from net/url, modified validOptionalPort() to accept ":*"
+func splitHostPort(hostport string) (host, port string) {
+	host = hostport
+
+	colon := strings.LastIndexByte(host, ':')
+	if colon != -1 && validOptionalPort(host[colon:]) {
+		host, port = host[:colon], host[colon+1:]
+	}
+
+	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		host = host[1 : len(host)-1]
+	}
+
+	return
+}
+
+// validOptionalPort reports whether port is either an empty string
+// or matches /^:\d*$/
+// *** taken from net/url, modified to accept ":*"
+func validOptionalPort(port string) bool {
+	if port == "" || port == ":*" {
+		return true
+	}
+	if port[0] != ':' {
+		return false
+	}
+	for _, b := range port[1:] {
+		if b < '0' || b > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 // IsValidRedirect checks whether the redirect URL is whitelisted
 func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	switch {
@@ -507,19 +544,20 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 		redirectHostname := redirectURL.Hostname()
 
 		for _, domain := range p.whitelistDomains {
-			domainURL := url.URL{
-				Host: strings.TrimLeft(domain, "."),
-			}
-			domainHostname := domainURL.Hostname()
-			if domainHostname == "" {
+			domainHostname, domainPort := splitHostPort(strings.TrimLeft(domain, "."))
+			if err != nil || domainHostname == "" {
 				continue
 			}
 
 			if (redirectHostname == domainHostname) || (strings.HasPrefix(domain, ".") && strings.HasSuffix(redirectHostname, domainHostname)) {
-				// if the domain has a port, only allow that port
-				// otherwise allow any port
-				domainPort := domainURL.Port()
-				if (domainPort == "") || (domainPort == redirectURL.Port()) {
+				// the domain names match, now validate the ports
+				// if the whitelisted domain's port is '*', allow all ports
+				// if the whitelisted domain contains a specific port, only allow that port
+				// if the whitelisted domain doesn't contain a port at all, only allow empty redirect ports ie http and https
+				redirectPort := redirectURL.Port()
+				if (domainPort == "*") ||
+					(domainPort == redirectPort) ||
+					(domainPort == "" && redirectPort == "") {
 					return true
 				}
 			}
