@@ -7,8 +7,8 @@
 - [#273](https://github.com/pusher/oauth2_proxy/pull/273) Support Go 1.13 (@dio)
 - [#275](https://github.com/pusher/oauth2_proxy/pull/275) docker: build from debian buster (@syscll)
 - [#258](https://github.com/pusher/oauth2_proxy/pull/258) Add IDToken for Azure provider
-- [#286](https://github.com/pusher/oauth2_proxy/pull/286) Requests.go updated with useful error messages (@biotom)
   - This PR adds the IDToken into the session for the Azure provider allowing requests to a backend to be identified as a specific user. As a consequence, if you are using a cookie to store the session the cookie will now exceed the 4kb size limit and be split into multiple cookies. This can cause problems when using nginx as a proxy, resulting in no cookie being passed at all. Either increase the proxy_buffer_size in nginx or implement the redis session storage (see https://pusher.github.io/oauth2_proxy/configuration#redis-storage)
+- [#286](https://github.com/pusher/oauth2_proxy/pull/286) Requests.go updated with useful error messages (@biotom)
 
 # v4.0.0
 
