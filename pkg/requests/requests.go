@@ -66,7 +66,7 @@ func RequestJSON(req *http.Request, v interface{}) error {
 func RequestUnparsedResponse(url string, header http.Header) (resp *http.Response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error performing get request")
+		return nil, fmt.Errorf("error performing get request: %w", err)
 	}
 	req.Header = header
 
