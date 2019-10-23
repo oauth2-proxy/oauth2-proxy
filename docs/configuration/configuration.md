@@ -111,7 +111,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-version` | n/a | print version string | |
 | `-whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
 
-Note, when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL.
+Note: when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
 See below for provider specific options
 
