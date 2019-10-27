@@ -232,3 +232,4 @@ v2.2 as released by Bitly.
   - Repository forked on 27/11/18
     - README updated to include note that this repository is forked
     - CHANGLOG created to track changes to repository from original fork
+    - Added bash >= 4.0 dependency to configure script 
