@@ -1,7 +1,7 @@
 # Vx.x.x (Pre-release)
 
 ## Changes since v4.0.0
-
+- [#291][https://github.com/pusher/oauth2_proxy/pull/227] Added bash >= 4.0 dependency to configure script (@jmfrank63)
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
 - [#259](https://github.com/pusher/oauth2_proxy/pull/259) Redirect to HTTPS (@jmickey)
 - [#273](https://github.com/pusher/oauth2_proxy/pull/273) Support Go 1.13 (@dio)
@@ -232,4 +232,4 @@ v2.2 as released by Bitly.
   - Repository forked on 27/11/18
     - README updated to include note that this repository is forked
     - CHANGLOG created to track changes to repository from original fork
-    - Added bash >= 4.0 dependency to configure script 
+    
