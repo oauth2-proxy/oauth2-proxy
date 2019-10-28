@@ -61,29 +61,4 @@ test: lint
 
 .PHONY: release
 release: lint test
-	mkdir release
-	mkdir release/$(BINARY)-$(VERSION).darwin-amd64.$(GO_VERSION)
-	mkdir release/$(BINARY)-$(VERSION).linux-amd64.$(GO_VERSION)
-	mkdir release/$(BINARY)-$(VERSION).linux-arm64.$(GO_VERSION)
-	mkdir release/$(BINARY)-$(VERSION).linux-armv6.$(GO_VERSION)
-	mkdir release/$(BINARY)-$(VERSION).windows-amd64.$(GO_VERSION)
-	GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
-		-o release/$(BINARY)-$(VERSION).darwin-amd64.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
-		-o release/$(BINARY)-$(VERSION).linux-amd64.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	GO111MODULE=on GOOS=linux GOARCH=arm64 go build -ldflags="-X main.VERSION=${VERSION}" \
-		-o release/$(BINARY)-$(VERSION).linux-arm64.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	GO111MODULE=on GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-X main.VERSION=${VERSION}" \
-		-o release/$(BINARY)-$(VERSION).linux-armv6.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	GO111MODULE=on GOOS=windows GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
-		-o release/$(BINARY)-$(VERSION).windows-amd64.$(GO_VERSION)/$(BINARY) github.com/pusher/oauth2_proxy
-	shasum -a 256 release/$(BINARY)-$(VERSION).darwin-amd64.$(GO_VERSION)/$(BINARY) > release/$(BINARY)-$(VERSION).darwin-amd64-sha256sum.txt
-	shasum -a 256 release/$(BINARY)-$(VERSION).linux-amd64.$(GO_VERSION)/$(BINARY) > release/$(BINARY)-$(VERSION).linux-amd64-sha256sum.txt
-	shasum -a 256 release/$(BINARY)-$(VERSION).linux-arm64.$(GO_VERSION)/$(BINARY) > release/$(BINARY)-$(VERSION).linux-arm64-sha256sum.txt
-	shasum -a 256 release/$(BINARY)-$(VERSION).linux-armv6.$(GO_VERSION)/$(BINARY) > release/$(BINARY)-$(VERSION).linux-armv6-sha256sum.txt
-	shasum -a 256 release/$(BINARY)-$(VERSION).windows-amd64.$(GO_VERSION)/$(BINARY) > release/$(BINARY)-$(VERSION).windows-amd64-sha256sum.txt
-	tar -C release -czvf release/$(BINARY)-$(VERSION).darwin-amd64.$(GO_VERSION).tar.gz $(BINARY)-$(VERSION).darwin-amd64.$(GO_VERSION)
-	tar -C release -czvf release/$(BINARY)-$(VERSION).linux-amd64.$(GO_VERSION).tar.gz $(BINARY)-$(VERSION).linux-amd64.$(GO_VERSION)
-	tar -C release -czvf release/$(BINARY)-$(VERSION).linux-arm64.$(GO_VERSION).tar.gz $(BINARY)-$(VERSION).linux-arm64.$(GO_VERSION)
-	tar -C release -czvf release/$(BINARY)-$(VERSION).linux-armv6.$(GO_VERSION).tar.gz $(BINARY)-$(VERSION).linux-armv6.$(GO_VERSION)
-	tar -C release -czvf release/$(BINARY)-$(VERSION).windows-amd64.$(GO_VERSION).tar.gz $(BINARY)-$(VERSION).windows-amd64.$(GO_VERSION)
+	BINARY=$(BINARY) VERSION=${VERSION} ./dist.sh
