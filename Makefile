@@ -61,4 +61,4 @@ test: lint
 
 .PHONY: release
 release: lint test
-	BINARY=$(BINARY) VERSION=${VERSION} ./dist.sh
+	BINARY=${BINARY} VERSION=${VERSION} ./dist.sh

@@ -16,31 +16,31 @@ fi
 
 ARCHS=(darwin-amd64 linux-amd64 linux-arm64 linux-armv6 windows-amd64)
 
-mkdir release
+mkdir -p release
 
 # Create architecture specific release dirs
 for ARCH in "${ARCHS[@]}"; do
-	mkdir release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}
-done
+	mkdir -p release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}
 
-# Create architecture specific binaries
-GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
-	-o release/${BINARY}-${VERSION}.darwin-amd64.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
-GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
-	-o release/${BINARY}-${VERSION}.linux-amd64.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
-GO111MODULE=on GOOS=linux GOARCH=arm64 go build -ldflags="-X main.VERSION=${VERSION}" \
-	-o release/${BINARY}-${VERSION}.linux-arm64.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
-GO111MODULE=on GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-X main.VERSION=${VERSION}" \
-	-o release/${BINARY}-${VERSION}.linux-armv6.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
-GO111MODULE=on GOOS=windows GOARCH=amd64 go build -ldflags="-X main.VERSION=${VERSION}" \
-	-o release/${BINARY}-${VERSION}.windows-amd64.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+    GO_OS=$(echo $ARCH | awk -F- '{print $1}')
+	GO_ARCH=$(echo $ARCH | awk -F- '{print $2}')
 
-cd release
+	# Create architecture specific binaries
+	if [[ ${GO_ARCH} == "armv6" ]]; then
+		GO111MODULE=on GOOS=${GO_OS} GOARCH=arm GOARM=6 go build -ldflags="-X main.VERSION=${VERSION}" \
+			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+	else
+		GO111MODULE=on GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -ldflags="-X main.VERSION=${VERSION}" \
+			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+	fi
 
-for ARCH in ${ARCHS[@]}; do
+	cd release
+
 	# Create sha256sum for architecture specific binary
 	shasum -a 256 ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} > ${BINARY}-${VERSION}.${ARCH}-sha256sum.txt
 
 	# Create tar file for architecture specific binary
 	tar -czvf ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}.tar.gz ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}
+
+	cd ..
 done
