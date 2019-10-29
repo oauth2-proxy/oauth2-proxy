@@ -22,7 +22,7 @@ mkdir -p release
 for ARCH in "${ARCHS[@]}"; do
 	mkdir -p release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}
 
-    GO_OS=$(echo $ARCH | awk -F- '{print $1}')
+	GO_OS=$(echo $ARCH | awk -F- '{print $1}')
 	GO_ARCH=$(echo $ARCH | awk -F- '{print $2}')
 
 	# Create architecture specific binaries
