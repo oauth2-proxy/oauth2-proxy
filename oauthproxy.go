@@ -592,7 +592,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 
 //UserInfo endpoint outputs session email in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("Content-Type", "application/json")
+
 	var userInfo struct {
 		Email string `json:"email"`
 	}
@@ -603,9 +603,9 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	userInfo.Email = session.Email
-	userJSON, _ := json.Marshal(userInfo)
-
-	rw.Write(userJSON)
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(userInfo)
 }
 
 // SignOut sends a response to clear the authentication cookie
