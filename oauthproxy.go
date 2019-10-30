@@ -593,10 +593,6 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 //UserInfo endpoint outputs session email in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
-	var userInfo struct {
-		Email string `json:"email"`
-	}
-
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
