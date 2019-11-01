@@ -11,6 +11,7 @@
 - [#286](https://github.com/pusher/oauth2_proxy/pull/286) Requests.go updated with useful error messages (@biotom)
 - [#302](https://github.com/pusher/oauth2_proxy/pull/302) Rewrite dist script (@syscll)
 - [#304](https://github.com/pusher/oauth2_proxy/pull/304) Add new Logo! :tada: (@JoelSpeed)
+- [#300](https://github.com/pusher/oauth2_proxy/pull/300) Added userinfo endpoint (@kbabuadze)
 
 # v4.0.0
 
