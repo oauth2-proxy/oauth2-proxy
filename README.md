@@ -1,4 +1,9 @@
-# oauth2_proxy
+![OAuth2 Proxy](/docs/logos/OAuth2_Proxy_horizontal.svg)
+
+[![Build Status](https://secure.travis-ci.org/pusher/oauth2_proxy.svg?branch=master)](http://travis-ci.org/pusher/oauth2_proxy)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pusher/oauth2_proxy)](https://goreportcard.com/report/github.com/pusher/oauth2_proxy)
+[![GoDoc](https://godoc.org/github.com/pusher/oauth2_proxy?status.svg)](https://godoc.org/github.com/pusher/oauth2_proxy)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
 to validate accounts by email, domain or group.
@@ -6,8 +11,6 @@ to validate accounts by email, domain or group.
 **Note:** This repository was forked from [bitly/OAuth2_Proxy](https://github.com/bitly/oauth2_proxy) on 27/11/2018.
 Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork.
 A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
-
-[![Build Status](https://secure.travis-ci.org/pusher/oauth2_proxy.svg?branch=master)](http://travis-ci.org/pusher/oauth2_proxy)
 
 ![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
 
