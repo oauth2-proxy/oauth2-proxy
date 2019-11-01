@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Configuration
-permalink: /docs/configuration
+permalink: /configuration
 has_children: true
 nav_order: 3
 ---
@@ -44,6 +44,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-extra-jwt-issuers` | string | if `-skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
 | `-exclude-logging-paths` | string | comma separated list of paths to exclude from logging, eg: `"/ping,/path2"` |`""` (no paths excluded) |
 | `-flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
+| `-force-https` | bool | enforce https redirect | `false` |
 | `-banner` | string | custom banner string. Use `"-"` to disable default banner. | |
 | `-footer` | string | custom footer string. Use `"-"` to disable default footer. | |
 | `-gcp-healthchecks` | bool | will enable `/liveness_check`, `/readiness_check`, and `/` (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses | false |
@@ -116,7 +117,7 @@ See below for provider specific options
 
 ### Upstreams Configuration
 
-`oauth2_proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers or serve static files from the file system. HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter, that will forward all authenticated requests to be forwarded to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+`oauth2_proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers or serve static files from the file system. HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter, this will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
 
 Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2_proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at. `file:///var/www/static/#/static/` will ie. make `/var/www/static/` available at `http://[oauth2_proxy url]/static/`.
 
@@ -249,6 +250,8 @@ server {
     proxy_set_header X-Real-IP               $remote_addr;
     proxy_set_header X-Scheme                $scheme;
     proxy_set_header X-Auth-Request-Redirect $request_uri;
+    # or, if you are handling multiple domains:
+    # proxy_set_header X-Auth-Request-Redirect $scheme://$host$request_uri;
   }
   location = /oauth2/auth {
     proxy_pass       http://127.0.0.1:4180;
@@ -308,7 +311,7 @@ If you use ingress-nginx in Kubernetes (which includes the Lua module), you also
 
 ```yaml
 nginx.ingress.kubernetes.io/auth-response-headers: Authorization
-nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=$request_uri
+nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=$escaped_request_uri
 nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
 nginx.ingress.kubernetes.io/configuration-snippet: |
   auth_request_set $name_upstream_1 $upstream_cookie_name_1;

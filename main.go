@@ -32,6 +32,7 @@ func main() {
 
 	flagSet.String("http-address", "127.0.0.1:4180", "[http://]<addr>:<port> or unix://<path> to listen on for HTTP clients")
 	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
+	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
@@ -55,6 +56,7 @@ func main() {
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.Var(&whitelistDomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
+	flagSet.String("keycloak-group", "", "restrict login to members of this group.")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
@@ -184,9 +186,9 @@ func main() {
 
 	var handler http.Handler
 	if opts.GCPHealthChecks {
-		handler = gcpHealthcheck(LoggingHandler(oauthproxy))
+		handler = redirectToHTTPS(opts, gcpHealthcheck(LoggingHandler(oauthproxy)))
 	} else {
-		handler = LoggingHandler(oauthproxy)
+		handler = redirectToHTTPS(opts, LoggingHandler(oauthproxy))
 	}
 	s := &Server{
 		Handler: handler,
