@@ -4,10 +4,13 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -62,6 +65,28 @@ func newRedisClient(opts options.RedisStoreOptions) (*redis.Client, error) {
 	opt, err := redis.ParseURL(opts.RedisConnectionURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse redis url: %s", err)
+	}
+
+	if opts.RedisInsecureTLS != false {
+		opt.TLSConfig.InsecureSkipVerify = true
+	}
+
+	if opts.RedisCAPath != "" {
+		rootCAs, _ := x509.SystemCertPool()
+		if rootCAs == nil {
+			rootCAs = x509.NewCertPool()
+		}
+		certs, err := ioutil.ReadFile(opts.RedisCAPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load %q, %v", opts.RedisCAPath, err)
+		}
+
+		// Append our cert to the system pool
+		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
+			logger.Printf("no certs appended, using system certs only")
+		}
+
+		opt.TLSConfig.RootCAs = rootCAs
 	}
 
 	client := redis.NewClient(opt)

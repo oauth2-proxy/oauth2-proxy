@@ -27,4 +27,6 @@ type RedisStoreOptions struct {
 	UseSentinel            bool     `flag:"redis-use-sentinel" cfg:"redis_use_sentinel" env:"OAUTH2_PROXY_REDIS_USE_SENTINEL"`
 	SentinelMasterName     string   `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name" env:"OAUTH2_PROXY_REDIS_SENTINEL_MASTER_NAME"`
 	SentinelConnectionURLs []string `flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls" env:"OAUTH2_PROXY_REDIS_SENTINEL_CONNECTION_URLS"`
+	RedisCAPath            string   `flag:"redis-ca-path" cfg:"redis_ca_path" env:"OAUTH2_PROXY_REDIS_CA_PATH"`
+	RedisInsecureTLS       bool     `flag:"redis-insecure-tls" cfg:"redis_insecure_tls" env:"OAUTH2_PROXY_REDIS_INSECURE_TLS"`
 }

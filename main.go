@@ -91,6 +91,8 @@ func main() {
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
 	flagSet.Bool("redis-use-sentinel", false, "Connect to redis via sentinels. Must set --redis-sentinel-master-name and --redis-sentinel-connection-urls to use this feature")
 	flagSet.String("redis-sentinel-master-name", "", "Redis sentinel master name. Used in conjunction with --redis-use-sentinel")
+	flagSet.String("redis-ca-path", "", "Redis custom CA path")
+	flagSet.Bool("redis-insecure-tls", false, "Use insecure TLS connection to redis")
 	flagSet.Var(&redisSentinelConnectionURLs, "redis-sentinel-connection-urls", "List of Redis sentinel connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-sentinel")
 
 	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
