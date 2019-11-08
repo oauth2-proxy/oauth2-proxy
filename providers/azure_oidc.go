@@ -2,7 +2,12 @@ package providers
 
 import (
 	"context"
+	"fmt"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
+	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
@@ -17,7 +22,8 @@ type AzureOIDCProvider struct {
 
 type AzureOIDCClaims struct {
 	*OIDCClaims
-	Groups []string
+	Groups            []string `json:"groups"`
+	PreferredUsername string   `json:"preferred_username"`
 }
 
 // NewAzureOIDCProvider initiates a new AzureOIDCProvider
@@ -57,8 +63,27 @@ func (p *AzureOIDCProvider) GetLoginURL(redirectURI, state string) string {
 	return a.String()
 }
 
+// Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *AzureOIDCProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
-	return p.OIDCProvider.Redeem(redirectURL, code)
+	ctx := context.Background()
+	c := oauth2.Config{
+		ClientID:     p.ClientID,
+		ClientSecret: p.ClientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL: p.RedeemURL.String(),
+		},
+		RedirectURL: redirectURL,
+		Scopes:      strings.Split(p.Scope, " "),
+	}
+	token, err := c.Exchange(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("token exchange: %v", err)
+	}
+	s, err = p.createSessionState(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("unable to update session: %v", err)
+	}
+	return
 }
 
 func (p *AzureOIDCProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
@@ -70,9 +95,65 @@ func (p *AzureOIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err er
 }
 
 func (p *AzureOIDCProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
-	return p.OIDCProvider.createSessionState(ctx, token)
-}
+	rawIDToken, ok := token.Extra("id_token").(string)
+	if !ok {
+		return nil, fmt.Errorf("token response did not contain an id_token")
+	}
 
+	// Parse and verify ID Token payload.
+	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify id_token: %v", err)
+	}
+
+	// Extract custom claims.
+	var claims AzureOIDCClaims
+
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+	}
+
+	if claims.Email == "" {
+		if p.ProfileURL.String() == "" {
+			return nil, fmt.Errorf("id_token did not contain an email")
+		}
+
+		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
+		// contents at the profileURL contains the email.
+		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
+
+		req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header = getOIDCHeader(token.AccessToken)
+
+		respJSON, err := requests.Request(req)
+		if err != nil {
+			return nil, err
+		}
+
+		email, err := respJSON.Get("email").String()
+		if err != nil {
+			return nil, fmt.Errorf("Neither id_token nor userinfo endpoint contained an email")
+		}
+
+		claims.Email = email
+	}
+	if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
+		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	}
+
+	return &sessions.SessionState{
+		AccessToken:  token.AccessToken,
+		IDToken:      rawIDToken,
+		RefreshToken: token.RefreshToken,
+		CreatedAt:    time.Now(),
+		ExpiresOn:    idToken.Expiry,
+		Email:        claims.Email,
+		User:         claims.PreferredUsername,
+	}, nil
+}
 func (p *AzureOIDCProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	return p.OIDCProvider.ValidateSessionState(s)
 }

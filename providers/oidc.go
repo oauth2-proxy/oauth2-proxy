@@ -218,6 +218,5 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 
 		claims.Email = email
 	}
-
 	return claims, nil
 }
