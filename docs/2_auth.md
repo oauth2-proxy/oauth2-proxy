@@ -13,6 +13,7 @@ Valid providers are :
 
 - [Google](#google-auth-provider) _default_
 - [Azure](#azure-auth-provider)
+- [AzureOidc](#azure-oidc-auth-provider)
 - [Facebook](#facebook-auth-provider)
 - [GitHub](#github-auth-provider)
 - [Keycloak](#keycloak-auth-provider)
@@ -84,6 +85,11 @@ Note: The user is checked against the group members list on initial authenticati
 ```
 
 Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](configuration#redis-storage) should resolve this.
+
+### Azure OIDC Auth Provider
+
+This is basically same as OIDC provider, but includes group support for restricting access to upstream services.
+To use this successfully please use v2 api enadpoint (https://login.microsoftonline.com/{tenant_id}/v2.0).
 
 ### Facebook Auth Provider
 
