@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -20,6 +19,7 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
 // TicketData is a structure representing the ticket used in server session storage
