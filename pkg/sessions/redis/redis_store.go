@@ -72,7 +72,10 @@ func newRedisClient(opts options.RedisStoreOptions) (*redis.Client, error) {
 	}
 
 	if opts.RedisCAPath != "" {
-		rootCAs, _ := x509.SystemCertPool()
+		rootCAs, err := x509.SystemCertPool()
+		if err != nil {
+			logger.Printf("failed to load system cert pool for redis connection, falling back to empty cert pool")
+		}
 		if rootCAs == nil {
 			rootCAs = x509.NewCertPool()
 		}
