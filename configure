@@ -5,6 +5,10 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+if [ -z "${BASH_VERSINFO}" ] || [ -z "${BASH_VERSINFO[0]}" ] || [ ${BASH_VERSINFO[0]} -lt 4 ]; then 
+  echo "This script requires Bash version >= 4"; exit 1; 
+fi
+
 declare -A tools=()
 declare -A desired=()
 

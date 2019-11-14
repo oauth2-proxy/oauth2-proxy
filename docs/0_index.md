@@ -5,7 +5,7 @@ permalink: /
 nav_order: 0
 ---
 
-# oauth2_proxy
+![OAuth2 Proxy](/logos/OAuth2_Proxy_horizontal.svg)
 
 A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
 to validate accounts by email, domain or group.
