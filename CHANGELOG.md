@@ -9,10 +9,12 @@
 - [#258](https://github.com/pusher/oauth2_proxy/pull/258) Add IDToken for Azure provider
   - This PR adds the IDToken into the session for the Azure provider allowing requests to a backend to be identified as a specific user. As a consequence, if you are using a cookie to store the session the cookie will now exceed the 4kb size limit and be split into multiple cookies. This can cause problems when using nginx as a proxy, resulting in no cookie being passed at all. Either increase the proxy_buffer_size in nginx or implement the redis session storage (see https://pusher.github.io/oauth2_proxy/configuration#redis-storage)
 - [#286](https://github.com/pusher/oauth2_proxy/pull/286) Requests.go updated with useful error messages (@biotom)
+- [#274](https://github.com/pusher/oauth2_proxy/pull/274) Supports many github teams with api pagination support (@toshi-miura, @apratina)
 - [#302](https://github.com/pusher/oauth2_proxy/pull/302) Rewrite dist script (@syscll)
 - [#304](https://github.com/pusher/oauth2_proxy/pull/304) Add new Logo! :tada: (@JoelSpeed)
 - [#300](https://github.com/pusher/oauth2_proxy/pull/300) Added userinfo endpoint (@kbabuadze)
 - [#309](https://github.com/pusher/oauth2_proxy/pull/309) Added support for custom CA when connecting to Redis cache
+
 # v4.0.0
 
 - [#248](https://github.com/pusher/oauth2_proxy/pull/248) Fix issue with X-Auth-Request-Redirect header being ignored
