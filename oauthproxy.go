@@ -545,7 +545,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 
 		for _, domain := range p.whitelistDomains {
 			domainHostname, domainPort := splitHostPort(strings.TrimLeft(domain, "."))
-			if err != nil || domainHostname == "" {
+			if domainHostname == "" {
 				continue
 			}
 
