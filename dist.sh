@@ -1,45 +1,46 @@
-#!/bin/bash
-# build binary distributions for linux/amd64 and darwin/amd64
-set -e
+#!/usr/bin/env bash
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo "working dir $DIR"
-mkdir -p $DIR/dist
-dep ensure || exit 1
+set -o errexit
 
-os=$(go env GOOS)
-arch=$(go env GOARCH)
-version=$(cat $DIR/version.go | grep "const VERSION" | awk '{print $NF}' | sed 's/"//g')
-goversion=$(go version | awk '{print $3}')
-sha256sum=()
-
-echo "... running tests"
-./test.sh
-
-for os in windows linux darwin; do
-    echo "... building v$version for $os/$arch"
-    EXT=
-    if [ $os = windows ]; then
-        EXT=".exe"
-    fi
-    BUILD=$(mktemp -d ${TMPDIR:-/tmp}/oauth2_proxy.XXXXXX)
-    TARGET="oauth2_proxy-$version.$os-$arch.$goversion"
-    FILENAME="oauth2_proxy-$version.$os-$arch$EXT"
-    GOOS=$os GOARCH=$arch CGO_ENABLED=0 \
-        go build -ldflags="-s -w" -o $BUILD/$TARGET/$FILENAME || exit 1
-    pushd $BUILD/$TARGET
-    sha256sum+=("$(shasum -a 256 $FILENAME || exit 1)")
-    cd .. && tar czvf $TARGET.tar.gz $TARGET
-    mv $TARGET.tar.gz $DIR/dist
-    popd
-done
-
-checksum_file="sha256sum.txt"
-cd $DIR/dist
-if [ -f $checksum_file ]; then
-    rm $checksum_file
+if [[ -z ${BINARY} ]] || [[ -z ${VERSION} ]]; then
+	echo "Missing required env var: BINARY=X VERSION=X $(basename $0)"
+	exit 1
 fi
-touch $checksum_file
-for checksum in "${sha256sum[@]}"; do
-    echo "$checksum" >> $checksum_file
+
+# Check for Go version 1.13.*
+GO_VERSION=$(go version | awk '{print $3}')
+if [[ ! "${GO_VERSION}" =~ ^go1.13.* ]]; then
+	echo "Go version must be >= go1.13"
+	exit 1
+fi
+
+ARCHS=(darwin-amd64 linux-amd64 linux-arm64 linux-armv6 windows-amd64)
+
+mkdir -p release
+
+# Create architecture specific release dirs
+for ARCH in "${ARCHS[@]}"; do
+	mkdir -p release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}
+
+	GO_OS=$(echo $ARCH | awk -F- '{print $1}')
+	GO_ARCH=$(echo $ARCH | awk -F- '{print $2}')
+
+	# Create architecture specific binaries
+	if [[ ${GO_ARCH} == "armv6" ]]; then
+		GO111MODULE=on GOOS=${GO_OS} GOARCH=arm GOARM=6 go build -ldflags="-X main.VERSION=${VERSION}" \
+			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+	else
+		GO111MODULE=on GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -ldflags="-X main.VERSION=${VERSION}" \
+			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+	fi
+
+	cd release
+
+	# Create sha256sum for architecture specific binary
+	shasum -a 256 ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} > ${BINARY}-${VERSION}.${ARCH}-sha256sum.txt
+
+	# Create tar file for architecture specific binary
+	tar -czvf ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}.tar.gz ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}
+
+	cd ..
 done

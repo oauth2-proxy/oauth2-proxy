@@ -1,4 +1,4 @@
-# oauth2_proxy
+![OAuth2 Proxy](/docs/logos/OAuth2_Proxy_horizontal.svg)
 
 [![Build Status](https://secure.travis-ci.org/pusher/oauth2_proxy.svg?branch=master)](http://travis-ci.org/pusher/oauth2_proxy)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pusher/oauth2_proxy)](https://goreportcard.com/report/github.com/pusher/oauth2_proxy)
