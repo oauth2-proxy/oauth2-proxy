@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,6 +27,11 @@ import (
 type TicketData struct {
 	TicketID string
 	Secret   []byte
+}
+
+type CookieRefreshToken struct {
+	Ticket       string `json:"Ticket"`
+	RefreshToken string `json:"RefreshToken"`
 }
 
 // SessionStore is an implementation of the sessions.SessionStore
@@ -121,17 +127,32 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 	if err != nil {
 		return err
 	}
-	ticketString, err := store.storeValue(value, store.CookieOptions.CookieExpire, requestCookie)
+
+	// Needless to keep session info in redis more than for refresh time, because refresh token will be stored in cookie
+	ttl := store.CookieOptions.CookieExpire
+	if store.CookieOptions.CookieOnlyRefreshToken {
+		ttl = store.CookieOptions.CookieRefresh
+	}
+
+	ticketString, err := store.storeValue(value, ttl, requestCookie)
 	if err != nil {
 		return err
 	}
 
-	ticketCookie := store.makeCookie(
-		req,
-		ticketString,
-		store.CookieOptions.CookieExpire,
-		s.CreatedAt,
-	)
+	if store.CookieOptions.CookieOnlyRefreshToken {
+		encryptedToken, encodingErr := store.CookieCipher.Encrypt(s.RefreshToken)
+		if encodingErr != nil {
+			return err
+		}
+
+		cookieWithRefreshToken, encodingErr := json.Marshal(CookieRefreshToken{Ticket: ticketString, RefreshToken: encryptedToken})
+		if encodingErr != nil {
+			return err
+		}
+		ticketString = string(cookieWithRefreshToken)
+	}
+
+	ticketCookie := store.makeCookie(req, ticketString, store.CookieOptions.CookieExpire, s.CreatedAt)
 
 	http.SetCookie(rw, ticketCookie)
 	return nil
@@ -147,12 +168,38 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 
 	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
 	if !ok {
-		return nil, fmt.Errorf("Cookie Signature not valid")
+		return nil, fmt.Errorf("cookie signature not valid")
 	}
+
+	if store.CookieOptions.CookieOnlyRefreshToken {
+		return store.loadSessionWithRefreshToken(val)
+	}
+
 	session, err := store.loadSessionFromString(val)
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
+	return session, nil
+}
+
+func (store *SessionStore) loadSessionWithRefreshToken(value string) (*sessions.SessionState, error) {
+	cookie, err := store.unmarshalCookieWithRefreshToken(value)
+	if err != nil {
+		return nil, err
+	}
+
+	decryptedRefreshToken, err := store.CookieCipher.Decrypt(cookie.RefreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := store.loadSessionFromString(cookie.Ticket)
+	if err != nil {
+		// If something wrong with session in redis, we should renew it
+		return &sessions.SessionState{RefreshToken: decryptedRefreshToken}, nil
+	}
+
+	session.RefreshToken = decryptedRefreshToken
 	return session, nil
 }
 
@@ -207,9 +254,16 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 
 	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
 	if !ok {
-		return fmt.Errorf("Cookie Signature not valid")
+		return fmt.Errorf("cookie signature not valid")
 	}
 
+	if store.CookieOptions.CookieOnlyRefreshToken {
+		data, err := store.unmarshalCookieWithRefreshToken(val)
+		if err != nil {
+			return err
+		}
+		val = data.Ticket
+	}
 	// We only return an error if we had an issue with redis
 	// If there's an issue decoding the ticket, ignore it
 	ticket, _ := decodeTicket(store.CookieOptions.CookieName, val)
@@ -275,6 +329,14 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
 		return newTicket()
 	}
 
+	if store.CookieOptions.CookieOnlyRefreshToken {
+		data, err := store.unmarshalCookieWithRefreshToken(val)
+		if err != nil {
+			return newTicket()
+		}
+		val = data.Ticket
+	}
+
 	// Valid cookie, decode the ticket
 	ticket, err := decodeTicket(store.CookieOptions.CookieName, val)
 	if err != nil {
@@ -282,6 +344,15 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
 		return newTicket()
 	}
 	return ticket, nil
+}
+
+func (store *SessionStore) unmarshalCookieWithRefreshToken(value string) (CookieRefreshToken, error) {
+	var cookie CookieRefreshToken
+	err := json.Unmarshal([]byte(value), &cookie)
+	if err != nil {
+		return cookie, fmt.Errorf("error while loading cookie with refresh token: %v", err)
+	}
+	return cookie, nil
 }
 
 func newTicket() (*TicketData, error) {

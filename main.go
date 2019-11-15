@@ -91,6 +91,7 @@ func main() {
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 	flagSet.String("cookie-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
+	flagSet.Bool("cookie-refresh-token-only", false, "store refresh token in cookie (worked with redis storage)")
 
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
