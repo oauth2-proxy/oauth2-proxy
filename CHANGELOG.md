@@ -15,6 +15,7 @@
 - [#300](https://github.com/pusher/oauth2_proxy/pull/300) Added userinfo endpoint (@kbabuadze)
 - [#309](https://github.com/pusher/oauth2_proxy/pull/309) Added support for custom CA when connecting to Redis cache (@lleszczu)
 - [#248](https://github.com/pusher/oauth2_proxy/pull/248) Fix issue with X-Auth-Request-Redirect header being ignored (@webnard)
+- [#314](https://github.com/pusher/oauth2_proxy/pull/314) Add redirect capability to sign_out (@costelmoraru)
 
 # v4.0.0
 
