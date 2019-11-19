@@ -775,6 +775,32 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 	}
 }
 
+func NewUserInfoEndpointTest() *ProcessCookieTest {
+	pcTest := NewProcessCookieTestWithDefaults()
+	pcTest.req, _ = http.NewRequest("GET",
+		pcTest.opts.ProxyPrefix+"/userinfo", nil)
+	return pcTest
+}
+
+func TestUserInfoEndpointAccepted(t *testing.T) {
+	test := NewUserInfoEndpointTest()
+	startSession := &sessions.SessionState{
+		Email: "john.doe@example.com", AccessToken: "my_access_token"}
+	test.SaveSession(startSession)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusOK, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "{\"email\":\"john.doe@example.com\"}\n", string(bodyBytes))
+}
+
+func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
+	test := NewUserInfoEndpointTest()
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+}
+
 func NewAuthOnlyEndpointTest(modifiers ...OptionsModifier) *ProcessCookieTest {
 	pcTest := NewProcessCookieTestWithOptionsModifiers(modifiers...)
 	pcTest.req, _ = http.NewRequest("GET",

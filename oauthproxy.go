@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	b64 "encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -76,6 +77,7 @@ type OAuthProxy struct {
 	OAuthStartPath    string
 	OAuthCallbackPath string
 	AuthOnlyPath      string
+	UserInfoPath      string
 
 	redirectURL         *url.URL // the url to receive requests at
 	whitelistDomains    []string
@@ -278,6 +280,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
 		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
+		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
 		ProxyPrefix:         opts.ProxyPrefix,
 		provider:            opts.provider,
@@ -569,6 +572,8 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.OAuthCallback(rw, req)
 	case path == p.AuthOnlyPath:
 		p.AuthenticateOnly(rw, req)
+	case path == p.UserInfoPath:
+		p.UserInfo(rw, req)
 	default:
 		p.Proxy(rw, req)
 	}
@@ -595,6 +600,22 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 			p.SignInPage(rw, req, http.StatusOK)
 		}
 	}
+}
+
+//UserInfo endpoint outputs session email in JSON format
+func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
+
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+	userInfo := struct {
+		Email string `json:"email"`
+	}{session.Email}
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(userInfo)
 }
 
 // SignOut sends a response to clear the authentication cookie
