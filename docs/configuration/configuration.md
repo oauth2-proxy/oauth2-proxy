@@ -21,7 +21,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | Option | Type | Description | Default |
 | ------ | ---- | ----------- | ------- |
 | `-acr-values` | string | optional, used by login.gov | `"http://idmanagement.gov/ns/assurance/loa/1"` |
-| `-approval-prompt` | string | OAuth approval_prompt | `"force"` |
+| `-approval-prompt` | string | OAuth approval_prompt, if empty the header will not be sent | `"force"` |
 | `-auth-logging` | bool | Log authentication attempts | true |
 | `-auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `-authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
