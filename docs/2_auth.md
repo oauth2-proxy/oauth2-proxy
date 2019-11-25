@@ -156,6 +156,7 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
 3.  Login with the fixture use in the dex guide and run the oauth2_proxy with the following args:
 
     -provider oidc
+    -provider-display-name "My OIDC Provider"
     -client-id oauth2_proxy
     -client-secret proxy
     -redirect-url http://127.0.0.1:4180/oauth2/callback
