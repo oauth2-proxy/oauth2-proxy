@@ -21,6 +21,7 @@
 ## Important Notes
 - (Security) Fix for [open redirect vulnerability](https://github.com/pusher/oauth2_proxy/security/advisories/GHSA-qqxw-m5fj-f7gv)..  a bad actor using `/\` in redirect URIs can redirect a session to another domain
 
+- [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp) 
 ## Breaking Changes
 
 - [#321](https://github.com/pusher/oauth2_proxy/pull/331) Add reverse proxy boolean flag to control whether headers like `X-Real-Ip` are accepted.
@@ -37,6 +38,7 @@
 - [#280](https://github.com/pusher/oauth2_proxy/pull/280) whitelisted redirect domains: add support for whitelisting specific ports or allowing wildcard ports (@kamaln7)
 - [#351](https://github.com/pusher/oauth2_proxy/pull/351) Add DigitalOcean Auth provider (@kamaln7)
 
+- [#335](https://github.com/pusher/oauth2_proxy/pull/335) OIDC Provider support for empty id_tokens in the access token refresh response (@howzat)
 # v4.1.0
 
 ## Release Highlights
