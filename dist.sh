@@ -14,7 +14,7 @@ if [[ ! "${GO_VERSION}" =~ ^go1.13.* ]]; then
 	exit 1
 fi
 
-ARCHS=(darwin-amd64 linux-amd64 linux-arm64 linux-armv6 windows-amd64)
+ARCHS=(darwin-amd64 linux-amd64 linux-arm64 linux-armv6 freebsd-amd64 windows-amd64)
 
 mkdir -p release
 
