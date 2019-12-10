@@ -1,5 +1,27 @@
 # Vx.x.x (Pre-release)
 
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v4.1.0
+
+# v4.1.0
+
+## Release Highlights
+- Added Keycloak provider
+- Build on Go 1.13
+- Upgrade Docker image to use Debian Buster
+- Added support for FreeBSD builds
+- Added new logo
+- Added support for GitHub teams
+
+## Important Notes
+N/A
+
+## Breaking Changes
+N/A
+
 ## Changes since v4.0.0
 - [#292](https://github.com/pusher/oauth2_proxy/pull/292) Added bash >= 4.0 dependency to configure script (@jmfrank63)
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
