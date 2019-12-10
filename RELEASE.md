@@ -43,4 +43,5 @@ Note this uses `v4.1.0` as an example release number.
   make docker-push-all
   ```
   Note: Ensure the docker tags are tags aren't `-dirty`
+
 12. Verify everything looks good at [quay](https://quay.io/repository/pusher/oauth2_proxy?tag=latest&tab=tags) and [github](https://github.com/pusher/oauth2_proxy/releases)
