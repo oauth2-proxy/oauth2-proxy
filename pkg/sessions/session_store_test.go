@@ -79,6 +79,12 @@ var _ = Describe("NewSessionStore", func() {
 				}
 			})
 
+			It("have the correct SameSite set", func() {
+				for _, cookie := range cookies {
+					Expect(cookie.SameSite).To(Equal(cookieOpts.CookieSameSite))
+				}
+			})
+
 			It("have a signature timestamp matching session.CreatedAt", func() {
 				for _, cookie := range cookies {
 					if cookie.Value != "" {
@@ -338,6 +344,7 @@ var _ = Describe("NewSessionStore", func() {
 					CookieSecure:   false,
 					CookieHTTPOnly: false,
 					CookieDomain:   "example.com",
+					CookieSameSite: http.SameSiteLaxMode,
 				}
 
 				var err error
@@ -379,6 +386,7 @@ var _ = Describe("NewSessionStore", func() {
 			CookieRefresh:  time.Duration(1) * time.Hour,
 			CookieSecure:   true,
 			CookieHTTPOnly: true,
+			CookieSameSite: http.SameSiteDefaultMode,
 		}
 
 		session = &sessionsapi.SessionState{

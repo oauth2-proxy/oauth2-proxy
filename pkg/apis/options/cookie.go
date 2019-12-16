@@ -1,6 +1,9 @@
 package options
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 // CookieOptions contains configuration options relating to Cookie configuration
 type CookieOptions struct {
@@ -12,4 +15,5 @@ type CookieOptions struct {
 	CookieRefresh  time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
 	CookieSecure   bool          `flag:"cookie-secure" cfg:"cookie_secure" env:"OAUTH2_PROXY_COOKIE_SECURE"`
 	CookieHTTPOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly" env:"OAUTH2_PROXY_COOKIE_HTTPONLY"`
+	CookieSameSite http.SameSite `flag:"cookie-samesite" cfg:"cookie_samesite" env:"OAUTH2_PROXY_COOKIE_SAMESITE"`
 }

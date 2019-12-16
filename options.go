@@ -155,6 +155,7 @@ func NewOptions() *Options {
 			CookieHTTPOnly: true,
 			CookieExpire:   time.Duration(168) * time.Hour,
 			CookieRefresh:  time.Duration(0),
+			CookieSameSite: http.SameSiteDefaultMode,
 		},
 		SessionOptions: options.SessionOptions{
 			Type: "cookie",

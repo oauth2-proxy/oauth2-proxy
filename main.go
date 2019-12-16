@@ -26,6 +26,7 @@ func main() {
 	jwtIssuers := StringArray{}
 	googleGroups := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
+	cookieSameSite := SameSiteValue{sameSite: http.SameSiteDefaultMode}
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -86,6 +87,7 @@ func main() {
 	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
+	flagSet.Var(&cookieSameSite, "cookie-samesite", "an optional cookie SameSite Value (ie: 'lax', 'strict', or 'none')")
 
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")

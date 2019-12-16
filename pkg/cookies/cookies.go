@@ -12,7 +12,7 @@ import (
 
 // MakeCookie constructs a cookie from the given parameters,
 // discovering the domain from the request if not specified.
-func MakeCookie(req *http.Request, name string, value string, path string, domain string, httpOnly bool, secure bool, expiration time.Duration, now time.Time) *http.Cookie {
+func MakeCookie(req *http.Request, name string, value string, path string, domain string, httpOnly bool, secure bool, sameSite http.SameSite, expiration time.Duration, now time.Time) *http.Cookie {
 	if domain != "" {
 		host := req.Host
 		if h, _, err := net.SplitHostPort(host); err == nil {
@@ -31,11 +31,12 @@ func MakeCookie(req *http.Request, name string, value string, path string, domai
 		HttpOnly: httpOnly,
 		Secure:   secure,
 		Expires:  now.Add(expiration),
+		SameSite: sameSite,
 	}
 }
 
 // MakeCookieFromOptions constructs a cookie based on the givemn *options.CookieOptions,
 // value and creation time
 func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.CookieOptions, expiration time.Duration, now time.Time) *http.Cookie {
-	return MakeCookie(req, name, value, opts.CookiePath, opts.CookieDomain, opts.CookieHTTPOnly, opts.CookieSecure, expiration, now)
+	return MakeCookie(req, name, value, opts.CookiePath, opts.CookieDomain, opts.CookieHTTPOnly, opts.CookieSecure, opts.CookieSameSite, expiration, now)
 }
