@@ -90,6 +90,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-request-logging` | bool | Log requests | true |
 | `-request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `-resource` | string | The resource that is protected (Azure AD only) | |
+| `-reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false | 
 | `-scope` | string | OAuth scope specification | |
 | `-session-store-type` | string | Session data storage backend | cookie |
 | `-set-xauthrequest` | bool | set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode) | false |
@@ -173,7 +174,7 @@ Available variables for auth logging:
 
 | Variable | Example | Description |
 | --- | --- | --- |
-| Client | 74.125.224.72 | The client/remote IP address. Will use the X-Real-IP header it if exists. |
+| Client | 74.125.224.72 | The client/remote IP address. Will use the X-Real-IP header it if exists & reverse-proxy is set to true. |
 | Host  | domain.com | The value of the Host header. |
 | Protocol | HTTP/1.0 | The request protocol. |
 | RequestMethod | GET | The request method. |
@@ -201,7 +202,7 @@ Available variables for request logging:
 
 | Variable | Example | Description |
 | --- | --- | --- |
-| Client | 74.125.224.72 | The client/remote IP address. Will use the X-Real-IP header it if exists. |
+| Client | 74.125.224.72 | The client/remote IP address. Will use the X-Real-IP header it if exists & reverse-proxy is set to true. |
 | Host  | domain.com | The value of the Host header. |
 | Protocol | HTTP/1.0 | The request protocol. |
 | RequestDuration | 0.001 | The time in seconds that a request took to process. |
