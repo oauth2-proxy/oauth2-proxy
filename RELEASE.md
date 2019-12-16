@@ -20,7 +20,7 @@ Note this uses `v4.1.0` as an example release number.
   git checkout -b release-v4.1.0
   ```
 4. Create pull request getting other maintainers to review
-5. Copy the release notes in to the draft Github release, adding a link to the [changelog](CHANGELOG.md)
+5. Copy the release notes in to the draft Github release, adding a link to [CHANGELOG.md](CHANGELOG.md)
 6. Update you local master branch
   ```
   git checkout master
@@ -29,19 +29,19 @@ Note this uses `v4.1.0` as an example release number.
 7. Create & push the tag
   ```
   git tag v4.1.0
-  git push upstream --tags
+  git push --tags
   ```
 8. Make the release artefacts
   ```
   make release
   ```
-9. Upload all the files (not the folders) from the `/release` folder to Github release as binary artefacts
+9. Upload all the files (not the folders) from the `/release` folder to Github release as binary artefacts. There should be both the tarballs (`tar.gz`) and the checksum files (`sha256sum.txt`).
 10. Publish release in Github
 11. Make and push docker images to Quay
   ```
   make docker-all
   make docker-push-all
   ```
-  Note: Ensure the docker tags are tags aren't `-dirty`
+  Note: Ensure the docker tags don't include `-dirty`. This means you have uncommitted changes.
 
 12. Verify everything looks good at [quay](https://quay.io/repository/pusher/oauth2_proxy?tag=latest&tab=tags) and [github](https://github.com/pusher/oauth2_proxy/releases)
