@@ -26,6 +26,7 @@ N/A
 ## Changes since v4.0.0
 - [#292](https://github.com/pusher/oauth2_proxy/pull/292) Added bash >= 4.0 dependency to configure script (@jmfrank63)
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
+- [#179](https://github.com/pusher/oauth2_proxy/pull/179) Add Nextcloud provider (@Ramblurr)
 - [#259](https://github.com/pusher/oauth2_proxy/pull/259) Redirect to HTTPS (@jmickey)
 - [#273](https://github.com/pusher/oauth2_proxy/pull/273) Support Go 1.13 (@dio)
 - [#275](https://github.com/pusher/oauth2_proxy/pull/275) docker: build from debian buster (@syscll)
