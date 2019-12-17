@@ -1,5 +1,28 @@
 # Vx.x.x (Pre-release)
 
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v4.1.0
+- [#325](https://github.com/pusher/oauth2_proxy/pull/325) dist.sh: use sha256sum (@syscll)
+
+# v4.1.0
+
+## Release Highlights
+- Added Keycloak provider
+- Build on Go 1.13
+- Upgrade Docker image to use Debian Buster
+- Added support for FreeBSD builds
+- Added new logo
+- Added support for GitHub teams
+
+## Important Notes
+N/A
+
+## Breaking Changes
+N/A
+
 ## Changes since v4.0.0
 - [#292](https://github.com/pusher/oauth2_proxy/pull/292) Added bash >= 4.0 dependency to configure script (@jmfrank63)
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
@@ -18,6 +41,7 @@
 - [#248](https://github.com/pusher/oauth2_proxy/pull/248) Fix issue with X-Auth-Request-Redirect header being ignored (@webnard)
 - [#314](https://github.com/pusher/oauth2_proxy/pull/314) Add redirect capability to sign_out (@costelmoraru)
 - [#265](https://github.com/pusher/oauth2_proxy/pull/265) Add upstream with static response (@cgroschupp)
+- [#317](https://github.com/pusher/oauth2_proxy/pull/317) Add build for FreeBSD (@fnkr)
 - [#296](https://github.com/pusher/oauth2_proxy/pull/296) Allow to override provider's name for sign-in page (@ffdybuster)
 
 # v4.0.0
