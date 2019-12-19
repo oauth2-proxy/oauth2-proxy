@@ -153,7 +153,7 @@ func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus
 		username = "-"
 	}
 
-	client := GetClient(l.reverseProxy, req)
+	client := GetClient(req, l.reverseProxy)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -201,7 +201,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		}
 	}
 
-	client := GetClient(l.reverseProxy, req)
+	client := GetClient(req, l.reverseProxy)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -253,7 +253,7 @@ func (l *Logger) GetFileLineString(calldepth int) string {
 }
 
 // GetClient parses an HTTP request for the client/remote IP address.
-func GetClient(reverseProxy bool, req *http.Request) string {
+func GetClient(req *http.Request, reverseProxy bool) string {
 	client := req.RemoteAddr
 	if reverseProxy {
 		if ip := req.Header.Get("X-Real-IP"); ip != "" {
