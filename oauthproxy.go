@@ -195,7 +195,7 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.Hma
 	}
 }
 
-// NewOAuthProxy creates a new instance of OOuthProxy from the options provided
+// NewOAuthProxy creates a new instance of OAuthProxy from the options provided
 func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	serveMux := http.NewServeMux()
 	var auth hmacauth.HmacAuth

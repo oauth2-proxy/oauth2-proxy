@@ -34,7 +34,7 @@ func MakeCookie(req *http.Request, name string, value string, path string, domai
 	}
 }
 
-// MakeCookieFromOptions constructs a cookie based on the givemn *options.CookieOptions,
+// MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time
 func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.CookieOptions, expiration time.Duration, now time.Time) *http.Cookie {
 	return MakeCookie(req, name, value, opts.CookiePath, opts.CookieDomain, opts.CookieHTTPOnly, opts.CookieSecure, expiration, now)
