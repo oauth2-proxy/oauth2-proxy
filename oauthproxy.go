@@ -912,7 +912,11 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		} else {
 			req.Header.Del("Authorization")
 		}
+	} else {
+		// Not PassAuthorization also removes previously passed authorization
+		req.Header.Del("Authorization")
 	}
+
 	if p.SetAuthorization {
 		if session.IDToken != "" {
 			rw.Header().Set("Authorization", fmt.Sprintf("Bearer %s", session.IDToken))

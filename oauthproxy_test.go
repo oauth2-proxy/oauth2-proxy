@@ -1390,3 +1390,61 @@ func TestFindJwtBearerToken(t *testing.T) {
 
 	fmt.Printf("%s", token)
 }
+
+func TestAddHeadersForProxying_PassAuthorization(t *testing.T) {
+	assert := assert.New(t)
+	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
+	sess := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token", IDToken: "my_id_token", CreatedAt: time.Now()}
+
+	req, err := http.NewRequest("GET", "http://example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rw := httptest.NewRecorder()
+	p.PassAuthorization = true
+	p.addHeadersForProxying(rw, req, sess)
+
+	// Verify Authorization header is passed
+	assert.Contains(req.Header, "Authorization")
+	assert.Len(req.Header["Authorization"], 1)
+	assert.Equal(req.Header["Authorization"][0], fmt.Sprintf("Bearer %s", sess.IDToken))
+}
+
+func TestAddHeadersForProxying_NoPassAuthorization(t *testing.T) {
+	assert := assert.New(t)
+	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
+	sess := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token", IDToken: "my_id_token", CreatedAt: time.Now()}
+
+	req, err := http.NewRequest("GET", "http://example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rw := httptest.NewRecorder()
+	p.PassAuthorization = false
+	p.addHeadersForProxying(rw, req, sess)
+
+	// Verify not Authorization header is created and passed
+	assert.NotContains(req.Header, "Authorization")
+}
+
+func TestAddHeadersForProxying_NoPassPreexistingAuthorization(t *testing.T) {
+	assert := assert.New(t)
+	p := OAuthProxy{CookieName: "oauth2", CookieDomain: "abc"}
+	sess := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token", IDToken: "my_id_token", CreatedAt: time.Now()}
+
+	req, err := http.NewRequest("GET", "http://example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("Authorization", "Bearer existingToken")
+
+	rw := httptest.NewRecorder()
+	p.PassAuthorization = false
+	p.addHeadersForProxying(rw, req, sess)
+
+	// Verify not Authorization header is created and passed
+	assert.NotContains(req.Header, "Authorization")
+}
