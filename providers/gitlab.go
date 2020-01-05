@@ -103,6 +103,9 @@ func (p *GitLabProvider) redeemRefreshToken(s *sessions.SessionState) (err error
 	s.CreatedAt = newSession.CreatedAt
 	s.ExpiresOn = newSession.ExpiresOn
 	s.Email = newSession.Email
+	if s.Email == "" {
+		s.Email, _ = p.GetEmailAddress(s)
+	}
 	return
 }
 
