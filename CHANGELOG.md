@@ -9,6 +9,7 @@
 
 ## Changes since v4.1.0
 - [#325](https://github.com/pusher/oauth2_proxy/pull/325) dist.sh: use sha256sum (@syscll)
+- [#179](https://github.com/pusher/oauth2_proxy/pull/179) Add Nextcloud provider (@Ramblurr)
 
 # v4.1.0
 
