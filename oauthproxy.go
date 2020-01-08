@@ -13,6 +13,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -78,31 +79,32 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	redirectURL         *url.URL // the url to receive requests at
-	whitelistDomains    []string
-	provider            providers.Provider
-	sessionStore        sessionsapi.SessionStore
-	ProxyPrefix         string
-	SignInMessage       string
-	HtpasswdFile        *HtpasswdFile
-	DisplayHtpasswdForm bool
-	serveMux            http.Handler
-	SetXAuthRequest     bool
-	PassBasicAuth       bool
-	SkipProviderButton  bool
-	PassUserHeaders     bool
-	BasicAuthPassword   string
-	PassAccessToken     bool
-	SetAuthorization    bool
-	PassAuthorization   bool
-	skipAuthRegex       []string
-	skipAuthPreflight   bool
-	skipJwtBearerTokens bool
-	jwtBearerVerifiers  []*oidc.IDTokenVerifier
-	compiledRegex       []*regexp.Regexp
-	templates           *template.Template
-	Banner              string
-	Footer              string
+	redirectURL          *url.URL // the url to receive requests at
+	whitelistDomains     []string
+	provider             providers.Provider
+	providerNameOverride string
+	sessionStore         sessionsapi.SessionStore
+	ProxyPrefix          string
+	SignInMessage        string
+	HtpasswdFile         *HtpasswdFile
+	DisplayHtpasswdForm  bool
+	serveMux             http.Handler
+	SetXAuthRequest      bool
+	PassBasicAuth        bool
+	SkipProviderButton   bool
+	PassUserHeaders      bool
+	BasicAuthPassword    string
+	PassAccessToken      bool
+	SetAuthorization     bool
+	PassAuthorization    bool
+	skipAuthRegex        []string
+	skipAuthPreflight    bool
+	skipJwtBearerTokens  bool
+	jwtBearerVerifiers   []*oidc.IDTokenVerifier
+	compiledRegex        []*regexp.Regexp
+	templates            *template.Template
+	Banner               string
+	Footer               string
 }
 
 // UpstreamProxy represents an upstream server to proxy to
@@ -203,12 +205,23 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	}
 	for _, u := range opts.proxyURLs {
 		path := u.Path
+		host := u.Host
 		switch u.Scheme {
 		case httpScheme, httpsScheme:
 			logger.Printf("mapping path %q => upstream %q", path, u)
 			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
 			serveMux.Handle(path, proxy)
+		case "static":
+			responseCode, err := strconv.Atoi(host)
+			if err != nil {
+				logger.Printf("unable to convert %q to int, use default \"200\"", host)
+				responseCode = 200
+			}
 
+			serveMux.HandleFunc(path, func(rw http.ResponseWriter, req *http.Request) {
+				rw.WriteHeader(responseCode)
+				fmt.Fprintf(rw, "Authenticated")
+			})
 		case "file":
 			if u.Fragment != "" {
 				path = u.Fragment
@@ -270,28 +283,29 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
-		ProxyPrefix:         opts.ProxyPrefix,
-		provider:            opts.provider,
-		sessionStore:        opts.sessionStore,
-		serveMux:            serveMux,
-		redirectURL:         redirectURL,
-		whitelistDomains:    opts.WhitelistDomains,
-		skipAuthRegex:       opts.SkipAuthRegex,
-		skipAuthPreflight:   opts.SkipAuthPreflight,
-		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
-		jwtBearerVerifiers:  opts.jwtBearerVerifiers,
-		compiledRegex:       opts.CompiledRegex,
-		SetXAuthRequest:     opts.SetXAuthRequest,
-		PassBasicAuth:       opts.PassBasicAuth,
-		PassUserHeaders:     opts.PassUserHeaders,
-		BasicAuthPassword:   opts.BasicAuthPassword,
-		PassAccessToken:     opts.PassAccessToken,
-		SetAuthorization:    opts.SetAuthorization,
-		PassAuthorization:   opts.PassAuthorization,
-		SkipProviderButton:  opts.SkipProviderButton,
-		templates:           loadTemplates(opts.CustomTemplatesDir),
-		Banner:              opts.Banner,
-		Footer:              opts.Footer,
+		ProxyPrefix:          opts.ProxyPrefix,
+		provider:             opts.provider,
+		providerNameOverride: opts.ProviderName,
+		sessionStore:         opts.sessionStore,
+		serveMux:             serveMux,
+		redirectURL:          redirectURL,
+		whitelistDomains:     opts.WhitelistDomains,
+		skipAuthRegex:        opts.SkipAuthRegex,
+		skipAuthPreflight:    opts.SkipAuthPreflight,
+		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
+		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
+		compiledRegex:        opts.CompiledRegex,
+		SetXAuthRequest:      opts.SetXAuthRequest,
+		PassBasicAuth:        opts.PassBasicAuth,
+		PassUserHeaders:      opts.PassUserHeaders,
+		BasicAuthPassword:    opts.BasicAuthPassword,
+		PassAccessToken:      opts.PassAccessToken,
+		SetAuthorization:     opts.SetAuthorization,
+		PassAuthorization:    opts.PassAuthorization,
+		SkipProviderButton:   opts.SkipProviderButton,
+		templates:            loadTemplates(opts.CustomTemplatesDir),
+		Banner:               opts.Banner,
+		Footer:               opts.Footer,
 	}
 }
 
@@ -452,6 +466,9 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		Version:       VERSION,
 		ProxyPrefix:   p.ProxyPrefix,
 		Footer:        template.HTML(p.Footer),
+	}
+	if p.providerNameOverride != "" {
+		t.ProviderName = p.providerNameOverride
 	}
 	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
 }
@@ -662,8 +679,14 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
 // SignOut sends a response to clear the authentication cookie
 func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+	redirect, err := p.GetRedirect(req)
+	if err != nil {
+		logger.Printf("Error obtaining redirect: %s", err.Error())
+		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		return
+	}
 	p.ClearSessionCookie(rw, req)
-	http.Redirect(rw, req, "/", 302)
+	http.Redirect(rw, req, redirect, 302)
 }
 
 // OAuthStart starts the OAuth2 authentication flow

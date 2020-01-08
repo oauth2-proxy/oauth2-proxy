@@ -19,6 +19,7 @@ Valid providers are :
 - [GitLab](#gitlab-auth-provider)
 - [LinkedIn](#linkedin-auth-provider)
 - [login.gov](#logingov-provider)
+- [Nextcloud](#nextcloud-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -156,6 +157,7 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
 3.  Login with the fixture use in the dex guide and run the oauth2_proxy with the following args:
 
     -provider oidc
+    -provider-display-name "My OIDC Provider"
     -client-id oauth2_proxy
     -client-secret proxy
     -redirect-url http://127.0.0.1:4180/oauth2/callback
@@ -287,6 +289,32 @@ In this case, you can set the `-skip-oidc-discovery` option, and supply those re
     -cookie-secure=false
     -email-domain example.com
 ```
+
+### Nextcloud Provider
+
+The Nextcloud provider allows you to authenticate against users in your
+Nextcloud instance.
+
+When you are using the Nextcloud provider, you must specify the urls via
+configuration, environment variable, or command line argument. Depending
+on whether your Nextcloud instance is using pretty urls your urls may be of the
+form `/index.php/apps/oauth2/*` or `/apps/oauth2/*`.
+
+Refer to the [OAuth2
+documentation](https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/oauth2.html)
+to setup the client id and client secret. Your "Redirection URI" will be
+`https://internalapp.yourcompany.com/oauth2/callback`.
+
+```
+    -provider nextcloud
+    -client-id <from nextcloud admin>
+    -client-secret <from nextcloud admin>
+    -login-url="<your nextcloud url>/index.php/apps/oauth2/authorize"
+    -redeem-url="<your nextcloud url>/index.php/apps/oauth2/api/v1/token"
+    -validate-url="<your nextcloud url>/ocs/v2.php/cloud/user?format=json"
+```
+
+Note: in *all* cases the validate-url will *not* have the `index.php`.
 
 ## Email Authentication
 

@@ -76,6 +76,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-pass-user-headers` | bool | pass X-Forwarded-User and X-Forwarded-Email information to upstream | true |
 | `-profile-url` | string | Profile access endpoint | |
 | `-provider` | string | OAuth provider | google |
+| `-provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `-ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `-proxy-prefix` | string | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`) | `"/oauth2"` |
 | `-proxy-websockets` | bool | enables WebSocket proxying | true |
@@ -106,7 +107,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
 | `-tls-cert-file` | string | path to certificate file | |
 | `-tls-key-file` | string | path to private key file | |
-| `-upstream` | string \| list | the http url(s) of the upstream endpoint or `file://` paths for static files. Routing is based on the path | |
+| `-upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
 | `-validate-url` | string | Access token validation endpoint | |
 | `-version` | n/a | print version string | |
 | `-whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
