@@ -3,7 +3,6 @@ package providers
 import (
 	"context"
 	"fmt"
-	"github.com/pusher/oauth2_proxy/pkg/requests"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/pusher/oauth2_proxy/pkg/requests"
 	"golang.org/x/oauth2"
 )
 
@@ -123,6 +123,7 @@ func (p *AzureOIDCProvider) createSessionState(ctx context.Context, token *oauth
 		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
 
 		req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
+		defer req.Body.Close()
 		if err != nil {
 			return nil, err
 		}
@@ -176,14 +177,20 @@ func (p *AzureOIDCProvider) ValidateGroup(session *sessions.SessionState) bool {
 			return true
 		}
 	}
+
+	if session.IDToken == "" {
+		logger.Printf("missing ID token. cannot validate session")
+		return false
+	}
+
 	var claims AzureOIDCClaims
 	err := getClaimFromToken(session.IDToken, &claims)
 	if err != nil {
 		logger.Printf("error: failed to parse IDToken, %s", err)
 		return false
 	}
-	for tokenGroup := range claims.Groups {
-		for permittedGroup := range p.PermittedGroups {
+	for _, tokenGroup := range claims.Groups {
+		for _, permittedGroup := range p.PermittedGroups {
 			if tokenGroup == permittedGroup {
 				return true
 			}
