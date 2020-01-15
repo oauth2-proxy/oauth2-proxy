@@ -18,3 +18,7 @@ providers/bitbucket_test.go @aledeganopix4d
 # Nextcloud provider
 providers/nextcloud.go @Ramblurr
 providers/nextcloud_test.go @Ramblurr
+
+# DigitalOcean provider
+providers/digitalocean.go @kamaln7
+providers/digitalocean_test.go @kamaln7
