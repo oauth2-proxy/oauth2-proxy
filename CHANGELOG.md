@@ -8,6 +8,7 @@
   This defaults to false. **Usage behind a reverse proxy will require this flag to be set to avoid logging the reverse proxy IP address**.
 
 ## Changes since v4.1.0
+- [#347](https://github.com/pusher/oauth2_proxy/pull/347) Update keycloak provider configuration documentation
 - [#325](https://github.com/pusher/oauth2_proxy/pull/325) dist.sh: use sha256sum (@syscll)
 - [#179](https://github.com/pusher/oauth2_proxy/pull/179) Add Nextcloud provider (@Ramblurr)
 
