@@ -10,6 +10,7 @@
 - [#179](https://github.com/pusher/oauth2_proxy/pull/179) Add Nextcloud provider (@Ramblurr)
 - [#280](https://github.com/pusher/oauth2_proxy/pull/280) whitelisted redirect domains: add support for whitelisting specific ports or allowing wildcard ports (@kamaln7)
 - [#351](https://github.com/pusher/oauth2_proxy/pull/351) Add DigitalOcean Auth provider (@kamaln7)
+- [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for Google provider with rotating key (@pasha-r)
 
 # v4.1.0
 
