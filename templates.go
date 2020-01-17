@@ -135,6 +135,10 @@ func getTemplates() *template.Template {
 			(function() {
 				var inputs = document.getElementsByName('rd');
 				for (var i = 0; i < inputs.length; i++) {
+					var idx = inputs[i].value.indexOf('#');
+					if (idx >= 0) {
+						inputs[i].value = inputs[i].value.substr(0, idx);
+					}
 					inputs[i].value += window.location.hash;
 				}
 			})();
