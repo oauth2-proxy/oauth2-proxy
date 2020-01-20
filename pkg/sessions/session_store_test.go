@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pusher/oauth2_proxy/pkg/apis/options"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/cookies"
+	cookiesapi "github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
 	"github.com/pusher/oauth2_proxy/pkg/sessions"
 	sessionscookie "github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
@@ -76,6 +76,12 @@ var _ = Describe("NewSessionStore", func() {
 			It("have the correct secure set", func() {
 				for _, cookie := range cookies {
 					Expect(cookie.Secure).To(Equal(cookieOpts.CookieSecure))
+				}
+			})
+
+			It("have the correct SameSite set", func() {
+				for _, cookie := range cookies {
+					Expect(cookie.SameSite).To(Equal(cookiesapi.ParseSameSite(cookieOpts.CookieSameSite)))
 				}
 			})
 
@@ -159,7 +165,7 @@ var _ = Describe("NewSessionStore", func() {
 					By("Using a valid cookie with a different providers session encoding")
 					broken := "BrokenSessionFromADifferentSessionImplementation"
 					value := encryption.SignedValue(cookieOpts.CookieSecret, cookieOpts.CookieName, broken, time.Now())
-					cookie := cookies.MakeCookieFromOptions(request, cookieOpts.CookieName, value, cookieOpts, cookieOpts.CookieExpire, time.Now())
+					cookie := cookiesapi.MakeCookieFromOptions(request, cookieOpts.CookieName, value, cookieOpts, cookieOpts.CookieExpire, time.Now())
 					request.AddCookie(cookie)
 
 					err := ss.Save(response, request, session)
@@ -338,6 +344,7 @@ var _ = Describe("NewSessionStore", func() {
 					CookieSecure:   false,
 					CookieHTTPOnly: false,
 					CookieDomain:   "example.com",
+					CookieSameSite: "strict",
 				}
 
 				var err error
@@ -379,6 +386,7 @@ var _ = Describe("NewSessionStore", func() {
 			CookieRefresh:  time.Duration(1) * time.Hour,
 			CookieSecure:   true,
 			CookieHTTPOnly: true,
+			CookieSameSite: "",
 		}
 
 		session = &sessionsapi.SessionState{
