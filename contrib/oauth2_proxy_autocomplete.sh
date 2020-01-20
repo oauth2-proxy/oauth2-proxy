@@ -17,7 +17,7 @@ _oauth2_proxy() {
 			return 0
 			;;
 		-provider)
-			COMPREPLY=( $(compgen -W "google azure facebook github keycloak gitlab linkedin login.gov" -- ${cur}) )
+			COMPREPLY=( $(compgen -W "google azure facebook github keycloak gitlab linkedin login.gov digitalocean" -- ${cur}) )
 			return 0
 			;;
 		-@(http-address|https-address|redirect-url|upstream|basic-auth-password|skip-auth-regex|flush-interval|extra-jwt-issuers|email-domain|whitelist-domain|keycloak-group|azure-tenant|bitbucket-team|bitbucket-repository|github-org|github-team|gitlab-group|google-group|google-admin-email|google-service-account-json|client-id|client_secret|banner|footer|proxy-prefix|ping-path|cookie-name|cookie-secret|cookie-domain|cookie-path|cookie-expire|cookie-refresh|cookie-samesite|redist-sentinel-master-name|redist-sentinel-connection-urls|logging-max-size|logging-max-age|logging-max-backups|standard-logging-format|request-logging-format|exclude-logging-paths|auth-logging-format|oidc-issuer-url|oidc-jwks-url|login-url|redeem-url|profile-url|resource|validate-url|scope|approval-prompt|signature-key|acr-values|jwt-key|pubjwk-url))

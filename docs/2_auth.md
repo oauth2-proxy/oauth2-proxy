@@ -20,6 +20,7 @@ Valid providers are :
 - [LinkedIn](#linkedin-auth-provider)
 - [login.gov](#logingov-provider)
 - [Nextcloud](#nextcloud-provider)
+- [DigitalOcean](#digitalocean-auth-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -107,8 +108,9 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 ### Keycloak Auth Provider
 
-1.  Create new client in your Keycloak with **Access Type** 'confidental'.
-2.  Create a mapper with **Mapper Type** 'Group Membership'.
+1.  Create new client in your Keycloak with **Access Type** 'confidental' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
+2.  Take note of the Secret in the credential tab of the client
+3.  Create a mapper with **Mapper Type** 'Group Membership' and **Token Claim Name** 'groups'.
 
 Make sure you set the following to the appropriate url:
 
@@ -116,8 +118,11 @@ Make sure you set the following to the appropriate url:
     -client-id=<client you have created>
     -client-secret=<your client's secret>
     -login-url="http(s)://<keycloak host>/realms/<your realm>/protocol/openid-connect/auth"
-    -redeem-url="http(s)://<keycloak host>/realms/master/<your realm>/openid-connect/auth/token"
-    -validate-url="http(s)://<keycloak host>/realms/master/<your realm>/openid-connect/userinfo"
+    -redeem-url="http(s)://<keycloak host>/realms/<your realm>/protocol/openid-connect/token"
+    -validate-url="http(s)://<keycloak host>/realms/<your realm>/protocol/openid-connect/userinfo"
+    -keycloak-group=<user_group>
+
+The group management in keycloak is using a tree. If you create a group named admin in keycloak you should define the 'keycloak-group' value to /admin.
 
 ### GitLab Auth Provider
 
@@ -315,6 +320,23 @@ to setup the client id and client secret. Your "Redirection URI" will be
 ```
 
 Note: in *all* cases the validate-url will *not* have the `index.php`.
+
+### DigitalOcean Auth Provider
+
+1. [Create a new OAuth application](https://cloud.digitalocean.com/account/api/applications)
+    * You can fill in the name, homepage, and description however you wish.
+    * In the "Application callback URL" field, enter: `https://oauth-proxy/oauth2/callback`, substituting `oauth2-proxy` with the actual hostname that oauth2_proxy is running on. The URL must match oauth2_proxy's configured redirect URL.
+2. Note the Client ID and Client Secret.
+
+To use the provider, pass the following options:
+
+```
+   --provider=digitalocean
+   --client-id=<Client ID>
+   --client-secret=<Client Secret>
+```
+
+ Alternatively, set the equivalent options in the config file. The redirect URL defaults to `https://<requested host header>/oauth2/callback`. If you need to change it, you can use the `--redirect-url` command-line option.
 
 ## Email Authentication
 
