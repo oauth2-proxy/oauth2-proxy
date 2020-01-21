@@ -381,6 +381,12 @@ func (o *Options) Validate() error {
 		}
 	}
 
+	switch o.CookieSameSite {
+	case "", "none", "lax", "strict":
+	default:
+		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
+	}
+
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)

@@ -20,6 +20,7 @@ import (
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
 	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/cookies"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/providers"
@@ -68,6 +69,7 @@ type OAuthProxy struct {
 	CookieHTTPOnly bool
 	CookieExpire   time.Duration
 	CookieRefresh  time.Duration
+	CookieSameSite string
 	Validator      func(string) bool
 
 	RobotsPath        string
@@ -195,7 +197,7 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.Hma
 	}
 }
 
-// NewOAuthProxy creates a new instance of OOuthProxy from the options provided
+// NewOAuthProxy creates a new instance of OAuthProxy from the options provided
 func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	serveMux := http.NewServeMux()
 	var auth hmacauth.HmacAuth
@@ -260,7 +262,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s path:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, opts.CookiePath, refresh)
+	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s path:%s samesite:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, opts.CookiePath, opts.CookieSameSite, refresh)
 
 	return &OAuthProxy{
 		CookieName:     opts.CookieName,
@@ -272,6 +274,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		CookieHTTPOnly: opts.CookieHTTPOnly,
 		CookieExpire:   opts.CookieExpire,
 		CookieRefresh:  opts.CookieRefresh,
+		CookieSameSite: opts.CookieSameSite,
 		Validator:      validator,
 
 		RobotsPath:        "/robots.txt",
@@ -380,6 +383,7 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 		HttpOnly: p.CookieHTTPOnly,
 		Secure:   p.CookieSecure,
 		Expires:  now.Add(expiration),
+		SameSite: cookies.ParseSameSite(p.CookieSameSite),
 	}
 }
 
