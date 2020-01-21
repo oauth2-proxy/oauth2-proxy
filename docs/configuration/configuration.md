@@ -38,6 +38,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable | |
 | `-cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `-cookie-secure` | bool | set secure (HTTPS) cookie flag | true |
+| `-cookie-samesite` | string | set SameSite cookie attribute (ie: `"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
 | `-custom-templates-dir` | string | path to custom html templates | |
 | `-display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `-email-domain` | string | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
@@ -113,7 +114,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-version` | n/a | print version string | |
 | `-whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
 
-Note, when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL.
+Note: when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
 See below for provider specific options
 

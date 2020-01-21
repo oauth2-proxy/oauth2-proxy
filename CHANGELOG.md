@@ -8,9 +8,13 @@
   This defaults to false. **Usage behind a reverse proxy will require this flag to be set to avoid logging the reverse proxy IP address**.
 
 ## Changes since v4.1.0
+
+- [#339](https://github.com/pusher/oauth2_proxy/pull/339) Add configuration for cookie 'SameSite' value. (@pgroudas)
 - [#347](https://github.com/pusher/oauth2_proxy/pull/347) Update keycloak provider configuration documentation
 - [#325](https://github.com/pusher/oauth2_proxy/pull/325) dist.sh: use sha256sum (@syscll)
 - [#179](https://github.com/pusher/oauth2_proxy/pull/179) Add Nextcloud provider (@Ramblurr)
+- [#280](https://github.com/pusher/oauth2_proxy/pull/280) whitelisted redirect domains: add support for whitelisting specific ports or allowing wildcard ports (@kamaln7)
+- [#351](https://github.com/pusher/oauth2_proxy/pull/351) Add DigitalOcean Auth provider (@kamaln7)
 
 # v4.1.0
 
