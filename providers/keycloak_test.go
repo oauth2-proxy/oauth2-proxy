@@ -10,9 +10,6 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 )
 
-const imaginaryAccessToken = "imaginary_access_token"
-const bearerAccessToken = "Bearer " + imaginaryAccessToken
-
 func testKeycloakProvider(hostname, group string) *KeycloakProvider {
 	p := NewKeycloakProvider(
 		&ProviderData{
@@ -44,7 +41,7 @@ func testKeycloakBackend(payload string) *httptest.Server {
 			url := r.URL
 			if url.Path != path {
 				w.WriteHeader(404)
-			} else if r.Header.Get("Authorization") != bearerAccessToken {
+			} else if !IsAuthorizedInHeader(r.Header) {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
@@ -100,7 +97,7 @@ func TestKeycloakProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testKeycloakProvider(bURL.Host, "")
 
-	session := &sessions.SessionState{AccessToken: imaginaryAccessToken}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
@@ -113,7 +110,7 @@ func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testKeycloakProvider(bURL.Host, "test-grp1")
 
-	session := &sessions.SessionState{AccessToken: imaginaryAccessToken}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
@@ -144,7 +141,7 @@ func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testKeycloakProvider(bURL.Host, "")
 
-	session := &sessions.SessionState{AccessToken: imaginaryAccessToken}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
