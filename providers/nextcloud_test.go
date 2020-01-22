@@ -39,7 +39,7 @@ func testNextcloudBackend(payload string) *httptest.Server {
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path != path || r.URL.RawQuery != query {
 				w.WriteHeader(404)
-			} else if r.Header.Get("Authorization") != "Bearer imaginary_access_token_nextcloud" {
+			} else if !IsAuthorizedInHeader(r.Header) {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
@@ -96,7 +96,7 @@ func TestNextcloudProviderGetEmailAddress(t *testing.T) {
 	p.ValidateURL.Path = userPath
 	p.ValidateURL.RawQuery = formatJSON
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token_nextcloud"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
@@ -131,7 +131,7 @@ func TestNextcloudProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) 
 	p.ValidateURL.Path = userPath
 	p.ValidateURL.RawQuery = formatJSON
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token_nextcloud"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)

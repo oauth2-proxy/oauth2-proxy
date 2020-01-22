@@ -34,7 +34,7 @@ func testLinkedInBackend(payload string) *httptest.Server {
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path != path {
 				w.WriteHeader(404)
-			} else if r.Header.Get("Authorization") != "Bearer imaginary_access_token" {
+			} else if !IsAuthorizedInHeader(r.Header) {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
@@ -98,7 +98,7 @@ func TestLinkedInProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testLinkedInProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@linkedin.com", email)
@@ -127,7 +127,7 @@ func TestLinkedInProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testLinkedInProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
