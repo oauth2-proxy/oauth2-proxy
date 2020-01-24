@@ -5,6 +5,9 @@
 # http_address = "127.0.0.1:4180"
 # https_address = ":443"
 
+## Are we running behind a reverse proxy? Will not accept headers like X-Real-Ip unless this is set.
+# reverse_proxy = true
+
 ## TLS Settings
 # tls_cert_file = ""
 # tls_key_file = ""

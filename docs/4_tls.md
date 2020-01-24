@@ -68,6 +68,7 @@ There are two recommended configurations.
        --cookie-secret=... \
        --cookie-secure=true \
        --provider=... \
+       --reverse-proxy=true \
        --client-id=... \
        --client-secret=...
     ```

@@ -4,6 +4,9 @@
 
 ## Breaking Changes
 
+- [#321](https://github.com/pusher/oauth2_proxy/pull/331) Add reverse proxy boolean flag to control whether headers like `X-Real-Ip` are accepted.
+  This defaults to false. **Usage behind a reverse proxy will require this flag to be set to avoid logging the reverse proxy IP address**.
+
 ## Changes since v4.1.0
 
 - [#339](https://github.com/pusher/oauth2_proxy/pull/339) Add configuration for cookie 'SameSite' value. (@pgroudas)
