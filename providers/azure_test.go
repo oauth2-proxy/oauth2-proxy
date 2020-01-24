@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -118,7 +117,7 @@ func testAzureBackend(payload string) *httptest.Server {
 			} else if r.Method == "POST" && r.Body != nil {
 				w.WriteHeader(200)
 				w.Write([]byte(payload))
-			} else if r.Header.Get("Authorization") != "Bearer imaginary_access_token" {
+			} else if !IsAuthorizedInHeader(r.Header) {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
@@ -134,7 +133,7 @@ func TestAzureProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
@@ -147,7 +146,7 @@ func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
@@ -160,7 +159,7 @@ func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
@@ -173,7 +172,7 @@ func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
 	assert.Equal(t, "", email)
@@ -186,7 +185,7 @@ func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", email)
@@ -199,7 +198,7 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
-	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
 	assert.Equal(t, "", email)
