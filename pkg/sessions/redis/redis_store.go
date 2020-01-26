@@ -39,7 +39,7 @@ type SessionStore struct {
 // NewRedisSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
-	cmdable, err := newRedisClient(opts.RedisStoreOptions)
+	cmdable, err := newRedisCmdable(opts.RedisStoreOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
@@ -53,7 +53,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 
 }
 
-func newRedisClient(opts options.RedisStoreOptions) (redis.Cmdable, error) {
+func newRedisCmdable(opts options.RedisStoreOptions) (redis.Cmdable, error) {
 	if opts.UseSentinel {
 		client := redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    opts.SentinelMasterName,
