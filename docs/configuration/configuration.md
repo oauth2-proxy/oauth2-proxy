@@ -328,4 +328,4 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
 
 ### Note on rotated Client Secret
-If you set up your OAuth2 provider to rotate your client secret you can use clent-secret-file setting to read the secret every time you get redeem call.
+If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.
