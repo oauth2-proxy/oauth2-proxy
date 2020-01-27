@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	b64 "encoding/base64"
 	"encoding/json"
@@ -1044,45 +1043,11 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		return nil, err
 	}
 
-	ctx := context.Background()
-	var session *sessionsapi.SessionState
-	for _, verifier := range p.jwtBearerVerifiers {
-		bearerToken, err := verifier.Verify(ctx, rawBearerToken)
-
-		if err != nil {
-			logger.Printf("failed to verify bearer token: %v", err)
-			continue
-		}
-
-		var claims struct {
-			Subject  string `json:"sub"`
-			Email    string `json:"email"`
-			Verified *bool  `json:"email_verified"`
-		}
-
-		if err := bearerToken.Claims(&claims); err != nil {
-			return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
-		}
-
-		if claims.Email == "" {
-			claims.Email = claims.Subject
-		}
-
-		if claims.Verified != nil && !*claims.Verified {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-		}
-
-		session = &sessionsapi.SessionState{
-			AccessToken:  rawBearerToken,
-			IDToken:      rawBearerToken,
-			RefreshToken: "",
-			ExpiresOn:    bearerToken.Expiry,
-			Email:        claims.Email,
-			User:         claims.Email,
-		}
-		return session, nil
+	s, err := p.provider.GetJwtSession(rawBearerToken)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("unable to verify jwt token %s", req.Header.Get("Authorization"))
+	return s, nil
 }
 
 // findBearerToken finds a valid JWT token from the Authorization header of a given request.

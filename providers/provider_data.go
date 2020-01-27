@@ -5,6 +5,7 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"io/ioutil"
 	"net/url"
+	oidc "github.com/coreos/go-oidc"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -21,6 +22,7 @@ type ProviderData struct {
 	ValidateURL       *url.URL
 	Scope             string
 	ApprovalPrompt    string
+    JwtBearerVerifiers []*oidc.IDTokenVerifier
 }
 
 // Data returns the ProviderData
