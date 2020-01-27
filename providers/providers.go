@@ -17,6 +17,7 @@ type Provider interface {
 	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)
 	SessionFromCookie(string, *encryption.Cipher) (*sessions.SessionState, error)
 	CookieForSession(*sessions.SessionState, *encryption.Cipher) (string, error)
+	GetJwtSession(string) (*sessions.SessionState, error)
 }
 
 // New provides a new Provider based on the configured provider string

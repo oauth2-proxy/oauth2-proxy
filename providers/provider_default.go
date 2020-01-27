@@ -9,9 +9,10 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
+	"context"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
+    "github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
@@ -134,4 +135,53 @@ func (p *ProviderData) ValidateSessionState(s *sessions.SessionState) bool {
 // do nothing if a refresh is not required
 func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
 	return false, nil
+}
+
+
+// GetJwtSession loads a session based on a JWT token in the authorization header.
+func (p *ProviderData) GetJwtSession(rawBearerToken string) (*sessions.SessionState, error) {
+	ctx := context.Background()
+	var session *sessions.SessionState
+
+	if (p == nil) {
+		return nil, fmt.Errorf("No JwtBearerVerifiers found")
+	}
+
+	for _, verifier := range p.JwtBearerVerifiers {
+		bearerToken, err := verifier.Verify(ctx, rawBearerToken)
+
+		if err != nil {
+			logger.Printf("failed to verify bearer token: %v", err)
+			continue
+		}
+
+		var claims struct {
+			Subject  string `json:"sub"`
+			Email    string `json:"email"`
+			Verified *bool  `json:"email_verified"`
+		}
+
+		if err := bearerToken.Claims(&claims); err != nil {
+			return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
+		}
+
+		if claims.Email == "" {
+			claims.Email = claims.Subject
+		}
+
+		if claims.Verified != nil && !*claims.Verified {
+			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+		}
+
+		session = &sessions.SessionState{
+			AccessToken:  rawBearerToken,
+			IDToken:      rawBearerToken,
+			RefreshToken: "",
+			ExpiresOn:    bearerToken.Expiry,
+			Email:        claims.Email,
+			User:         claims.Email,
+		}
+		return session, nil
+	}
+	return nil, fmt.Errorf("failed to process the raw bearer token or there were no bearer verifiers present")
 }

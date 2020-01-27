@@ -28,7 +28,7 @@ func testDropsolidProvider(hostname string) *DropsolidProvider {
 }
 
 func testDropsolidBackend(payload string) *httptest.Server {
-	path := "/v2/account"
+	path := "/oauth/user.info"
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -47,15 +47,15 @@ func TestDropsolidProviderDefaults(t *testing.T) {
 	p := testDropsolidProvider("")
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Dropsolid", p.Data().ProviderName)
-	assert.Equal(t, "https://cloud.Dropsolid.com/v1/oauth/authorize",
+	assert.Equal(t, "https://platform.dropsolid.com/oauth/authorize",
 		p.Data().LoginURL.String())
-	assert.Equal(t, "https://cloud.Dropsolid.com/v1/oauth/token",
+	assert.Equal(t, "https://platform.dropsolid.com/oauth/token",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://api.Dropsolid.com/v2/account",
+	assert.Equal(t, "https://platform.dropsolid.com/oauth/user.info",
 		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://api.Dropsolid.com/v2/account",
+	assert.Equal(t, "https://platform.dropsolid.com/oauth/user.info",
 		p.Data().ValidateURL.String())
-	assert.Equal(t, "read", p.Data().Scope)
+	assert.Equal(t, "openid email", p.Data().Scope)
 }
 
 func TestDropsolidProviderOverrides(t *testing.T) {
@@ -92,7 +92,7 @@ func TestDropsolidProviderOverrides(t *testing.T) {
 }
 
 func TestDropsolidProviderGetEmailAddress(t *testing.T) {
-	b := testDropsolidBackend(`{"account": {"email": "user@example.com"}}`)
+	b := testDropsolidBackend(`{"sub": "23", "email":"user@example.com"}`)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)

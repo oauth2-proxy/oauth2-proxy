@@ -1034,6 +1034,7 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	opts.provider = NewTestProvider(upstreamURL, "")
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return false })
+	logger.Printf("%+v", proxy)
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("OPTIONS", "/preflight-request", nil)
 	proxy.ServeHTTP(rw, req)
@@ -1374,6 +1375,9 @@ func TestGetJwtSession(t *testing.T) {
 	tp.GroupValidator = func(s string) bool {
 		return true
 	}
+	tp.ProviderData = &providers.ProviderData{
+		JwtBearerVerifiers: test.opts.jwtBearerVerifiers,
+	}
 
 	authHeader := fmt.Sprintf("Bearer %s", goodJwt)
 	test.req.Header = map[string][]string{
@@ -1422,10 +1426,15 @@ func TestJwtUnauthorizedOnGroupValidationFailure(t *testing.T) {
 		opts.SkipJwtBearerTokens = true
 		opts.jwtBearerVerifiers = append(opts.jwtBearerVerifiers, verifier)
 	})
+
 	tp, _ := test.proxy.provider.(*TestProvider)
 	// Verify ValidateGroup fails JWT authorization
 	tp.GroupValidator = func(s string) bool {
 		return false
+	}
+
+	tp.ProviderData = &providers.ProviderData{
+		JwtBearerVerifiers: test.opts.jwtBearerVerifiers,
 	}
 
 	authHeader := fmt.Sprintf("Bearer %s", goodJwt)
@@ -1434,6 +1443,7 @@ func TestJwtUnauthorizedOnGroupValidationFailure(t *testing.T) {
 	}
 	test.proxy.ServeHTTP(test.rw, test.req)
 	if test.rw.Code != http.StatusUnauthorized {
+		logger.Printf("%v", test.rw.Code)
 		t.Fatalf("expected 401 got %d", test.rw.Code)
 	}
 }
