@@ -1,6 +1,23 @@
 # Vx.x.x (Pre-release)
 
+## Release Hightlights
+
 ## Important Notes
+
+## Breaking Changes
+
+## Changes since v5.0.0
+
+# v5.0.0
+
+## Release Hightlights
+- Disabled CGO (binaries will work regardless og glibc/musl)
+- Allow whitelisted redirect ports
+- Nextcloud provider support added
+- DigitalOcean provider support added
+
+## Important Notes
+N/A
 
 ## Breaking Changes
 
@@ -9,8 +26,10 @@
 
 ## Changes since v4.1.0
 
+- [#331](https://github.com/pusher/oauth2_proxy/pull/331) Add reverse proxy setting (@martin-css)
+- [#365](https://github.com/pusher/oauth2_proxy/pull/365) Build with CGO=0 (@tomelliff)
 - [#339](https://github.com/pusher/oauth2_proxy/pull/339) Add configuration for cookie 'SameSite' value. (@pgroudas)
-- [#347](https://github.com/pusher/oauth2_proxy/pull/347) Update keycloak provider configuration documentation
+- [#347](https://github.com/pusher/oauth2_proxy/pull/347) Update keycloak provider configuration documentation. (@sushiMix)
 - [#325](https://github.com/pusher/oauth2_proxy/pull/325) dist.sh: use sha256sum (@syscll)
 - [#179](https://github.com/pusher/oauth2_proxy/pull/179) Add Nextcloud provider (@Ramblurr)
 - [#280](https://github.com/pusher/oauth2_proxy/pull/280) whitelisted redirect domains: add support for whitelisting specific ports or allowing wildcard ports (@kamaln7)
