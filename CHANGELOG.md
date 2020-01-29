@@ -17,7 +17,7 @@
 - DigitalOcean provider support added
 
 ## Important Notes
-N/A
+- (Security) Fix for open redirect vulnerability..  a bad actor using `/\` in redirect URIs can redirect a session to another domain
 
 ## Breaking Changes
 
