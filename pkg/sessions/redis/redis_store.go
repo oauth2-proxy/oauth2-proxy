@@ -54,6 +54,10 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 }
 
 func newRedisCmdable(opts options.RedisStoreOptions) (redis.Cmdable, error) {
+	if opts.UseSentinel && opts.UseCluster {
+		return nil, fmt.Errorf("options redis-use-sentinel and redis-use-cluster are mutual exclusive")
+	}
+
 	if opts.UseSentinel {
 		client := redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    opts.SentinelMasterName,
