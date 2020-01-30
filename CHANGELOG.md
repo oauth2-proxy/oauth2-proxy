@@ -8,6 +8,8 @@
 
 ## Changes since v5.0.0
 
+- [#363](https://github.com/pusher/oauth2_proxy/pull/363) Extension of Redis Session Store to Support Redis Cluster (@yan-dblinf)
+
 # v5.0.0
 
 ## Release Hightlights
