@@ -17,7 +17,7 @@
 - DigitalOcean provider support added
 
 ## Important Notes
-- (Security) Fix for open redirect vulnerability..  a bad actor using `/\` in redirect URIs can redirect a session to another domain
+- (Security) Fix for [open redirect vulnerability](https://github.com/pusher/oauth2_proxy/security/advisories/GHSA-qqxw-m5fj-f7gv)..  a bad actor using `/\` in redirect URIs can redirect a session to another domain
 
 ## Breaking Changes
 
