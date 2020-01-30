@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
@@ -121,26 +122,18 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 }
 
 func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
+
 	getIDToken := func() (string, bool) {
 		rawIDToken, _ := token.Extra("id_token").(string)
-		return rawIDToken, len(rawIDToken) > 0
+		return rawIDToken, len(strings.TrimSpace(rawIDToken)) > 0
 	}
 
-	verifyIDToken := func(rawIdToken string) (*oidc.IDToken, error) {
-		return p.Verifier.Verify(ctx, rawIdToken)
+	if rawIDToken, present := getIDToken(); present {
+		verifiedIdToken, err := p.Verifier.Verify(ctx, rawIDToken)
+		return verifiedIdToken, err
+	} else {
+		return nil, nil
 	}
-
-	idToken, err := p.extractIDToken(getIDToken, verifyIDToken)
-	return idToken, err
-}
-
-func (p *OIDCProvider) extractIDToken(findIDToken GetIDTokenFn, verifyIDToken VerifyIDTokenFn) (*oidc.IDToken, error) {
-
-	if rawIDToken, present := findIDToken(); present {
-		return verifyIDToken(rawIDToken)
-	}
-
-	return nil, nil
 }
 
 func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
@@ -159,7 +152,7 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 				return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 			}
 
-			newSession.IDToken = token.Extra("id_token").(string) // can this be derived from the object version
+			newSession.IDToken = token.Extra("id_token").(string)
 			newSession.Email = claims.Email
 			newSession.User = claims.Subject
 		}
@@ -189,9 +182,6 @@ func getOIDCHeader(accessToken string) http.Header {
 	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
 }
-
-type GetIDTokenFn = func() (string, bool)
-type VerifyIDTokenFn = func(rawIdToken string) (*oidc.IDToken, error)
 
 func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
 
