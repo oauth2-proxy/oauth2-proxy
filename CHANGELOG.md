@@ -8,6 +8,8 @@
 
 ## Changes since v5.0.0
 
+- [#353](https://github.com/pusher/oauth2_proxy/pull/353) Fix login page fragment handling after soft reload on Firefox (@ffdybuster)
+
 # v5.0.0
 
 ## Release Hightlights
