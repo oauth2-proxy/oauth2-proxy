@@ -69,4 +69,4 @@ and `--redis-sentinel-connection-urls` appropriately.
 Redis Cluster is available to be the backend store as well. To leverage it, you will need to set the 
 `--redis-use-cluster=true` flag, and configure the flags `--redis-cluster-connection-urls` appropriately.
 
-Note that flags `--redis-use-sentinel=true` and `--redis-use-cluster=true` are mutual exclusive.
+Note that flags `--redis-use-sentinel=true` and `--redis-use-cluster=true` are mutually exclusive.
