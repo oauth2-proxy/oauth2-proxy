@@ -8,6 +8,8 @@
 
 ## Changes since v5.0.0
 
+- [#372](https://github.com/pusher/oauth2_proxy/pull/372) Allow fallback to secondary verified email address in GitHub provider (@dmnemec)
+
 # v5.0.0
 
 ## Release Hightlights
