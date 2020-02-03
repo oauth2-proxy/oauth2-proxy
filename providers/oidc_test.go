@@ -28,13 +28,14 @@ const refreshToken = "refresh_token"
 const clientID = "https://test.myapp.com"
 const secret = "secret"
 
-type IDTokenClaims struct {
+type idTokenClaims struct {
 	Name    string `json:"name,omitempty"`
 	Email   string `json:"email,omitempty"`
 	Picture string `json:"picture,omitempty"`
 	jwt.StandardClaims
 }
-type RedeemResponse struct {
+
+type redeemTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int64  `json:"expires_in"`
@@ -42,7 +43,7 @@ type RedeemResponse struct {
 	IDToken      string `json:"id_token,omitempty"`
 }
 
-var defaultIDToken IDTokenClaims = IDTokenClaims{
+var defaultIDToken idTokenClaims = idTokenClaims{
 	"Jane Dobbs",
 	"janed@me.com",
 	"http://mugbook.com/janed/me.jpg",
@@ -57,11 +58,11 @@ var defaultIDToken IDTokenClaims = IDTokenClaims{
 	},
 }
 
-type KeySetStub struct {}
+type fakeKeySetStub struct {}
 
-func (c KeySetStub) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
+func (fakeKeySetStub) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
 	decodeString, err := base64.RawURLEncoding.DecodeString(strings.Split(jwt, ".")[1])
-	tokenClaims := &IDTokenClaims{}
+	tokenClaims := &idTokenClaims{}
 	err = json.Unmarshal(decodeString, tokenClaims)
 
 	if err != nil || tokenClaims.Id == "this-id-fails-validation" {
@@ -99,7 +100,7 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 		ProviderData: providerData,
 		Verifier:     oidc.NewVerifier(
 			"https://issuer.example.com",
-			KeySetStub{},
+			fakeKeySetStub{},
 			&oidc.Config{ClientID: clientID},
 		),
 	}
@@ -116,7 +117,7 @@ func newOIDCServer(body []byte) (*url.URL, *httptest.Server) {
 	return u, s
 }
 
-func newSignedTestIDToken(tokenClaims IDTokenClaims) (string, error) {
+func newSignedTestIDToken(tokenClaims idTokenClaims) (string, error) {
 
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	standardClaims := jwt.NewWithClaims(jwt.SigningMethodRS256, tokenClaims)
@@ -141,7 +142,7 @@ func newTestSetup(body []byte) (*httptest.Server, *OIDCProvider) {
 func TestOIDCProviderRedeem(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
-	body, _ := json.Marshal(RedeemResponse{
+	body, _ := json.Marshal(redeemTokenResponse{
 		AccessToken:  accessToken,
 		ExpiresIn:    10,
 		TokenType:    "Bearer",
@@ -164,7 +165,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
-	body, _ := json.Marshal(RedeemResponse{
+	body, _ := json.Marshal(redeemTokenResponse{
 		AccessToken:  accessToken,
 		ExpiresIn:    10,
 		TokenType:    "Bearer",
@@ -197,7 +198,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
-	body, _ := json.Marshal(RedeemResponse{
+	body, _ := json.Marshal(redeemTokenResponse{
 		AccessToken:  accessToken,
 		ExpiresIn:    10,
 		TokenType:    "Bearer",
