@@ -20,7 +20,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 		err = errors.New("missing code")
 		return
 	}
-	clientSecret, err := p.ClientSecret()
+	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return
 	}

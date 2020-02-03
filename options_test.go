@@ -54,9 +54,9 @@ func TestClientSecretFileOptionFails(t *testing.T) {
 
 	p := o.provider.Data()
 	assert.Equal(t, "xyzzyplugh", p.ClientSecretFile)
-	assert.Equal(t, "", p.ClientSecret_)
+	assert.Equal(t, "", p.ClientSecret)
 
-	s, err := p.ClientSecret()
+	s, err := p.GetClientSecret()
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", s)
 }
@@ -84,9 +84,9 @@ func TestClientSecretFileOption(t *testing.T) {
 
 	p := o.provider.Data()
 	assert.Equal(t, clientSecretFileName, p.ClientSecretFile)
-	assert.Equal(t, "", p.ClientSecret_)
+	assert.Equal(t, "", p.ClientSecret)
 
-	s, err := p.ClientSecret()
+	s, err := p.GetClientSecret()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "testcase", s)
 }

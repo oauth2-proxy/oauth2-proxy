@@ -400,11 +400,11 @@ func (o *Options) Validate() error {
 
 func parseProviderInfo(o *Options, msgs []string) []string {
 	p := &providers.ProviderData{
-		Scope:          o.Scope,
-		ClientID:       o.ClientID,
-		ClientSecret_:   o.ClientSecret,
+		Scope:            o.Scope,
+		ClientID:         o.ClientID,
+		ClientSecret:     o.ClientSecret,
 		ClientSecretFile: o.ClientSecretFile,
-		ApprovalPrompt: o.ApprovalPrompt,
+		ApprovalPrompt:   o.ApprovalPrompt,
 	}
 	p.LoginURL, msgs = parseURL(o.LoginURL, "login", msgs)
 	p.RedeemURL, msgs = parseURL(o.RedeemURL, "redeem", msgs)
