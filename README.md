@@ -18,7 +18,7 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v4.0.0`)
+    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v5.0.0`)
 
     b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 
