@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
@@ -42,28 +43,36 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *sessions.SessionStat
 	if err != nil {
 		return nil, fmt.Errorf("token exchange: %v", err)
 	}
-	s, err = p.createSessionState(ctx, token)
+
+	// in the initial exchange the id token is mandatory
+	idToken, err := p.findVerifiedIDToken(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify id_token: %v", err)
+	} else if idToken == nil {
+		return nil, fmt.Errorf("token response did not contain an id_token")
+	}
+
+	s, err = p.createSessionState(token, idToken)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update session: %v", err)
 	}
+
 	return
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
+// RefreshToken to fetch a new Access Token (and optional ID token) if required
 func (p *OIDCProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil
 	}
-
-	origExpiration := s.ExpiresOn
 
 	err := p.redeemRefreshToken(s)
 	if err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
-	fmt.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
+	fmt.Printf("refreshed access token %s (expired on %s)\n", s, s.ExpiresOn)
 	return true, nil
 }
 
@@ -84,81 +93,76 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 	if err != nil {
 		return fmt.Errorf("failed to get token: %v", err)
 	}
-	newSession, err := p.createSessionState(ctx, token)
+
+	// in the token refresh response the id_token is optional
+	idToken, err := p.findVerifiedIDToken(ctx, token)
 	if err != nil {
-		return fmt.Errorf("unable to update session: %v", err)
+		return fmt.Errorf("unable to extract id_token from response: %v", err)
 	}
+
+	newSession, err := p.createSessionState(token, idToken)
+	if err != nil {
+		return fmt.Errorf("unable create new session state from response: %v", err)
+	}
+
+	// It's possible that if the refresh token isn't in the token response the session will not contain an id token
+	// if it doesn't it's probably better to retain the old one
+	if newSession.IDToken != "" {
+		s.IDToken = newSession.IDToken
+		s.Email = newSession.Email
+		s.User = newSession.User
+	}
+
 	s.AccessToken = newSession.AccessToken
-	s.IDToken = newSession.IDToken
 	s.RefreshToken = newSession.RefreshToken
 	s.CreatedAt = newSession.CreatedAt
 	s.ExpiresOn = newSession.ExpiresOn
-	s.Email = newSession.Email
+
 	return
 }
 
-func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
-	rawIDToken, ok := token.Extra("id_token").(string)
-	if !ok {
-		return nil, fmt.Errorf("token response did not contain an id_token")
+func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
+
+	getIDToken := func() (string, bool) {
+		rawIDToken, _ := token.Extra("id_token").(string)
+		return rawIDToken, len(strings.TrimSpace(rawIDToken)) > 0
 	}
 
-	// Parse and verify ID Token payload.
-	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
-	if err != nil {
-		return nil, fmt.Errorf("could not verify id_token: %v", err)
+	if rawIDToken, present := getIDToken(); present {
+		verifiedIdToken, err := p.Verifier.Verify(ctx, rawIDToken)
+		return verifiedIdToken, err
+	} else {
+		return nil, nil
 	}
+}
 
-	// Extract custom claims.
-	var claims struct {
-		Subject  string `json:"sub"`
-		Email    string `json:"email"`
-		Verified *bool  `json:"email_verified"`
-	}
-	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
-	}
+func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
 
-	if claims.Email == "" {
-		if p.ProfileURL.String() == "" {
-			return nil, fmt.Errorf("id_token did not contain an email")
-		}
+	newSession := &sessions.SessionState{}
 
-		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
-		// contents at the profileURL contains the email.
-		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
-
-		req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
+	if idToken != nil {
+		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String())
 		if err != nil {
-			return nil, err
-		}
-		req.Header = getOIDCHeader(token.AccessToken)
-
-		respJSON, err := requests.Request(req)
-		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
 		}
 
-		email, err := respJSON.Get("email").String()
-		if err != nil {
-			return nil, fmt.Errorf("Neither id_token nor userinfo endpoint contained an email")
-		}
+		if claims != nil {
 
-		claims.Email = email
-	}
-	if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+			if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
+				return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+			}
+
+			newSession.IDToken = token.Extra("id_token").(string)
+			newSession.Email = claims.Email
+			newSession.User = claims.Subject
+		}
 	}
 
-	return &sessions.SessionState{
-		AccessToken:  token.AccessToken,
-		IDToken:      rawIDToken,
-		RefreshToken: token.RefreshToken,
-		CreatedAt:    time.Now(),
-		ExpiresOn:    idToken.Expiry,
-		Email:        claims.Email,
-		User:         claims.Subject,
-	}, nil
+	newSession.AccessToken = token.AccessToken
+	newSession.RefreshToken = token.RefreshToken
+	newSession.CreatedAt = time.Now()
+	newSession.ExpiresOn = token.Expiry
+	return newSession, nil
 }
 
 // ValidateSessionState checks that the session's IDToken is still valid
@@ -177,4 +181,49 @@ func getOIDCHeader(accessToken string) http.Header {
 	header.Set("Accept", "application/json")
 	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
+}
+
+func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
+
+	// Extract custom claims.
+	claims := &OIDCClaims{}
+	if err := idToken.Claims(claims); err != nil {
+		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+	}
+
+	if claims.Email == "" {
+		if profileURL == "" {
+			return nil, fmt.Errorf("id_token did not contain an email")
+		}
+
+		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
+		// contents at the profileURL contains the email.
+		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
+
+		req, err := http.NewRequest("GET", profileURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header = getOIDCHeader(accessToken)
+
+		respJSON, err := requests.Request(req)
+		if err != nil {
+			return nil, err
+		}
+
+		email, err := respJSON.Get("email").String()
+		if err != nil {
+			return nil, fmt.Errorf("neither id_token nor userinfo endpoint contained an email")
+		}
+
+		claims.Email = email
+	}
+
+	return claims, nil
+}
+
+type OIDCClaims struct {
+	Subject  string `json:"sub"`
+	Email    string `json:"email"`
+	Verified *bool  `json:"email_verified"`
 }
