@@ -26,6 +26,7 @@ func main() {
 	jwtIssuers := StringArray{}
 	googleGroups := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
+	redisClusterConnectionURLs := StringArray{}
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -96,6 +97,8 @@ func main() {
 	flagSet.String("redis-ca-path", "", "Redis custom CA path")
 	flagSet.Bool("redis-insecure-skip-tls-verify", false, "Use insecure TLS connection to redis")
 	flagSet.Var(&redisSentinelConnectionURLs, "redis-sentinel-connection-urls", "List of Redis sentinel connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-sentinel")
+	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
+	flagSet.Var(&redisClusterConnectionURLs, "redis-cluster-connection-urls", "List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-cluster")
 
 	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
 	flagSet.Int("logging-max-size", 100, "Maximum size in megabytes of the log file before rotation")
