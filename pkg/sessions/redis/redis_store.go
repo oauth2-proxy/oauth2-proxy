@@ -33,19 +33,19 @@ type TicketData struct {
 type SessionStore struct {
 	CookieCipher  *encryption.Cipher
 	CookieOptions *options.CookieOptions
-	Client        *redis.Client
+	Cmdable       redis.Cmdable
 }
 
 // NewRedisSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
-	client, err := newRedisClient(opts.RedisStoreOptions)
+	cmdable, err := newRedisCmdable(opts.RedisStoreOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
 
 	rs := &SessionStore{
-		Client:        client,
+		Cmdable:       cmdable,
 		CookieCipher:  opts.Cipher,
 		CookieOptions: cookieOpts,
 	}
@@ -53,11 +53,22 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 
 }
 
-func newRedisClient(opts options.RedisStoreOptions) (*redis.Client, error) {
+func newRedisCmdable(opts options.RedisStoreOptions) (redis.Cmdable, error) {
+	if opts.UseSentinel && opts.UseCluster {
+		return nil, fmt.Errorf("options redis-use-sentinel and redis-use-cluster are mutually exclusive")
+	}
+
 	if opts.UseSentinel {
 		client := redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    opts.SentinelMasterName,
 			SentinelAddrs: opts.SentinelConnectionURLs,
+		})
+		return client, nil
+	}
+
+	if opts.UseCluster {
+		client := redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: opts.ClusterConnectionURLs,
 		})
 		return client, nil
 	}
@@ -152,7 +163,7 @@ func (store *SessionStore) loadSessionFromString(value string) (*sessions.Sessio
 		return nil, err
 	}
 
-	result, err := store.Client.Get(ticket.asHandle(store.CookieOptions.CookieName)).Result()
+	result, err := store.Cmdable.Get(ticket.asHandle(store.CookieOptions.CookieName)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +214,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 	// If there's an issue decoding the ticket, ignore it
 	ticket, _ := decodeTicket(store.CookieOptions.CookieName, val)
 	if ticket != nil {
-		_, err := store.Client.Del(ticket.asHandle(store.CookieOptions.CookieName)).Result()
+		_, err := store.Cmdable.Del(ticket.asHandle(store.CookieOptions.CookieName)).Result()
 		if err != nil {
 			return fmt.Errorf("error clearing cookie from redis: %s", err)
 		}
@@ -243,7 +254,7 @@ func (store *SessionStore) storeValue(value string, expiration time.Duration, re
 	stream.XORKeyStream(ciphertext, []byte(value))
 
 	handle := ticket.asHandle(store.CookieOptions.CookieName)
-	err = store.Client.Set(handle, ciphertext, expiration).Err()
+	err = store.Cmdable.Set(handle, ciphertext, expiration).Err()
 	if err != nil {
 		return "", err
 	}
