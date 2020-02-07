@@ -53,6 +53,13 @@ func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 	return &GitHubProvider{ProviderData: p}
 }
 
+func getGitHubHeader(accessToken string) http.Header {
+	header := make(http.Header)
+	header.Set("Accept", "application/vnd.github.v3+json")
+	header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
+	return header
+}
+
 // SetOrgTeam adds GitHub org reading parameters to the OAuth2 scope
 func (p *GitHubProvider) SetOrgTeam(org, team string) {
 	p.Org = org
@@ -87,8 +94,7 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 			RawQuery: params.Encode(),
 		}
 		req, _ := http.NewRequest("GET", endpoint.String(), nil)
-		req.Header.Set("Accept", "application/vnd.github.v3+json")
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
+		req.Header = getGitHubHeader(accessToken)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return false, err
@@ -164,8 +170,7 @@ func (p *GitHubProvider) hasOrgAndTeam(accessToken string) (bool, error) {
 		}
 
 		req, _ := http.NewRequest("GET", endpoint.String(), nil)
-		req.Header.Set("Accept", "application/vnd.github.v3+json")
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
+		req.Header = getGitHubHeader(accessToken)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return false, err
@@ -283,7 +288,7 @@ func (p *GitHubProvider) GetEmailAddress(s *sessions.SessionState) (string, erro
 		Path:   path.Join(p.ValidateURL.Path, "/user/emails"),
 	}
 	req, _ := http.NewRequest("GET", endpoint.String(), nil)
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", s.AccessToken))
+	req.Header = getGitHubHeader(s.AccessToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
@@ -332,7 +337,7 @@ func (p *GitHubProvider) GetUserName(s *sessions.SessionState) (string, error) {
 		return "", fmt.Errorf("could not create new GET request: %v", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", s.AccessToken))
+	req.Header = getGitHubHeader(s.AccessToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
@@ -356,4 +361,9 @@ func (p *GitHubProvider) GetUserName(s *sessions.SessionState) (string, error) {
 	}
 
 	return user.Login, nil
+}
+
+// ValidateSessionState validates the AccessToken
+func (p *GitHubProvider) ValidateSessionState(s *sessions.SessionState) bool {
+	return validateToken(p, s.AccessToken, getGitHubHeader(s.AccessToken))
 }
