@@ -32,7 +32,7 @@ func (p *ProviderData) GetClientSecret() (ClientSecret string, err error) {
 	}
 
 	// Getting ClientSecret can fail in runtime so we need to report it without returning the file name to the user
-	FileClientSecret, err := ioutil.ReadFile(p.ClientSecretFile)
+	fileClientSecret, err := ioutil.ReadFile(p.ClientSecretFile)
 	if err != nil {
 		logger.Printf("error reading client secret file %s: %s", p.ClientSecretFile, err)
 		return "", errors.New("could not read client secret file")
