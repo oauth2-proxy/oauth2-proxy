@@ -12,7 +12,7 @@
 - [#335](https://github.com/pusher/oauth2_proxy/pull/335) OIDC Provider support for empty id_tokens in the access token refresh response (@howzat)
 - [#363](https://github.com/pusher/oauth2_proxy/pull/363) Extension of Redis Session Store to Support Redis Cluster (@yan-dblinf)
 - [#353](https://github.com/pusher/oauth2_proxy/pull/353) Fix login page fragment handling after soft reload on Firefox (@ffdybuster)
-- [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for Google provider with rotating key (@pasha-r)
+- [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for providers that rotate client secret via file system (@pasha-r)
 
 # v5.0.0
 
