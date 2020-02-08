@@ -37,5 +37,5 @@ func (p *ProviderData) GetClientSecret() (ClientSecret string, err error) {
 		logger.Printf("error reading client secret file %s: %s", p.ClientSecretFile, err)
 		return "", errors.New("could not read client secret file")
 	}
-	return string(FileClientSecret), nil
+	return string(fileClientSecret), nil
 }
