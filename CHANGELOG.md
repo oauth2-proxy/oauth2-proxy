@@ -1,9 +1,10 @@
 # Vx.x.x (Pre-release)
 
 ## Release Hightlights
+- Added Auth0 provider
 
 ## Important Notes
-- [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp) 
+- [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp)  
 
 ## Breaking Changes
 
@@ -12,6 +13,7 @@
 - [#335](https://github.com/pusher/oauth2_proxy/pull/335) OIDC Provider support for empty id_tokens in the access token refresh response (@howzat)
 - [#363](https://github.com/pusher/oauth2_proxy/pull/363) Extension of Redis Session Store to Support Redis Cluster (@yan-dblinf)
 - [#353](https://github.com/pusher/oauth2_proxy/pull/353) Fix login page fragment handling after soft reload on Firefox (@ffdybuster)
+- [#](https://github.com/pusher/oauth2_proxy/pull/) Add auth0 provider
 
 # v5.0.0
 
