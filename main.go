@@ -65,6 +65,7 @@ func main() {
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
 	flagSet.String("gitlab-group", "", "restrict logins to members of this group")
+	flagSet.String("auth0-domain", "", "the auth0 domain (tenant-name.auth0.com)")
 	flagSet.Var(&googleGroups, "google-group", "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")

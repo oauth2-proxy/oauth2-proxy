@@ -7,6 +7,7 @@ require (
 	github.com/alicebob/gopher-json v0.0.0-20180125190556-5a6b3ba71ee6 // indirect
 	github.com/alicebob/miniredis v2.5.0+incompatible
 	github.com/bitly/go-simplejson v0.5.0
+	github.com/bitly/oauth2_proxy v2.0.1+incompatible
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible

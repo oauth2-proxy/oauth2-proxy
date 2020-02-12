@@ -22,6 +22,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | ------ | ---- | ----------- | ------- |
 | `-acr-values` | string | optional, used by login.gov | `"http://idmanagement.gov/ns/assurance/loa/1"` |
 | `-approval-prompt` | string | OAuth approval_prompt | `"force"` |
+| `-auth0-domain` | string | the domain to use with the auth0 provider, ie: `example.auth0.com` | |
 | `-auth-logging` | bool | Log authentication attempts | true |
 | `-auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `-authenticated-emails-file` | string | authenticate against emails via file (one per line) | |

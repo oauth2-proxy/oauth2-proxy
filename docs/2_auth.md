@@ -21,6 +21,7 @@ Valid providers are :
 - [login.gov](#logingov-provider)
 - [Nextcloud](#nextcloud-provider)
 - [DigitalOcean](#digitalocean-auth-provider)
+- [Auth0](#auth0-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -337,6 +338,24 @@ To use the provider, pass the following options:
 ```
 
  Alternatively, set the equivalent options in the config file. The redirect URL defaults to `https://<requested host header>/oauth2/callback`. If you need to change it, you can use the `--redirect-url` command-line option.
+ 
+### Auth0 Provider
+
+1. Get the Auth0 domain associated with your Auth0 tenant (i.e. example.auth0.com).
+2. [Create a new "Regular Web Application"](https://manage.auth0.com/#/applications) and open settings
+    * Substitute `oauth2-proxy` with the actual hostname that oauth2_proxy is running on in the following URLs:
+        * In the "Allowed Callback URLs" field, enter: `https://oauth-proxy/oauth2/callback`
+        * In the "Allowed Web Origins" and "Allowed Origins (CORS)" field, enter: `https://oauth-proxy`
+3. Note the Client ID and Client Secret found in settings.
+
+To use the provider, pass the following options:
+
+```
+   --provider=auth0
+   --auth0-domain=<Auth0 Domain>
+   --client-id=<Client ID>
+   --client-secret=<Client Secret>
+```
 
 ## Email Authentication
 

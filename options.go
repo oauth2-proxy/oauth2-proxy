@@ -52,6 +52,7 @@ type Options struct {
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org" env:"OAUTH2_PROXY_GITHUB_ORG"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team" env:"OAUTH2_PROXY_GITHUB_TEAM"`
 	GitLabGroup              string   `flag:"gitlab-group" cfg:"gitlab_group" env:"OAUTH2_PROXY_GITLAB_GROUP"`
+	Auth0Domain              string   `flag:"auth0-domain" cfg:"auth0_domain" env:"OAUTH2_PROXY_AUTH0_DOMAIN"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group" env:"OAUTH2_PROXY_GOOGLE_GROUPS"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email" env:"OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json" env:"OAUTH2_PROXY_GOOGLE_SERVICE_ACCOUNT_JSON"`
@@ -407,6 +408,8 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 	switch p := o.provider.(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.AzureTenant)
+	case *providers.Auth0Provider:
+		p.Configure(o.Auth0Domain)
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
 	case *providers.KeycloakProvider:
