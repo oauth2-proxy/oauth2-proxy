@@ -16,11 +16,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis"
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
 	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
+	"github.com/pusher/oauth2_proxy/pkg/sessions/redis"
 	"github.com/pusher/oauth2_proxy/providers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1401,6 +1404,69 @@ func TestGetJwtSession(t *testing.T) {
 	assert.Equal(t, test.rw.Header().Get("Authorization"), authHeader)
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-User"), "john@example.com")
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
+}
+
+func TestSkipSessionTicket(t *testing.T) {
+	/* token payload:
+	{
+	  "sub": "1234567890",
+	  "aud": "https://test.myapp.com",
+	  "name": "John Doe",
+	  "email": "john@example.com",
+	  "iss": "https://issuer.example.com",
+	  "iat": 1553691215,
+	  "exp": 1912151821
+	}
+	*/
+	goodJwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
+		"eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoiaHR0cHM6Ly90ZXN0Lm15YXBwLmNvbSIsIm5hbWUiOiJKb2huIERvZSIsImVtY" +
+		"WlsIjoiam9obkBleGFtcGxlLmNvbSIsImlzcyI6Imh0dHBzOi8vaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNTUzNjkxMj" +
+		"E1LCJleHAiOjE5MTIxNTE4MjF9." +
+		"rLVyzOnEldUq_pNkfa-WiV8TVJYWyZCaM2Am_uo8FGg11zD7l-qmz3x1seTvqpH6Y0Ty00fmv6dJnGnC8WMnPXQiodRTfhBSe" +
+		"OKZMu0HkMD2sg52zlKkbfLTO6ic5VnbVgwjjrB8am_Ta6w7kyFUaB5C1BsIrrLMldkWEhynbb8"
+
+	keyset := NoOpKeySet{}
+	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
+		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+
+	test := NewAuthOnlyEndpointTest(func(opts *Options) {
+		opts.PassAuthorization = true
+		opts.SkipJwtBearerTokens = true
+		opts.SkipSessionTickets = true
+		opts.CookieExpire = time.Duration(23) * time.Hour
+		opts.jwtBearerVerifiers = append(opts.jwtBearerVerifiers, verifier)
+	})
+	tp, _ := test.proxy.provider.(*TestProvider)
+	tp.GroupValidator = func(s string) bool {
+		return true
+	}
+
+	// Setup test miniredis
+	mr, _ := miniredis.Run()
+	test.opts.RedisConnectionURL = "redis://" + mr.Addr()
+	store, _ := redis.NewRedisSessionStore(&test.opts.SessionOptions, &test.opts.CookieOptions)
+	test.proxy.sessionStore = store
+
+	// Inject Session into redis using store.Save and dummy request
+	redisStore, _ := test.proxy.sessionStore.(*redis.SessionStore)
+	sessionState := sessions.SessionState{IDToken: goodJwt}
+	rw := httptest.NewRecorder()
+	redisStore.Save(rw, &http.Request{}, &sessionState)
+	response := rw.Result()
+	responseCookie := response.Cookies()[0]
+	ticketString, _, _ := encryption.Validate(responseCookie, test.opts.CookieSecret, test.opts.CookieExpire)
+
+	authHeader := fmt.Sprintf("Bearer %s", ticketString)
+	test.req.Header = map[string][]string{
+		"Authorization": {authHeader},
+	}
+
+	// Get session from Bearer with ticket
+	session, _ := test.proxy.GetJwtSession(test.req)
+	assert.Equal(t, session.User, "john@example.com")
+	assert.Equal(t, session.Email, "john@example.com")
+	assert.Equal(t, session.ExpiresOn, time.Unix(1912151821, 0))
+	assert.Equal(t, session.IDToken, goodJwt)
 }
 
 func TestJwtUnauthorizedOnGroupValidationFailure(t *testing.T) {

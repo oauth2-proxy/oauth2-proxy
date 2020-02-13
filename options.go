@@ -70,6 +70,7 @@ type Options struct {
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
 	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
+	SkipSessionTickets            bool          `flag:"skip-session-tickets" cfg:"skip_session_tickets" env:"OAUTH2_PROXY_SKIP_SESSION_TICKETS"`
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
 	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
@@ -351,6 +352,15 @@ func (o *Options) Validate() error {
 		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
 	} else {
 		o.sessionStore = sessionStore
+	}
+
+	if o.SkipSessionTickets {
+		if o.SessionOptions.Type != options.RedisSessionStoreType {
+			msgs = append(msgs, "skipping session tickets requires redis session store")
+		}
+		if !o.SkipJwtBearerTokens {
+			msgs = append(msgs, "skipping session tickets requires skip JWT bearer tokens enabled")
+		}
 	}
 
 	if o.CookieRefresh >= o.CookieExpire {

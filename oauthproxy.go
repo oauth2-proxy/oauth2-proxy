@@ -104,6 +104,7 @@ type OAuthProxy struct {
 	skipAuthPreflight    bool
 	skipJwtBearerTokens  bool
 	jwtBearerVerifiers   []*oidc.IDTokenVerifier
+	skipSessionTickets   bool
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
 	Banner               string
@@ -298,6 +299,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
+		skipSessionTickets:   opts.SkipSessionTickets,
 		compiledRegex:        opts.CompiledRegex,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
@@ -1122,15 +1124,17 @@ func (p *OAuthProxy) findBearerToken(req *http.Request) (string, error) {
 		}
 	}
 
-	redisStore, ok := p.sessionStore.(*redis.SessionStore)
-	// Check if this is actually a session identifier
-	if ok && strings.HasPrefix(rawBearerToken, p.CookieName){
-		session, err := redisStore.LoadSessionFromString(rawBearerToken)
-		if err != nil {
-			logger.PrintAuthf("", req, logger.AuthFailure, "error loading ticket from store: %v", err)
-		} else {
-			// Only proceed if we found a cookie in the cookie store
-			rawBearerToken = session.IDToken
+	if p.skipSessionTickets {
+		// Check if this is actually a session ticket
+		redisStore, ok := p.sessionStore.(*redis.SessionStore)
+		if ok && strings.HasPrefix(rawBearerToken, p.CookieName) {
+			session, err := redisStore.LoadSessionFromString(rawBearerToken)
+			if err != nil {
+				logger.PrintAuthf("", req, logger.AuthFailure, "error loading session from store: %v", err)
+			} else if len(session.IDToken) > 0 {
+				// Only proceed if we found a session and it has an ID token
+				rawBearerToken = session.IDToken
+			}
 		}
 	}
 
