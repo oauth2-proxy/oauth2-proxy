@@ -105,6 +105,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
 | `-skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `-login-url`, `-redeem-url` and `-oidc-jwks-url` must be configured in this case | false |
 | `-skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
+| `-skip-session-tickets` | bool | will skip requests that have verified session tickets if session-store-type is redis and skip-jwt-bearer-tokens is set | false |
 | `-ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |
 | `-ssl-upstream-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS upstreams | false |
 | `-standard-logging` | bool | Log standard runtime information | true |

@@ -55,7 +55,7 @@ func main() {
 	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
 	flagSet.Var(&jwtIssuers, "extra-jwt-issuers", "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
-	flagSet.Bool("skip-session-tickets", false, "if session-store-type is redis and skip-jwt-bearer-tokens is set, requests that have verified session tickets will be skipped (default false)")
+	flagSet.Bool("skip-session-tickets", false, "will skip requests that have verified session tickets if session-store-type is redis and skip-jwt-bearer-tokens is set (default false)")
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.Var(&whitelistDomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
