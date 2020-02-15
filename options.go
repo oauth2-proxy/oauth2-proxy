@@ -496,9 +496,6 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			}
 		}
 	}
-	//case *providers.DropsolidProvider:
-	//	p.PubJWKURL, msgs = parseURL(o.PubJWKURL, "pubjwk", msgs)
-	//}
 	return msgs
 }
 
