@@ -23,7 +23,6 @@ import (
 type DropsolidProvider struct {
 	*ProviderData
 	JWTKey    *rsa.PrivateKey
-//	PubJWKURL *url.URL
 }
 
 type dropsolidJwtClaims struct {
