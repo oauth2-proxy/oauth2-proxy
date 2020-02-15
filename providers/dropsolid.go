@@ -23,7 +23,7 @@ import (
 type DropsolidProvider struct {
 	*ProviderData
 	JWTKey    *rsa.PrivateKey
-	PubJWKURL *url.URL
+//	PubJWKURL *url.URL
 }
 
 type dropsolidJwtClaims struct {
@@ -235,31 +235,6 @@ func (p *DropsolidProvider) Redeem(redirectURL, code string) (s *sessions.Sessio
 	}
 	return
 }
-
-/*func (p *DropsolidProvider) getPublicKeyFromJwtBearerVerfifier(token *jwt.Token) (interface{}, error) {
-	// @Todo, refactor this to use the p.JwtBearerVerifiers data.
-	resp, myerr := http.Get(p.PubJWKURL.String())
-	if myerr != nil {
-		return nil, myerr
-	}
-	if resp.StatusCode != 200 {
-		myerr = fmt.Errorf("got %d from %q", resp.StatusCode, p.PubJWKURL.String())
-		return nil, myerr
-	}
-	body, myerr := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if myerr != nil {
-		return nil, myerr
-	}
-
-	var pubkeys jose.JSONWebKeySet
-	myerr = json.Unmarshal(body, &pubkeys)
-	if myerr != nil {
-		return nil, myerr
-	}
-	pubkey := pubkeys.Keys[0]
-	return pubkey.Key, nil
-}*/
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required

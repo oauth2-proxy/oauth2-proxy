@@ -495,9 +495,9 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 				p.JWTKey = signKey
 			}
 		}
-	case *providers.DropsolidProvider:
-		p.PubJWKURL, msgs = parseURL(o.PubJWKURL, "pubjwk", msgs)
-	}
+	//case *providers.DropsolidProvider:
+	//	p.PubJWKURL, msgs = parseURL(o.PubJWKURL, "pubjwk", msgs)
+	//}
 	return msgs
 }
 
