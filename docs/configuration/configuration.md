@@ -29,6 +29,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
 | `-client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
 | `-client-secret` | string | the OAuth Client Secret | |
+| `-client-secret-file` | string | the file with OAuth Client Secret | |
 | `-config` | string | path to config file | |
 | `-cookie-domain` | string | an optional cookie domain to force cookies to (ie: `.yourcompany.com`) | |
 | `-cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
@@ -329,3 +330,6 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 ```
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
+
+### Note on rotated Client Secret
+If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.

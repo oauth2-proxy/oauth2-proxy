@@ -146,6 +146,18 @@ func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	}
 }
 
+func TestGoogleProviderRedeemFailsNoCLientSecret(t *testing.T) {
+	p := newGoogleProvider()
+	p.ProviderData.ClientSecretFile = "srvnoerre"
+
+	session, err := p.Redeem("http://redirect/", "code1234")
+	assert.NotEqual(t, nil, err)
+	if session != nil {
+		t.Errorf("expect nill session %#v", session)
+	}
+	assert.Equal(t, "could not read client secret file", err.Error())
+}
+
 func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
 	p := newGoogleProvider()
 
