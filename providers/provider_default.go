@@ -20,11 +20,15 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 		err = errors.New("missing code")
 		return
 	}
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return
+	}
 
 	params := url.Values{}
 	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", p.ClientSecret)
+	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
