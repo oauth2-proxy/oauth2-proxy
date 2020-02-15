@@ -15,6 +15,7 @@
 - [#363](https://github.com/pusher/oauth2_proxy/pull/363) Extension of Redis Session Store to Support Redis Cluster (@yan-dblinf)
 - [#353](https://github.com/pusher/oauth2_proxy/pull/353) Fix login page fragment handling after soft reload on Firefox (@ffdybuster)
 - [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for providers that rotate client secret via file system (@pasha-r)
+- [#395](https://github.com/pusher/oauth2_proxy/pull/395) Add Dropsolid OAuth provider and "providerize" GetJwtSession (@nickveenhof)
 
 # v5.0.0
 
