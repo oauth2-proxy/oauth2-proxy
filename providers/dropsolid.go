@@ -2,35 +2,35 @@ package providers
 
 import (
 	"bytes"
+	"context"
+	"crypto/rsa"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"io/ioutil"
-	"encoding/json"
-    "crypto/rsa"
 	"time"
-	"errors"
-	"context"
 
 	"github.com/dgrijalva/jwt-go"
-    "github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
 // DropsolidProvider represents a Dropsolid Platform based Identity Provider
 type DropsolidProvider struct {
 	*ProviderData
-	JWTKey    *rsa.PrivateKey
+	JWTKey *rsa.PrivateKey
 }
 
 type dropsolidJwtClaims struct {
-	Scopes     []string   `json:"scopes"`
+	Scopes []string `json:"scopes"`
 	jwt.StandardClaims
 }
 
 type dropsolidUserInfo struct {
-	UserId        string   `json:"sub"`
-	Email         string   `json:"email"`
+	UserId string `json:"sub"`
+	Email  string `json:"email"`
 }
 
 // NewDropsolidProvider initiates a new DropsolidProvider
@@ -73,7 +73,6 @@ func getDropsolidHeader(accessToken string) http.Header {
 	return header
 }
 
-
 func (p *DropsolidProvider) getUserInfo(s *sessions.SessionState) (*dropsolidUserInfo, error) {
 	// Retrieve user info JSON
 	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
@@ -103,9 +102,9 @@ func (p *DropsolidProvider) getUserInfo(s *sessions.SessionState) (*dropsolidUse
 		return nil, fmt.Errorf("failed to parse user info: %v", err)
 	}
 	// handle json did not match error
-    if userInfo.UserId == "" || userInfo.Email == "" {
-        return nil, fmt.Errorf("failed to parse user info: %v", err)
-    }
+	if userInfo.UserId == "" || userInfo.Email == "" {
+		return nil, fmt.Errorf("failed to parse user info: %v", err)
+	}
 
 	return &userInfo, nil
 }
@@ -120,7 +119,6 @@ func (p *DropsolidProvider) GetUserName(s *sessions.SessionState) (string, error
 
 	return userInfo.UserId, nil
 }
-
 
 // GetEmailAddress returns the Account email address
 func (p *DropsolidProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
@@ -179,9 +177,9 @@ func (p *DropsolidProvider) Redeem(redirectURL, code string) (s *sessions.Sessio
 
 	// blindly try json and x-www-form-urlencoded
 	var jsonResponse struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn int64 `json:"expires_in"`
-		TokenType string `json:"token_type"`
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+		TokenType    string `json:"token_type"`
 		RefreshToken string `json:"refresh_token"`
 	}
 	err = json.Unmarshal(body, &jsonResponse)
@@ -193,13 +191,13 @@ func (p *DropsolidProvider) Redeem(redirectURL, code string) (s *sessions.Sessio
 	// Validate the JWT Token
 	c, err := p.validateJwtTokenAndGetClaims(jsonResponse.AccessToken)
 	//token, err := jwt.ParseWithClaims(jsonResponse.AccessToken, &dropsolidJwtClaims{}, p.getPublicKeyFromJwtBearerVerfifier)
-	// If the JWT validation fails, something is really wrong. 
+	// If the JWT validation fails, something is really wrong.
 	// Do not allow to continue.
-	if (err != nil) {
+	if err != nil {
 		return
 	}
 	claims := c.(dropsolidJwtClaims)
-	if (err != nil) {
+	if err != nil {
 		return
 	}
 	// Check the expiration date in the JWT
@@ -210,7 +208,7 @@ func (p *DropsolidProvider) Redeem(redirectURL, code string) (s *sessions.Sessio
 
 	if err == nil {
 		s = &sessions.SessionState{
-			AccessToken: jsonResponse.AccessToken,
+			AccessToken:  jsonResponse.AccessToken,
 			RefreshToken: jsonResponse.RefreshToken,
 			CreatedAt:    time.Now(),
 			ExpiresOn:    t,
@@ -247,13 +245,13 @@ func (p *DropsolidProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bo
 
 	// Validate the JWT Token
 	c, err := p.validateJwtTokenAndGetClaims(newToken)
-	// If the JWT validation fails, something is really wrong. 
+	// If the JWT validation fails, something is really wrong.
 	// Do not allow to continue.
-	if (err != nil) {
+	if err != nil {
 		return false, err
 	}
 	claims := c.(*dropsolidJwtClaims)
-	if (err != nil) {
+	if err != nil {
 		return false, err
 	}
 	// Check the expiration date in the JWT
@@ -298,9 +296,9 @@ func (p *DropsolidProvider) redeemRefreshToken(refreshToken string) (newToken st
 	}
 
 	var data struct {
-		AccessToken string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`		
-		ExpiresIn   int64  `json:"expires_in"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in"`
 	}
 	err = json.Unmarshal(body, &data)
 	if err != nil {
@@ -336,22 +334,22 @@ func (p *DropsolidProvider) validateJwtTokenAndGetClaims(rawBearerToken string) 
 func (p *DropsolidProvider) GetJwtSession(rawBearerToken string) (*sessions.SessionState, error) {
 	// Validate the JWT Token
 	c, err := p.validateJwtTokenAndGetClaims(rawBearerToken)
-	if (err != nil) {
+	if err != nil {
 		return nil, err
 	}
 
 	claims := c.(dropsolidJwtClaims)
-	if (err != nil) {
+	if err != nil {
 		return nil, err
 	}
 
 	// Check the expiration date in the JWT
 	t := time.Unix(claims.ExpiresAt, 0)
 	session := &sessions.SessionState{
-		AccessToken:  rawBearerToken,
-		CreatedAt:    time.Now(),
-		ExpiresOn:    t,
-		User:         claims.Subject,
+		AccessToken: rawBearerToken,
+		CreatedAt:   time.Now(),
+		ExpiresOn:   t,
+		User:        claims.Subject,
 	}
 
 	// Get email address
