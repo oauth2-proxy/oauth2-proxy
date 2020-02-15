@@ -190,7 +190,7 @@ func (p *DropsolidProvider) Redeem(redirectURL, code string) (s *sessions.Sessio
 
 	// Validate the JWT Token
 	c, err := p.validateJwtTokenAndGetClaims(jsonResponse.AccessToken)
-	//token, err := jwt.ParseWithClaims(jsonResponse.AccessToken, &dropsolidJwtClaims{}, p.getPublicKeyFromJwtBearerVerfifier)
+
 	// If the JWT validation fails, something is really wrong.
 	// Do not allow to continue.
 	if err != nil {
@@ -200,9 +200,6 @@ func (p *DropsolidProvider) Redeem(redirectURL, code string) (s *sessions.Sessio
 	if err != nil {
 		return
 	}
-	// Check the expiration date in the JWT
-	// Decode the JWT token data.
-	//claims := token.Claims.(dropsolidJwtClaims)
 	// Check if it needs a refresh based on the JWT expiry date
 	t := time.Unix(claims.ExpiresAt, 0)
 
