@@ -29,6 +29,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
 | `-client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
 | `-client-secret` | string | the OAuth Client Secret | |
+| `-client-secret-file` | string | the file with OAuth Client Secret | |
 | `-config` | string | path to config file | |
 | `-cookie-domain` | string | an optional cookie domain to force cookies to (ie: `.yourcompany.com`) | |
 | `-cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
@@ -37,7 +38,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-cookie-path` | string | an optional cookie path to force cookies to (ie: `/poc/`) | `"/"` |
 | `-cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable | |
 | `-cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
-| `-cookie-secure` | bool | set secure (HTTPS) cookie flag | true |
+| `-cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `-cookie-samesite` | string | set SameSite cookie attribute (ie: `"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
 | `-custom-templates-dir` | string | path to custom html templates | |
 | `-display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
@@ -93,9 +94,9 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-request-logging` | bool | Log requests | true |
 | `-request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `-resource` | string | The resource that is protected (Azure AD only) | |
-| `-reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false | 
+| `-reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false |
 | `-scope` | string | OAuth scope specification | |
-| `-session-store-type` | string | Session data storage backend | cookie |
+| `-session-store-type` | string | [Session data storage backend](sessions); redis or cookie | cookie |
 | `-set-xauthrequest` | bool | set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode) | false |
 | `-set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
 | `-signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
@@ -329,3 +330,6 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 ```
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
+
+### Note on rotated Client Secret
+If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.
