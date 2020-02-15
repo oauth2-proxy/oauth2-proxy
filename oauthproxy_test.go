@@ -1034,7 +1034,6 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	opts.provider = NewTestProvider(upstreamURL, "")
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return false })
-	logger.Printf("%+v", proxy)
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("OPTIONS", "/preflight-request", nil)
 	proxy.ServeHTTP(rw, req)
@@ -1443,7 +1442,6 @@ func TestJwtUnauthorizedOnGroupValidationFailure(t *testing.T) {
 	}
 	test.proxy.ServeHTTP(test.rw, test.req)
 	if test.rw.Code != http.StatusUnauthorized {
-		logger.Printf("%v", test.rw.Code)
 		t.Fatalf("expected 401 got %d", test.rw.Code)
 	}
 }
