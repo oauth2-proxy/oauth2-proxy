@@ -12,8 +12,6 @@ import (
 	"errors"
 	"context"
 
-	//"gopkg.in/square/go-jose.v2"
-	//"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
     "github.com/pusher/oauth2_proxy/pkg/logger"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
