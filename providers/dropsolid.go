@@ -203,13 +203,13 @@ func (p *DropsolidProvider) Redeem(redirectURL, code string) (s *sessions.Sessio
 	if (err != nil) {
 		return
 	}
-	claims := c.(*dropsolidJwtClaims)
+	claims := c.(dropsolidJwtClaims)
 	if (err != nil) {
 		return
 	}
 	// Check the expiration date in the JWT
 	// Decode the JWT token data.
-	//claims := token.Claims.(*dropsolidJwtClaims)
+	//claims := token.Claims.(dropsolidJwtClaims)
 	// Check if it needs a refresh based on the JWT expiry date
 	t := time.Unix(claims.ExpiresAt, 0)
 
@@ -370,7 +370,7 @@ func (p *DropsolidProvider) GetJwtSession(rawBearerToken string) (*sessions.Sess
 		return nil, err
 	}
 
-	claims := c.(*dropsolidJwtClaims)
+	claims := c.(dropsolidJwtClaims)
 	if (err != nil) {
 		return nil, err
 	}
