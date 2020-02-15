@@ -135,7 +135,6 @@ func (p *DropsolidProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 
 // ValidateSessionState validates the AccessToken
 func (p *DropsolidProvider) ValidateSessionState(s *sessions.SessionState) bool {
-	logger.Printf("validating token")
 	return validateToken(p, s.AccessToken, getDropsolidHeader(s.AccessToken))
 }
 
@@ -146,7 +145,6 @@ func (p *DropsolidProvider) Redeem(redirectURL, code string) (s *sessions.Sessio
 		err = errors.New("missing code")
 		return
 	}
-	logger.Printf("%v", "Got into the redeem")
 
 	params := url.Values{}
 	params.Add("redirect_uri", redirectURL)
