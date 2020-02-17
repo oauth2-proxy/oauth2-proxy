@@ -50,7 +50,10 @@ func NewAzureOIDCProvider(p *ProviderData) *AzureOIDCProvider {
 func (p *AzureOIDCProvider) GetLoginURL(redirectURI, state string) string {
 	var a url.URL
 	a = *p.LoginURL
-	params, _ := url.ParseQuery(a.RawQuery)
+	params, err := url.ParseQuery(a.RawQuery)
+	if err != nil {
+		panic(err)
+	}
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "id_token code")
 	params.Set("redirect_uri", redirectURI)

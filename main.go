@@ -62,7 +62,7 @@ func main() {
 	flagSet.Var(&whitelistDomains, "whitelist-domain", "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
 	flagSet.String("keycloak-group", "", "restrict login to members of this group.")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
-	flagSet.Var(&azureOidcGroups, "azure-permitted-groups", "restrict logins to member of this azure groups")
+	flagSet.Var(&azureOidcGroups, "azure-permitted-groups", "restrict logins to members of these azure groups")
 	flagSet.Var(&azureOidcExemptedEmails, "azure-exempted-emails", "logins that don't have to pass group restrictions, requires 'azure-permitted-groups` option to be set")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
