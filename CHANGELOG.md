@@ -16,6 +16,7 @@
 - [#363](https://github.com/pusher/oauth2_proxy/pull/363) Extension of Redis Session Store to Support Redis Cluster (@yan-dblinf)
 - [#353](https://github.com/pusher/oauth2_proxy/pull/353) Fix login page fragment handling after soft reload on Firefox (@ffdybuster)
 - [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for providers that rotate client secret via file system (@pasha-r)
+- [#401](https://github.com/pusher/oauth2_proxy/pull/401) Give the option to pass email address in the Basic auth header instead of upstream usernames. (@Spindel)
 - [#405](https://github.com/pusher/oauth2_proxy/pull/405) The `/sign_in` page now honors the `rd` query parameter, fixing the redirect after a successful authentication (@ti-mo)
 
 # v5.0.0
