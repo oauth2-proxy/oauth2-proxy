@@ -129,7 +129,7 @@ func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Coo
 // it into a slice of cookies which fit within the 4kb cookie limit indexing
 // the cookies from 0
 func splitCookie(c *http.Cookie) []*http.Cookie {
-	if len(c.Value) < maxCookieLength {
+	if len(c.String()) < maxCookieLength {
 		return []*http.Cookie{c}
 	}
 	cookies := []*http.Cookie{}
