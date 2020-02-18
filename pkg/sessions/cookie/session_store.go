@@ -99,7 +99,7 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now ti
 		value = encryption.SignedValue(s.CookieOptions.CookieSecret, s.CookieOptions.CookieName, value, now)
 	}
 	c := s.makeCookie(req, s.CookieOptions.CookieName, value, s.CookieOptions.CookieExpire, now)
-	if len(c.Value) > 4096-len(s.CookieOptions.CookieName) {
+	if len(c.String()) > 4096 {
 		return splitCookie(c)
 	}
 	return []*http.Cookie{c}
