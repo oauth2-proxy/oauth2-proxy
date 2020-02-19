@@ -46,7 +46,7 @@ func New(provider string, p *ProviderData) Provider {
 	case "digitalocean":
 		return NewDigitalOceanProvider(p)
 	case "dropsolid":
-		return NewDropsolidProvider(p)		
+		return NewDropsolidProvider(p)
 	default:
 		return NewGoogleProvider(p)
 	}

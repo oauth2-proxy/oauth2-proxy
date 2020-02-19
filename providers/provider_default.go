@@ -2,17 +2,17 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
-	"context"
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
-    "github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
@@ -137,13 +137,12 @@ func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, e
 	return false, nil
 }
 
-
 // GetJwtSession loads a session based on a JWT token in the authorization header.
 func (p *ProviderData) GetJwtSession(rawBearerToken string) (*sessions.SessionState, error) {
 	ctx := context.Background()
 	var session *sessions.SessionState
 
-	if (p == nil) {
+	if p == nil {
 		return nil, fmt.Errorf("No JwtBearerVerifiers found")
 	}
 
