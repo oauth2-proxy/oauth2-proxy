@@ -72,6 +72,9 @@ type Options struct {
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
 	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
+	SkipJwtClientIDCheck          bool          `flag:"skip-jwt-clientid-check" cfg:"skip_jwt_clientid_check" env:"OAUTH2_PROXY_SKIP_JWT_CLIENTID_CHECK"`
+	SkipJwtExpiryCheck            bool          `flag:"skip-jwt-expiry-check" cfg:"skip_jwt_expiry_check" env:"OAUTH2_PROXY_SKIP_JWT_EXPIRY_CHECK"`
+	SkipJwtIssuerCheck            bool          `flag:"skip-jwt-issuer-check" cfg:"skip_jwt_issuer_check" env:"OAUTH2_PROXY_SKIP_JWT_ISSUER_CHECK"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
 	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
@@ -163,6 +166,9 @@ func NewOptions() *Options {
 		},
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
+		SkipJwtClientIDCheck:             false,
+		SkipJwtExpiryCheck:               false,
+		SkipJwtIssuerCheck:               false,
 		PassBasicAuth:                    true,
 		PassUserHeaders:                  true,
 		PassAccessToken:                  false,
@@ -289,7 +295,7 @@ func (o *Options) Validate() error {
 			var jwtIssuers []jwtIssuer
 			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
 			for _, jwtIssuer := range jwtIssuers {
-				verifier, err := newVerifierFromJwtIssuer(jwtIssuer)
+				verifier, err := newVerifierFromJwtIssuer(jwtIssuer, o)
 				if err != nil {
 					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
 				}
@@ -538,10 +544,12 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error) {
+func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer, o *Options) (*oidc.IDTokenVerifier, error) {
 	config := &oidc.Config{
-		ClientID: jwtIssuer.audience,
-                SkipClientIDCheck: true,
+		ClientID:          jwtIssuer.audience,
+        SkipClientIDCheck: o.SkipJwtClientIDCheck,
+        SkipExpiryCheck:   o.SkipJwtExpiryCheck,
+		SkipIssuerCheck:   o.SkipJwtIssuerCheck,
 	}
 	// Try as an OpenID Connect Provider first
 	var verifier *oidc.IDTokenVerifier

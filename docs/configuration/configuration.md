@@ -104,6 +104,9 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
 | `-skip-auth-regex` | string | bypass authentication for requests paths that match (may be given multiple times) | |
 | `-skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
+| `-skip-jwt-clientid-check` | bool | will skip the client ID JWT verification that is enabled by default in the OIDC library used for JWT validation. | false |
+| `-skip-jwt-expiry-check` | bool | will skip the Expiry Date JWT verification that is enabled by default in the OIDC library used for JWT validation. | false |
+| `-skip-jwt-issuer-check` | bool | will skip the Issuer JWT verification that is enabled by default in the OIDC library used for JWT validation. | false |
 | `-skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `-login-url`, `-redeem-url` and `-oidc-jwks-url` must be configured in this case | false |
 | `-skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
 | `-ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |

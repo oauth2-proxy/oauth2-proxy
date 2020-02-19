@@ -102,6 +102,9 @@ type OAuthProxy struct {
 	skipAuthRegex        []string
 	skipAuthPreflight    bool
 	skipJwtBearerTokens  bool
+	SkipJwtClientIDCheck bool
+	SkipJwtExpiryCheck   bool
+	SkipJwtIssuerCheck   bool
 	jwtBearerVerifiers   []*oidc.IDTokenVerifier
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
@@ -296,6 +299,9 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		skipAuthRegex:        opts.SkipAuthRegex,
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
+		SkipJwtClientIDCheck: opts.SkipJwtClientIDCheck,
+		SkipJwtExpiryCheck:   opts.SkipJwtExpiryCheck,
+		SkipJwtIssuerCheck:   opts.SkipJwtIssuerCheck,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
 		compiledRegex:        opts.CompiledRegex,
 		SetXAuthRequest:      opts.SetXAuthRequest,
