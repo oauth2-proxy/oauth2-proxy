@@ -446,12 +446,15 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	p.ClearSessionCookie(rw, req)
 	rw.WriteHeader(code)
 
-	redirecURL := req.URL.RequestURI()
-	if req.Header.Get("X-Auth-Request-Redirect") != "" {
-		redirecURL = req.Header.Get("X-Auth-Request-Redirect")
+	redirectURL, err := p.GetRedirect(req)
+	if err != nil {
+		logger.Printf("Error obtaining redirect: %s", err.Error())
+		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		return
 	}
-	if redirecURL == p.SignInPath {
-		redirecURL = "/"
+
+	if redirectURL == p.SignInPath {
+		redirectURL = "/"
 	}
 
 	t := struct {
@@ -466,7 +469,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		ProviderName:  p.provider.Data().ProviderName,
 		SignInMessage: p.SignInMessage,
 		CustomLogin:   p.displayCustomLoginForm(),
-		Redirect:      redirecURL,
+		Redirect:      redirectURL,
 		Version:       VERSION,
 		ProxyPrefix:   p.ProxyPrefix,
 		Footer:        template.HTML(p.Footer),
