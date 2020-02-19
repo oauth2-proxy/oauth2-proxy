@@ -82,6 +82,7 @@ type Options struct {
 	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify" env:"OAUTH2_PROXY_SSL_UPSTREAM_INSECURE_SKIP_VERIFY"`
 	SetXAuthRequest               bool          `flag:"set-xauthrequest" cfg:"set_xauthrequest" env:"OAUTH2_PROXY_SET_XAUTHREQUEST"`
 	SetAuthorization              bool          `flag:"set-authorization-header" cfg:"set_authorization_header" env:"OAUTH2_PROXY_SET_AUTHORIZATION_HEADER"`
+	UpstreamAuthorizationHeader   string        `flag:"upstream-authorization-header" cfg:"upstream_authorization_header" env:"OAUTH2_PROXY_UPSTREAM_AUTHORIZATION_HEADER"`
 	PassAuthorization             bool          `flag:"pass-authorization-header" cfg:"pass_authorization_header" env:"OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER"`
 	SkipAuthPreflight             bool          `flag:"skip-auth-preflight" cfg:"skip_auth_preflight" env:"OAUTH2_PROXY_SKIP_AUTH_PREFLIGHT"`
 	FlushInterval                 time.Duration `flag:"flush-interval" cfg:"flush_interval" env:"OAUTH2_PROXY_FLUSH_INTERVAL"`
@@ -168,6 +169,7 @@ func NewOptions() *Options {
 		PassAccessToken:                  false,
 		PassHostHeader:                   true,
 		SetAuthorization:                 false,
+		UpstreamAuthorizationHeader:      "",
 		PassAuthorization:                false,
 		ApprovalPrompt:                   "force",
 		InsecureOIDCAllowUnverifiedEmail: false,
@@ -541,8 +543,8 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 // a verifier for that issuer.
 func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error) {
 	config := &oidc.Config{
-		ClientID: jwtIssuer.audience,
-                SkipClientIDCheck: true,
+		ClientID:          jwtIssuer.audience,
+		SkipClientIDCheck: true,
 	}
 	// Try as an OpenID Connect Provider first
 	var verifier *oidc.IDTokenVerifier
