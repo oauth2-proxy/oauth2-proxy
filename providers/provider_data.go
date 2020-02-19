@@ -15,7 +15,7 @@ type ProviderData struct {
 	ProviderName       string
 	ClientID           string
 	ClientSecret       string
-	ClientSecretFile  string
+	ClientSecretFile   string
 	LoginURL           *url.URL
 	RedeemURL          *url.URL
 	ProfileURL         *url.URL
