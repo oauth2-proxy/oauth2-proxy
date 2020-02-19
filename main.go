@@ -54,6 +54,9 @@ func main() {
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
 	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
+	flagSet.Bool("skip-jwt-clientid-check", false, "will skip the client ID JWT verification that is enabled by default in the OIDC library used for JWT validation. (default false)")
+	flagSet.Bool("skip-jwt-expiry-check", false, "will skip the Expiry Date JWT verification that is enabled by default in the OIDC library used for JWT validation. (default false)")
+	flagSet.Bool("skip-jwt-issuer-check", false, "will skip the Issuer JWT verification that is enabled by default in the OIDC library used for JWT validation. (default false)")
 	flagSet.Var(&jwtIssuers, "extra-jwt-issuers", "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
