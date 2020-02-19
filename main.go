@@ -64,6 +64,7 @@ func main() {
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
+	flagSet.String("gitea-user", "", "restrict logins to a specific gitea username")
 	flagSet.String("gitlab-group", "", "restrict logins to members of this group")
 	flagSet.Var(&googleGroups, "google-group", "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")

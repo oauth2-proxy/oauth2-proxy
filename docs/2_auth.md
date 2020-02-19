@@ -15,6 +15,7 @@ Valid providers are :
 - [Azure](#azure-auth-provider)
 - [Facebook](#facebook-auth-provider)
 - [GitHub](#github-auth-provider)
+- [Gitea](#gitea-auth-provider)
 - [Keycloak](#keycloak-auth-provider)
 - [GitLab](#gitlab-auth-provider)
 - [LinkedIn](#linkedin-auth-provider)
@@ -105,6 +106,25 @@ If you are using GitHub enterprise, make sure you set the following to the appro
     -login-url="http(s)://<enterprise github host>/login/oauth/authorize"
     -redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
     -validate-url="http(s)://<enterprise github host>/api/v3"
+
+### Gitea Auth Provider
+
+1.  Create a new application: https://gitea.com/user/settings/applications
+2.  Under `Create a new OAuth2 Application` enter the correct `Redirect URI` ie `https://internal.yourcompany.com/oauth2/callback`
+
+The Gitea auth provider supports an additional parameter to restrict authentication access by username:
+
+    -gitea-user="<your gitea username>": restrict logins to a specific gitea username
+
+If you are using a private Gitea installation, make sure you set the following to the appropriate url:
+
+    -login-url="http(s)://<custom gitea host>/login/oauth/authorize"
+    -redeem-url="http(s)://<custom gitea host>/login/oauth/access_token"
+    -profile-url="http(s)://<custom gitea host>/api/v1/user"
+
+./oauth2_proxy -http-address=http://localhost:4000 -provider=gitea 
+ -redirect-url=http://localhost:4000/oauth2/callback   -profile-url=http://192.168.1.142:3000/api/v1/user -gitea-user=sergio
+
 
 ### Keycloak Auth Provider
 
