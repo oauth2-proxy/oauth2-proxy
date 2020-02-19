@@ -96,7 +96,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-resource` | string | The resource that is protected (Azure AD only) | |
 | `-reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false |
 | `-scope` | string | OAuth scope specification | |
-| `-session-store-type` | string | [Session data storage backend](sessions); redis or cookie | cookie |
+| `-session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
 | `-set-xauthrequest` | bool | set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode) | false |
 | `-set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
 | `-signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
