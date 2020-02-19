@@ -8,7 +8,7 @@
 ## Breaking Changes
 
 ## Changes since v5.0.0
-
+- [#410](https://github.com/pusher/oauth2_proxy/pull/410) Implement Gitea Provider with optional user filter (@igzsergiofernandez)
 - [#385](https://github.com/pusher/oauth2_proxy/pull/385) Use the `Authorization` header instead of `access_token` for refreshing GitHub Provider sessions (@ibuclaw)
 - [#372](https://github.com/pusher/oauth2_proxy/pull/372) Allow fallback to secondary verified email address in GitHub provider (@dmnemec)
 - [#335](https://github.com/pusher/oauth2_proxy/pull/335) OIDC Provider support for empty id_tokens in the access token refresh response (@howzat)
