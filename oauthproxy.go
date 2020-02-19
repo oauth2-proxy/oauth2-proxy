@@ -982,7 +982,6 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	}
 
 	if len(p.UpstreamAuthorizationHeader) > 0 {
-		logger.Printf("setting basic auth")
 		req.Header["Authorization"] = []string{fmt.Sprintf("%s", p.UpstreamAuthorizationHeader)}
 	}
 
