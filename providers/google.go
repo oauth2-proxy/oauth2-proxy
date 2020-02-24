@@ -40,11 +40,17 @@ type claims struct {
 func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	p.ProviderName = "Google"
 	if p.LoginURL.String() == "" {
+		var query string
+		if p.HostedDomain == "" {
+			query = "access_type=offline&hd=" + p.HostedDomain
+		} else {
+			query = "access_type=offline"
+		}
 		p.LoginURL = &url.URL{Scheme: "https",
 			Host: "accounts.google.com",
 			Path: "/o/oauth2/auth",
 			// to get a refresh token. see https://developers.google.com/identity/protocols/OAuth2WebServer#offline
-			RawQuery: "access_type=offline",
+			RawQuery: query,
 		}
 	}
 	if p.RedeemURL.String() == "" {

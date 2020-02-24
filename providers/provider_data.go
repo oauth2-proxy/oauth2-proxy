@@ -21,6 +21,7 @@ type ProviderData struct {
 	ValidateURL       *url.URL
 	Scope             string
 	ApprovalPrompt    string
+	HostedDomain      string
 }
 
 // Data returns the ProviderData
