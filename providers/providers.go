@@ -40,6 +40,10 @@ func New(provider string, p *ProviderData) Provider {
 		return NewLoginGovProvider(p)
 	case "bitbucket":
 		return NewBitbucketProvider(p)
+	case "nextcloud":
+		return NewNextcloudProvider(p)
+	case "digitalocean":
+		return NewDigitalOceanProvider(p)
 	default:
 		return NewGoogleProvider(p)
 	}

@@ -14,7 +14,7 @@ if [[ ! "${GO_VERSION}" =~ ^go1.13.* ]]; then
 	exit 1
 fi
 
-ARCHS=(darwin-amd64 linux-amd64 linux-arm64 linux-armv6 windows-amd64)
+ARCHS=(darwin-amd64 linux-amd64 linux-arm64 linux-armv6 freebsd-amd64 windows-amd64)
 
 mkdir -p release
 
@@ -27,17 +27,17 @@ for ARCH in "${ARCHS[@]}"; do
 
 	# Create architecture specific binaries
 	if [[ ${GO_ARCH} == "armv6" ]]; then
-		GO111MODULE=on GOOS=${GO_OS} GOARCH=arm GOARM=6 go build -ldflags="-X main.VERSION=${VERSION}" \
+		GO111MODULE=on GOOS=${GO_OS} GOARCH=arm GOARM=6 CGO_ENABLED=0 go build -ldflags="-X main.VERSION=${VERSION}" \
 			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
 	else
-		GO111MODULE=on GOOS=${GO_OS} GOARCH=${GO_ARCH} go build -ldflags="-X main.VERSION=${VERSION}" \
+		GO111MODULE=on GOOS=${GO_OS} GOARCH=${GO_ARCH} CGO_ENABLED=0 go build -ldflags="-X main.VERSION=${VERSION}" \
 			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
 	fi
 
 	cd release
 
 	# Create sha256sum for architecture specific binary
-	shasum -a 256 ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} > ${BINARY}-${VERSION}.${ARCH}-sha256sum.txt
+	sha256sum ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} > ${BINARY}-${VERSION}.${ARCH}-sha256sum.txt
 
 	# Create tar file for architecture specific binary
 	tar -czvf ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}.tar.gz ${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}

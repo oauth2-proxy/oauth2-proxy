@@ -1,5 +1,65 @@
 # Vx.x.x (Pre-release)
 
+## Release Hightlights
+
+## Important Notes
+- [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp)
+
+## Breaking Changes
+
+## Changes since v5.0.0
+
+- [#400](https://github.com/pusher/oauth2_proxy/pull/400) Add `nsswitch.conf` to Docker image to allow hosts file to work (@luketainton)
+- [#385](https://github.com/pusher/oauth2_proxy/pull/385) Use the `Authorization` header instead of `access_token` for refreshing GitHub Provider sessions (@ibuclaw)
+- [#372](https://github.com/pusher/oauth2_proxy/pull/372) Allow fallback to secondary verified email address in GitHub provider (@dmnemec)
+- [#335](https://github.com/pusher/oauth2_proxy/pull/335) OIDC Provider support for empty id_tokens in the access token refresh response (@howzat)
+- [#363](https://github.com/pusher/oauth2_proxy/pull/363) Extension of Redis Session Store to Support Redis Cluster (@yan-dblinf)
+- [#353](https://github.com/pusher/oauth2_proxy/pull/353) Fix login page fragment handling after soft reload on Firefox (@ffdybuster)
+- [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for providers that rotate client secret via file system (@pasha-r)
+
+# v5.0.0
+
+## Release Hightlights
+- Disabled CGO (binaries will work regardless og glibc/musl)
+- Allow whitelisted redirect ports
+- Nextcloud provider support added
+- DigitalOcean provider support added
+
+## Important Notes
+- (Security) Fix for [open redirect vulnerability](https://github.com/pusher/oauth2_proxy/security/advisories/GHSA-qqxw-m5fj-f7gv)..  a bad actor using `/\` in redirect URIs can redirect a session to another domain
+
+## Breaking Changes
+
+- [#321](https://github.com/pusher/oauth2_proxy/pull/331) Add reverse proxy boolean flag to control whether headers like `X-Real-Ip` are accepted.
+  This defaults to false. **Usage behind a reverse proxy will require this flag to be set to avoid logging the reverse proxy IP address**.
+
+## Changes since v4.1.0
+
+- [#331](https://github.com/pusher/oauth2_proxy/pull/331) Add reverse proxy setting (@martin-css)
+- [#365](https://github.com/pusher/oauth2_proxy/pull/365) Build with CGO=0 (@tomelliff)
+- [#339](https://github.com/pusher/oauth2_proxy/pull/339) Add configuration for cookie 'SameSite' value. (@pgroudas)
+- [#347](https://github.com/pusher/oauth2_proxy/pull/347) Update keycloak provider configuration documentation. (@sushiMix)
+- [#325](https://github.com/pusher/oauth2_proxy/pull/325) dist.sh: use sha256sum (@syscll)
+- [#179](https://github.com/pusher/oauth2_proxy/pull/179) Add Nextcloud provider (@Ramblurr)
+- [#280](https://github.com/pusher/oauth2_proxy/pull/280) whitelisted redirect domains: add support for whitelisting specific ports or allowing wildcard ports (@kamaln7)
+- [#351](https://github.com/pusher/oauth2_proxy/pull/351) Add DigitalOcean Auth provider (@kamaln7)
+
+# v4.1.0
+
+## Release Highlights
+- Added Keycloak provider
+- Build on Go 1.13
+- Upgrade Docker image to use Debian Buster
+- Added support for FreeBSD builds
+- Added new logo
+- Added support for GitHub teams
+
+## Important Notes
+N/A
+
+## Breaking Changes
+N/A
+
 ## Changes since v4.0.0
 - [#292](https://github.com/pusher/oauth2_proxy/pull/292) Added bash >= 4.0 dependency to configure script (@jmfrank63)
 - [#227](https://github.com/pusher/oauth2_proxy/pull/227) Add Keycloak provider (@Ofinka)
@@ -16,6 +76,9 @@
 - [#309](https://github.com/pusher/oauth2_proxy/pull/309) Added support for custom CA when connecting to Redis cache (@lleszczu)
 - [#248](https://github.com/pusher/oauth2_proxy/pull/248) Fix issue with X-Auth-Request-Redirect header being ignored (@webnard)
 - [#314](https://github.com/pusher/oauth2_proxy/pull/314) Add redirect capability to sign_out (@costelmoraru)
+- [#265](https://github.com/pusher/oauth2_proxy/pull/265) Add upstream with static response (@cgroschupp)
+- [#317](https://github.com/pusher/oauth2_proxy/pull/317) Add build for FreeBSD (@fnkr)
+- [#296](https://github.com/pusher/oauth2_proxy/pull/296) Allow to override provider's name for sign-in page (@ffdybuster)
 
 # v4.0.0
 

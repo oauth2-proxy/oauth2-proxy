@@ -1,6 +1,6 @@
 # Default owner should be a Pusher cloud-team member or another maintainer
 # unless overridden by later rules in this file
-* @pusher/cloud-team @syscll @steakunderscore
+* @pusher/cloud-team @syscll @steakunderscore @JoelSpeed
 
 # login.gov provider
 # Note:  If @timothy-spencer terms out of his appointment, your best bet
@@ -14,3 +14,11 @@ providers/logingov_test.go @timothy-spencer
 # Bitbucket provider
 providers/bitbucket.go @aledeganopix4d
 providers/bitbucket_test.go @aledeganopix4d
+
+# Nextcloud provider
+providers/nextcloud.go @Ramblurr
+providers/nextcloud_test.go @Ramblurr
+
+# DigitalOcean provider
+providers/digitalocean.go @kamaln7
+providers/digitalocean_test.go @kamaln7

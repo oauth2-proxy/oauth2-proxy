@@ -88,6 +88,7 @@ type Logger struct {
 	stdEnabled     bool
 	authEnabled    bool
 	reqEnabled     bool
+	reverseProxy   bool
 	excludePaths   map[string]struct{}
 	stdLogTemplate *template.Template
 	authTemplate   *template.Template
@@ -102,6 +103,7 @@ func New(flag int) *Logger {
 		stdEnabled:     true,
 		authEnabled:    true,
 		reqEnabled:     true,
+		reverseProxy:   false,
 		excludePaths:   nil,
 		stdLogTemplate: template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
 		authTemplate:   template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
@@ -151,7 +153,7 @@ func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus
 		username = "-"
 	}
 
-	client := GetClient(req)
+	client := GetClient(req, l.reverseProxy)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -199,7 +201,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		}
 	}
 
-	client := GetClient(req)
+	client := GetClient(req, l.reverseProxy)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -251,10 +253,12 @@ func (l *Logger) GetFileLineString(calldepth int) string {
 }
 
 // GetClient parses an HTTP request for the client/remote IP address.
-func GetClient(req *http.Request) string {
-	client := req.Header.Get("X-Real-IP")
-	if client == "" {
-		client = req.RemoteAddr
+func GetClient(req *http.Request, reverseProxy bool) string {
+	client := req.RemoteAddr
+	if reverseProxy {
+		if ip := req.Header.Get("X-Real-IP"); ip != "" {
+			client = ip
+		}
 	}
 
 	if c, _, err := net.SplitHostPort(client); err == nil {
@@ -306,6 +310,13 @@ func (l *Logger) SetReqEnabled(e bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.reqEnabled = e
+}
+
+// SetReverseProxy controls whether logging will trust headers that can be set by a reverse proxy.
+func (l *Logger) SetReverseProxy(e bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.reverseProxy = e
 }
 
 // SetExcludePaths sets the paths to exclude from logging.
@@ -379,6 +390,12 @@ func SetAuthEnabled(e bool) {
 // standard logger.
 func SetReqEnabled(e bool) {
 	std.SetReqEnabled(e)
+}
+
+// SetReverseProxy controls whether logging will trust headers that can be set
+// by a reverse proxy for the standard logger.
+func SetReverseProxy(e bool) {
+	std.SetReverseProxy(e)
 }
 
 // SetExcludePaths sets the path to exclude from logging, eg: health checks

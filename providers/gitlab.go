@@ -38,10 +38,15 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *GitLabProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return
+	}
+
 	ctx := context.Background()
 	c := oauth2.Config{
 		ClientID:     p.ClientID,
-		ClientSecret: p.ClientSecret,
+		ClientSecret: clientSecret,
 		Endpoint: oauth2.Endpoint{
 			TokenURL: p.RedeemURL.String(),
 		},
@@ -77,9 +82,14 @@ func (p *GitLabProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool,
 }
 
 func (p *GitLabProvider) redeemRefreshToken(s *sessions.SessionState) (err error) {
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return
+	}
+
 	c := oauth2.Config{
 		ClientID:     p.ClientID,
-		ClientSecret: p.ClientSecret,
+		ClientSecret: clientSecret,
 		Endpoint: oauth2.Endpoint{
 			TokenURL: p.RedeemURL.String(),
 		},

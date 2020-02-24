@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testLinkedInProvider(hostname string) *LinkedInProvider {
-	p := NewLinkedInProvider(
+func testDigitalOceanProvider(hostname string) *DigitalOceanProvider {
+	p := NewDigitalOceanProvider(
 		&ProviderData{
 			ProviderName: "",
 			LoginURL:     &url.URL{},
@@ -27,8 +27,8 @@ func testLinkedInProvider(hostname string) *LinkedInProvider {
 	return p
 }
 
-func testLinkedInBackend(payload string) *httptest.Server {
-	path := "/v1/people/~/email-address"
+func testDigitalOceanBackend(payload string) *httptest.Server {
+	path := "/v2/account"
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -43,23 +43,23 @@ func testLinkedInBackend(payload string) *httptest.Server {
 		}))
 }
 
-func TestLinkedInProviderDefaults(t *testing.T) {
-	p := testLinkedInProvider("")
+func TestDigitalOceanProviderDefaults(t *testing.T) {
+	p := testDigitalOceanProvider("")
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "LinkedIn", p.Data().ProviderName)
-	assert.Equal(t, "https://www.linkedin.com/uas/oauth2/authorization",
+	assert.Equal(t, "DigitalOcean", p.Data().ProviderName)
+	assert.Equal(t, "https://cloud.digitalocean.com/v1/oauth/authorize",
 		p.Data().LoginURL.String())
-	assert.Equal(t, "https://www.linkedin.com/uas/oauth2/accessToken",
+	assert.Equal(t, "https://cloud.digitalocean.com/v1/oauth/token",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://www.linkedin.com/v1/people/~/email-address",
+	assert.Equal(t, "https://api.digitalocean.com/v2/account",
 		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://www.linkedin.com/v1/people/~/email-address",
+	assert.Equal(t, "https://api.digitalocean.com/v2/account",
 		p.Data().ValidateURL.String())
-	assert.Equal(t, "r_emailaddress r_basicprofile", p.Data().Scope)
+	assert.Equal(t, "read", p.Data().Scope)
 }
 
-func TestLinkedInProviderOverrides(t *testing.T) {
-	p := NewLinkedInProvider(
+func TestDigitalOceanProviderOverrides(t *testing.T) {
+	p := NewDigitalOceanProvider(
 		&ProviderData{
 			LoginURL: &url.URL{
 				Scheme: "https",
@@ -79,7 +79,7 @@ func TestLinkedInProviderOverrides(t *testing.T) {
 				Path:   "/oauth/tokeninfo"},
 			Scope: "profile"})
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "LinkedIn", p.Data().ProviderName)
+	assert.Equal(t, "DigitalOcean", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/oauth/auth",
 		p.Data().LoginURL.String())
 	assert.Equal(t, "https://example.com/oauth/token",
@@ -91,25 +91,25 @@ func TestLinkedInProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestLinkedInProviderGetEmailAddress(t *testing.T) {
-	b := testLinkedInBackend(`"user@linkedin.com"`)
+func TestDigitalOceanProviderGetEmailAddress(t *testing.T) {
+	b := testDigitalOceanBackend(`{"account": {"email": "user@example.com"}}`)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testLinkedInProvider(bURL.Host)
+	p := testDigitalOceanProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@linkedin.com", email)
+	assert.Equal(t, "user@example.com", email)
 }
 
-func TestLinkedInProviderGetEmailAddressFailedRequest(t *testing.T) {
-	b := testLinkedInBackend("unused payload")
+func TestDigitalOceanProviderGetEmailAddressFailedRequest(t *testing.T) {
+	b := testDigitalOceanBackend("unused payload")
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testLinkedInProvider(bURL.Host)
+	p := testDigitalOceanProvider(bURL.Host)
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -120,12 +120,12 @@ func TestLinkedInProviderGetEmailAddressFailedRequest(t *testing.T) {
 	assert.Equal(t, "", email)
 }
 
-func TestLinkedInProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
-	b := testLinkedInBackend("{\"foo\": \"bar\"}")
+func TestDigitalOceanProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
+	b := testDigitalOceanBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testLinkedInProvider(bURL.Host)
+	p := testDigitalOceanProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)

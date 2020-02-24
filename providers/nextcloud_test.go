@@ -6,12 +6,15 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/bmizerany/assert"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/stretchr/testify/assert"
 )
 
-func testKeycloakProvider(hostname, group string) *KeycloakProvider {
-	p := NewKeycloakProvider(
+const formatJSON = "format=json"
+const userPath = "/ocs/v2.php/cloud/user"
+
+func testNextcloudProvider(hostname string) *NextcloudProvider {
+	p := NewNextcloudProvider(
 		&ProviderData{
 			ProviderName: "",
 			LoginURL:     &url.URL{},
@@ -19,11 +22,6 @@ func testKeycloakProvider(hostname, group string) *KeycloakProvider {
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
 			Scope:        ""})
-
-	if group != "" {
-		p.SetGroup(group)
-	}
-
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
 		updateURL(p.Data().RedeemURL, hostname)
@@ -33,13 +31,13 @@ func testKeycloakProvider(hostname, group string) *KeycloakProvider {
 	return p
 }
 
-func testKeycloakBackend(payload string) *httptest.Server {
-	path := "/api/v3/user"
+func testNextcloudBackend(payload string) *httptest.Server {
+	path := userPath
+	query := formatJSON
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			url := r.URL
-			if url.Path != path {
+			if r.URL.Path != path || r.URL.RawQuery != query {
 				w.WriteHeader(404)
 			} else if !IsAuthorizedInHeader(r.Header) {
 				w.WriteHeader(403)
@@ -50,65 +48,53 @@ func testKeycloakBackend(payload string) *httptest.Server {
 		}))
 }
 
-func TestKeycloakProviderDefaults(t *testing.T) {
-	p := testKeycloakProvider("", "")
+func TestNextcloudProviderDefaults(t *testing.T) {
+	p := testNextcloudProvider("")
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "Keycloak", p.Data().ProviderName)
-	assert.Equal(t, "https://keycloak.org/oauth/authorize",
+	assert.Equal(t, "Nextcloud", p.Data().ProviderName)
+	assert.Equal(t, "",
 		p.Data().LoginURL.String())
-	assert.Equal(t, "https://keycloak.org/oauth/token",
+	assert.Equal(t, "",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://keycloak.org/api/v3/user",
+	assert.Equal(t, "",
 		p.Data().ValidateURL.String())
-	assert.Equal(t, "api", p.Data().Scope)
 }
 
-func TestKeycloakProviderOverrides(t *testing.T) {
-	p := NewKeycloakProvider(
+func TestNextcloudProviderOverrides(t *testing.T) {
+	p := NewNextcloudProvider(
 		&ProviderData{
 			LoginURL: &url.URL{
 				Scheme: "https",
 				Host:   "example.com",
-				Path:   "/oauth/auth"},
+				Path:   "/index.php/apps/oauth2/authorize"},
 			RedeemURL: &url.URL{
 				Scheme: "https",
 				Host:   "example.com",
-				Path:   "/oauth/token"},
+				Path:   "/index.php/apps/oauth2/api/v1/token"},
 			ValidateURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/api/v3/user"},
+				Scheme:   "https",
+				Host:     "example.com",
+				Path:     "/test/ocs/v2.php/cloud/user",
+				RawQuery: formatJSON},
 			Scope: "profile"})
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "Keycloak", p.Data().ProviderName)
-	assert.Equal(t, "https://example.com/oauth/auth",
+	assert.Equal(t, "Nextcloud", p.Data().ProviderName)
+	assert.Equal(t, "https://example.com/index.php/apps/oauth2/authorize",
 		p.Data().LoginURL.String())
-	assert.Equal(t, "https://example.com/oauth/token",
+	assert.Equal(t, "https://example.com/index.php/apps/oauth2/api/v1/token",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://example.com/api/v3/user",
+	assert.Equal(t, "https://example.com/test/ocs/v2.php/cloud/user?"+formatJSON,
 		p.Data().ValidateURL.String())
-	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestKeycloakProviderGetEmailAddress(t *testing.T) {
-	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\"}")
+func TestNextcloudProviderGetEmailAddress(t *testing.T) {
+	b := testNextcloudBackend("{\"ocs\": {\"data\": { \"email\": \"michael.bland@gsa.gov\"}}}")
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
-
-	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
-}
-
-func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
-	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "test-grp1")
+	p := testNextcloudProvider(bURL.Host)
+	p.ValidateURL.Path = userPath
+	p.ValidateURL.RawQuery = formatJSON
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)
@@ -118,12 +104,14 @@ func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
 
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
-func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
-	b := testKeycloakBackend("unused payload")
+func TestNextcloudProviderGetEmailAddressFailedRequest(t *testing.T) {
+	b := testNextcloudBackend("unused payload")
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testNextcloudProvider(bURL.Host)
+	p.ValidateURL.Path = userPath
+	p.ValidateURL.RawQuery = formatJSON
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -134,12 +122,14 @@ func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
 	assert.Equal(t, "", email)
 }
 
-func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
-	b := testKeycloakBackend("{\"foo\": \"bar\"}")
+func TestNextcloudProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
+	b := testNextcloudBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testNextcloudProvider(bURL.Host)
+	p.ValidateURL.Path = userPath
+	p.ValidateURL.RawQuery = formatJSON
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(session)

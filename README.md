@@ -18,7 +18,7 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v4.0.0`)
+    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v5.0.0`)
 
     b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 
@@ -35,6 +35,11 @@ oauth2_proxy-4.0.0.linux-amd64: OK
 3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://pusher.github.io/oauth2_proxy/configuration)
 4.  [Configure SSL or Deploy behind a SSL endpoint](https://pusher.github.io/oauth2_proxy/tls-configuration) (example provided for Nginx)
 
+
+## Security
+
+If you are running a version older than v5.0.0 we **strongly recommend you please update** to a current version. RE: [open redirect vulnverability](https://github.com/pusher/oauth2_proxy/security/advisories/GHSA-qqxw-m5fj-f7gv)
+
 ## Docs
 
 Read the docs on our [Docs site](https://pusher.github.io/oauth2_proxy).
@@ -47,4 +52,4 @@ If you would like to reach out to the maintainers, come talk to us in the `#oaut
 
 ## Contributing
 
-Please see our [Contributing](CONTRIBUTING.md) guidelines.
+Please see our [Contributing](CONTRIBUTING.md) guidelines. For releasing see our [release creation guide](RELEASE.md).

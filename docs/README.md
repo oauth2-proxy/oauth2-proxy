@@ -6,7 +6,7 @@ https://pusher.github.io/oauth2_proxy.
 When making changes to this docs site, please test your changes locally:
 
 ```bash
-make serve
+docs$ make serve
 ```
 
 To run the docs site locally you will need Ruby at version 2.1.0 or
