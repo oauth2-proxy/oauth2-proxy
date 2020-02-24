@@ -74,6 +74,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
 | `-pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `-pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream | true |
+| `-set-basic-auth` | bool | set HTTP Basic Auth information to upstream | true |
 | `-pass-host-header` | bool | pass the request Host Header to upstream | true |
 | `-pass-user-headers` | bool | pass X-Forwarded-User and X-Forwarded-Email information to upstream | true |
 | `-profile-url` | string | Profile access endpoint | |
