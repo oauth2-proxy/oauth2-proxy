@@ -79,7 +79,6 @@ func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionSta
 		return
 	}
 
-
 	params := url.Values{}
 	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)

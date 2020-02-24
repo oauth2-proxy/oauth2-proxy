@@ -139,11 +139,10 @@ func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.To
 	}
 
 	if rawIDToken, present := getIDToken(); present {
-		verifiedIdToken, err := p.Verifier.Verify(ctx, rawIDToken)
-		return verifiedIdToken, err
-	} else {
-		return nil, nil
+		verifiedIDToken, err := p.Verifier.Verify(ctx, rawIDToken)
+		return verifiedIDToken, err
 	}
+	return nil, nil
 }
 
 func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {

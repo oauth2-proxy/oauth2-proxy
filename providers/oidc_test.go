@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"golang.org/x/oauth2"
 
 	"github.com/bmizerany/assert"
@@ -58,7 +59,7 @@ var defaultIDToken idTokenClaims = idTokenClaims{
 	},
 }
 
-type fakeKeySetStub struct {}
+type fakeKeySetStub struct{}
 
 func (fakeKeySetStub) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
 	decodeString, err := base64.RawURLEncoding.DecodeString(strings.Split(jwt, ".")[1])
@@ -98,7 +99,7 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 
 	p := &OIDCProvider{
 		ProviderData: providerData,
-		Verifier:     oidc.NewVerifier(
+		Verifier: oidc.NewVerifier(
 			"https://issuer.example.com",
 			fakeKeySetStub{},
 			&oidc.Config{ClientID: clientID},
@@ -235,30 +236,30 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	defer server.Close()
 
 	token := newOauth2Token()
-	signedIdToken, _ := newSignedTestIDToken(defaultIDToken)
-	tokenWithIdToken := token.WithExtra(map[string]interface{}{
-		"id_token": signedIdToken,
+	signedIDToken, _ := newSignedTestIDToken(defaultIDToken)
+	tokenWithIDToken := token.WithExtra(map[string]interface{}{
+		"id_token": signedIDToken,
 	})
 
-	verifiedIdToken, err := provider.findVerifiedIDToken(context.Background(), tokenWithIdToken)
+	verifiedIDToken, err := provider.findVerifiedIDToken(context.Background(), tokenWithIDToken)
 	assert.Equal(t, true, err == nil)
-	assert.Equal(t, true, verifiedIdToken != nil)
-	assert.Equal(t, defaultIDToken.Issuer, verifiedIdToken.Issuer)
-	assert.Equal(t, defaultIDToken.Subject, verifiedIdToken.Subject)
+	assert.Equal(t, true, verifiedIDToken != nil)
+	assert.Equal(t, defaultIDToken.Issuer, verifiedIDToken.Issuer)
+	assert.Equal(t, defaultIDToken.Subject, verifiedIDToken.Subject)
 
 	// When the validation fails the response should be nil
 	defaultIDToken.Id = "this-id-fails-validation"
-	signedIdToken, _ = newSignedTestIDToken(defaultIDToken)
-	tokenWithIdToken = token.WithExtra(map[string]interface{}{
-		"id_token": signedIdToken,
+	signedIDToken, _ = newSignedTestIDToken(defaultIDToken)
+	tokenWithIDToken = token.WithExtra(map[string]interface{}{
+		"id_token": signedIDToken,
 	})
 
-	verifiedIdToken, err = provider.findVerifiedIDToken(context.Background(), tokenWithIdToken)
+	verifiedIDToken, err = provider.findVerifiedIDToken(context.Background(), tokenWithIDToken)
 	assert.Equal(t, errors.New("failed to verify signature: the validation failed for subject [123456789]"), err)
-	assert.Equal(t, true, verifiedIdToken == nil)
+	assert.Equal(t, true, verifiedIDToken == nil)
 
 	// When there is no id token in the oauth token
-	verifiedIdToken, err = provider.findVerifiedIDToken(context.Background(), newOauth2Token())
+	verifiedIDToken, err = provider.findVerifiedIDToken(context.Background(), newOauth2Token())
 	assert.Equal(t, nil, err)
-	assert.Equal(t, true, verifiedIdToken == nil)
+	assert.Equal(t, true, verifiedIDToken == nil)
 }
