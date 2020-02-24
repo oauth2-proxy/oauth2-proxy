@@ -58,6 +58,8 @@ type giteaUserInfo struct {
 	Email    string `json:"email"`
 }
 
+var InvalidUserError error = errors.New("invalid username")
+
 func (p *GiteaProvider) getUserInfo(s *sessions.SessionState) (*giteaUserInfo, error) {
 
 	if s.AccessToken == "" {
@@ -98,7 +100,8 @@ func (p *GiteaProvider) getUserInfo(s *sessions.SessionState) (*giteaUserInfo, e
 	}
 
 	if p.user != "" && p.user != userInfo.Username {
-		return nil, fmt.Errorf("invalid username %s for this request", userInfo.Username)
+		fmt.Println(userInfo)
+		return nil, fmt.Errorf("%w:%s", InvalidUserError, userInfo.Username)
 	}
 
 	return &userInfo, nil
@@ -112,4 +115,16 @@ func (p *GiteaProvider) GetEmailAddress(s *sessions.SessionState) (string, error
 	}
 
 	return userInfo.Email, nil
+}
+
+func (p *GiteaProvider) GetUserName(s *sessions.SessionState) (string, error) {
+	userInfo, err := p.getUserInfo(s)
+	if errors.Is(err, InvalidUserError) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return userInfo.Username, nil
 }
