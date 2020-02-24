@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
@@ -39,9 +38,38 @@ func Validate(o *options.Options) error {
 	}
 
 	msgs := make([]string, 0)
+
+	var cipher *encryption.Cipher
 	if o.Cookie.Secret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
+	} else {
+		validCookieSecretSize := false
+		for _, i := range []int{16, 24, 32} {
+			if len(encryption.SecretBytes(o.Cookie.Secret)) == i {
+				validCookieSecretSize = true
+			}
+		}
+		var decoded bool
+		if string(encryption.SecretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
+			decoded = true
+		}
+		if !validCookieSecretSize {
+			var suffix string
+			if decoded {
+				suffix = " note: cookie secret was base64 decoded"
+			}
+			msgs = append(msgs,
+				fmt.Sprintf("Cookie secret must be 16, 24, or 32 bytes to create an AES cipher. Got %d bytes.%s",
+					len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
+		} else {
+			var err error
+			cipher, err = encryption.NewCipher(encryption.SecretBytes(o.Cookie.Secret))
+			if err != nil {
+				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
+			}
+		}
 	}
+
 	if o.ClientID == "" {
 		msgs = append(msgs, "missing setting: client-id")
 	}
@@ -194,38 +222,6 @@ func Validate(o *options.Options) error {
 		o.SetCompiledRegex(append(o.GetCompiledRegex(), compiledRegex))
 	}
 	msgs = parseProviderInfo(o, msgs)
-
-	var cipher *encryption.Cipher
-	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.Cookie.Refresh != time.Duration(0)) {
-		validCookieSecretSize := false
-		for _, i := range []int{16, 24, 32} {
-			if len(encryption.SecretBytes(o.Cookie.Secret)) == i {
-				validCookieSecretSize = true
-			}
-		}
-		var decoded bool
-		if string(encryption.SecretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
-			decoded = true
-		}
-		if !validCookieSecretSize {
-			var suffix string
-			if decoded {
-				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.Cookie.Secret)
-			}
-			msgs = append(msgs, fmt.Sprintf(
-				"cookie_secret must be 16, 24, or 32 bytes "+
-					"to create an AES cipher when "+
-					"pass_access_token == true or "+
-					"cookie_refresh != 0, but is %d bytes.%s",
-				len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
-		} else {
-			var err error
-			cipher, err = encryption.NewCipher(encryption.SecretBytes(o.Cookie.Secret))
-			if err != nil {
-				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
-			}
-		}
-	}
 
 	o.Session.Cipher = cipher
 	sessionStore, err := sessions.NewSessionStore(&o.Session, &o.Cookie)

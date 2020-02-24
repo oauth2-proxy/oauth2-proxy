@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	cookieSecret = "foobar"
+	cookieSecret = "secretthirtytwobytes+abcdefghijk"
 	clientID     = "bazquux"
 	clientSecret = "xyzzyplugh"
 )
