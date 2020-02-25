@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const Post = "POST"
-
 func testAzureProvider(hostname string) *AzureProvider {
 	p := NewAzureProvider(
 		&ProviderData{
@@ -114,9 +112,9 @@ func testAzureBackend(payload string) *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if (r.URL.Path != path || r.URL.RawQuery != query) && r.Method != Post {
+			if (r.URL.Path != path || r.URL.RawQuery != query) && r.Method != http.MethodPost {
 				w.WriteHeader(404)
-			} else if r.Method == Post && r.Body != nil {
+			} else if r.Method == http.MethodPost && r.Body != nil {
 				w.WriteHeader(200)
 				w.Write([]byte(payload))
 			} else if !IsAuthorizedInHeader(r.Header) {
