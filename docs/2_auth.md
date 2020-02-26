@@ -88,8 +88,30 @@ Note: When using the Azure Auth provider with nginx and the cookie session store
 
 ### Azure OIDC Auth Provider
 
-This is basically same as OIDC provider, but includes group support for restricting access to upstream services.
-To use this successfully please use v2 api enadpoint (https://login.microsoftonline.com/{tenant_id}/v2.0).
+1. Go to [https://portal.azure.com](https://portal.azure.com), and create new "App Registration".
+1. Go to **"Authentication"** page and configure addresses for your applications: `https://internal.yourcompany.com/oauth2/callback`
+1. Go to **"Manifest"** page and enable group support in ID tokens by adding groupMembershipClaims entry 
+    ```json
+    {
+      "groupMembershipClaims": "SecurityGroup",
+      ...
+    }
+    ```
+1. Go to **"Certificates & secrets"** settings, create new secret and store it in safely. After you close page you won't be able to read it again.
+1. Go to **"Overview"** page to check tenant ID and client ID of "App Registration"
+1. Start oauth2-proxy with given settings
+    ```
+    --azure-permitted-groups=<comma separated list of group object ids>
+    --oidc-issuer-url=https://login.microsoftonline.com/<tenant_id>/v2.0
+    --provider=azure-oidc
+   ```
+
+
+NOTE: This provider doesn't support Azure Active Directory (v1.0) endpoints.
+
+NOTE: If `--azure-permitted-groups` is not specified, all logged users are authorized
+
+NOTE: If users are members of large number of groups ID token will grow in size and so will the cookie that stores it. In such case consider using redis session store.
 
 ### Facebook Auth Provider
 

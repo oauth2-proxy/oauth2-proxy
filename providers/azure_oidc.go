@@ -40,7 +40,7 @@ func NewAzureOIDCProvider(p *ProviderData) *AzureOIDCProvider {
 		provider.ProfileURL = &url.URL{
 			Scheme: "https",
 			Host:   "graph.microsoft.com",
-			Path:   "/v1.0/me",
+			Path:   "/oidc/userinfo",
 		}
 	}
 
