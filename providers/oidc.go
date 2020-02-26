@@ -8,10 +8,10 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
+	"golang.org/x/oauth2"
+
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
-
-	"golang.org/x/oauth2"
 )
 
 // OIDCProvider represents an OIDC based Identity Provider
@@ -140,11 +140,10 @@ func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.To
 	}
 
 	if rawIDToken, present := getIDToken(); present {
-		verifiedIdToken, err := p.Verifier.Verify(ctx, rawIDToken)
-		return verifiedIdToken, err
-	} else {
-		return nil, nil
+		verifiedIDToken, err := p.Verifier.Verify(ctx, rawIDToken)
+		return verifiedIDToken, err
 	}
+	return nil, nil
 }
 
 func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {

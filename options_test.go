@@ -13,11 +13,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	cookieSecret = "foobar"
+	clientID     = "bazquux"
+)
+
 func testOptions() *Options {
 	o := NewOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
-	o.CookieSecret = "foobar"
-	o.ClientID = "bazquux"
+	o.CookieSecret = cookieSecret
+	o.ClientID = clientID
 	o.ClientSecret = "xyzzyplugh"
 	o.EmailDomains = []string{"*"}
 	return o
@@ -45,8 +50,8 @@ func TestNewOptions(t *testing.T) {
 
 func TestClientSecretFileOptionFails(t *testing.T) {
 	o := NewOptions()
-	o.CookieSecret = "foobar"
-	o.ClientID = "bazquux"
+	o.CookieSecret = cookieSecret
+	o.ClientID = clientID
 	o.ClientSecretFile = "xyzzyplugh"
 	o.EmailDomains = []string{"*"}
 	err := o.Validate()
@@ -75,8 +80,8 @@ func TestClientSecretFileOption(t *testing.T) {
 	defer os.Remove(clientSecretFileName)
 
 	o := NewOptions()
-	o.CookieSecret = "foobar"
-	o.ClientID = "bazquux"
+	o.CookieSecret = cookieSecret
+	o.ClientID = clientID
 	o.ClientSecretFile = clientSecretFileName
 	o.EmailDomains = []string{"*"}
 	err = o.Validate()
@@ -151,8 +156,10 @@ func TestProxyURLsError(t *testing.T) {
 	err := o.Validate()
 	assert.NotEqual(t, nil, err)
 
+	// The error message for net/url url.Parse has changed slightly since go1.14.
+	// https: //github.com/golang/go/commit/64cfe9fe22113cd6bc05a2c5d0cbe872b1b57860
 	expected := errorMsg([]string{
-		"error parsing upstream: parse 127.0.0.1:8081: " +
+		"error parsing upstream: parse \"127.0.0.1:8081\": " +
 			"first path segment in URL cannot contain colon"})
 	assert.Equal(t, expected, err.Error())
 }
