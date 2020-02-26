@@ -10,6 +10,7 @@ type Provider interface {
 	Data() *ProviderData
 	GetEmailAddress(*sessions.SessionState) (string, error)
 	GetUserName(*sessions.SessionState) (string, error)
+	GetPreferredUsername(*sessions.SessionState) (string, error)
 	Redeem(string, string) (*sessions.SessionState, error)
 	ValidateGroup(string) bool
 	ValidateSessionState(*sessions.SessionState) bool

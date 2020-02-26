@@ -48,6 +48,7 @@ var SignatureHeaders = []string{
 	"Authorization",
 	"X-Forwarded-User",
 	"X-Forwarded-Email",
+	"X-Forwarded-Preferred-User",
 	"X-Forwarded-Access-Token",
 	"Cookie",
 	"Gap-Auth",
@@ -350,6 +351,10 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *sessionsapi.SessionState,
 
 	if s.Email == "" {
 		s.Email, err = p.provider.GetEmailAddress(s)
+	}
+
+	if s.PreferredUsername == "" {
+		s.PreferredUsername, err = p.provider.GetPreferredUsername(s)
 	}
 
 	if s.User == "" {
@@ -670,7 +675,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-//UserInfo endpoint outputs session email in JSON format
+//UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
 	session, err := p.getAuthenticatedSession(rw, req)
@@ -679,8 +684,12 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	userInfo := struct {
-		Email string `json:"email"`
-	}{session.Email}
+		Email             string `json:"email"`
+		PreferredUsername string `json:"preferredUsername"`
+	}{
+		Email:             session.Email,
+		PreferredUsername: session.PreferredUsername,
+	}
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(userInfo)
@@ -939,6 +948,11 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 				req.Header.Del("X-Forwarded-Email")
 			}
 		}
+		if session.PreferredUsername != "" {
+			req.Header["X-Forwarded-Preferred-Username"] = []string{session.PreferredUsername}
+		} else {
+			req.Header.Del("X-Forwarded-Preferred-Username")
+		}
 	}
 
 	if p.PassUserHeaders {
@@ -948,6 +962,11 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		} else {
 			req.Header.Del("X-Forwarded-Email")
 		}
+		if session.PreferredUsername != "" {
+			req.Header["X-Forwarded-Preferred-Username"] = []string{session.PreferredUsername}
+		} else {
+			req.Header.Del("X-Forwarded-Preferred-Username")
+		}
 	}
 
 	if p.SetXAuthRequest {
@@ -956,6 +975,11 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			rw.Header().Set("X-Auth-Request-Email", session.Email)
 		} else {
 			rw.Header().Del("X-Auth-Request-Email")
+		}
+		if session.PreferredUsername != "" {
+			rw.Header().Set("X-Auth-Request-Preferred-Username", session.PreferredUsername)
+		} else {
+			rw.Header().Del("X-Auth-Request-Preferred-Username")
 		}
 
 		if p.PassAccessToken {
@@ -1066,9 +1090,10 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		}
 
 		var claims struct {
-			Subject  string `json:"sub"`
-			Email    string `json:"email"`
-			Verified *bool  `json:"email_verified"`
+			Subject           string `json:"sub"`
+			Email             string `json:"email"`
+			Verified          *bool  `json:"email_verified"`
+			PreferredUsername string `json:"preferred_username"`
 		}
 
 		if err := bearerToken.Claims(&claims); err != nil {
@@ -1084,12 +1109,13 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		}
 
 		session = &sessionsapi.SessionState{
-			AccessToken:  rawBearerToken,
-			IDToken:      rawBearerToken,
-			RefreshToken: "",
-			ExpiresOn:    bearerToken.Expiry,
-			Email:        claims.Email,
-			User:         claims.Email,
+			AccessToken:       rawBearerToken,
+			IDToken:           rawBearerToken,
+			RefreshToken:      "",
+			ExpiresOn:         bearerToken.Expiry,
+			Email:             claims.Email,
+			User:              claims.Email,
+			PreferredUsername: claims.PreferredUsername,
 		}
 		return session, nil
 	}
