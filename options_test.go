@@ -3,7 +3,9 @@ package main
 import (
 	"crypto"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -37,8 +39,56 @@ func TestNewOptions(t *testing.T) {
 	expected := errorMsg([]string{
 		"missing setting: cookie-secret",
 		"missing setting: client-id",
-		"missing setting: client-secret"})
+		"missing setting: client-secret or client-secret-file"})
 	assert.Equal(t, expected, err.Error())
+}
+
+func TestClientSecretFileOptionFails(t *testing.T) {
+	o := NewOptions()
+	o.CookieSecret = "foobar"
+	o.ClientID = "bazquux"
+	o.ClientSecretFile = "xyzzyplugh"
+	o.EmailDomains = []string{"*"}
+	err := o.Validate()
+	assert.NotEqual(t, nil, err)
+
+	p := o.provider.Data()
+	assert.Equal(t, "xyzzyplugh", p.ClientSecretFile)
+	assert.Equal(t, "", p.ClientSecret)
+
+	s, err := p.GetClientSecret()
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "", s)
+}
+
+func TestClientSecretFileOption(t *testing.T) {
+	var err error
+	f, err := ioutil.TempFile("", "client_secret_temp_file_")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	f.WriteString("testcase")
+	if err := f.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
+	clientSecretFileName := f.Name()
+	defer os.Remove(clientSecretFileName)
+
+	o := NewOptions()
+	o.CookieSecret = "foobar"
+	o.ClientID = "bazquux"
+	o.ClientSecretFile = clientSecretFileName
+	o.EmailDomains = []string{"*"}
+	err = o.Validate()
+	assert.Equal(t, nil, err)
+
+	p := o.provider.Data()
+	assert.Equal(t, clientSecretFileName, p.ClientSecretFile)
+	assert.Equal(t, "", p.ClientSecret)
+
+	s, err := p.GetClientSecret()
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "testcase", s)
 }
 
 func TestGoogleGroupOptions(t *testing.T) {

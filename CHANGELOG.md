@@ -9,10 +9,14 @@
 
 ## Changes since v5.0.0
 
+- [#400](https://github.com/pusher/oauth2_proxy/pull/400) Add `nsswitch.conf` to Docker image to allow hosts file to work (@luketainton)
+- [#385](https://github.com/pusher/oauth2_proxy/pull/385) Use the `Authorization` header instead of `access_token` for refreshing GitHub Provider sessions (@ibuclaw)
+- [#372](https://github.com/pusher/oauth2_proxy/pull/372) Allow fallback to secondary verified email address in GitHub provider (@dmnemec)
 - [#335](https://github.com/pusher/oauth2_proxy/pull/335) OIDC Provider support for empty id_tokens in the access token refresh response (@howzat)
 - [#363](https://github.com/pusher/oauth2_proxy/pull/363) Extension of Redis Session Store to Support Redis Cluster (@yan-dblinf)
 - [#353](https://github.com/pusher/oauth2_proxy/pull/353) Fix login page fragment handling after soft reload on Firefox (@ffdybuster)
 - [#308](https://github.com/pusher/oauth2_proxy/pull/308) Add AzureOIDC provider
+- [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for providers that rotate client secret via file system (@pasha-r)
 
 # v5.0.0
 

@@ -102,11 +102,15 @@ func (p *GoogleProvider) Redeem(redirectURL, code string) (s *sessions.SessionSt
 		err = errors.New("missing code")
 		return
 	}
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return
+	}
 
 	params := url.Values{}
 	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", p.ClientSecret)
+	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 	var req *http.Request
@@ -261,9 +265,14 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool,
 
 func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, idToken string, expires time.Duration, err error) {
 	// https://developers.google.com/identity/protocols/OAuth2WebServer#refresh
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return
+	}
+
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", p.ClientSecret)
+	params.Add("client_secret", clientSecret)
 	params.Add("refresh_token", refreshToken)
 	params.Add("grant_type", "refresh_token")
 	var req *http.Request
