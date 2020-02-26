@@ -16,6 +16,7 @@ import (
 const (
 	cookieSecret = "foobar"
 	clientID     = "bazquux"
+	clientSecret = "xyzzyplugh"
 )
 
 func testOptions() *Options {
@@ -23,7 +24,7 @@ func testOptions() *Options {
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
 	o.CookieSecret = cookieSecret
 	o.ClientID = clientID
-	o.ClientSecret = "xyzzyplugh"
+	o.ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
 	return o
 }
@@ -52,13 +53,13 @@ func TestClientSecretFileOptionFails(t *testing.T) {
 	o := NewOptions()
 	o.CookieSecret = cookieSecret
 	o.ClientID = clientID
-	o.ClientSecretFile = "xyzzyplugh"
+	o.ClientSecretFile = clientSecret
 	o.EmailDomains = []string{"*"}
 	err := o.Validate()
 	assert.NotEqual(t, nil, err)
 
 	p := o.provider.Data()
-	assert.Equal(t, "xyzzyplugh", p.ClientSecretFile)
+	assert.Equal(t, clientSecret, p.ClientSecretFile)
 	assert.Equal(t, "", p.ClientSecret)
 
 	s, err := p.GetClientSecret()
