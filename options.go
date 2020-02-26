@@ -165,7 +165,7 @@ func NewOptions() *Options {
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
 		PassBasicAuth:                    true,
-		SetBasicAuth:                     true,
+		SetBasicAuth:                     false,
 		PassUserHeaders:                  true,
 		PassAccessToken:                  false,
 		PassHostHeader:                   true,

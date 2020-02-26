@@ -932,14 +932,6 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		}
 	}
 
-	if p.SetBasicAuth {
-		if session.User != "" {
-			rw.Header().Set("Authorization", fmt.Sprintf("Basic %s", b64.StdEncoding.EncodeToString([]byte(session.User+":"+p.BasicAuthPassword))))
-		} else {
-			rw.Header().Del("Authorization")
-		}
-	}
-
 	if p.PassUserHeaders {
 		req.Header["X-Forwarded-User"] = []string{session.User}
 		if session.Email != "" {
@@ -984,6 +976,12 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	if p.SetAuthorization {
 		if session.IDToken != "" {
 			rw.Header().Set("Authorization", fmt.Sprintf("Bearer %s", session.IDToken))
+		} else {
+			rw.Header().Del("Authorization")
+		}
+	} else if p.SetBasicAuth {
+		if session.User != "" {
+			rw.Header().Set("Authorization", fmt.Sprintf("Basic %s", b64.StdEncoding.EncodeToString([]byte(session.User+":"+p.BasicAuthPassword))))
 		} else {
 			rw.Header().Del("Authorization")
 		}

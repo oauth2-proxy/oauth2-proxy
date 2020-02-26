@@ -74,7 +74,6 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
 | `-pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `-pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream | true |
-| `-set-basic-auth` | bool | set HTTP Basic Auth information to upstream | true |
 | `-pass-host-header` | bool | pass the request Host Header to upstream | true |
 | `-pass-user-headers` | bool | pass X-Forwarded-User and X-Forwarded-Email information to upstream | true |
 | `-profile-url` | string | Profile access endpoint | |
@@ -100,6 +99,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
 | `-set-xauthrequest` | bool | set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode) | false |
 | `-set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
+| `-set-basic-auth` | bool | set HTTP Basic Auth information to in response (useful in Nginx auth_request mode) | true |
 | `-signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
 | `-silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
 | `-skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
