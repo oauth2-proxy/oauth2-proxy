@@ -18,6 +18,8 @@ Valid providers are :
 - [Keycloak](#keycloak-auth-provider)
 - [GitLab](#gitlab-auth-provider)
 - [LinkedIn](#linkedin-auth-provider)
+- [Microsoft Azure AD](#microsoft-azure-ad-provider)
+- [OpenID Connect](#openid-connect-provider)
 - [login.gov](#logingov-provider)
 - [Nextcloud](#nextcloud-provider)
 - [DigitalOcean](#digitalocean-auth-provider)
