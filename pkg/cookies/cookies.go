@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -39,7 +40,24 @@ func MakeCookie(req *http.Request, name string, value string, path string, domai
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time
 func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.CookieOptions, expiration time.Duration, now time.Time) *http.Cookie {
-	return MakeCookie(req, name, value, opts.CookiePath, opts.CookieDomain, opts.CookieHTTPOnly, opts.CookieSecure, expiration, now, ParseSameSite(opts.CookieSameSite))
+	// Sort cookie domains by length, so that we try longer (and more specific)
+	// domains first
+	sortedDomains := opts.CookieDomains
+	sort.Slice(sortedDomains, func(i, j int) bool {
+		return len(sortedDomains[i]) > len(sortedDomains[j])
+	})
+	for _, domain := range sortedDomains {
+		if strings.HasSuffix(req.Host, domain) {
+			return MakeCookie(req, name, value, opts.CookiePath, domain, opts.CookieHTTPOnly, opts.CookieSecure, expiration, now, ParseSameSite(opts.CookieSameSite))
+		}
+	}
+	// If nothing matches, create the cookie with the shortest domain
+	logger.Printf("Warning: request host %q did not match any of the specific cookie domains of %q", req.Host, strings.Join(sortedDomains, ","))
+	defaultDomain := ""
+	if len(sortedDomains) > 0 {
+		defaultDomain = sortedDomains[len(sortedDomains)-1]
+	}
+	return MakeCookie(req, name, value, opts.CookiePath, defaultDomain, opts.CookieHTTPOnly, opts.CookieSecure, expiration, now, ParseSameSite(opts.CookieSameSite))
 }
 
 // Parse a valid http.SameSite value from a user supplied string for use of making cookies.

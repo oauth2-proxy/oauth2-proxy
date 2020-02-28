@@ -63,7 +63,11 @@ var _ = Describe("NewSessionStore", func() {
 
 			It("have the correct domain set", func() {
 				for _, cookie := range cookies {
-					Expect(cookie.Domain).To(Equal(cookieOpts.CookieDomain))
+					specifiedDomain := ""
+					if len(cookieOpts.CookieDomains) > 0 {
+						specifiedDomain = cookieOpts.CookieDomains[0]
+					}
+					Expect(cookie.Domain).To(Equal(specifiedDomain))
 				}
 			})
 
@@ -343,7 +347,7 @@ var _ = Describe("NewSessionStore", func() {
 					CookieRefresh:  time.Duration(2) * time.Hour,
 					CookieSecure:   false,
 					CookieHTTPOnly: false,
-					CookieDomain:   "example.com",
+					CookieDomains:  []string{"example.com"},
 					CookieSameSite: "strict",
 				}
 
