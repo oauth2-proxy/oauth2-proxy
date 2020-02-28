@@ -103,6 +103,7 @@ type OAuthProxy struct {
 	skipAuthPreflight    bool
 	skipJwtBearerTokens  bool
 	jwtBearerVerifiers   []*oidc.IDTokenVerifier
+	realClientIPHeader   string
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
 	Banner               string
@@ -297,6 +298,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
+		realClientIPHeader:   opts.RealClientIPHeader,
 		compiledRegex:        opts.CompiledRegex,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
@@ -487,12 +489,13 @@ func (p *OAuthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (st
 	if user == "" {
 		return "", false
 	}
+	client := p.GetRemoteAddr(req)
 	// check auth
 	if p.HtpasswdFile.Validate(user, passwd) {
-		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via HtpasswdFile")
+		logger.PrintAuthf(user, req, client, logger.AuthSuccess, "Authenticated via HtpasswdFile")
 		return user, true
 	}
-	logger.PrintAuthf(user, req, logger.AuthFailure, "Invalid authentication via HtpasswdFile")
+	logger.PrintAuthf(user, req, client, logger.AuthFailure, "Invalid authentication via HtpasswdFile")
 	return "", false
 }
 
@@ -609,10 +612,46 @@ func (p *OAuthProxy) IsWhitelistedPath(path string) bool {
 	return false
 }
 
-func getRemoteAddr(req *http.Request) (s string) {
+// Returns (nil, nil) if no client IP found matching requirements found (missing header).
+func (p *OAuthProxy) GetRealClientIP(req *http.Request) (*net.IP, error) {
+	var ipStr string
+	if p.realClientIPHeader != "" {
+		if realIP := req.Header.Get(p.realClientIPHeader); realIP != "" {
+			ipStr = realIP
+		} else {
+			return nil, nil
+		}
+	} else {
+		splitIP, _, err := net.SplitHostPort(req.RemoteAddr)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to address (%s) from http.RemoteAddr", req.RemoteAddr)
+		}
+		ipStr = splitIP
+	}
+
+	if commaIndex := strings.IndexRune(ipStr, ','); commaIndex != -1 {
+		ipStr = ipStr[:commaIndex]
+	}
+	ipStr = strings.TrimSpace(ipStr)
+
+	if ipHost, _, err := net.SplitHostPort(ipStr); err == nil {
+		ipStr = ipHost
+	}
+
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return nil, fmt.Errorf("Unable to parse IP (%s) from X-Real-IP header", ipStr)
+	}
+
+	return &ip, nil
+}
+
+func (p *OAuthProxy) GetRemoteAddr(req *http.Request) (s string) {
 	s = req.RemoteAddr
-	if req.Header.Get("X-Real-IP") != "" {
-		s += fmt.Sprintf(" (%q)", req.Header.Get("X-Real-IP"))
+	if realClientIP, err := p.GetRealClientIP(req); err != nil {
+		logger.Printf("Unable to get real client IP: %s", err.Error())
+	} else if realClientIP != nil {
+		s += fmt.Sprintf(" (%q)", realClientIP.String())
 	}
 	return
 }
@@ -715,7 +754,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
-	remoteAddr := getRemoteAddr(req)
+	remoteAddr := p.GetRemoteAddr(req)
 
 	// finish the oauth cycle
 	err := req.ParseForm()
@@ -748,13 +787,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	redirect := s[1]
 	c, err := req.Cookie(p.CSRFCookieName)
 	if err != nil {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable too obtain CSRF cookie")
+		logger.PrintAuthf(session.Email, req, remoteAddr, logger.AuthFailure, "Invalid authentication via OAuth2: unable too obtain CSRF cookie")
 		p.ErrorPage(rw, 403, "Permission Denied", err.Error())
 		return
 	}
 	p.ClearCSRFCookie(rw, req)
 	if c.Value != nonce {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: csrf token mismatch, potential attack")
+		logger.PrintAuthf(session.Email, req, remoteAddr, logger.AuthFailure, "Invalid authentication via OAuth2: csrf token mismatch, potential attack")
 		p.ErrorPage(rw, 403, "Permission Denied", "csrf failed")
 		return
 	}
@@ -765,7 +804,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	// set cookie, or deny
 	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
+		logger.PrintAuthf(session.Email, req, remoteAddr, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Printf("%s %s", remoteAddr, err)
@@ -774,7 +813,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		}
 		http.Redirect(rw, req, redirect, 302)
 	} else {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
+		logger.PrintAuthf(session.Email, req, remoteAddr, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 	}
 }
@@ -843,7 +882,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	remoteAddr := getRemoteAddr(req)
+	remoteAddr := p.GetRemoteAddr(req)
 	if session == nil {
 		session, err = p.LoadCookiedSession(req)
 		if err != nil {
@@ -892,10 +931,11 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
+	client := p.GetRemoteAddr(req)
 	if saveSession && session != nil {
 		err = p.SaveSession(rw, req, session)
 		if err != nil {
-			logger.PrintAuthf(session.Email, req, logger.AuthError, "Save session error %s", err)
+			logger.PrintAuthf(session.Email, req, client, logger.AuthError, "Save session error %s", err)
 			return nil, err
 		}
 	}
@@ -989,6 +1029,8 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 // CheckBasicAuth checks the requests Authorization header for basic auth
 // credentials and authenticates these against the proxies HtpasswdFile
 func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*sessionsapi.SessionState, error) {
+	client := p.GetRemoteAddr(req)
+
 	if p.HtpasswdFile == nil {
 		return nil, nil
 	}
@@ -1009,10 +1051,10 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*sessionsapi.SessionStat
 		return nil, fmt.Errorf("invalid format %s", b)
 	}
 	if p.HtpasswdFile.Validate(pair[0], pair[1]) {
-		logger.PrintAuthf(pair[0], req, logger.AuthSuccess, "Authenticated via basic auth and HTpasswd File")
+		logger.PrintAuthf(pair[0], req, client, logger.AuthSuccess, "Authenticated via basic auth and HTpasswd File")
 		return &sessionsapi.SessionState{User: pair[0]}, nil
 	}
-	logger.PrintAuthf(pair[0], req, logger.AuthFailure, "Invalid authentication via basic auth: not in Htpasswd File")
+	logger.PrintAuthf(pair[0], req, client, logger.AuthFailure, "Invalid authentication via basic auth: not in Htpasswd File")
 	return nil, nil
 }
 

@@ -139,6 +139,7 @@ func main() {
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+	flagSet.String("real-client-ip-header", "", "Header used to determine the real IP of the client (ex: X-Forwarded-For)")
 
 	flagSet.Parse(os.Args[1:])
 

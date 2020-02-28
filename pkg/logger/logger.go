@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -142,7 +141,7 @@ func (l *Logger) Output(calldepth int, message string) {
 // PrintAuth writes auth info to the logger. Requires an http.Request to
 // log request details. Remaining arguments are handled in the manner of
 // fmt.Sprintf. Writes a final newline to the end of every message.
-func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus, format string, a ...interface{}) {
+func (l *Logger) PrintAuth(username string, req *http.Request, client string, status AuthStatus, format string, a ...interface{}) {
 	if !l.authEnabled {
 		return
 	}
@@ -152,8 +151,6 @@ func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus
 	if username == "" {
 		username = "-"
 	}
-
-	client := GetClient(req, l.reverseProxy)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -201,13 +198,11 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		}
 	}
 
-	client := GetClient(req, l.reverseProxy)
-
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	l.reqTemplate.Execute(l.writer, reqLogMessageData{
-		Client:          client,
+		Client:          req.RemoteAddr,
 		Host:            req.Host,
 		Protocol:        req.Proto,
 		RequestDuration: fmt.Sprintf("%0.3f", duration),
@@ -250,22 +245,6 @@ func (l *Logger) GetFileLineString(calldepth int) string {
 	}
 
 	return fmt.Sprintf("%s:%d", file, line)
-}
-
-// GetClient parses an HTTP request for the client/remote IP address.
-func GetClient(req *http.Request, reverseProxy bool) string {
-	client := req.RemoteAddr
-	if reverseProxy {
-		if ip := req.Header.Get("X-Real-IP"); ip != "" {
-			client = ip
-		}
-	}
-
-	if c, _, err := net.SplitHostPort(client); err == nil {
-		client = c
-	}
-
-	return client
 }
 
 // FormatTimestamp returns a formatted timestamp.
@@ -480,8 +459,8 @@ func Panicln(v ...interface{}) {
 
 // PrintAuthf writes authentication details to the standard logger.
 // Arguments are handled in the manner of fmt.Printf.
-func PrintAuthf(username string, req *http.Request, status AuthStatus, format string, a ...interface{}) {
-	std.PrintAuth(username, req, status, format, a...)
+func PrintAuthf(username string, req *http.Request, client string, status AuthStatus, format string, a ...interface{}) {
+	std.PrintAuth(username, req, client, status, format, a...)
 }
 
 // PrintReq writes request details to the standard logger.
