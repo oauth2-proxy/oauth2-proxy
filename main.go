@@ -27,6 +27,7 @@ func main() {
 	googleGroups := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
 	redisClusterConnectionURLs := StringArray{}
+	bypassIPWhitelist := StringArray{}
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -140,6 +141,7 @@ func main() {
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 	flagSet.String("real-client-ip-header", "", "Header used to determine the real IP of the client (ex: X-Forwarded-For)")
+	flagSet.Var(&bypassIPWhitelist, "bypass-ip-whitelist", "list of IPs or CIDR ranges to allow bypass of oauth2")
 
 	flagSet.Parse(os.Args[1:])
 

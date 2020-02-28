@@ -1499,3 +1499,42 @@ func TestFindJwtBearerToken(t *testing.T) {
 
 	fmt.Printf("%s", token)
 }
+
+func TestIPWhitelist(t *testing.T) {
+	opts := NewOptions()
+	opts.BypassIPWhitelist = []string{
+		"127.0.0.0/8",
+		"::1",
+	}
+	opts.RealClientIPHeader = "X-Forwarded-For"
+	opts.Validate()
+
+	proxy := NewOAuthProxy(opts, func(string) bool { return true })
+
+	var rw *httptest.ResponseRecorder
+	var req *http.Request
+
+	rw = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Add("X-Forwarded-For", "127.0.0.1")
+	proxy.ServeHTTP(rw, req)
+	assert.Equal(t, 404, rw.Code)
+
+	rw = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Add("X-Forwarded-For", "::1")
+	proxy.ServeHTTP(rw, req)
+	assert.Equal(t, 404, rw.Code)
+
+	rw = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Add("X-Forwarded-For", "12.34.56.78")
+	proxy.ServeHTTP(rw, req)
+	assert.Equal(t, 403, rw.Code)
+
+	rw = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Add("X-Forwarded-For", "::2")
+	proxy.ServeHTTP(rw, req)
+	assert.Equal(t, 403, rw.Code)
+}

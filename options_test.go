@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -341,4 +342,68 @@ func TestRealClientIPHeader(t *testing.T) {
 		"Invalid configuration:\n"+
 			"  real_client_ip_header (!934invalidheader-23:) not in valid format",
 		err.Error())
+}
+
+func TestBypassIPWhitelist(t *testing.T) {
+	var o *Options
+	var err error
+
+	o = testOptions()
+	o.BypassIPWhitelist = StringArray{
+		"127.0.0.1",
+		"10.32.0.1/32",
+		"43.36.201.0/24",
+		"::1",
+		"2a12:105:ee7:9234:0:0:0:0/64",
+	}
+	err = o.Validate()
+	assert.Equal(t, nil, err)
+	assert.Equal(t,
+		net.IPNet{IP: net.IP{127, 0, 0, 1}, Mask: net.IPMask{255, 255, 255, 255}},
+		*o.bypassIPWhitelist[0],
+	)
+	assert.Equal(t,
+		net.IPNet{IP: net.IP{10, 32, 0, 1}, Mask: net.IPMask{255, 255, 255, 255}},
+		*o.bypassIPWhitelist[1],
+	)
+	assert.Equal(t,
+		net.IPNet{IP: net.IP{43, 36, 201, 0}, Mask: net.IPMask{255, 255, 255, 0}},
+		*o.bypassIPWhitelist[2],
+	)
+	assert.Equal(t,
+		net.IPNet{
+			IP:   net.IP{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+			Mask: net.IPMask{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		},
+		*o.bypassIPWhitelist[3],
+	)
+	assert.Equal(t,
+		net.IPNet{
+			IP:   net.IP{0x2a, 0x12, 0x1, 0x5, 0xe, 0xe7, 0x92, 0x34, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+			Mask: net.IPMask{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+		},
+		*o.bypassIPWhitelist[4],
+	)
+
+	o = testOptions()
+	o.BypassIPWhitelist = StringArray{
+		"135.180.78.199",
+		"135.180.78.199/32",
+		"d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4",
+		"d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4/128",
+	}
+	err = o.Validate()
+	assert.Equal(t, nil, err)
+	assert.Equal(t, o.bypassIPWhitelist[0], o.bypassIPWhitelist[1])
+	assert.Equal(t, o.bypassIPWhitelist[2], o.bypassIPWhitelist[3])
+
+	o = testOptions()
+	o.BypassIPWhitelist = StringArray{"[::1]", "alkwlkbn/32"}
+	err = o.Validate()
+	assert.Equal(t,
+		"Invalid configuration:\n"+
+			"  bypass_ip_whitelist[0] ([::1]) looks like a IP address, but could not be recognized\n"+
+			"  bypass_ip_whitelist[1] (alkwlkbn/32) can't parse as CIDR: invalid CIDR address: alkwlkbn/32",
+		err.Error(),
+	)
 }

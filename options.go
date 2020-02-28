@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -86,6 +87,7 @@ type Options struct {
 	SkipAuthPreflight             bool          `flag:"skip-auth-preflight" cfg:"skip_auth_preflight" env:"OAUTH2_PROXY_SKIP_AUTH_PREFLIGHT"`
 	FlushInterval                 time.Duration `flag:"flush-interval" cfg:"flush_interval" env:"OAUTH2_PROXY_FLUSH_INTERVAL"`
 	RealClientIPHeader            string        `flag:"real-client-ip-header" cfg:"real_client_ip_header" env:"OAUTH2_PROXY_REAL_CLIENT_IP_HEADER"`
+	BypassIPWhitelist             []string      `flag:"bypass-ip-whitelist" cfg:"bypass_ip_whitelist" env:"OAUTH2_PROXY_BYPASS_IP_WHITELIST"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -134,6 +136,7 @@ type Options struct {
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
+	bypassIPWhitelist  []*net.IPNet
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -401,6 +404,14 @@ func (o *Options) Validate() error {
 		}
 	}
 
+	if o.BypassIPWhitelist != nil && len(o.BypassIPWhitelist) > 0 {
+		parsedIPNets, whiteListMsgs := parseBypassIPWhitelist(o.BypassIPWhitelist, msgs)
+		msgs = append(msgs, whiteListMsgs...)
+		for _, ipNet := range parsedIPNets {
+			o.bypassIPWhitelist = append(o.bypassIPWhitelist, ipNet)
+		}
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
@@ -543,6 +554,40 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 		parsedIssuers = append(parsedIssuers, jwtIssuer{issuerURI: uri, audience: audience})
 	}
 	return parsedIssuers, msgs
+}
+
+func parseBypassIPWhitelist(ipWhitelistStrs []string, msgs []string) ([]*net.IPNet, []string) {
+	var parsedIPNets []*net.IPNet
+
+	for ipIndex, ipStr := range ipWhitelistStrs {
+		if !strings.ContainsRune(ipStr, '/') {
+			ip := net.ParseIP(ipStr)
+			if ip == nil {
+				msgs = append(msgs, fmt.Sprintf(
+					"bypass_ip_whitelist[%d] (%s) looks like a IP address, but could not be recognized", ipIndex, ipStr))
+				continue
+			}
+
+			if ip.To4() != nil {
+				ipStr += "/32"
+			} else if ip.To16() != nil {
+				ipStr += "/128"
+			} else {
+				msgs = append(msgs, fmt.Sprintf("bypass_ip_whitelist[%d] (%s) address neither IPv4 or IPv6", ipIndex, ipStr))
+				continue
+			}
+		}
+
+		_, ipNet, err := net.ParseCIDR(ipStr)
+		if err != nil {
+			msgs = append(msgs, fmt.Sprintf("bypass_ip_whitelist[%d] (%s) can't parse as CIDR: %s", ipIndex, ipStr, err.Error()))
+			continue
+		}
+
+		parsedIPNets = append(parsedIPNets, ipNet)
+	}
+
+	return parsedIPNets, msgs
 }
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
