@@ -324,3 +324,21 @@ func TestGCPHealthcheck(t *testing.T) {
 	o.GCPHealthChecks = true
 	assert.Equal(t, nil, o.Validate())
 }
+
+func TestRealClientIPHeader(t *testing.T) {
+	var o *Options
+	var err error
+
+	o = testOptions()
+	o.RealClientIPHeader = "X-Forwarded-For"
+	assert.Equal(t, nil, o.Validate())
+
+	o = testOptions()
+	o.RealClientIPHeader = "!934invalidheader-23:"
+	err = o.Validate()
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t,
+		"Invalid configuration:\n"+
+			"  real_client_ip_header (!934invalidheader-23:) not in valid format",
+		err.Error())
+}

@@ -85,6 +85,7 @@ type Options struct {
 	PassAuthorization             bool          `flag:"pass-authorization-header" cfg:"pass_authorization_header" env:"OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER"`
 	SkipAuthPreflight             bool          `flag:"skip-auth-preflight" cfg:"skip_auth_preflight" env:"OAUTH2_PROXY_SKIP_AUTH_PREFLIGHT"`
 	FlushInterval                 time.Duration `flag:"flush-interval" cfg:"flush_interval" env:"OAUTH2_PROXY_FLUSH_INTERVAL"`
+	RealClientIPHeader            string        `flag:"real-client-ip-header" cfg:"real_client_ip_header" env:"OAUTH2_PROXY_REAL_CLIENT_IP_HEADER"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -391,6 +392,14 @@ func (o *Options) Validate() error {
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)
+
+	if o.RealClientIPHeader != "" {
+		if match, err := regexp.MatchString("^[a-zA-Z0-9-]+$", o.RealClientIPHeader); err != nil {
+			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) could not check regex: %s", o.RealClientIPHeader, err.Error()))
+		} else if !match {
+			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not in valid format", o.RealClientIPHeader))
+		}
+	}
 
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
