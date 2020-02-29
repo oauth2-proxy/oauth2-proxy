@@ -111,7 +111,7 @@ NOTE: This provider doesn't support Azure Active Directory (v1.0) endpoints.
 
 NOTE: If `--azure-permitted-groups` is not specified, all logged users are authorized
 
-NOTE: If users are members of large number of groups ID token will grow in size and so will the cookie that stores it. In such case consider using redis session store.
+NOTE: If a user is a member of a large number of groups, the ID token may become larger and be unable to be stored within a single cookie. It is recommended to use Redis for session storage with Azure.
 
 ### Facebook Auth Provider
 
