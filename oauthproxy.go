@@ -99,6 +99,7 @@ type OAuthProxy struct {
 	PassAccessToken      bool
 	SetAuthorization     bool
 	PassAuthorization    bool
+	PreferEmailToUser    bool
 	skipAuthRegex        []string
 	skipAuthPreflight    bool
 	skipJwtBearerTokens  bool
@@ -305,6 +306,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		PassAccessToken:      opts.PassAccessToken,
 		SetAuthorization:     opts.SetAuthorization,
 		PassAuthorization:    opts.PassAuthorization,
+		PreferEmailToUser:    opts.PreferEmailToUser,
 		SkipProviderButton:   opts.SkipProviderButton,
 		templates:            loadTemplates(opts.CustomTemplatesDir),
 		Banner:               opts.Banner,
@@ -924,12 +926,18 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
 func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
 	if p.PassBasicAuth {
-		req.SetBasicAuth(session.User, p.BasicAuthPassword)
-		req.Header["X-Forwarded-User"] = []string{session.User}
-		if session.Email != "" {
-			req.Header["X-Forwarded-Email"] = []string{session.Email}
-		} else {
+		if p.PreferEmailToUser && session.Email != "" {
+			req.SetBasicAuth(session.Email, p.BasicAuthPassword)
+			req.Header["X-Forwarded-User"] = []string{session.Email}
 			req.Header.Del("X-Forwarded-Email")
+		} else {
+			req.SetBasicAuth(session.User, p.BasicAuthPassword)
+			req.Header["X-Forwarded-User"] = []string{session.User}
+			if session.Email != "" {
+				req.Header["X-Forwarded-Email"] = []string{session.Email}
+			} else {
+				req.Header.Del("X-Forwarded-Email")
+			}
 		}
 	}
 
