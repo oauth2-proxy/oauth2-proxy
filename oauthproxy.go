@@ -355,6 +355,9 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *sessionsapi.SessionState,
 
 	if s.PreferredUsername == "" {
 		s.PreferredUsername, err = p.provider.GetPreferredUsername(s)
+		if err != nil && err.Error() == "not implemented" {
+			err = nil
+		}
 	}
 
 	if s.User == "" {
