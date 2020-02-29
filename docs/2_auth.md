@@ -90,7 +90,7 @@ Note: When using the Azure Auth provider with nginx and the cookie session store
 
 1. Go to [https://portal.azure.com](https://portal.azure.com), and create new "App Registration".
 1. Go to **"Authentication"** page and configure addresses for your applications: `https://internal.yourcompany.com/oauth2/callback`
-1. Go to **"Manifest"** page and enable group support in ID tokens by adding groupMembershipClaims entry 
+1. Go to **"Manifest"** page and enable group support in ID tokens by adding `groupMembershipClaims` entry 
     ```json
     {
       "groupMembershipClaims": "SecurityGroup",
