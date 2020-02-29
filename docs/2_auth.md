@@ -97,7 +97,7 @@ Note: When using the Azure Auth provider with nginx and the cookie session store
       ...
     }
     ```
-1. Go to **"Certificates & secrets"** settings, create new secret and store it in safely. After you close page you won't be able to read it again.
+1. Go to **"Certificates & secrets"** settings, create a new secret and store it safely. After you close the page, you won't be able to read it again.
 1. Go to **"Overview"** page to check tenant ID and client ID of "App Registration"
 1. Start oauth2-proxy with given settings
     ```
