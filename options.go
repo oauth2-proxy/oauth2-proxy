@@ -395,7 +395,7 @@ func (o *Options) Validate() error {
 
 	if o.RealClientIPHeader != "" {
 		if match, err := regexp.MatchString("^[a-zA-Z0-9-]+$", o.RealClientIPHeader); err != nil {
-			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) could not check regex: %s", o.RealClientIPHeader, err.Error()))
+			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) could not check regex: %v", o.RealClientIPHeader, err))
 		} else if !match {
 			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not in valid format", o.RealClientIPHeader))
 		}
