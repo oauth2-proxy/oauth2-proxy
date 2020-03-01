@@ -640,7 +640,7 @@ func (p *OAuthProxy) GetRealClientIP(req *http.Request) (*net.IP, error) {
 
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		return nil, fmt.Errorf("Unable to parse IP (%s) from X-Real-IP header", ipStr)
+		return nil, fmt.Errorf("Unable to parse IP (%s) from %s header", ipStr, p.realClientIPHeader)
 	}
 
 	return &ip, nil
