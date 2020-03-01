@@ -931,11 +931,10 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	client := p.GetRemoteAddr(req)
 	if saveSession && session != nil {
 		err = p.SaveSession(rw, req, session)
 		if err != nil {
-			logger.PrintAuthf(session.Email, req, client, logger.AuthError, "Save session error %s", err)
+			logger.PrintAuthf(session.Email, req, remoteAddr, logger.AuthError, "Save session error %s", err)
 			return nil, err
 		}
 	}
