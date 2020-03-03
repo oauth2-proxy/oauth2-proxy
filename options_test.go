@@ -333,6 +333,17 @@ func TestRealClientIPHeader(t *testing.T) {
 	o = testOptions()
 	o.RealClientIPHeader = "X-Forwarded-For"
 	assert.Equal(t, nil, o.Validate())
+	assert.NotNil(t, o.realClientIPParser)
+
+	o = testOptions()
+	o.RealClientIPHeader = "Forwarded"
+	err = o.Validate()
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t,
+		"Invalid configuration:\n"+
+			"  real_client_ip_header (Forwarded) not accepted parameter value: The HTTP header key (Forwarded) is either invalid or unsupported",
+		err.Error())
+	assert.Nil(t, o.realClientIPParser)
 
 	o = testOptions()
 	o.RealClientIPHeader = "!934invalidheader-23:"
@@ -340,8 +351,9 @@ func TestRealClientIPHeader(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t,
 		"Invalid configuration:\n"+
-			"  real_client_ip_header (!934invalidheader-23:) not in valid format",
+			"  real_client_ip_header (!934invalidheader-23:) not accepted parameter value: The HTTP header key (!934invalidheader-23:) is either invalid or unsupported",
 		err.Error())
+	assert.Nil(t, o.realClientIPParser)
 }
 
 func TestBypassIPWhitelist(t *testing.T) {
