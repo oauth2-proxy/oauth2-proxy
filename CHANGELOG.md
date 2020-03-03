@@ -18,6 +18,7 @@
   - Remove Pusher Cloud Team from CODEOWNERS
   - Release images moved to `quay.io/oauth2-proxy/oauth2-proxy`
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
+- [#432](https://github.com/oauth2-proxy/oauth2-proxy/pull/432) Update ruby dependencies for documentation (@theobarberbany)
 
 # v5.1.0
 
