@@ -74,7 +74,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
 | `-pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `-pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
-| `-prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. | false |
+| `-prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with `-pass-basic-auth` and `-pass-user-headers` | false |
 | `-pass-host-header` | bool | pass the request Host Header to upstream | true |
 | `-pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `-profile-url` | string | Profile access endpoint | |
