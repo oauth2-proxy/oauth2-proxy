@@ -223,6 +223,30 @@ Generate a unique `client_secret` to encrypt the cookie.
 
 Then you can start the oauth2_proxy with `./oauth2_proxy -config /etc/example.cfg`
 
+#### Configuring the OIDC Provider with Enterprise PKS UAA
+
+Modify your UAA Client `pks_cluster_client` via the `uaac` command line:
+
+```bash
+uaac client update pks_cluster_client --scope openid,roles,uaa.user,profile,email \
+  --authorized_grant_types password,refresh_token,authorization_code \
+  --redirect_uri "<APP_URL>/oauth2/callback" \
+  --authorities uaa.resource
+```
+
+Run `oauth2_proxy` with the following args:
+
+```bash
+/bin/oauth2_proxy -provider=oidc \
+    -client-id=pks_cluster_client \
+    -upstream=http://localhost:8080/ \
+    -email-domain=* \
+    -oidc-issuer-url=https://<UAA_URL>:8443/oauth/token \
+    -redirect-url=<APP_URL>/oauth2/callback \
+    --insecure-oidc-allow-unverified-email \
+    --insecure-oidc-allow-empty-client-secret
+```
+
 
 ### login.gov Provider
 
