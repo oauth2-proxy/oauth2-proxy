@@ -9,6 +9,7 @@
 
 ## Changes since v5.0.0
 
+- [#445](https://github.com/pusher/oauth2_proxy/pull/445) Expose `acr_values` to all providers (@holyjak)
 - [#419](https://github.com/pusher/oauth2_proxy/pull/419) Support Go 1.14, upgrade dependencies, upgrade golangci-lint to 1.23.6 (@johejo)
 - [#444](https://github.com/pusher/oauth2_proxy/pull/444) Support prompt in addition to approval-prompt (@holyjak)
 - [#435](https://github.com/pusher/oauth2_proxy/pull/435) Fix issue with group validation calling google directory API on every HTTP request (@ericofusco)
