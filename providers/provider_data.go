@@ -11,16 +11,19 @@ import (
 // of OAuth2 providers
 type ProviderData struct {
 	ProviderName      string
-	ClientID          string
-	ClientSecret      string
-	ClientSecretFile  string
 	LoginURL          *url.URL
 	RedeemURL         *url.URL
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
+	// Auth request params & related, see
+	//https://openid.net/specs/openid-connect-basic-1_0.html#rfc.section.2.1.1.1
+	AcrValues         string
+	ApprovalPrompt    string  // NOTE: Renamed to "prompt" in OAuth2
+	ClientID          string
+	ClientSecret      string
+	ClientSecretFile  string
 	Scope             string
-	ApprovalPrompt    string
 }
 
 // Data returns the ProviderData

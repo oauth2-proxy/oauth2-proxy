@@ -9,6 +9,7 @@
 
 ## Changes since v5.0.0
 
+- [#436](https://github.com/pusher/oauth2_proxy/pull/436) Expose `acr_values` to all providers (@holyjak)
 - [#400](https://github.com/pusher/oauth2_proxy/pull/400) Add `nsswitch.conf` to Docker image to allow hosts file to work (@luketainton)
 - [#385](https://github.com/pusher/oauth2_proxy/pull/385) Use the `Authorization` header instead of `access_token` for refreshing GitHub Provider sessions (@ibuclaw)
 - [#372](https://github.com/pusher/oauth2_proxy/pull/372) Allow fallback to secondary verified email address in GitHub provider (@dmnemec)
