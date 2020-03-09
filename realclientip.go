@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-type RealClientIPParser interface {
+type realClientIPParsder interface {
 	GetRealClientIP(http.Header) (net.IP, error)
 }
 
-func GetRealClientIPParser(headerKey string) (RealClientIPParser, error) {
+func getRealClientIPParsder(headerKey string) (realClientIPParsder, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
-	if _, ok := XForwardedForCompatableHeaders[headerKey]; ok {
+	if _, ok := xForwardedForCompatableHeaders[headerKey]; ok {
 		return &xForwardedForClientIPParser{header: headerKey}, nil
 	}
 
@@ -22,7 +22,7 @@ func GetRealClientIPParser(headerKey string) (RealClientIPParser, error) {
 	return nil, fmt.Errorf("The HTTP header key (%s) is either invalid or unsupported", headerKey)
 }
 
-var XForwardedForCompatableHeaders = map[string]bool{
+var xForwardedForCompatableHeaders = map[string]bool{
 	http.CanonicalHeaderKey("X-Forwarded-For"): true,
 	http.CanonicalHeaderKey("X-Real-IP"):       true,
 	http.CanonicalHeaderKey("X-ProxyUser-IP"):  true,
