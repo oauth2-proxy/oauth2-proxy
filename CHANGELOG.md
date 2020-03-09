@@ -6,9 +6,11 @@
 - [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp)
 
 ## Breaking Changes
+- [#440](https://github.com/pusher/oauth2_proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
 
 ## Changes since v5.0.0
 
+- [#440](https://github.com/pusher/oauth2_proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
 - [#419](https://github.com/pusher/oauth2_proxy/pull/419) Support Go 1.14, upgrade dependencies, upgrade golangci-lint to 1.23.6 (@johejo)
 - [#444](https://github.com/pusher/oauth2_proxy/pull/444) Support prompt in addition to approval-prompt (@holyjak)
 - [#435](https://github.com/pusher/oauth2_proxy/pull/435) Fix issue with group validation calling google directory API on every HTTP request (@ericofusco)
