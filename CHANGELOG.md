@@ -18,6 +18,7 @@
 - [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for providers that rotate client secret via file system (@pasha-r)
 - [#401](https://github.com/pusher/oauth2_proxy/pull/401) Give the option to pass email address in the Basic auth header instead of upstream usernames. (@Spindel)
 - [#405](https://github.com/pusher/oauth2_proxy/pull/405) The `/sign_in` page now honors the `rd` query parameter, fixing the redirect after a successful authentication (@ti-mo)
+- [#438](https://github.com/pusher/oauth2_proxy/pull/438) Add `--insecure-oidc-allow-empty-client-secret` flag to allow for empty client secrets.
 
 # v5.0.0
 

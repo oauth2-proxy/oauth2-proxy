@@ -93,7 +93,7 @@ type Options struct {
 	ProviderName                       string `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
 	OIDCIssuerURL                      string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
 	InsecureOIDCAllowUnverifiedEmail   bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
-	InsecureOIDCAllowEmptyClientSecret bool   `flag:"insecure-oidc-allow-empty-client-secret" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_EMPTY_CLIENT_SECRET"`
+	InsecureOIDCAllowEmptyClientSecret bool   `flag:"insecure-oidc-allow-empty-client-secret" cfg:"insecure_oidc_allow_empty_client_secret" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_EMPTY_CLIENT_SECRET"`
 	SkipOIDCDiscovery                  bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
 	OIDCJwksURL                        string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
 	LoginURL                           string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
