@@ -14,18 +14,17 @@ type realClientIPParsder interface {
 func getRealClientIPParsder(headerKey string) (realClientIPParsder, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
-	if _, ok := xForwardedForCompatableHeaders[headerKey]; ok {
+	switch (headerKey) {
+	case http.CanonicalHeaderKey("X-Forwarded-For"):
+		fallthrough
+	case http.CanonicalHeaderKey("X-Real-IP"):
+		fallthrough
+	case http.CanonicalHeaderKey("X-ProxyUser-IP"):
 		return &xForwardedForClientIPParser{header: headerKey}, nil
 	}
 
 	// TODO: implement the more standardized but more complex `Forwarded` header.
 	return nil, fmt.Errorf("The HTTP header key (%s) is either invalid or unsupported", headerKey)
-}
-
-var xForwardedForCompatableHeaders = map[string]bool{
-	http.CanonicalHeaderKey("X-Forwarded-For"): true,
-	http.CanonicalHeaderKey("X-Real-IP"):       true,
-	http.CanonicalHeaderKey("X-ProxyUser-IP"):  true,
 }
 
 type xForwardedForClientIPParser struct {
