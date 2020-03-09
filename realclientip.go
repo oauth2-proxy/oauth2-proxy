@@ -50,12 +50,8 @@ func (p xForwardedForClientIPParser) GetRealClientIP(h http.Header) (net.IP, err
 
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		return nil, parseFailureError(ipStr, p.header)
+		return nil, fmt.Errorf("Unable to parse IP (%s) from %s header", ipStr, http.CanonicalHeaderKey(p.header))
 	}
 
 	return ip, nil
-}
-
-func parseFailureError(ipStr string, h string) error {
-	return fmt.Errorf("Unable to parse IP (%s) from %s header", ipStr, http.CanonicalHeaderKey(h))
 }
