@@ -638,7 +638,7 @@ func (p *OAuthProxy) GetRemoteIP(req *http.Request) (net.IP, error) {
 		return nil, fmt.Errorf("Unable to parse IP (%s)", ipStr)
 	}
 
-	return ip, err
+	return ip, nil
 }
 
 func (p *OAuthProxy) GetClientString(req *http.Request, full bool) (s string) {
