@@ -281,8 +281,8 @@ func (o *Options) Validate() error {
 		}
 	}
 
-	if o.PreferEmailToUser == true && o.PassBasicAuth == false {
-		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth")
+	if o.PreferEmailToUser == true && o.PassBasicAuth == false && o.PassUserHeaders == false {
+		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
 	}
 
 	if o.SkipJwtBearerTokens {

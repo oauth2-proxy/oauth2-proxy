@@ -957,12 +957,18 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	}
 
 	if p.PassUserHeaders {
-		req.Header["X-Forwarded-User"] = []string{session.User}
-		if session.Email != "" {
-			req.Header["X-Forwarded-Email"] = []string{session.Email}
-		} else {
+		if p.PreferEmailToUser && session.Email != "" {
+			req.Header["X-Forwarded-User"] = []string{session.Email}
 			req.Header.Del("X-Forwarded-Email")
+		} else {
+			req.Header["X-Forwarded-User"] = []string{session.User}
+			if session.Email != "" {
+				req.Header["X-Forwarded-Email"] = []string{session.Email}
+			} else {
+				req.Header.Del("X-Forwarded-Email")
+			}
 		}
+
 		if session.PreferredUsername != "" {
 			req.Header["X-Forwarded-Preferred-Username"] = []string{session.PreferredUsername}
 		} else {

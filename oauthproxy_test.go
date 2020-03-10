@@ -504,22 +504,44 @@ func TestBasicAuthWithEmail(t *testing.T) {
 		assert.Equal(t, expectedEmailHeader, req.Header["Authorization"][0])
 		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
 	}
+}
 
+func TestPassUserHeadersWithEmail(t *testing.T) {
+	opts := NewOptions()
+	opts.PassBasicAuth = false
 	opts.PassUserHeaders = true
+	opts.PreferEmailToUser = false
+	opts.Validate()
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+
+	session := &sessions.SessionState{
+		User:        userName,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   time.Now(),
+	}
 	{
-		// PassUserHeaders takes predecense over the headers added by
-		// PassBasicAuth, thus we expect them to contain something else.
 		rw := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase2", nil)
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase0", nil)
 		proxy := NewOAuthProxy(opts, func(email string) bool {
 			return email == emailAddress
 		})
-
 		proxy.addHeadersForProxying(rw, req, session)
-		// The user address here should still be an email.
-		assert.Equal(t, expectedEmailHeader, req.Header["Authorization"][0])
-		assert.Equal(t, emailAddress, req.Header["X-Forwarded-Email"][0])
 		assert.Equal(t, userName, req.Header["X-Forwarded-User"][0])
+	}
+
+	opts.PreferEmailToUser = true
+	{
+		rw := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase1", nil)
+
+		proxy := NewOAuthProxy(opts, func(email string) bool {
+			return email == emailAddress
+		})
+		proxy.addHeadersForProxying(rw, req, session)
+		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
 	}
 }
 
