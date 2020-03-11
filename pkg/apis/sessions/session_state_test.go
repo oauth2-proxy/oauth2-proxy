@@ -19,12 +19,13 @@ func TestSessionStateSerialization(t *testing.T) {
 	c2, err := encryption.NewCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
-		Email:        "user@domain.com",
-		AccessToken:  "token1234",
-		IDToken:      "rawtoken1234",
-		CreatedAt:    time.Now(),
-		ExpiresOn:    time.Now().Add(time.Duration(1) * time.Hour),
-		RefreshToken: "refresh4321",
+		Email:             "user@domain.com",
+		PreferredUsername: "user",
+		AccessToken:       "token1234",
+		IDToken:           "rawtoken1234",
+		CreatedAt:         time.Now(),
+		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
@@ -34,6 +35,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@domain.com", ss.User)
 	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.AccessToken, ss.AccessToken)
 	assert.Equal(t, s.IDToken, ss.IDToken)
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
@@ -46,6 +48,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, "user@domain.com", ss.User)
 	assert.NotEqual(t, s.Email, ss.Email)
+	assert.NotEqual(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
@@ -59,12 +62,13 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	c2, err := encryption.NewCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
-		User:         "just-user",
-		Email:        "user@domain.com",
-		AccessToken:  "token1234",
-		CreatedAt:    time.Now(),
-		ExpiresOn:    time.Now().Add(time.Duration(1) * time.Hour),
-		RefreshToken: "refresh4321",
+		User:              "just-user",
+		PreferredUsername: "ju",
+		Email:             "user@domain.com",
+		AccessToken:       "token1234",
+		CreatedAt:         time.Now(),
+		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
@@ -74,6 +78,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, s.User, ss.User)
 	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.AccessToken, ss.AccessToken)
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
@@ -85,6 +90,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, s.User, ss.User)
 	assert.NotEqual(t, s.Email, ss.Email)
+	assert.NotEqual(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
@@ -93,11 +99,12 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 
 func TestSessionStateSerializationNoCipher(t *testing.T) {
 	s := &sessions.SessionState{
-		Email:        "user@domain.com",
-		AccessToken:  "token1234",
-		CreatedAt:    time.Now(),
-		ExpiresOn:    time.Now().Add(time.Duration(1) * time.Hour),
-		RefreshToken: "refresh4321",
+		Email:             "user@domain.com",
+		PreferredUsername: "user",
+		AccessToken:       "token1234",
+		CreatedAt:         time.Now(),
+		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(nil)
 	assert.Equal(t, nil, err)
@@ -107,18 +114,20 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@domain.com", ss.User)
 	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, "", ss.AccessToken)
 	assert.Equal(t, "", ss.RefreshToken)
 }
 
 func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	s := &sessions.SessionState{
-		User:         "just-user",
-		Email:        "user@domain.com",
-		AccessToken:  "token1234",
-		CreatedAt:    time.Now(),
-		ExpiresOn:    time.Now().Add(time.Duration(1) * time.Hour),
-		RefreshToken: "refresh4321",
+		User:              "just-user",
+		Email:             "user@domain.com",
+		PreferredUsername: "user",
+		AccessToken:       "token1234",
+		CreatedAt:         time.Now(),
+		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(nil)
 	assert.Equal(t, nil, err)
@@ -128,6 +137,7 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, s.User, ss.User)
 	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, "", ss.AccessToken)
 	assert.Equal(t, "", ss.RefreshToken)
 }
