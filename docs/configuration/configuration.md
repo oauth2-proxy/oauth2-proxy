@@ -14,6 +14,8 @@ To generate a strong cookie secret use `python -c 'import os,base64; print(base6
 
 ### Config File
 
+Every command line argument can be specified in a config file by replacing hypens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
+
 An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2_proxy.cfg`
 
 ### Command Line Options
