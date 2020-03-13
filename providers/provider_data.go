@@ -20,6 +20,7 @@ type ProviderData struct {
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
 	Scope             string
+	Prompt            string
 	ApprovalPrompt    string
 }
 
