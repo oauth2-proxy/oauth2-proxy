@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-type realClientIPParsder interface {
+type realClientIPParser interface {
 	GetRealClientIP(http.Header) (net.IP, error)
 }
 
-func getRealClientIPParsder(headerKey string) (realClientIPParsder, error) {
+func getRealClientIPParsder(headerKey string) (realClientIPParser, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
 	switch headerKey {

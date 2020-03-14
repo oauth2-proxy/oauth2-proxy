@@ -105,7 +105,7 @@ type OAuthProxy struct {
 	skipAuthPreflight    bool
 	skipJwtBearerTokens  bool
 	jwtBearerVerifiers   []*oidc.IDTokenVerifier
-	realClientIPParser   realClientIPParsder
+	realClientIPParser   realClientIPParser
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
 	Banner               string

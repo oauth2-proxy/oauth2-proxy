@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetRealClientIPParser(t *testing.T) {
-	var p realClientIPParsder
+	var p realClientIPParser
 	var err error
 
 	p, err = getRealClientIPParsder("X-Forwarded-For")

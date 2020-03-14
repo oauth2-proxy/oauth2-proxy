@@ -136,7 +136,7 @@ type Options struct {
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
-	realClientIPParser realClientIPParsder
+	realClientIPParser realClientIPParser
 }
 
 // SignatureData holds hmacauth signature hash and key
