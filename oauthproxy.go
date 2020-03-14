@@ -625,7 +625,7 @@ func (p *OAuthProxy) IsWhitelistedPath(path string) bool {
 	return false
 }
 
-// GetRealClientIP obtains the IP of the end user client from headers or remote address
+// GetRealClientIP obtains the IP of the end user client from headers or remote address.
 // Returns (nil, nil) if no client IP found matching requirements found (missing header).
 func (p *OAuthProxy) GetRealClientIP(req *http.Request) (net.IP, error) {
 	var ip net.IP
