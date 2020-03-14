@@ -8,10 +8,10 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
+	"golang.org/x/oauth2"
+
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/requests"
-
-	"golang.org/x/oauth2"
 )
 
 // OIDCProvider represents an OIDC based Identity Provider

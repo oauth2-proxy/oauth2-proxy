@@ -8,20 +8,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"golang.org/x/oauth2"
-
-	"github.com/bmizerany/assert"
-	"github.com/coreos/go-oidc"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bmizerany/assert"
+	"github.com/coreos/go-oidc"
+	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/oauth2"
+
+	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 )
 
 const accessToken = "access_token"
