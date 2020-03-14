@@ -649,12 +649,10 @@ func (p *OAuthProxy) GetRemoteIP(req *http.Request) (net.IP, error) {
 func (p *OAuthProxy) GetClientString(req *http.Request, full bool) (s string) {
 	var realClientIPStr string
 	if p.realClientIPParser != nil {
-		if realClientIP, err := p.realClientIPParser.GetRealClientIP(req.Header); err == nil {
-			if realClientIP != nil {
-				realClientIPStr = realClientIP.String()
-			}
-		} else {
+		if realClientIP, err := p.realClientIPParser.GetRealClientIP(req.Header); err != nil {
 			logger.Printf("Unable to get real client IP: %v", err)
+		} else if realClientIP != nil {
+			realClientIPStr = realClientIP.String()
 		}
 	}
 
