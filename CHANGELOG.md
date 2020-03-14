@@ -9,6 +9,7 @@
 
 ## Changes since v5.0.0
 
+- [#444](https://github.com/pusher/oauth2_proxy/pull/444) Support prompt in addition to approval-prompt (@holyjak)
 - [#435](https://github.comq/pusher/oauth2_proxy/pull/435) Fix issue with group validation calling google directory API on every HTTP request (@ericofusco)
 - [#400](https://github.com/pusher/oauth2_proxy/pull/400) Add `nsswitch.conf` to Docker image to allow hosts file to work (@luketainton)
 - [#385](https://github.com/pusher/oauth2_proxy/pull/385) Use the `Authorization` header instead of `access_token` for refreshing GitHub Provider sessions (@ibuclaw)
