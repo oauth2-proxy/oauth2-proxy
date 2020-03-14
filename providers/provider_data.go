@@ -2,9 +2,10 @@ package providers
 
 import (
 	"errors"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"io/ioutil"
 	"net/url"
+
+	"github.com/pusher/oauth2_proxy/pkg/logger"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -20,6 +21,7 @@ type ProviderData struct {
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
 	Scope             string
+	Prompt            string
 	ApprovalPrompt    string
 }
 

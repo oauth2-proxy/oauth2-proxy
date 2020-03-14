@@ -956,13 +956,11 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	if session != nil && session.Email != "" {
-		if !p.Validator(session.Email) || !p.provider.ValidateGroup(session.Email) {
-			logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
-			session = nil
-			saveSession = false
-			clearSession = true
-		}
+	if session != nil && session.Email != "" && !p.Validator(session.Email) {
+		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+		session = nil
+		saveSession = false
+		clearSession = true
 	}
 
 	if saveSession && session != nil {

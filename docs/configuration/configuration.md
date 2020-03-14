@@ -14,6 +14,8 @@ To generate a strong cookie secret use `python -c 'import os,base64; print(base6
 
 ### Config File
 
+Every command line argument can be specified in a config file by replacing hypens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
+
 An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2_proxy.cfg`
 
 ### Command Line Options
@@ -78,6 +80,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-pass-host-header` | bool | pass the request Host Header to upstream | true |
 | `-pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `-profile-url` | string | Profile access endpoint | |
+| `-prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `-provider` | string | OAuth provider | google |
 | `-provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `-ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
