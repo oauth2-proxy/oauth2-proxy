@@ -14,7 +14,7 @@ type realClientIPParsder interface {
 func getRealClientIPParsder(headerKey string) (realClientIPParsder, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
-	switch (headerKey) {
+	switch headerKey {
 	case http.CanonicalHeaderKey("X-Forwarded-For"):
 		fallthrough
 	case http.CanonicalHeaderKey("X-Real-IP"):
