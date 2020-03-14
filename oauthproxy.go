@@ -628,32 +628,21 @@ func (p *OAuthProxy) IsWhitelistedPath(path string) bool {
 // GetRealClientIP obtains the IP of the end user client from headers or remote address.
 // Returns (nil, nil) if no client IP found matching requirements found (missing header).
 func (p *OAuthProxy) GetRealClientIP(req *http.Request) (net.IP, error) {
-	var ip net.IP
-	var err error
-
 	if p.realClientIPParser != nil {
-		ip, err = p.realClientIPParser.GetRealClientIP(req.Header)
-	} else {
-		ip, err = p.GetRemoteIP(req)
+		return p.realClientIPParser.GetRealClientIP(req.Header)
 	}
-
-	return ip, err
+	return p.GetRemoteIP(req)
 }
 
 // GetRemoteIP obtains the IP of the low-level connected network host
 func (p *OAuthProxy) GetRemoteIP(req *http.Request) (net.IP, error) {
-	var ip net.IP
-	var err error
-
-	var ipStr string
-	if ipStr, _, err = net.SplitHostPort(req.RemoteAddr); err != nil {
+	if ipStr, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
 		return nil, fmt.Errorf("Unable to address (%s) from http.RemoteAddr", req.RemoteAddr)
-	}
-	if ip = net.ParseIP(ipStr); ip == nil {
+	} else if ip := net.ParseIP(ipStr); ip != nil {
+		return ip, nil
+	} else {
 		return nil, fmt.Errorf("Unable to parse IP (%s)", ipStr)
 	}
-
-	return ip, nil
 }
 
 // GetClientString obtains the human readable string of the remote IP and optionally the real client IP if available
