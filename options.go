@@ -101,7 +101,8 @@ type Options struct {
 	ProtectedResource                string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
 	ValidateURL                      string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
 	Scope                            string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
-	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"`
+	Prompt                           string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
+	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
@@ -171,6 +172,7 @@ func NewOptions() *Options {
 		SetAuthorization:                 false,
 		PassAuthorization:                false,
 		PreferEmailToUser:                false,
+		Prompt:                           "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                   "force",
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
@@ -411,6 +413,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		ClientID:         o.ClientID,
 		ClientSecret:     o.ClientSecret,
 		ClientSecretFile: o.ClientSecretFile,
+		Prompt:           o.Prompt,
 		ApprovalPrompt:   o.ApprovalPrompt,
 	}
 	p.LoginURL, msgs = parseURL(o.LoginURL, "login", msgs)
