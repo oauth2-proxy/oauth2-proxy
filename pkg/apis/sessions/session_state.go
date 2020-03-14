@@ -12,13 +12,14 @@ import (
 
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	AccessToken  string    `json:",omitempty"`
-	IDToken      string    `json:",omitempty"`
-	CreatedAt    time.Time `json:"-"`
-	ExpiresOn    time.Time `json:"-"`
-	RefreshToken string    `json:",omitempty"`
-	Email        string    `json:",omitempty"`
-	User         string    `json:",omitempty"`
+	AccessToken       string    `json:",omitempty"`
+	IDToken           string    `json:",omitempty"`
+	CreatedAt         time.Time `json:"-"`
+	ExpiresOn         time.Time `json:"-"`
+	RefreshToken      string    `json:",omitempty"`
+	Email             string    `json:",omitempty"`
+	User              string    `json:",omitempty"`
+	PreferredUsername string    `json:",omitempty"`
 }
 
 // SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
@@ -46,7 +47,7 @@ func (s *SessionState) Age() time.Duration {
 
 // String constructs a summary of the session state
 func (s *SessionState) String() string {
-	o := fmt.Sprintf("Session{email:%s user:%s", s.Email, s.User)
+	o := fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s", s.Email, s.User, s.PreferredUsername)
 	if s.AccessToken != "" {
 		o += " token:true"
 	}
@@ -72,6 +73,7 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 		// Store only Email and User when cipher is unavailable
 		ss.Email = s.Email
 		ss.User = s.User
+		ss.PreferredUsername = s.PreferredUsername
 	} else {
 		ss = *s
 		var err error
@@ -83,6 +85,12 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 		}
 		if ss.User != "" {
 			ss.User, err = c.Encrypt(ss.User)
+			if err != nil {
+				return "", err
+			}
+		}
+		if ss.PreferredUsername != "" {
+			ss.PreferredUsername, err = c.Encrypt(ss.PreferredUsername)
 			if err != nil {
 				return "", err
 			}
@@ -199,8 +207,9 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 	if c == nil {
 		// Load only Email and User when cipher is unavailable
 		ss = &SessionState{
-			Email: ss.Email,
-			User:  ss.User,
+			Email:             ss.Email,
+			User:              ss.User,
+			PreferredUsername: ss.PreferredUsername,
 		}
 	} else {
 		// Backward compatibility with using unencrypted Email
@@ -215,6 +224,12 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 			decryptedUser, errUser := c.Decrypt(ss.User)
 			if errUser == nil {
 				ss.User = decryptedUser
+			}
+		}
+		if ss.PreferredUsername != "" {
+			ss.PreferredUsername, err = c.Decrypt(ss.PreferredUsername)
+			if err != nil {
+				return nil, err
 			}
 		}
 		if ss.AccessToken != "" {

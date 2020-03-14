@@ -121,6 +121,7 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 		s.IDToken = newSession.IDToken
 		s.Email = newSession.Email
 		s.User = newSession.User
+		s.PreferredUsername = newSession.PreferredUsername
 	}
 
 	s.AccessToken = newSession.AccessToken
@@ -164,6 +165,7 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 			newSession.IDToken = token.Extra("id_token").(string)
 			newSession.Email = claims.Email
 			newSession.User = claims.Subject
+			newSession.PreferredUsername = claims.PreferredUsername
 		}
 	}
 
@@ -232,7 +234,8 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 }
 
 type OIDCClaims struct {
-	Subject  string `json:"sub"`
-	Email    string `json:"email"`
-	Verified *bool  `json:"email_verified"`
+	Subject           string `json:"sub"`
+	Email             string `json:"email"`
+	Verified          *bool  `json:"email_verified"`
+	PreferredUsername string `json:"preferred_username"`
 }

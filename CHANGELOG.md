@@ -3,12 +3,13 @@
 ## Release Hightlights
 
 ## Important Notes
-- [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp) 
+- [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp)
 
 ## Breaking Changes
 
 ## Changes since v5.0.0
 
+- [#435](https://github.comq/pusher/oauth2_proxy/pull/435) Fix issue with group validation calling google directory API on every HTTP request (@ericofusco)
 - [#400](https://github.com/pusher/oauth2_proxy/pull/400) Add `nsswitch.conf` to Docker image to allow hosts file to work (@luketainton)
 - [#385](https://github.com/pusher/oauth2_proxy/pull/385) Use the `Authorization` header instead of `access_token` for refreshing GitHub Provider sessions (@ibuclaw)
 - [#372](https://github.com/pusher/oauth2_proxy/pull/372) Allow fallback to secondary verified email address in GitHub provider (@dmnemec)
@@ -16,6 +17,9 @@
 - [#363](https://github.com/pusher/oauth2_proxy/pull/363) Extension of Redis Session Store to Support Redis Cluster (@yan-dblinf)
 - [#353](https://github.com/pusher/oauth2_proxy/pull/353) Fix login page fragment handling after soft reload on Firefox (@ffdybuster)
 - [#355](https://github.com/pusher/oauth2_proxy/pull/355) Add Client Secret File support for providers that rotate client secret via file system (@pasha-r)
+- [#401](https://github.com/pusher/oauth2_proxy/pull/401) Give the option to pass email address in the Basic auth header instead of upstream usernames. (@Spindel)
+- [#405](https://github.com/pusher/oauth2_proxy/pull/405) The `/sign_in` page now honors the `rd` query parameter, fixing the redirect after a successful authentication (@ti-mo)
+- [#434](https://github.com/pusher/oauth2_proxy/pull/434) Give the option to prefer email address in the username header when using the -pass-user-headers option (@jordancrawfordnz)
 
 # v5.0.0
 

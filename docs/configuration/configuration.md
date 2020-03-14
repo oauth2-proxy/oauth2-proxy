@@ -10,9 +10,11 @@ nav_order: 3
 
 `oauth2_proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
 
-To generate a strong cookie secret use `python -c 'import os,base64; print base64.urlsafe_b64encode(os.urandom(16))'`
+To generate a strong cookie secret use `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(16)).decode())'`
 
 ### Config File
+
+Every command line argument can be specified in a config file by replacing hypens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
 
 An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2_proxy.cfg`
 
@@ -73,9 +75,10 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `-pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
 | `-pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
-| `-pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream | true |
+| `-pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
+| `-prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with `-pass-basic-auth` and `-pass-user-headers` | false |
 | `-pass-host-header` | bool | pass the request Host Header to upstream | true |
-| `-pass-user-headers` | bool | pass X-Forwarded-User and X-Forwarded-Email information to upstream | true |
+| `-pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `-profile-url` | string | Profile access endpoint | |
 | `-provider` | string | OAuth provider | google |
 | `-provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
@@ -97,7 +100,7 @@ An example [oauth2_proxy.cfg]({{ site.gitweb }}/contrib/oauth2_proxy.cfg.example
 | `-reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false |
 | `-scope` | string | OAuth scope specification | |
 | `-session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
-| `-set-xauthrequest` | bool | set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode) | false |
+| `-set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode) | false |
 | `-set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
 | `-signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
 | `-silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |

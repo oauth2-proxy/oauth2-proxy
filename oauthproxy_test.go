@@ -379,13 +379,6 @@ func (tp *TestProvider) ValidateSessionState(session *sessions.SessionState) boo
 	return tp.ValidToken
 }
 
-func (tp *TestProvider) ValidateGroup(email string) bool {
-	if tp.GroupValidator != nil {
-		return tp.GroupValidator(email)
-	}
-	return true
-}
-
 func TestBasicAuthPassword(t *testing.T) {
 	providerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Printf("%#v", r)
@@ -412,6 +405,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	opts.CookieSecure = false
 	opts.PassBasicAuth = true
 	opts.PassUserHeaders = true
+	opts.PreferEmailToUser = true
 	opts.BasicAuthPassword = "This is a secure password"
 	opts.Validate()
 
@@ -464,6 +458,91 @@ func TestBasicAuthPassword(t *testing.T) {
 	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(emailAddress+":"+opts.BasicAuthPassword))
 	assert.Equal(t, expectedHeader, rw.Body.String())
 	providerServer.Close()
+}
+
+func TestBasicAuthWithEmail(t *testing.T) {
+	opts := NewOptions()
+	opts.PassBasicAuth = true
+	opts.PassUserHeaders = false
+	opts.PreferEmailToUser = false
+	opts.BasicAuthPassword = "This is a secure password"
+	opts.Validate()
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+
+	// The username in the basic auth credentials is expected to be equal to the email address from the
+	expectedEmailHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(emailAddress+":"+opts.BasicAuthPassword))
+	expectedUserHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(userName+":"+opts.BasicAuthPassword))
+
+	session := &sessions.SessionState{
+		User:        userName,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   time.Now(),
+	}
+	{
+		rw := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase0", nil)
+		proxy := NewOAuthProxy(opts, func(email string) bool {
+			return email == emailAddress
+		})
+		proxy.addHeadersForProxying(rw, req, session)
+		assert.Equal(t, expectedUserHeader, req.Header["Authorization"][0])
+		assert.Equal(t, userName, req.Header["X-Forwarded-User"][0])
+	}
+
+	opts.PreferEmailToUser = true
+	{
+		rw := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase1", nil)
+
+		proxy := NewOAuthProxy(opts, func(email string) bool {
+			return email == emailAddress
+		})
+		proxy.addHeadersForProxying(rw, req, session)
+		assert.Equal(t, expectedEmailHeader, req.Header["Authorization"][0])
+		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
+	}
+}
+
+func TestPassUserHeadersWithEmail(t *testing.T) {
+	opts := NewOptions()
+	opts.PassBasicAuth = false
+	opts.PassUserHeaders = true
+	opts.PreferEmailToUser = false
+	opts.Validate()
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+
+	session := &sessions.SessionState{
+		User:        userName,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   time.Now(),
+	}
+	{
+		rw := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase0", nil)
+		proxy := NewOAuthProxy(opts, func(email string) bool {
+			return email == emailAddress
+		})
+		proxy.addHeadersForProxying(rw, req, session)
+		assert.Equal(t, userName, req.Header["X-Forwarded-User"][0])
+	}
+
+	opts.PreferEmailToUser = true
+	{
+		rw := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase1", nil)
+
+		proxy := NewOAuthProxy(opts, func(email string) bool {
+			return email == emailAddress
+		})
+		proxy.addHeadersForProxying(rw, req, session)
+		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
+	}
 }
 
 type PassAccessTokenTest struct {
@@ -966,25 +1045,6 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
 }
 
-func TestAuthOnlyEndpointUnauthorizedOnProviderGroupValidationFailure(t *testing.T) {
-	test := NewAuthOnlyEndpointTest()
-	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
-	test.SaveSession(startSession)
-	provider := &TestProvider{
-		ValidToken: true,
-		GroupValidator: func(s string) bool {
-			return false
-		},
-	}
-
-	test.proxy.provider = provider
-	test.proxy.ServeHTTP(test.rw, test.req)
-	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
-	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
-}
-
 func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	var pcTest ProcessCookieTest
 
@@ -1401,41 +1461,6 @@ func TestGetJwtSession(t *testing.T) {
 	assert.Equal(t, test.rw.Header().Get("Authorization"), authHeader)
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-User"), "john@example.com")
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
-}
-
-func TestJwtUnauthorizedOnGroupValidationFailure(t *testing.T) {
-	goodJwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-		"eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoiaHR0cHM6Ly90ZXN0Lm15YXBwLmNvbSIsIm5hbWUiOiJKb2huIERvZSIsImVtY" +
-		"WlsIjoiam9obkBleGFtcGxlLmNvbSIsImlzcyI6Imh0dHBzOi8vaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNTUzNjkxMj" +
-		"E1LCJleHAiOjE5MTIxNTE4MjF9." +
-		"rLVyzOnEldUq_pNkfa-WiV8TVJYWyZCaM2Am_uo8FGg11zD7l-qmz3x1seTvqpH6Y0Ty00fmv6dJnGnC8WMnPXQiodRTfhBSe" +
-		"OKZMu0HkMD2sg52zlKkbfLTO6ic5VnbVgwjjrB8am_Ta6w7kyFUaB5C1BsIrrLMldkWEhynbb8"
-
-	keyset := NoOpKeySet{}
-	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
-		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
-
-	test := NewAuthOnlyEndpointTest(func(opts *Options) {
-		opts.PassAuthorization = true
-		opts.SetAuthorization = true
-		opts.SetXAuthRequest = true
-		opts.SkipJwtBearerTokens = true
-		opts.jwtBearerVerifiers = append(opts.jwtBearerVerifiers, verifier)
-	})
-	tp, _ := test.proxy.provider.(*TestProvider)
-	// Verify ValidateGroup fails JWT authorization
-	tp.GroupValidator = func(s string) bool {
-		return false
-	}
-
-	authHeader := fmt.Sprintf("Bearer %s", goodJwt)
-	test.req.Header = map[string][]string{
-		"Authorization": {authHeader},
-	}
-	test.proxy.ServeHTTP(test.rw, test.req)
-	if test.rw.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401 got %d", test.rw.Code)
-	}
 }
 
 func TestFindJwtBearerToken(t *testing.T) {
