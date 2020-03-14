@@ -403,7 +403,7 @@ func (o *Options) Validate() error {
 	msgs = setupLogger(o, msgs)
 
 	if o.RealClientIPHeader != "" {
-		o.realClientIPParser, err = getRealClientIPParsder(o.RealClientIPHeader)
+		o.realClientIPParser, err = getRealClientIPParser(o.RealClientIPHeader)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
 		}

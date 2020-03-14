@@ -15,11 +15,11 @@ func TestGetRealClientIPParser(t *testing.T) {
 	var p realClientIPParser
 	var err error
 
-	p, err = getRealClientIPParsder("X-Forwarded-For")
+	p, err = getRealClientIPParser("X-Forwarded-For")
 	assert.Nil(t, err)
 	assert.Equal(t, reflect.TypeOf(p), reflect.TypeOf((*xForwardedForClientIPParser)(nil)))
 
-	p, err = getRealClientIPParsder("X-REAL-IP")
+	p, err = getRealClientIPParser("X-REAL-IP")
 	assert.Nil(t, err)
 	assert.Equal(t, reflect.TypeOf(p), reflect.TypeOf((*xForwardedForClientIPParser)(nil)))
 	if xp, ok := p.(*xForwardedForClientIPParser); ok {
@@ -28,21 +28,21 @@ func TestGetRealClientIPParser(t *testing.T) {
 		panic("Type of local variable p changed without assignment?")
 	}
 
-	p, err = getRealClientIPParsder("x-proxyuser-ip")
+	p, err = getRealClientIPParser("x-proxyuser-ip")
 	assert.Nil(t, err)
 	assert.Equal(t, reflect.TypeOf(p), reflect.TypeOf((*xForwardedForClientIPParser)(nil)))
 
-	p, err = getRealClientIPParsder("")
+	p, err = getRealClientIPParser("")
 	assert.NotNil(t, err)
 	assert.Equal(t, err.Error(), "The HTTP header key () is either invalid or unsupported")
 	assert.Nil(t, p)
 
-	p, err = getRealClientIPParsder("Forwarded")
+	p, err = getRealClientIPParser("Forwarded")
 	assert.NotNil(t, err)
 	assert.Equal(t, err.Error(), "The HTTP header key (Forwarded) is either invalid or unsupported")
 	assert.Nil(t, p)
 
-	p, err = getRealClientIPParsder("2#* @##$$:kd")
+	p, err = getRealClientIPParser("2#* @##$$:kd")
 	assert.NotNil(t, err)
 	assert.Equal(t, err.Error(), "The HTTP header key (2#* @##$$:kd) is either invalid or unsupported")
 	assert.Nil(t, p)

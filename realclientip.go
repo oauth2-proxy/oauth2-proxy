@@ -11,7 +11,7 @@ type realClientIPParser interface {
 	GetRealClientIP(http.Header) (net.IP, error)
 }
 
-func getRealClientIPParsder(headerKey string) (realClientIPParser, error) {
+func getRealClientIPParser(headerKey string) (realClientIPParser, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
 	switch headerKey {
