@@ -346,7 +346,7 @@ To use the provider, pass the following options:
 ### Bitbucket Auth Provider
 
 1. [Add a new OAuth consumer](https://confluence.atlassian.com/bitbucket/oauth-on-bitbucket-cloud-238027431.html)
-    * In "Callback URL" use `https://oauth-proxy/oauth2/callback`, substituting `oauth2-proxy` with the actual hostname that oauth2_proxy is running on.
+    * In "Callback URL" use `https://<oauth2-proxy>/oauth2/callback`, substituting `<oauth2-proxy>` with the actual hostname that oauth2_proxy is running on.
     * In Permissions section select:
         * Account -> Email
         * Team membership -> Read
