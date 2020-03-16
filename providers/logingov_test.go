@@ -192,7 +192,7 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 	session, err := p.Redeem("http://redirect/", "code1234")
 	assert.NoError(t, err)
 	assert.NotEqual(t, session, nil)
-	assert.Equal(t, "timothy.spencer@gsa.gov", session.Email)
+	assert.Equal(t, "timothy.spencer@gsa.gov", session.UserID)
 	assert.Equal(t, "a1234", session.AccessToken)
 
 	// The test ought to run in under 2 seconds.  If not, you may need to bump this up.

@@ -242,8 +242,8 @@ var _ = Describe("NewSessionStore", func() {
 
 				It("loads a session equal to the original session", func() {
 					if cookieOpts.CookieSecret == "" {
-						// Only Email and User stored in session when encrypted
-						Expect(loadedSession.Email).To(Equal(session.Email))
+						// Only UserID and User stored in session when encrypted
+						Expect(loadedSession.UserID).To(Equal(session.UserID))
 						Expect(loadedSession.User).To(Equal(session.User))
 					} else {
 						// All fields stored in session if encrypted
@@ -394,7 +394,8 @@ var _ = Describe("NewSessionStore", func() {
 			IDToken:      "IDToken",
 			ExpiresOn:    time.Now().Add(1 * time.Hour),
 			RefreshToken: "RefreshToken",
-			Email:        "john.doe@example.com",
+			UserID:       "john.doe@example.com",
+			UserIDType:   sessionsapi.UserIDTypeEmail,
 			User:         "john.doe",
 		}
 

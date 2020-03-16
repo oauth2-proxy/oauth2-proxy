@@ -156,7 +156,7 @@ func (p *GoogleProvider) Redeem(redirectURL, code string) (s *sessions.SessionSt
 		CreatedAt:    time.Now(),
 		ExpiresOn:    time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second),
 		RefreshToken: jsonResponse.RefreshToken,
-		Email:        c.Email,
+		UserID:       c.Email,
 		User:         c.Subject,
 	}
 	return
@@ -251,8 +251,8 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool,
 	}
 
 	// re-check that the user is in the proper google group(s)
-	if !p.ValidateGroup(s.Email) {
-		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
+	if !p.ValidateGroup(s.UserID) {
+		return false, fmt.Errorf("%s is no longer in the group(s)", s.UserID)
 	}
 
 	origExpiration := s.ExpiresOn

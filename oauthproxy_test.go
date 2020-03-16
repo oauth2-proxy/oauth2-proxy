@@ -477,7 +477,7 @@ func TestBasicAuthWithEmail(t *testing.T) {
 
 	session := &sessions.SessionState{
 		User:        userName,
-		Email:       emailAddress,
+		UserID:      emailAddress,
 		AccessToken: "oauth_token",
 		CreatedAt:   time.Now(),
 	}
@@ -518,7 +518,7 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 
 	session := &sessions.SessionState{
 		User:        userName,
-		Email:       emailAddress,
+		UserID:      emailAddress,
 		AccessToken: "oauth_token",
 		CreatedAt:   time.Now(),
 	}
@@ -895,12 +895,12 @@ func (p *ProcessCookieTest) LoadCookiedSession() (*sessions.SessionState, error)
 func TestLoadCookiedSession(t *testing.T) {
 	pcTest := NewProcessCookieTestWithDefaults()
 
-	startSession := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token", CreatedAt: time.Now()}
+	startSession := &sessions.SessionState{UserID: "john.doe@example.com", AccessToken: "my_access_token", CreatedAt: time.Now()}
 	pcTest.SaveSession(startSession)
 
 	session, err := pcTest.LoadCookiedSession()
 	assert.Equal(t, nil, err)
-	assert.Equal(t, startSession.Email, session.Email)
+	assert.Equal(t, startSession.UserID, session.UserID)
 	assert.Equal(t, "john.doe@example.com", session.User)
 	assert.Equal(t, startSession.AccessToken, session.AccessToken)
 }
@@ -921,7 +921,7 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 	})
 	reference := time.Now().Add(time.Duration(-2) * time.Hour)
 
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	startSession := &sessions.SessionState{UserID: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
 	pcTest.SaveSession(startSession)
 
 	session, err := pcTest.LoadCookiedSession()
@@ -929,7 +929,7 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 	if session.Age() < time.Duration(-2)*time.Hour {
 		t.Errorf("cookie too young %v", session.Age())
 	}
-	assert.Equal(t, startSession.Email, session.Email)
+	assert.Equal(t, startSession.UserID, session.UserID)
 }
 
 func TestProcessCookieFailIfCookieExpired(t *testing.T) {
@@ -937,7 +937,7 @@ func TestProcessCookieFailIfCookieExpired(t *testing.T) {
 		opts.CookieExpire = time.Duration(24) * time.Hour
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	startSession := &sessions.SessionState{UserID: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
 	pcTest.SaveSession(startSession)
 
 	session, err := pcTest.LoadCookiedSession()
@@ -952,7 +952,7 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 		opts.CookieExpire = time.Duration(24) * time.Hour
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
-	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+	startSession := &sessions.SessionState{UserID: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
 	pcTest.SaveSession(startSession)
 
 	pcTest.proxy.CookieRefresh = time.Hour
@@ -973,7 +973,7 @@ func NewUserInfoEndpointTest() *ProcessCookieTest {
 func TestUserInfoEndpointAccepted(t *testing.T) {
 	test := NewUserInfoEndpointTest()
 	startSession := &sessions.SessionState{
-		Email: "john.doe@example.com", AccessToken: "my_access_token"}
+		UserID: "john.doe@example.com", AccessToken: "my_access_token"}
 	test.SaveSession(startSession)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
@@ -999,7 +999,7 @@ func NewAuthOnlyEndpointTest(modifiers ...OptionsModifier) *ProcessCookieTest {
 func TestAuthOnlyEndpointAccepted(t *testing.T) {
 	test := NewAuthOnlyEndpointTest()
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
+		UserID: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
 	test.SaveSession(startSession)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
@@ -1023,7 +1023,7 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
+		UserID: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
 	test.SaveSession(startSession)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
@@ -1035,7 +1035,7 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	test := NewAuthOnlyEndpointTest()
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
+		UserID: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}
 	test.SaveSession(startSession)
 	test.validateUser = false
 
@@ -1066,7 +1066,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 		pcTest.opts.ProxyPrefix+"/auth", nil)
 
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: time.Now()}
+		User: "oauth_user", UserID: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: time.Now()}
 	pcTest.SaveSession(startSession)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
@@ -1198,7 +1198,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
 	req.Header = st.header
 
 	state := &sessions.SessionState{
-		Email: "mbland@acm.org", AccessToken: "my_access_token"}
+		UserID: "mbland@acm.org", AccessToken: "my_access_token"}
 	err = proxy.SaveSession(st.rw, req, state)
 	if err != nil {
 		panic(err)
@@ -1443,7 +1443,7 @@ func TestGetJwtSession(t *testing.T) {
 	// Bearer
 	session, _ := test.proxy.GetJwtSession(test.req)
 	assert.Equal(t, session.User, "john@example.com")
-	assert.Equal(t, session.Email, "john@example.com")
+	assert.Equal(t, session.UserID, "john@example.com")
 	assert.Equal(t, session.ExpiresOn, time.Unix(1912151821, 0))
 	assert.Equal(t, session.IDToken, goodJwt)
 

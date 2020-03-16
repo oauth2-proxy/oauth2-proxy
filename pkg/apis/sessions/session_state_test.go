@@ -19,7 +19,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	c2, err := encryption.NewCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
-		Email:             "user@domain.com",
+		UserID:            "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
 		IDToken:           "rawtoken1234",
@@ -34,7 +34,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@domain.com", ss.User)
-	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.UserID, ss.UserID)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.AccessToken, ss.AccessToken)
 	assert.Equal(t, s.IDToken, ss.IDToken)
@@ -47,7 +47,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, "user@domain.com", ss.User)
-	assert.NotEqual(t, s.Email, ss.Email)
+	assert.NotEqual(t, s.UserID, ss.UserID)
 	assert.NotEqual(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
@@ -64,7 +64,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	s := &sessions.SessionState{
 		User:              "just-user",
 		PreferredUsername: "ju",
-		Email:             "user@domain.com",
+		UserID:            "user@domain.com",
 		AccessToken:       "token1234",
 		CreatedAt:         time.Now(),
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
@@ -77,7 +77,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, s.User, ss.User)
-	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.UserID, ss.UserID)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.AccessToken, ss.AccessToken)
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
@@ -89,7 +89,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, s.User, ss.User)
-	assert.NotEqual(t, s.Email, ss.Email)
+	assert.NotEqual(t, s.UserID, ss.UserID)
 	assert.NotEqual(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
@@ -99,7 +99,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 
 func TestSessionStateSerializationNoCipher(t *testing.T) {
 	s := &sessions.SessionState{
-		Email:             "user@domain.com",
+		UserID:            "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
 		CreatedAt:         time.Now(),
@@ -113,7 +113,7 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 	ss, err := sessions.DecodeSessionState(encoded, nil)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@domain.com", ss.User)
-	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.UserID, ss.UserID)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, "", ss.AccessToken)
 	assert.Equal(t, "", ss.RefreshToken)
@@ -122,7 +122,7 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	s := &sessions.SessionState{
 		User:              "just-user",
-		Email:             "user@domain.com",
+		UserID:            "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
 		CreatedAt:         time.Now(),
@@ -136,7 +136,7 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	ss, err := sessions.DecodeSessionState(encoded, nil)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, s.User, ss.User)
-	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.UserID, ss.UserID)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, "", ss.AccessToken)
 	assert.Equal(t, "", ss.RefreshToken)
@@ -171,14 +171,14 @@ func TestEncodeSessionState(t *testing.T) {
 	testCases := []testCase{
 		{
 			SessionState: sessions.SessionState{
-				Email: "user@domain.com",
-				User:  "just-user",
+				UserID: "user@domain.com",
+				User:   "just-user",
 			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+			Encoded: `{"UserID":"user@domain.com","User":"just-user"}`,
 		},
 		{
 			SessionState: sessions.SessionState{
-				Email:        "user@domain.com",
+				UserID:       "user@domain.com",
 				User:         "just-user",
 				AccessToken:  "token1234",
 				IDToken:      "rawtoken1234",
@@ -186,7 +186,7 @@ func TestEncodeSessionState(t *testing.T) {
 				ExpiresOn:    e,
 				RefreshToken: "refresh4321",
 			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+			Encoded: `{"UserID":"user@domain.com","User":"just-user"}`,
 		},
 	}
 
@@ -219,17 +219,17 @@ func TestDecodeSessionState(t *testing.T) {
 	testCases := []testCase{
 		{
 			SessionState: sessions.SessionState{
-				Email: "user@domain.com",
-				User:  "just-user",
+				UserID: "user@domain.com",
+				User:   "just-user",
 			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+			Encoded: `{"UserID":"user@domain.com","User":"just-user"}`,
 		},
 		{
 			SessionState: sessions.SessionState{
-				Email: "user@domain.com",
-				User:  "user@domain.com",
+				UserID: "user@domain.com",
+				User:   "user@domain.com",
 			},
-			Encoded: `{"Email":"user@domain.com"}`,
+			Encoded: `{"UserID":"user@domain.com"}`,
 		},
 		{
 			SessionState: sessions.SessionState{
@@ -239,14 +239,14 @@ func TestDecodeSessionState(t *testing.T) {
 		},
 		{
 			SessionState: sessions.SessionState{
-				Email: "user@domain.com",
-				User:  "just-user",
+				UserID: "user@domain.com",
+				User:   "just-user",
 			},
-			Encoded: fmt.Sprintf(`{"Email":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
+			Encoded: fmt.Sprintf(`{"UserID":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
 		},
 		{
 			SessionState: sessions.SessionState{
-				Email:        "user@domain.com",
+				UserID:       "user@domain.com",
 				User:         "just-user",
 				AccessToken:  "token1234",
 				IDToken:      "rawtoken1234",
@@ -254,31 +254,31 @@ func TestDecodeSessionState(t *testing.T) {
 				ExpiresOn:    e,
 				RefreshToken: "refresh4321",
 			},
-			Encoded: fmt.Sprintf(`{"Email":"FsKKYrTWZWrxSOAqA/fTNAUZS5QWCqOBjuAbBlbVOw==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw==","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
+			Encoded: fmt.Sprintf(`{"UserID":"FsKKYrTWZWrxSOAqA/fTNAUZS5QWCqOBjuAbBlbVOw==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw==","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
 			Cipher:  c,
 		},
 		{
 			SessionState: sessions.SessionState{
-				Email: "user@domain.com",
-				User:  "just-user",
+				UserID: "user@domain.com",
+				User:   "just-user",
 			},
-			Encoded: `{"Email":"EGTllJcOFC16b7LBYzLekaHAC5SMMSPdyUrg8hd25g==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw=="}`,
+			Encoded: `{"UserID":"EGTllJcOFC16b7LBYzLekaHAC5SMMSPdyUrg8hd25g==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw=="}`,
 			Cipher:  c,
 		},
 		{
-			Encoded: `{"Email":"user@domain.com","User":"just-user","AccessToken":"X"}`,
+			Encoded: `{"UserID":"user@domain.com","User":"just-user","AccessToken":"X"}`,
 			Cipher:  c,
 			Error:   true,
 		},
 		{
-			Encoded: `{"Email":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
+			Encoded: `{"UserID":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
 			Cipher:  c,
 			Error:   true,
 		},
 		{
 			SessionState: sessions.SessionState{
-				User:  "just-user",
-				Email: "user@domain.com",
+				User:   "just-user",
+				UserID: "user@domain.com",
 			},
 			Encoded: "email:user@domain.com user:just-user",
 		},
@@ -298,7 +298,7 @@ func TestDecodeSessionState(t *testing.T) {
 		},
 		{
 			SessionState: sessions.SessionState{
-				Email:        "user@domain.com",
+				UserID:       "user@domain.com",
 				User:         "just-user",
 				AccessToken:  "token1234",
 				ExpiresOn:    e,
@@ -309,7 +309,7 @@ func TestDecodeSessionState(t *testing.T) {
 		},
 		{
 			SessionState: sessions.SessionState{
-				Email:        "user@domain.com",
+				UserID:       "user@domain.com",
 				User:         "just-user",
 				AccessToken:  "token1234",
 				IDToken:      "rawtoken1234",
@@ -332,7 +332,7 @@ func TestDecodeSessionState(t *testing.T) {
 		assert.NoError(t, err)
 		if assert.NotNil(t, ss) {
 			assert.Equal(t, tc.User, ss.User)
-			assert.Equal(t, tc.Email, ss.Email)
+			assert.Equal(t, tc.UserID, ss.UserID)
 			assert.Equal(t, tc.AccessToken, ss.AccessToken)
 			assert.Equal(t, tc.RefreshToken, ss.RefreshToken)
 			assert.Equal(t, tc.IDToken, ss.IDToken)

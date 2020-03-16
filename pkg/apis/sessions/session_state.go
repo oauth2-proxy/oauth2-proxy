@@ -10,16 +10,22 @@ import (
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
 )
 
+const UserIDTypeEmail = "email"
+
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	AccessToken       string    `json:",omitempty"`
-	IDToken           string    `json:",omitempty"`
-	CreatedAt         time.Time `json:"-"`
-	ExpiresOn         time.Time `json:"-"`
-	RefreshToken      string    `json:",omitempty"`
-	Email             string    `json:",omitempty"`
-	User              string    `json:",omitempty"`
-	PreferredUsername string    `json:",omitempty"`
+	AccessToken  string    `json:",omitempty"`
+	IDToken      string    `json:",omitempty"`
+	CreatedAt    time.Time `json:"-"`
+	ExpiresOn    time.Time `json:"-"`
+	RefreshToken string    `json:",omitempty"`
+	// Existing stored session may still include the old 'email' field (renamed to UserID now);
+	// remove it in the next version
+	LegacyEmail       string `json:"Email,omitempty"`
+	UserID            string `json:",omitempty"`
+	UserIDType        string `json:",omitempty"` // "" == "email" (in older providers)
+	User              string `json:",omitempty"`
+	PreferredUsername string `json:",omitempty"`
 }
 
 // SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
@@ -47,7 +53,7 @@ func (s *SessionState) Age() time.Duration {
 
 // String constructs a summary of the session state
 func (s *SessionState) String() string {
-	o := fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s", s.Email, s.User, s.PreferredUsername)
+	o := fmt.Sprintf("Session{userid:%s user:%s PreferredUsername:%s", s.UserID, s.User, s.PreferredUsername)
 	if s.AccessToken != "" {
 		o += " token:true"
 	}
@@ -70,15 +76,26 @@ func (s *SessionState) String() string {
 func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) {
 	var ss SessionState
 	if c == nil {
-		// Store only Email and User when cipher is unavailable
-		ss.Email = s.Email
+		// Store only UserID, UserIDType and User when cipher is unavailable
+		ss.UserID = s.UserID
+		ss.UserIDType = s.UserIDType
 		ss.User = s.User
 		ss.PreferredUsername = s.PreferredUsername
 	} else {
 		ss = *s
+		// Backwards compatibility: session from email-only providers:
+		if ss.UserIDType == "" && ss.UserID != "" {
+			ss.UserIDType = UserIDTypeEmail
+		}
 		var err error
-		if ss.Email != "" {
-			ss.Email, err = c.Encrypt(ss.Email)
+		if ss.UserID != "" {
+			ss.UserID, err = c.Encrypt(ss.UserID)
+			if err != nil {
+				return "", err
+			}
+		}
+		if ss.UserIDType != "" {
+			ss.UserIDType, err = c.Encrypt(ss.UserIDType)
 			if err != nil {
 				return "", err
 			}
@@ -136,7 +153,7 @@ func legacyDecodeSessionStatePlain(v string) (*SessionState, error) {
 	user := strings.TrimPrefix(chunks[1], "user:")
 	email := strings.TrimPrefix(chunks[0], "email:")
 
-	return &SessionState{User: user, Email: email}, nil
+	return &SessionState{User: user, LegacyEmail: email}, nil
 }
 
 // legacyDecodeSessionState attempts to decode the session state string
@@ -205,18 +222,42 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		}
 	}
 	if c == nil {
-		// Load only Email and User when cipher is unavailable
+		// Load only UserID* and User when cipher is unavailable
+		legacyEmail := ss.LegacyEmail
 		ss = &SessionState{
-			Email:             ss.Email,
+			UserID:            ss.UserID,
+			UserIDType:        ss.UserIDType,
 			User:              ss.User,
 			PreferredUsername: ss.PreferredUsername,
 		}
+		// Backwards compatibility for sessions encoded before we renamed Email to UserID
+		if ss.UserID == "" && legacyEmail != "" {
+			ss.UserID = legacyEmail
+			ss.UserIDType = UserIDTypeEmail
+		}
 	} else {
+		if ss.UserID != "" {
+			ss.UserID, err = c.Decrypt(ss.UserID)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if ss.UserIDType != "" {
+			ss.UserIDType, err = c.Decrypt(ss.UserIDType)
+			if err != nil {
+				return nil, err
+			}
+		}
 		// Backward compatibility with using unencrypted Email
-		if ss.Email != "" {
-			decryptedEmail, errEmail := c.Decrypt(ss.Email)
+		if ss.LegacyEmail != "" {
+			decryptedEmail, errEmail := c.Decrypt(ss.LegacyEmail)
 			if errEmail == nil {
-				ss.Email = decryptedEmail
+				ss.LegacyEmail = decryptedEmail
+			}
+			// Backward compatibility with pre-userid tokens that only had email
+			if ss.UserID == "" {
+				ss.UserID = ss.LegacyEmail
+				ss.UserIDType = UserIDTypeEmail
 			}
 		}
 		// Backward compatibility with using unencrypted User
@@ -252,7 +293,7 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		}
 	}
 	if ss.User == "" {
-		ss.User = ss.Email
+		ss.User = ss.UserID
 	}
 	return ss, nil
 }

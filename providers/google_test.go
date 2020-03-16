@@ -105,7 +105,7 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	session, err := p.Redeem("http://redirect/", "code1234")
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, session, nil)
-	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "michael.bland@gsa.gov", session.UserID)
 	assert.Equal(t, "a1234", session.AccessToken)
 	assert.Equal(t, "refresh12345", session.RefreshToken)
 }

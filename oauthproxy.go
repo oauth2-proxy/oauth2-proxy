@@ -349,8 +349,10 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *sessionsapi.SessionState,
 		return
 	}
 
-	if s.Email == "" {
-		s.Email, err = p.provider.GetEmailAddress(s)
+	// Legacy providers only support email and do not initialize UserID
+	if s.UserID == "" {
+		s.UserID, err = p.provider.GetEmailAddress(s)
+		s.UserIDType = "email"
 	}
 
 	if s.PreferredUsername == "" {
@@ -690,7 +692,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		Email             string `json:"email"`
 		PreferredUsername string `json:"preferredUsername,omitempty"`
 	}{
-		Email:             session.Email,
+		Email:             session.UserID, // FIXME What is UserID != email?
 		PreferredUsername: session.PreferredUsername,
 	}
 	rw.Header().Set("Content-Type", "application/json")
@@ -765,13 +767,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	redirect := s[1]
 	c, err := req.Cookie(p.CSRFCookieName)
 	if err != nil {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable too obtain CSRF cookie")
+		logger.PrintAuthf(session.UserID, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable too obtain CSRF cookie")
 		p.ErrorPage(rw, 403, "Permission Denied", err.Error())
 		return
 	}
 	p.ClearCSRFCookie(rw, req)
 	if c.Value != nonce {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: csrf token mismatch, potential attack")
+		logger.PrintAuthf(session.UserID, req, logger.AuthFailure, "Invalid authentication via OAuth2: csrf token mismatch, potential attack")
 		p.ErrorPage(rw, 403, "Permission Denied", "csrf failed")
 		return
 	}
@@ -781,8 +783,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
+	if p.Validator(session.UserID) && p.provider.ValidateGroup(session.UserID) {
+		logger.PrintAuthf(session.UserID, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Printf("%s %s", remoteAddr, err)
@@ -791,7 +793,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		}
 		http.Redirect(rw, req, redirect, 302)
 	} else {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
+		logger.PrintAuthf(session.UserID, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 	}
 }
@@ -900,8 +902,8 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	if session != nil && session.Email != "" && !p.Validator(session.Email) {
-		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+	if session != nil && session.UserID != "" && !p.Validator(session.UserID) {
+		logger.Printf(session.UserID, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
 		session = nil
 		saveSession = false
 		clearSession = true
@@ -910,7 +912,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	if saveSession && session != nil {
 		err = p.SaveSession(rw, req, session)
 		if err != nil {
-			logger.PrintAuthf(session.Email, req, logger.AuthError, "Save session error %s", err)
+			logger.PrintAuthf(session.UserID, req, logger.AuthError, "Save session error %s", err)
 			return nil, err
 		}
 	}
@@ -936,15 +938,15 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
 func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
 	if p.PassBasicAuth {
-		if p.PreferEmailToUser && session.Email != "" {
-			req.SetBasicAuth(session.Email, p.BasicAuthPassword)
-			req.Header["X-Forwarded-User"] = []string{session.Email}
+		if p.PreferEmailToUser && session.UserID != "" {
+			req.SetBasicAuth(session.UserID, p.BasicAuthPassword)
+			req.Header["X-Forwarded-User"] = []string{session.UserID}
 			req.Header.Del("X-Forwarded-Email")
 		} else {
 			req.SetBasicAuth(session.User, p.BasicAuthPassword)
 			req.Header["X-Forwarded-User"] = []string{session.User}
-			if session.Email != "" {
-				req.Header["X-Forwarded-Email"] = []string{session.Email}
+			if session.UserID != "" {
+				req.Header["X-Forwarded-Email"] = []string{session.UserID}
 			} else {
 				req.Header.Del("X-Forwarded-Email")
 			}
@@ -957,13 +959,13 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	}
 
 	if p.PassUserHeaders {
-		if p.PreferEmailToUser && session.Email != "" {
-			req.Header["X-Forwarded-User"] = []string{session.Email}
+		if p.PreferEmailToUser && session.UserID != "" {
+			req.Header["X-Forwarded-User"] = []string{session.UserID}
 			req.Header.Del("X-Forwarded-Email")
 		} else {
 			req.Header["X-Forwarded-User"] = []string{session.User}
-			if session.Email != "" {
-				req.Header["X-Forwarded-Email"] = []string{session.Email}
+			if session.UserID != "" {
+				req.Header["X-Forwarded-Email"] = []string{session.UserID}
 			} else {
 				req.Header.Del("X-Forwarded-Email")
 			}
@@ -978,8 +980,8 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 
 	if p.SetXAuthRequest {
 		rw.Header().Set("X-Auth-Request-User", session.User)
-		if session.Email != "" {
-			rw.Header().Set("X-Auth-Request-Email", session.Email)
+		if session.UserID != "" {
+			rw.Header().Set("X-Auth-Request-Email", session.UserID)
 		} else {
 			rw.Header().Del("X-Auth-Request-Email")
 		}
@@ -1021,10 +1023,10 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		}
 	}
 
-	if session.Email == "" {
+	if session.UserID == "" {
 		rw.Header().Set("GAP-Auth", session.User)
 	} else {
-		rw.Header().Set("GAP-Auth", session.Email)
+		rw.Header().Set("GAP-Auth", session.UserID)
 	}
 }
 
@@ -1120,7 +1122,7 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 			IDToken:           rawBearerToken,
 			RefreshToken:      "",
 			ExpiresOn:         bearerToken.Expiry,
-			Email:             claims.Email,
+			UserID:            claims.Email, // FIXME What if -user-id-token = [phone_number] ?
 			User:              claims.Email,
 			PreferredUsername: claims.PreferredUsername,
 		}

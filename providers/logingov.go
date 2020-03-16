@@ -253,7 +253,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 		IDToken:     jsonResponse.IDToken,
 		CreatedAt:   time.Now(),
 		ExpiresOn:   time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second),
-		Email:       email,
+		UserID:      email,
 	}
 	return
 }

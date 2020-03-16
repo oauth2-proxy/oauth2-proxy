@@ -120,7 +120,8 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 	// if it doesn't it's probably better to retain the old one
 	if newSession.IDToken != "" {
 		s.IDToken = newSession.IDToken
-		s.Email = newSession.Email
+		s.UserID = newSession.UserID
+		s.UserIDType = newSession.UserIDType
 		s.User = newSession.User
 		s.PreferredUsername = newSession.PreferredUsername
 	}
@@ -166,8 +167,8 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 
 			newSession.IDToken = token.Extra("id_token").(string)
 
-			newSession.Email = claims.UserID
-			//newSession.UserIDType = claims.UserIDType
+			newSession.UserID = claims.UserID
+			newSession.UserIDType = claims.UserIDType
 
 			newSession.User = claims.Subject
 			newSession.PreferredUsername = claims.PreferredUsername
