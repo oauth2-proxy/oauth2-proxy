@@ -9,6 +9,7 @@
 
 ## Changes since v5.0.0
 
+- [#448](https://github.com/pusher/oauth2_proxy/pull/448) Add `-user-id-claim` to support phone_number in addition to email
 - [#450](https://github.com/pusher/oauth2_proxy/pull/450) Fix http.Cookie SameSite is not copied (@johejo)
 - [#445](https://github.com/pusher/oauth2_proxy/pull/445) Expose `acr_values` to all providers (@holyjak)
 - [#419](https://github.com/pusher/oauth2_proxy/pull/419) Support Go 1.14, upgrade dependencies, upgrade golangci-lint to 1.23.6 (@johejo)

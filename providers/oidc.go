@@ -20,6 +20,7 @@ type OIDCProvider struct {
 
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
+	UserIDClaims         []string
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
@@ -151,7 +152,8 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 	newSession := &sessions.SessionState{}
 
 	if idToken != nil {
-		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String())
+		fmt.Println("UserIDClaims=", p.UserIDClaims) // FIXME rm
+		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String(), p.UserIDClaims)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
 		}
@@ -163,7 +165,10 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 			}
 
 			newSession.IDToken = token.Extra("id_token").(string)
-			newSession.Email = claims.Email
+
+			newSession.Email = claims.UserID
+			//newSession.UserIDType = claims.UserIDType
+
 			newSession.User = claims.Subject
 			newSession.PreferredUsername = claims.PreferredUsername
 		}
@@ -194,7 +199,7 @@ func getOIDCHeader(accessToken string) http.Header {
 	return header
 }
 
-func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
+func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string, userIDClaims []string) (*OIDCClaims, error) {
 
 	// Extract custom claims.
 	claims := &OIDCClaims{}
@@ -202,40 +207,72 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
 	}
 
-	if claims.Email == "" {
-		if profileURL == "" {
-			return nil, fmt.Errorf("id_token did not contain an email")
+	for _, userIDClaim := range userIDClaims {
+		if claims.UserID != "" {
+			break
+		} else if userIDClaim == "email" {
+			if claims.Email == "" {
+				claims.Email, _ = tryFetchEmail(claims.Email, accessToken, profileURL)
+			}
+			claims.UserID = claims.Email
+			claims.UserIDType = userIDClaim
+		} else if userIDClaim == "phone_number" {
+			claims.UserID = claims.PhoneNumber
+			claims.UserIDType = userIDClaim
+		} else {
+			return nil, fmt.Errorf("asked for the unsupported used-id-claim '%s'; supported: email, phone_number",
+				userIDClaim)
 		}
-
-		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
-		// contents at the profileURL contains the email.
-		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
-
-		req, err := http.NewRequest("GET", profileURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header = getOIDCHeader(accessToken)
-
-		respJSON, err := requests.Request(req)
-		if err != nil {
-			return nil, err
-		}
-
-		email, err := respJSON.Get("email").String()
-		if err != nil {
-			return nil, fmt.Errorf("neither id_token nor userinfo endpoint contained an email")
-		}
-
-		claims.Email = email
 	}
+
+	if claims.UserID == "" {
+		return nil, fmt.Errorf("id_token contained none of the user id claims %v", userIDClaims)
+	}
+
+	fmt.Println("DBG>>> ODIC: UserID=", claims.UserID) // FIXME rm
 
 	return claims, nil
 }
 
+func tryFetchEmail(emailClaim string, accessToken string, profileURL string) (string, error) {
+	if emailClaim != "" {
+		return emailClaim, nil
+	}
+
+	if profileURL == "" {
+		return "", fmt.Errorf("id_token did not contain an email and no profile-url for trying to fetch it specified")
+	}
+
+	// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
+	// contents at the profileURL contains the email.
+	// Make a query to the userinfo endpoint, and attempt to locate the email from there.
+
+	req, err := http.NewRequest("GET", profileURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header = getOIDCHeader(accessToken)
+
+	respJSON, err := requests.Request(req)
+	if err != nil {
+		return "", err
+	}
+
+	email, err := respJSON.Get("email").String()
+	if err != nil {
+		return "", fmt.Errorf("neither id_token nor userinfo endpoint contained an email")
+	}
+
+	return email, nil
+}
+
 type OIDCClaims struct {
-	Subject           string `json:"sub"`
-	Email             string `json:"email"`
-	Verified          *bool  `json:"email_verified"`
-	PreferredUsername string `json:"preferred_username"`
+	UserID              string `json:"-"` // Derived from other fields
+	UserIDType          string `json:"-"` // Derived from other fields
+	Subject             string `json:"sub"`
+	Email               string `json:"email"`
+	PhoneNumber         string `json:"phone_number"`
+	PhoneNumberVerified *bool  `json:"phone_number_verified"`
+	Verified            *bool  `json:"email_verified"`
+	PreferredUsername   string `json:"preferred_username"`
 }

@@ -103,6 +103,7 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 			fakeKeySetStub{},
 			&oidc.Config{ClientID: clientID},
 		),
+		UserIDClaims: []string{"email"},
 	}
 
 	return p

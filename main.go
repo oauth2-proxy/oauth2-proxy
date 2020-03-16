@@ -27,6 +27,7 @@ func main() {
 	googleGroups := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
 	redisClusterConnectionURLs := StringArray{}
+	userIDClaims := StringArray{}
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -142,6 +143,8 @@ func main() {
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
+	flagSet.Var(&userIDClaims, "user-id-claim", "which claim contains the user ID (may be given multiple times, the first one present gets used)")
+
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
@@ -160,6 +163,10 @@ func main() {
 	}
 	cfg.LoadEnvForStruct(opts)
 	options.Resolve(opts, flagSet, cfg)
+
+	if len(opts.UserIDClaims) == 0 {
+		opts.UserIDClaims = []string{"email"}
+	}
 
 	err := opts.Validate()
 	if err != nil {
