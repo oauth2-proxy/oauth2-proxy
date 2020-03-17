@@ -207,5 +207,6 @@ func copyCookie(c *http.Cookie) *http.Cookie {
 		HttpOnly:   c.HttpOnly,
 		Raw:        c.Raw,
 		Unparsed:   c.Unparsed,
+		SameSite:   c.SameSite,
 	}
 }
