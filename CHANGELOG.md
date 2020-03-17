@@ -8,13 +8,13 @@
 ## Breaking Changes
 - [#440](https://github.com/pusher/oauth2_proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
     - The Azure AD Graph API has been [deprecated](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api) and is being replaced by the Microsoft Graph API.
-      If your application relies on the access token being passed to it to access the Azure AD Graph API,
-  you should migrate you application to use the Microsoft Graph API.
+      If your application relies on the access token being passed to it to access the Azure AD Graph API, you should migrate your application to use the Microsoft Graph API.
       Existing behaviour can be retained by setting  `-resource=https://graph.windows.net`.
 
 ## Changes since v5.0.0
 
 - [#440](https://github.com/pusher/oauth2_proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
+- [#445](https://github.com/pusher/oauth2_proxy/pull/445) Expose `acr_values` to all providers (@holyjak)
 - [#419](https://github.com/pusher/oauth2_proxy/pull/419) Support Go 1.14, upgrade dependencies, upgrade golangci-lint to 1.23.6 (@johejo)
 - [#444](https://github.com/pusher/oauth2_proxy/pull/444) Support prompt in addition to approval-prompt (@holyjak)
 - [#435](https://github.com/pusher/oauth2_proxy/pull/435) Fix issue with group validation calling google directory API on every HTTP request (@ericofusco)
