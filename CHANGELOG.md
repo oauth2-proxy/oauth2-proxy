@@ -7,10 +7,10 @@
 
 ## Breaking Changes
 - [#440](https://github.com/pusher/oauth2_proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
-  Azure AD Graph API is deprecated. See [microsoft docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api).
-  Big Affected if application behind oauth2_proxy uses access token.
-  The behind application is recommended migrating to Microsoft Graph API.
-  Who want to continue using the Azure AD Graph API can use the `-resource` flag to keep the previous behavior.
+    - The Azure AD Graph API has been [deprecated](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api) and is being replaced by the Microsoft Graph API.
+      If your application relies on the access token being passed to it to access the Azure AD Graph API,
+  you should migrate you application to use the Microsoft Graph API.
+      Existing behaviour can be retained by setting  `-resource=https://graph.windows.net`.
 
 ## Changes since v5.0.0
 
