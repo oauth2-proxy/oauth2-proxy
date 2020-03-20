@@ -970,7 +970,7 @@ func NewUserInfoEndpointTest() *ProcessCookieTest {
 	return pcTest
 }
 
-func TestUserInfoEndpointAccepted(t *testing.T) {
+func TestUserInfoEndpointAcceptedForEmailUserID(t *testing.T) {
 	test := NewUserInfoEndpointTest()
 	startSession := &sessions.SessionState{
 		UserID: "john.doe@example.com", AccessToken: "my_access_token"}
@@ -979,7 +979,19 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusOK, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "{\"email\":\"john.doe@example.com\"}\n", string(bodyBytes))
+	assert.Equal(t, "{\"userID\":\"john.doe@example.com\",\"userIDClaim\":\"email\",\"email\":\"john.doe@example.com\"}\n", string(bodyBytes))
+}
+
+func TestUserInfoEndpointAcceptedForCustomUserID(t *testing.T) {
+	test := NewUserInfoEndpointTest()
+	startSession := &sessions.SessionState{
+		UserID: "my-id", UserIDType: "my_claim", AccessToken: "my_access_token"}
+	test.SaveSession(startSession)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusOK, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "{\"userID\":\"my-id\",\"userIDClaim\":\"my_claim\"}\n", string(bodyBytes))
 }
 
 func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {

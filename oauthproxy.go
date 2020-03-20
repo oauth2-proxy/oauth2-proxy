@@ -352,7 +352,7 @@ func (p *OAuthProxy) redeemCode(host, code string) (s *sessionsapi.SessionState,
 	// Legacy providers only support email and do not initialize UserID
 	if s.UserID == "" {
 		s.UserID, err = p.provider.GetEmailAddress(s)
-		s.UserIDType = "email"
+		s.UserIDType = sessionsapi.UserIDTypeEmail
 	}
 
 	if s.PreferredUsername == "" {
@@ -688,11 +688,21 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
+	email := ""
+	userIDClaim := session.UserIDType
+	if session.IsIdentifiedByEmail() {
+		email = session.UserID
+		userIDClaim = sessionsapi.UserIDTypeEmail
+	}
 	userInfo := struct {
-		Email             string `json:"email"`
+		UserID            string `json:"userID"`
+		UserIDClaim       string `json:"userIDClaim"`
+		LegacyEmail       string `json:"email,omitempty"`
 		PreferredUsername string `json:"preferredUsername,omitempty"`
 	}{
-		Email:             session.UserID, // FIXME What is UserID != email?
+		UserID:            session.UserID,
+		UserIDClaim:       userIDClaim,
+		LegacyEmail:       email,
 		PreferredUsername: session.PreferredUsername,
 	}
 	rw.Header().Set("Content-Type", "application/json")
@@ -783,7 +793,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.UserID) && p.provider.ValidateGroup(session.UserID) {
+	if (session.IsIdentifiedByEmail() && p.Validator(session.UserID)) && p.provider.ValidateGroup(session.UserID) {
 		logger.PrintAuthf(session.UserID, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -902,7 +912,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	if session != nil && session.UserID != "" && !p.Validator(session.UserID) {
+	if session != nil && session.IsIdentifiedByEmail() && !p.Validator(session.UserID) {
 		logger.Printf(session.UserID, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
 		session = nil
 		saveSession = false
@@ -947,6 +957,10 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			req.Header["X-Forwarded-User"] = []string{session.User}
 			if session.UserID != "" {
 				req.Header["X-Forwarded-Email"] = []string{session.UserID}
+				req.Header["X-Forwarded-User-Id"] = []string{session.UserID}
+				if session.UserIDType != "" {
+					req.Header["X-Forwarded-User-Id-Claim"] = []string{session.UserIDType}
+				}
 			} else {
 				req.Header.Del("X-Forwarded-Email")
 			}
@@ -966,8 +980,13 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			req.Header["X-Forwarded-User"] = []string{session.User}
 			if session.UserID != "" {
 				req.Header["X-Forwarded-Email"] = []string{session.UserID}
+				req.Header["X-Forwarded-User-Id"] = []string{session.UserID}
+				if session.UserIDType != "" {
+					req.Header["X-Forwarded-User-Id-Claim"] = []string{session.UserIDType}
+				}
 			} else {
 				req.Header.Del("X-Forwarded-Email")
+				req.Header.Del("X-Forwarded-User-Id")
 			}
 		}
 
@@ -982,8 +1001,13 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		rw.Header().Set("X-Auth-Request-User", session.User)
 		if session.UserID != "" {
 			rw.Header().Set("X-Auth-Request-Email", session.UserID)
+			rw.Header().Set("X-Auth-Request-User-Id", session.UserID)
+			if session.UserIDType != "" {
+				rw.Header().Set("X-Forwarded-User-Id-Claim", session.UserIDType)
+			}
 		} else {
 			rw.Header().Del("X-Auth-Request-Email")
+			rw.Header().Del("X-Auth-Request-User-Id")
 		}
 		if session.PreferredUsername != "" {
 			rw.Header().Set("X-Auth-Request-Preferred-Username", session.PreferredUsername)
@@ -1098,7 +1122,8 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 			continue
 		}
 
-		var claims struct {
+		// NOTE: The token is presumabely the ID token
+		var claims struct { // TODO Duplicates providers/oidc#OIDCClaims
 			Subject           string `json:"sub"`
 			Email             string `json:"email"`
 			Verified          *bool  `json:"email_verified"`

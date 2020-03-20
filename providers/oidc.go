@@ -153,7 +153,6 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 	newSession := &sessions.SessionState{}
 
 	if idToken != nil {
-		fmt.Println("UserIDClaims=", p.UserIDClaims) // FIXME rm
 		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String(), p.UserIDClaims)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
@@ -230,8 +229,6 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 		return nil, fmt.Errorf("id_token contained none of the user id claims %v", userIDClaims)
 	}
 
-	fmt.Println("DBG>>> ODIC: UserID=", claims.UserID) // FIXME rm
-
 	return claims, nil
 }
 
@@ -272,8 +269,8 @@ type OIDCClaims struct {
 	UserIDType          string `json:"-"` // Derived from other fields
 	Subject             string `json:"sub"`
 	Email               string `json:"email"`
+	Verified            *bool  `json:"email_verified"`
 	PhoneNumber         string `json:"phone_number"`
 	PhoneNumberVerified *bool  `json:"phone_number_verified"`
-	Verified            *bool  `json:"email_verified"`
 	PreferredUsername   string `json:"preferred_username"`
 }

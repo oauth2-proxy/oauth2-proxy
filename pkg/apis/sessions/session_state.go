@@ -19,8 +19,8 @@ type SessionState struct {
 	CreatedAt    time.Time `json:"-"`
 	ExpiresOn    time.Time `json:"-"`
 	RefreshToken string    `json:",omitempty"`
-	// Existing stored session may still include the old 'email' field (renamed to UserID now);
-	// remove it in the next version
+	// Existing stored session may still include the old 'email' field (renamed to UserID now)
+	// so we read it into LegacyEmail to ingest; remove it in the next version
 	LegacyEmail       string `json:"Email,omitempty"`
 	UserID            string `json:",omitempty"`
 	UserIDType        string `json:",omitempty"` // "" == "email" (in older providers)
@@ -41,6 +41,11 @@ func (s *SessionState) IsExpired() bool {
 		return true
 	}
 	return false
+}
+
+// True if UserID is an email (and not some other of claim such as phone_number)
+func (s *SessionState) IsIdentifiedByEmail() bool {
+	return s.UserID != "" && (s.UserIDType == "" || s.UserIDType == UserIDTypeEmail) // "" because email is default for legacy reasons
 }
 
 // Age returns the age of a session
