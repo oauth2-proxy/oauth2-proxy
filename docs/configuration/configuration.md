@@ -317,7 +317,9 @@ server {
 }
 ```
 
-If you use ingress-nginx in Kubernetes (which includes the Lua module), you also can use the following configuration snippet for your Ingress:
+When you use ingress-nginx in Kubernetes , you MUST use `kubernetes/ingress-nginx` (which includes the Lua module) and the following configuration snippet for your `Ingress`.
+Variables set with `auth_request_set` are not `set`-able in plain nginx config when the location is processed via `proxy_pass` and then may only be processed by Lua.
+Note that `nginxinc/kubernetes-ingress` does not include the Lua module.
 
 ```yaml
 nginx.ingress.kubernetes.io/auth-response-headers: Authorization
@@ -332,6 +334,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
     end
   }
 ```
+Alternatively, use `-session-store-type=redis` when expecting sessions / large OIDC tokens.
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
 
