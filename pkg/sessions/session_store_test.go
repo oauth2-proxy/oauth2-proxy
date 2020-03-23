@@ -95,6 +95,11 @@ var _ = Describe("NewSessionStore", func() {
 				}
 			})
 
+			It("have a cookie size no greater than 4096", func() {
+				for _, cookie := range cookies {
+					Expect(len(cookie.String())).To(BeNumerically("<", 4096))
+				}
+			})
 		})
 	}
 
