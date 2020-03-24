@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"github.com/coreos/go-oidc"
 	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
 	"github.com/pusher/oauth2_proxy/pkg/encryption"
 )
@@ -18,6 +19,7 @@ type Provider interface {
 	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)
 	SessionFromCookie(string, *encryption.Cipher) (*sessions.SessionState, error)
 	CookieForSession(*sessions.SessionState, *encryption.Cipher) (string, error)
+	CreateSessionStateFromBearerToken(rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error)
 }
 
 // New provides a new Provider based on the configured provider string

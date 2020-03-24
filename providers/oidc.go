@@ -150,27 +150,15 @@ func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.To
 
 func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
 
-	newSession := &sessions.SessionState{}
+	var newSession *sessions.SessionState
 
-	if idToken != nil {
-		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String(), p.UserIDClaims)
+	if idToken == nil {
+		newSession = &sessions.SessionState{}
+	} else {
+		var err error
+		newSession, err = p.createSessionStateInternal(token.Extra("id_token").(string), idToken, token)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
-		}
-
-		if claims != nil {
-
-			if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
-				return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-			}
-
-			newSession.IDToken = token.Extra("id_token").(string)
-
-			newSession.UserID = claims.UserID
-			newSession.UserIDType = claims.UserIDType
-
-			newSession.User = claims.Subject
-			newSession.PreferredUsername = claims.PreferredUsername
+			return nil, err
 		}
 	}
 
@@ -178,6 +166,53 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 	newSession.RefreshToken = token.RefreshToken
 	newSession.CreatedAt = time.Now()
 	newSession.ExpiresOn = token.Expiry
+	return newSession, nil
+}
+
+func (p *OIDCProvider) CreateSessionStateFromBearerToken(rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+	newSession, err := p.createSessionStateInternal(rawIDToken, idToken, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	newSession.AccessToken = rawIDToken
+	newSession.IDToken = rawIDToken
+	newSession.RefreshToken = ""
+	newSession.ExpiresOn = idToken.Expiry
+
+	return newSession, nil
+}
+
+func (p *OIDCProvider) createSessionStateInternal(rawIDToken string, idToken *oidc.IDToken, token *oauth2.Token) (*sessions.SessionState, error) {
+
+	newSession := &sessions.SessionState{}
+
+	if idToken == nil {
+		return newSession, nil
+	}
+	accessToken := ""
+	if token != nil {
+		accessToken = token.AccessToken
+	}
+
+	claims, err := findClaimsFromIDToken(idToken, accessToken, p.ProfileURL.String(), p.UserIDClaims)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
+	}
+
+	newSession.IDToken = rawIDToken
+
+	newSession.UserID = claims.UserID
+	newSession.UserIDType = claims.UserIDType
+
+	newSession.User = claims.Subject
+	newSession.PreferredUsername = claims.PreferredUsername
+
+	verifyEmail := (claims.UserIDType == sessions.UserIDTypeEmail) && !p.AllowUnverifiedEmail
+	if verifyEmail && claims.Verified != nil && !*claims.Verified {
+		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	}
+
 	return newSession, nil
 }
 
@@ -210,7 +245,7 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 	for _, userIDClaim := range userIDClaims {
 		if claims.UserID != "" {
 			break
-		} else if userIDClaim == "email" {
+		} else if userIDClaim == sessions.UserIDTypeEmail {
 			if claims.Email == "" {
 				claims.Email, _ = tryFetchEmail(claims.Email, accessToken, profileURL)
 			}
@@ -239,6 +274,9 @@ func tryFetchEmail(emailClaim string, accessToken string, profileURL string) (st
 
 	if profileURL == "" {
 		return "", fmt.Errorf("id_token did not contain an email and no profile-url for trying to fetch it specified")
+	}
+	if accessToken == "" {
+		return "", fmt.Errorf("id_token did not contain an email and no access token provided to fetch it from the profile-url")
 	}
 
 	// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo

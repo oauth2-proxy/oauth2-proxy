@@ -1113,7 +1113,6 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 	}
 
 	ctx := context.Background()
-	var session *sessionsapi.SessionState
 	for _, verifier := range p.jwtBearerVerifiers {
 		bearerToken, err := verifier.Verify(ctx, rawBearerToken)
 
@@ -1122,36 +1121,7 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 			continue
 		}
 
-		// NOTE: The token is presumabely the ID token
-		var claims struct { // TODO Duplicates providers/oidc#OIDCClaims
-			Subject           string `json:"sub"`
-			Email             string `json:"email"`
-			Verified          *bool  `json:"email_verified"`
-			PreferredUsername string `json:"preferred_username"`
-		}
-
-		if err := bearerToken.Claims(&claims); err != nil {
-			return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
-		}
-
-		if claims.Email == "" {
-			claims.Email = claims.Subject
-		}
-
-		if claims.Verified != nil && !*claims.Verified {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-		}
-
-		session = &sessionsapi.SessionState{
-			AccessToken:       rawBearerToken,
-			IDToken:           rawBearerToken,
-			RefreshToken:      "",
-			ExpiresOn:         bearerToken.Expiry,
-			UserID:            claims.Email, // FIXME What if -user-id-token = [phone_number] ?
-			User:              claims.Email,
-			PreferredUsername: claims.PreferredUsername,
-		}
-		return session, nil
+		return p.provider.CreateSessionStateFromBearerToken(rawBearerToken, bearerToken)
 	}
 	return nil, fmt.Errorf("unable to verify jwt token %s", req.Header.Get("Authorization"))
 }
