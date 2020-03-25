@@ -208,6 +208,20 @@ func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string
 	return parsed, msgs
 }
 
+// splitString will break a string using a single character discriminator.
+// If the character isn't found, the empty string will be returned for the
+// second value. Also can optionally remove the character as well.
+func splitString(s string, sep byte, cutc bool) (string, string) {
+	i := strings.IndexByte(s, sep)
+	if i < 0 {
+		return s, ""
+	}
+	if cutc {
+		return s[:i], s[i+1:]
+	}
+	return s[:i], s[i:]
+}
+
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func (o *Options) Validate() error {
@@ -309,6 +323,15 @@ func (o *Options) Validate() error {
 	o.redirectURL, msgs = parseURL(o.RedirectURL, "redirect", msgs)
 
 	for _, u := range o.Upstreams {
+
+		// Unfortunately, url.Parse also unencodes the fragment (if any is present). Since we
+		// treat the fragment with special meaning, we don't want that. We want it interpreted
+		// literally. Let's snag it before it's modified (we'll put it back in the URL in its
+		// escaped form). If URL had something like URL.RawFragment (similar to RawPath), this
+		// wouldn't be necessary.
+		var rawFrag string
+		u, rawFrag = splitString(u, '#', true)
+
 		upstreamURL, err := url.Parse(u)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("error parsing upstream: %s", err))
@@ -316,6 +339,7 @@ func (o *Options) Validate() error {
 			if upstreamURL.Path == "" {
 				upstreamURL.Path = "/"
 			}
+			upstreamURL.Fragment = rawFrag
 			o.proxyURLs = append(o.proxyURLs, upstreamURL)
 		}
 	}

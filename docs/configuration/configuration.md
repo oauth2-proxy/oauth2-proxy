@@ -129,9 +129,18 @@ See below for provider specific options
 
 `oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers or serve static files from the file system. HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter, this will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
 
-Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at. `file:///var/www/static/#/static/` will ie. make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
+Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL (see below).
 
 Multiple upstreams can either be configured by supplying a comma separated list to the `-upstream` parameter, supplying the parameter multiple times or provinding a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
+
+> NOTE: When defining upstream URLs, if it does not end with a slash ('/') it will match ONLY that path EXACTLY, which is probably not what you're expecting. i.e. `http://127.0.0.1:8080/some/path` will serve ONLY the exact URL `http://[oauth2-proxy url]/some/path` (not anything below it such as `http://[oauth2-proxy url]/some/path/some/file.html`). To match anything "below" that you must also include the trailing slash.
+
+#### Path Mapping via URL Fragment
+
+For HTTP(s) and file:// based upstream locations, if you include a fragment as part of the upstream URL, it will interpret that as the path to map in the proxy server. For example:
+
+* Upstream URL of `file:///var/www/static/#/static/` will map `http://[oauth2-proxy url]/static/...` to `/var/www/static/...`
+* Upstream URL of `http://127.0.0.1:8080/foo/#/api/` will map `http://[oauth2-proxy url]/api/...` to `http://127.0.0.1:8080/foo/...`
 
 ### Environment variables
 

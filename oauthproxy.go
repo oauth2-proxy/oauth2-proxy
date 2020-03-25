@@ -135,38 +135,138 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// NewReverseProxy creates a reverse proxy using the default path mapping rules (i.e.
+// the muxPath will be whatever the target URL's path is). So, for example,
+// "http://foo/path/" will mux to the "/path/" when determining which handler
+// to call.
+//
+// To create a customized path mapping use NewReverseProxy()
+func NewDefaultReverseProxy(target *url.URL, opts *Options) (proxy *httputil.ReverseProxy) {
+	return NewReverseProxy(target, target.EscapedPath(), opts)
+}
+
 // NewReverseProxy creates a new reverse proxy for proxying requests to upstream
-// servers
-func NewReverseProxy(target *url.URL, opts *Options) (proxy *httputil.ReverseProxy) {
+// servers. It has to tweak the default httputil.NewSingleHostReverseProxy()
+// "director" callback because:
+//
+//  - There are some slightly different semantics we want for path combination.
+//    By default, an upstream "http://upstream/upath/" binds to "/upath/" for the
+//    serveMux which results in:
+//
+//         "http://proxy/upath/file.html" => "http://upstream/upath/file.html"
+//
+//    But the default path appending behavior of httputil's version would cause
+//    extra path info being injected (e.g. "http://upstream/upath/upath/file.html")
+//    resulting in incorrect upstream URLs. Further, we'd like to remap some
+//    upstream locations by explicitly providing a different "base", for example:
+//
+//         "http://proxy/file.html" => "http://upstream/upath/file.html"
+//
+//    Can be accomplished by specifying "http://upstream/upath/#/" and it will
+//    use the fragment as the `muxPath` (similar to how local file remapping works).
+//
+//  - Also, there (at the time of writing) is a bug with how it handles escaped Paths:
+//      https://github.com/golang/go/pull/36378/files
+//
+//  - However, we make sure to retain the query param merging, as it's important
+//    in situations where the upstream requires an authentication token for example.
+//
+func NewReverseProxy(target *url.URL, muxPath string, opts *Options) (proxy *httputil.ReverseProxy) {
+
+	passRequestHost := opts.PassHostHeader
 	proxy = httputil.NewSingleHostReverseProxy(target)
+
+	primeDirector := proxy.Director
+
+	proxy.Director = func(req *http.Request) {
+		// Save the original path (and rawpath) to work around the bug with
+		// escaped slashes in older versions of Go.
+		origPath, origRawPath := req.URL.Path, req.URL.RawPath
+
+		// Wrap the default httputil implementation as it does some useful
+		// things like query string merging and updating the User Agent if
+		// necessary (also lets us get fixes made to Go later on).
+		primeDirector(req)
+
+		if !passRequestHost {
+			// Make sure this matches the target if we're not explicitly
+			// sending the request's Host instead.
+			req.Host = target.Host
+		}
+
+		// Take request's "/foo/file.html" and strip the muxPath off the
+		// front. We know it exists on the path since that's how this
+		// handler got called in the first place (via proxy's serveMux
+		// path matching). If muxPath is "/foo/" we want "/file.html"
+		// (note the slash is retained). Note: this replaces the possibly
+		// incorrect path calculated in the default implementation.
+
+		if origRawPath != "" {
+			// If this is not empty, then the path had some escaping done,
+			// and in order to maintain its pairity with the "non-Raw"
+			// version, we have to trim that one so it matches. As the
+			// semantics are that if RawPath doesn't decode into exactly
+			// the Path value, it's ignored.
+			req.URL.RawPath = strings.TrimPrefix(origRawPath, muxPath)
+			if unescapedMuxPath, err := url.PathUnescape(muxPath); err != nil {
+				req.URL.Path = strings.TrimPrefix(origPath, unescapedMuxPath)
+			} else {
+				// This would only happen if muxPath was incorrectly passed
+				// to us (such a malformed manual path remapping). Not really
+				// much we can do... I'm not sure what HTTP servers are
+				// supposed to do in this case.
+				req.URL.Path = strings.TrimPrefix(origPath, muxPath)
+			}
+		} else {
+			// With no escaping, there's less to worry about.
+			req.URL.Path = strings.TrimPrefix(origPath, muxPath)
+		}
+
+		req.URL.Path, req.URL.RawPath = joinURLPath(target, req.URL)
+	}
+
 	proxy.FlushInterval = opts.FlushInterval
 	if opts.SSLUpstreamInsecureSkipVerify {
 		proxy.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
+
 	return proxy
 }
 
-func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
-	director := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		director(req)
-		// use RequestURI so that we aren't unescaping encoded slashes in the request path
-		req.Host = target.Host
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
+func singleJoiningSlash(a, b string) string {
+	aslash := strings.HasSuffix(a, "/")
+	bslash := strings.HasPrefix(b, "/")
+	switch {
+	case aslash && bslash:
+		return a + b[1:]
+	case !aslash && !bslash && b != "":
+		return a + "/" + b
 	}
+	return a + b
 }
 
-func setProxyDirector(proxy *httputil.ReverseProxy) {
-	director := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		director(req)
-		// use RequestURI so that we aren't unescaping encoded slashes in the request path
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
+// Fix from: https://github.com/golang/go/pull/36378
+func joinURLPath(a, b *url.URL) (path, rawpath string) {
+	if a.RawPath == "" && b.RawPath == "" {
+		return singleJoiningSlash(a.Path, b.Path), ""
 	}
+	// Same as singleJoiningSlash, but uses EscapedPath to determine
+	// whether a slash should be added
+	apath := a.EscapedPath()
+	bpath := b.EscapedPath()
+
+	aslash := strings.HasSuffix(apath, "/")
+	bslash := strings.HasPrefix(bpath, "/")
+
+	switch {
+	case aslash && bslash:
+		return a.Path + b.Path[1:], apath + bpath[1:]
+	case !aslash && !bslash && bpath != "":
+		return a.Path + "/" + b.Path, apath + "/" + bpath
+	}
+	return a.Path + b.Path, apath + bpath
 }
 
 // NewFileServer creates a http.Handler to serve files from the filesystem
@@ -175,14 +275,8 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 }
 
 // NewWebSocketOrRestReverseProxy creates a reverse proxy for REST or websocket based on url
-func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.HmacAuth) http.Handler {
-	u.Path = ""
-	proxy := NewReverseProxy(u, opts)
-	if !opts.PassHostHeader {
-		setProxyUpstreamHostHeader(proxy, u)
-	} else {
-		setProxyDirector(proxy)
-	}
+func NewWebSocketOrRestReverseProxy(u *url.URL, muxPath string, opts *Options, auth hmacauth.HmacAuth) http.Handler {
+	proxy := NewReverseProxy(u, muxPath, opts)
 
 	// this should give us a wss:// scheme if the url is https:// based.
 	var wsProxy *wsutil.ReverseProxy
@@ -199,6 +293,19 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.Hma
 	}
 }
 
+func checkMuxPath(path string) bool {
+	if strings.Contains(path, "%2f") || strings.Contains(path, "%2F") {
+		// http.NewServeMux() doesn't deal with escaped paths properly when figuring out which
+		// handler to invoke since it uses url.URL.Path under the hood. i.e. it unescapes it and
+		// tries to match that instead.
+		// TODO: Investigate using http://github.com/gorilla/mux instead?
+		// TODO: If this is fixed, look for the currently t.Skip()'d tests in oauthproxy_test.go and re-enable them
+		logger.Printf("warning: mapping paths with escaped slashes are not currently supported: %s", path)
+		return false
+	}
+	return true
+}
+
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
 func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	serveMux := http.NewServeMux()
@@ -208,12 +315,16 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			SignatureHeader, SignatureHeaders)
 	}
 	for _, u := range opts.proxyURLs {
-		path := u.Path
+		path := u.EscapedPath()
 		host := u.Host
 		switch u.Scheme {
 		case httpScheme, httpsScheme:
+			if u.Fragment != "" {
+				path = u.Fragment
+			}
 			logger.Printf("mapping path %q => upstream %q", path, u)
-			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
+			proxy := NewWebSocketOrRestReverseProxy(u, path, opts, auth)
+			checkMuxPath(path)
 			serveMux.Handle(path, proxy)
 		case "static":
 			responseCode, err := strconv.Atoi(host)
@@ -222,6 +333,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 				responseCode = 200
 			}
 
+			checkMuxPath(path)
 			serveMux.HandleFunc(path, func(rw http.ResponseWriter, req *http.Request) {
 				rw.WriteHeader(responseCode)
 				fmt.Fprintf(rw, "Authenticated")
@@ -238,6 +350,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 				wsHandler: nil,
 				auth:      nil,
 			}
+			checkMuxPath(path)
 			serveMux.Handle(path, &uProxy)
 		default:
 			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
@@ -631,7 +744,7 @@ func getRemoteAddr(req *http.Request) (s string) {
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	switch path := req.URL.Path; {
+	switch path := req.URL.EscapedPath(); {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
 	case path == p.PingPath:

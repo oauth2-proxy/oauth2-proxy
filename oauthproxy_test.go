@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"net/url"
 	"regexp"
 	"strings"
@@ -75,7 +76,7 @@ func TestWebSocketProxy(t *testing.T) {
 	options := NewOptions()
 	var auth hmacauth.HmacAuth
 	options.PassHostHeader = true
-	proxyHandler := NewWebSocketOrRestReverseProxy(backendURL, options, auth)
+	proxyHandler := NewWebSocketOrRestReverseProxy(backendURL, backendURL.Path, options, auth)
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
@@ -122,8 +123,7 @@ func TestNewReverseProxy(t *testing.T) {
 	backendHost := net.JoinHostPort(backendHostname, backendPort)
 	proxyURL, _ := url.Parse(backendURL.Scheme + "://" + backendHost + "/")
 
-	proxyHandler := NewReverseProxy(proxyURL, &Options{FlushInterval: time.Second})
-	setProxyUpstreamHostHeader(proxyHandler, proxyURL)
+	proxyHandler := NewDefaultReverseProxy(proxyURL, &Options{FlushInterval: time.Second})
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
@@ -144,8 +144,7 @@ func TestEncodedSlashes(t *testing.T) {
 	defer backend.Close()
 
 	b, _ := url.Parse(backend.URL)
-	proxyHandler := NewReverseProxy(b, &Options{FlushInterval: time.Second})
-	setProxyDirector(proxyHandler)
+	proxyHandler := NewDefaultReverseProxy(b, &Options{FlushInterval: time.Second})
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
@@ -159,6 +158,228 @@ func TestEncodedSlashes(t *testing.T) {
 	if seen != encodedPath {
 		t.Errorf("got bad request %q expected %q", seen, encodedPath)
 	}
+}
+
+type fakeUpstreamSetup struct {
+	lastSeenURI     string
+	lastSeenRequest string
+	lastSeenCode    int
+	lastCode        int
+	proxy           *OAuthProxy
+	backend         *httptest.Server
+	backendURL      *url.URL
+}
+
+func newFakeUpstreamSetup(upstreamPath string) *fakeUpstreamSetup {
+
+	setup := &fakeUpstreamSetup{}
+
+	setup.backend = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// fmt.Printf("Requested %q\n", r.RequestURI)
+		setup.lastSeenURI = r.RequestURI
+		if dump, err := httputil.DumpRequest(r, false); err != nil {
+			setup.lastSeenCode = 500
+			w.WriteHeader(500)
+			setup.lastSeenRequest = fmt.Sprintf("%s", err)
+		} else {
+			setup.lastSeenCode = 200
+			w.WriteHeader(200)
+			setup.lastSeenRequest = fmt.Sprintf("%s", dump)
+		}
+	}))
+
+	setup.backendURL, _ = url.Parse(setup.backend.URL)
+
+	opts := NewOptions()
+	opts.ClientID = "asdlkjx"
+	opts.ClientSecret = "alkgks"
+	opts.CookieSecret = "asdkugkj"
+	opts.SkipAuthRegex = []string{".*"} // don't want auth here
+	opts.Upstreams = []string{
+		setup.backend.URL + upstreamPath,
+	}
+	opts.Validate()
+
+	setup.proxy = NewOAuthProxy(opts, func(string) bool { return true })
+
+	return setup
+}
+
+func (f *fakeUpstreamSetup) close() {
+	f.backend.Close()
+}
+
+// Find out what RequestURI the proxy wound up serving for the requested one.
+func (f *fakeUpstreamSetup) translateRequest(path string) string {
+	rw := httptest.NewRecorder()
+	f.lastSeenURI = ""
+	f.lastSeenRequest = ""
+	f.lastSeenCode = 0
+	f.lastCode = 0
+	req, _ := http.NewRequest("GET", "http://localhost"+path, nil)
+	f.proxy.ServeHTTP(rw, req)
+	f.lastCode = rw.Code
+	return f.lastSeenURI
+}
+
+func TestNoSlashRequest(t *testing.T) {
+	fu := newFakeUpstreamSetup("")
+	defer fu.close()
+
+	// Many clients auto-inject a '/' if you try and issue a request
+	// like http://foo?q=bar. For us, we don't detect this case and
+	// just read it normally. However, since it doesn't match any path
+	// in the Proxy's serveMux() mapping, it will fail to be serviced
+	// (which is probably fine for us, given it's not a HTTP compliant
+	// request)
+
+	fu.translateRequest("")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+
+	fu.translateRequest("?q=foo")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+
+	fu.translateRequest("#frag")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+}
+
+func TestQueryPassedUpstream(t *testing.T) {
+	fu := newFakeUpstreamSetup("")
+	defer fu.close()
+
+	assert.Equal(t, "/", fu.translateRequest("/"))
+
+	fu.translateRequest("?q=foo") // Technically malformed URL
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+
+	assert.Equal(t, "/foo?q=bar", fu.translateRequest("/foo?q=bar"))
+	assert.Equal(t, "/foo/bar?q=baz", fu.translateRequest("/foo/bar?q=baz"))
+	// Make sure encoded slashes play nice
+	assert.Equal(t, "/a%2Fb?q=baz", fu.translateRequest("/a%2Fb?q=baz"))
+}
+
+func TestUpstreamWithQuery(t *testing.T) {
+	fu := newFakeUpstreamSetup("?t=T")
+	defer fu.close()
+
+	assert.Equal(t, "/?t=T", fu.translateRequest("/"))
+	assert.Equal(t, "/foo?t=T&q=bar", fu.translateRequest("/foo?q=bar"))
+	// Make sure encoded slashes play nice
+	assert.Equal(t, "/a%2Fb?t=T&q=baz", fu.translateRequest("/a%2Fb?q=baz"))
+}
+
+func TestUpstreamWithPath(t *testing.T) {
+	fu := newFakeUpstreamSetup("/site/")
+	defer fu.close()
+
+	// Note these won't be served since by default the upstream's path is used
+	// for the proxy's serveMux path.
+
+	fu.translateRequest("/")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+
+	fu.translateRequest("/a.html")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+
+	// This will work though, since it shares the path as its start
+	fu.translateRequest("/site/a.html")
+	assert.Equal(t, "/site/a.html", "/site/a.html")
+
+	// Make sure encoded slashes play nice
+	assert.Equal(t, "/site/a%2Fb", fu.translateRequest("/site/a%2Fb"))
+	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/site/a%2Fb?q=baz"))
+}
+
+func TestUpstreamExactPath(t *testing.T) {
+	fu := newFakeUpstreamSetup("/foo")
+	defer fu.close()
+
+	// Not handled due to no /site on front
+	fu.translateRequest("/a.html")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+
+	// Not handled due to no / on the end of the upstream URL
+	fu.translateRequest("/foo/a.html")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+	assert.Equal(t, 404, fu.lastCode)
+
+	// The only one that works
+	assert.Equal(t, "/foo", fu.translateRequest("/foo"))
+}
+
+func TestUpstreamWithPathAndQuery(t *testing.T) {
+	fu := newFakeUpstreamSetup("/site/?t=T")
+	defer fu.close()
+
+	// Not handled due to no /site/ on front
+	fu.translateRequest("/a.html")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+
+	// ServeMux has a special case for if you've mux'd the
+	// ends-with-slash version of a path and not the
+	// non-slashed version: it redirects to the slashed
+	// version for you if asking for the non-slashed.
+	fu.translateRequest("/site")
+	assert.Equal(t, "", fu.lastSeenURI)
+	assert.Equal(t, 0, fu.lastSeenCode)
+	assert.Equal(t, 301, fu.lastCode)
+
+	// These should though.
+	assert.Equal(t, "/site/?t=T", fu.translateRequest("/site/"))
+	assert.Equal(t, "/site/a.html?t=T", fu.translateRequest("/site/a.html"))
+	assert.Equal(t, "/site/site/a.html?t=T", fu.translateRequest("/site/site/a.html"))
+	// Query params are combined correctly
+	assert.Equal(t, "/site/a?t=T&foo=bar", fu.translateRequest("/site/a?foo=bar"))
+	// Make sure encoded slashes play nice
+	assert.Equal(t, "/site/a%2Fb?t=T&q=baz", fu.translateRequest("/site/a%2Fb?q=baz"))
+}
+
+func TestUpstreamWithMappedPath(t *testing.T) {
+	fu := newFakeUpstreamSetup("/site/#/")
+	defer fu.close()
+
+	assert.Equal(t, "/site/", fu.translateRequest("/"))
+	assert.Equal(t, "/site/a.html", fu.translateRequest("/a.html"))
+	assert.Equal(t, "/site/site/a.html", fu.translateRequest("/site/a.html"))
+	// Make sure encoded slashes play nice
+	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/a%2Fb?q=baz"))
+}
+
+func TestUpstreamWithEscapedPath(t *testing.T) {
+	// TODO: See checkMuxPath() as to why we're skipping. Remove once a solution is in place.
+	t.Skip("Skipping test due to Known Issue with escaped paths")
+
+	fu := newFakeUpstreamSetup("/a%2Fb/")
+	defer fu.close()
+
+	assert.Equal(t, "/a%2Fb/c/", fu.translateRequest("/a%2Fb/c/"))
+	assert.Equal(t, "/a%2Fb/a.html", fu.translateRequest("/a%2Fb/a.html"))
+	// Make sure encoded slashes play nice
+	assert.Equal(t, "/a%2Fb/c/x%2Fy/a.html", fu.translateRequest("/a%2Fb/c/x%2Fy/a.html"))
+	assert.Equal(t, "/a%2Fb/c/a%2Fb?q=baz", fu.translateRequest("/a%2Fb/c/a%2Fb?q=baz"))
+}
+
+func TestUpstreamWithEscapedMappedPath(t *testing.T) {
+	// TODO: See checkMuxPath() as to why we're skipping. Remove once a solution is in place.
+	t.Skip("Skipping test due to Known Issue with escaped paths")
+
+	fu := newFakeUpstreamSetup("/site/#/a%2Fb/c/")
+	defer fu.close()
+
+	assert.Equal(t, "/site/", fu.translateRequest("/a%2Fb/c/"))
+	assert.Equal(t, "/site/a.html", fu.translateRequest("/a%2Fb/c/a.html"))
+	assert.Equal(t, "/site/site/a.html", fu.translateRequest("/a%2Fb/c/site/a.html"))
+	// Make sure encoded slashes play nice
+	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/a%2Fb/c/a%2Fb?q=baz"))
 }
 
 func TestRobotsTxt(t *testing.T) {
@@ -1522,5 +1743,5 @@ func TestFindJwtBearerToken(t *testing.T) {
 		assert.Error(t, err)
 	}
 
-	fmt.Printf("%s", token)
+	t.Logf("%s", token)
 }
