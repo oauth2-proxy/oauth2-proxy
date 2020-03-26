@@ -469,7 +469,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	t := struct {
 		ProviderName  string
-		SignInMessage string
+		SignInMessage template.HTML
 		CustomLogin   bool
 		Redirect      string
 		Version       string
@@ -477,7 +477,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		Footer        template.HTML
 	}{
 		ProviderName:  p.provider.Data().ProviderName,
-		SignInMessage: p.SignInMessage,
+		SignInMessage: template.HTML(p.SignInMessage),
 		CustomLogin:   p.displayCustomLoginForm(),
 		Redirect:      redirectURL,
 		Version:       VERSION,
