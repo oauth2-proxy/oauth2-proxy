@@ -132,7 +132,7 @@ func main() {
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
-	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
+	flagSet.String("approval-prompt", "force", "OAuth approval_prompt, if set to 'none' the parameter will not be sent")
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.String("acr-values", "http://idmanagement.gov/ns/assurance/loa/1", "acr values string:  optional, used by login.gov")
