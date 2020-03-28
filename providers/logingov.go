@@ -24,7 +24,6 @@ type LoginGovProvider struct {
 	// TODO (@timothy-spencer): Ideally, the nonce would be in the session state, but the session state
 	// is created only upon code redemption, not during the auth, when this must be supplied.
 	Nonce     string
-	AcrValues string
 	JWTKey    *rsa.PrivateKey
 	PubJWKURL *url.URL
 }
@@ -270,7 +269,11 @@ func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
 	params.Add("state", state)
-	params.Add("acr_values", p.AcrValues)
+	acr := p.AcrValues
+	if acr == "" {
+		acr = "http://idmanagement.gov/ns/assurance/loa/1"
+	}
+	params.Add("acr_values", acr)
 	params.Add("nonce", p.Nonce)
 	a.RawQuery = params.Encode()
 	return a.String()

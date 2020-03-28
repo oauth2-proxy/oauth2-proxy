@@ -424,6 +424,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		ClientSecretFile: o.ClientSecretFile,
 		Prompt:           o.Prompt,
 		ApprovalPrompt:   o.ApprovalPrompt,
+		AcrValues:        o.AcrValues,
 	}
 	p.LoginURL, msgs = parseURL(o.LoginURL, "login", msgs)
 	p.RedeemURL, msgs = parseURL(o.RedeemURL, "redeem", msgs)
@@ -482,7 +483,6 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			}
 		}
 	case *providers.LoginGovProvider:
-		p.AcrValues = o.AcrValues
 		p.PubJWKURL, msgs = parseURL(o.PubJWKURL, "pubjwk", msgs)
 
 		// JWT key can be supplied via env variable or file in the filesystem, but not both.
