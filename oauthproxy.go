@@ -637,7 +637,7 @@ func (p *OAuthProxy) GetRealClientIP(req *http.Request) (net.IP, error) {
 // GetRemoteIP obtains the IP of the low-level connected network host
 func (p *OAuthProxy) GetRemoteIP(req *http.Request) (net.IP, error) {
 	if ipStr, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
-		return nil, fmt.Errorf("Unable to address (%s) from http.RemoteAddr", req.RemoteAddr)
+		return nil, fmt.Errorf("Unable to parse address (%s) from http.RemoteAddr", req.RemoteAddr)
 	} else if ip := net.ParseIP(ipStr); ip != nil {
 		return ip, nil
 	} else {
