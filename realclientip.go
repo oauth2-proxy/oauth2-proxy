@@ -27,6 +27,12 @@ type xForwardedForClientIPParser struct {
 	header string
 }
 
+// GetRealClientIP obtain the IP address of the end-user (not proxy).
+// Parses headers sharing the format as specified by:
+// * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For.
+// Returns the `<client>` portion specified in the above document.
+// Additionally, is capable of parsing IPs with the port included, for v4 in the format "<ip>:<port>" and for v6 in the
+// format "[<ip>]:<port>".  With-port and without-port formats are seamlessly supported concurrently.
 func (p xForwardedForClientIPParser) GetRealClientIP(h http.Header) (net.IP, error) {
 	var ipStr string
 	if realIP := h.Get(p.header); realIP != "" {
