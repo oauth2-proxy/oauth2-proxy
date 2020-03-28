@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto"
 	"crypto/tls"
@@ -89,20 +90,22 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider                         string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
-	ProviderName                     string `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
-	OIDCIssuerURL                    string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
-	InsecureOIDCAllowUnverifiedEmail bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
-	SkipOIDCDiscovery                bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
-	OIDCJwksURL                      string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
-	LoginURL                         string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
-	RedeemURL                        string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
-	ProfileURL                       string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
-	ProtectedResource                string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
-	ValidateURL                      string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
-	Scope                            string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
-	Prompt                           string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
-	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
+	Provider                         string   `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
+	ProviderName                     string   `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
+	OIDCIssuerURL                    string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
+	InsecureOIDCAllowUnverifiedEmail bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
+	SkipOIDCDiscovery                bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
+	OIDCJwksURL                      string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
+	LoginURL                         string   `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
+	RedeemURL                        string   `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
+	ProfileURL                       string   `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
+	ProtectedResource                string   `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
+	ValidateURL                      string   `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
+	Scope                            string   `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
+	Prompt                           string   `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
+	ApprovalPrompt                   string   `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
+	ClaimAuthorizations              []string `flag:"claim-authorizations" cfg:"claim_authorizations" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATIONS"`
+	ClaimAuthorizationsFile          string   `flag:"claim-authorizations-file" cfg:"claim_authorizations_file" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATIONS_FILE"`
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
@@ -135,6 +138,7 @@ type Options struct {
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
+	ClaimsAuthorizer   *JMESValidator
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -396,6 +400,7 @@ func (o *Options) Validate() error {
 		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
 	}
 
+	msgs = parseClaimAuthorizations(o, msgs)
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)
@@ -526,6 +531,50 @@ func parseSignatureKey(o *Options, msgs []string) []string {
 			o.SignatureKey)
 	}
 	o.signatureData = &SignatureData{hash: hash, key: secretKey}
+	return msgs
+}
+
+func parseClaimAuthorizations(o *Options, msgs []string) []string {
+
+	v := &JMESValidator{}
+
+	for _, assertion := range o.ClaimAuthorizations {
+		if _, err := v.AddRule(assertion); err != nil {
+			msgs = append(msgs, fmt.Sprintf("%v", err))
+		}
+	}
+
+	if o.ClaimAuthorizationsFile != "" {
+		if file, err := os.Open(o.ClaimAuthorizationsFile); err == nil {
+			lineNo := 0
+			fileScanner := bufio.NewScanner(file)
+			fileScanner.Split(bufio.ScanLines)
+			for fileScanner.Scan() {
+				lineNo += 1
+				line := fileScanner.Text()
+				if _, err := v.AddRule(line); err != nil {
+					msgs = append(msgs, fmt.Sprintf("error in claims authorization file %s:%d: %v", o.ClaimAuthorizationsFile, lineNo, err))
+				}
+			}
+			file.Close()
+		} else {
+			msgs = append(msgs, fmt.Sprintf("error loading claims authorization file: %v", err))
+		}
+	}
+
+	o.ClaimsAuthorizer = v
+
+	// Setting ExtractRawClaims here gives the provider a hint that they will be needed when
+	// validating or refreshing a session. If this is false, then the provider is fine to leave them
+	// mainly encoded or do only whatever minimal processing that it requires to function.
+	//
+	// However, if this *is* set, and the provider does not actually provide claims via one of the
+	// sessions.SessionState.SetRawClaims() variants, authorization will fail (since there won't be
+	// any claims to authorize), and an error will be logged. If there are no claims available for
+	// whatever reason, setting the raw claims to nil is fine in order to prevent the error being
+	// logged (but it will likely not pass authorization in that case).
+	o.provider.Data().ExtractRawClaims = !v.IsEmpty()
+
 	return msgs
 }
 

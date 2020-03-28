@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
@@ -20,6 +21,12 @@ type SessionState struct {
 	Email             string    `json:",omitempty"`
 	User              string    `json:",omitempty"`
 	PreferredUsername string    `json:",omitempty"`
+	Authz             string    `json:",omitempty"`
+
+	// Internal parts used to transfer data between provider
+	// and the main Oauthproxy paths. Not meant to be serialized.
+	rawClaims      map[string]interface{}
+	rawClaimsValid bool
 }
 
 // SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
@@ -74,6 +81,7 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 		ss.Email = s.Email
 		ss.User = s.User
 		ss.PreferredUsername = s.PreferredUsername
+		ss.Authz = s.Authz
 	} else {
 		ss = *s
 		var err error
@@ -210,6 +218,7 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 			Email:             ss.Email,
 			User:              ss.User,
 			PreferredUsername: ss.PreferredUsername,
+			Authz:             ss.Authz,
 		}
 	} else {
 		// Backward compatibility with using unencrypted Email
@@ -255,4 +264,24 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		ss.User = ss.Email
 	}
 	return ss, nil
+}
+
+func (ss *SessionState) RawClaims() map[string]interface{} {
+	return ss.rawClaims
+}
+
+func (ss *SessionState) RawClaimsValid() bool {
+	return ss.rawClaimsValid
+}
+
+func (ss *SessionState) SetRawClaims(rawClaims map[string]interface{}) {
+	ss.rawClaims = rawClaims
+	ss.rawClaimsValid = true
+}
+
+func (ss *SessionState) SetRawClaimsFromIDToken(idToken *oidc.IDToken) (err error) {
+	if err = idToken.Claims(&ss.rawClaims); err == nil {
+		ss.rawClaimsValid = true
+	}
+	return
 }

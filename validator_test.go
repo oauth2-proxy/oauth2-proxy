@@ -1,10 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
+	"math"
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/jmespath/go-jmespath"
+	"github.com/stretchr/testify/assert"
 )
 
 type ValidatorTest struct {
@@ -208,4 +214,82 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 	if !validator("xyzzy.plugh@example.com") {
 		t.Error("email added to list should validate")
 	}
+}
+
+func TestTruthiness(t *testing.T) {
+
+	type Obj struct {
+		foo int
+	}
+
+	// https://developer.mozilla.org/en-US/docs/Glossary/Truthy
+	assert.True(t, truthy(true))
+	assert.True(t, truthy([]string{}))
+	assert.True(t, truthy([]string{"a"}))
+	assert.True(t, truthy([]int{}))
+	assert.True(t, truthy([]Obj{Obj{}}))
+	assert.True(t, truthy(make([]interface{}, 0)))
+	assert.True(t, truthy(make([]interface{}, 1)))
+	assert.True(t, truthy(make(map[string]interface{}, 1)))
+	assert.True(t, truthy(make(map[string]interface{}, 0)))
+	assert.True(t, truthy(42))
+	assert.True(t, truthy("0"))
+	assert.True(t, truthy("false"))
+	assert.True(t, truthy(time.Now()))
+	assert.True(t, truthy(-42))
+	assert.True(t, truthy(1.0))
+	assert.True(t, truthy(0.000000001))
+	assert.True(t, truthy(3.14))
+	assert.True(t, truthy(-3.14))
+	assert.True(t, truthy(math.Inf(1)))
+	assert.True(t, truthy(math.Inf(-1)))
+
+	assert.False(t, truthy(false))
+	assert.False(t, truthy(0))
+	assert.False(t, truthy(0.0))
+	assert.False(t, truthy(""))
+	assert.False(t, truthy(nil))
+	assert.False(t, truthy(math.NaN()))
+}
+
+func assertJmesTruthy(t *testing.T, data map[string]interface{}, expr string, expected bool) {
+	if result, err := jmespath.Search(expr, data); err != nil {
+		t.Errorf("expression %q evaluation failed: %v", expr, err)
+		assert.Equal(t, expected, false)
+	} else {
+		assert.Equal(t, expected, truthy(result))
+	}
+}
+
+func TestJMESTruthiness(t *testing.T) {
+
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(
+		`{
+			"age": 34,
+			"name": "James T. Kirk",
+			"orgs": ["Starfleet", "U.S.S. Enterprise"],
+			"traits": { "shirt": "yellow" },
+			"captain": true
+		}`), &data); err != nil {
+		assert.Failf(t, "failed to parse test data", "error: %v", err)
+		return
+	}
+
+	// Not really meant to be an exhaustive JMESpath test suite... Just some examples
+	assertJmesTruthy(t, data, "name", true)
+	assertJmesTruthy(t, data, "fullName", false)
+	assertJmesTruthy(t, data, "contains(name, 'Kirk')", true)
+	assertJmesTruthy(t, data, "contains(name, 'Spock')", false)
+	assertJmesTruthy(t, data, "captain", true)
+	assertJmesTruthy(t, data, "orgs", true)
+	assertJmesTruthy(t, data, "orgs[10]", false)
+	assertJmesTruthy(t, data, "contains(orgs, 'Starfleet')", true)
+	assertJmesTruthy(t, data, "length(orgs[?contains(@, 'Starfleet')])", true)
+	assertJmesTruthy(t, data, "contains(orgs, 'Klingon Empire')", false)
+	assertJmesTruthy(t, data, "length(orgs[?contains(@, 'Klingon Empire')])", false)
+	assertJmesTruthy(t, data, "traits.humble", false)
+	assertJmesTruthy(t, data, "traits.shirt == 'yellow'", true)
+	assertJmesTruthy(t, data, "traits.shirt == 'red'", false)
+	assertJmesTruthy(t, data, "traits.shirt", true)
 }

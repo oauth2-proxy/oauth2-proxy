@@ -158,7 +158,7 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 
 		if claims != nil {
 
-			if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
+			if !p.AllowUnverifiedEmail && claims.EmailVerified != nil && !*claims.EmailVerified {
 				return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 			}
 
@@ -166,6 +166,7 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 			newSession.Email = claims.Email
 			newSession.User = claims.Subject
 			newSession.PreferredUsername = claims.PreferredUsername
+			newSession.SetRawClaims(claims.rawClaims)
 		}
 	}
 
@@ -179,9 +180,11 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 // ValidateSessionState checks that the session's IDToken is still valid
 func (p *OIDCProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	ctx := context.Background()
-	_, err := p.Verifier.Verify(ctx, s.IDToken)
-	if err != nil {
+	if idToken, err := p.Verifier.Verify(ctx, s.IDToken); err != nil {
 		return false
+	} else if p.ExtractRawClaims {
+		// Stash these since the proxy is going to need them...
+		s.SetRawClaimsFromIDToken(idToken)
 	}
 
 	return true
@@ -196,10 +199,35 @@ func getOIDCHeader(accessToken string) http.Header {
 
 func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
 
-	// Extract custom claims.
 	claims := &OIDCClaims{}
-	if err := idToken.Claims(claims); err != nil {
+
+	if err := idToken.Claims(&claims.rawClaims); err != nil {
 		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+	}
+
+	// TODO: Implement Aggregated and/or Distributed claims fetching...
+	// <https://openid.net/specs/openid-connect-core-1_0.html#AggregatedDistributedClaims>
+	// This is necessary if, for example, the identity is a part of so many groups that it can't fit
+	// them into a normal claims assertion. Unfortunately, it's entirely possible that the OAuth2
+	// provider has a lot of these that we don't really care about, so when implementing this, we
+	// probably want a config option like `OAUTH2_PROXY_FETCH_DISTRIBUTED_CLAIMS=groups` (or
+	// whatever) so that if it comes back distributed, we have the extra hint that it's actually
+	// worth the time spent fetching it before running validation. If the validator doesn't care,
+	// then we don't really care either.
+
+	// Extract custom claims manually (to avoid parsing twice)
+
+	if value, ok := claims.rawClaims["sub"].(string); ok {
+		claims.Subject = value
+	}
+	if value, ok := claims.rawClaims["email"].(string); ok {
+		claims.Email = value
+	}
+	if value, ok := claims.rawClaims["email_verified"].(*bool); ok {
+		claims.EmailVerified = value
+	}
+	if value, ok := claims.rawClaims["preferred_username"].(string); ok {
+		claims.PreferredUsername = value
 	}
 
 	if claims.Email == "" {
@@ -234,8 +262,9 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 }
 
 type OIDCClaims struct {
+	rawClaims         map[string]interface{}
 	Subject           string `json:"sub"`
 	Email             string `json:"email"`
-	Verified          *bool  `json:"email_verified"`
+	EmailVerified     *bool  `json:"email_verified"`
 	PreferredUsername string `json:"preferred_username"`
 }

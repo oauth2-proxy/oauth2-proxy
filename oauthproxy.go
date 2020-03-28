@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/base64"
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
@@ -106,6 +109,7 @@ type OAuthProxy struct {
 	skipJwtBearerTokens  bool
 	jwtBearerVerifiers   []*oidc.IDTokenVerifier
 	compiledRegex        []*regexp.Regexp
+	claimsAuthorizer     *JMESValidator
 	templates            *template.Template
 	Banner               string
 	Footer               string
@@ -266,6 +270,11 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s path:%s samesite:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, opts.CookiePath, opts.CookieSameSite, refresh)
 
+	claimsAuthRules := opts.ClaimsAuthorizer.Rules()
+	if len(claimsAuthRules) > 0 {
+		logger.Printf("Authorizing requests using any of the following claims: %s", strings.Join(claimsAuthRules, ", "))
+	}
+
 	return &OAuthProxy{
 		CookieName:     opts.CookieName,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.CookieName, "csrf"),
@@ -300,6 +309,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
 		compiledRegex:        opts.CompiledRegex,
+		claimsAuthorizer:     opts.ClaimsAuthorizer,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
 		PassUserHeaders:      opts.PassUserHeaders,
@@ -781,8 +791,9 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
+	saveSession := true
+	if ok, reason := p.AuthorizeSession(session, &saveSession); ok {
+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2 (rule: %s): %s", reason, session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Printf("%s %s", remoteAddr, err)
@@ -793,6 +804,112 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
+	}
+}
+
+// AuthorizeSession will check the session state and ensure that it meets
+// all of the authorization criteria (email domains and/or claims criteria).
+// If it hasn't
+func (p *OAuthProxy) AuthorizeSession(s *sessionsapi.SessionState, saveSession *bool) (authorized bool, reason string) {
+
+	if !p.Validator(s.Email) {
+		return false, "failed email validation"
+	}
+
+	if !p.provider.ValidateGroup(s.Email) {
+		return false, "failed group validation"
+	}
+
+	return p.ValidateAuthorizedClaims(s, saveSession)
+}
+
+const (
+	authZPass byte = 'P'
+	authZFail byte = 'F'
+)
+
+func (p *OAuthProxy) createAuthzDigest(s *sessionsapi.SessionState, authZresult byte) ([]byte, error) {
+
+	// The digest is keyed to the following:
+	//   - The hash of the proxy's configured authorization rules
+	//   - Pass/Fail the authorization test
+	//   - UserId
+
+	mac := hmac.New(sha256.New, p.claimsAuthorizer.RulesHash())
+	mac.Write([]byte{authZresult})
+	mac.Write([]byte(s.User))
+	return mac.Sum(nil), nil
+}
+
+// ValidateAuthorizedClaims will extract any claims from the idtoken and check them
+// against the rules configured to allow acceptance.
+//  - If no assertions were specified, it will trivially accept any (or no) claims.
+//  - Otherwise, the first assertion that evaluates to a ["truthy"](https://developer.mozilla.org/en-US/docs/Glossary/Truthy) result will return true.
+//  - If no assertion matches, the claims are not deemed acceptable and false is returned.
+func (p *OAuthProxy) ValidateAuthorizedClaims(s *sessionsapi.SessionState, saveSession *bool) (authorized bool, reason string) {
+
+	if p.claimsAuthorizer.IsEmpty() {
+		return true, "*"
+	}
+
+	if s.Authz != "" {
+		// We have a cached claims assertions result so we only need to re-validate
+		// the request if the digest doesn't match.
+
+		// If any of those things changes, the cache is considered invalid and the full
+		// authorization check must be made again.
+
+		if providedMAC, err := base64.StdEncoding.DecodeString(s.Authz[1:]); err == nil {
+			if expectedMAC, err := p.createAuthzDigest(s, s.Authz[0]); err == nil {
+				if hmac.Equal(providedMAC, expectedMAC) {
+					// Note: The cached result is indeed valid, now actually see if we were authorized. :)
+					return s.Authz[0] == authZPass, "(cached)"
+				}
+			}
+
+			// MAC fail (probably) means something changed since we last saw this user (or
+			// the session was just refreshed), we need to re-verify the authorization rules.
+			logger.Printf("Clearing session authz cache and revalidating claims")
+		} else {
+			logger.Printf("Clearing session authz cache because of decode error: %v", err)
+		}
+
+		s.Authz = ""
+
+		// If the code path that brought us here hasn't also provided us claims to
+		// use, then we have to fail and cause a session revalidation.
+		if !s.RawClaimsValid() {
+			return false, "authz invalidated"
+		}
+	}
+
+	authzResult := authZFail
+
+	if !s.RawClaimsValid() {
+		// If we got here, then the session was created/deserialized and the
+		// provider didn't, uh, provide the claims. ;) This is an implementation
+		// error as all providers should honor this request if they are able,
+		// even if that means setting the claims to nil.
+
+		// We'll print something at least so that the person who's set up this
+		// proxy knows about it and isn't left wondering why it doesn't work.
+		logger.Printf("error: claims-based authorization is enabled, but provider implementation doesn't support it; all requests will fail to authorize")
+	} else {
+		if ok, idx := p.claimsAuthorizer.MatchesAny(s.RawClaims()); ok {
+			authzResult = authZPass
+			reason = p.claimsAuthorizer.Rules()[idx]
+		}
+	}
+
+	if digest, err := p.createAuthzDigest(s, authzResult); err != nil {
+		// Should never happen?
+		logger.Printf("error creating authz digest: %v", err)
+		return false, "digest creation failed"
+	} else {
+		s.Authz = string(authzResult) + base64.StdEncoding.EncodeToString(digest)
+		// Flag session as needing to be saved in cookie (regardless of pass or fail).
+		*saveSession = true
+		return authzResult == authZPass, reason
 	}
 }
 
@@ -900,11 +1017,13 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	if session != nil && session.Email != "" && !p.Validator(session.Email) {
-		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
-		session = nil
-		saveSession = false
-		clearSession = true
+	if session != nil {
+		if ok, _ := p.AuthorizeSession(session, &saveSession); !ok {
+			logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+			session = nil
+			saveSession = false
+			clearSession = true
+		}
 	}
 
 	if saveSession && session != nil {

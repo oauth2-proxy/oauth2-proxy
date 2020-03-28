@@ -26,6 +26,7 @@ type ProviderData struct {
 	ClientSecretFile string
 	Scope            string
 	Prompt           string
+	ExtractRawClaims bool
 }
 
 // Data returns the ProviderData
