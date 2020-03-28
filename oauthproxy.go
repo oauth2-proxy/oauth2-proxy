@@ -135,7 +135,7 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// NewReverseProxy creates a reverse proxy using the default path mapping rules (i.e.
+// NewDefaultReverseProxy creates a reverse proxy using the default path mapping rules (i.e.
 // the muxPath will be whatever the target URL's path is). So, for example,
 // "http://foo/path/" will mux to the "/path/" when determining which handler
 // to call.
