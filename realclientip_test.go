@@ -1,134 +1,104 @@
 package main
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetRealClientIPParser(t *testing.T) {
-	var p realClientIPParser
-	var err error
+	forwardedForType := reflect.TypeOf((*xForwardedForClientIPParser)(nil))
 
-	p, err = getRealClientIPParser("X-Forwarded-For")
-	assert.Nil(t, err)
-	assert.Equal(t, reflect.TypeOf(p), reflect.TypeOf((*xForwardedForClientIPParser)(nil)))
-
-	p, err = getRealClientIPParser("X-REAL-IP")
-	assert.Nil(t, err)
-	assert.Equal(t, reflect.TypeOf(p), reflect.TypeOf((*xForwardedForClientIPParser)(nil)))
-	if xp, ok := p.(*xForwardedForClientIPParser); ok {
-		assert.Equal(t, xp.header, http.CanonicalHeaderKey("X-Real-Ip"))
-	} else {
-		panic("Type of local variable p changed without assignment?")
+	tests := []struct {
+		header     string
+		errString  string
+		parserType reflect.Type
+	}{
+		{"X-Forwarded-For", "", forwardedForType},
+		{"X-REAL-IP", "", forwardedForType},
+		{"x-proxyuser-ip", "", forwardedForType},
+		{"", "The HTTP header key () is either invalid or unsupported", nil},
+		{"Forwarded", "The HTTP header key (Forwarded) is either invalid or unsupported", nil},
+		{"2#* @##$$:kd", "The HTTP header key (2#* @##$$:kd) is either invalid or unsupported", nil},
 	}
 
-	p, err = getRealClientIPParser("x-proxyuser-ip")
-	assert.Nil(t, err)
-	assert.Equal(t, reflect.TypeOf(p), reflect.TypeOf((*xForwardedForClientIPParser)(nil)))
+	for _, test := range tests {
+		p, err := getRealClientIPParser(test.header)
 
-	p, err = getRealClientIPParser("")
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), "The HTTP header key () is either invalid or unsupported")
-	assert.Nil(t, p)
+		if test.errString == "" {
+			assert.Nil(t, err)
+		} else {
+			assert.NotNil(t, err)
+			assert.Equal(t, err.Error(), test.errString)
+		}
 
-	p, err = getRealClientIPParser("Forwarded")
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), "The HTTP header key (Forwarded) is either invalid or unsupported")
-	assert.Nil(t, p)
+		if test.parserType == nil {
+			assert.Nil(t, p)
+		} else {
+			assert.NotNil(t, p)
+			assert.Equal(t, reflect.TypeOf(p), test.parserType)
+		}
 
-	p, err = getRealClientIPParser("2#* @##$$:kd")
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), "The HTTP header key (2#* @##$$:kd) is either invalid or unsupported")
-	assert.Nil(t, p)
+		if xp, ok := p.(*xForwardedForClientIPParser); ok {
+			assert.Equal(t, xp.header, http.CanonicalHeaderKey(test.header))
+		}
+	}
 }
 
 func TestXForwardedForClientIPParser(t *testing.T) {
-	var p *xForwardedForClientIPParser
-	var ip net.IP
-	var expectedIPString string
-	var err error
-	var h http.Header
+	p := &xForwardedForClientIPParser{header: http.CanonicalHeaderKey("X-Forwarded-For")}
 
-	p = &xForwardedForClientIPParser{header: http.CanonicalHeaderKey("X-Forwarded-For")}
+	tests := []struct {
+		headerValue string
+		errString   string
+		expectedIP  net.IP
+	}{
+		{"", "", nil},
+		{"1.2.3.4", "", net.ParseIP("1.2.3.4")},
+		{"10::23", "", net.ParseIP("10::23")},
+		{"::1", "", net.ParseIP("::1")},
+		{"[::1]:1234", "", net.ParseIP("::1")},
+		{"10.0.10.11:1234", "", net.ParseIP("10.0.10.11")},
+		{"192.168.10.50, 10.0.0.1, 1.2.3.4", "", net.ParseIP("192.168.10.50")},
+		{"nil", "Unable to parse IP (nil) from X-Forwarded-For header", nil},
+		{"10000.10000.10000.10000", "Unable to parse IP (10000.10000.10000.10000) from X-Forwarded-For header", nil},
+	}
 
-	h = http.Header{}
-	ip, err = p.GetRealClientIP(h)
-	assert.Nil(t, err)
-	assert.Nil(t, ip)
+	for _, test := range tests {
+		h := http.Header{}
+		h.Add("X-Forwarded-For", test.headerValue)
 
-	h = http.Header{}
-	h.Add("X-Forwarded-For", "")
-	ip, err = p.GetRealClientIP(h)
-	assert.Nil(t, err)
-	assert.Nil(t, ip)
+		ip, err := p.GetRealClientIP(h)
 
-	h = http.Header{}
-	expectedIPString = "1.2.3.4"
-	h.Add("X-Forwarded-For", expectedIPString)
-	ip, err = p.GetRealClientIP(h)
-	assert.Nil(t, err)
-	assert.NotNil(t, ip)
-	assert.Equal(t, ip, net.ParseIP(expectedIPString))
+		if test.errString == "" {
+			assert.Nil(t, err)
+		} else {
+			assert.NotNil(t, err)
+			assert.Equal(t, err.Error(), test.errString)
+		}
 
-	h = http.Header{}
-	expectedIPString = "10::23"
-	h.Add("X-Forwarded-For", expectedIPString)
-	ip, err = p.GetRealClientIP(h)
-	assert.Nil(t, err)
-	assert.NotNil(t, ip)
-	assert.Equal(t, ip, net.ParseIP(expectedIPString))
+		if test.expectedIP == nil {
+			assert.Nil(t, ip)
+		} else {
+			assert.NotNil(t, ip)
+			assert.Equal(t, ip, test.expectedIP)
+		}
+	}
+}
 
-	h = http.Header{}
-	expectedIPString = "::1"
-	h.Add("X-Forwarded-For", fmt.Sprintf("[%s]:1234", expectedIPString))
-	ip, err = p.GetRealClientIP(h)
-	assert.Nil(t, err)
-	assert.NotNil(t, ip)
-	assert.Equal(t, ip, net.ParseIP(expectedIPString))
+func TestXForwardedForClientIPParserIgnoresOthers(t *testing.T) {
+	p := &xForwardedForClientIPParser{header: http.CanonicalHeaderKey("X-Forwarded-For")}
 
-	h = http.Header{}
-	expectedIPString = "10.0.10.11"
-	h.Add("X-Forwarded-For", fmt.Sprintf("%s:1234", expectedIPString))
-	ip, err = p.GetRealClientIP(h)
-	assert.Nil(t, err)
-	assert.NotNil(t, ip)
-	assert.Equal(t, ip, net.ParseIP(expectedIPString))
-
-	h = http.Header{}
-	expectedIPString = "192.168.10.50"
+	h := http.Header{}
+	expectedIPString := "192.168.10.50"
 	h.Add("X-Real-IP", "10.0.0.1")
 	h.Add("X-ProxyUser-IP", "10.0.0.1")
 	h.Add("X-Forwarded-For", expectedIPString)
-	ip, err = p.GetRealClientIP(h)
+	ip, err := p.GetRealClientIP(h)
 	assert.Nil(t, err)
 	assert.NotNil(t, ip)
 	assert.Equal(t, ip, net.ParseIP(expectedIPString))
-
-	h = http.Header{}
-	expectedIPString = "192.168.10.50"
-	h.Add("X-Forwarded-For", strings.Join([]string{expectedIPString, "10.0.0.1", "1.2.3.4"}, ", "))
-	ip, err = p.GetRealClientIP(h)
-	assert.Nil(t, err)
-	assert.NotNil(t, ip)
-	assert.Equal(t, ip, net.ParseIP(expectedIPString))
-
-	h = http.Header{}
-	h.Add("X-Forwarded-For", "nil")
-	ip, err = p.GetRealClientIP(h)
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), "Unable to parse IP (nil) from X-Forwarded-For header")
-	assert.Nil(t, ip)
-
-	h = http.Header{}
-	h.Add("X-Forwarded-For", "10000.10000.10000.10000")
-	ip, err = p.GetRealClientIP(h)
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), "Unable to parse IP (10000.10000.10000.10000) from X-Forwarded-For header")
-	assert.Nil(t, ip)
 }

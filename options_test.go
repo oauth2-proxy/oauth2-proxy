@@ -331,11 +331,13 @@ func TestRealClientIPHeader(t *testing.T) {
 	var o *Options
 	var err error
 
+	// Ensure simple use case works.
 	o = testOptions()
 	o.RealClientIPHeader = "X-Forwarded-For"
 	assert.Equal(t, nil, o.Validate())
 	assert.NotNil(t, o.realClientIPParser)
 
+	// Ensure unknown header format proces an error.
 	o = testOptions()
 	o.RealClientIPHeader = "Forwarded"
 	err = o.Validate()
@@ -346,6 +348,7 @@ func TestRealClientIPHeader(t *testing.T) {
 		err.Error())
 	assert.Nil(t, o.realClientIPParser)
 
+	// Ensure invalid header format produces an error.
 	o = testOptions()
 	o.RealClientIPHeader = "!934invalidheader-23:"
 	err = o.Validate()
