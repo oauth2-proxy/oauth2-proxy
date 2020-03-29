@@ -29,6 +29,8 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `-azure-tenant string` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
 | `-basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
+| `-claim-authorization` | string | define a claim-based authorization rule (may be repeated) | |
+| `-claim-authorizations-file` | string | read claim-based authorization rules from a file (one per line) | |
 | `-client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
 | `-client-secret` | string | the OAuth Client Secret | |
 | `-client-secret-file` | string | the file with OAuth Client Secret | |
@@ -243,6 +245,40 @@ Available variables for standard logging:
 | Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
 | File | main.go:40 | The file and line number of the logging statement. |
 | Message | HTTP: listening on 127.0.0.1:4180 | The details of the log statement. |
+
+## Using claim-based Authorization to restrict access
+
+If you would like to restrict the requests that oauth2_proxy allows after authentication is successful, it is possible to configure additional authorization. The most basic level of this uses the EMAIL_DOMAIN to pattern match the authenticated user's email address, however, this is often not flexible enough and it is unable to use any other information about the user to restrict access. For more flexibility, it's possible to define rules that will inspect a valid ID token's "claims" object for one or more matching criteria.
+
+To configure claim-based authorization, use the `-claim-authorization` or `-claim-authorizations-file` config option(s). The first will define one rule per instance (or as a list if loading from a config file or environment variables), and the latter will load them from a specified file, one per line. Empty values or ones that start with a '#' as the first non-whitespace character will be ignored. If no rules have been specified, no claim-based authorization will be performed.
+
+When using `-claim-authoriation` (or one of its variants), rules are specified using [JMESpath](https://jmespath.org) expressions and will be evaluated for ["truthiness"](https://developer.mozilla.org/en-US/docs/Glossary/Truthy), in order, and *if any rules evaluates to "true", the request will be considered authorized ano no further rules will be checked*. If after scanning all of the configured rules no match is found, the request will be denied with a "403 Forbidden" response.
+
+> Note: This is evaluated after the existing EMAIL_DOMAIN or any provider's specific group-based authorization mechanism, so it is possible one of those other systems may deny the request, despite any rules you configure with this system.
+
+### Examples of JMESpath expressions
+
+* Match an email domain (same functionality as `-email-domain` config option, but uses claims to do it):
+  ```
+  # Match some email domains (matches any of the below)
+  ends_with(email, '@somehost.com')
+  ends_with(email, '@anotherhost.com')
+  ```
+
+* Match a group membership (ID token must be configured to return "groups" claims):
+  ```
+  contains(groups, 'editor')
+  contains(groups, 'admin')
+  contains(groups, 'viewers')
+  ```
+
+* Any arbitrary claim can be used, as long as it's part of the ID token:
+  ```
+  shirt == 'red'
+  ```
+
+For more information on what these types of expressions can do, please see the [JMESpath tutorial](https://jmespath.org/tutorial.html) for lots of examples and a full language specification.
+
 
 ## <a name="nginx-auth-request"></a>Configuring for use with the Nginx `auth_request` directive
 

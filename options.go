@@ -104,7 +104,7 @@ type Options struct {
 	Scope                            string   `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
 	Prompt                           string   `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
 	ApprovalPrompt                   string   `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
-	ClaimAuthorizations              []string `flag:"claim-authorizations" cfg:"claim_authorizations" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATIONS"`
+	ClaimAuthorizations              []string `flag:"claim-authorization" cfg:"claim_authorizations" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATIONS"`
 	ClaimAuthorizationsFile          string   `flag:"claim-authorizations-file" cfg:"claim_authorizations_file" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATIONS_FILE"`
 
 	// Configuration values for logging
