@@ -5,8 +5,8 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-if [ -z "${BASH_VERSINFO}" ] || [ -z "${BASH_VERSINFO[0]}" ] || [ ${BASH_VERSINFO[0]} -lt 4 ]; then 
-  echo "This script requires Bash version >= 4"; exit 1; 
+if [ -z "${BASH_VERSINFO}" ] || [ -z "${BASH_VERSINFO[0]}" ] || [ ${BASH_VERSINFO[0]} -lt 4 ]; then
+  echo "This script requires Bash version >= 4"; exit 1;
 fi
 
 declare -A tools=()
@@ -81,7 +81,7 @@ check_for() {
 check_go_version() {
   echo -n "Checking go version... "
   GO_VERSION=$(${tools[go]} version | ${tools[awk]} '{where = match($0, /[0-9]\.[0-9]+\.[0-9]*/); if (where != 0) print substr($0, RSTART, RLENGTH)}')
-  vercomp $GO_VERSION 1.12
+  vercomp $GO_VERSION 1.14
   case $? in
     0) ;&
     1)
@@ -91,7 +91,7 @@ check_go_version() {
       ;;
     2)
       printf "${RED}"
-      echo "$GO_VERSION < 1.12"
+      echo "$GO_VERSION < 1.14"
       exit 1
       ;;
   esac

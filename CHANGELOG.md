@@ -3,9 +3,24 @@
 ## Release Hightlights
 
 ## Important Notes
+
+## Breaking Changes
+
+## Changes since v5.1.0
+
+# v5.1.0
+
+## Release Hightlights
+- Bump to Go 1.14
+- Reduced number of Google API requests for group validation
+- Support for Redis Cluster
+- Support for overriding hosts in hosts file
+
+## Important Notes
 - [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp)
 
 ## Breaking Changes
+N/A
 
 ## Changes since v5.0.0
 

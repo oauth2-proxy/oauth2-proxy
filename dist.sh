@@ -7,10 +7,10 @@ if [[ -z ${BINARY} ]] || [[ -z ${VERSION} ]]; then
 	exit 1
 fi
 
-# Check for Go version 1.13.*
+# Check for Go version 1.14.*
 GO_VERSION=$(go version | awk '{print $3}')
-if [[ ! "${GO_VERSION}" =~ ^go1.13.* ]]; then
-	echo "Go version must be >= go1.13"
+if [[ ! "${GO_VERSION}" =~ ^go1.14.* ]]; then
+	echo "Go version must be >= go1.14"
 	exit 1
 fi
 
