@@ -6,7 +6,18 @@
 
 ## Breaking Changes
 
+- Migration from Pusher to independent org may have introduced breaking changes for your environment.
+  - See the changes listed below for PR [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) for full details
+  - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
+
 ## Changes since v5.1.0
+
+- [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) Migrate to oauth2-proxy/oauth2-proxy (@JoelSpeed)
+  - Project renamed from `pusher/oauth2_proxy` to `oauth2-proxy`
+  - Move Go import path from `github.com/pusher/oauth2_proxy` to `github.com/oauth2-proxy/oauth2-proxy`
+  - Remove Pusher Cloud Team from CODEOWNERS
+  - Release images moved to `quay.io/oauth2-proxy/oauth2-proxy`
+  - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
 
 # v5.1.0
 

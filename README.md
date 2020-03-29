@@ -12,6 +12,9 @@ to validate accounts by email, domain or group.
 Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork.
 A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 
+**Note:** This project was formerly hosted as `pusher/oauth2_proxy` but has been renamed as of 29/03/2020 to `oauth2-proxy/oauth2-proxy`.
+Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-proxy` and binaries wiil been named `oauth2-proxy`.
+
 ![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
 
 ## Installation
