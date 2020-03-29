@@ -20,7 +20,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 
 ### Sign out
 
-To sign the user out, redirect them to `/oauth2/sign_out`. This endpoint only removes oauth2_proxy's own cookies, i.e. the user is still logged in with the authentication provider and may automatically re-login when accessing the application again. You will also need to redirect the user to the authentication provider's sign out page afterwards using the `rd` query parameter, i.e. redirect the user to something like (notice the url-encoding!):
+To sign the user out, redirect them to `/oauth2/sign_out`. This endpoint only removes oauth2-proxy's own cookies, i.e. the user is still logged in with the authentication provider and may automatically re-login when accessing the application again. You will also need to redirect the user to the authentication provider's sign out page afterwards using the `rd` query parameter, i.e. redirect the user to something like (notice the url-encoding!):
 
 ```
 /oauth2/sign_out?rd=https%3A%2F%2Fmy-oidc-provider.example.com%2Fsign_out_page
@@ -33,7 +33,7 @@ GET /oauth2/sign_out HTTP/1.1
 X-Auth-Request-Redirect: https://my-oidc-provider/sign_out_page
 ...
 ```
-    
+
 (The "sign_out_page" should be the [`end_session_endpoint`](https://openid.net/specs/openid-connect-session-1_0.html#rfc.section.2.1) from [the metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) if your OIDC provider supports Session Management and Discovery.)
 
 BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` in the example) must be added to the [`-whitelist-domain`](configuration) configuration option otherwise the redirect will be ignored.

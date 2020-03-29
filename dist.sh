@@ -28,10 +28,10 @@ for ARCH in "${ARCHS[@]}"; do
 	# Create architecture specific binaries
 	if [[ ${GO_ARCH} == "armv6" ]]; then
 		GO111MODULE=on GOOS=${GO_OS} GOARCH=arm GOARM=6 CGO_ENABLED=0 go build -ldflags="-X main.VERSION=${VERSION}" \
-			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/oauth2-proxy/oauth2-proxy
 	else
 		GO111MODULE=on GOOS=${GO_OS} GOARCH=${GO_ARCH} CGO_ENABLED=0 go build -ldflags="-X main.VERSION=${VERSION}" \
-			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/oauth2-proxy/oauth2-proxy
 	fi
 
 	cd release

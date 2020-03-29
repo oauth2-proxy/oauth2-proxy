@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
 // SessionState is used to store information about the currently authenticated user session
