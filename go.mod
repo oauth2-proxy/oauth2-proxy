@@ -1,4 +1,4 @@
-module github.com/pusher/oauth2_proxy
+module github.com/oauth2-proxy/oauth2-proxy
 
 go 1.14
 

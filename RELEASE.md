@@ -1,6 +1,6 @@
 # Release
 
-Here's how OAuth2_Proxy releases are created.
+Here's how OAuth2 Proxy releases are created.
 
 ## Schedule
 
@@ -44,4 +44,4 @@ Note this uses `v4.1.0` as an example release number.
   ```
   Note: Ensure the docker tags don't include `-dirty`. This means you have uncommitted changes.
 
-12. Verify everything looks good at [quay](https://quay.io/repository/pusher/oauth2_proxy?tag=latest&tab=tags) and [github](https://github.com/pusher/oauth2_proxy/releases)
+12. Verify everything looks good at [quay](https://quay.io/repository/oauth2-proxy/oauth2-proxy?tag=latest&tab=tags) and [github](https://github.com/oauth2-proxy/oauth2-proxy/releases)

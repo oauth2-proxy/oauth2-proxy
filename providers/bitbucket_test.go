@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )
 
 func testBitbucketProvider(hostname, team string, repository string) *BitbucketProvider {

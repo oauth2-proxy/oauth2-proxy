@@ -1,12 +1,12 @@
 #
-# Autocompletion for oauth2_proxy
+# Autocompletion for oauth2-proxy
 #
 # To install this, copy/move this file to /etc/bash.completion.d/
-# or add a line to your ~/.bashrc | ~/.bash_profile that says ". /path/to/oauth2_proxy/contrib/oauth2_proxy_autocomplete.sh"
+# or add a line to your ~/.bashrc | ~/.bash_profile that says ". /path/to/oauth2-proxy/contrib/oauth2-proxy_autocomplete.sh"
 #
 
 _oauth2_proxy() {
-	_oauth2_proxy_commands=$(oauth2_proxy -h 2>&1 | sed -n '/^\s*-/s/ \+/ /gp' | awk '{print $1}' | tr '\n' ' ')
+	_oauth2_proxy_commands=$(oauth2-proxy -h 2>&1 | sed -n '/^\s*-/s/ \+/ /gp' | awk '{print $1}' | tr '\n' ' ')
 	local cur prev
 	COMPREPLY=()
 	cur="${COMP_WORDS[COMP_CWORD]}"
@@ -27,4 +27,4 @@ _oauth2_proxy() {
 	COMPREPLY=( $(compgen -W "${_oauth2_proxy_commands}" -- ${cur}) )
 	return 0;
 }
-complete -F _oauth2_proxy oauth2_proxy
+complete -F _oauth2_proxy oauth2-proxy
