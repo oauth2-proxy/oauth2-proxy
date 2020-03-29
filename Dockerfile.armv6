@@ -1,7 +1,7 @@
 FROM golang:1.14-buster AS builder
 
 # Download tools
-RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.6
+RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/pusher/oauth2_proxy
