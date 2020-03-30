@@ -151,14 +151,18 @@ func (v *JMESValidator) AddRule(jmespathExpr string) (bool, error) {
 
 	rule := strings.TrimSpace(jmespathExpr)
 	if rule != "" && !strings.HasPrefix(rule, "#") {
-		if compiled, err := jmespath.Compile(rule); err != nil {
+		var compiled *jmespath.JMESPath
+		var err error
+
+		if compiled, err = jmespath.Compile(rule); err != nil {
 			return false, fmt.Errorf("invalid claim assertion (%q): %v", rule, err)
-		} else {
-			// Invalidate the hash if it had been requested yet
-			v.rulesHash = nil
-			v.rules = append(v.rules, rule)
-			v.compiledRules = append(v.compiledRules, compiled)
 		}
+
+		// Invalidate the hash if it had been requested yet
+		v.rulesHash = nil
+		v.rules = append(v.rules, rule)
+		v.compiledRules = append(v.compiledRules, compiled)
+
 		return true, nil
 	}
 

@@ -904,7 +904,8 @@ func (p *OAuthProxy) ValidateAuthorizedClaims(s *sessionsapi.SessionState, saveS
 	if digest, err := p.createAuthzDigest(s, authzResult); err != nil {
 		// Should never happen?
 		logger.Printf("error creating authz digest: %v", err)
-		return false, "digest creation failed"
+		authzResult = authZFail
+		reason = "digest creation failed"
 	} else {
 		s.Authz = string(authzResult) + base64.StdEncoding.EncodeToString(digest)
 		// Flag session as needing to be saved in cookie (regardless of pass or fail).
