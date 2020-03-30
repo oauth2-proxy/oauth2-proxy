@@ -909,8 +909,8 @@ func (p *OAuthProxy) ValidateAuthorizedClaims(s *sessionsapi.SessionState, saveS
 		s.Authz = string(authzResult) + base64.StdEncoding.EncodeToString(digest)
 		// Flag session as needing to be saved in cookie (regardless of pass or fail).
 		*saveSession = true
-		return authzResult == authZPass, reason
 	}
+	return authzResult == authZPass, reason
 }
 
 // AuthenticateOnly checks whether the user is currently logged in

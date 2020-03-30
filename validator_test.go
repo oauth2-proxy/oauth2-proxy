@@ -227,7 +227,7 @@ func TestTruthiness(t *testing.T) {
 	assert.True(t, truthy([]string{}))
 	assert.True(t, truthy([]string{"a"}))
 	assert.True(t, truthy([]int{}))
-	assert.True(t, truthy([]Obj{Obj{}}))
+	assert.True(t, truthy([]Obj{{}}))
 	assert.True(t, truthy(make([]interface{}, 0)))
 	assert.True(t, truthy(make([]interface{}, 1)))
 	assert.True(t, truthy(make(map[string]interface{}, 1)))
