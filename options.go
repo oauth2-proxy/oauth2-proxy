@@ -21,6 +21,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -89,20 +90,21 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider                         string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
-	ProviderName                     string `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
-	OIDCIssuerURL                    string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
-	InsecureOIDCAllowUnverifiedEmail bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
-	SkipOIDCDiscovery                bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
-	OIDCJwksURL                      string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
-	LoginURL                         string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
-	RedeemURL                        string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
-	ProfileURL                       string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
-	ProtectedResource                string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
-	ValidateURL                      string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
-	Scope                            string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
-	Prompt                           string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
-	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
+	Provider                           string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
+	ProviderName                       string `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
+	OIDCIssuerURL                      string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
+	InsecureOIDCAllowUnverifiedEmail   bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
+	InsecureOIDCSkipIssuerVerification bool   `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification" env:"OAUTH2_PROXY_INSECURE_OIDC_SKIP_ISSUER_VERIFICATION"`
+	SkipOIDCDiscovery                  bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
+	OIDCJwksURL                        string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
+	LoginURL                           string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
+	RedeemURL                          string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
+	ProfileURL                         string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
+	ProtectedResource                  string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
+	ValidateURL                        string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
+	Scope                              string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
+	Prompt                             string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
+	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
@@ -247,6 +249,44 @@ func (o *Options) Validate() error {
 
 		ctx := context.Background()
 
+		if o.InsecureOIDCSkipIssuerVerification && !o.SkipOIDCDiscovery {
+			// go-oidc doesn't let us pass bypass the issuer check this in the oidc.NewProvider call
+			// (which uses discovery to get the URLs), so we'll do a quick check ourselves and if
+			// we get the URLs, we'll just use the non-discovery path.
+
+			logger.Printf("Performing OIDC Discovery...")
+
+			if req, err := http.NewRequest("GET", strings.TrimSuffix(o.OIDCIssuerURL, "/")+"/.well-known/openid-configuration", nil); err == nil {
+				if body, err := requests.Request(req); err == nil {
+
+					// Prefer manually configured URLs. It's a bit unclear
+					// why you'd be doing discovery and also providing the URLs
+					// explicitly though...
+					if o.LoginURL == "" {
+						o.LoginURL = body.Get("authorization_endpoint").MustString()
+					}
+
+					if o.RedeemURL == "" {
+						o.RedeemURL = body.Get("token_endpoint").MustString()
+					}
+
+					if o.OIDCJwksURL == "" {
+						o.OIDCJwksURL = body.Get("jwks_uri").MustString()
+					}
+
+					if o.ProfileURL == "" {
+						o.ProfileURL = body.Get("userinfo_endpoint").MustString()
+					}
+
+					o.SkipOIDCDiscovery = true
+				} else {
+					logger.Printf("error: failed to discover OIDC configuration: %v", err)
+				}
+			} else {
+				logger.Printf("error: failed parsing OIDC discovery URL: %v", err)
+			}
+		}
+
 		// Construct a manual IDTokenVerifier from issuer URL & JWKS URI
 		// instead of metadata discovery if we enable -skip-oidc-discovery.
 		// In this case we need to make sure the required endpoints for
@@ -263,16 +303,24 @@ func (o *Options) Validate() error {
 			}
 			keySet := oidc.NewRemoteKeySet(ctx, o.OIDCJwksURL)
 			o.oidcVerifier = oidc.NewVerifier(o.OIDCIssuerURL, keySet, &oidc.Config{
-				ClientID: o.ClientID,
+				ClientID:        o.ClientID,
+				SkipIssuerCheck: o.InsecureOIDCSkipIssuerVerification,
 			})
 		} else {
 			// Configure discoverable provider data.
 			provider, err := oidc.NewProvider(ctx, o.OIDCIssuerURL)
 			if err != nil {
+				// go-oidc doesn't let us pass bypass the issuer check this in the oidc.NewProvider call,
+				// so we'll catch this case and just warn that you have to manually provide it instead of
+				// rely on discovery.
+				if o.InsecureOIDCSkipIssuerVerification && strings.HasPrefix(err.Error(), "oidc: issuer did not match the issuer returned by provider") {
+					logger.Printf("Your have specified InsecureOIDCSkipIssuerVerification, but OIDC discovery is not currently compatible with this setting. Please also use SkipOIDCDiscovery and set the requisite URLs manually to use this option.")
+				}
 				return err
 			}
 			o.oidcVerifier = provider.Verifier(&oidc.Config{
-				ClientID: o.ClientID,
+				ClientID:        o.ClientID,
+				SkipIssuerCheck: o.InsecureOIDCSkipIssuerVerification,
 			})
 
 			o.LoginURL = provider.Endpoint().AuthURL
