@@ -7,6 +7,7 @@ import (
 	"github.com/go-redis/redis/v7"
 )
 
+// Client is wrapper interface for redis.Client and redis.ClusterClient.
 type Client interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
