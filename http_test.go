@@ -1,9 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"sync"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -155,4 +160,28 @@ func TestRedirectNotWhenHTTPS(t *testing.T) {
 	}
 
 	assert.Equal(t, http.StatusOK, res.StatusCode, "status code should be %d, got: %d", http.StatusOK, res.StatusCode)
+}
+
+func TestGracefulShutdown(t *testing.T) {
+	signals := []syscall.Signal{syscall.SIGINT, syscall.SIGTERM}
+
+	for i, signal := range signals {
+		name := fmt.Sprintf("%s", signal)
+		t.Run(name, func(t *testing.T) {
+			opts := NewOptions()
+			opts.HTTPAddress = fmt.Sprintf(":%d", 4180+i)
+			srv := Server{Handler: http.DefaultServeMux, Opts: opts}
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				srv.ServeHTTP()
+			}()
+			time.Sleep(500 * time.Millisecond)
+			if err := syscall.Kill(os.Getpid(), signal); err != nil {
+				t.Fatal(err)
+			}
+			wg.Wait()
+		})
+	}
 }

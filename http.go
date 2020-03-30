@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
@@ -90,13 +95,7 @@ func (s *Server) ServeHTTP() {
 		logger.Fatalf("FATAL: listen (%s, %s) failed - %s", networkType, listenAddr, err)
 	}
 	logger.Printf("HTTP: listening on %s", listenAddr)
-
-	server := &http.Server{Handler: s.Handler}
-	err = server.Serve(listener)
-	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		logger.Printf("ERROR: http.Serve() - %s", err)
-	}
-
+	s.serve(listener)
 	logger.Printf("HTTP: closing %s", listener.Addr())
 }
 
@@ -125,14 +124,33 @@ func (s *Server) ServeHTTPS() {
 	logger.Printf("HTTPS: listening on %s", ln.Addr())
 
 	tlsListener := tls.NewListener(tcpKeepAliveListener{ln.(*net.TCPListener)}, config)
-	srv := &http.Server{Handler: s.Handler}
-	err = srv.Serve(tlsListener)
-
-	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		logger.Printf("ERROR: https.Serve() - %s", err)
-	}
-
+	s.serve(tlsListener)
 	logger.Printf("HTTPS: closing %s", tlsListener.Addr())
+}
+
+func (s *Server) serve(listener net.Listener) {
+	srv := &http.Server{Handler: s.Handler}
+
+	// See https://golang.org/pkg/net/http/#Server.Shutdown
+	idleConnsClosed := make(chan struct{})
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		s := <-sigint
+		logger.Printf("caught signal: %s", s)
+
+		// We received an interrupt signal, shut down.
+		if err := srv.Shutdown(context.Background()); err != nil {
+			// Error from closing listeners, or context timeout:
+			logger.Printf("HTTP server Shutdown: %v", err)
+		}
+		close(idleConnsClosed)
+	}()
+
+	err := srv.Serve(listener)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("ERROR: http.Serve() - %s", err)
+	}
 }
 
 // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
