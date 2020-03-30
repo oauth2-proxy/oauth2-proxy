@@ -11,16 +11,16 @@ import (
 	"time"
 
 	miniredis "github.com/alicebob/miniredis/v2"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	cookiesapi "github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
+	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pusher/oauth2_proxy/pkg/apis/options"
-	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	cookiesapi "github.com/pusher/oauth2_proxy/pkg/cookies"
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
-	"github.com/pusher/oauth2_proxy/pkg/sessions"
-	sessionscookie "github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
-	"github.com/pusher/oauth2_proxy/pkg/sessions/redis"
-	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
 func TestSessionStore(t *testing.T) {

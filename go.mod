@@ -1,6 +1,6 @@
-module github.com/pusher/oauth2_proxy
+module github.com/oauth2-proxy/oauth2-proxy
 
-go 1.13
+go 1.14
 
 require (
 	github.com/BurntSushi/toml v0.3.1

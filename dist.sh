@@ -7,10 +7,10 @@ if [[ -z ${BINARY} ]] || [[ -z ${VERSION} ]]; then
 	exit 1
 fi
 
-# Check for Go version 1.13.*
+# Check for Go version 1.14.*
 GO_VERSION=$(go version | awk '{print $3}')
-if [[ ! "${GO_VERSION}" =~ ^go1.13.* ]]; then
-	echo "Go version must be >= go1.13"
+if [[ ! "${GO_VERSION}" =~ ^go1.14.* ]]; then
+	echo "Go version must be >= go1.14"
 	exit 1
 fi
 
@@ -28,10 +28,10 @@ for ARCH in "${ARCHS[@]}"; do
 	# Create architecture specific binaries
 	if [[ ${GO_ARCH} == "armv6" ]]; then
 		GO111MODULE=on GOOS=${GO_OS} GOARCH=arm GOARM=6 CGO_ENABLED=0 go build -ldflags="-X main.VERSION=${VERSION}" \
-			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/oauth2-proxy/oauth2-proxy
 	else
 		GO111MODULE=on GOOS=${GO_OS} GOARCH=${GO_ARCH} CGO_ENABLED=0 go build -ldflags="-X main.VERSION=${VERSION}" \
-			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/pusher/oauth2_proxy
+			-o release/${BINARY}-${VERSION}.${ARCH}.${GO_VERSION}/${BINARY} github.com/oauth2-proxy/oauth2-proxy
 	fi
 
 	cd release
