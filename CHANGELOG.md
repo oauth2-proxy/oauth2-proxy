@@ -4,6 +4,8 @@
 
 ## Important Notes
 
+- [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Responses to endpoints with a proxy prefix will now return headers for preventing browser caching.
+
 ## Breaking Changes
 
 - Migration from Pusher to independent org may have introduced breaking changes for your environment.
@@ -12,6 +14,7 @@
 
 ## Changes since v5.1.0
 
+- [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Prevent browser caching during auth flow (@johejo)
 - [#468](https://github.com/oauth2-proxy/oauth2-proxy/pull/468) Implement graceful shutdown and propagate request context (@johejo)
 - [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) Migrate to oauth2-proxy/oauth2-proxy (@JoelSpeed)
   - Project renamed from `pusher/oauth2_proxy` to `oauth2-proxy`

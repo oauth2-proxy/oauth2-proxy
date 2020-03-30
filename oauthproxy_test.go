@@ -1524,3 +1524,35 @@ func TestFindJwtBearerToken(t *testing.T) {
 
 	fmt.Printf("%s", token)
 }
+
+func Test_prepareNoCache(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		prepareNoCache(w)
+	})
+	mux := http.NewServeMux()
+	mux.Handle("/", handler)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	mux.ServeHTTP(rec, req)
+
+	for k, v := range noCacheHeaders {
+		assert.Equal(t, rec.Header().Get(k), v)
+	}
+}
+
+func Test_hasProxyPrefix(t *testing.T) {
+	tests := []struct {
+		path, prefix string
+		want         bool
+	}{
+		{"/oauth2/start", "/oauth2", true},
+		{"/other", "/oauth2", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			got := hasProxyPrefix(tt.path, tt.prefix)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

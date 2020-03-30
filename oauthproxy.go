@@ -633,45 +633,28 @@ func getRemoteAddr(req *http.Request) (s string) {
 	return
 }
 
-// Variables for nocache was ported from https://github.com/go-chi/chi/blob/master/middleware/nocache.go
-
-// Unix epoch time
-var epoch = time.Unix(0, 0).Format(time.RFC1123)
-
-// Taken from https://github.com/mytrile/nocache
+// See https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=en
 var noCacheHeaders = map[string]string{
-	"Expires":         epoch,
-	"Cache-Control":   "no-cache, no-store, no-transform, must-revalidate, private, max-age=0",
-	"Pragma":          "no-cache",
-	"X-Accel-Expires": "0",
-}
-
-var etagHeaders = []string{
-	"ETag",
-	"If-Modified-Since",
-	"If-Match",
-	"If-None-Match",
-	"If-Range",
-	"If-Unmodified-Since",
+	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
+	"Cache-Control":   "no-cache, no-store, must-revalidate, max-age=0",
+	"X-Accel-Expires": "0", // https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
 }
 
 // prepareNoCache prepares headers for preventing browser caching.
-func prepareNoCache(w http.ResponseWriter, r *http.Request) {
-	// Delete any ETag headers that may have been set
-	for _, v := range etagHeaders {
-		if r.Header.Get(v) != "" {
-			r.Header.Del(v)
-		}
-	}
+func prepareNoCache(w http.ResponseWriter) {
 	// Set NoCache headers
 	for k, v := range noCacheHeaders {
 		w.Header().Set(k, v)
 	}
 }
 
+func hasProxyPrefix(path, prefix string) bool {
+	return strings.HasPrefix(path, prefix)
+}
+
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
-		prepareNoCache(rw, req)
+	if hasProxyPrefix(req.URL.Path, p.ProxyPrefix) {
+		prepareNoCache(rw)
 	}
 
 	switch path := req.URL.Path; {
