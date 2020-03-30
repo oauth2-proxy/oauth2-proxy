@@ -266,22 +266,22 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 	return ss, nil
 }
 
-func (ss *SessionState) RawClaims() map[string]interface{} {
-	return ss.rawClaims
+func (s *SessionState) RawClaims() map[string]interface{} {
+	return s.rawClaims
 }
 
-func (ss *SessionState) RawClaimsValid() bool {
-	return ss.rawClaimsValid
+func (s *SessionState) RawClaimsValid() bool {
+	return s.rawClaimsValid
 }
 
-func (ss *SessionState) SetRawClaims(rawClaims map[string]interface{}) {
-	ss.rawClaims = rawClaims
-	ss.rawClaimsValid = true
+func (s *SessionState) SetRawClaims(rawClaims map[string]interface{}) {
+	s.rawClaims = rawClaims
+	s.rawClaimsValid = true
 }
 
-func (ss *SessionState) SetRawClaimsFromIDToken(idToken *oidc.IDToken) (err error) {
-	if err = idToken.Claims(&ss.rawClaims); err == nil {
-		ss.rawClaimsValid = true
+func (s *SessionState) SetRawClaimsFromIDToken(idToken *oidc.IDToken) (err error) {
+	if err = idToken.Claims(&s.rawClaims); err == nil {
+		s.rawClaimsValid = true
 	}
 	return
 }

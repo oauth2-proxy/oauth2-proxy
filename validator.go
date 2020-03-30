@@ -158,8 +158,8 @@ func (v *JMESValidator) AddRule(jmespathExpr string) (bool, error) {
 			v.rulesHash = nil
 			v.rules = append(v.rules, rule)
 			v.compiledRules = append(v.compiledRules, compiled)
-			return true, nil
 		}
+		return true, nil
 	}
 
 	// Not an error, but nothing as added either (empty or commented rule)

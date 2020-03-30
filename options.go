@@ -550,7 +550,7 @@ func parseClaimAuthorizations(o *Options, msgs []string) []string {
 			fileScanner := bufio.NewScanner(file)
 			fileScanner.Split(bufio.ScanLines)
 			for fileScanner.Scan() {
-				lineNo += 1
+				lineNo++
 				line := fileScanner.Text()
 				if _, err := v.AddRule(line); err != nil {
 					msgs = append(msgs, fmt.Sprintf("error in claims authorization file %s:%d: %v", o.ClaimAuthorizationsFile, lineNo, err))
