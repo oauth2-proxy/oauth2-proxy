@@ -252,9 +252,11 @@ If you would like to restrict the requests that oauth2_proxy allows after authen
 
 To configure claim-based authorization, use the `-claim-authorization` or `-claim-authorizations-file` config option(s). The first will define one rule per instance (or as a list if loading from a config file or environment variables), and the latter will load them from a specified file, one per line. Empty values or ones that start with a '#' as the first non-whitespace character will be ignored. If no rules have been specified, no claim-based authorization will be performed.
 
-When using `-claim-authoriation` (or one of its variants), rules are specified using [JMESpath](https://jmespath.org) expressions and will be evaluated for ["truthiness"](https://developer.mozilla.org/en-US/docs/Glossary/Truthy), in order, and *if any rules evaluates to "true", the request will be considered authorized ano no further rules will be checked*. If after scanning all of the configured rules no match is found, the request will be denied with a "403 Forbidden" response.
+When using claim-based authorization, rules are specified using [JMESpath](https://jmespath.org) expressions and will be checked for any ["non-empty"](https://jmespath.org/specification.html#or-expressions) result (note, the integer `0` is true in this case). Rules are evaluated in order, with the rules read from the file coming after any manually specified rule. *If any rule evaluates to "true" (i.e. a non-empty result), the request will be considered authorized and no further rules will be checked*. If after scanning all of the configured rules no match is found, the request will be denied with a "403 Forbidden" response.
 
 > Note: This is evaluated after the existing EMAIL_DOMAIN or any provider's specific group-based authorization mechanism, so it is possible one of those other systems may deny the request, despite any rules you configure with this system.
+
+> Note: If using the environment variable configuration option `OAUTH2_PROXY_CLAIM_AUTHORIZATION`, you can effectively chain expressions using the `||` operator. For example: `contains(groups, 'Group1') || contains(groups, 'Group2')`.
 
 ### Examples of JMESpath expressions
 

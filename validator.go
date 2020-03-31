@@ -4,8 +4,8 @@ import (
 	"crypto"
 	"encoding/csv"
 	"fmt"
-	"math"
 	"os"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"unsafe"
@@ -115,34 +115,44 @@ func (v *JMESValidator) IsEmpty() bool {
 	return len(v.rules) == 0
 }
 
-// truthy() is anything that's not "falsy" (i.e. false, 0, 0.0, "", nil, and NaN)
-// Since this is JSON-centric (intended for checking claims) it follows the rules here:
-//  https://developer.mozilla.org/en-US/docs/Glossary/Truthy
+// truthy() is anything that's not "falsy", or in this case "nothing-y" is probably
+// more accurate. False values are: [], {}, "", `false`, and `nil`. Notably, any
+// numeric value is true (including 0).
+//   https://jmespath.org/specification.html#or-expressions
 func truthy(result interface{}) bool {
+
 	switch v := result.(type) {
-	case int:
-		return v != 0
-	case uint:
-		return v != 0
-	case int32:
-		return v != 0
-	case uint32:
-		return v != 0
-	case int64:
-		return v != 0
-	case uint64:
-		return v != 0
-	case string:
-		return v != ""
-	case float32:
-		return !math.IsNaN(float64(v)) && v != 0.0
-	case float64:
-		return !math.IsNaN(v) && v != 0.0
 	case bool:
 		return v
+	case []interface{}:
+		return len(v) > 0
+	case map[string]interface{}:
+		return len(v) > 0
+	case string:
+		return len(v) > 0
+	case nil:
+		return false
 	}
-	// Notably, [] and {} are truthy. Only nil is falsy.
-	return result != nil
+
+	// go-jmespath does extra validation as well, we should keep parity
+	rv := reflect.ValueOf(result)
+	switch rv.Kind() {
+	case reflect.Struct:
+		// Structs are not the same as an empty map (i.e. they are "something"
+		// even if all 0's of something), thus true here.
+		return true
+	case reflect.Slice, reflect.Map:
+		return rv.Len() > 0
+	case reflect.Ptr:
+		if rv.IsNil() {
+			return false
+		}
+		// If a pointer, check the pointed at value.
+		elem := rv.Elem()
+		return truthy(elem.Interface())
+	}
+
+	return true
 }
 
 func (v *JMESValidator) AddRule(jmespathExpr string) (bool, error) {

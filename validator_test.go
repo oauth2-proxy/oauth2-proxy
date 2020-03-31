@@ -222,17 +222,19 @@ func TestTruthiness(t *testing.T) {
 		foo int
 	}
 
-	// https://developer.mozilla.org/en-US/docs/Glossary/Truthy
+	mm := make(map[string]interface{})
+	mm["foo"] = 1
+
+	// https://jmespath.org/specification.html#or-expressions
 	assert.True(t, truthy(true))
-	assert.True(t, truthy([]string{}))
 	assert.True(t, truthy([]string{"a"}))
-	assert.True(t, truthy([]int{}))
 	assert.True(t, truthy([]Obj{{}}))
-	assert.True(t, truthy(make([]interface{}, 0)))
 	assert.True(t, truthy(make([]interface{}, 1)))
-	assert.True(t, truthy(make(map[string]interface{}, 1)))
-	assert.True(t, truthy(make(map[string]interface{}, 0)))
+	assert.True(t, truthy(make([]string, 1)))
+	assert.True(t, truthy(mm))
 	assert.True(t, truthy(42))
+	assert.True(t, truthy(0))
+	assert.True(t, truthy(0.0))
 	assert.True(t, truthy("0"))
 	assert.True(t, truthy("false"))
 	assert.True(t, truthy(time.Now()))
@@ -243,13 +245,16 @@ func TestTruthiness(t *testing.T) {
 	assert.True(t, truthy(-3.14))
 	assert.True(t, truthy(math.Inf(1)))
 	assert.True(t, truthy(math.Inf(-1)))
+	assert.True(t, truthy(math.NaN()))
 
 	assert.False(t, truthy(false))
-	assert.False(t, truthy(0))
-	assert.False(t, truthy(0.0))
 	assert.False(t, truthy(""))
 	assert.False(t, truthy(nil))
-	assert.False(t, truthy(math.NaN()))
+	assert.False(t, truthy([]string{}))
+	assert.False(t, truthy([]int{}))
+	assert.False(t, truthy(make([]interface{}, 0)))
+	assert.False(t, truthy(make(map[string]interface{}, 1)))
+	assert.False(t, truthy(make(map[string]interface{}, 0)))
 }
 
 func assertJmesTruthy(t *testing.T, data map[string]interface{}, expr string, expected bool) {
@@ -285,9 +290,10 @@ func TestJMESTruthiness(t *testing.T) {
 	assertJmesTruthy(t, data, "orgs", true)
 	assertJmesTruthy(t, data, "orgs[10]", false)
 	assertJmesTruthy(t, data, "contains(orgs, 'Starfleet')", true)
-	assertJmesTruthy(t, data, "length(orgs[?contains(@, 'Starfleet')])", true)
+	assertJmesTruthy(t, data, "orgs[?contains(@, 'Starfleet')]", true)
 	assertJmesTruthy(t, data, "contains(orgs, 'Klingon Empire')", false)
-	assertJmesTruthy(t, data, "length(orgs[?contains(@, 'Klingon Empire')])", false)
+	assertJmesTruthy(t, data, "length(orgs[?contains(@, 'Klingon Empire')])", true) // 0 is "a value", thus true
+	assertJmesTruthy(t, data, "orgs[?contains(@, 'Klingon Empire')]", false)        // [] is not "a value", thus false
 	assertJmesTruthy(t, data, "traits.humble", false)
 	assertJmesTruthy(t, data, "traits.shirt == 'yellow'", true)
 	assertJmesTruthy(t, data, "traits.shirt == 'red'", false)
