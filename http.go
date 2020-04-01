@@ -6,10 +6,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
@@ -19,6 +16,7 @@ import (
 type Server struct {
 	Handler http.Handler
 	Opts    *Options
+	stop    chan struct{} // channel for waiting shutdown
 }
 
 // ListenAndServe will serve traffic on HTTP or HTTPS depending on TLS options
@@ -134,9 +132,7 @@ func (s *Server) serve(listener net.Listener) {
 	// See https://golang.org/pkg/net/http/#Server.Shutdown
 	idleConnsClosed := make(chan struct{})
 	go func() {
-		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
-		<-sigint
+		<-s.stop // wait notification for stopping server
 
 		// We received an interrupt signal, shut down.
 		if err := srv.Shutdown(context.Background()); err != nil {
