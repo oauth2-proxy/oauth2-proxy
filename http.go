@@ -150,6 +150,7 @@ func (s *Server) serve(listener net.Listener) {
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Printf("ERROR: http.Serve() - %s", err)
 	}
+	<-idleConnsClosed
 }
 
 // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
