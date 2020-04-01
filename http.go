@@ -136,8 +136,7 @@ func (s *Server) serve(listener net.Listener) {
 	go func() {
 		sigint := make(chan os.Signal, 1)
 		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
-		s := <-sigint
-		logger.Printf("caught signal: %s", s)
+		<-sigint
 
 		// We received an interrupt signal, shut down.
 		if err := srv.Shutdown(context.Background()); err != nil {
