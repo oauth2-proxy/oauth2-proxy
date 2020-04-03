@@ -203,7 +203,7 @@ you may wish to configure an authorization server for each application. Otherwis
 
 ```
 provider = "oidc"
-redirect_url = "https://example.corp.com"
+redirect_url = "https://example.corp.com/oauth2/callback"
 oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
 upstreams = [
     "https://example.corp.com"
@@ -224,6 +224,39 @@ Generate a unique `client_secret` to encrypt the cookie.
 
 Then you can start the oauth2-proxy with `./oauth2-proxy -config /etc/example.cfg`
 
+#### Configuring the OIDC Provider with Okta - localhost
+1. Signup for developer account: https://developer.okta.com/signup/
+2. Create New `Web` Application: https://${your-okta-domain}/dev/console/apps/new
+3. Example Application Settings for localhost:
+   * **Name:** My Web App
+   * **Base URIs:** http://localhost:4180/
+   * **Login redirect URIs:** http://localhost:4180/oauth2/callback
+   * **Logout redirect URIs:** http://localhost:4180/
+   * **Group assignments:** `Everyone`
+   * **Grant type allowed:** `Authorization Code` and `Refresh Token`
+4. Make note of the `Client ID` and `Client secret`, they are needed in a future step
+5. Make note of the **default** Authorization Server Issuer URI from: https://${your-okta-domain}/admin/oauth2/as
+6. Example config file `/etc/localhost.cfg`
+   ```
+   provider = "oidc"
+   redirect_url = "http://localhost:4180/oauth2/callback"
+   oidc_issuer_url = "https://${your-okta-domain}/oauth2/default"
+   upstreams = [
+       "http://0.0.0.0:8080"
+   ]
+   email_domains = [
+       "*"
+   ]
+   client_id = "XXX"
+   client_secret = "YYY"
+   pass_access_token = true
+   cookie_secret = "ZZZ"
+   cookie_secure = false
+   skip_provider_button = true
+   # Note: use the following for testing within a container
+   # http_address = "0.0.0.0:4180"
+   ```
+7. Then you can start the oauth2-proxy with `./oauth2-proxy -config /etc/localhost.cfg`
 
 ### login.gov Provider
 
