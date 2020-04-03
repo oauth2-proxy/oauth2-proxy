@@ -20,6 +20,7 @@
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
 - [#432](https://github.com/oauth2-proxy/oauth2-proxy/pull/432) Update ruby dependencies for documentation (@theobarberbany)
 - [#471](https://github.com/oauth2-proxy/oauth2-proxy/pull/471) Add logging in case of invalid redirects (@gargath)
+- [#462](https://github.com/oauth2-proxy/oauth2-proxy/pull/462) Allow HTML in banner message (@eritikass).
 
 # v5.1.0
 
@@ -37,7 +38,6 @@ N/A
 
 ## Changes since v5.0.0
 
-- [#462](https://github.com/oauth2-proxy/oauth2-proxy/pull/462) Allow HTML in banner message (@eritikass).
 - [#450](https://github.com/oauth2-proxy/oauth2-proxy/pull/450) Fix http.Cookie SameSite is not copied (@johejo)
 - [#445](https://github.com/oauth2-proxy/oauth2-proxy/pull/445) Expose `acr_values` to all providers (@holyjak)
 - [#419](https://github.com/oauth2-proxy/oauth2-proxy/pull/419) Support Go 1.14, upgrade dependencies, upgrade golangci-lint to 1.23.6 (@johejo)
