@@ -159,8 +159,6 @@ func (v *JMESValidator) AddRule(jmespathExpr string) (bool, error) {
 
 	// TODO: Check for duplicate rules and warn?
 
-	fmt.Printf("RULE: %q\n", jmespathExpr)
-
 	rule := strings.TrimSpace(jmespathExpr)
 	if rule == "" || strings.HasPrefix(rule, "#") {
 		// Not an error, but nothing as added either (empty or commented rule)
