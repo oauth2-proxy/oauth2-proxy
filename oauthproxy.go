@@ -270,7 +270,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s path:%s samesite:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, opts.CookiePath, opts.CookieSameSite, refresh)
 
-	claimsAuthRules := opts.ClaimsAuthorizer.Rules()
+	claimsAuthRules := opts.claimsAuthorizer.Rules()
 	if len(claimsAuthRules) > 0 {
 		logger.Printf("Authorizing requests using any of the following claims: %s", strings.Join(claimsAuthRules, ", "))
 	}
@@ -309,7 +309,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
 		compiledRegex:        opts.CompiledRegex,
-		claimsAuthorizer:     opts.ClaimsAuthorizer,
+		claimsAuthorizer:     opts.claimsAuthorizer,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
 		PassUserHeaders:      opts.PassUserHeaders,

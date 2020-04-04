@@ -138,7 +138,7 @@ type Options struct {
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
-	ClaimsAuthorizer   *JMESValidator
+	claimsAuthorizer   *JMESValidator
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -562,7 +562,7 @@ func parseClaimAuthorizations(o *Options, msgs []string) []string {
 		}
 	}
 
-	o.ClaimsAuthorizer = v
+	o.claimsAuthorizer = v
 
 	// Setting ExtractRawClaims here gives the provider a hint that they will be needed when
 	// validating or refreshing a session. If this is false, then the provider is fine to leave them
