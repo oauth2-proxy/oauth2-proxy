@@ -14,7 +14,7 @@ to validate accounts by email, domain or group.
 Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork.
 A list of changes can be seen in the [CHANGELOG]({{ site.gitweb }}/CHANGELOG.md).
 
-[![Build Status](https://secure.travis-ci.org/pusher/oauth2_proxy.svg?branch=master)](http://travis-ci.org/pusher/oauth2_proxy)
+[![Build Status](https://secure.travis-ci.org/oauth2-proxy/oauth2-proxy.svg?branch=master)](http://travis-ci.org/oauth2-proxy/oauth2-proxy)
 
 ![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
 

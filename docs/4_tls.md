@@ -11,10 +11,10 @@ There are two recommended configurations.
 
 1.  Configure SSL Termination with OAuth2 Proxy by providing a `--tls-cert-file=/path/to/cert.pem` and `--tls-key-file=/path/to/cert.key`.
 
-    The command line to run `oauth2_proxy` in this configuration would look like this:
+    The command line to run `oauth2-proxy` in this configuration would look like this:
 
     ```bash
-    ./oauth2_proxy \
+    ./oauth2-proxy \
         --email-domain="yourcompany.com"  \
         --upstream=http://127.0.0.1:8080/ \
         --tls-cert-file=/path/to/cert.pem \
@@ -28,12 +28,12 @@ There are two recommended configurations.
 
 2.  Configure SSL Termination with [Nginx](http://nginx.org/) (example config below), Amazon ELB, Google Cloud Platform Load Balancing, or ....
 
-    Because `oauth2_proxy` listens on `127.0.0.1:4180` by default, to listen on all interfaces (needed when using an
+    Because `oauth2-proxy` listens on `127.0.0.1:4180` by default, to listen on all interfaces (needed when using an
     external load balancer like Amazon ELB or Google Platform Load Balancing) use `--http-address="0.0.0.0:4180"` or
     `--http-address="http://:4180"`.
 
-    Nginx will listen on port `443` and handle SSL connections while proxying to `oauth2_proxy` on port `4180`.
-    `oauth2_proxy` will then authenticate requests for an upstream application. The external endpoint for this example
+    Nginx will listen on port `443` and handle SSL connections while proxying to `oauth2-proxy` on port `4180`.
+    `oauth2-proxy` will then authenticate requests for an upstream application. The external endpoint for this example
     would be `https://internal.yourcompany.com/`.
 
     An example Nginx config follows. Note the use of `Strict-Transport-Security` header to pin requests to SSL
@@ -59,10 +59,10 @@ There are two recommended configurations.
     }
     ```
 
-    The command line to run `oauth2_proxy` in this configuration would look like this:
+    The command line to run `oauth2-proxy` in this configuration would look like this:
 
     ```bash
-    ./oauth2_proxy \
+    ./oauth2-proxy \
        --email-domain="yourcompany.com"  \
        --upstream=http://127.0.0.1:8080/ \
        --cookie-secret=... \

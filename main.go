@@ -6,18 +6,20 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	options "github.com/mreiferson/go-options"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 func main() {
 	logger.SetFlags(logger.Lshortfile)
-	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("oauth2-proxy", flag.ExitOnError)
 
 	emailDomains := StringArray{}
 	whitelistDomains := StringArray{}
@@ -145,7 +147,7 @@ func main() {
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("oauth2_proxy %s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
 		return
 	}
 
@@ -204,6 +206,14 @@ func main() {
 	s := &Server{
 		Handler: handler,
 		Opts:    opts,
+		stop:    make(chan struct{}, 1),
 	}
+	// Observe signals in background goroutine.
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		s.stop <- struct{}{} // notify having caught signal
+	}()
 	s.ListenAndServe()
 }

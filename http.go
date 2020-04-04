@@ -1,19 +1,22 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 // Server represents an HTTP server
 type Server struct {
 	Handler http.Handler
 	Opts    *Options
+	stop    chan struct{} // channel for waiting shutdown
 }
 
 // ListenAndServe will serve traffic on HTTP or HTTPS depending on TLS options
@@ -90,13 +93,7 @@ func (s *Server) ServeHTTP() {
 		logger.Fatalf("FATAL: listen (%s, %s) failed - %s", networkType, listenAddr, err)
 	}
 	logger.Printf("HTTP: listening on %s", listenAddr)
-
-	server := &http.Server{Handler: s.Handler}
-	err = server.Serve(listener)
-	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		logger.Printf("ERROR: http.Serve() - %s", err)
-	}
-
+	s.serve(listener)
 	logger.Printf("HTTP: closing %s", listener.Addr())
 }
 
@@ -125,14 +122,31 @@ func (s *Server) ServeHTTPS() {
 	logger.Printf("HTTPS: listening on %s", ln.Addr())
 
 	tlsListener := tls.NewListener(tcpKeepAliveListener{ln.(*net.TCPListener)}, config)
-	srv := &http.Server{Handler: s.Handler}
-	err = srv.Serve(tlsListener)
-
-	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		logger.Printf("ERROR: https.Serve() - %s", err)
-	}
-
+	s.serve(tlsListener)
 	logger.Printf("HTTPS: closing %s", tlsListener.Addr())
+}
+
+func (s *Server) serve(listener net.Listener) {
+	srv := &http.Server{Handler: s.Handler}
+
+	// See https://golang.org/pkg/net/http/#Server.Shutdown
+	idleConnsClosed := make(chan struct{})
+	go func() {
+		<-s.stop // wait notification for stopping server
+
+		// We received an interrupt signal, shut down.
+		if err := srv.Shutdown(context.Background()); err != nil {
+			// Error from closing listeners, or context timeout:
+			logger.Printf("HTTP server Shutdown: %v", err)
+		}
+		close(idleConnsClosed)
+	}()
+
+	err := srv.Serve(listener)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("ERROR: http.Serve() - %s", err)
+	}
+	<-idleConnsClosed
 }
 
 // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
