@@ -14,7 +14,7 @@
 
 ## Changes since v5.1.0
 
-- [#469](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support phone_number in addition to email
+- [#469](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support generic claims in addition to email
 - [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Prevent browser caching during auth flow (@johejo)
 - [#481](https://github.com/oauth2-proxy/oauth2-proxy/pull/481) Update Okta docs (@trevorbox)
 - [#474](https://github.com/oauth2-proxy/oauth2-proxy/pull/474) Always log hasMember request error object (@jbielick)

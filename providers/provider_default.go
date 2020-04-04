@@ -149,7 +149,6 @@ func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, e
 }
 
 func (p *ProviderData) CreateSessionStateFromBearerToken(rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
-	// NOTE: The token is presumably the ID token
 	var claims struct {
 		Subject           string `json:"sub"`
 		Email             string `json:"email"`
