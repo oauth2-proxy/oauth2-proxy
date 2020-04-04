@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -170,7 +171,18 @@ func TestGracefulShutdown(t *testing.T) {
 	}()
 
 	stop <- struct{}{} // emulate catching signals
-	wg.Wait()
+
+	// An idiomatic for sync.WaitGroup with timeout
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+	case <-time.After(1 * time.Second):
+		t.Fatal("Server should return gracefully but timeout has occurred")
+	}
 
 	assert.Len(t, stop, 0) // check if stop chan is empty
 }
