@@ -802,7 +802,11 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		}
 		http.Redirect(rw, req, redirect, 302)
 	} else {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
+		if reason != "" {
+			logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized: %s", reason)
+		} else {
+			logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
+		}
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
 	}
 }
@@ -879,21 +883,23 @@ func (p *OAuthProxy) ValidateAuthorizedClaims(s *sessionsapi.SessionState, saveS
 		// If the code path that brought us here hasn't also provided us claims to
 		// use, then we have to fail and cause a session revalidation.
 		if !s.RawClaimsValid() {
-			return false, "authz invalidated"
+			return false, "authz cache failed with no claims available"
 		}
 	}
 
 	authzResult := authZFail
 
 	if !s.RawClaimsValid() {
-		// If we got here, then the session was created/deserialized and the
-		// provider didn't, uh, provide the claims. ;) This is an implementation
-		// error as all providers should honor this request if they are able,
-		// even if that means setting the claims to nil.
+		// If we got here, then the session was created/deserialized and there were no claims.
+		// Either the cookie was unencrypted (and thus has only basic information), or the provider
+		// didn't, uh, provide, the claims. ;) (Which is an implementation error as all providers
+		// should honor this request if they are able, even if that means setting the claims to
+		// nil.)
 
-		// We'll print something at least so that the person who's set up this
-		// proxy knows about it and isn't left wondering why it doesn't work.
-		logger.Printf("error: claims-based authorization is enabled, but provider implementation doesn't support it; all requests will fail to authorize")
+		// We'll print something at least so that the person who's set up this proxy knows about it
+		// and isn't left wondering why it doesn't work.
+		logger.Printf("error: claims-based authorization is enabled, but the session has no claims to validate; all requests will fail to authorize (this is likely a config problem)")
+		reason = "session claims are unknown"
 	} else {
 		if ok, idx := p.claimsAuthorizer.MatchesAny(s.RawClaims()); ok {
 			authzResult = authZPass
@@ -1019,8 +1025,8 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	if session != nil {
-		if ok, _ := p.AuthorizeSession(session, &saveSession); !ok {
-			logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+		if ok, reason := p.AuthorizeSession(session, &saveSession); !ok {
+			logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s, because: %s", session, reason)
 			session = nil
 			saveSession = false
 			clearSession = true
