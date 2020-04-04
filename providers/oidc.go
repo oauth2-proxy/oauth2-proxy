@@ -14,6 +14,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
+const emailClaim = "email"
+
 // OIDCProvider represents an OIDC based Identity Provider
 type OIDCProvider struct {
 	*ProviderData
@@ -206,7 +208,7 @@ func (p *OIDCProvider) createSessionStateInternal(rawIDToken string, idToken *oi
 	newSession.User = claims.Subject
 	newSession.PreferredUsername = claims.PreferredUsername
 
-	verifyEmail := (p.UserIDClaim == "email") && !p.AllowUnverifiedEmail
+	verifyEmail := (p.UserIDClaim == emailClaim) && !p.AllowUnverifiedEmail
 	if verifyEmail && claims.Verified != nil && !*claims.Verified {
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.UserID)
 	}
@@ -234,29 +236,23 @@ func getOIDCHeader(accessToken string) http.Header {
 
 func (p *OIDCProvider) findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
 
-	// Extract custom claims.
 	claims := &OIDCClaims{}
+	// Extract default claims.
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
+	}
+	// Extract custom claims.
 	if err := idToken.Claims(&claims.rawClaims); err != nil {
-		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)
 	}
 
-	// Extract custom claims manually (to avoid parsing twice)
 	userID := claims.rawClaims[p.UserIDClaim]
 	if userID == nil {
-		return nil, fmt.Errorf("claims did not contains the required user-id-claim '%s'; claims: %v", p.UserIDClaim, claims.rawClaims)
+		return nil, fmt.Errorf("claims did not contains the required user-id-claim '%s'", p.UserIDClaim)
 	}
 	claims.UserID = fmt.Sprint(userID)
-	if value, ok := claims.rawClaims["sub"].(string); ok {
-		claims.Subject = value
-	}
-	if value, ok := claims.rawClaims["email_verified"].(*bool); ok {
-		claims.Verified = value
-	}
-	if value, ok := claims.rawClaims["preferred_username"].(string); ok {
-		claims.PreferredUsername = value
-	}
 
-	if claims.UserID == "" {
+	if p.UserIDClaim == emailClaim && claims.UserID == "" {
 		if profileURL == "" {
 			return nil, fmt.Errorf("id_token did not contain an email")
 		}
@@ -289,8 +285,8 @@ func (p *OIDCProvider) findClaimsFromIDToken(idToken *oidc.IDToken, accessToken 
 
 type OIDCClaims struct {
 	rawClaims         map[string]interface{}
-	Subject           string
 	UserID            string
-	Verified          *bool
-	PreferredUsername string
+	Subject           string `json:"sub"`
+	Verified          *bool  `json:"email_verified"`
+	PreferredUsername string `json:"preferred_username"`
 }
