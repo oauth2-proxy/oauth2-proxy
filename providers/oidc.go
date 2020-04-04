@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -20,6 +21,8 @@ type OIDCProvider struct {
 
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
+	AllowedGroups        []string
+	GroupsClaim          string
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
@@ -151,15 +154,19 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 	newSession := &sessions.SessionState{}
 
 	if idToken != nil {
-		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String())
+		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String(), p.GroupsClaim)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
+			return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
 		}
 
 		if claims != nil {
 
 			if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
 				return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+			}
+
+			if len(p.AllowedGroups) > 0 && !claims.GroupsHas(p.AllowedGroups) {
+				return nil, fmt.Errorf("oidc id_token must contain groups %v", p.AllowedGroups)
 			}
 
 			newSession.IDToken = token.Extra("id_token").(string)
@@ -194,15 +201,22 @@ func getOIDCHeader(accessToken string) http.Header {
 	return header
 }
 
-func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
+func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string, groupsClaim string) (*OIDCClaims, error) {
 
 	// Extract custom claims.
-	claims := &OIDCClaims{}
-	if err := idToken.Claims(claims); err != nil {
+	c := new(oidcClaimsRaw)
+	if err := idToken.Claims(c); err != nil {
 		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
 	}
 
-	if claims.Email == "" {
+	oidcClaims := &OIDCClaims{}
+	if c.contains("email") {
+		if err := c.parseClaim("email", &oidcClaims.Email); err != nil {
+			return nil, fmt.Errorf("error while getting email claim from id_token: %v", err)
+		}
+	}
+
+	if oidcClaims.Email == "" {
 		if profileURL == "" {
 			return nil, fmt.Errorf("id_token did not contain an email")
 		}
@@ -227,15 +241,85 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 			return nil, fmt.Errorf("neither id_token nor userinfo endpoint contained an email")
 		}
 
-		claims.Email = email
+		oidcClaims.Email = email
 	}
 
-	return claims, nil
+	if c.contains("email_verified") {
+		if err := c.parseClaim("email_verified", &oidcClaims.Verified); err != nil {
+			return nil, fmt.Errorf("error while getting email_verified claim from id_token: %v", err)
+		}
+	}
+
+	if c.contains("preferred_username") {
+		if err := c.parseClaim("preferred_username", &oidcClaims.PreferredUsername); err != nil {
+			return nil, err
+		}
+	}
+
+	if c.contains("sub") {
+		if err := c.parseClaim("sub", &oidcClaims.Subject); err != nil {
+			return nil, fmt.Errorf("error while getting sub claim from id_token: %v", err)
+		}
+	}
+
+	if groupsClaim != "" {
+		if err := c.parseClaim(groupsClaim, &oidcClaims.Groups); err != nil {
+			return nil, fmt.Errorf("error while getting %s claim from id_token: %v", groupsClaim, err)
+		}
+	}
+
+	return oidcClaims, nil
+}
+
+type stringOrArray []string
+
+func (s *stringOrArray) UnmarshalJSON(b []byte) error {
+	var a []string
+	if err := json.Unmarshal(b, &a); err == nil {
+		*s = a
+		return nil
+	}
+	var str string
+	if err := json.Unmarshal(b, &str); err != nil {
+		return err
+	}
+	*s = []string{str}
+	return nil
+}
+
+type oidcClaimsRaw map[string]json.RawMessage
+
+func (c oidcClaimsRaw) contains(desired string) bool {
+	_, ok := c[desired]
+	return ok
+}
+
+func (c oidcClaimsRaw) parseClaim(name string, value interface{}) error {
+	claim, ok := c[name]
+	if !ok {
+		return fmt.Errorf("claim not present")
+	}
+	return json.Unmarshal(claim, value)
 }
 
 type OIDCClaims struct {
-	Subject           string `json:"sub"`
-	Email             string `json:"email"`
-	Verified          *bool  `json:"email_verified"`
-	PreferredUsername string `json:"preferred_username"`
+	Groups            stringOrArray
+	Subject           string
+	Email             string
+	Verified          *bool
+	PreferredUsername string
+}
+
+func (o *OIDCClaims) GroupsHas(groups []string) bool {
+	desiredGroupsCounter := 0
+	for _, groupFromConfig := range groups {
+		for _, tokenGroup := range o.Groups {
+			if groupFromConfig == tokenGroup {
+				desiredGroupsCounter++
+				break
+			}
+		}
+	}
+
+	return desiredGroupsCounter == len(groups)
 }

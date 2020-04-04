@@ -29,9 +29,10 @@ const clientID = "https://test.myapp.com"
 const secret = "secret"
 
 type idTokenClaims struct {
-	Name    string `json:"name,omitempty"`
-	Email   string `json:"email,omitempty"`
-	Picture string `json:"picture,omitempty"`
+	Name    string   `json:"name,omitempty"`
+	Email   string   `json:"email,omitempty"`
+	Picture string   `json:"picture,omitempty"`
+	Groups  []string `json:"groups,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -43,19 +44,22 @@ type redeemTokenResponse struct {
 	IDToken      string `json:"id_token,omitempty"`
 }
 
-var defaultIDToken idTokenClaims = idTokenClaims{
-	"Jane Dobbs",
-	"janed@me.com",
-	"http://mugbook.com/janed/me.jpg",
-	jwt.StandardClaims{
-		Audience:  "https://test.myapp.com",
-		ExpiresAt: time.Now().Add(time.Duration(5) * time.Minute).Unix(),
-		Id:        "id-some-id",
-		IssuedAt:  time.Now().Unix(),
-		Issuer:    "https://issuer.example.com",
-		NotBefore: 0,
-		Subject:   "123456789",
-	},
+func getDefaultIDToken() idTokenClaims {
+	return idTokenClaims{
+		"Jane Dobbs",
+		"janed@me.com",
+		"http://mugbook.com/janed/me.jpg",
+		[]string{"admins", "everyone"},
+		jwt.StandardClaims{
+			Audience:  "https://test.myapp.com",
+			ExpiresAt: time.Now().Add(time.Duration(5) * time.Minute).Unix(),
+			Id:        "id-some-id",
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    "https://issuer.example.com",
+			NotBefore: 0,
+			Subject:   "123456789",
+		},
+	}
 }
 
 type fakeKeySetStub struct{}
@@ -141,6 +145,7 @@ func newTestSetup(body []byte) (*httptest.Server, *OIDCProvider) {
 
 func TestOIDCProviderRedeem(t *testing.T) {
 
+	defaultIDToken := getDefaultIDToken()
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(redeemTokenResponse{
 		AccessToken:  accessToken,
@@ -164,6 +169,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 
 func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 
+	defaultIDToken := getDefaultIDToken()
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(redeemTokenResponse{
 		AccessToken:  accessToken,
@@ -197,6 +203,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 
 func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 
+	defaultIDToken := getDefaultIDToken()
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(redeemTokenResponse{
 		AccessToken:  accessToken,
@@ -218,6 +225,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 		Email:        "changeit",
 		User:         "changeit",
 	}
+
 	refreshed, err := provider.RefreshSessionIfNeeded(existingSession)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, refreshed, true)
@@ -233,6 +241,8 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	server, provider := newTestSetup([]byte(""))
 
 	defer server.Close()
+
+	defaultIDToken := getDefaultIDToken()
 
 	token := newOauth2Token()
 	signedIDToken, _ := newSignedTestIDToken(defaultIDToken)
@@ -261,4 +271,40 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	verifiedIDToken, err = provider.findVerifiedIDToken(context.Background(), newOauth2Token())
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, verifiedIDToken == nil)
+}
+
+func TestOIDCProvider_groupsCheck(t *testing.T) {
+	server, provider := newTestSetup([]byte(""))
+	defer server.Close()
+
+	defaultIDToken := getDefaultIDToken()
+
+	token := newOauth2Token()
+	signedIDToken, _ := newSignedTestIDToken(defaultIDToken)
+	tokenWithIDToken := token.WithExtra(map[string]interface{}{
+		"id_token": signedIDToken,
+	})
+
+	// token groups not in allowed groups
+	provider.GroupsClaim = "groups"
+	provider.AllowedGroups = []string{"workers"}
+	verifiedIDToken, err := provider.findVerifiedIDToken(context.Background(), tokenWithIDToken)
+	assert.Equal(t, true, err == nil)
+	_, err = provider.createSessionState(tokenWithIDToken, verifiedIDToken)
+	assert.Equal(t, errors.New("oidc id_token must contain groups [workers]"), err)
+
+	// successful groups check
+	provider.AllowedGroups = []string{"admins"}
+	verifiedIDToken, err = provider.findVerifiedIDToken(context.Background(), tokenWithIDToken)
+	assert.Equal(t, true, err == nil)
+	_, err = provider.createSessionState(tokenWithIDToken, verifiedIDToken)
+	assert.Equal(t, true, err == nil)
+
+	// wrong groups claim
+	provider.GroupsClaim = "wrong_groups_claim"
+	verifiedIDToken, err = provider.findVerifiedIDToken(context.Background(), tokenWithIDToken)
+	assert.Equal(t, true, err == nil)
+	_, err = provider.createSessionState(tokenWithIDToken, verifiedIDToken)
+	assert.Equal(t, errors.New("couldn't extract claims from id_token (error while getting wrong_groups_claim "+
+		"claim from id_token: claim not present)"), err)
 }

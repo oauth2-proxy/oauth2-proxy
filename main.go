@@ -25,6 +25,7 @@ func main() {
 	skipAuthRegex := StringArray{}
 	jwtIssuers := StringArray{}
 	googleGroups := StringArray{}
+	oidcGroups := StringArray{}
 	redisSentinelConnectionURLs := StringArray{}
 	redisClusterConnectionURLs := StringArray{}
 
@@ -123,6 +124,8 @@ func main() {
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
+	flagSet.String("oidc-groups-claim", "", "OIDC groups claim")
+	flagSet.Var(&oidcGroups, "oidc-group", "restrict logins to members of this group (may be given multiple times).")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")

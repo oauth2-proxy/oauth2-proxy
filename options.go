@@ -89,20 +89,22 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider                         string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
-	ProviderName                     string `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
-	OIDCIssuerURL                    string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
-	InsecureOIDCAllowUnverifiedEmail bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
-	SkipOIDCDiscovery                bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
-	OIDCJwksURL                      string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
-	LoginURL                         string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
-	RedeemURL                        string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
-	ProfileURL                       string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
-	ProtectedResource                string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
-	ValidateURL                      string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
-	Scope                            string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
-	Prompt                           string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
-	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
+	Provider                         string   `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
+	ProviderName                     string   `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
+	OIDCIssuerURL                    string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
+	InsecureOIDCAllowUnverifiedEmail bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
+	SkipOIDCDiscovery                bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
+	OIDCJwksURL                      string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
+	OIDCGroups                       []string `flag:"oidc-group" cfg:"oidc_group" env:"OAUTH2_PROXY_OIDC_GROUP"`
+	OIDCGroupsClaim                  string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim" env:"OAUTH2_PROXY_OIDC_GROUPS_CLAIM"`
+	LoginURL                         string   `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
+	RedeemURL                        string   `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
+	ProfileURL                       string   `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
+	ProtectedResource                string   `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
+	ValidateURL                      string   `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
+	Scope                            string   `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
+	Prompt                           string   `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
+	ApprovalPrompt                   string   `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
@@ -449,6 +451,12 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {
 			p.Verifier = o.oidcVerifier
+		}
+		if o.OIDCGroupsClaim == "" && len(o.OIDCGroups) > 0 {
+			msgs = append(msgs, "oidc required oidc-groups-claim to use oidc-group option")
+		} else {
+			p.GroupsClaim = o.OIDCGroupsClaim
+			p.AllowedGroups = o.OIDCGroups
 		}
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
