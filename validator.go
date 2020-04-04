@@ -157,27 +157,29 @@ func truthy(result interface{}) bool {
 
 func (v *JMESValidator) AddRule(jmespathExpr string) (bool, error) {
 
-	// TODO: Check for duplicate rules?
+	// TODO: Check for duplicate rules and warn?
+
+	fmt.Printf("RULE: %q\n", jmespathExpr)
 
 	rule := strings.TrimSpace(jmespathExpr)
-	if rule != "" && !strings.HasPrefix(rule, "#") {
-		var compiled *jmespath.JMESPath
-		var err error
-
-		if compiled, err = jmespath.Compile(rule); err != nil {
-			return false, fmt.Errorf("invalid claim assertion (%q): %v", rule, err)
-		}
-
-		// Invalidate the hash if it had been requested yet
-		v.rulesHash = nil
-		v.rules = append(v.rules, rule)
-		v.compiledRules = append(v.compiledRules, compiled)
-
-		return true, nil
+	if rule == "" || strings.HasPrefix(rule, "#") {
+		// Not an error, but nothing as added either (empty or commented rule)
+		return false, nil
 	}
 
-	// Not an error, but nothing as added either (empty or commented rule)
-	return false, nil
+	var compiled *jmespath.JMESPath
+	var err error
+
+	if compiled, err = jmespath.Compile(rule); err != nil {
+		return false, fmt.Errorf("invalid claim assertion (%q): %v", rule, err)
+	}
+
+	// Invalidate the hash if it had been requested yet
+	v.rulesHash = nil
+	v.rules = append(v.rules, rule)
+	v.compiledRules = append(v.compiledRules, compiled)
+
+	return true, nil
 }
 
 // Rules will return the current set of valid registered rules (in source form).
@@ -192,17 +194,22 @@ func (v *JMESValidator) Rules() []string {
 // set of rules has changed over time.
 func (v *JMESValidator) RulesHash() []byte {
 
-	if v.rulesHash == nil && len(v.rules) > 0 {
-
-		// Create a hash of our rules (in source form) so that we can know
-		// if they have changed since they were last run against something
-		h := crypto.SHA256.New()
-		for _, rule := range v.rules {
-			h.Write([]byte(rule))
-		}
-
-		v.rulesHash = h.Sum(nil)
+	if v.rulesHash != nil {
+		return v.rulesHash
 	}
+
+	if len(v.rules) == 0 {
+		return nil
+	}
+
+	// Create a hash of our rules (in source form) so that we can know
+	// if they have changed since they were last run against something
+	h := crypto.SHA256.New()
+	for _, rule := range v.rules {
+		h.Write([]byte(rule))
+	}
+
+	v.rulesHash = h.Sum(nil)
 
 	return v.rulesHash
 }
@@ -213,10 +220,6 @@ func (v *JMESValidator) RulesHash() []byte {
 // since at least one rule must match. If a match is found, returns true as
 // well as the index of the rule that was successfully matched.
 func (v *JMESValidator) MatchesAny(data map[string]interface{}) (bool, int) {
-
-	// if s, err := json.MarshalIndent(data, "", "  "); err == nil {
-	// 	logger.Printf("CLAIMS: %s", string(s))
-	// }
 
 	if data == nil {
 		return false, -1

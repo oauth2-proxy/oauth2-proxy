@@ -279,9 +279,10 @@ func (s *SessionState) SetRawClaims(rawClaims map[string]interface{}) {
 	s.rawClaimsValid = true
 }
 
-func (s *SessionState) SetRawClaimsFromIDToken(idToken *oidc.IDToken) (err error) {
-	if err = idToken.Claims(&s.rawClaims); err == nil {
-		s.rawClaimsValid = true
+func (s *SessionState) SetRawClaimsFromIDToken(idToken *oidc.IDToken) error {
+	if err := idToken.Claims(&s.rawClaims); err != nil {
+		return err
 	}
-	return
+	s.rawClaimsValid = true
+	return nil
 }
