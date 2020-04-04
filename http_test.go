@@ -171,4 +171,6 @@ func TestGracefulShutdown(t *testing.T) {
 
 	stop <- struct{}{} // emulate catching signals
 	wg.Wait()
+
+	assert.Len(t, stop, 0) // check if stop chan is empty
 }
