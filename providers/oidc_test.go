@@ -62,6 +62,9 @@ type fakeKeySetStub struct{}
 
 func (fakeKeySetStub) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
 	decodeString, err := base64.RawURLEncoding.DecodeString(strings.Split(jwt, ".")[1])
+	if err != nil {
+		return nil, err
+	}
 	tokenClaims := &idTokenClaims{}
 	err = json.Unmarshal(decodeString, tokenClaims)
 

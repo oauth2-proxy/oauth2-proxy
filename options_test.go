@@ -31,7 +31,7 @@ func testOptions() *Options {
 
 func errorMsg(msgs []string) string {
 	result := make([]string, 0)
-	result = append(result, "Invalid configuration:")
+	result = append(result, "invalid configuration:")
 	result = append(result, msgs...)
 	return strings.Join(result, "\n  ")
 }
@@ -278,7 +278,7 @@ func TestValidateSignatureKeyInvalidSpec(t *testing.T) {
 	o := testOptions()
 	o.SignatureKey = "invalid spec"
 	err := o.Validate()
-	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
+	assert.Equal(t, err.Error(), "invalid configuration:\n"+
 		"  invalid signature hash:key spec: "+o.SignatureKey)
 }
 
@@ -286,7 +286,7 @@ func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 	o := testOptions()
 	o.SignatureKey = "unsupported:default secret"
 	err := o.Validate()
-	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
+	assert.Equal(t, err.Error(), "invalid configuration:\n"+
 		"  unsupported signature hash algorithm: "+o.SignatureKey)
 }
 
@@ -300,7 +300,7 @@ func TestValidateCookieBadName(t *testing.T) {
 	o := testOptions()
 	o.CookieName = "_bad_cookie_name{}"
 	err := o.Validate()
-	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
+	assert.Equal(t, err.Error(), "invalid configuration:\n"+
 		fmt.Sprintf("  invalid cookie name: %q", o.CookieName))
 }
 
@@ -311,7 +311,7 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 	o.SkipOIDCDiscovery = true
 
 	err := o.Validate()
-	assert.Equal(t, "Invalid configuration:\n"+
+	assert.Equal(t, "invalid configuration:\n"+
 		fmt.Sprintf("  missing setting: login-url\n  missing setting: redeem-url\n  missing setting: oidc-jwks-url"), err.Error())
 
 	o.LoginURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/authorize?p=b2c_1_sign_in"
