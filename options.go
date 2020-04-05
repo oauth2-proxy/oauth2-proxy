@@ -310,12 +310,6 @@ func (o *Options) Validate() error {
 			// Configure discoverable provider data.
 			provider, err := oidc.NewProvider(ctx, o.OIDCIssuerURL)
 			if err != nil {
-				// go-oidc doesn't let us pass bypass the issuer check this in the oidc.NewProvider call,
-				// so we'll catch this case and just warn that you have to manually provide it instead of
-				// rely on discovery.
-				if o.InsecureOIDCSkipIssuerVerification && strings.HasPrefix(err.Error(), "oidc: issuer did not match the issuer returned by provider") {
-					logger.Printf("Your have specified InsecureOIDCSkipIssuerVerification, but OIDC discovery is not currently compatible with this setting. Please also use SkipOIDCDiscovery and set the requisite URLs manually to use this option.")
-				}
 				return err
 			}
 			o.oidcVerifier = provider.Verifier(&oidc.Config{
