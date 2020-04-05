@@ -111,7 +111,7 @@ func testAzureBackend(payload string) *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if (r.URL.Path != path) && r.Method != "POST" {
+			if (r.URL.Path != path) && r.Method != http.MethodPost {
 				w.WriteHeader(404)
 			} else if r.Method == http.MethodPost && r.Body != nil {
 				w.WriteHeader(200)
