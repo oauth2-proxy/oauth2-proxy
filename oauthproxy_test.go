@@ -1033,6 +1033,12 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
+	// The act of inserting a valid session into the cookie store makes
+	// the session implicitly authorized. Validation is not performed
+	// on every request (any more), so this test which mocks an invalidated
+	// user after setting the cookie no longer works.
+	t.Skip("Skipping invalid email validation failure test")
+
 	test := NewAuthOnlyEndpointTest()
 	startSession := &sessions.SessionState{
 		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: time.Now()}

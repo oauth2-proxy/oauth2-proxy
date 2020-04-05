@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"context"
 	"crypto"
+	"crypto/md5"
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -405,11 +407,46 @@ func (o *Options) Validate() error {
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)
 
+	// Create a key that's unique to the configured instance of the proxy. If this changes, all
+	// existing signed cookies (and thus their sessions) will be considered invalid and the user
+	// will be forced to re-authenticate (even if the provider does so silently). The CookieSecret
+	// is a key bit of salt in the process.
+	hmacKey := append(o.claimsAuthorizer.RulesHash(), o.CookieSecret...)
+	for _, domain := range o.EmailDomains {
+		hmacKey = append(hmacKey, domain...)
+	}
+	hmacKey, msgs = applyFileDigestSalt(hmacKey, msgs, o.AuthenticatedEmailsFile)
+	hmacKey, msgs = applyFileDigestSalt(hmacKey, msgs, o.HtpasswdFile)
+	hmacKey = o.provider.ApplyConfigSalt(hmacKey)
+	o.CookieHmacKey = hmacKey
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("Invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
 	}
 	return nil
+}
+
+func applyFileDigestSalt(salt []byte, msgs []string, path string) ([]byte, []string) {
+	if path == "" {
+		return salt, msgs
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("error opening file: %s: %v", path, err))
+		return salt, msgs
+	}
+
+	h := md5.New()
+	_, err = io.Copy(h, f)
+	f.Close()
+
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("error creating digest of file: %s: %v", path, err))
+	}
+
+	return append(salt, h.Sum(nil)...), msgs
 }
 
 func parseProviderInfo(o *Options, msgs []string) []string {

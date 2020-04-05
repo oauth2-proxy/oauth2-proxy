@@ -145,7 +145,7 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
 
-	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieHmacKey, store.CookieOptions.CookieExpire)
 	if !ok {
 		return nil, fmt.Errorf("Cookie Signature not valid")
 	}
@@ -205,7 +205,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 		return fmt.Errorf("error retrieving cookie: %v", err)
 	}
 
-	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieHmacKey, store.CookieOptions.CookieExpire)
 	if !ok {
 		return fmt.Errorf("Cookie Signature not valid")
 	}
@@ -225,7 +225,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 // makeCookie makes a cookie, signing the value if present
 func (store *SessionStore) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
 	if value != "" {
-		value = encryption.SignedValue(store.CookieOptions.CookieSecret, store.CookieOptions.CookieName, value, now)
+		value = encryption.SignedValue(store.CookieOptions.CookieHmacKey, store.CookieOptions.CookieName, value, now)
 	}
 	return cookies.MakeCookieFromOptions(
 		req,
@@ -269,7 +269,7 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
 	}
 
 	// An existing cookie exists, try to retrieve the ticket
-	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieHmacKey, store.CookieOptions.CookieExpire)
 	if !ok {
 		// Cookie is invalid, create a new ticket
 		return newTicket()

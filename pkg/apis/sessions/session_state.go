@@ -21,7 +21,6 @@ type SessionState struct {
 	Email             string    `json:",omitempty"`
 	User              string    `json:",omitempty"`
 	PreferredUsername string    `json:",omitempty"`
-	Authz             string    `json:",omitempty"`
 
 	// Internal parts used to transfer data between provider
 	// and the main Oauthproxy paths. Not meant to be serialized.
@@ -81,7 +80,6 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 		ss.Email = s.Email
 		ss.User = s.User
 		ss.PreferredUsername = s.PreferredUsername
-		ss.Authz = s.Authz
 	} else {
 		ss = *s
 		var err error
@@ -218,7 +216,6 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 			Email:             ss.Email,
 			User:              ss.User,
 			PreferredUsername: ss.PreferredUsername,
-			Authz:             ss.Authz,
 		}
 	} else {
 		// Backward compatibility with using unencrypted Email

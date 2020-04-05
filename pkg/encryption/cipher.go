@@ -5,7 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -19,14 +19,22 @@ import (
 // additionally, the 'value' is encrypted so it's opaque to the browser
 
 // Validate ensures a cookie is properly signed
-func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value string, t time.Time, ok bool) {
+func Validate(cookie *http.Cookie, hmacKey []byte, expiration time.Duration) (value string, t time.Time, ok bool) {
 	// value, timestamp, sig
 	parts := strings.Split(cookie.Value, "|")
 	if len(parts) != 3 {
 		return
 	}
-	sig := cookieSignature(seed, cookie.Name, parts[0], parts[1])
-	if checkHmac(parts[2], sig) {
+
+	var err error
+	var providedMAC, expectedMAC []byte
+
+	expectedMAC = cookieMAC(hmacKey, cookie.Name, parts[0], parts[1])
+	if providedMAC, err = base64.URLEncoding.DecodeString(parts[2]); err != nil {
+		return
+	}
+
+	if hmac.Equal(providedMAC, expectedMAC) {
 		ts, err := strconv.Atoi(parts[1])
 		if err != nil {
 			return
@@ -50,33 +58,20 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 }
 
 // SignedValue returns a cookie that is signed and can later be checked with Validate
-func SignedValue(seed string, key string, value string, now time.Time) string {
+func SignedValue(hmacKey []byte, cookieName string, value string, now time.Time) string {
 	encodedValue := base64.URLEncoding.EncodeToString([]byte(value))
 	timeStr := fmt.Sprintf("%d", now.Unix())
-	sig := cookieSignature(seed, key, encodedValue, timeStr)
-	cookieVal := fmt.Sprintf("%s|%s|%s", encodedValue, timeStr, sig)
+	mac := cookieMAC(hmacKey, cookieName, encodedValue, timeStr)
+	cookieVal := fmt.Sprintf("%s|%s|%s", encodedValue, timeStr, base64.URLEncoding.EncodeToString(mac))
 	return cookieVal
 }
 
-func cookieSignature(args ...string) string {
-	h := hmac.New(sha1.New, []byte(args[0]))
-	for _, arg := range args[1:] {
+func cookieMAC(hmacKey []byte, args ...string) []byte {
+	h := hmac.New(sha256.New, hmacKey)
+	for _, arg := range args {
 		h.Write([]byte(arg))
 	}
-	var b []byte
-	b = h.Sum(b)
-	return base64.URLEncoding.EncodeToString(b)
-}
-
-func checkHmac(input, expected string) bool {
-	inputMAC, err1 := base64.URLEncoding.DecodeString(input)
-	if err1 == nil {
-		expectedMAC, err2 := base64.URLEncoding.DecodeString(expected)
-		if err2 == nil {
-			return hmac.Equal(inputMAC, expectedMAC)
-		}
-	}
-	return false
+	return h.Sum(nil)
 }
 
 // Cipher provides methods to encrypt and decrypt cookie values

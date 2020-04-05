@@ -12,6 +12,7 @@ type Provider interface {
 	GetUserName(*sessions.SessionState) (string, error)
 	GetPreferredUsername(*sessions.SessionState) (string, error)
 	Redeem(string, string) (*sessions.SessionState, error)
+	ApplyConfigSalt(buf []byte) []byte
 	ValidateGroup(string) bool
 	ValidateSessionState(*sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string

@@ -129,6 +129,24 @@ func (p *ProviderData) GetPreferredUsername(s *sessions.SessionState) (string, e
 	return "", errors.New("not implemented")
 }
 
+// ApplyConfigSalt should append configuration-specific information that
+// may require invalidation of user sessions if it changes. Use the standard
+// Go append mechanisms for appending to a byte slice. E.g.
+//    return append(salt, configSpecificSaltGoesHere)
+//
+// Notably, there is not a time or nonce-like value here, since we'd prefer
+// to keep sessions stable if possible. However if the config changes such that
+// we shouldn't trust sessions created using the old config any more (notably
+// things like authorization) it SHOULD be in here. The salt will have been
+// initially seeded from the global configuration and should be included in
+// the returned result (generally via appending).
+func (p *ProviderData) ApplyConfigSalt(salt []byte) []byte {
+	salt = append(salt, p.ProviderName...)
+	salt = append(salt, p.ClientSecret...)
+	salt = append(salt, p.ClientID...)
+	return salt
+}
+
 // ValidateGroup validates that the provided email exists in the configured provider
 // email group(s).
 func (p *ProviderData) ValidateGroup(email string) bool {

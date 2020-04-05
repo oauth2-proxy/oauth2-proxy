@@ -53,7 +53,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		// always http.ErrNoCookie
 		return nil, fmt.Errorf("Cookie %q not present", s.CookieOptions.CookieName)
 	}
-	val, _, ok := encryption.Validate(c, s.CookieOptions.CookieSecret, s.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(c, s.CookieOptions.CookieHmacKey, s.CookieOptions.CookieExpire)
 	if !ok {
 		return nil, errors.New("Cookie Signature not valid")
 	}
@@ -96,7 +96,7 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
 	if value != "" {
-		value = encryption.SignedValue(s.CookieOptions.CookieSecret, s.CookieOptions.CookieName, value, now)
+		value = encryption.SignedValue(s.CookieOptions.CookieHmacKey, s.CookieOptions.CookieName, value, now)
 	}
 	c := s.makeCookie(req, s.CookieOptions.CookieName, value, s.CookieOptions.CookieExpire, now)
 	if len(c.Value) > 4096-len(s.CookieOptions.CookieName) {
