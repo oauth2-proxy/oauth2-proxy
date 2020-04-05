@@ -64,7 +64,6 @@ var (
 
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
-	CookieSeed     string
 	CookieName     string
 	CSRFCookieName string
 	CookieDomain   string
@@ -278,7 +277,6 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	return &OAuthProxy{
 		CookieName:     opts.CookieName,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.CookieName, "csrf"),
-		CookieSeed:     opts.CookieSecret,
 		CookieDomain:   opts.CookieDomain,
 		CookiePath:     opts.CookiePath,
 		CookieSecure:   opts.CookieSecure,
