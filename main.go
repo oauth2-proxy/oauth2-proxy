@@ -6,8 +6,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -205,6 +207,14 @@ func main() {
 	s := &Server{
 		Handler: handler,
 		Opts:    opts,
+		stop:    make(chan struct{}, 1),
 	}
+	// Observe signals in background goroutine.
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		s.stop <- struct{}{} // notify having caught signal
+	}()
 	s.ListenAndServe()
 }

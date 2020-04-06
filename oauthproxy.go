@@ -469,7 +469,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	t := struct {
 		ProviderName  string
-		SignInMessage string
+		SignInMessage template.HTML
 		CustomLogin   bool
 		Redirect      string
 		Version       string
@@ -477,7 +477,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		Footer        template.HTML
 	}{
 		ProviderName:  p.provider.Data().ProviderName,
-		SignInMessage: p.SignInMessage,
+		SignInMessage: template.HTML(p.SignInMessage),
 		CustomLogin:   p.displayCustomLoginForm(),
 		Redirect:      redirectURL,
 		Version:       VERSION,
@@ -576,6 +576,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
 		redirectURL, err := url.Parse(redirect)
 		if err != nil {
+			logger.Printf("Rejecting invalid redirect %q: scheme unsupported or missing", redirect)
 			return false
 		}
 		redirectHostname := redirectURL.Hostname()
@@ -600,8 +601,10 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 			}
 		}
 
+		logger.Printf("Rejecting invalid redirect %q: domain / port not in whitelist", redirect)
 		return false
 	default:
+		logger.Printf("Rejecting invalid redirect %q: not an absolute or relative URL", redirect)
 		return false
 	}
 }

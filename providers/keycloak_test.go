@@ -6,7 +6,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )
 
