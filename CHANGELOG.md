@@ -11,7 +11,7 @@
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
 
 ## Changes since v5.1.0
-- Update Okta docs (@trevorbox)
+- [#481](https://github.com/oauth2-proxy/oauth2-proxy/pull/481) Update Okta docs (@trevorbox)
 - [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) Migrate to oauth2-proxy/oauth2-proxy (@JoelSpeed)
   - Project renamed from `pusher/oauth2_proxy` to `oauth2-proxy`
   - Move Go import path from `github.com/pusher/oauth2_proxy` to `github.com/oauth2-proxy/oauth2-proxy`
