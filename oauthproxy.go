@@ -293,7 +293,7 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, muxPath string, opts *Options, a
 	}
 }
 
-func checkMuxPath(path string) bool {
+func checkMuxPath(path string) {
 	if strings.Contains(path, "%2f") || strings.Contains(path, "%2F") {
 		// http.NewServeMux() doesn't deal with escaped paths properly when figuring out which
 		// handler to invoke since it uses url.URL.Path under the hood. i.e. it unescapes it and
@@ -301,9 +301,7 @@ func checkMuxPath(path string) bool {
 		// TODO: Investigate using http://github.com/gorilla/mux instead?
 		// TODO: If this is fixed, look for the currently t.Skip()'d tests in oauthproxy_test.go and re-enable them
 		logger.Printf("warning: mapping paths with escaped slashes are not currently supported: %s", path)
-		return false
 	}
-	return true
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
