@@ -198,11 +198,11 @@ func userInGroup(service *admin.Service, groups []string, email string) bool {
 		req := service.Members.HasMember(group, email)
 		r, err := req.Do()
 		if err != nil {
-			err, ok := err.(*googleapi.Error)
+			gerr, ok := err.(*googleapi.Error)
 			switch {
-			case ok && err.Code == 404:
+			case ok && gerr.Code == 404:
 				logger.Printf("error checking membership in group %s: group does not exist", group)
-			case ok && err.Code == 400:
+			case ok && gerr.Code == 400:
 				// It is possible for Members.HasMember to return false even if the email is a group member.
 				// One case that can cause this is if the user email is from a different domain than the group,
 				// e.g. "member@otherdomain.com" in the group "group@mydomain.com" will result in a 400 error
