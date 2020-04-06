@@ -811,7 +811,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 // AuthorizeSession will check the session state and ensure that it meets
 // all of the authorization criteria (email domains and/or claims criteria).
-// If it hasn't
+// If it hasn't, it will return false along with a loggable description of why.
+// If it has, it will also return the rule that was used to authorize the user.
 func (p *OAuthProxy) AuthorizeSession(s *sessionsapi.SessionState, saveSession *bool) (authorized bool, reason string) {
 
 	if !p.Validator(s.Email) {
