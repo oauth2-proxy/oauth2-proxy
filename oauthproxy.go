@@ -1185,6 +1185,10 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 			User:              claims.Email,
 			PreferredUsername: claims.PreferredUsername,
 		}
+		if err := session.SetRawClaimsFromIDToken(bearerToken); err != nil {
+			return nil, err
+		}
+
 		return session, nil
 	}
 	return nil, fmt.Errorf("unable to verify jwt token %s", req.Header.Get("Authorization"))
