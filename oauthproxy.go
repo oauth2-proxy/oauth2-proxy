@@ -222,7 +222,14 @@ func NewReverseProxy(target *url.URL, muxPath string, opts *Options) (proxy *htt
 			req.URL.Path = strings.TrimPrefix(origPath, muxPath)
 		}
 
-		req.URL.Path, req.URL.RawPath = joinURLPath(target, req.URL)
+		if req.URL.Path == "" {
+			// Make sure we don't inject an extra trailing '/' if
+			// the path has been completely removed after trimming
+			req.URL.Path = target.Path
+			req.URL.RawPath = target.RawPath
+		} else {
+			req.URL.Path, req.URL.RawPath = joinURLPath(target, req.URL)
+		}
 	}
 
 	proxy.FlushInterval = opts.FlushInterval
@@ -241,13 +248,12 @@ func singleJoiningSlash(a, b string) string {
 	switch {
 	case aslash && bslash:
 		return a + b[1:]
-	case !aslash && !bslash && b != "":
+	case !aslash && !bslash:
 		return a + "/" + b
 	}
 	return a + b
 }
 
-// Fix from: https://github.com/golang/go/pull/36378
 func joinURLPath(a, b *url.URL) (path, rawpath string) {
 	if a.RawPath == "" && b.RawPath == "" {
 		return singleJoiningSlash(a.Path, b.Path), ""
@@ -263,7 +269,7 @@ func joinURLPath(a, b *url.URL) (path, rawpath string) {
 	switch {
 	case aslash && bslash:
 		return a.Path + b.Path[1:], apath + bpath[1:]
-	case !aslash && !bslash && bpath != "":
+	case !aslash && !bslash:
 		return a.Path + "/" + b.Path, apath + "/" + bpath
 	}
 	return a.Path + b.Path, apath + bpath
