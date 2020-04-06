@@ -175,7 +175,6 @@ func newFakeUpstreamSetup(upstreamPath string) *fakeUpstreamSetup {
 	setup := &fakeUpstreamSetup{}
 
 	setup.backend = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// fmt.Printf("Requested %q\n", r.RequestURI)
 		setup.lastSeenURI = r.RequestURI
 		if dump, err := httputil.DumpRequest(r, false); err != nil {
 			setup.lastSeenCode = 500
