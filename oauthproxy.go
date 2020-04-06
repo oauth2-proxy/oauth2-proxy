@@ -789,8 +789,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	saveSession := true
-	if ok, reason := p.AuthorizeSession(session, &saveSession); ok {
+	if ok, reason := p.AuthorizeSession(session); ok {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2 (rule: %s): %s", reason, session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -813,7 +812,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 // all of the authorization criteria (email domains and/or claims criteria).
 // If it hasn't, it will return false along with a loggable description of why.
 // If it has, it will also return the rule that was used to authorize the user.
-func (p *OAuthProxy) AuthorizeSession(s *sessionsapi.SessionState, saveSession *bool) (authorized bool, reason string) {
+func (p *OAuthProxy) AuthorizeSession(s *sessionsapi.SessionState) (authorized bool, reason string) {
 
 	if !p.Validator(s.Email) {
 		return false, "failed email validation"
@@ -823,7 +822,7 @@ func (p *OAuthProxy) AuthorizeSession(s *sessionsapi.SessionState, saveSession *
 		return false, "failed group validation"
 	}
 
-	return p.ValidateAuthorizedClaims(s, saveSession)
+	return p.ValidateAuthorizedClaims(s)
 }
 
 // ValidateAuthorizedClaims will extract any claims from the idtoken and check them
@@ -831,7 +830,7 @@ func (p *OAuthProxy) AuthorizeSession(s *sessionsapi.SessionState, saveSession *
 //  - If no assertions were specified, it will trivially accept any (or no) claims.
 //  - Otherwise, the first assertion that evaluates to a ["truthy"](https://developer.mozilla.org/en-US/docs/Glossary/Truthy) result will return true.
 //  - If no assertion matches, the claims are not deemed acceptable and false is returned.
-func (p *OAuthProxy) ValidateAuthorizedClaims(s *sessionsapi.SessionState, saveSession *bool) (bool, string) {
+func (p *OAuthProxy) ValidateAuthorizedClaims(s *sessionsapi.SessionState) (bool, string) {
 
 	if p.claimsAuthorizer.IsEmpty() {
 		return true, "*"
@@ -851,7 +850,6 @@ func (p *OAuthProxy) ValidateAuthorizedClaims(s *sessionsapi.SessionState, saveS
 	}
 
 	if ok, idx := p.claimsAuthorizer.MatchesAny(s.RawClaims()); ok {
-		*saveSession = true
 		return true, p.claimsAuthorizer.Rules()[idx]
 	}
 
@@ -944,7 +942,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 				revalidated = true
 
 				// Token was refreshed, make sure authorization still applies.
-				if ok, reason := p.AuthorizeSession(session, &saveSession); !ok {
+				if ok, reason := p.AuthorizeSession(session); !ok {
 					logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Removing re-validated session because it failed authorization (rule: %s): %s", reason, session)
 					session = nil
 					saveSession = false
