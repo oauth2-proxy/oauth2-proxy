@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/oauth2"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"

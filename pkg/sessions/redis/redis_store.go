@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -14,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
@@ -33,19 +34,19 @@ type TicketData struct {
 type SessionStore struct {
 	CookieCipher  *encryption.Cipher
 	CookieOptions *options.CookieOptions
-	Cmdable       redis.Cmdable
+	Client        Client
 }
 
 // NewRedisSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
-	cmdable, err := newRedisCmdable(opts.RedisStoreOptions)
+	client, err := newRedisCmdable(opts.RedisStoreOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
 
 	rs := &SessionStore{
-		Cmdable:       cmdable,
+		Client:        client,
 		CookieCipher:  opts.Cipher,
 		CookieOptions: cookieOpts,
 	}
@@ -53,7 +54,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 
 }
 
-func newRedisCmdable(opts options.RedisStoreOptions) (redis.Cmdable, error) {
+func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
 	if opts.UseSentinel && opts.UseCluster {
 		return nil, fmt.Errorf("options redis-use-sentinel and redis-use-cluster are mutually exclusive")
 	}
@@ -63,14 +64,14 @@ func newRedisCmdable(opts options.RedisStoreOptions) (redis.Cmdable, error) {
 			MasterName:    opts.SentinelMasterName,
 			SentinelAddrs: opts.SentinelConnectionURLs,
 		})
-		return client, nil
+		return newClient(client), nil
 	}
 
 	if opts.UseCluster {
 		client := redis.NewClusterClient(&redis.ClusterOptions{
 			Addrs: opts.ClusterConnectionURLs,
 		})
-		return client, nil
+		return newClusterClient(client), nil
 	}
 
 	opt, err := redis.ParseURL(opts.RedisConnectionURL)
@@ -104,7 +105,7 @@ func newRedisCmdable(opts options.RedisStoreOptions) (redis.Cmdable, error) {
 	}
 
 	client := redis.NewClient(opt)
-	return client, nil
+	return newClient(client), nil
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -121,7 +122,8 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 	if err != nil {
 		return err
 	}
-	ticketString, err := store.storeValue(value, store.CookieOptions.CookieExpire, requestCookie)
+	ctx := req.Context()
+	ticketString, err := store.storeValue(ctx, value, store.CookieOptions.CookieExpire, requestCookie)
 	if err != nil {
 		return err
 	}
@@ -149,7 +151,8 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 	if !ok {
 		return nil, fmt.Errorf("Cookie Signature not valid")
 	}
-	session, err := store.loadSessionFromString(val)
+	ctx := req.Context()
+	session, err := store.loadSessionFromString(ctx, val)
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
@@ -157,18 +160,17 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 }
 
 // loadSessionFromString loads the session based on the ticket value
-func (store *SessionStore) loadSessionFromString(value string) (*sessions.SessionState, error) {
+func (store *SessionStore) loadSessionFromString(ctx context.Context, value string) (*sessions.SessionState, error) {
 	ticket, err := decodeTicket(store.CookieOptions.CookieName, value)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := store.Cmdable.Get(ticket.asHandle(store.CookieOptions.CookieName)).Result()
+	resultBytes, err := store.Client.Get(ctx, ticket.asHandle(store.CookieOptions.CookieName))
 	if err != nil {
 		return nil, err
 	}
 
-	resultBytes := []byte(result)
 	block, err := aes.NewCipher(ticket.Secret)
 	if err != nil {
 		return nil, err
@@ -214,7 +216,8 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 	// If there's an issue decoding the ticket, ignore it
 	ticket, _ := decodeTicket(store.CookieOptions.CookieName, val)
 	if ticket != nil {
-		_, err := store.Cmdable.Del(ticket.asHandle(store.CookieOptions.CookieName)).Result()
+		ctx := req.Context()
+		err := store.Client.Del(ctx, ticket.asHandle(store.CookieOptions.CookieName))
 		if err != nil {
 			return fmt.Errorf("error clearing cookie from redis: %s", err)
 		}
@@ -237,7 +240,7 @@ func (store *SessionStore) makeCookie(req *http.Request, value string, expires t
 	)
 }
 
-func (store *SessionStore) storeValue(value string, expiration time.Duration, requestCookie *http.Cookie) (string, error) {
+func (store *SessionStore) storeValue(ctx context.Context, value string, expiration time.Duration, requestCookie *http.Cookie) (string, error) {
 	ticket, err := store.getTicket(requestCookie)
 	if err != nil {
 		return "", fmt.Errorf("error getting ticket: %v", err)
@@ -254,7 +257,7 @@ func (store *SessionStore) storeValue(value string, expiration time.Duration, re
 	stream.XORKeyStream(ciphertext, []byte(value))
 
 	handle := ticket.asHandle(store.CookieOptions.CookieName)
-	err = store.Cmdable.Set(handle, ciphertext, expiration).Err()
+	err = store.Client.Set(ctx, handle, ciphertext, expiration)
 	if err != nil {
 		return "", err
 	}
@@ -290,7 +293,7 @@ func newTicket() (*TicketData, error) {
 		return nil, fmt.Errorf("failed to create new ticket ID %s", err)
 	}
 	// ticketID is hex encoded
-	ticketID := fmt.Sprintf("%x", rawID)
+	ticketID := hex.EncodeToString(rawID)
 
 	secret := make([]byte, aes.BlockSize)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
