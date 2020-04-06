@@ -1,8 +1,8 @@
 package providers
 
 import (
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
 // Provider represents an upstream identity provider implementation
@@ -10,6 +10,7 @@ type Provider interface {
 	Data() *ProviderData
 	GetEmailAddress(*sessions.SessionState) (string, error)
 	GetUserName(*sessions.SessionState) (string, error)
+	GetPreferredUsername(*sessions.SessionState) (string, error)
 	Redeem(string, string) (*sessions.SessionState, error)
 	ValidateGroup(string) bool
 	ValidateSessionState(*sessions.SessionState) bool

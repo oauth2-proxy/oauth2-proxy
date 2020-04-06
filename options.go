@@ -17,12 +17,12 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
-	"github.com/pusher/oauth2_proxy/pkg/apis/options"
-	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
-	"github.com/pusher/oauth2_proxy/pkg/sessions"
-	"github.com/pusher/oauth2_proxy/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -74,6 +74,7 @@ type Options struct {
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
 	SetBasicAuth                  bool          `flag:"set-basic-auth" cfg:"set_basic_auth" env:"OAUTH2_PROXY_SET_BASIC_AUTH"`
+	PreferEmailToUser             bool          `flag:"prefer-email-to-user" cfg:"prefer_email_to_user" env:"OAUTH2_PROXY_PREFER_EMAIL_TO_USER"`
 	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
 	PassHostHeader                bool          `flag:"pass-host-header" cfg:"pass_host_header" env:"OAUTH2_PROXY_PASS_HOST_HEADER"`
@@ -101,7 +102,8 @@ type Options struct {
 	ProtectedResource                string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
 	ValidateURL                      string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
 	Scope                            string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
-	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"`
+	Prompt                           string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
+	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
@@ -171,6 +173,8 @@ func NewOptions() *Options {
 		PassHostHeader:                   true,
 		SetAuthorization:                 false,
 		PassAuthorization:                false,
+		PreferEmailToUser:                false,
+		Prompt:                           "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                   "force",
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
@@ -283,6 +287,10 @@ func (o *Options) Validate() error {
 		if o.Scope == "" {
 			o.Scope = "openid email profile"
 		}
+	}
+
+	if o.PreferEmailToUser == true && o.PassBasicAuth == false && o.PassUserHeaders == false {
+		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
 	}
 
 	if o.SkipJwtBearerTokens {
@@ -411,7 +419,9 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		ClientID:         o.ClientID,
 		ClientSecret:     o.ClientSecret,
 		ClientSecretFile: o.ClientSecretFile,
+		Prompt:           o.Prompt,
 		ApprovalPrompt:   o.ApprovalPrompt,
+		AcrValues:        o.AcrValues,
 	}
 	p.LoginURL, msgs = parseURL(o.LoginURL, "login", msgs)
 	p.RedeemURL, msgs = parseURL(o.RedeemURL, "redeem", msgs)
@@ -470,7 +480,6 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			}
 		}
 	case *providers.LoginGovProvider:
-		p.AcrValues = o.AcrValues
 		p.PubJWKURL, msgs = parseURL(o.PubJWKURL, "pubjwk", msgs)
 
 		// JWT key can be supplied via env variable or file in the filesystem, but not both.

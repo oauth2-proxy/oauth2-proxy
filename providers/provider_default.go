@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
@@ -90,7 +90,12 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	a = *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-	params.Set("approval_prompt", p.ApprovalPrompt)
+	params.Add("acr_values", p.AcrValues)
+	if p.Prompt != "" {
+		params.Set("prompt", p.Prompt)
+	} else { // Legacy variant of the prompt param:
+		params.Set("approval_prompt", p.ApprovalPrompt)
+	}
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
@@ -116,6 +121,11 @@ func (p *ProviderData) GetEmailAddress(s *sessions.SessionState) (string, error)
 
 // GetUserName returns the Account username
 func (p *ProviderData) GetUserName(s *sessions.SessionState) (string, error) {
+	return "", errors.New("not implemented")
+}
+
+// GetPreferredUsername returns the Account preferred username
+func (p *ProviderData) GetPreferredUsername(s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 

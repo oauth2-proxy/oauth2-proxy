@@ -13,12 +13,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	cookieSecret = "foobar"
+	clientID     = "bazquux"
+	clientSecret = "xyzzyplugh"
+)
+
 func testOptions() *Options {
 	o := NewOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
-	o.CookieSecret = "foobar"
-	o.ClientID = "bazquux"
-	o.ClientSecret = "xyzzyplugh"
+	o.CookieSecret = cookieSecret
+	o.ClientID = clientID
+	o.ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
 	return o
 }
@@ -45,15 +51,15 @@ func TestNewOptions(t *testing.T) {
 
 func TestClientSecretFileOptionFails(t *testing.T) {
 	o := NewOptions()
-	o.CookieSecret = "foobar"
-	o.ClientID = "bazquux"
-	o.ClientSecretFile = "xyzzyplugh"
+	o.CookieSecret = cookieSecret
+	o.ClientID = clientID
+	o.ClientSecretFile = clientSecret
 	o.EmailDomains = []string{"*"}
 	err := o.Validate()
 	assert.NotEqual(t, nil, err)
 
 	p := o.provider.Data()
-	assert.Equal(t, "xyzzyplugh", p.ClientSecretFile)
+	assert.Equal(t, clientSecret, p.ClientSecretFile)
 	assert.Equal(t, "", p.ClientSecret)
 
 	s, err := p.GetClientSecret()
@@ -75,8 +81,8 @@ func TestClientSecretFileOption(t *testing.T) {
 	defer os.Remove(clientSecretFileName)
 
 	o := NewOptions()
-	o.CookieSecret = "foobar"
-	o.ClientID = "bazquux"
+	o.CookieSecret = cookieSecret
+	o.ClientID = clientID
 	o.ClientSecretFile = clientSecretFileName
 	o.EmailDomains = []string{"*"}
 	err = o.Validate()
@@ -150,11 +156,7 @@ func TestProxyURLsError(t *testing.T) {
 	o.Upstreams = append(o.Upstreams, "127.0.0.1:8081")
 	err := o.Validate()
 	assert.NotEqual(t, nil, err)
-
-	expected := errorMsg([]string{
-		"error parsing upstream: parse 127.0.0.1:8081: " +
-			"first path segment in URL cannot contain colon"})
-	assert.Equal(t, expected, err.Error())
+	assert.Contains(t, err.Error(), "error parsing upstream")
 }
 
 func TestCompiledRegex(t *testing.T) {

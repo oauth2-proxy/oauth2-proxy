@@ -9,17 +9,17 @@ nav_order: 1
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v4.0.0`)
+    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v5.1.0`)
 
-    b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
+    b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy` which will put the binary in `$GOROOT/bin`
 
-    c. Using the prebuilt docker image [quay.io/pusher/oauth2_proxy](https://quay.io/pusher/oauth2_proxy) (AMD64, ARMv6 and ARM64 tags available)
+    c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, ARMv6 and ARM64 tags available)
 
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 
 ```
 $ sha256sum -c sha256sum.txt 2>&1 | grep OK
-oauth2_proxy-4.0.0.linux-amd64: OK
+oauth2-proxy-x.y.z.linux-amd64: OK
 ```
 
 2.  [Select a Provider and Register an OAuth Application with a Provider](auth-configuration)

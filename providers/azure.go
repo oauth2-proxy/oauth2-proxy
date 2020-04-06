@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
-	"github.com/pusher/oauth2_proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
 // AzureProvider represents an Azure based Identity Provider
@@ -78,7 +78,6 @@ func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionSta
 	if err != nil {
 		return
 	}
-
 
 	params := url.Values{}
 	params.Add("redirect_uri", redirectURL)

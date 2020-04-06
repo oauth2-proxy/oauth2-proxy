@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/pkg/logger"
-	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
+	"github.com/fsnotify/fsnotify"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 // WaitForReplacement waits for a file to exist on disk and then starts a watch

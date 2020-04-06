@@ -8,10 +8,10 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/requests"
-
 	"golang.org/x/oauth2"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
 // OIDCProvider represents an OIDC based Identity Provider
@@ -121,6 +121,7 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 		s.IDToken = newSession.IDToken
 		s.Email = newSession.Email
 		s.User = newSession.User
+		s.PreferredUsername = newSession.PreferredUsername
 	}
 
 	s.AccessToken = newSession.AccessToken
@@ -139,11 +140,10 @@ func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.To
 	}
 
 	if rawIDToken, present := getIDToken(); present {
-		verifiedIdToken, err := p.Verifier.Verify(ctx, rawIDToken)
-		return verifiedIdToken, err
-	} else {
-		return nil, nil
+		verifiedIDToken, err := p.Verifier.Verify(ctx, rawIDToken)
+		return verifiedIDToken, err
 	}
+	return nil, nil
 }
 
 func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
@@ -165,6 +165,7 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 			newSession.IDToken = token.Extra("id_token").(string)
 			newSession.Email = claims.Email
 			newSession.User = claims.Subject
+			newSession.PreferredUsername = claims.PreferredUsername
 		}
 	}
 
@@ -233,7 +234,8 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 }
 
 type OIDCClaims struct {
-	Subject  string `json:"sub"`
-	Email    string `json:"email"`
-	Verified *bool  `json:"email_verified"`
+	Subject           string `json:"sub"`
+	Email             string `json:"email"`
+	Verified          *bool  `json:"email_verified"`
+	PreferredUsername string `json:"preferred_username"`
 }
