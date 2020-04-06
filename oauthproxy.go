@@ -973,15 +973,17 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			req.Header.Del("Authorization")
 		}
 	}
-	if p.SetAuthorization {
-		if session.IDToken != "" {
-			rw.Header().Set("Authorization", fmt.Sprintf("Bearer %s", session.IDToken))
+	if p.SetBasicAuth {
+		if session.User != "" {
+			authVal := b64.StdEncoding.EncodeToString([]byte(session.User + ":" + p.BasicAuthPassword))
+			rw.Header().Set("Authorization", "Basic "+authVal)
 		} else {
 			rw.Header().Del("Authorization")
 		}
-	} else if p.SetBasicAuth {
-		if session.User != "" {
-			rw.Header().Set("Authorization", fmt.Sprintf("Basic %s", b64.StdEncoding.EncodeToString([]byte(session.User+":"+p.BasicAuthPassword))))
+	}
+	if p.SetAuthorization {
+		if session.IDToken != "" {
+			rw.Header().Set("Authorization", fmt.Sprintf("Bearer %s", session.IDToken))
 		} else {
 			rw.Header().Del("Authorization")
 		}

@@ -241,6 +241,10 @@ func (o *Options) Validate() error {
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 
+	if o.SetBasicAuth && o.SetAuthorization {
+		msgs = append(msgs, "mutually exclusive: set-basic-auth and set-authorization-header can not be set both on true")
+	}
+
 	if o.OIDCIssuerURL != "" {
 
 		ctx := context.Background()
