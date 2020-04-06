@@ -3,7 +3,6 @@
 ## Release Hightlights
 
 ## Important Notes
-- [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp)
 
 ## Breaking Changes
 
