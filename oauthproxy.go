@@ -648,12 +648,8 @@ func prepareNoCache(w http.ResponseWriter) {
 	}
 }
 
-func hasProxyPrefix(path, prefix string) bool {
-	return strings.HasPrefix(path, prefix)
-}
-
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if hasProxyPrefix(req.URL.Path, p.ProxyPrefix) {
+	if strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
 		prepareNoCache(rw)
 	}
 

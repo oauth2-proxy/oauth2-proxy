@@ -1541,22 +1541,6 @@ func Test_prepareNoCache(t *testing.T) {
 	}
 }
 
-func Test_hasProxyPrefix(t *testing.T) {
-	tests := []struct {
-		path, prefix string
-		want         bool
-	}{
-		{"/oauth2/start", "/oauth2", true},
-		{"/other", "/oauth2", false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.path, func(t *testing.T) {
-			got := hasProxyPrefix(tt.path, tt.prefix)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func Test_noCacheHeadersDoesNotExistsInResponseHeadersFromUpstream(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("upstream"))
