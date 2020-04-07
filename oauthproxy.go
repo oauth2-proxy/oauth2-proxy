@@ -853,6 +853,11 @@ func (p *OAuthProxy) ValidateAuthorizedClaims(s *sessionsapi.SessionState) (bool
 		return true, p.claimsAuthorizer.Rules()[idx]
 	}
 
+	// It's pretty hard to troubleshoot configuration if we can't see what claims are failing...
+	if buf, err := json.Marshal(s.RawClaims()); err == nil {
+		return false, fmt.Sprintf("claims are not authorized: %s", string(buf))
+	}
+
 	return false, "claims are not authorized"
 }
 
