@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -395,6 +396,12 @@ func (o *Options) Validate() error {
 	default:
 		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
 	}
+
+	// Sort cookie domains by length, so that we try longer (and more specific)
+	// domains first
+	sort.Slice(o.CookieDomains, func(i, j int) bool {
+		return len(o.CookieDomains[i]) > len(o.CookieDomains[j])
+	})
 
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)

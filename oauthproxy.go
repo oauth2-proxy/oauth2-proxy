@@ -13,7 +13,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -382,13 +381,7 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 		host = req.Host
 	}
 
-	// Sort cookie domains by length, so that we try longer (and more specific)
-	// domains first
-	sortedDomains := p.CookieDomains
-	sort.Slice(sortedDomains, func(i, j int) bool {
-		return len(sortedDomains[i]) > len(sortedDomains[j])
-	})
-	for _, domain := range sortedDomains {
+	for _, domain := range p.CookieDomains {
 		if strings.HasSuffix(host, domain) {
 			cookieDomain = domain
 			break
