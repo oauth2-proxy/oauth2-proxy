@@ -11,7 +11,10 @@
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
 
 ## Changes since v5.1.0
+
 - [#481](https://github.com/oauth2-proxy/oauth2-proxy/pull/481) Update Okta docs (@trevorbox)
+- [#474](https://github.com/oauth2-proxy/oauth2-proxy/pull/474) Always log hasMember request error object (@jbielick)
+- [#468](https://github.com/oauth2-proxy/oauth2-proxy/pull/468) Implement graceful shutdown and propagate request context (@johejo)
 - [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) Migrate to oauth2-proxy/oauth2-proxy (@JoelSpeed)
   - Project renamed from `pusher/oauth2_proxy` to `oauth2-proxy`
   - Move Go import path from `github.com/pusher/oauth2_proxy` to `github.com/oauth2-proxy/oauth2-proxy`
@@ -20,6 +23,7 @@
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
 - [#432](https://github.com/oauth2-proxy/oauth2-proxy/pull/432) Update ruby dependencies for documentation (@theobarberbany)
 - [#471](https://github.com/oauth2-proxy/oauth2-proxy/pull/471) Add logging in case of invalid redirects (@gargath)
+- [#462](https://github.com/oauth2-proxy/oauth2-proxy/pull/462) Allow HTML in banner message (@eritikass).
 
 # v5.1.0
 
@@ -52,6 +56,7 @@ N/A
 - [#401](https://github.com/oauth2-proxy/oauth2-proxy/pull/401) Give the option to pass email address in the Basic auth header instead of upstream usernames. (@Spindel)
 - [#405](https://github.com/oauth2-proxy/oauth2-proxy/pull/405) The `/sign_in` page now honors the `rd` query parameter, fixing the redirect after a successful authentication (@ti-mo)
 - [#434](https://github.com/oauth2-proxy/oauth2-proxy/pull/434) Give the option to prefer email address in the username header when using the -pass-user-headers option (@jordancrawfordnz)
+
 
 # v5.0.0
 

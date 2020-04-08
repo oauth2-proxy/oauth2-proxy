@@ -49,8 +49,8 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-exclude-logging-paths` | string | comma separated list of paths to exclude from logging, eg: `"/ping,/path2"` |`""` (no paths excluded) |
 | `-flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `-force-https` | bool | enforce https redirect | `false` |
-| `-banner` | string | custom banner string. Use `"-"` to disable default banner. | |
-| `-footer` | string | custom footer string. Use `"-"` to disable default footer. | |
+| `-banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
+| `-footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
 | `-gcp-healthchecks` | bool | will enable `/liveness_check`, `/readiness_check`, and `/` (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses | false |
 | `-github-org` | string | restrict logins to members of this organisation | |
 | `-github-team` | string | restrict logins to members of any of these teams (slug), separated by a comma | |
