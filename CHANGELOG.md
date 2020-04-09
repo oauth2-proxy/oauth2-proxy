@@ -10,14 +10,15 @@
   - See the changes listed below for PR [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) for full details
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
 
-- [#440](https://github.com/pusher/oauth2_proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
+- [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
     - The Azure AD Graph API has been [deprecated](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api) and is being replaced by the Microsoft Graph API.
       If your application relies on the access token being passed to it to access the Azure AD Graph API, you should migrate your application to use the Microsoft Graph API.
       Existing behaviour can be retained by setting  `-resource=https://graph.windows.net`.
 
 ## Changes since v5.1.0
 
-- [#440](https://github.com/pusher/oauth2_proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
+- [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
+- [#481](https://github.com/oauth2-proxy/oauth2-proxy/pull/481) Update Okta docs (@trevorbox)
 - [#474](https://github.com/oauth2-proxy/oauth2-proxy/pull/474) Always log hasMember request error object (@jbielick)
 - [#468](https://github.com/oauth2-proxy/oauth2-proxy/pull/468) Implement graceful shutdown and propagate request context (@johejo)
 - [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) Migrate to oauth2-proxy/oauth2-proxy (@JoelSpeed)
