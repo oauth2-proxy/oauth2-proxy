@@ -455,6 +455,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 
 // SignInPage writes the sing in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
+	prepareNoCache(rw)
 	p.ClearSessionCookie(rw, req)
 	rw.WriteHeader(code)
 
@@ -635,7 +636,26 @@ func getRemoteAddr(req *http.Request) (s string) {
 	return
 }
 
+// See https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=en
+var noCacheHeaders = map[string]string{
+	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
+	"Cache-Control":   "no-cache, no-store, must-revalidate, max-age=0",
+	"X-Accel-Expires": "0", // https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
+}
+
+// prepareNoCache prepares headers for preventing browser caching.
+func prepareNoCache(w http.ResponseWriter) {
+	// Set NoCache headers
+	for k, v := range noCacheHeaders {
+		w.Header().Set(k, v)
+	}
+}
+
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
+		prepareNoCache(rw)
+	}
+
 	switch path := req.URL.Path; {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
@@ -717,6 +737,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 
 // OAuthStart starts the OAuth2 authentication flow
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
+	prepareNoCache(rw)
 	nonce, err := encryption.Nonce()
 	if err != nil {
 		logger.Printf("Error obtaining nonce: %s", err.Error())
