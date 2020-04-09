@@ -1524,3 +1524,46 @@ func TestFindJwtBearerToken(t *testing.T) {
 
 	fmt.Printf("%s", token)
 }
+
+func Test_prepareNoCache(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		prepareNoCache(w)
+	})
+	mux := http.NewServeMux()
+	mux.Handle("/", handler)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	mux.ServeHTTP(rec, req)
+
+	for k, v := range noCacheHeaders {
+		assert.Equal(t, rec.Header().Get(k), v)
+	}
+}
+
+func Test_noCacheHeadersDoesNotExistsInResponseHeadersFromUpstream(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("upstream"))
+	}))
+	t.Cleanup(upstream.Close)
+
+	opts := NewOptions()
+	opts.Upstreams = []string{upstream.URL}
+	opts.SkipAuthRegex = []string{".*"}
+	_ = opts.Validate()
+	proxy := NewOAuthProxy(opts, func(email string) bool {
+		return true
+	})
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/upstream", nil)
+	proxy.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "upstream", rec.Body.String())
+
+	// checking noCacheHeaders does not exists in response headers from upstream
+	for k := range noCacheHeaders {
+		assert.Equal(t, "", rec.Header().Get(k))
+	}
+}
