@@ -56,17 +56,13 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 // GetCookieDomain returns the correct cookie domain given a list of domains
 // by checking the X-Fowarded-Host and host header of an an http request
 func GetCookieDomain(req *http.Request, cookieDomains []string) string {
-	cookieDomain := ""
-
 	host := GetRequestHost(req)
 	for _, domain := range cookieDomains {
 		if strings.HasSuffix(host, domain) {
-			cookieDomain = domain
-			break
+			return domain
 		}
 	}
-	return cookieDomain
-
+	return ""
 }
 
 // GetRequestHost return the request host header or X-Forwarded-Host if present
