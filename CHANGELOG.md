@@ -23,6 +23,7 @@
 - [#432](https://github.com/oauth2-proxy/oauth2-proxy/pull/432) Update ruby dependencies for documentation (@theobarberbany)
 - [#471](https://github.com/oauth2-proxy/oauth2-proxy/pull/471) Add logging in case of invalid redirects (@gargath)
 - [#462](https://github.com/oauth2-proxy/oauth2-proxy/pull/462) Allow HTML in banner message (@eritikass).
+- [#412](https://github.com/pusher/oauth2_proxy/pull/412) Allow multiple cookie domains to be specified (@edahlseng)
 
 # v5.1.0
 
@@ -54,7 +55,6 @@ N/A
 - [#355](https://github.com/oauth2-proxy/oauth2-proxy/pull/355) Add Client Secret File support for providers that rotate client secret via file system (@pasha-r)
 - [#401](https://github.com/oauth2-proxy/oauth2-proxy/pull/401) Give the option to pass email address in the Basic auth header instead of upstream usernames. (@Spindel)
 - [#405](https://github.com/oauth2-proxy/oauth2-proxy/pull/405) The `/sign_in` page now honors the `rd` query parameter, fixing the redirect after a successful authentication (@ti-mo)
-- [#412](https://github.com/pusher/oauth2_proxy/pull/412) Allow multiple cookie domains to be specified (@edahlseng)
 - [#434](https://github.com/oauth2-proxy/oauth2-proxy/pull/434) Give the option to prefer email address in the username header when using the -pass-user-headers option (@jordancrawfordnz)
 
 
