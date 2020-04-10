@@ -29,7 +29,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `-azure-tenant string` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
 | `-basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
-| `-claim-authorization` | string | define a claim-based authorization rule (may be repeated) | |
+| `-claim-authorization` | string | define a claim-based authorization rule | |
 | `-claim-authorizations-file` | string | read claim-based authorization rules from a file (one per line) | |
 | `-client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
 | `-client-secret` | string | the OAuth Client Secret | |
