@@ -74,6 +74,7 @@ type Options struct {
 	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
+	SetBasicAuth                  bool          `flag:"set-basic-auth" cfg:"set_basic_auth" env:"OAUTH2_PROXY_SET_BASIC_AUTH"`
 	PreferEmailToUser             bool          `flag:"prefer-email-to-user" cfg:"prefer_email_to_user" env:"OAUTH2_PROXY_PREFER_EMAIL_TO_USER"`
 	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
@@ -167,6 +168,7 @@ func NewOptions() *Options {
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
 		PassBasicAuth:                    true,
+		SetBasicAuth:                     false,
 		PassUserHeaders:                  true,
 		PassAccessToken:                  false,
 		PassHostHeader:                   true,
@@ -242,6 +244,10 @@ func (o *Options) Validate() error {
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
 			"\n      use email-domain=* to authorize all email addresses")
+	}
+
+	if o.SetBasicAuth && o.SetAuthorization {
+		msgs = append(msgs, "mutually exclusive: set-basic-auth and set-authorization-header can not both be true")
 	}
 
 	if o.OIDCIssuerURL != "" {

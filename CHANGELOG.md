@@ -4,6 +4,8 @@
 
 ## Important Notes
 
+- [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Responses to endpoints with a proxy prefix will now return headers for preventing browser caching.
+
 ## Breaking Changes
 
 - Migration from Pusher to independent org may have introduced breaking changes for your environment.
@@ -12,6 +14,8 @@
 
 ## Changes since v5.1.0
 
+- [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Prevent browser caching during auth flow (@johejo)
+- [#481](https://github.com/oauth2-proxy/oauth2-proxy/pull/481) Update Okta docs (@trevorbox)
 - [#474](https://github.com/oauth2-proxy/oauth2-proxy/pull/474) Always log hasMember request error object (@jbielick)
 - [#468](https://github.com/oauth2-proxy/oauth2-proxy/pull/468) Implement graceful shutdown and propagate request context (@johejo)
 - [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) Migrate to oauth2-proxy/oauth2-proxy (@JoelSpeed)
@@ -24,6 +28,7 @@
 - [#471](https://github.com/oauth2-proxy/oauth2-proxy/pull/471) Add logging in case of invalid redirects (@gargath)
 - [#462](https://github.com/oauth2-proxy/oauth2-proxy/pull/462) Allow HTML in banner message (@eritikass).
 - [#412](https://github.com/pusher/oauth2_proxy/pull/412) Allow multiple cookie domains to be specified (@edahlseng)
+- [#413](https://github.com/oauth2-proxy/oauth2-proxy/pull/413) Add -set-basic-auth param to set the Basic Authorization header for upstreams (@morarucostel).
 
 # v5.1.0
 
