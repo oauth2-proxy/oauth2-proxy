@@ -94,6 +94,7 @@ type OAuthProxy struct {
 	serveMux             http.Handler
 	SetXAuthRequest      bool
 	PassBasicAuth        bool
+	SetBasicAuth         bool
 	SkipProviderButton   bool
 	PassUserHeaders      bool
 	BasicAuthPassword    string
@@ -302,6 +303,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		compiledRegex:        opts.CompiledRegex,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
+		SetBasicAuth:         opts.SetBasicAuth,
 		PassUserHeaders:      opts.PassUserHeaders,
 		BasicAuthPassword:    opts.BasicAuthPassword,
 		PassAccessToken:      opts.PassAccessToken,
@@ -1035,6 +1037,14 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			req.Header["Authorization"] = []string{fmt.Sprintf("Bearer %s", session.IDToken)}
 		} else {
 			req.Header.Del("Authorization")
+		}
+	}
+	if p.SetBasicAuth {
+		if session.User != "" {
+			authVal := b64.StdEncoding.EncodeToString([]byte(session.User + ":" + p.BasicAuthPassword))
+			rw.Header().Set("Authorization", "Basic "+authVal)
+		} else {
+			rw.Header().Del("Authorization")
 		}
 	}
 	if p.SetAuthorization {
