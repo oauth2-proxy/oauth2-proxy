@@ -153,20 +153,20 @@ func NewDefaultReverseProxy(target *url.URL, opts *Options) (proxy *httputil.Rev
 //    By default, an upstream "http://upstream/upath/" binds to "/upath/" for the
 //    serveMux which results in:
 //
-//         "http://proxy/upath/file.html" => "http://upstream/upath/file.html"
+//         "http://proxy/upath/index.html" => "http://upstream/upath/index.html"
 //
 //    But the default path appending behavior of httputil's version would cause
-//    extra path info being injected (e.g. "http://upstream/upath/upath/file.html")
+//    extra path info being injected (e.g. "http://upstream/upath/upath/index.html")
 //    resulting in incorrect upstream URLs. Further, we'd like to remap some
 //    upstream locations by explicitly providing a different "base", for example:
 //
-//         "http://proxy/file.html" => "http://upstream/upath/file.html"
+//         "http://proxy/index.html" => "http://upstream/upath/index.html"
 //
 //    Can be accomplished by specifying "http://upstream/upath/#/" and it will
 //    use the fragment as the `muxPath` (similar to how local file remapping works).
 //
 //  - Also, there (at the time of writing) is a bug with how it handles escaped Paths:
-//      https://github.com/golang/go/pull/36378/files
+//      https://github.com/golang/go/pull/36378
 //
 //  - However, we make sure to retain the query param merging, as it's important
 //    in situations where the upstream requires an authentication token for example.
@@ -194,10 +194,10 @@ func NewReverseProxy(target *url.URL, muxPath string, opts *Options) (proxy *htt
 			req.Host = target.Host
 		}
 
-		// Take request's "/foo/file.html" and strip the muxPath off the
+		// Take request's "/foo/index.html" and strip the muxPath off the
 		// front. We know it exists on the path since that's how this
 		// handler got called in the first place (via proxy's serveMux
-		// path matching). If muxPath is "/foo/" we want "/file.html"
+		// path matching). If muxPath is "/foo/" we want "/index.html"
 		// (note the slash is retained). Note: this replaces the possibly
 		// incorrect path calculated in the default implementation.
 
@@ -212,7 +212,7 @@ func NewReverseProxy(target *url.URL, muxPath string, opts *Options) (proxy *htt
 				req.URL.Path = strings.TrimPrefix(origPath, unescapedMuxPath)
 			} else {
 				// This would only happen if muxPath was incorrectly passed
-				// to us (such a malformed manual path remapping). Not really
+				// to us (such as a malformed manual path remapping). Not really
 				// much we can do... I'm not sure what HTTP servers are
 				// supposed to do in this case.
 				req.URL.Path = strings.TrimPrefix(origPath, muxPath)

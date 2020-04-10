@@ -133,14 +133,14 @@ Static file paths are configured as a file:// URL. `file:///var/www/static/` wil
 
 Multiple upstreams can either be configured by supplying a comma separated list to the `-upstream` parameter, supplying the parameter multiple times or provinding a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
 
-> NOTE: When defining upstream URLs, if it does not end with a slash ('/') it will match ONLY that path EXACTLY, which is probably not what you're expecting. i.e. `http://127.0.0.1:8080/some/path` will serve ONLY the exact URL `http://[oauth2-proxy url]/some/path` (not anything below it such as `http://[oauth2-proxy url]/some/path/some/file.html`). To match anything "below" that you must also include the trailing slash.
+> NOTE: When defining upstream URLs, if it does not end with a slash ('/') it will match ONLY that path EXACTLY, which is probably not what you're expecting. i.e. `http://127.0.0.1:8080/some/path` will serve ONLY the exact URL `http://[oauth2-proxy url]/some/path` (not anything below it such as `http://[oauth2-proxy url]/some/path/some/index.html`). To match anything "below" that you must also include the trailing slash.
 
 #### Path Mapping via URL Fragment
 
 For HTTP(s) and file:// based upstream locations, if you include a fragment as part of the upstream URL, it will interpret that as the path to map in the proxy server. For example:
 
-* Upstream URL of `file:///var/www/static/#/static/` will map `http://[oauth2-proxy url]/static/...` to `/var/www/static/...`
-* Upstream URL of `http://127.0.0.1:8080/foo/#/api/` will map `http://[oauth2-proxy url]/api/...` to `http://127.0.0.1:8080/foo/...`
+* Upstream URL of `file:///var/www/static/#/static/` will map `http://[oauth2-proxy url]/static/abc` to `/var/www/static/abc`
+* Upstream URL of `http://127.0.0.1:8080/foo/#/api/` will map `http://[oauth2-proxy url]/api/abc` to `http://127.0.0.1:8080/foo/abc`
 
 ### Environment variables
 
