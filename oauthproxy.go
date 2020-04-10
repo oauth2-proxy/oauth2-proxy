@@ -375,21 +375,10 @@ func (p *OAuthProxy) MakeCSRFCookie(req *http.Request, value string, expiration 
 }
 
 func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
-	cookieDomain := ""
-	host := req.Header.Get("X-Forwarded-Host")
-	if host == "" {
-		host = req.Host
-	}
-
-	for _, domain := range p.CookieDomains {
-		if strings.HasSuffix(host, domain) {
-			cookieDomain = domain
-			break
-		}
-	}
+	cookieDomain := cookies.GetCookieDomain(req, p.CookieDomains)
 
 	if cookieDomain != "" {
-		domain := host
+		domain := cookies.GetRequestHost(req)
 		if h, _, err := net.SplitHostPort(domain); err == nil {
 			domain = h
 		}
