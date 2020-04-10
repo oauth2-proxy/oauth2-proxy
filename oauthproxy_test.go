@@ -269,6 +269,7 @@ func TestUpstreamWithQuery(t *testing.T) {
 	assert.Equal(t, "/foo?t=T&q=bar", fu.translateRequest("/foo?q=bar"))
 	// Make sure encoded slashes play nice
 	assert.Equal(t, "/a%2Fb?t=T&q=baz", fu.translateRequest("/a%2Fb?q=baz"))
+	assert.Equal(t, "/a%2Fb?t=T&t=Q", fu.translateRequest("/a%2Fb?t=Q"))
 }
 
 func TestUpstreamWithPath(t *testing.T) {
