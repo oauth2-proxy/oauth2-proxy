@@ -31,7 +31,7 @@ func (cfg EnvOptions) LoadEnvForStruct(options interface{}) {
 		field := typ.Field(i)
 		fieldV := reflect.Indirect(val).Field(i)
 
-		if field.Type.Kind() == reflect.Struct && field.Anonymous {
+		if field.Type.Kind() == reflect.Struct {
 			cfg.LoadEnvForStruct(fieldV.Interface())
 			continue
 		}
