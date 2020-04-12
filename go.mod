@@ -13,10 +13,13 @@ require (
 	github.com/go-redis/redis/v7 v7.2.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
+	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mreiferson/go-options v1.0.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
+	github.com/spf13/pflag v1.0.3
+	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.5.1
 	github.com/yhat/wsutil v0.0.0-20170731153501-1d66fa95c997
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
