@@ -66,8 +66,7 @@ type Options struct {
 
 	Cookie options.CookieOptions
 
-	// Embed SessionOptions
-	options.SessionOptions
+	Session options.SessionOptions
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
@@ -164,7 +163,7 @@ func NewOptions() *Options {
 			Expire:   time.Duration(168) * time.Hour,
 			Refresh:  time.Duration(0),
 		},
-		SessionOptions: options.SessionOptions{
+		Session: options.SessionOptions{
 			Type: "cookie",
 		},
 		SetXAuthRequest:                  false,
@@ -412,8 +411,8 @@ func (o *Options) Validate() error {
 		}
 	}
 
-	o.SessionOptions.Cipher = cipher
-	sessionStore, err := sessions.NewSessionStore(&o.SessionOptions, &o.Cookie)
+	o.Session.Cipher = cipher
+	sessionStore, err := sessions.NewSessionStore(&o.Session, &o.Cookie)
 	if err != nil {
 		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
 	} else {

@@ -1403,7 +1403,7 @@ func TestClearSplitCookie(t *testing.T) {
 	opts := NewOptions()
 	opts.Cookie.Name = "oauth2"
 	opts.Cookie.Domains = []string{"abc"}
-	store, err := cookie.NewCookieSessionStore(&opts.SessionOptions, &opts.Cookie)
+	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
 	assert.Equal(t, err, nil)
 	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
 	var rw = httptest.NewRecorder()
@@ -1432,7 +1432,7 @@ func TestClearSingleCookie(t *testing.T) {
 	opts := NewOptions()
 	opts.Cookie.Name = "oauth2"
 	opts.Cookie.Domains = []string{"abc"}
-	store, err := cookie.NewCookieSessionStore(&opts.SessionOptions, &opts.Cookie)
+	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
 	assert.Equal(t, err, nil)
 	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
 	var rw = httptest.NewRecorder()

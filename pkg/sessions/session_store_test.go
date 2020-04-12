@@ -428,7 +428,7 @@ var _ = Describe("NewSessionStore", func() {
 			mr, err = miniredis.Run()
 			Expect(err).ToNot(HaveOccurred())
 			opts.Type = options.RedisSessionStoreType
-			opts.RedisConnectionURL = "redis://" + mr.Addr()
+			opts.Redis.ConnectionURL = "redis://" + mr.Addr()
 		})
 
 		AfterEach(func() {

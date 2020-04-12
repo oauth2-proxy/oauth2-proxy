@@ -40,7 +40,7 @@ type SessionStore struct {
 // NewRedisSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
-	client, err := newRedisCmdable(opts.RedisStoreOptions)
+	client, err := newRedisCmdable(opts.Redis)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
@@ -74,16 +74,16 @@ func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
 		return newClusterClient(client), nil
 	}
 
-	opt, err := redis.ParseURL(opts.RedisConnectionURL)
+	opt, err := redis.ParseURL(opts.ConnectionURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse redis url: %s", err)
 	}
 
-	if opts.RedisInsecureTLS {
+	if opts.InsecureSkipTLSVerify {
 		opt.TLSConfig.InsecureSkipVerify = true
 	}
 
-	if opts.RedisCAPath != "" {
+	if opts.CAPath != "" {
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil {
 			logger.Printf("failed to load system cert pool for redis connection, falling back to empty cert pool")
@@ -91,9 +91,9 @@ func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
 		if rootCAs == nil {
 			rootCAs = x509.NewCertPool()
 		}
-		certs, err := ioutil.ReadFile(opts.RedisCAPath)
+		certs, err := ioutil.ReadFile(opts.CAPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load %q, %v", opts.RedisCAPath, err)
+			return nil, fmt.Errorf("failed to load %q, %v", opts.CAPath, err)
 		}
 
 		// Append our cert to the system pool
