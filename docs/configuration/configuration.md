@@ -33,7 +33,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-client-secret` | string | the OAuth Client Secret | |
 | `-client-secret-file` | string | the file with OAuth Client Secret | |
 | `-config` | string | path to config file | |
-| `-cookie-domain` | string | an optional cookie domain to force cookies to (ie: `.yourcompany.com`) | |
+| `-cookie-domain` | string \| list | Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
 | `-cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
 | `-cookie-httponly` | bool | set HttpOnly cookie flag | true |
 | `-cookie-name` | string | the name of the cookie that the oauth_proxy creates | `"_oauth2_proxy"` |

@@ -64,7 +64,7 @@ type OAuthProxy struct {
 	CookieSeed     string
 	CookieName     string
 	CSRFCookieName string
-	CookieDomain   string
+	CookieDomains  []string
 	CookiePath     string
 	CookieSecure   bool
 	CookieHTTPOnly bool
@@ -265,13 +265,13 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s path:%s samesite:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, opts.CookieDomain, opts.CookiePath, opts.CookieSameSite, refresh)
+	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, strings.Join(opts.CookieDomains, ","), opts.CookiePath, opts.CookieSameSite, refresh)
 
 	return &OAuthProxy{
 		CookieName:     opts.CookieName,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.CookieName, "csrf"),
 		CookieSeed:     opts.CookieSecret,
-		CookieDomain:   opts.CookieDomain,
+		CookieDomains:  opts.CookieDomains,
 		CookiePath:     opts.CookiePath,
 		CookieSecure:   opts.CookieSecure,
 		CookieHTTPOnly: opts.CookieHTTPOnly,
@@ -377,13 +377,15 @@ func (p *OAuthProxy) MakeCSRFCookie(req *http.Request, value string, expiration 
 }
 
 func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
-	if p.CookieDomain != "" {
-		domain := req.Host
+	cookieDomain := cookies.GetCookieDomain(req, p.CookieDomains)
+
+	if cookieDomain != "" {
+		domain := cookies.GetRequestHost(req)
 		if h, _, err := net.SplitHostPort(domain); err == nil {
 			domain = h
 		}
-		if !strings.HasSuffix(domain, p.CookieDomain) {
-			logger.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, p.CookieDomain)
+		if !strings.HasSuffix(domain, cookieDomain) {
+			logger.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, cookieDomain)
 		}
 	}
 
@@ -391,7 +393,7 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 		Name:     name,
 		Value:    value,
 		Path:     p.CookiePath,
-		Domain:   p.CookieDomain,
+		Domain:   cookieDomain,
 		HttpOnly: p.CookieHTTPOnly,
 		Secure:   p.CookieSecure,
 		Expires:  now.Add(expiration),
