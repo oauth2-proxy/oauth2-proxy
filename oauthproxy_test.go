@@ -1459,8 +1459,7 @@ type NoOpKeySet struct {
 func (NoOpKeySet) VerifySignature(ctx context.Context, jwt string) (payload []byte, err error) {
 	splitStrings := strings.Split(jwt, ".")
 	payloadString := splitStrings[1]
-	jsonString, err := base64.RawURLEncoding.DecodeString(payloadString)
-	return jsonString, err
+	return base64.RawURLEncoding.DecodeString(payloadString)
 }
 
 func TestGetJwtSession(t *testing.T) {
