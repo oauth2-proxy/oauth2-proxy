@@ -12,6 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
 )
 
@@ -129,6 +130,7 @@ func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Coo
 // it into a slice of cookies which fit within the 4kb cookie limit indexing
 // the cookies from 0
 func splitCookie(c *http.Cookie) []*http.Cookie {
+	logger.Printf("WARNING: Multiple cookies are required for this session as it exceeds the 4kb cookie limit. Please use server side session storage (eg. Redis) instead.")
 	if len(c.Value) < maxCookieLength {
 		return []*http.Cookie{c}
 	}
