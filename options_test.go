@@ -312,7 +312,7 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 
 	err := o.Validate()
 	assert.Equal(t, "invalid configuration:\n"+
-		fmt.Sprintf("  missing setting: login-url\n  missing setting: redeem-url\n  missing setting: oidc-jwks-url"), err.Error())
+		"  missing setting: login-url\n  missing setting: redeem-url\n  missing setting: oidc-jwks-url", err.Error())
 
 	o.LoginURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/authorize?p=b2c_1_sign_in"
 	o.RedeemURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/token?p=b2c_1_sign_in"

@@ -245,7 +245,9 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 
 	verifiedIDToken, err := provider.findVerifiedIDToken(context.Background(), tokenWithIDToken)
 	assert.Equal(t, true, err == nil)
-	assert.Equal(t, true, verifiedIDToken != nil)
+	if verifiedIDToken == nil {
+		t.Fatal("verifiedIDToken is nil")
+	}
 	assert.Equal(t, defaultIDToken.Issuer, verifiedIDToken.Issuer)
 	assert.Equal(t, defaultIDToken.Subject, verifiedIDToken.Subject)
 
