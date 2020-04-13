@@ -267,11 +267,11 @@ func trimUnescapedPathPrefix(rawPath string, prefix string) (string, error) {
 			if i1+2 >= l1 {
 				return "", fmt.Errorf("invalid escape sequence: end of string")
 			}
-			if val, err := strconv.ParseUint(rawPath[i1+1:i1+3], 16, 8); err != nil {
+			val, err := strconv.ParseUint(rawPath[i1+1:i1+3], 16, 8)
+			if err != nil {
 				return "", fmt.Errorf("invalid escape sequence: %%%s", rawPath[i1+1:i1+2])
-			} else {
-				c1 = byte(val)
 			}
+			c1 = byte(val)
 			i1 += 2
 		}
 		if c1 != c2 {
@@ -381,9 +381,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			// Emulate URL.setPath() does here wrt to RawPath semantics. We can safely
 			// ignore the error here because we validated it during options.Validate().
 			if rawPath != "" {
-				if path, _ = url.PathUnescape(rawPath); path == rawPath {
-					rawPath = ""
-				}
+				path, _ = url.PathUnescape(rawPath)
 			}
 			logger.Printf("mapping path %q => upstream %q", path, u)
 			proxy := NewWebSocketOrRestReverseProxy(u, path, opts, auth)
