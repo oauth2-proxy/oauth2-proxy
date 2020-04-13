@@ -215,9 +215,10 @@ func (f *fakeUpstreamSetup) translateRequest(path string) string {
 	f.lastSeenRequest = ""
 	f.lastSeenCode = 0
 	f.lastCode = 0
-	req, _ := http.NewRequest("GET", "http://localhost"+path, nil)
-	f.proxy.ServeHTTP(rw, req)
-	f.lastCode = rw.Code
+	if req, err := http.NewRequest("GET", "http://localhost"+path, nil); err == nil {
+		f.proxy.ServeHTTP(rw, req)
+		f.lastCode = rw.Code
+	}
 	return f.lastSeenURI
 }
 
@@ -288,12 +289,41 @@ func TestUpstreamWithPath(t *testing.T) {
 	assert.Equal(t, 0, fu.lastSeenCode)
 
 	// This will work though, since it shares the path as its start
-	fu.translateRequest("/site/a.html")
-	assert.Equal(t, "/site/a.html", "/site/a.html")
+	assert.Equal(t, "/site/a.html", fu.translateRequest("/site/a.html"))
 
 	// Make sure encoded slashes play nice
 	assert.Equal(t, "/site/a%2Fb", fu.translateRequest("/site/a%2Fb"))
 	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/site/a%2Fb?q=baz"))
+}
+
+func TestMalformedUpstreamPathRemapping(t *testing.T) {
+	// Note %f is not a valid url encoding, so...
+	fu := newFakeUpstreamSetup("/site/%25f/#/%f/")
+	defer fu.close()
+
+	// ...it will fail to validate and thus leave us with a 404 when attempting to request it
+	fu.translateRequest("/%25f/foo.html")
+	assert.Equal(t, 404, fu.lastCode)
+}
+
+func TestUpstreamEscapedPathRemapping(t *testing.T) {
+	fu := newFakeUpstreamSetup("/site/#/a%2fb/")
+	defer fu.close()
+
+	assert.Equal(t, "/site/foo.html", fu.translateRequest("/a%2fb/foo.html"))
+	assert.Equal(t, "/site/foo.html", fu.translateRequest("/a/b/foo.html"))
+	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/a%2fb/a%2Fb?q=baz"))
+	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/a/b/a%2Fb?q=baz"))
+}
+
+func TestUpstreamUnescapedPathRemapping(t *testing.T) {
+	fu := newFakeUpstreamSetup("/site/#/a/b/")
+	defer fu.close()
+
+	assert.Equal(t, "/site/foo.html", fu.translateRequest("/a%2fb/foo.html"))
+	assert.Equal(t, "/site/foo.html", fu.translateRequest("/a/b/foo.html"))
+	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/a%2fb/a%2Fb?q=baz"))
+	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/a/b/a%2Fb?q=baz"))
 }
 
 func TestUpstreamExactPath(t *testing.T) {
@@ -355,9 +385,6 @@ func TestUpstreamWithMappedPath(t *testing.T) {
 }
 
 func TestUpstreamWithEscapedPath(t *testing.T) {
-	// TODO: See checkMuxPath() as to why we're skipping. Remove once a solution is in place.
-	t.Skip("Skipping test due to Known Issue with escaped paths")
-
 	fu := newFakeUpstreamSetup("/a%2Fb/")
 	defer fu.close()
 
@@ -369,9 +396,6 @@ func TestUpstreamWithEscapedPath(t *testing.T) {
 }
 
 func TestUpstreamWithEscapedMappedPath(t *testing.T) {
-	// TODO: See checkMuxPath() as to why we're skipping. Remove once a solution is in place.
-	t.Skip("Skipping test due to Known Issue with escaped paths")
-
 	fu := newFakeUpstreamSetup("/site/#/a%2Fb/c/")
 	defer fu.close()
 
@@ -380,6 +404,41 @@ func TestUpstreamWithEscapedMappedPath(t *testing.T) {
 	assert.Equal(t, "/site/site/a.html", fu.translateRequest("/a%2Fb/c/site/a.html"))
 	// Make sure encoded slashes play nice
 	assert.Equal(t, "/site/a%2Fb?q=baz", fu.translateRequest("/a%2Fb/c/a%2Fb?q=baz"))
+}
+
+func Test_trimUnescapedPathPrefix(t *testing.T) {
+	testCases := []struct {
+		path     string
+		prefix   string
+		expected string
+	}{
+		{"/a%2fb%2fc/foo%2fbar.html", "/a/b/c/", "foo%2fbar.html"},
+		{"/a/b%2fc/foo%2fbar.html", "/a/b/c/", "foo%2fbar.html"},
+		{"/a%2fb/c/foo%2fbar.html", "/a/b/c/", "foo%2fbar.html"},
+		{"/a/b/c/foo%2fbar.html", "/a/b/c/", "foo%2fbar.html"},
+		{"/a/b%2fc/foo%2fbar.html", "/a/b/d/", "/a/b%2fc/foo%2fbar.html"},
+		{"/a/b/c/", "/a/b/c/", ""},
+		{"/a/b/c//", "/a/b/c/", "/"},
+		{"%2ffoo", "/", "foo"},
+		{"/a", "/a/", "/a"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.path, func(t *testing.T) {
+			p, err := trimUnescapedPathPrefix(tc.path, tc.prefix)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, p)
+		})
+	}
+
+	// Incomplete escape sequence
+	var err error
+	_, err = trimUnescapedPathPrefix("f%b", "foo")
+	assert.Error(t, err)
+
+	// Invalid escape sequence
+	_, err = trimUnescapedPathPrefix("f%oo", "foo")
+	assert.Error(t, err)
 }
 
 func TestRobotsTxt(t *testing.T) {

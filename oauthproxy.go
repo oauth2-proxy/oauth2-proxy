@@ -143,7 +143,7 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //
 // To create a customized path mapping use NewReverseProxy()
 func NewDefaultReverseProxy(target *url.URL, opts *Options) (proxy *httputil.ReverseProxy) {
-	return NewReverseProxy(target, target.EscapedPath(), opts)
+	return NewReverseProxy(target, target.Path, opts)
 }
 
 // NewReverseProxy creates a new reverse proxy for proxying requests to upstream
@@ -195,33 +195,29 @@ func NewReverseProxy(target *url.URL, muxPath string, opts *Options) (proxy *htt
 			req.Host = target.Host
 		}
 
-		// Take request's "/foo/index.html" and strip the muxPath off the
-		// front. We know it exists on the path since that's how this
-		// handler got called in the first place (via proxy's serveMux
-		// path matching). If muxPath is "/foo/" we want "/index.html"
-		// (note the slash is retained). Note: this replaces the possibly
-		// incorrect path calculated in the default implementation.
+		// Take request's "/foo/index.html" and strip the muxPath off the front. We know it exists
+		// on the path since that's how this handler got called in the first place (via proxy's
+		// serveMux path matching). If muxPath is "/foo/" we want "/index.html" (note the slash is
+		// retained). Note: this replaces the possibly incorrect path calculated in the default
+		// implementation.
 
 		if origRawPath != "" {
-			// If this is not empty, then the path had some escaping done,
-			// and in order to maintain its pairity with the "non-Raw"
-			// version, we have to trim that one so it matches. As the
-			// semantics are that if RawPath doesn't decode into exactly
-			// the Path value, it's ignored.
-			req.URL.RawPath = strings.TrimPrefix(origRawPath, muxPath)
-			if unescapedMuxPath, err := url.PathUnescape(muxPath); err != nil {
-				req.URL.Path = strings.TrimPrefix(origPath, unescapedMuxPath)
-			} else {
-				// This would only happen if muxPath was incorrectly passed
-				// to us (such as a malformed manual path remapping). Not really
-				// much we can do... I'm not sure what HTTP servers are
-				// supposed to do in this case.
-				req.URL.Path = strings.TrimPrefix(origPath, muxPath)
-			}
-		} else {
-			// With no escaping, there's less to worry about.
-			req.URL.Path = strings.TrimPrefix(origPath, muxPath)
+			// If this is not empty, then the URL had a "non-default" encoding. Usually this is a
+			// path that was originally escaped when first encountered, but Go unescaped it while
+			// parsing.
+			//
+			// Example: "/a/b%2fc/" --> { Path = "/a/b/c/", RawPath = "/a/b%2fc/" }
+			//
+			// We use a special trimming algorithm that checks the escaped version as it trims,
+			// otherwise there's no way to retain the trailing part, which itself may have escaped
+			// sequences in it that need to be passed through untouched.
+
+			// We can ignore the error because we wouldn't be here if the URL was not escaped
+			// properly.
+			req.URL.RawPath, _ = trimUnescapedPathPrefix(origRawPath, muxPath)
 		}
+
+		req.URL.Path = strings.TrimPrefix(origPath, muxPath)
 
 		if req.URL.Path == "" {
 			// Make sure we don't inject an extra trailing '/' if
@@ -241,6 +237,57 @@ func NewReverseProxy(target *url.URL, muxPath string, opts *Options) (proxy *htt
 	}
 
 	return proxy
+}
+
+// trimUnescapedPathPrefix works like strings.TrimPrefix() but will attempt to do the equivalent of
+// url.PathUnescape() on characters in rawPath as it does the comparison with the corresponding
+// characters in the prefix string.
+//
+// This is useful because there are numerous valid mappings to the unescaped version depending on
+// how many escaped components exist in the raw path.
+//
+// For example, the following all map to "/a/b/c" as a prefix:
+//
+//   "/a%2fb%2fc/foo%2fbar.html"
+//   "/a%2fb/c/foo%2fbar.html"
+//   "/a/b%2c/foo%2fbar.html"
+//   "/a/b/c/foo%2fbar.html"
+//
+// In the event of a malformed escape sequence, an error is returned. If the rawPath does
+// not match the escaped prefix, it is returned unmodified.
+func trimUnescapedPathPrefix(rawPath string, prefix string) (string, error) {
+	l1 := len(rawPath)
+	l2 := len(prefix)
+	var i1, i2 int
+	for i2 < l2 && i1 < l1 {
+		c1 := rawPath[i1]
+		c2 := prefix[i2]
+		if c1 == '%' {
+			// Malformed if not followed by exactly two hexadecimal bytes.
+			if i1+2 >= l1 {
+				return "", fmt.Errorf("invalid escape sequence: end of string")
+			}
+			if val, err := strconv.ParseUint(rawPath[i1+1:i1+3], 16, 8); err != nil {
+				return "", fmt.Errorf("invalid escape sequence: %%%s", rawPath[i1+1:i1+2])
+			} else {
+				c1 = byte(val)
+			}
+			i1 += 2
+		}
+		if c1 != c2 {
+			// Prefix doesn't match. Just return early.
+			return rawPath, nil
+		}
+		i1++
+		i2++
+	}
+
+	// Only if the entire prefix matches
+	if i2 == l2 {
+		return rawPath[i1:], nil
+	}
+
+	return rawPath, nil
 }
 
 func singleJoiningSlash(a, b string) string {
@@ -320,12 +367,23 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			SignatureHeader, SignatureHeaders)
 	}
 	for _, u := range opts.proxyURLs {
+		rawPath := u.RawPath
 		path := u.EscapedPath()
 		host := u.Host
 		switch u.Scheme {
 		case httpScheme, httpsScheme:
 			if u.Fragment != "" {
-				path = u.Fragment
+				// Note: http.ServeMux only handles the unescaped variant, so we perform
+				// the same logic here to make sure the user's config operates as expected.
+				rawPath = u.Fragment
+				u.Fragment = ""
+			}
+			// Emulate URL.setPath() does here wrt to RawPath semantics. We can safely
+			// ignore the error here because we validated it during options.Validate().
+			if rawPath != "" {
+				if path, _ = url.PathUnescape(rawPath); path == rawPath {
+					rawPath = ""
+				}
 			}
 			logger.Printf("mapping path %q => upstream %q", path, u)
 			proxy := NewWebSocketOrRestReverseProxy(u, path, opts, auth)

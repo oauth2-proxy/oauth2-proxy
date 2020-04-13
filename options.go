@@ -326,6 +326,12 @@ func (o *Options) Validate() error {
 		if i := strings.IndexByte(u, '#'); i >= 0 {
 			rawFrag = u[i+1:]
 			u = u[:i]
+
+			// Detect malformed path mappings at config validation time.
+			if _, err := url.PathUnescape(rawFrag); err != nil {
+				msgs = append(msgs, fmt.Sprintf("error parsing upstream path mapping %q: %v", rawFrag, err))
+				continue
+			}
 		}
 
 		upstreamURL, err := url.Parse(u)
