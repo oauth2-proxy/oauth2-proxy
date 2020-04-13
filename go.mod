@@ -3,7 +3,6 @@ module github.com/oauth2-proxy/oauth2-proxy
 go 1.14
 
 require (
-	github.com/BurntSushi/toml v0.3.1
 	github.com/alicebob/miniredis/v2 v2.11.2
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
@@ -14,7 +13,6 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
 	github.com/mitchellh/mapstructure v1.1.2
-	github.com/mreiferson/go-options v1.0.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect

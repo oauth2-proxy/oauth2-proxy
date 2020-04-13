@@ -64,9 +64,8 @@ type Options struct {
 	Banner                   string   `flag:"banner" cfg:"banner" env:"OAUTH2_PROXY_BANNER"`
 	Footer                   string   `flag:"footer" cfg:"footer" env:"OAUTH2_PROXY_FOOTER"`
 
-	Cookie options.CookieOptions
-
-	Session options.SessionOptions
+	Cookie  options.CookieOptions  `cfg:",squash"`
+	Session options.SessionOptions `cfg:",squash"`
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
@@ -132,7 +131,7 @@ type Options struct {
 	// internal values that are set after config validation
 	redirectURL        *url.URL
 	proxyURLs          []*url.URL
-	CompiledRegex      []*regexp.Regexp
+	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
 	sessionStore       sessionsapi.SessionStore
 	signatureData      *SignatureData
@@ -370,12 +369,12 @@ func (o *Options) Validate() error {
 	}
 
 	for _, u := range o.SkipAuthRegex {
-		CompiledRegex, err := regexp.Compile(u)
+		compiledRegex, err := regexp.Compile(u)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("error compiling regex=%q %s", u, err))
 			continue
 		}
-		o.CompiledRegex = append(o.CompiledRegex, CompiledRegex)
+		o.compiledRegex = append(o.compiledRegex, compiledRegex)
 	}
 	msgs = parseProviderInfo(o, msgs)
 
