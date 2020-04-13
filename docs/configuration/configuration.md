@@ -33,7 +33,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-client-secret` | string | the OAuth Client Secret | |
 | `-client-secret-file` | string | the file with OAuth Client Secret | |
 | `-config` | string | path to config file | |
-| `-cookie-domain` | string | an optional cookie domain to force cookies to (ie: `.yourcompany.com`) | |
+| `-cookie-domain` | string \| list | Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
 | `-cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
 | `-cookie-httponly` | bool | set HttpOnly cookie flag | true |
 | `-cookie-name` | string | the name of the cookie that the oauth_proxy creates | `"_oauth2_proxy"` |
@@ -103,6 +103,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
 | `-set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode) | false |
 | `-set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
+| `-set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | true |
 | `-signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
 | `-silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
 | `-skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
