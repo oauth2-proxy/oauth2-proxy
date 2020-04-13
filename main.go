@@ -13,6 +13,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/validation"
 	"github.com/spf13/pflag"
 )
 
@@ -148,14 +149,14 @@ func main() {
 		return
 	}
 
-	opts := NewOptions()
+	opts := options.NewOptions()
 	err := options.Load(*config, flagSet, opts)
 	if err != nil {
 		logger.Printf("ERROR: Failed to load config: %v", err)
 		os.Exit(1)
 	}
 
-	err = opts.Validate()
+	err = validation.Validate(opts)
 	if err != nil {
 		logger.Printf("%s", err)
 		os.Exit(1)

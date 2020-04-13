@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -110,7 +111,7 @@ func TestGCPHealthcheckNotIngressPut(t *testing.T) {
 }
 
 func TestRedirectToHTTPSTrue(t *testing.T) {
-	opts := NewOptions()
+	opts := options.NewOptions()
 	opts.ForceHTTPS = true
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("test"))
@@ -125,7 +126,7 @@ func TestRedirectToHTTPSTrue(t *testing.T) {
 }
 
 func TestRedirectToHTTPSFalse(t *testing.T) {
-	opts := NewOptions()
+	opts := options.NewOptions()
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("test"))
 	}
@@ -139,7 +140,7 @@ func TestRedirectToHTTPSFalse(t *testing.T) {
 }
 
 func TestRedirectNotWhenHTTPS(t *testing.T) {
-	opts := NewOptions()
+	opts := options.NewOptions()
 	opts.ForceHTTPS = true
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("test"))
@@ -160,7 +161,7 @@ func TestRedirectNotWhenHTTPS(t *testing.T) {
 }
 
 func TestGracefulShutdown(t *testing.T) {
-	opts := NewOptions()
+	opts := options.NewOptions()
 	stop := make(chan struct{}, 1)
 	srv := Server{Handler: http.DefaultServeMux, Opts: opts, stop: stop}
 	var wg sync.WaitGroup

@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 // Server represents an HTTP server
 type Server struct {
 	Handler http.Handler
-	Opts    *Options
+	Opts    *options.Options
 	stop    chan struct{} // channel for waiting shutdown
 }
 
@@ -167,7 +168,7 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	return tc, nil
 }
 
-func redirectToHTTPS(opts *Options, h http.Handler) http.Handler {
+func redirectToHTTPS(opts *options.Options, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		proto := r.Header.Get("X-Forwarded-Proto")
 		if opts.ForceHTTPS && (r.TLS == nil || (proto != "" && strings.ToLower(proto) != "https")) {

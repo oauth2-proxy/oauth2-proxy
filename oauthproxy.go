@@ -19,6 +19,8 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/logging"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
@@ -112,7 +114,7 @@ type OAuthProxy struct {
 	jwtBearerVerifiers   []*oidc.IDTokenVerifier
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
-	realClientIPParser   realClientIPParser
+	realClientIPParser   logging.RealClientIPParser
 	Banner               string
 	Footer               string
 }
@@ -143,7 +145,7 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // NewReverseProxy creates a new reverse proxy for proxying requests to upstream
 // servers
-func NewReverseProxy(target *url.URL, opts *Options) (proxy *httputil.ReverseProxy) {
+func NewReverseProxy(target *url.URL, opts *options.Options) (proxy *httputil.ReverseProxy) {
 	proxy = httputil.NewSingleHostReverseProxy(target)
 	proxy.FlushInterval = opts.FlushInterval
 	if opts.SSLUpstreamInsecureSkipVerify {
@@ -181,7 +183,7 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 }
 
 // NewWebSocketOrRestReverseProxy creates a reverse proxy for REST or websocket based on url
-func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.HmacAuth) http.Handler {
+func NewWebSocketOrRestReverseProxy(u *url.URL, opts *options.Options, auth hmacauth.HmacAuth) http.Handler {
 	u.Path = ""
 	proxy := NewReverseProxy(u, opts)
 	if !opts.PassHostHeader {
@@ -209,14 +211,14 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.Hma
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
-func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
+func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthProxy {
 	serveMux := http.NewServeMux()
 	var auth hmacauth.HmacAuth
-	if sigData := opts.signatureData; sigData != nil {
-		auth = hmacauth.NewHmacAuth(sigData.hash, []byte(sigData.key),
+	if sigData := opts.GetSignatureData(); sigData != nil {
+		auth = hmacauth.NewHmacAuth(sigData.Hash, []byte(sigData.Key),
 			SignatureHeader, SignatureHeaders)
 	}
-	for _, u := range opts.proxyURLs {
+	for _, u := range opts.GetProxyURLs() {
 		path := u.Path
 		host := u.Host
 		switch u.Scheme {
@@ -252,7 +254,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
 		}
 	}
-	for _, u := range opts.compiledRegex {
+	for _, u := range opts.GetCompiledRegex() {
 		logger.Printf("compiled skip-auth-regex => %q", u)
 	}
 
@@ -262,12 +264,12 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
 	}
-	redirectURL := opts.redirectURL
+	redirectURL := opts.GetRedirectURL()
 	if redirectURL.Path == "" {
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 	}
 
-	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
+	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.GetProvider().Data().ProviderName, opts.ClientID)
 	refresh := "disabled"
 	if opts.Cookie.Refresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
@@ -298,18 +300,18 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
 		ProxyPrefix:          opts.ProxyPrefix,
-		provider:             opts.provider,
+		provider:             opts.GetProvider(),
 		providerNameOverride: opts.ProviderName,
-		sessionStore:         opts.sessionStore,
+		sessionStore:         opts.GetSessionStore(),
 		serveMux:             serveMux,
 		redirectURL:          redirectURL,
 		whitelistDomains:     opts.WhitelistDomains,
 		skipAuthRegex:        opts.SkipAuthRegex,
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
-		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
-		compiledRegex:        opts.compiledRegex,
-		realClientIPParser:   opts.realClientIPParser,
+		jwtBearerVerifiers:   opts.GetJWTBearerVerifiers(),
+		compiledRegex:        opts.GetCompiledRegex(),
+		realClientIPParser:   opts.GetRealClientIPParser(),
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
 		SetBasicAuth:         opts.SetBasicAuth,
@@ -760,7 +762,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
-	remoteAddr := getClientString(p.realClientIPParser, req, true)
+	remoteAddr := logging.GetClientString(p.realClientIPParser, req, true)
 
 	// finish the oauth cycle
 	err := req.ParseForm()
@@ -888,7 +890,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	remoteAddr := getClientString(p.realClientIPParser, req, true)
+	remoteAddr := logging.GetClientString(p.realClientIPParser, req, true)
 	if session == nil {
 		session, err = p.LoadCookiedSession(req)
 		if err != nil {
