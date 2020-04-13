@@ -260,7 +260,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
 func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
-	var a url.URL = *p.LoginURL
+	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
 	params.Set("approval_prompt", p.ApprovalPrompt)
