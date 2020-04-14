@@ -122,7 +122,7 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 		pn++
 	}
 
-	var presentOrgs []string
+	presentOrgs := make([]string, 0, len(orgs))
 	for _, org := range orgs {
 		if p.Org == org.Login {
 			logger.Printf("Found Github Organization: %q", org.Login)

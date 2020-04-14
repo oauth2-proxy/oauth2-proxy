@@ -180,11 +180,7 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 func (p *OIDCProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	ctx := context.Background()
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 func getOIDCHeader(accessToken string) http.Header {

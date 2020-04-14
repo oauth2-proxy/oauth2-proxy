@@ -76,7 +76,7 @@ func (p *KeycloakProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 			}
 		}
 
-		if found != true {
+		if !found {
 			logger.Printf("group not found, access denied")
 			return "", nil
 		}
