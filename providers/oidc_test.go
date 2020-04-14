@@ -62,6 +62,9 @@ type fakeKeySetStub struct{}
 
 func (fakeKeySetStub) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
 	decodeString, err := base64.RawURLEncoding.DecodeString(strings.Split(jwt, ".")[1])
+	if err != nil {
+		return nil, err
+	}
 	tokenClaims := &idTokenClaims{}
 	err = json.Unmarshal(decodeString, tokenClaims)
 
@@ -242,7 +245,9 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 
 	verifiedIDToken, err := provider.findVerifiedIDToken(context.Background(), tokenWithIDToken)
 	assert.Equal(t, true, err == nil)
-	assert.Equal(t, true, verifiedIDToken != nil)
+	if verifiedIDToken == nil {
+		t.Fatal("verifiedIDToken is nil")
+	}
 	assert.Equal(t, defaultIDToken.Issuer, verifiedIDToken.Issuer)
 	assert.Equal(t, defaultIDToken.Subject, verifiedIDToken.Subject)
 

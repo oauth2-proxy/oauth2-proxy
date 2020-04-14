@@ -52,11 +52,11 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 	c, err := loadCookie(req, s.CookieOptions.CookieName)
 	if err != nil {
 		// always http.ErrNoCookie
-		return nil, fmt.Errorf("Cookie %q not present", s.CookieOptions.CookieName)
+		return nil, fmt.Errorf("cookie %q not present", s.CookieOptions.CookieName)
 	}
 	val, _, ok := encryption.Validate(c, s.CookieOptions.CookieSecret, s.CookieOptions.CookieExpire)
 	if !ok {
-		return nil, errors.New("Cookie Signature not valid")
+		return nil, errors.New("cookie signature not valid")
 	}
 
 	session, err := utils.SessionFromCookie(val, s.CookieCipher)
@@ -69,8 +69,6 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 // Clear clears any saved session information by writing a cookie to
 // clear the session
 func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
-	var cookies []*http.Cookie
-
 	// matches CookieName, CookieName_<number>
 	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieOptions.CookieName))
 
@@ -79,7 +77,6 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
 
 			http.SetCookie(rw, clearCookie)
-			cookies = append(cookies, clearCookie)
 		}
 	}
 
@@ -174,7 +171,7 @@ func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {
 		}
 	}
 	if len(cookies) == 0 {
-		return nil, fmt.Errorf("Could not find cookie %s", cookieName)
+		return nil, fmt.Errorf("could not find cookie %s", cookieName)
 	}
 	return joinCookies(cookies)
 }
