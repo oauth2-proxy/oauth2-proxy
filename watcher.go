@@ -44,7 +44,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 		defer watcher.Close()
 		for {
 			select {
-			case _ = <-done:
+			case <-done:
 				logger.Printf("Shutting down watcher for: %s", filename)
 				return
 			case event := <-watcher.Events:

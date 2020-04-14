@@ -88,9 +88,9 @@ func TestRequestUnparsedResponseUsingAccessTokenParameter(t *testing.T) {
 
 	response, err := RequestUnparsedResponse(
 		backend.URL+"?access_token=my_token", nil)
+	assert.Equal(t, nil, err)
 	defer response.Body.Close()
 
-	assert.Equal(t, nil, err)
 	assert.Equal(t, 200, response.StatusCode)
 	body, err := ioutil.ReadAll(response.Body)
 	assert.Equal(t, nil, err)
@@ -124,9 +124,9 @@ func TestRequestUnparsedResponseUsingHeaders(t *testing.T) {
 	headers := make(http.Header)
 	headers.Set("Auth", "my_token")
 	response, err := RequestUnparsedResponse(backend.URL, headers)
+	assert.Equal(t, nil, err)
 	defer response.Body.Close()
 
-	assert.Equal(t, nil, err)
 	assert.Equal(t, 200, response.StatusCode)
 	body, err := ioutil.ReadAll(response.Body)
 	assert.Equal(t, nil, err)
