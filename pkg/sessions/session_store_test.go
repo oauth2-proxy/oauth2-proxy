@@ -10,17 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alicebob/miniredis"
+	miniredis "github.com/alicebob/miniredis/v2"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	cookiesapi "github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
+	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pusher/oauth2_proxy/pkg/apis/options"
-	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	cookiesapi "github.com/pusher/oauth2_proxy/pkg/cookies"
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
-	"github.com/pusher/oauth2_proxy/pkg/sessions"
-	sessionscookie "github.com/pusher/oauth2_proxy/pkg/sessions/cookie"
-	"github.com/pusher/oauth2_proxy/pkg/sessions/redis"
-	"github.com/pusher/oauth2_proxy/pkg/sessions/utils"
 )
 
 func TestSessionStore(t *testing.T) {
@@ -63,7 +63,11 @@ var _ = Describe("NewSessionStore", func() {
 
 			It("have the correct domain set", func() {
 				for _, cookie := range cookies {
-					Expect(cookie.Domain).To(Equal(cookieOpts.CookieDomain))
+					specifiedDomain := ""
+					if len(cookieOpts.CookieDomains) > 0 {
+						specifiedDomain = cookieOpts.CookieDomains[0]
+					}
+					Expect(cookie.Domain).To(Equal(specifiedDomain))
 				}
 			})
 
@@ -343,7 +347,7 @@ var _ = Describe("NewSessionStore", func() {
 					CookieRefresh:  time.Duration(2) * time.Hour,
 					CookieSecure:   false,
 					CookieHTTPOnly: false,
-					CookieDomain:   "example.com",
+					CookieDomains:  []string{"example.com"},
 					CookieSameSite: "strict",
 				}
 

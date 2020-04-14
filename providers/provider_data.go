@@ -2,31 +2,36 @@ package providers
 
 import (
 	"errors"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
 	"io/ioutil"
 	"net/url"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
 type ProviderData struct {
 	ProviderName      string
-	ClientID          string
-	ClientSecret      string
-	ClientSecretFile  string
 	LoginURL          *url.URL
 	RedeemURL         *url.URL
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
-	Scope             string
-	ApprovalPrompt    string
+	// Auth request params & related, see
+	//https://openid.net/specs/openid-connect-basic-1_0.html#rfc.section.2.1.1.1
+	AcrValues        string
+	ApprovalPrompt   string // NOTE: Renamed to "prompt" in OAuth2
+	ClientID         string
+	ClientSecret     string
+	ClientSecretFile string
+	Scope            string
+	Prompt           string
 }
 
 // Data returns the ProviderData
 func (p *ProviderData) Data() *ProviderData { return p }
 
-func (p *ProviderData) GetClientSecret() (ClientSecret string, err error) {
+func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	if p.ClientSecret != "" || p.ClientSecretFile == "" {
 		return p.ClientSecret, nil
 	}

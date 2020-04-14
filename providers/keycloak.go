@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
-	"github.com/pusher/oauth2_proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
 type KeycloakProvider struct {
@@ -76,7 +76,7 @@ func (p *KeycloakProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 			}
 		}
 
-		if found != true {
+		if !found {
 			logger.Printf("group not found, access denied")
 			return "", nil
 		}

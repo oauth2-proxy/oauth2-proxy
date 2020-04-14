@@ -7,7 +7,7 @@ nav_order: 2
 
 ## OAuth Provider Configuration
 
-You will need to register an OAuth application with a Provider (Google, GitHub or another provider), and configure it with Redirect URI(s) for the domain you intend to run `oauth2_proxy` on.
+You will need to register an OAuth application with a Provider (Google, GitHub or another provider), and configure it with Redirect URI(s) for the domain you intend to run `oauth2-proxy` on.
 
 Valid providers are :
 
@@ -23,6 +23,7 @@ Valid providers are :
 - [login.gov](#logingov-provider)
 - [Nextcloud](#nextcloud-provider)
 - [DigitalOcean](#digitalocean-auth-provider)
+- [Bitbucket](#bitbucket-auth-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -66,8 +67,8 @@ https://www.googleapis.com/auth/admin.directory.user.readonly
 7.  Create or choose an existing administrative email address on the Gmail domain to assign to the `google-admin-email` flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from step 5 for the reason why.
 8.  Create or choose an existing email group and set that email to the `google-group` flag. You can pass multiple instances of this flag with different groups
     and the user will be checked against all the provided groups.
-9.  Lock down the permissions on the json file downloaded from step 1 so only oauth2_proxy is able to read the file and set the path to the file in the `google-service-account-json` flag.
-10. Restart oauth2_proxy.
+9.  Lock down the permissions on the json file downloaded from step 1 so only oauth2-proxy is able to read the file and set the path to the file in the `google-service-account-json` flag.
+10. Restart oauth2-proxy.
 
 Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
 
@@ -87,7 +88,7 @@ Note: The user is checked against the group members list on initial authenticati
    --client-secret=<value from step 6>
 ```
 
-Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](configuration#redis-storage) should resolve this.
+Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](configuration/sessions#redis-storage) should resolve this.
 
 ### Facebook Auth Provider
 
@@ -162,12 +163,12 @@ Take note of your `TenantId` if applicable for your situation. The `TenantId` ca
 OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects. This provider was originally built against CoreOS Dex and we will use it as an example.
 
 1.  Launch a Dex instance using the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md).
-2.  Setup oauth2_proxy with the correct provider and using the default ports and callbacks.
-3.  Login with the fixture use in the dex guide and run the oauth2_proxy with the following args:
+2.  Setup oauth2-proxy with the correct provider and using the default ports and callbacks.
+3.  Login with the fixture use in the dex guide and run the oauth2-proxy with the following args:
 
     -provider oidc
     -provider-display-name "My OIDC Provider"
-    -client-id oauth2_proxy
+    -client-id oauth2-proxy
     -client-secret proxy
     -redirect-url http://127.0.0.1:4180/oauth2/callback
     -oidc-issuer-url http://127.0.0.1:5556
@@ -202,7 +203,7 @@ you may wish to configure an authorization server for each application. Otherwis
 
 ```
 provider = "oidc"
-redirect_url = "https://example.corp.com"
+redirect_url = "https://example.corp.com/oauth2/callback"
 oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
 upstreams = [
     "https://example.corp.com"
@@ -247,6 +248,39 @@ Run `oauth2_proxy` with the following args:
     --insecure-oidc-allow-empty-client-secret
 ```
 
+#### Configuring the OIDC Provider with Okta - localhost
+1. Signup for developer account: https://developer.okta.com/signup/
+2. Create New `Web` Application: https://${your-okta-domain}/dev/console/apps/new
+3. Example Application Settings for localhost:
+   * **Name:** My Web App
+   * **Base URIs:** http://localhost:4180/
+   * **Login redirect URIs:** http://localhost:4180/oauth2/callback
+   * **Logout redirect URIs:** http://localhost:4180/
+   * **Group assignments:** `Everyone`
+   * **Grant type allowed:** `Authorization Code` and `Refresh Token`
+4. Make note of the `Client ID` and `Client secret`, they are needed in a future step
+5. Make note of the **default** Authorization Server Issuer URI from: https://${your-okta-domain}/admin/oauth2/as
+6. Example config file `/etc/localhost.cfg`
+   ```
+   provider = "oidc"
+   redirect_url = "http://localhost:4180/oauth2/callback"
+   oidc_issuer_url = "https://${your-okta-domain}/oauth2/default"
+   upstreams = [
+       "http://0.0.0.0:8080"
+   ]
+   email_domains = [
+       "*"
+   ]
+   client_id = "XXX"
+   client_secret = "YYY"
+   pass_access_token = true
+   cookie_secret = "ZZZ"
+   cookie_secure = false
+   skip_provider_button = true
+   # Note: use the following for testing within a container
+   # http_address = "0.0.0.0:4180"
+   ```
+7. Then you can start the oauth2-proxy with `./oauth2-proxy -config /etc/localhost.cfg`
 
 ### login.gov Provider
 
@@ -274,7 +308,7 @@ First, register your application in the dashboard.  The important bits are:
 
 Now start the proxy up with the following options:
 ```
-./oauth2_proxy -provider login.gov \
+./oauth2-proxy -provider login.gov \
   -client-id=${LOGINGOV_ISSUER} \
   -redirect-url=http://localhost:4180/oauth2/callback \
   -oidc-issuer-url=https://idp.int.identitysandbox.gov/ \
@@ -305,13 +339,13 @@ proxy, and you would use real hostnames everywhere.
 
 #### Skip OIDC discovery
 
-Some providers do not support OIDC discovery via their issuer URL, so oauth2_proxy cannot simply grab the authorization, token and jwks URI endpoints from the provider's metadata.
+Some providers do not support OIDC discovery via their issuer URL, so oauth2-proxy cannot simply grab the authorization, token and jwks URI endpoints from the provider's metadata.
 
 In this case, you can set the `-skip-oidc-discovery` option, and supply those required endpoints manually:
 
 ```
     -provider oidc
-    -client-id oauth2_proxy
+    -client-id oauth2-proxy
     -client-secret proxy
     -redirect-url http://127.0.0.1:4180/oauth2/callback
     -oidc-issuer-url http://127.0.0.1:5556
@@ -353,7 +387,7 @@ Note: in *all* cases the validate-url will *not* have the `index.php`.
 
 1. [Create a new OAuth application](https://cloud.digitalocean.com/account/api/applications)
     * You can fill in the name, homepage, and description however you wish.
-    * In the "Application callback URL" field, enter: `https://oauth-proxy/oauth2/callback`, substituting `oauth2-proxy` with the actual hostname that oauth2_proxy is running on. The URL must match oauth2_proxy's configured redirect URL.
+    * In the "Application callback URL" field, enter: `https://oauth-proxy/oauth2/callback`, substituting `oauth2-proxy` with the actual hostname that oauth2-proxy is running on. The URL must match oauth2-proxy's configured redirect URL.
 2. Note the Client ID and Client Secret.
 
 To use the provider, pass the following options:
@@ -366,6 +400,27 @@ To use the provider, pass the following options:
 
  Alternatively, set the equivalent options in the config file. The redirect URL defaults to `https://<requested host header>/oauth2/callback`. If you need to change it, you can use the `--redirect-url` command-line option.
 
+### Bitbucket Auth Provider
+
+1. [Add a new OAuth consumer](https://confluence.atlassian.com/bitbucket/oauth-on-bitbucket-cloud-238027431.html)
+    * In "Callback URL" use `https://<oauth2-proxy>/oauth2/callback`, substituting `<oauth2-proxy>` with the actual hostname that oauth2-proxy is running on.
+    * In Permissions section select:
+        * Account -> Email
+        * Team membership -> Read
+        * Repositories -> Read
+2. Note the Client ID and Client Secret.
+
+To use the provider, pass the following options:
+
+```
+   --provider=bitbucket
+   --client-id=<Client ID>
+   --client-secret=<Client Secret>
+```
+
+The default configuration allows everyone with Bitbucket account to authenticate. To restrict the access to the team members use additional configuration option: `--bitbucket-team=<Team name>`. To restrict the access to only these users who has access to one selected repository use `--bitbucket-repository=<Repository name>`.
+
+
 ## Email Authentication
 
 To authorize by email domain use `--email-domain=yourcompany.com`. To authorize individual email addresses use `--authenticated-emails-file=/path/to/file` with one email per line. To authorize all email addresses use `--email-domain=*`.
@@ -374,5 +429,5 @@ To authorize by email domain use `--email-domain=yourcompany.com`. To authorize 
 
 Follow the examples in the [`providers` package]({{ site.gitweb }}/providers/) to define a new
 `Provider` instance. Add a new `case` to
-[`providers.New()`]({{ site.gitweb }}/providers/providers.go) to allow `oauth2_proxy` to use the
+[`providers.New()`]({{ site.gitweb }}/providers/providers.go) to allow `oauth2-proxy` to use the
 new `Provider`.

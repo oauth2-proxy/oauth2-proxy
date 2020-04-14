@@ -6,19 +6,22 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	options "github.com/mreiferson/go-options"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 func main() {
 	logger.SetFlags(logger.Lshortfile)
-	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("oauth2-proxy", flag.ExitOnError)
 
+	cookieDomains := StringArray{}
 	emailDomains := StringArray{}
 	whitelistDomains := StringArray{}
 	upstreams := StringArray{}
@@ -41,6 +44,7 @@ func main() {
 	flagSet.Bool("set-xauthrequest", false, "set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)")
 	flagSet.Var(&upstreams, "upstream", "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
 	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
+	flagSet.Bool("set-basic-auth", true, "set HTTP Basic Auth information in response (useful in Nginx auth_request mode)")
 	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
 	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
@@ -84,7 +88,7 @@ func main() {
 
 	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
 	flagSet.String("cookie-secret", "", "the seed string for secure cookies (optionally base64 encoded)")
-	flagSet.String("cookie-domain", "", "an optional cookie domain to force cookies to (ie: .yourcompany.com)*")
+	flagSet.Var(&cookieDomains, "cookie-domain", "Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).")
 	flagSet.String("cookie-path", "/", "an optional cookie path to force cookies to (ie: /poc/)*")
 	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
 	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
@@ -133,10 +137,11 @@ func main() {
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
+	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
-	flagSet.String("acr-values", "http://idmanagement.gov/ns/assurance/loa/1", "acr values string:  optional, used by login.gov")
+	flagSet.String("acr-values", "", "acr values string:  optional")
 	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
@@ -145,7 +150,7 @@ func main() {
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("oauth2_proxy %s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
 		return
 	}
 
@@ -204,6 +209,14 @@ func main() {
 	s := &Server{
 		Handler: handler,
 		Opts:    opts,
+		stop:    make(chan struct{}, 1),
 	}
+	// Observe signals in background goroutine.
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		s.stop <- struct{}{} // notify having caught signal
+	}()
 	s.ListenAndServe()
 }

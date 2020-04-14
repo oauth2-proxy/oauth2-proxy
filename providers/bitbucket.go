@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
-	"github.com/pusher/oauth2_proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
 // BitbucketProvider represents an Bitbucket based Identity Provider
@@ -116,7 +116,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 				break
 			}
 		}
-		if found != true {
+		if !found {
 			logger.Print("team membership test failed, access denied")
 			return "", nil
 		}
@@ -147,7 +147,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 				break
 			}
 		}
-		if found != true {
+		if !found {
 			logger.Print("repository access test failed, access denied")
 			return "", nil
 		}

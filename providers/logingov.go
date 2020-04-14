@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -24,7 +24,6 @@ type LoginGovProvider struct {
 	// TODO (@timothy-spencer): Ideally, the nonce would be in the session state, but the session state
 	// is created only upon code redemption, not during the auth, when this must be supplied.
 	Nonce     string
-	AcrValues string
 	JWTKey    *rsa.PrivateKey
 	PubJWKURL *url.URL
 }
@@ -184,7 +183,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 		Issuer:    p.ClientID,
 		Subject:   p.ClientID,
 		Audience:  p.RedeemURL.String(),
-		ExpiresAt: int64(time.Now().Add(time.Duration(5 * time.Minute)).Unix()),
+		ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
 		Id:        randSeq(32),
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
@@ -261,8 +260,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
 func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
-	var a url.URL
-	a = *p.LoginURL
+	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
 	params.Set("approval_prompt", p.ApprovalPrompt)
@@ -270,7 +268,11 @@ func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
 	params.Add("state", state)
-	params.Add("acr_values", p.AcrValues)
+	acr := p.AcrValues
+	if acr == "" {
+		acr = "http://idmanagement.gov/ns/assurance/loa/1"
+	}
+	params.Add("acr_values", acr)
 	params.Add("nonce", p.Nonce)
 	a.RawQuery = params.Encode()
 	return a.String()

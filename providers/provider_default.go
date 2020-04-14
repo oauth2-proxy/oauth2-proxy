@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
@@ -86,11 +86,15 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 
 // GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	var a url.URL
-	a = *p.LoginURL
+	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-	params.Set("approval_prompt", p.ApprovalPrompt)
+	params.Add("acr_values", p.AcrValues)
+	if p.Prompt != "" {
+		params.Set("prompt", p.Prompt)
+	} else { // Legacy variant of the prompt param:
+		params.Set("approval_prompt", p.ApprovalPrompt)
+	}
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")

@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pusher/oauth2_proxy/pkg/logger"
-	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
+	"github.com/fsnotify/fsnotify"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 // WaitForReplacement waits for a file to exist on disk and then starts a watch
@@ -43,7 +44,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 		defer watcher.Close()
 		for {
 			select {
-			case _ = <-done:
+			case <-done:
 				logger.Printf("Shutting down watcher for: %s", filename)
 				return
 			case event := <-watcher.Events:

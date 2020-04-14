@@ -10,7 +10,7 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"golang.org/x/oauth2"
 )
 
@@ -222,11 +222,7 @@ func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.T
 func (p *GitLabProvider) ValidateSessionState(s *sessions.SessionState) bool {
 	ctx := context.Background()
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 // GetEmailAddress returns the Account email address

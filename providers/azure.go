@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
-	"github.com/pusher/oauth2_proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
 // AzureProvider represents an Azure based Identity Provider
@@ -28,16 +28,15 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 
 	if p.ProfileURL == nil || p.ProfileURL.String() == "" {
 		p.ProfileURL = &url.URL{
-			Scheme:   "https",
-			Host:     "graph.windows.net",
-			Path:     "/me",
-			RawQuery: "api-version=1.6",
+			Scheme: "https",
+			Host:   "graph.microsoft.com",
+			Path:   "/v1.0/me",
 		}
 	}
 	if p.ProtectedResource == nil || p.ProtectedResource.String() == "" {
 		p.ProtectedResource = &url.URL{
 			Scheme: "https",
-			Host:   "graph.windows.net",
+			Host:   "graph.microsoft.com",
 		}
 	}
 	if p.Scope == "" {
@@ -78,7 +77,6 @@ func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionSta
 	if err != nil {
 		return
 	}
-
 
 	params := url.Values{}
 	params.Add("redirect_uri", redirectURL)

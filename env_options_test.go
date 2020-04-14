@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	proxy "github.com/pusher/oauth2_proxy"
+	proxy "github.com/oauth2-proxy/oauth2-proxy"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -11,18 +11,19 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
-	"github.com/pusher/oauth2_proxy/pkg/apis/options"
-	sessionsapi "github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/encryption"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
-	"github.com/pusher/oauth2_proxy/pkg/sessions"
-	"github.com/pusher/oauth2_proxy/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -73,6 +74,7 @@ type Options struct {
 	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
+	SetBasicAuth                  bool          `flag:"set-basic-auth" cfg:"set_basic_auth" env:"OAUTH2_PROXY_SET_BASIC_AUTH"`
 	PreferEmailToUser             bool          `flag:"prefer-email-to-user" cfg:"prefer_email_to_user" env:"OAUTH2_PROXY_PREFER_EMAIL_TO_USER"`
 	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
@@ -94,7 +96,7 @@ type Options struct {
 	OIDCIssuerURL                      string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
 	InsecureOIDCAllowUnverifiedEmail   bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
 	InsecureOIDCAllowEmptyClientSecret bool   `flag:"insecure-oidc-allow-empty-client-secret" cfg:"insecure_oidc_allow_empty_client_secret" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_EMPTY_CLIENT_SECRET"`
-	SkipOIDCDiscovery                  bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
+  SkipOIDCDiscovery                  bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
 	OIDCJwksURL                        string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
 	LoginURL                           string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
 	RedeemURL                          string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
@@ -102,7 +104,8 @@ type Options struct {
 	ProtectedResource                  string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
 	ValidateURL                        string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
 	Scope                              string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
-	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"`
+	Prompt                             string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
+	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
@@ -163,18 +166,21 @@ func NewOptions() *Options {
 		SessionOptions: options.SessionOptions{
 			Type: "cookie",
 		},
+
 		SetXAuthRequest:                    false,
 		SkipAuthPreflight:                  false,
 		PassBasicAuth:                      true,
+		SetBasicAuth:                       false,
 		PassUserHeaders:                    true,
 		PassAccessToken:                    false,
 		PassHostHeader:                     true,
 		SetAuthorization:                   false,
 		PassAuthorization:                  false,
 		PreferEmailToUser:                  false,
+		Prompt:                             "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                     "force",
 		InsecureOIDCAllowUnverifiedEmail:   false,
-		InsecureOIDCAllowEmptyClientSecret: false,
+		InsecureOIDCAllowEmptyClientSecret: false,    
 		SkipOIDCDiscovery:                  false,
 		LoggingFilename:                    "",
 		LoggingMaxSize:                     100,
@@ -244,6 +250,10 @@ func (o *Options) Validate() error {
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 
+	if o.SetBasicAuth && o.SetAuthorization {
+		msgs = append(msgs, "mutually exclusive: set-basic-auth and set-authorization-header can not both be true")
+	}
+
 	if o.OIDCIssuerURL != "" {
 
 		ctx := context.Background()
@@ -284,7 +294,7 @@ func (o *Options) Validate() error {
 		}
 	}
 
-	if o.PreferEmailToUser == true && o.PassBasicAuth == false && o.PassUserHeaders == false {
+	if o.PreferEmailToUser && !o.PassBasicAuth && !o.PassUserHeaders {
 		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
 	}
 
@@ -343,7 +353,7 @@ func (o *Options) Validate() error {
 		if string(secretBytes(o.CookieSecret)) != o.CookieSecret {
 			decoded = true
 		}
-		if validCookieSecretSize == false {
+		if !validCookieSecretSize {
 			var suffix string
 			if decoded {
 				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.CookieSecret)
@@ -397,12 +407,18 @@ func (o *Options) Validate() error {
 		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
 	}
 
+	// Sort cookie domains by length, so that we try longer (and more specific)
+	// domains first
+	sort.Slice(o.CookieDomains, func(i, j int) bool {
+		return len(o.CookieDomains[i]) > len(o.CookieDomains[j])
+	})
+
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)
 
 	if len(msgs) != 0 {
-		return fmt.Errorf("Invalid configuration:\n  %s",
+		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
 	}
 	return nil
@@ -414,7 +430,9 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		ClientID:         o.ClientID,
 		ClientSecret:     o.ClientSecret,
 		ClientSecretFile: o.ClientSecretFile,
+		Prompt:           o.Prompt,
 		ApprovalPrompt:   o.ApprovalPrompt,
+		AcrValues:        o.AcrValues,
 	}
 	p.LoginURL, msgs = parseURL(o.LoginURL, "login", msgs)
 	p.RedeemURL, msgs = parseURL(o.RedeemURL, "redeem", msgs)
@@ -473,7 +491,6 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 			}
 		}
 	case *providers.LoginGovProvider:
-		p.AcrValues = o.AcrValues
 		p.PubJWKURL, msgs = parseURL(o.PubJWKURL, "pubjwk", msgs)
 
 		// JWT key can be supplied via env variable or file in the filesystem, but not both.
@@ -532,7 +549,7 @@ func parseSignatureKey(o *Options, msgs []string) []string {
 // parseJwtIssuers takes in an array of strings in the form of issuer=audience
 // and parses to an array of jwtIssuer structs.
 func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
-	var parsedIssuers []jwtIssuer
+	parsedIssuers := make([]jwtIssuer, 0, len(issuers))
 	for _, jwtVerifier := range issuers {
 		components := strings.Split(jwtVerifier, "=")
 		if len(components) < 2 {

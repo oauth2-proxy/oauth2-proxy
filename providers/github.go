@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pusher/oauth2_proxy/pkg/apis/sessions"
-	"github.com/pusher/oauth2_proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 // GitHubProvider represents an GitHub based Identity Provider
@@ -122,7 +122,7 @@ func (p *GitHubProvider) hasOrg(accessToken string) (bool, error) {
 		pn++
 	}
 
-	var presentOrgs []string
+	presentOrgs := make([]string, 0, len(orgs))
 	for _, org := range orgs {
 		if p.Org == org.Login {
 			logger.Printf("Found Github Organization: %q", org.Login)
