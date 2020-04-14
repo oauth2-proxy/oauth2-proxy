@@ -18,13 +18,14 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/net/websocket"
+
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/net/websocket"
 )
 
 func init() {
@@ -171,7 +172,7 @@ func TestRobotsTxt(t *testing.T) {
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/robots.txt", nil)
 	proxy.ServeHTTP(rw, req)
-	assert.Equal(t, 200, rw.Code)
+	assert.Equal(t, http.StatusOK, rw.Code)
 	assert.Equal(t, "User-agent: *\nDisallow: /", rw.Body.String())
 }
 
@@ -764,7 +765,7 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 	const endpoint = "/some/random/endpoint"
 
 	code, body := sipTest.GetEndpoint(endpoint)
-	assert.Equal(t, 403, code)
+	assert.Equal(t, http.StatusForbidden, code)
 
 	match := sipTest.signInRegexp.FindStringSubmatch(body)
 	if match == nil {
@@ -780,7 +781,7 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 	sipTest := NewSignInPageTest(false)
 	code, body := sipTest.GetEndpoint("/oauth2/sign_in")
-	assert.Equal(t, 200, code)
+	assert.Equal(t, http.StatusOK, code)
 
 	match := sipTest.signInRegexp.FindStringSubmatch(body)
 	if match == nil {
@@ -797,7 +798,7 @@ func TestSignInPageSkipProvider(t *testing.T) {
 	const endpoint = "/some/random/endpoint"
 
 	code, body := sipTest.GetEndpoint(endpoint)
-	assert.Equal(t, 302, code)
+	assert.Equal(t, http.StatusFound, code)
 
 	match := sipTest.signInProviderRegexp.FindStringSubmatch(body)
 	if match == nil {
@@ -811,7 +812,7 @@ func TestSignInPageSkipProviderDirect(t *testing.T) {
 	const endpoint = "/sign_in"
 
 	code, body := sipTest.GetEndpoint(endpoint)
-	assert.Equal(t, 302, code)
+	assert.Equal(t, http.StatusFound, code)
 
 	match := sipTest.signInProviderRegexp.FindStringSubmatch(body)
 	if match == nil {
@@ -1163,7 +1164,7 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	req, _ := http.NewRequest("OPTIONS", "/preflight-request", nil)
 	proxy.ServeHTTP(rw, req)
 
-	assert.Equal(t, 200, rw.Code)
+	assert.Equal(t, http.StatusOK, rw.Code)
 	assert.Equal(t, "response", rw.Body.String())
 }
 
@@ -1281,7 +1282,7 @@ func TestNoRequestSignature(t *testing.T) {
 	st := NewSignatureTest()
 	defer st.Close()
 	st.MakeRequestWithExpectedKey("GET", "", "")
-	assert.Equal(t, 200, st.rw.Code)
+	assert.Equal(t, http.StatusOK, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "no signature received")
 }
 
@@ -1290,7 +1291,7 @@ func TestRequestSignatureGetRequest(t *testing.T) {
 	defer st.Close()
 	st.opts.SignatureKey = "sha1:7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d"
 	st.MakeRequestWithExpectedKey("GET", "", "7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d")
-	assert.Equal(t, 200, st.rw.Code)
+	assert.Equal(t, http.StatusOK, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "signatures match")
 }
 
@@ -1300,7 +1301,7 @@ func TestRequestSignaturePostRequest(t *testing.T) {
 	st.opts.SignatureKey = "sha1:d90df39e2d19282840252612dd7c81421a372f61"
 	payload := `{ "hello": "world!" }`
 	st.MakeRequestWithExpectedKey("POST", payload, "d90df39e2d19282840252612dd7c81421a372f61")
-	assert.Equal(t, 200, st.rw.Code)
+	assert.Equal(t, http.StatusOK, st.rw.Code)
 	assert.Equal(t, st.rw.Body.String(), "signatures match")
 }
 

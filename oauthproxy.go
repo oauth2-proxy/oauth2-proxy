@@ -500,7 +500,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 // ManualSignIn handles basic auth logins to the proxy
 func (p *OAuthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {
-	if req.Method != "POST" || p.HtpasswdFile == nil {
+	if req.Method != http.MethodPost || p.HtpasswdFile == nil {
 		return "", false
 	}
 	user := req.FormValue("username")
@@ -1125,7 +1125,7 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		return nil, err
 	}
 
-	ctx := context.Background()
+	ctx := req.Context()
 	var session *sessionsapi.SessionState
 	for _, verifier := range p.jwtBearerVerifiers {
 		bearerToken, err := verifier.Verify(ctx, rawBearerToken)

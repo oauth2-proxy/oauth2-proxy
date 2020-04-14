@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -8,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )

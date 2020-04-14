@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
+
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"

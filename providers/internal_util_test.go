@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )
 
 func updateURL(url *url.URL, hostname string) {

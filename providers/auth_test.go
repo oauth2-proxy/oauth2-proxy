@@ -8,7 +8,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )
 
-var authorizedAccessToken = "imaginary_access_token"
+const authorizedAccessToken = "imaginary_access_token"
 
 func CreateAuthorizedSession() *sessions.SessionState {
 	return &sessions.SessionState{AccessToken: authorizedAccessToken}

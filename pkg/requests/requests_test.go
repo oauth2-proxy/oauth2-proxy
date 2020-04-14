@@ -23,7 +23,7 @@ func testBackend(t *testing.T, responseCode int, payload string) *httptest.Serve
 }
 
 func TestRequest(t *testing.T) {
-	backend := testBackend(t, 200, "{\"foo\": \"bar\"}")
+	backend := testBackend(t, http.StatusOK, "{\"foo\": \"bar\"}")
 	defer backend.Close()
 
 	req, _ := http.NewRequest("GET", backend.URL, nil)
@@ -37,7 +37,7 @@ func TestRequest(t *testing.T) {
 func TestRequestFailure(t *testing.T) {
 	// Create a backend to generate a test URL, then close it to cause a
 	// connection error.
-	backend := testBackend(t, 200, "{\"foo\": \"bar\"}")
+	backend := testBackend(t, http.StatusOK, "{\"foo\": \"bar\"}")
 	backend.Close()
 
 	req, err := http.NewRequest("GET", backend.URL, nil)
@@ -62,7 +62,7 @@ func TestHttpErrorCode(t *testing.T) {
 }
 
 func TestJsonParsingError(t *testing.T) {
-	backend := testBackend(t, 200, "not well-formed JSON")
+	backend := testBackend(t, http.StatusOK, "not well-formed JSON")
 	defer backend.Close()
 
 	req, err := http.NewRequest("GET", backend.URL, nil)
@@ -93,14 +93,14 @@ func TestRequestUnparsedResponseUsingAccessTokenParameter(t *testing.T) {
 	assert.Equal(t, nil, err)
 	defer response.Body.Close()
 
-	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, http.StatusOK, response.StatusCode)
 	body, err := ioutil.ReadAll(response.Body)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "some payload", string(body))
 }
 
 func TestRequestUnparsedResponseUsingAccessTokenParameterFailedResponse(t *testing.T) {
-	backend := testBackend(t, 200, "some payload")
+	backend := testBackend(t, http.StatusOK, "some payload")
 	// Close the backend now to force a request failure.
 	backend.Close()
 
@@ -131,7 +131,7 @@ func TestRequestUnparsedResponseUsingHeaders(t *testing.T) {
 	assert.Equal(t, nil, err)
 	defer response.Body.Close()
 
-	assert.Equal(t, 200, response.StatusCode)
+	assert.Equal(t, http.StatusOK, response.StatusCode)
 	body, err := ioutil.ReadAll(response.Body)
 	assert.Equal(t, nil, err)
 

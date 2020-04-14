@@ -25,7 +25,7 @@ func TestGCPHealthcheckLiveness(t *testing.T) {
 	r.Host = host
 	h.ServeHTTP(rw, r)
 
-	assert.Equal(t, 200, rw.Code)
+	assert.Equal(t, http.StatusOK, rw.Code)
 	assert.Equal(t, "OK", rw.Body.String())
 }
 
@@ -41,7 +41,7 @@ func TestGCPHealthcheckReadiness(t *testing.T) {
 	r.Host = host
 	h.ServeHTTP(rw, r)
 
-	assert.Equal(t, 200, rw.Code)
+	assert.Equal(t, http.StatusOK, rw.Code)
 	assert.Equal(t, "OK", rw.Body.String())
 }
 
@@ -73,7 +73,7 @@ func TestGCPHealthcheckIngress(t *testing.T) {
 	r.Header.Set(userAgentHeader, googleHealthCheckUserAgent)
 	h.ServeHTTP(rw, r)
 
-	assert.Equal(t, 200, rw.Code)
+	assert.Equal(t, http.StatusOK, rw.Code)
 	assert.Equal(t, "", rw.Body.String())
 }
 

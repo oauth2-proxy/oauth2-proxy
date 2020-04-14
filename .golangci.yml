@@ -24,6 +24,7 @@ linters:
     - stylecheck
     - unconvert
     - gocritic
+    - errcheck
   disable-all: true
 issues:
   exclude-rules:
@@ -33,3 +34,4 @@ issues:
         - bodyclose
         - unconvert
         - gocritic
+        - errcheck

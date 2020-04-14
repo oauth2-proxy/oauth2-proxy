@@ -139,6 +139,8 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 	return false, nil
 }
 
+var rep1 = regexp.MustCompile(`(?s).*\<https://api.github.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
+
 func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (bool, error) {
 	// https://developer.github.com/v3/orgs/teams/#list-user-teams
 
@@ -197,7 +199,6 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			// <https://api.github.com/user/teams?page=3&per_page=10>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=10>; rel="first"
 
 			link := resp.Header.Get("Link")
-			rep1 := regexp.MustCompile(`(?s).*\<https://api.github.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
 			i, converr := strconv.Atoi(rep1.ReplaceAllString(link, "$1"))
 
 			// If the last page cannot be taken from the link in the http header, the last variable remains zero
