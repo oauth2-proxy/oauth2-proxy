@@ -467,7 +467,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	redirectURL, err := p.GetRedirect(req)
 	if err != nil {
 		logger.Printf("Error obtaining redirect: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", err.Error())
 		return
 	}
 
@@ -690,7 +690,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
 		logger.Printf("Error obtaining redirect: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", err.Error())
 		return
 	}
 
@@ -733,7 +733,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
 		logger.Printf("Error obtaining redirect: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", err.Error())
 		return
 	}
 	p.ClearSessionCookie(rw, req)
@@ -746,14 +746,14 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	nonce, err := encryption.Nonce()
 	if err != nil {
 		logger.Printf("Error obtaining nonce: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", err.Error())
 		return
 	}
 	p.SetCSRFCookie(rw, req, nonce)
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
 		logger.Printf("Error obtaining redirect: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", err.Error())
 		return
 	}
 	redirectURI := p.GetRedirectURI(req.Host)
@@ -769,13 +769,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
 		logger.Printf("Error while parsing OAuth2 callback: %s" + err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", err.Error())
 		return
 	}
 	errorString := req.Form.Get("error")
 	if errorString != "" {
 		logger.Printf("Error while parsing OAuth2 callback: %s ", errorString)
-		p.ErrorPage(rw, 403, "Permission Denied", errorString)
+		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", errorString)
 		return
 	}
 
@@ -783,28 +783,28 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.redeemCode(ctx, req.Host, req.Form.Get("code"))
 	if err != nil {
 		logger.Printf("Error redeeming code during OAuth2 callback: %s ", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", "Internal Error")
 		return
 	}
 
 	s := strings.SplitN(req.Form.Get("state"), ":", 2)
 	if len(s) != 2 {
 		logger.Printf("Error while parsing OAuth2 state: invalid length")
-		p.ErrorPage(rw, 500, "Internal Error", "Invalid State")
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", "Invalid State")
 		return
 	}
 	nonce := s[0]
 	redirect := s[1]
 	c, err := req.Cookie(p.CSRFCookieName)
 	if err != nil {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable too obtain CSRF cookie")
-		p.ErrorPage(rw, 403, "Permission Denied", err.Error())
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
+		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", err.Error())
 		return
 	}
 	p.ClearCSRFCookie(rw, req)
 	if c.Value != nonce {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: csrf token mismatch, potential attack")
-		p.ErrorPage(rw, 403, "Permission Denied", "csrf failed")
+		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", "csrf failed")
 		return
 	}
 
@@ -818,14 +818,15 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Printf("%s %s", remoteAddr, err)
-			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+			p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", "Internal Error")
 			return
 		}
 		http.Redirect(rw, req, redirect, http.StatusFound)
-	} else {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
-		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
+		return
 	}
+
+	logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
+	p.ErrorPage(rw, http.StatusUnauthorized, "Permission Denied", "Invalid Account")
 }
 
 // AuthenticateOnly checks whether the user is currently logged in
