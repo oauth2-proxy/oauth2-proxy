@@ -198,7 +198,7 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return nil, err
 	}
