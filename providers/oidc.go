@@ -161,7 +161,12 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 				return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 			}
 
-			newSession.IDToken = token.Extra("id_token").(string)
+			var ok bool
+			newSession.IDToken, ok = token.Extra("id_token").(string)
+			if !ok {
+				return nil, fmt.Errorf("id_token is not a string value: token=%v", token)
+			}
+
 			newSession.Email = claims.Email
 			newSession.User = claims.Subject
 			newSession.PreferredUsername = claims.PreferredUsername

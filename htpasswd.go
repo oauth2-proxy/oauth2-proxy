@@ -4,11 +4,13 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"os"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 // Lookup passwords in a htpasswd file
@@ -58,7 +60,7 @@ func (h *HtpasswdFile) Validate(user string, password string) bool {
 	if shaPrefix == "{SHA}" {
 		shaValue := realPassword[5:]
 		d := sha1.New()
-		d.Write([]byte(password))
+		fmt.Fprint(d, password)
 		return shaValue == base64.StdEncoding.EncodeToString(d.Sum(nil))
 	}
 

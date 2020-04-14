@@ -14,6 +14,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	options "github.com/mreiferson/go-options"
+
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
@@ -146,7 +147,9 @@ func main() {
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
-	flagSet.Parse(os.Args[1:])
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		logger.Fatal("ERROR: failed parse flagSet")
+	}
 
 	if *showVersion {
 		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())

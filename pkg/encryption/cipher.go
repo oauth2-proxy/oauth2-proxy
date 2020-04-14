@@ -61,10 +61,9 @@ func SignedValue(seed string, key string, value string, now time.Time) string {
 func cookieSignature(args ...string) string {
 	h := hmac.New(sha1.New, []byte(args[0]))
 	for _, arg := range args[1:] {
-		h.Write([]byte(arg))
+		fmt.Fprint(h, arg)
 	}
-	var b []byte
-	b = h.Sum(b)
+	b := h.Sum(nil)
 	return base64.URLEncoding.EncodeToString(b)
 }
 

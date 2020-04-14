@@ -35,3 +35,6 @@ issues:
         - unconvert
         - gocritic
         - errcheck
+linters-settings:
+  errcheck:
+    check-type-assertions: true

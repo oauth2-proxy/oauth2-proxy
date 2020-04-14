@@ -125,7 +125,10 @@ func checkNonce(ctx context.Context, idToken string, p *LoginGovProvider) error 
 		return err
 	}
 
-	claims := token.Claims.(*loginGovCustomClaims)
+	claims, ok := token.Claims.(*loginGovCustomClaims)
+	if !ok {
+		return fmt.Errorf("type assertion of toke.Claims failed: token=%s", token.Raw)
+	}
 	if claims.Nonce != p.Nonce {
 		return fmt.Errorf("nonce validation failed")
 	}

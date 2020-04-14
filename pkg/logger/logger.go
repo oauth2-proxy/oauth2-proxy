@@ -130,13 +130,13 @@ func (l *Logger) Output(calldepth int, message string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.stdLogTemplate.Execute(l.writer, stdLogMessageData{
+	_ = l.stdLogTemplate.Execute(l.writer, stdLogMessageData{
 		Timestamp: FormatTimestamp(now),
 		File:      file,
 		Message:   message,
 	})
 
-	l.writer.Write([]byte("\n"))
+	fmt.Fprint(l.writer, "\n")
 }
 
 // PrintAuthf writes auth info to the logger. Requires an http.Request to
@@ -158,7 +158,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.authTemplate.Execute(l.writer, authLogMessageData{
+	_ = l.authTemplate.Execute(l.writer, authLogMessageData{
 		Client:        client,
 		Host:          req.Host,
 		Protocol:      req.Proto,
@@ -170,7 +170,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 		Message:       fmt.Sprintf(format, a...),
 	})
 
-	l.writer.Write([]byte("\n"))
+	fmt.Fprint(l.writer, "\n")
 }
 
 // PrintReq writes request details to the Logger using the http.Request,
@@ -206,7 +206,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.reqTemplate.Execute(l.writer, reqLogMessageData{
+	_ = l.reqTemplate.Execute(l.writer, reqLogMessageData{
 		Client:          client,
 		Host:            req.Host,
 		Protocol:        req.Proto,
@@ -221,7 +221,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		Username:        username,
 	})
 
-	l.writer.Write([]byte("\n"))
+	fmt.Fprint(l.writer, "\n")
 }
 
 // GetFileLineString will find the caller file and line number

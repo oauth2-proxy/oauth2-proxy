@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -39,12 +40,12 @@ func gcpHealthcheck(h http.Handler) http.Handler {
 		// Check for liveness and readiness:  used for Google App Engine
 		if r.URL.EscapedPath() == "/liveness_check" {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
+			fmt.Fprint(w, "OK")
 			return
 		}
 		if r.URL.EscapedPath() == "/readiness_check" {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
+			fmt.Fprint(w, "OK")
 			return
 		}
 
@@ -157,13 +158,17 @@ type tcpKeepAliveListener struct {
 	*net.TCPListener
 }
 
-func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	tc, err := ln.AcceptTCP()
 	if err != nil {
-		return
+		return nil, err
 	}
-	tc.SetKeepAlive(true)
-	tc.SetKeepAlivePeriod(3 * time.Minute)
+	if err := tc.SetKeepAlive(true); err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
+		return nil, err
+	}
 	return tc, nil
 }
 

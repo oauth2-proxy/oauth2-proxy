@@ -455,13 +455,15 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 		Message:     message,
 		ProxyPrefix: p.ProxyPrefix,
 	}
-	p.templates.ExecuteTemplate(rw, "error.html", t)
+	_ = p.templates.ExecuteTemplate(rw, "error.html", t)
 }
 
 // SignInPage writes the sing in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
-	p.ClearSessionCookie(rw, req)
+	if err := p.ClearSessionCookie(rw, req); err != nil {
+		logger.Printf("Warning: falied to clear session %s", err.Error())
+	}
 	rw.WriteHeader(code)
 
 	redirectURL, err := p.GetRedirect(req)
@@ -495,7 +497,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	if p.providerNameOverride != "" {
 		t.ProviderName = p.providerNameOverride
 	}
-	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
+	_ = p.templates.ExecuteTemplate(rw, "sign_in.html", t)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
@@ -697,7 +699,9 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	user, ok := p.ManualSignIn(rw, req)
 	if ok {
 		session := &sessionsapi.SessionState{User: user}
-		p.SaveSession(rw, req, session)
+		if err := p.SaveSession(rw, req, session); err != nil {
+			logger.Printf("Warning: failed to save session %s", err.Error())
+		}
 		http.Redirect(rw, req, redirect, http.StatusFound)
 	} else {
 		if p.SkipProviderButton {
@@ -725,7 +729,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	}
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(userInfo)
+	_ = json.NewEncoder(rw).Encode(userInfo)
 }
 
 // SignOut sends a response to clear the authentication cookie
@@ -736,7 +740,10 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", err.Error())
 		return
 	}
-	p.ClearSessionCookie(rw, req)
+
+	if err := p.ClearSessionCookie(rw, req); err != nil {
+		logger.Printf("Warning: failed to clear session %s", err.Error())
+	}
 	http.Redirect(rw, req, redirect, http.StatusFound)
 }
 
@@ -950,7 +957,9 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	if clearSession {
-		p.ClearSessionCookie(rw, req)
+		if err := p.ClearSessionCookie(rw, req); err != nil {
+			logger.Printf("Warning: failed to clear session %s", err.Error())
+		}
 	}
 
 	if session == nil {
