@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
@@ -64,7 +65,7 @@ func (p *BitbucketProvider) SetRepository(repository string) {
 }
 
 // GetEmailAddress returns the email of the authenticated user
-func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 
 	var emails struct {
 		Values []struct {
@@ -82,7 +83,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 			FullName string `json:"full_name"`
 		}
 	}
-	req, err := http.NewRequest("GET",
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		p.ValidateURL.String()+"?access_token="+s.AccessToken, nil)
 	if err != nil {
 		logger.Printf("failed building request %s", err)
@@ -95,10 +96,9 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 	}
 
 	if p.Team != "" {
-		teamURL := &url.URL{}
-		*teamURL = *p.ValidateURL
+		teamURL := *p.ValidateURL
 		teamURL.Path = "/2.0/teams"
-		req, err = http.NewRequest("GET",
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 			teamURL.String()+"?role=member&access_token="+s.AccessToken, nil)
 		if err != nil {
 			logger.Printf("failed building request %s", err)
@@ -109,7 +109,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 			logger.Printf("failed requesting teams membership %s", err)
 			return "", err
 		}
-		var found = false
+		found := false
 		for _, team := range teams.Values {
 			if p.Team == team.Name {
 				found = true
@@ -126,7 +126,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 		repositoriesURL := &url.URL{}
 		*repositoriesURL = *p.ValidateURL
 		repositoriesURL.Path = "/2.0/repositories/" + strings.Split(p.Repository, "/")[0]
-		req, err = http.NewRequest("GET",
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 			repositoriesURL.String()+"?role=contributor"+
 				"&q=full_name="+url.QueryEscape("\""+p.Repository+"\"")+
 				"&access_token="+s.AccessToken,
@@ -140,7 +140,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 			logger.Printf("failed checking repository access %s", err)
 			return "", err
 		}
-		var found = false
+		found := false
 		for _, repository := range repositories.Values {
 			if p.Repository == repository.FullName {
 				found = true

@@ -19,12 +19,13 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
+	"github.com/yhat/wsutil"
+
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
-	"github.com/yhat/wsutil"
 )
 
 const (
@@ -340,34 +341,37 @@ func (p *OAuthProxy) displayCustomLoginForm() bool {
 	return p.HtpasswdFile != nil && p.DisplayHtpasswdForm
 }
 
-func (p *OAuthProxy) redeemCode(host, code string) (s *sessionsapi.SessionState, err error) {
+func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (*sessionsapi.SessionState, error) {
 	if code == "" {
 		return nil, errors.New("missing code")
 	}
 	redirectURI := p.GetRedirectURI(host)
-	s, err = p.provider.Redeem(redirectURI, code)
+	s, err := p.provider.Redeem(ctx, redirectURI, code)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if s.Email == "" {
-		s.Email, err = p.provider.GetEmailAddress(s)
+		s.Email, err = p.provider.GetEmailAddress(ctx, s)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.PreferredUsername == "" {
-		s.PreferredUsername, err = p.provider.GetPreferredUsername(s)
-		if err != nil && err.Error() == "not implemented" {
-			err = nil
+		s.PreferredUsername, err = p.provider.GetPreferredUsername(ctx, s)
+		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
+			return nil, err
 		}
 	}
 
 	if s.User == "" {
-		s.User, err = p.provider.GetUserName(s)
-		if err != nil && err.Error() == "not implemented" {
-			err = nil
+		s.User, err = p.provider.GetUserName(ctx, s)
+		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
+			return nil, err
 		}
 	}
-	return
+	return s, nil
 }
 
 // MakeCSRFCookie creates a cookie for CSRF
@@ -775,7 +779,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, err := p.redeemCode(req.Host, req.Form.Get("code"))
+	ctx := req.Context()
+	session, err := p.redeemCode(ctx, req.Host, req.Form.Get("code"))
 	if err != nil {
 		logger.Printf("Error redeeming code during OAuth2 callback: %s ", err.Error())
 		p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
@@ -888,6 +893,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	remoteAddr := getRemoteAddr(req)
+	ctx := req.Context()
 	if session == nil {
 		session, err = p.LoadCookiedSession(req)
 		if err != nil {
@@ -900,7 +906,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 				saveSession = true
 			}
 
-			if ok, err := p.provider.RefreshSessionIfNeeded(session); err != nil {
+			if ok, err := p.provider.RefreshSessionIfNeeded(ctx, session); err != nil {
 				logger.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
 				clearSession = true
 				session = nil
@@ -919,7 +925,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	if saveSession && !revalidated && session != nil && session.AccessToken != "" {
-		if !p.provider.ValidateSessionState(session) {
+		if !p.provider.ValidateSessionState(ctx, session) {
 			logger.Printf("Removing session: error validating %s", session)
 			saveSession = false
 			session = nil
@@ -1161,6 +1167,8 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 	return nil, fmt.Errorf("unable to verify jwt token %s", req.Header.Get("Authorization"))
 }
 
+var jwtRegex = regexp.MustCompile(`^eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`)
+
 // findBearerToken finds a valid JWT token from the Authorization header of a given request.
 func (p *OAuthProxy) findBearerToken(req *http.Request) (string, error) {
 	auth := req.Header.Get("Authorization")
@@ -1168,7 +1176,6 @@ func (p *OAuthProxy) findBearerToken(req *http.Request) (string, error) {
 	if len(s) != 2 {
 		return "", fmt.Errorf("invalid authorization header %s", auth)
 	}
-	jwtRegex := regexp.MustCompile(`^eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`)
 	var rawBearerToken string
 	if s[0] == "Bearer" && jwtRegex.MatchString(s[1]) {
 		rawBearerToken = s[1]

@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -28,7 +29,7 @@ func Request(req *http.Request) (*simplejson.Json, error) {
 		return nil, fmt.Errorf("problem reading http request body: %w", err)
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("got %d %s", resp.StatusCode, body)
 	}
 
@@ -62,8 +63,8 @@ func RequestJSON(req *http.Request, v interface{}) error {
 }
 
 // RequestUnparsedResponse performs a GET and returns the raw response object
-func RequestUnparsedResponse(url string, header http.Header) (resp *http.Response, err error) {
-	req, err := http.NewRequest("GET", url, nil)
+func RequestUnparsedResponse(ctx context.Context, url string, header http.Header) (resp *http.Response, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error performing get request: %w", err)
 	}

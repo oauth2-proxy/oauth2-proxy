@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -189,7 +190,8 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 	defer pubjwkserver.Close()
 
-	session, err := p.Redeem("http://redirect/", "code1234")
+	ctx := context.TODO()
+	session, err := p.Redeem(ctx, "http://redirect/", "code1234")
 	assert.NoError(t, err)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "timothy.spencer@gsa.gov", session.Email)
@@ -283,7 +285,8 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 	defer pubjwkserver.Close()
 
-	_, err = p.Redeem("http://redirect/", "code1234")
+	ctx := context.TODO()
+	_, err = p.Redeem(ctx, "http://redirect/", "code1234")
 
 	// The "badfakenonce" in the idtoken above should cause this to error out
 	assert.Error(t, err)

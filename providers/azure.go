@@ -2,6 +2,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -68,14 +69,13 @@ func (p *AzureProvider) Configure(tenant string) {
 	}
 }
 
-func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, errors.New("missing code")
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -88,10 +88,9 @@ func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionSta
 		params.Add("resource", p.ProtectedResource.String())
 	}
 
-	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
-		return
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -104,12 +103,11 @@ func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionSta
 	body, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
 	}
 
 	var jsonResponse struct {
@@ -120,70 +118,67 @@ func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionSta
 	}
 	err = json.Unmarshal(body, &jsonResponse)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	s = &sessions.SessionState{
+	return &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
 		CreatedAt:    time.Now(),
 		ExpiresOn:    time.Unix(jsonResponse.ExpiresOn, 0),
 		RefreshToken: jsonResponse.RefreshToken,
-	}
-	return
+	}, nil
 }
 
 func getAzureHeader(accessToken string) http.Header {
 	header := make(http.Header)
 	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	header.Set("Accept", "application/json")
 	return header
 }
 
 func getEmailFromJSON(json *simplejson.Json) (string, error) {
-	var email string
-	var err error
-
-	email, err = json.Get("mail").String()
-
+	email, err := json.Get("mail").String()
 	if err != nil || email == "" {
-		otherMails, otherMailsErr := json.Get("otherMails").Array()
-		if len(otherMails) > 0 {
-			email = otherMails[0].(string)
+		otherMails, err := json.Get("otherMails").Array()
+		if err != nil {
+			return "", err
 		}
-		err = otherMailsErr
+		if len(otherMails) == 0 {
+			return "", errors.New("no email")
+		}
+		email, ok := otherMails[0].(string)
+		if !ok {
+			return "", errors.New("no email")
+		}
+		return email, nil
 	}
 
-	return email, err
+	return email, nil
 }
 
 // GetEmailAddress returns the Account email address
-func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
-	var email string
-	var err error
-
+func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.ProfileURL.String(), nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header = getAzureHeader(s.AccessToken)
 
 	json, err := requests.Request(req)
-
 	if err != nil {
 		return "", err
 	}
 
-	email, err = getEmailFromJSON(json)
-
+	email, err := getEmailFromJSON(json)
 	if err == nil && email != "" {
 		return email, err
 	}
 
 	email, err = json.Get("userPrincipalName").String()
-
 	if err != nil {
 		logger.Printf("failed making request %s", err)
 		return "", err
@@ -194,5 +189,5 @@ func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error
 		return "", err
 	}
 
-	return email, err
+	return email, nil
 }

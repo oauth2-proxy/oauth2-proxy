@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )
@@ -119,8 +120,9 @@ func TestBitbucketProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testBitbucketProvider(bURL.Host, "", "")
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -132,8 +134,9 @@ func TestBitbucketProviderGetEmailAddressAndGroup(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testBitbucketProvider(bURL.Host, "bioinformatics", "")
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -150,8 +153,9 @@ func TestBitbucketProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
+	ctx := context.TODO()
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -163,8 +167,9 @@ func TestBitbucketProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) 
 	bURL, _ := url.Parse(b.URL)
 	p := testBitbucketProvider(bURL.Host, "", "")
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, "", email)
 	assert.Equal(t, nil, err)
 }

@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"context"
+
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
@@ -8,16 +10,16 @@ import (
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
-	GetEmailAddress(*sessions.SessionState) (string, error)
-	GetUserName(*sessions.SessionState) (string, error)
-	GetPreferredUsername(*sessions.SessionState) (string, error)
-	Redeem(string, string) (*sessions.SessionState, error)
-	ValidateGroup(string) bool
-	ValidateSessionState(*sessions.SessionState) bool
+	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
+	GetUserName(ctx context.Context, s *sessions.SessionState) (string, error)
+	GetPreferredUsername(ctx context.Context, s *sessions.SessionState) (string, error)
+	Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error)
+	ValidateGroup(group string) bool
+	ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
-	RefreshSessionIfNeeded(*sessions.SessionState) (bool, error)
-	SessionFromCookie(string, *encryption.Cipher) (*sessions.SessionState, error)
-	CookieForSession(*sessions.SessionState, *encryption.Cipher) (string, error)
+	RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error)
+	SessionFromCookie(v string, c *encryption.Cipher) (*sessions.SessionState, error)
+	CookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error)
 }
 
 // New provides a new Provider based on the configured provider string

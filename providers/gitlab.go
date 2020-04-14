@@ -10,8 +10,9 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"golang.org/x/oauth2"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )
 
 // GitLabProvider represents a GitLab based Identity Provider
@@ -37,13 +38,12 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GitLabProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *GitLabProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	ctx := context.Background()
 	c := oauth2.Config{
 		ClientID:     p.ClientID,
 		ClientSecret: clientSecret,
@@ -54,34 +54,34 @@ func (p *GitLabProvider) Redeem(redirectURL, code string) (s *sessions.SessionSt
 	}
 	token, err := c.Exchange(ctx, code)
 	if err != nil {
-		return nil, fmt.Errorf("token exchange: %v", err)
+		return nil, fmt.Errorf("token exchange: %w", err)
 	}
-	s, err = p.createSessionState(ctx, token)
+	s, err := p.createSessionState(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("unable to update session: %v", err)
+		return nil, fmt.Errorf("unable to update session: %w", err)
 	}
-	return
+	return s, nil
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *GitLabProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
+func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil
 	}
 
 	origExpiration := s.ExpiresOn
 
-	err := p.redeemRefreshToken(s)
+	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
-		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
+		return false, fmt.Errorf("unable to redeem refresh token: %w", err)
 	}
 
 	fmt.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
 	return true, nil
 }
 
-func (p *GitLabProvider) redeemRefreshToken(s *sessions.SessionState) (err error) {
+func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return
@@ -94,18 +94,17 @@ func (p *GitLabProvider) redeemRefreshToken(s *sessions.SessionState) (err error
 			TokenURL: p.RedeemURL.String(),
 		},
 	}
-	ctx := context.Background()
 	t := &oauth2.Token{
 		RefreshToken: s.RefreshToken,
 		Expiry:       time.Now().Add(-time.Hour),
 	}
 	token, err := c.TokenSource(ctx, t).Token()
 	if err != nil {
-		return fmt.Errorf("failed to get token: %v", err)
+		return fmt.Errorf("failed to get token: %w", err)
 	}
 	newSession, err := p.createSessionState(ctx, token)
 	if err != nil {
-		return fmt.Errorf("unable to update session: %v", err)
+		return fmt.Errorf("unable to update session: %w", err)
 	}
 	s.AccessToken = newSession.AccessToken
 	s.IDToken = newSession.IDToken
@@ -123,7 +122,7 @@ type gitlabUserInfo struct {
 	Groups        []string `json:"groups"`
 }
 
-func (p *GitLabProvider) getUserInfo(s *sessions.SessionState) (*gitlabUserInfo, error) {
+func (p *GitLabProvider) getUserInfo(ctx context.Context, s *sessions.SessionState) (*gitlabUserInfo, error) {
 	// Retrieve user info JSON
 	// https://docs.gitlab.com/ee/integration/openid_connect_provider.html#shared-information
 
@@ -131,31 +130,31 @@ func (p *GitLabProvider) getUserInfo(s *sessions.SessionState) (*gitlabUserInfo,
 	userInfoURL := *p.LoginURL
 	userInfoURL.Path = "/oauth/userinfo"
 
-	req, err := http.NewRequest("GET", userInfoURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userInfoURL.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create user info request: %v", err)
+		return nil, fmt.Errorf("failed to create user info request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to perform user info request: %v", err)
+		return nil, fmt.Errorf("failed to perform user info request: %w", err)
 	}
 	var body []byte
 	body, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read user info response: %v", err)
+		return nil, fmt.Errorf("failed to read user info response: %w", err)
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("got %d during user info request: %s", resp.StatusCode, body)
 	}
 
 	var userInfo gitlabUserInfo
 	err = json.Unmarshal(body, &userInfo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse user info: %v", err)
+		return nil, fmt.Errorf("failed to parse user info: %w", err)
 	}
 
 	return &userInfo, nil
@@ -206,7 +205,7 @@ func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.T
 	// Parse and verify ID Token payload.
 	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify id_token: %v", err)
+		return nil, fmt.Errorf("could not verify id_token: %w", err)
 	}
 
 	return &sessions.SessionState{
@@ -219,18 +218,17 @@ func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.T
 }
 
 // ValidateSessionState checks that the session's IDToken is still valid
-func (p *GitLabProvider) ValidateSessionState(s *sessions.SessionState) bool {
-	ctx := context.Background()
+func (p *GitLabProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitLabProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *GitLabProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	// Retrieve user info
-	userInfo, err := p.getUserInfo(s)
+	userInfo, err := p.getUserInfo(ctx, s)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve user info: %v", err)
+		return "", fmt.Errorf("failed to retrieve user info: %w", err)
 	}
 
 	// Check if email is verified
@@ -241,23 +239,23 @@ func (p *GitLabProvider) GetEmailAddress(s *sessions.SessionState) (string, erro
 	// Check if email has valid domain
 	err = p.verifyEmailDomain(userInfo)
 	if err != nil {
-		return "", fmt.Errorf("email domain check failed: %v", err)
+		return "", fmt.Errorf("email domain check failed: %w", err)
 	}
 
 	// Check group membership
 	err = p.verifyGroupMembership(userInfo)
 	if err != nil {
-		return "", fmt.Errorf("group membership check failed: %v", err)
+		return "", fmt.Errorf("group membership check failed: %w", err)
 	}
 
 	return userInfo.Email, nil
 }
 
 // GetUserName returns the Account user name
-func (p *GitLabProvider) GetUserName(s *sessions.SessionState) (string, error) {
-	userInfo, err := p.getUserInfo(s)
+func (p *GitLabProvider) GetUserName(ctx context.Context, s *sessions.SessionState) (string, error) {
+	userInfo, err := p.getUserInfo(ctx, s)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve user info: %v", err)
+		return "", fmt.Errorf("failed to retrieve user info: %w", err)
 	}
 
 	return userInfo.Username, nil

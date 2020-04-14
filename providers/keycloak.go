@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 
@@ -47,14 +48,13 @@ func (p *KeycloakProvider) SetGroup(group string) {
 	p.Group = group
 }
 
-func (p *KeycloakProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 
-	req, err := http.NewRequest("GET", p.ValidateURL.String(), nil)
-	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.ValidateURL.String(), nil)
 	if err != nil {
-		logger.Printf("failed building request %s", err)
 		return "", err
 	}
+	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
 	json, err := requests.Request(req)
 	if err != nil {
 		logger.Printf("failed making request %s", err)

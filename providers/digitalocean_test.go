@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -98,8 +99,9 @@ func TestDigitalOceanProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testDigitalOceanProvider(bURL.Host)
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@example.com", email)
 }
@@ -114,8 +116,9 @@ func TestDigitalOceanProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
+	ctx := context.TODO()
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -127,8 +130,9 @@ func TestDigitalOceanProviderGetEmailAddressEmailNotPresentInPayload(t *testing.
 	bURL, _ := url.Parse(b.URL)
 	p := testDigitalOceanProvider(bURL.Host)
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }

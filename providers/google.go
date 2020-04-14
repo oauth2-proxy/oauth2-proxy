@@ -98,14 +98,13 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GoogleProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, errors.New("missing code")
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -114,27 +113,24 @@ func (p *GoogleProvider) Redeem(redirectURL, code string) (s *sessions.SessionSt
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
-	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
-		return
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return
+		return nil, err
 	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
 	}
 
 	var jsonResponse struct {
@@ -145,13 +141,13 @@ func (p *GoogleProvider) Redeem(redirectURL, code string) (s *sessions.SessionSt
 	}
 	err = json.Unmarshal(body, &jsonResponse)
 	if err != nil {
-		return
+		return nil, err
 	}
 	c, err := claimsFromIDToken(jsonResponse.IDToken)
 	if err != nil {
-		return
+		return nil, err
 	}
-	s = &sessions.SessionState{
+	s := &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
 		CreatedAt:    time.Now(),
@@ -160,7 +156,7 @@ func (p *GoogleProvider) Redeem(redirectURL, code string) (s *sessions.SessionSt
 		Email:        c.Email,
 		User:         c.Subject,
 	}
-	return
+	return s, nil
 }
 
 // SetGroupRestriction configures the GoogleProvider to restrict access to the
@@ -242,12 +238,12 @@ func (p *GoogleProvider) ValidateGroup(email string) bool {
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *GoogleProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
+func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil
 	}
 
-	newToken, newIDToken, duration, err := p.redeemRefreshToken(s.RefreshToken)
+	newToken, newIDToken, duration, err := p.redeemRefreshToken(ctx, s.RefreshToken)
 	if err != nil {
 		return false, err
 	}
@@ -265,7 +261,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool,
 	return true, nil
 }
 
-func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, idToken string, expires time.Duration, err error) {
+func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken string) (token string, idToken string, expires time.Duration, err error) {
 	// https://developers.google.com/identity/protocols/OAuth2WebServer#refresh
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
@@ -278,7 +274,7 @@ func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, 
 	params.Add("refresh_token", refreshToken)
 	params.Add("grant_type", "refresh_token")
 	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequestWithContext(ctx, http.MethodPost, p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return
 	}
@@ -288,14 +284,13 @@ func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, 
 	if err != nil {
 		return
 	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
 		return
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
 		return
 	}

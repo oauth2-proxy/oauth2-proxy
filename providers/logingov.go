@@ -2,6 +2,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
@@ -88,66 +89,68 @@ type loginGovCustomClaims struct {
 }
 
 // checkNonce checks the nonce in the id_token
-func checkNonce(idToken string, p *LoginGovProvider) (err error) {
+func checkNonce(ctx context.Context, idToken string, p *LoginGovProvider) error {
 	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		resp, myerr := http.Get(p.PubJWKURL.String())
-		if myerr != nil {
-			return nil, myerr
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.PubJWKURL.String(), nil)
+		if err != nil {
+			return nil, err
 		}
-		if resp.StatusCode != 200 {
-			myerr = fmt.Errorf("got %d from %q", resp.StatusCode, p.PubJWKURL.String())
-			return nil, myerr
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
 		}
-		body, myerr := ioutil.ReadAll(resp.Body)
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("got %d from %q", resp.StatusCode, p.PubJWKURL.String())
+		}
+		body, err := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		if myerr != nil {
-			return nil, myerr
+		if err != nil {
+			return nil, err
 		}
 
 		var pubkeys jose.JSONWebKeySet
-		myerr = json.Unmarshal(body, &pubkeys)
-		if myerr != nil {
-			return nil, myerr
+		err = json.Unmarshal(body, &pubkeys)
+		if err != nil {
+			return nil, err
+		}
+		if len(pubkeys.Keys) == 0 {
+			return nil, fmt.Errorf("no keys in jwt: pubkeys=%v", pubkeys)
 		}
 		pubkey := pubkeys.Keys[0]
 
 		return pubkey.Key, nil
 	})
 	if err != nil {
-		return
+		return err
 	}
 
 	claims := token.Claims.(*loginGovCustomClaims)
 	if claims.Nonce != p.Nonce {
-		err = fmt.Errorf("nonce validation failed")
-		return
+		return fmt.Errorf("nonce validation failed")
 	}
-	return
+	return nil
 }
 
-func emailFromUserInfo(accessToken string, userInfoEndpoint string) (email string, err error) {
+func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint string) (string, error) {
 	// query the user info endpoint for user attributes
-	var req *http.Request
-	req, err = http.NewRequest("GET", userInfoEndpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userInfoEndpoint, nil)
 	if err != nil {
-		return
+		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return
+		return "", err
 	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return
+		return "", err
 	}
 
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, userInfoEndpoint, body)
-		return
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("got %d from %q %s", resp.StatusCode, userInfoEndpoint, body)
 	}
 
 	// parse the user attributes from the data we got and make sure that
@@ -158,25 +161,22 @@ func emailFromUserInfo(accessToken string, userInfoEndpoint string) (email strin
 	}
 	err = json.Unmarshal(body, &emailData)
 	if err != nil {
-		return
+		return "", err
 	}
 	if emailData.Email == "" {
-		err = fmt.Errorf("missing email")
-		return
+		return "", fmt.Errorf("missing email")
 	}
-	email = emailData.Email
+	email := emailData.Email
 	if !emailData.EmailVerified {
-		err = fmt.Errorf("email %s not listed as verified", email)
-		return
+		return "", fmt.Errorf("email %s not listed as verified", email)
 	}
-	return
+	return email, nil
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, errors.New("missing code")
 	}
 
 	claims := &jwt.StandardClaims{
@@ -189,7 +189,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
 	ss, err := token.SignedString(p.JWTKey)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -198,10 +198,9 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 
-	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
-		return
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -214,12 +213,11 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 	body, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
 	}
 
 	// Get the token from the body that we got from the token endpoint.
@@ -231,31 +229,30 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 	}
 	err = json.Unmarshal(body, &jsonResponse)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// check nonce here
-	err = checkNonce(jsonResponse.IDToken, p)
+	err = checkNonce(ctx, jsonResponse.IDToken, p)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// Get the email address
-	var email string
-	email, err = emailFromUserInfo(jsonResponse.AccessToken, p.ProfileURL.String())
+	email, err := emailFromUserInfo(ctx, jsonResponse.AccessToken, p.ProfileURL.String())
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// Store the data that we found in the session state
-	s = &sessions.SessionState{
+	s := &sessions.SessionState{
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,
 		CreatedAt:   time.Now(),
 		ExpiresOn:   time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second),
 		Email:       email,
 	}
-	return
+	return s, nil
 }
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters

@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -27,8 +28,8 @@ func getNextcloudHeader(accessToken string) http.Header {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *NextcloudProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
-	req, err := http.NewRequest("GET",
+func (p *NextcloudProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		p.ValidateURL.String(), nil)
 	if err != nil {
 		logger.Printf("failed building request %s", err)
@@ -41,5 +42,8 @@ func (p *NextcloudProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 		return "", err
 	}
 	email, err := json.Get("ocs").Get("data").Get("email").String()
-	return email, err
+	if err != nil {
+		return "", err
+	}
+	return email, nil
 }

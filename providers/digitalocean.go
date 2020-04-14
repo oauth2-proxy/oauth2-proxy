@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -53,11 +54,11 @@ func getDigitalOceanHeader(accessToken string) http.Header {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *DigitalOceanProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *DigitalOceanProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.ProfileURL.String(), nil)
 	if err != nil {
 		return "", err
 	}
@@ -76,6 +77,7 @@ func (p *DigitalOceanProvider) GetEmailAddress(s *sessions.SessionState) (string
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *DigitalOceanProvider) ValidateSessionState(s *sessions.SessionState) bool {
-	return validateToken(p, s.AccessToken, getDigitalOceanHeader(s.AccessToken))
+func (p *DigitalOceanProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, getDigitalOceanHeader(s.AccessToken))
+
 }

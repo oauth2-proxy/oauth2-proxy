@@ -29,13 +29,12 @@ func NewOIDCProvider(p *ProviderData) *OIDCProvider {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *OIDCProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	ctx := context.Background()
 	c := oauth2.Config{
 		ClientID:     p.ClientID,
 		ClientSecret: clientSecret,
@@ -46,33 +45,33 @@ func (p *OIDCProvider) Redeem(redirectURL, code string) (s *sessions.SessionStat
 	}
 	token, err := c.Exchange(ctx, code)
 	if err != nil {
-		return nil, fmt.Errorf("token exchange: %v", err)
+		return nil, fmt.Errorf("token exchange: %w", err)
 	}
 
 	// in the initial exchange the id token is mandatory
 	idToken, err := p.findVerifiedIDToken(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify id_token: %v", err)
+		return nil, fmt.Errorf("could not verify id_token: %w", err)
 	} else if idToken == nil {
 		return nil, fmt.Errorf("token response did not contain an id_token")
 	}
 
-	s, err = p.createSessionState(token, idToken)
+	s, err := p.createSessionState(ctx, token, idToken)
 	if err != nil {
-		return nil, fmt.Errorf("unable to update session: %v", err)
+		return nil, fmt.Errorf("unable to update session: %w", err)
 	}
 
-	return
+	return s, nil
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new Access Token (and optional ID token) if required
-func (p *OIDCProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
+func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil
 	}
 
-	err := p.redeemRefreshToken(s)
+	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
@@ -81,7 +80,7 @@ func (p *OIDCProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, e
 	return true, nil
 }
 
-func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) {
+func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return
@@ -94,7 +93,6 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 			TokenURL: p.RedeemURL.String(),
 		},
 	}
-	ctx := context.Background()
 	t := &oauth2.Token{
 		RefreshToken: s.RefreshToken,
 		Expiry:       time.Now().Add(-time.Hour),
@@ -110,7 +108,7 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 		return fmt.Errorf("unable to extract id_token from response: %v", err)
 	}
 
-	newSession, err := p.createSessionState(token, idToken)
+	newSession, err := p.createSessionState(ctx, token, idToken)
 	if err != nil {
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
@@ -135,29 +133,30 @@ func (p *OIDCProvider) redeemRefreshToken(s *sessions.SessionState) (err error) 
 func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
 
 	getIDToken := func() (string, bool) {
-		rawIDToken, _ := token.Extra("id_token").(string)
+		rawIDToken, ok := token.Extra("id_token").(string)
+		if !ok {
+			return "", false
+		}
 		return rawIDToken, len(strings.TrimSpace(rawIDToken)) > 0
 	}
 
 	if rawIDToken, present := getIDToken(); present {
-		verifiedIDToken, err := p.Verifier.Verify(ctx, rawIDToken)
-		return verifiedIDToken, err
+		return p.Verifier.Verify(ctx, rawIDToken)
 	}
 	return nil, nil
 }
 
-func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
 
 	newSession := &sessions.SessionState{}
 
 	if idToken != nil {
-		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String())
+		claims, err := findClaimsFromIDToken(ctx, idToken, token.AccessToken, p.ProfileURL.String())
 		if err != nil {
 			return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
 		}
 
 		if claims != nil {
-
 			if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
 				return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 			}
@@ -177,8 +176,7 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 }
 
 // ValidateSessionState checks that the session's IDToken is still valid
-func (p *OIDCProvider) ValidateSessionState(s *sessions.SessionState) bool {
-	ctx := context.Background()
+func (p *OIDCProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
 }
@@ -190,12 +188,12 @@ func getOIDCHeader(accessToken string) http.Header {
 	return header
 }
 
-func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
+func findClaimsFromIDToken(ctx context.Context, idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
 
 	// Extract custom claims.
 	claims := &OIDCClaims{}
 	if err := idToken.Claims(claims); err != nil {
-		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+		return nil, fmt.Errorf("failed to parse id_token claims: %w", err)
 	}
 
 	if claims.Email == "" {
@@ -207,7 +205,7 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 		// contents at the profileURL contains the email.
 		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
 
-		req, err := http.NewRequest("GET", profileURL, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, profileURL, nil)
 		if err != nil {
 			return nil, err
 		}

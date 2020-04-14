@@ -2,6 +2,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,15 +15,18 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
+var (
+	ErrNotImplemented = errors.New("not implemented")
+)
+
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, errors.New("missing code")
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -35,28 +39,27 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 		params.Add("resource", p.ProtectedResource.String())
 	}
 
-	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
 	var body []byte
 	body, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
 	}
 
 	// blindly try json and x-www-form-urlencoded
@@ -64,24 +67,22 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 		AccessToken string `json:"access_token"`
 	}
 	err = json.Unmarshal(body, &jsonResponse)
-	if err == nil {
-		s = &sessions.SessionState{
-			AccessToken: jsonResponse.AccessToken,
+	if err != nil {
+		v, err := url.ParseQuery(string(body))
+		if err != nil {
+			return nil, err
 		}
-		return
+		a := v.Get("access_token")
+		if a == "" {
+			return nil, fmt.Errorf("no access token found %s", body)
+		}
+		return &sessions.SessionState{AccessToken: a, CreatedAt: time.Now()}, nil
 	}
 
-	var v url.Values
-	v, err = url.ParseQuery(string(body))
-	if err != nil {
-		return
-	}
-	if a := v.Get("access_token"); a != "" {
-		s = &sessions.SessionState{AccessToken: a, CreatedAt: time.Now()}
-	} else {
-		err = fmt.Errorf("no access token found %s", body)
-	}
-	return
+	return &sessions.SessionState{
+		AccessToken: jsonResponse.AccessToken,
+	}, nil
+
 }
 
 // GetLoginURL with typical oauth parameters
@@ -114,18 +115,18 @@ func (p *ProviderData) SessionFromCookie(v string, c *encryption.Cipher) (s *ses
 }
 
 // GetEmailAddress returns the Account email address
-func (p *ProviderData) GetEmailAddress(s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
+func (p *ProviderData) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+	return "", ErrNotImplemented
 }
 
 // GetUserName returns the Account username
-func (p *ProviderData) GetUserName(s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
+func (p *ProviderData) GetUserName(ctx context.Context, s *sessions.SessionState) (string, error) {
+	return "", ErrNotImplemented
 }
 
 // GetPreferredUsername returns the Account preferred username
-func (p *ProviderData) GetPreferredUsername(s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
+func (p *ProviderData) GetPreferredUsername(ctx context.Context, s *sessions.SessionState) (string, error) {
+	return "", ErrNotImplemented
 }
 
 // ValidateGroup validates that the provided email exists in the configured provider
@@ -135,12 +136,12 @@ func (p *ProviderData) ValidateGroup(email string) bool {
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *ProviderData) ValidateSessionState(s *sessions.SessionState) bool {
-	return validateToken(p, s.AccessToken, nil)
+func (p *ProviderData) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, nil)
 }
 
 // RefreshSessionIfNeeded should refresh the user's session if required and
 // do nothing if a refresh is not required
-func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
+func (p *ProviderData) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	return false, nil
 }

@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -86,7 +87,8 @@ func TestRequestUnparsedResponseUsingAccessTokenParameter(t *testing.T) {
 		}))
 	defer backend.Close()
 
-	response, err := RequestUnparsedResponse(
+	ctx := context.TODO()
+	response, err := RequestUnparsedResponse(ctx,
 		backend.URL+"?access_token=my_token", nil)
 	assert.Equal(t, nil, err)
 	defer response.Body.Close()
@@ -102,7 +104,8 @@ func TestRequestUnparsedResponseUsingAccessTokenParameterFailedResponse(t *testi
 	// Close the backend now to force a request failure.
 	backend.Close()
 
-	response, err := RequestUnparsedResponse(
+	ctx := context.TODO()
+	response, err := RequestUnparsedResponse(ctx,
 		backend.URL+"?access_token=my_token", nil)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, (*http.Response)(nil), response)
@@ -121,9 +124,10 @@ func TestRequestUnparsedResponseUsingHeaders(t *testing.T) {
 		}))
 	defer backend.Close()
 
+	ctx := context.TODO()
 	headers := make(http.Header)
 	headers.Set("Auth", "my_token")
-	response, err := RequestUnparsedResponse(backend.URL, headers)
+	response, err := RequestUnparsedResponse(ctx, backend.URL, headers)
 	assert.Equal(t, nil, err)
 	defer response.Body.Close()
 

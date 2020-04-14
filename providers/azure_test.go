@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -132,8 +133,9 @@ func TestAzureProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
 }
@@ -145,8 +147,9 @@ func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
 }
@@ -158,8 +161,9 @@ func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
 }
@@ -171,8 +175,9 @@ func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
 	assert.Equal(t, "", email)
 }
@@ -184,8 +189,9 @@ func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -197,8 +203,9 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
+	ctx := context.TODO()
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
 	assert.Equal(t, "", email)
 }
@@ -209,10 +216,11 @@ func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
 	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
 	assert.Equal(t, nil, err)
 
+	ctx := context.TODO()
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 	p.Data().RedeemURL.Path = "/common/oauth2/token"
-	s, err := p.Redeem("https://localhost", "1234")
+	s, err := p.Redeem(ctx, "https://localhost", "1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "testtoken1234", s.IDToken)
 	assert.Equal(t, timestamp, s.ExpiresOn.UTC())
