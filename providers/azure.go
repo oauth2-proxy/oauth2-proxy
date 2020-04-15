@@ -140,21 +140,21 @@ func getAzureHeader(accessToken string) http.Header {
 
 func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	email, err := json.Get("mail").String()
-	if err != nil || email == "" {
-		otherMails, err := json.Get("otherMails").Array()
-		if err != nil {
-			return "", err
-		}
-		if len(otherMails) == 0 {
-			return "", errors.New("no email")
-		}
-		email, ok := otherMails[0].(string)
-		if !ok {
-			return "", errors.New("no email")
-		}
+	if err == nil && email != "" {
 		return email, nil
 	}
 
+	otherMails, err := json.Get("otherMails").Array()
+	if err != nil {
+		return "", err
+	}
+	if len(otherMails) == 0 {
+		return "", errors.New("no email")
+	}
+	email, ok := otherMails[0].(string)
+	if !ok {
+		return "", errors.New("no email")
+	}
 	return email, nil
 }
 

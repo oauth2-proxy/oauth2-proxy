@@ -98,7 +98,7 @@ func TestNextcloudProviderGetEmailAddress(t *testing.T) {
 	p.ValidateURL.Path = userPath
 	p.ValidateURL.RawQuery = formatJSON
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
@@ -119,7 +119,7 @@ func TestNextcloudProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)
@@ -135,7 +135,7 @@ func TestNextcloudProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) 
 	p.ValidateURL.Path = userPath
 	p.ValidateURL.RawQuery = formatJSON
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)

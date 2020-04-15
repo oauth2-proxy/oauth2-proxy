@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/csv"
-	"fmt"
 	"io"
 	"os"
 
@@ -59,9 +58,8 @@ func (h *HtpasswdFile) Validate(user string, password string) bool {
 	shaPrefix := realPassword[:5]
 	if shaPrefix == "{SHA}" {
 		shaValue := realPassword[5:]
-		d := sha1.New()
-		fmt.Fprint(d, password)
-		return shaValue == base64.StdEncoding.EncodeToString(d.Sum(nil))
+		sum := sha1.Sum([]byte(password))
+		return shaValue == base64.StdEncoding.EncodeToString(sum[:])
 	}
 
 	bcryptPrefix := realPassword[:4]

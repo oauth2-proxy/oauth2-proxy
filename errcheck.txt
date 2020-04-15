@@ -1,0 +1,3 @@
+(net/http.ResponseWriter).Write
+(io.Writer).Write
+(*text/template.Template).Execute

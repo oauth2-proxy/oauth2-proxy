@@ -99,7 +99,7 @@ func TestKeycloakProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testKeycloakProvider(bURL.Host, "")
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
@@ -113,7 +113,7 @@ func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testKeycloakProvider(bURL.Host, "test-grp1")
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
@@ -132,7 +132,7 @@ func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)
@@ -146,7 +146,7 @@ func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testKeycloakProvider(bURL.Host, "")
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)

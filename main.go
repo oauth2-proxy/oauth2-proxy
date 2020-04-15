@@ -147,9 +147,8 @@ func main() {
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
-	if err := flagSet.Parse(os.Args[1:]); err != nil {
-		logger.Fatal("ERROR: failed parse flagSet")
-	}
+	// Never return an error by flag.ExitOnError.
+	_ = flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
 		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())

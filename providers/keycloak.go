@@ -52,6 +52,7 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.ValidateURL.String(), nil)
 	if err != nil {
+		logger.Printf("failed building request %s", err)
 		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+s.AccessToken)

@@ -91,14 +91,14 @@ func (vtTest *ValidateSessionStateTest) Close() {
 func TestValidateSessionStateValidToken(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
-	ctx := context.TODO()
+	ctx := context.Background()
 	assert.Equal(t, true, validateToken(ctx, vtTest.provider, "foobar", nil))
 }
 
 func TestValidateSessionStateValidTokenWithHeaders(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
-	ctx := context.TODO()
+	ctx := context.Background()
 	vtTest.header = make(http.Header)
 	vtTest.header.Set("Authorization", "Bearer foobar")
 	assert.Equal(t, true,
@@ -108,14 +108,14 @@ func TestValidateSessionStateValidTokenWithHeaders(t *testing.T) {
 func TestValidateSessionStateEmptyToken(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
-	ctx := context.TODO()
+	ctx := context.Background()
 	assert.Equal(t, false, validateToken(ctx, vtTest.provider, "", nil))
 }
 
 func TestValidateSessionStateEmptyValidateURL(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
-	ctx := context.TODO()
+	ctx := context.Background()
 	vtTest.provider.Data().ValidateURL = nil
 	assert.Equal(t, false, validateToken(ctx, vtTest.provider, "foobar", nil))
 }
@@ -124,14 +124,14 @@ func TestValidateSessionStateRequestNetworkFailure(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	// Close immediately to simulate a network failure
 	vtTest.Close()
-	ctx := context.TODO()
+	ctx := context.Background()
 	assert.Equal(t, false, validateToken(ctx, vtTest.provider, "foobar", nil))
 }
 
 func TestValidateSessionStateExpiredToken(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
-	ctx := context.TODO()
+	ctx := context.Background()
 	vtTest.responseCode = 401
 	assert.Equal(t, false, validateToken(ctx, vtTest.provider, "foobar", nil))
 }

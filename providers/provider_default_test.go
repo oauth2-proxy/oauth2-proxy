@@ -12,7 +12,7 @@ import (
 
 func TestRefresh(t *testing.T) {
 	p := &ProviderData{}
-	ctx := context.TODO()
+	ctx := context.Background()
 	refreshed, err := p.RefreshSessionIfNeeded(ctx, &sessions.SessionState{
 		ExpiresOn: time.Now().Add(time.Duration(-11) * time.Minute),
 	})

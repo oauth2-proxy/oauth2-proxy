@@ -352,9 +352,9 @@ func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (*sessio
 	}
 
 	if s.Email == "" {
-		s.Email, err = p.provider.GetEmailAddress(ctx, s)
+		s.Email, err = p.provider.GetEmailAddress(ctx, s) // TODO should return error?
 		if err != nil {
-			return nil, err
+			logger.Printf("failed to get email address %v", err)
 		}
 	}
 
@@ -440,7 +440,7 @@ func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 // PingPage responds 200 OK to requests
 func (p *OAuthProxy) PingPage(rw http.ResponseWriter) {
 	rw.WriteHeader(http.StatusOK)
-	fmt.Fprintf(rw, "OK")
+	rw.Write([]byte("OK"))
 }
 
 // ErrorPage writes an error response
@@ -462,7 +462,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
 	if err := p.ClearSessionCookie(rw, req); err != nil {
-		logger.Printf("Warning: falied to clear session %s", err.Error())
+		logger.Printf("Warning: falied to clear session %v", err)
 	}
 	rw.WriteHeader(code)
 
@@ -700,7 +700,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	if ok {
 		session := &sessionsapi.SessionState{User: user}
 		if err := p.SaveSession(rw, req, session); err != nil {
-			logger.Printf("Warning: failed to save session %s", err.Error())
+			logger.Printf("Warning: failed to save session %v", err)
 		}
 		http.Redirect(rw, req, redirect, http.StatusFound)
 	} else {
@@ -742,7 +742,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := p.ClearSessionCookie(rw, req); err != nil {
-		logger.Printf("Warning: failed to clear session %s", err.Error())
+		logger.Printf("Warning: failed to clear session %v", err)
 	}
 	http.Redirect(rw, req, redirect, http.StatusFound)
 }
@@ -958,7 +958,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 
 	if clearSession {
 		if err := p.ClearSessionCookie(rw, req); err != nil {
-			logger.Printf("Warning: failed to clear session %s", err.Error())
+			logger.Printf("Warning: failed to clear session %v", err)
 		}
 	}
 

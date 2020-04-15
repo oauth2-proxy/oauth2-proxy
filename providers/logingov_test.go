@@ -190,7 +190,7 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 	defer pubjwkserver.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session, err := p.Redeem(ctx, "http://redirect/", "code1234")
 	assert.NoError(t, err)
 	assert.NotEqual(t, session, nil)
@@ -285,7 +285,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 	defer pubjwkserver.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	_, err = p.Redeem(ctx, "http://redirect/", "code1234")
 
 	// The "badfakenonce" in the idtoken above should cause this to error out

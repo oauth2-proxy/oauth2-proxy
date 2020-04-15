@@ -7,8 +7,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )
 
 func testLinkedInProvider(hostname string) *LinkedInProvider {
@@ -99,7 +100,7 @@ func TestLinkedInProviderGetEmailAddress(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testLinkedInProvider(bURL.Host)
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.Equal(t, nil, err)
@@ -116,7 +117,7 @@ func TestLinkedInProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)
@@ -130,7 +131,7 @@ func TestLinkedInProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testLinkedInProvider(bURL.Host)
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(ctx, session)
 	assert.NotEqual(t, nil, err)

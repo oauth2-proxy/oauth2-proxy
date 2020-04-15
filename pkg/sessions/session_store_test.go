@@ -11,6 +11,9 @@ import (
 	"time"
 
 	miniredis "github.com/alicebob/miniredis/v2"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	cookiesapi "github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
@@ -19,8 +22,6 @@ import (
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 func TestSessionStore(t *testing.T) {

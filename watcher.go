@@ -55,7 +55,9 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 				// can't be opened.
 				if event.Op&(fsnotify.Remove|fsnotify.Rename|fsnotify.Chmod) != 0 {
 					logger.Printf("watching interrupted on event: %s", event)
-					_ = watcher.Remove(filename)
+					if err := watcher.Remove(filename); err != nil {
+						logger.Printf("failed to remove %s", filename)
+					}
 					WaitForReplacement(filename, event.Op, watcher)
 				}
 				logger.Printf("reloading after event: %s", event)

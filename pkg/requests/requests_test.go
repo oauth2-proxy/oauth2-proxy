@@ -87,7 +87,7 @@ func TestRequestUnparsedResponseUsingAccessTokenParameter(t *testing.T) {
 		}))
 	defer backend.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	response, err := RequestUnparsedResponse(ctx,
 		backend.URL+"?access_token=my_token", nil)
 	assert.Equal(t, nil, err)
@@ -104,7 +104,7 @@ func TestRequestUnparsedResponseUsingAccessTokenParameterFailedResponse(t *testi
 	// Close the backend now to force a request failure.
 	backend.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	response, err := RequestUnparsedResponse(ctx,
 		backend.URL+"?access_token=my_token", nil)
 	assert.NotEqual(t, nil, err)
@@ -124,7 +124,7 @@ func TestRequestUnparsedResponseUsingHeaders(t *testing.T) {
 		}))
 	defer backend.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	headers := make(http.Header)
 	headers.Set("Auth", "my_token")
 	response, err := RequestUnparsedResponse(ctx, backend.URL, headers)

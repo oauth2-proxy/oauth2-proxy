@@ -156,7 +156,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 	server, provider := newTestSetup(body)
 	defer server.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session, err := provider.Redeem(ctx, provider.RedeemURL.String(), "code1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Email, session.Email)
@@ -179,7 +179,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 	server, provider := newTestSetup(body)
 	defer server.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	existingSession := &sessions.SessionState{
 		AccessToken:  "changeit",
 		IDToken:      idToken,
@@ -214,7 +214,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	server, provider := newTestSetup(body)
 	defer server.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	existingSession := &sessions.SessionState{
 		AccessToken:  "changeit",
 		IDToken:      "changeit",

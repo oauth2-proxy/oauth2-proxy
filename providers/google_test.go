@@ -102,7 +102,7 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session, err := p.Redeem(ctx, "http://redirect/", "code1234")
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, session, nil)
@@ -140,7 +140,7 @@ func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session, err := p.Redeem(ctx, "http://redirect/", "code1234")
 	assert.NotEqual(t, nil, err)
 	if session != nil {
@@ -152,7 +152,7 @@ func TestGoogleProviderRedeemFailsNoCLientSecret(t *testing.T) {
 	p := newGoogleProvider()
 	p.ProviderData.ClientSecretFile = "srvnoerre"
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session, err := p.Redeem(ctx, "http://redirect/", "code1234")
 	assert.NotEqual(t, nil, err)
 	if session != nil {
@@ -173,7 +173,7 @@ func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
 	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session, err := p.Redeem(ctx, "http://redirect/", "code1234")
 	assert.NotEqual(t, nil, err)
 	if session != nil {
@@ -193,7 +193,7 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	session, err := p.Redeem(ctx, "http://redirect/", "code1234")
 	assert.NotEqual(t, nil, err)
 	if session != nil {

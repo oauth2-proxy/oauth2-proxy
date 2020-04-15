@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -40,12 +39,12 @@ func gcpHealthcheck(h http.Handler) http.Handler {
 		// Check for liveness and readiness:  used for Google App Engine
 		if r.URL.EscapedPath() == "/liveness_check" {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, "OK")
+			w.Write([]byte("OK"))
 			return
 		}
 		if r.URL.EscapedPath() == "/readiness_check" {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, "OK")
+			w.Write([]byte("OK"))
 			return
 		}
 
