@@ -60,7 +60,7 @@ func (p *FacebookProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequest(http.MethodGet, p.ProfileURL.String()+"?fields=name,email", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.ProfileURL.String()+"?fields=name,email", nil)
 	if err != nil {
 		return "", err
 	}
