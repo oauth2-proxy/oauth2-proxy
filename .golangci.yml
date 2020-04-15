@@ -38,3 +38,5 @@ issues:
 linters-settings:
   errcheck:
     check-type-assertions: true
+  goimports:
+    local-prefixes: github.com/oauth2-proxy/oauth2-proxy
