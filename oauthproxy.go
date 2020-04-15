@@ -455,7 +455,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 		Message:     message,
 		ProxyPrefix: p.ProxyPrefix,
 	}
-	_ = p.templates.ExecuteTemplate(rw, "error.html", t)
+	p.templates.ExecuteTemplate(rw, "error.html", t)
 }
 
 // SignInPage writes the sing in template to the response
@@ -497,7 +497,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	if p.providerNameOverride != "" {
 		t.ProviderName = p.providerNameOverride
 	}
-	_ = p.templates.ExecuteTemplate(rw, "sign_in.html", t)
+	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
@@ -729,7 +729,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	}
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(rw).Encode(userInfo)
+	json.NewEncoder(rw).Encode(userInfo)
 }
 
 // SignOut sends a response to clear the authentication cookie

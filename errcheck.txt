@@ -1,3 +1,5 @@
 (net/http.ResponseWriter).Write
 (io.Writer).Write
 (*text/template.Template).Execute
+(*html/template.Template).ExecuteTemplate
+(*encoding/json.Encoder).Encode
