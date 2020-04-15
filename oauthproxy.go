@@ -786,8 +786,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ctx := req.Context()
-	session, err := p.redeemCode(ctx, req.Host, req.Form.Get("code"))
+	session, err := p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
 	if err != nil {
 		logger.Printf("Error redeeming code during OAuth2 callback: %s ", err.Error())
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Error", "Internal Error")
