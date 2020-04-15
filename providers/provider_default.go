@@ -67,21 +67,21 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*s
 		AccessToken string `json:"access_token"`
 	}
 	err = json.Unmarshal(body, &jsonResponse)
-	if err != nil {
-		v, err := url.ParseQuery(string(body))
-		if err != nil {
-			return nil, err
-		}
-		a := v.Get("access_token")
-		if a == "" {
-			return nil, fmt.Errorf("no access token found %s", body)
-		}
-		return &sessions.SessionState{AccessToken: a, CreatedAt: time.Now()}, nil
+	if err == nil {
+		return &sessions.SessionState{
+			AccessToken: jsonResponse.AccessToken,
+		}, nil
 	}
 
-	return &sessions.SessionState{
-		AccessToken: jsonResponse.AccessToken,
-	}, nil
+	v, err := url.ParseQuery(string(body))
+	if err != nil {
+		return nil, err
+	}
+	a := v.Get("access_token")
+	if a == "" {
+		return nil, fmt.Errorf("no access token found %s", body)
+	}
+	return &sessions.SessionState{AccessToken: a, CreatedAt: time.Now()}, nil
 
 }
 
