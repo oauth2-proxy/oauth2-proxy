@@ -37,6 +37,7 @@
 - [#412](https://github.com/pusher/oauth2_proxy/pull/412) Allow multiple cookie domains to be specified (@edahlseng)
 - [#413](https://github.com/oauth2-proxy/oauth2-proxy/pull/413) Add -set-basic-auth param to set the Basic Authorization header for upstreams (@morarucostel).
 - [#483](https://github.com/oauth2-proxy/oauth2-proxy/pull/483) Warn users when session cookies are split (@JoelSpeed)
+- [#488](https://github.com/oauth2-proxy/oauth2-proxy/pull/488) Set-Basic-Auth should default to false (@JoelSpeed)
 
 # v5.1.0
 
