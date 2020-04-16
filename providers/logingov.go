@@ -115,7 +115,7 @@ func checkNonce(ctx context.Context, idToken string, p *LoginGovProvider) error 
 			return nil, err
 		}
 		if len(pubkeys.Keys) == 0 {
-			return nil, fmt.Errorf("no keys in jwt: pubkeys=%v", pubkeys)
+			return nil, fmt.Errorf("no keys in jwks")
 		}
 		pubkey := pubkeys.Keys[0]
 
