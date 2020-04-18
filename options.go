@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -291,7 +292,7 @@ func (o *Options) Validate() error {
 		}
 	}
 
-	if o.PreferEmailToUser == true && o.PassBasicAuth == false && o.PassUserHeaders == false {
+	if o.PreferEmailToUser && !o.PassBasicAuth && !o.PassUserHeaders {
 		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
 	}
 
@@ -350,7 +351,7 @@ func (o *Options) Validate() error {
 		if string(secretBytes(o.CookieSecret)) != o.CookieSecret {
 			decoded = true
 		}
-		if validCookieSecretSize == false {
+		if !validCookieSecretSize {
 			var suffix string
 			if decoded {
 				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.CookieSecret)
@@ -404,12 +405,18 @@ func (o *Options) Validate() error {
 		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
 	}
 
+	// Sort cookie domains by length, so that we try longer (and more specific)
+	// domains first
+	sort.Slice(o.CookieDomains, func(i, j int) bool {
+		return len(o.CookieDomains[i]) > len(o.CookieDomains[j])
+	})
+
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)
 
 	if len(msgs) != 0 {
-		return fmt.Errorf("Invalid configuration:\n  %s",
+		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
 	}
 	return nil
@@ -541,7 +548,7 @@ func parseSignatureKey(o *Options, msgs []string) []string {
 // parseJwtIssuers takes in an array of strings in the form of issuer=audience
 // and parses to an array of jwtIssuer structs.
 func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
-	var parsedIssuers []jwtIssuer
+	parsedIssuers := make([]jwtIssuer, 0, len(issuers))
 	for _, jwtVerifier := range issuers {
 		components := strings.Split(jwtVerifier, "=")
 		if len(components) < 2 {

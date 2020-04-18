@@ -79,7 +79,7 @@ func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
 		return nil, fmt.Errorf("unable to parse redis url: %s", err)
 	}
 
-	if opts.RedisInsecureTLS != false {
+	if opts.RedisInsecureTLS {
 		opt.TLSConfig.InsecureSkipVerify = true
 	}
 
@@ -149,7 +149,7 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 
 	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
 	if !ok {
-		return nil, fmt.Errorf("Cookie Signature not valid")
+		return nil, fmt.Errorf("cookie signature not valid")
 	}
 	ctx := req.Context()
 	session, err := store.loadSessionFromString(ctx, val)
@@ -209,7 +209,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 
 	val, _, ok := encryption.Validate(requestCookie, store.CookieOptions.CookieSecret, store.CookieOptions.CookieExpire)
 	if !ok {
-		return fmt.Errorf("Cookie Signature not valid")
+		return fmt.Errorf("cookie signature not valid")
 	}
 
 	// We only return an error if we had an issue with redis

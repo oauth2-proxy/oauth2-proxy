@@ -88,8 +88,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 
 // GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	var a url.URL
-	a = *p.LoginURL
+	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
 	params.Add("acr_values", p.AcrValues)
