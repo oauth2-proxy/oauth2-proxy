@@ -117,7 +117,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
 | `-tls-cert-file` | string | path to certificate file | |
 | `-tls-key-file` | string | path to private key file | |
-| `-upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
+| `-upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path. Options can be set for an upstream by providing an element before it with a prefix of `opts: and one or more of the options denoted in the [upstream options section](#upstream-options)  | |
 | `-validate-url` | string | Access token validation endpoint | |
 | `-version` | n/a | print version string | |
 | `-whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
@@ -133,6 +133,16 @@ See below for provider specific options
 Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at. `file:///var/www/static/#/static/` will ie. make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
 
 Multiple upstreams can either be configured by supplying a comma separated list to the `-upstream` parameter, supplying the parameter multiple times or provinding a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
+
+#### Upstream Options
+
+Options can be configured for a specific upstream by providing an element before an upstream with a prefix of `opts:`. Each option should be separated by a `+`( there is only one supported option at the moment ). To specify false for an option prefix it with a `!`.
+
+Ex: `opts:StripPrefix,http://localhost:5678/thisprefix/` proxied requests will be made with  `/thisprefix/` stripped.
+
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| StripPrefix | Strips the path prefix from requests to this upstream path before proxying them to the backend  | false |
 
 ### Environment variables
 
