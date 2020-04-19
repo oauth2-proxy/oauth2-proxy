@@ -74,7 +74,7 @@ func TestWebSocketProxy(t *testing.T) {
 	options := NewOptions()
 	var auth hmacauth.HmacAuth
 	options.PassHostHeader = true
-	proxyHandler := NewWebSocketOrRestReverseProxy(backendURL, options, auth)
+	proxyHandler := NewWebSocketOrRestReverseProxy(backendURL, options, auth, NewUpstreamOptionsFromDefaults())
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
@@ -106,6 +106,38 @@ func TestWebSocketProxy(t *testing.T) {
 	if g, e := string(bodyBytes), backendHostname; g != e {
 		t.Errorf("got body %q; expected %q", g, e)
 	}
+}
+
+func TestReverseProxyStripPath(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/somepath") {
+			w.WriteHeader(200)
+			w.Write([]byte(r.URL.Path))
+		} else {
+			w.WriteHeader(404)
+		}
+	})
+	backend := httptest.NewServer(&handler)
+	defer backend.Close()
+
+	backendURL, _ := url.Parse(backend.URL)
+
+	backendURL.Path = "/somepath"
+
+	options := NewOptions()
+	var auth hmacauth.HmacAuth
+	options.PassHostHeader = true
+	proxyHandler := NewWebSocketOrRestReverseProxy(backendURL, options, auth, *ParseUpstreamOptions("opts:StripPath"))
+
+	getReq, _ := http.NewRequest("GET", backend.URL+"/somepath/another_path_that_shouldnt_be_stripped/", nil)
+	rr := httptest.NewRecorder()
+
+	proxyHandler.ServeHTTP(rr, getReq)
+
+	assert.Equal(t, 200, rr.Result().StatusCode)
+
+	bodyBytes, _ := ioutil.ReadAll(rr.Body)
+	assert.Equal(t, "/another_path_that_shouldnt_be_stripped/", string(bodyBytes))
 }
 
 func TestNewReverseProxy(t *testing.T) {

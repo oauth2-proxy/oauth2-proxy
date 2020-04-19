@@ -141,14 +141,14 @@ func TestRedirectURL(t *testing.T) {
 
 func TestProxyURLs(t *testing.T) {
 	o := testOptions()
-	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8081")
+	o.Upstreams = append(o.Upstreams, "opts:StripPath", "http://127.0.0.1:8081")
 	assert.Equal(t, nil, o.Validate())
-	expected := []*url.URL{
-		{Scheme: "http", Host: "127.0.0.1:8080", Path: "/"},
+	expected := []UpstreamConfig{
+		{URL: &url.URL{Scheme: "http", Host: "127.0.0.1:8080", Path: "/"}},
 		// note the '/' was added
-		{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"},
+		{URL: &url.URL{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"}, UpstreamOptions: UpstreamOptions{StripPath: true}},
 	}
-	assert.Equal(t, expected, o.proxyURLs)
+	assert.Equal(t, expected, o.upstreams)
 }
 
 func TestProxyURLsError(t *testing.T) {
@@ -325,4 +325,10 @@ func TestGCPHealthcheck(t *testing.T) {
 	o := testOptions()
 	o.GCPHealthChecks = true
 	assert.Equal(t, nil, o.Validate())
+}
+
+func TestNewUpstreamOptionsFromDefaults(t *testing.T) {
+	assert.NotPanics(t, func() {
+		NewUpstreamOptionsFromDefaults()
+	})
 }

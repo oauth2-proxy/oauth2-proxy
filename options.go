@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -130,13 +131,69 @@ type Options struct {
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
-	proxyURLs          []*url.URL
+	upstreams          []UpstreamConfig
 	CompiledRegex      []*regexp.Regexp
 	provider           providers.Provider
 	sessionStore       sessionsapi.SessionStore
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
+}
+
+type UpstreamConfig struct {
+	URL *url.URL
+	UpstreamOptions
+}
+
+var upstreamOptionDefaults = map[string]bool{
+	"StripPath": false,
+}
+
+type UpstreamOptions struct {
+	StripPath bool
+}
+
+func ParseUpstreamOptions(optionString string) *UpstreamOptions {
+	optionString = strings.TrimPrefix(optionString, "opts:")
+	options := NewUpstreamOptionsFromDefaults()
+
+	ps := reflect.ValueOf(&options)
+	// struct
+	s := ps.Elem()
+	for _, opt := range strings.Split(optionString, "+") {
+		var field reflect.Value
+		var negate bool
+		if strings.HasPrefix(opt, "!") {
+			opt = opt[1:]
+			negate = true
+		}
+
+		field = s.FieldByName(opt)
+
+		if field.IsValid() {
+			field.SetBool(!negate)
+		}
+	}
+
+	return &options
+}
+
+func NewUpstreamOptionsFromDefaults() UpstreamOptions {
+	options := UpstreamOptions{}
+	structVal := reflect.ValueOf(&options)
+	structVal = structVal.Elem()
+	structType := structVal.Type()
+	for i := 0; i < structVal.NumField(); i++ {
+		fName := structType.Field(i).Name
+
+		def, ok := upstreamOptionDefaults[fName]
+		if !ok {
+			panic("A default value must be set for every upstream option")
+		}
+		structVal.Field(i).SetBool(def)
+	}
+
+	return options
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -315,7 +372,13 @@ func (o *Options) Validate() error {
 
 	o.redirectURL, msgs = parseURL(o.RedirectURL, "redirect", msgs)
 
+	var nextUpstreamOptions *UpstreamOptions
 	for _, u := range o.Upstreams {
+		if trimmed := strings.TrimPrefix(u, "opts:"); len(u) != len(trimmed) {
+			nextUpstreamOptions = ParseUpstreamOptions(trimmed)
+			continue
+		}
+
 		upstreamURL, err := url.Parse(u)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("error parsing upstream: %s", err))
@@ -323,8 +386,20 @@ func (o *Options) Validate() error {
 			if upstreamURL.Path == "" {
 				upstreamURL.Path = "/"
 			}
-			o.proxyURLs = append(o.proxyURLs, upstreamURL)
+			upstreamConf := UpstreamConfig{
+				URL: upstreamURL,
+			}
+
+			if nextUpstreamOptions == nil {
+				upstreamConf.UpstreamOptions = NewUpstreamOptionsFromDefaults()
+			} else {
+				upstreamConf.UpstreamOptions = *nextUpstreamOptions
+			}
+
+			o.upstreams = append(o.upstreams, upstreamConf)
 		}
+
+		nextUpstreamOptions = nil
 	}
 
 	for _, u := range o.SkipAuthRegex {

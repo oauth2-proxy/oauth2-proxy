@@ -176,13 +176,19 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 }
 
 // NewWebSocketOrRestReverseProxy creates a reverse proxy for REST or websocket based on url
-func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.HmacAuth) http.Handler {
+func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.HmacAuth, upstreamOptions UpstreamOptions) http.Handler {
+	prefix := u.Path
 	u.Path = ""
-	proxy := NewReverseProxy(u, opts)
+	var proxy http.Handler
+	proxy = NewReverseProxy(u, opts)
 	if !opts.PassHostHeader {
-		setProxyUpstreamHostHeader(proxy, u)
+		setProxyUpstreamHostHeader(proxy.(*httputil.ReverseProxy), u)
 	} else {
-		setProxyDirector(proxy)
+		setProxyDirector(proxy.(*httputil.ReverseProxy))
+	}
+
+	if upstreamOptions.StripPath {
+		proxy = http.StripPrefix(prefix, proxy)
 	}
 
 	// this should give us a wss:// scheme if the url is https:// based.
@@ -208,13 +214,13 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		auth = hmacauth.NewHmacAuth(sigData.hash, []byte(sigData.key),
 			SignatureHeader, SignatureHeaders)
 	}
-	for _, u := range opts.proxyURLs {
-		path := u.Path
-		host := u.Host
-		switch u.Scheme {
+	for _, u := range opts.upstreams {
+		path := u.URL.Path
+		host := u.URL.Host
+		switch u.URL.Scheme {
 		case httpScheme, httpsScheme:
-			logger.Printf("mapping path %q => upstream %q", path, u)
-			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
+			logger.Printf("mapping path %q => upstream %q", path, u.URL)
+			proxy := NewWebSocketOrRestReverseProxy(u.URL, opts, auth, u.UpstreamOptions)
 			serveMux.Handle(path, proxy)
 		case "static":
 			responseCode, err := strconv.Atoi(host)
@@ -228,11 +234,11 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 				fmt.Fprintf(rw, "Authenticated")
 			})
 		case "file":
-			if u.Fragment != "" {
-				path = u.Fragment
+			if u.URL.Fragment != "" {
+				path = u.URL.Fragment
 			}
-			logger.Printf("mapping path %q => file system %q", path, u.Path)
-			proxy := NewFileServer(path, u.Path)
+			logger.Printf("mapping path %q => file system %q", path, u.URL.Path)
+			proxy := NewFileServer(path, u.URL.Path)
 			uProxy := UpstreamProxy{
 				upstream:  path,
 				handler:   proxy,
@@ -241,7 +247,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			}
 			serveMux.Handle(path, &uProxy)
 		default:
-			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
+			panic(fmt.Sprintf("unknown upstream protocol %s", u.URL.Scheme))
 		}
 	}
 	for _, u := range opts.CompiledRegex {
