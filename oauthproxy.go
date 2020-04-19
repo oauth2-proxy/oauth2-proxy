@@ -184,6 +184,9 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.Hma
 		wsScheme := "ws" + strings.TrimPrefix(u.Scheme, "http")
 		wsURL := &url.URL{Scheme: wsScheme, Host: u.Host}
 		wsProxy = wsutil.NewSingleHostReverseProxy(wsURL)
+		if opts.SSLUpstreamInsecureSkipVerify {
+			wsProxy.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
 	}
 	return &UpstreamProxy{
 		upstream:  u.Host,

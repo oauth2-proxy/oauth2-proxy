@@ -22,6 +22,7 @@
 - [#486](https://github.com/oauth2-proxy/oauth2-proxy/pull/486) Add new linters (@johejo)
 - [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
 - [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Prevent browser caching during auth flow (@johejo)
+- [#467](https://github.com/oauth2-proxy/oauth2-proxy/pull/467) Allow OIDC issuer verification to be skipped (@chkohner)
 - [#481](https://github.com/oauth2-proxy/oauth2-proxy/pull/481) Update Okta docs (@trevorbox)
 - [#474](https://github.com/oauth2-proxy/oauth2-proxy/pull/474) Always log hasMember request error object (@jbielick)
 - [#468](https://github.com/oauth2-proxy/oauth2-proxy/pull/468) Implement graceful shutdown and propagate request context (@johejo)
@@ -38,6 +39,7 @@
 - [#413](https://github.com/oauth2-proxy/oauth2-proxy/pull/413) Add -set-basic-auth param to set the Basic Authorization header for upstreams (@morarucostel).
 - [#483](https://github.com/oauth2-proxy/oauth2-proxy/pull/483) Warn users when session cookies are split (@JoelSpeed)
 - [#488](https://github.com/oauth2-proxy/oauth2-proxy/pull/488) Set-Basic-Auth should default to false (@JoelSpeed)
+- [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify
 
 # v5.1.0
 
