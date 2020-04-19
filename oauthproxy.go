@@ -174,7 +174,7 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.Hma
 	}
 
 	if upstreamOptions.StripPath {
-		fmt.Printf("stripping %s from requests\n", prefix)
+		logger.Printf("stripping path %s from requests to %s", prefix, u.Host)
 		proxy = http.StripPrefix(prefix, proxy)
 	}
 
