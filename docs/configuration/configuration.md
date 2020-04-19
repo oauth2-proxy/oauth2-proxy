@@ -71,6 +71,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-jwt-key-file` | string | path to the private key file in PEM format used to sign the JWT so that you can say something like `-jwt-key-file=/etc/ssl/private/jwt_signing_key.pem`: required by login.gov | |
 | `-login-url` | string | Authentication endpoint | |
 | `-insecure-oidc-allow-unverified-email` | bool | don't fail if an email address in an id_token is not verified | false |
+| `-insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
 | `-oidc-issuer-url` | string | the OpenID Connect issuer URL. ie: `"https://accounts.google.com"` | |
 | `-oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `-pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
