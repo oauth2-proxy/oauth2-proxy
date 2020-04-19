@@ -155,18 +155,6 @@ func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
 		director(req)
 		// use RequestURI so that we aren't unescaping encoded slashes in the request path
 		req.Host = target.Host
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
-	}
-}
-
-func setProxyDirector(proxy *httputil.ReverseProxy) {
-	director := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		director(req)
-		// use RequestURI so that we aren't unescaping encoded slashes in the request path
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
 	}
 }
 
@@ -179,15 +167,14 @@ func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
 func NewWebSocketOrRestReverseProxy(u *url.URL, opts *Options, auth hmacauth.HmacAuth, upstreamOptions UpstreamOptions) http.Handler {
 	prefix := u.Path
 	u.Path = ""
-	var proxy http.Handler
-	proxy = NewReverseProxy(u, opts)
+	var proxy http.Handler = NewReverseProxy(u, opts)
+
 	if !opts.PassHostHeader {
 		setProxyUpstreamHostHeader(proxy.(*httputil.ReverseProxy), u)
-	} else {
-		setProxyDirector(proxy.(*httputil.ReverseProxy))
 	}
 
 	if upstreamOptions.StripPath {
+		fmt.Printf("stripping %s from requests\n", prefix)
 		proxy = http.StripPrefix(prefix, proxy)
 	}
 

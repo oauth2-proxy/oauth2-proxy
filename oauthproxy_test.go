@@ -176,7 +176,6 @@ func TestEncodedSlashes(t *testing.T) {
 
 	b, _ := url.Parse(backend.URL)
 	proxyHandler := NewReverseProxy(b, &Options{FlushInterval: time.Second})
-	setProxyDirector(proxyHandler)
 	frontend := httptest.NewServer(proxyHandler)
 	defer frontend.Close()
 
