@@ -163,14 +163,13 @@ func ParseUpstreamOptions(optionString string) *UpstreamOptions {
 	// struct
 	s := ps.Elem()
 	for _, opt := range strings.Split(optionString, "+") {
-		var field reflect.Value
 		var negate bool
 		if strings.HasPrefix(opt, "!") {
 			opt = opt[1:]
 			negate = true
 		}
 
-		field = s.FieldByName(opt)
+		field := s.FieldByName(opt)
 
 		if field.IsValid() {
 			field.SetBool(!negate)
