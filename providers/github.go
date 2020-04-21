@@ -323,7 +323,7 @@ func (p *GitHubProvider) isCollaborator(username, accessToken string) (bool, err
 	endpoint := &url.URL{
 		Scheme: p.ValidateURL.Scheme,
 		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/repo/", p.Repo, "/collaborators/", username),
+		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo, "/collaborators/", username),
 	}
 	req, _ := http.NewRequest("GET", endpoint.String(), nil)
 	req.Header = getGitHubHeader(accessToken)
@@ -331,8 +331,20 @@ func (p *GitHubProvider) isCollaborator(username, accessToken string) (bool, err
 	if err != nil {
 		return false, err
 	}
+	body, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return false, err
+	}
 
-	return resp.StatusCode == 204, nil
+	if resp.StatusCode != 204 {
+		return false, fmt.Errorf("got %d from %q %s",
+			resp.StatusCode, endpoint.String(), body)
+	}
+
+	logger.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
+
+	return true, nil
 }
 
 // GetEmailAddress returns the Account email address
@@ -445,7 +457,7 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 
 	// Now that we have the username we can check collaborator status
 	if p.Org == "" && p.Repo != "" && p.Token != "" {
-		if ok, err := p.isCollaborator(user.Login, s.AccessToken); err != nil || !ok {
+		if ok, err := p.isCollaborator(user.Login, p.Token); err != nil || !ok {
 			return "", err
 		}
 	}

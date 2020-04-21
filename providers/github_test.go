@@ -31,8 +31,8 @@ func testGitHubProvider(hostname string) *GitHubProvider {
 
 func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
-		"/repo/oauth2-proxy/oauth2-proxy":                      {""},
-		"/repo/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
+		"/repo/oauth2-proxy/oauth2-proxy":                       {""},
+		"/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
 		"/user":        {""},
 		"/user/emails": {""},
 		"/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
@@ -291,7 +291,7 @@ func TestGitHubProviderGetUserName(t *testing.T) {
 func TestGitHubProviderGetUserNameWithRepoAndToken(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
 		"/user": {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
-		"/repo/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
+		"/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
 	})
 	defer b.Close()
 
