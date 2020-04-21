@@ -29,8 +29,10 @@ func testGitHubProvider(hostname string) *GitHubProvider {
 	return p
 }
 
-func testGitHubBackend(payload []string) *httptest.Server {
+func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
+		"/repo/oauth2-proxy/oauth2-proxy":                      {""},
+		"/repo/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
 		"/user":        {""},
 		"/user/emails": {""},
 		"/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
@@ -47,10 +49,16 @@ func testGitHubBackend(payload []string) *httptest.Server {
 					index = i
 				}
 			}
+			payload := []string{}
+			if ok && validQuery {
+				payload, ok = payloads[r.URL.Path]
+			}
 			if !ok {
 				w.WriteHeader(404)
 			} else if !validQuery {
 				w.WriteHeader(404)
+			} else if payload[index] == "" {
+				w.WriteHeader(204)
 			} else {
 				w.WriteHeader(200)
 				w.Write([]byte(payload[index]))
@@ -99,7 +107,9 @@ func TestGitHubProviderOverrides(t *testing.T) {
 }
 
 func TestGitHubProviderGetEmailAddress(t *testing.T) {
-	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`})
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -112,7 +122,9 @@ func TestGitHubProviderGetEmailAddress(t *testing.T) {
 }
 
 func TestGitHubProviderGetEmailAddressNotVerified(t *testing.T) {
-	b := testGitHubBackend([]string{`[ {"email": "michael.bland@gsa.gov", "verified": false, "primary": true} ]`})
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -125,10 +137,13 @@ func TestGitHubProviderGetEmailAddressNotVerified(t *testing.T) {
 }
 
 func TestGitHubProviderGetEmailAddressWithOrg(t *testing.T) {
-	b := testGitHubBackend([]string{
-		`[ {"email": "michael.bland@gsa.gov", "primary": true, "verified": true, "login":"testorg"} ]`,
-		`[ {"email": "michael.bland1@gsa.gov", "primary": true, "verified": true, "login":"testorg1"} ]`,
-		`[ ]`,
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ {"login":"testorg"} ]`,
+			`[ {"login":"testorg1"} ]`,
+			`[ ]`,
+		},
 	})
 	defer b.Close()
 
@@ -142,10 +157,93 @@ func TestGitHubProviderGetEmailAddressWithOrg(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
 
+func TestGitHubProviderGetEmailAddressWithWriteAccessToPublicRepo(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": false}`},
+		"/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestGitHubProviderGetEmailAddressWithReadOnlyAccessToPrivateRepo(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": false}, "private": true}`},
+		"/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestGitHubProviderGetEmailAddressWithWriteAccessToPrivateRepo(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": true}`},
+		"/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestGitHubProviderGetEmailAddressWithNoAccessToPrivateRepo(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/repo/oauth2-proxy/oauth2-proxy": {},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(session)
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "", email)
+}
+
+func TestGitHubProviderGetEmailAddressWithToken(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetRepo("oauth2-proxy/oauth2-proxy", "token")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
 func TestGitHubProviderGetEmailAddressFailedRequest(t *testing.T) {
-	b := testGitHubBackend([]string{"unused payload"})
+	b := testGitHubBackend(map[string][]string{})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -161,7 +259,9 @@ func TestGitHubProviderGetEmailAddressFailedRequest(t *testing.T) {
 }
 
 func TestGitHubProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
-	b := testGitHubBackend([]string{"{\"foo\": \"bar\"}"})
+	b := testGitHubBackend(map[string][]string{
+		"/user/emails": {`{"foo": "bar"}`},
+	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -174,14 +274,47 @@ func TestGitHubProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 }
 
 func TestGitHubProviderGetUserName(t *testing.T) {
-	b := testGitHubBackend([]string{`{"email": "michael.bland@gsa.gov", "login": "mbland"}`})
+	b := testGitHubBackend(map[string][]string{
+		"/user": {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGitHubProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
+	email, err := p.GetUserName(session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "mbland", email)
+}
+
+func TestGitHubProviderGetUserNameWithRepoAndToken(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user": {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/repo/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetRepo("oauth2-proxy/oauth2-proxy", "token")
+
+	session := CreateAuthorizedSession()
 	email, err := p.GetUserName(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "mbland", email)
+}
+
+func TestGitHubProviderGetUserNameWithRepoAndTokenWithoutPushAccess(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetRepo("oauth2-proxy/oauth2-proxy", "token")
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetUserName(session)
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "", email)
 }
