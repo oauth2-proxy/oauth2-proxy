@@ -2,6 +2,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -15,10 +16,10 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 )
 
 // GoogleProvider represents an Google based Identity Provider
@@ -184,8 +185,9 @@ func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Serv
 	}
 	conf.Subject = adminEmail
 
-	client := conf.Client(oauth2.NoContext)
-	adminService, err := admin.New(client)
+	ctx := context.Background()
+	client := conf.Client(ctx)
+	adminService, err := admin.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		logger.Fatal(err)
 	}

@@ -12,10 +12,18 @@
   - See the changes listed below for PR [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) for full details
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
 
+- [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
+    - The Azure AD Graph API has been [deprecated](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api) and is being replaced by the Microsoft Graph API.
+      If your application relies on the access token being passed to it to access the Azure AD Graph API, you should migrate your application to use the Microsoft Graph API.
+      Existing behaviour can be retained by setting  `-resource=https://graph.windows.net`.
+
 ## Changes since v5.1.0
 
-- [#469](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support generic claims in addition to email
+- [#499](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support generic claims in addition to email
+- [#486](https://github.com/oauth2-proxy/oauth2-proxy/pull/486) Add new linters (@johejo)
+- [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
 - [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Prevent browser caching during auth flow (@johejo)
+- [#467](https://github.com/oauth2-proxy/oauth2-proxy/pull/467) Allow OIDC issuer verification to be skipped (@chkohner)
 - [#481](https://github.com/oauth2-proxy/oauth2-proxy/pull/481) Update Okta docs (@trevorbox)
 - [#474](https://github.com/oauth2-proxy/oauth2-proxy/pull/474) Always log hasMember request error object (@jbielick)
 - [#468](https://github.com/oauth2-proxy/oauth2-proxy/pull/468) Implement graceful shutdown and propagate request context (@johejo)
@@ -28,7 +36,11 @@
 - [#432](https://github.com/oauth2-proxy/oauth2-proxy/pull/432) Update ruby dependencies for documentation (@theobarberbany)
 - [#471](https://github.com/oauth2-proxy/oauth2-proxy/pull/471) Add logging in case of invalid redirects (@gargath)
 - [#462](https://github.com/oauth2-proxy/oauth2-proxy/pull/462) Allow HTML in banner message (@eritikass).
+- [#412](https://github.com/pusher/oauth2_proxy/pull/412) Allow multiple cookie domains to be specified (@edahlseng)
 - [#413](https://github.com/oauth2-proxy/oauth2-proxy/pull/413) Add -set-basic-auth param to set the Basic Authorization header for upstreams (@morarucostel).
+- [#483](https://github.com/oauth2-proxy/oauth2-proxy/pull/483) Warn users when session cookies are split (@JoelSpeed)
+- [#488](https://github.com/oauth2-proxy/oauth2-proxy/pull/488) Set-Basic-Auth should default to false (@JoelSpeed)
+- [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify
 
 # v5.1.0
 
@@ -61,7 +73,6 @@ N/A
 - [#401](https://github.com/oauth2-proxy/oauth2-proxy/pull/401) Give the option to pass email address in the Basic auth header instead of upstream usernames. (@Spindel)
 - [#405](https://github.com/oauth2-proxy/oauth2-proxy/pull/405) The `/sign_in` page now honors the `rd` query parameter, fixing the redirect after a successful authentication (@ti-mo)
 - [#434](https://github.com/oauth2-proxy/oauth2-proxy/pull/434) Give the option to prefer email address in the username header when using the -pass-user-headers option (@jordancrawfordnz)
-
 
 # v5.0.0
 

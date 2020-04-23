@@ -139,10 +139,10 @@ func (l *Logger) Output(calldepth int, message string) {
 	l.writer.Write([]byte("\n"))
 }
 
-// PrintAuth writes auth info to the logger. Requires an http.Request to
+// PrintAuthf writes auth info to the logger. Requires an http.Request to
 // log request details. Remaining arguments are handled in the manner of
 // fmt.Sprintf. Writes a final newline to the end of every message.
-func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus, format string, a ...interface{}) {
+func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatus, format string, a ...interface{}) {
 	if !l.authEnabled {
 		return
 	}
@@ -166,7 +166,7 @@ func (l *Logger) PrintAuth(username string, req *http.Request, status AuthStatus
 		Timestamp:     FormatTimestamp(now),
 		UserAgent:     fmt.Sprintf("%q", req.UserAgent()),
 		Username:      username,
-		Status:        fmt.Sprintf("%s", status),
+		Status:        string(status),
 		Message:       fmt.Sprintf(format, a...),
 	})
 
@@ -185,7 +185,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		return
 	}
 
-	duration := float64(time.Now().Sub(ts)) / float64(time.Second)
+	duration := float64(time.Since(ts)) / float64(time.Second)
 
 	if username == "" {
 		username = "-"
@@ -481,7 +481,7 @@ func Panicln(v ...interface{}) {
 // PrintAuthf writes authentication details to the standard logger.
 // Arguments are handled in the manner of fmt.Printf.
 func PrintAuthf(username string, req *http.Request, status AuthStatus, format string, a ...interface{}) {
-	std.PrintAuth(username, req, status, format, a...)
+	std.PrintAuthf(username, req, status, format, a...)
 }
 
 // PrintReq writes request details to the standard logger.

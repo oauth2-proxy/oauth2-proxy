@@ -21,6 +21,7 @@ func main() {
 	logger.SetFlags(logger.Lshortfile)
 	flagSet := flag.NewFlagSet("oauth2-proxy", flag.ExitOnError)
 
+	cookieDomains := StringArray{}
 	emailDomains := StringArray{}
 	whitelistDomains := StringArray{}
 	upstreams := StringArray{}
@@ -43,7 +44,7 @@ func main() {
 	flagSet.Bool("set-xauthrequest", false, "set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)")
 	flagSet.Var(&upstreams, "upstream", "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
 	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
-	flagSet.Bool("set-basic-auth", true, "set HTTP Basic Auth information in response (useful in Nginx auth_request mode)")
+	flagSet.Bool("set-basic-auth", false, "set HTTP Basic Auth information in response (useful in Nginx auth_request mode)")
 	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
 	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
@@ -87,7 +88,7 @@ func main() {
 
 	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
 	flagSet.String("cookie-secret", "", "the seed string for secure cookies (optionally base64 encoded)")
-	flagSet.String("cookie-domain", "", "an optional cookie domain to force cookies to (ie: .yourcompany.com)*")
+	flagSet.Var(&cookieDomains, "cookie-domain", "Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).")
 	flagSet.String("cookie-path", "/", "an optional cookie path to force cookies to (ie: /poc/)*")
 	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
 	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
@@ -127,6 +128,7 @@ func main() {
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
+	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("login-url", "", "Authentication endpoint")
