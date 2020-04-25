@@ -326,3 +326,46 @@ func TestGCPHealthcheck(t *testing.T) {
 	o.GCPHealthChecks = true
 	assert.Equal(t, nil, o.Validate())
 }
+
+func TestRealClientIPHeader(t *testing.T) {
+	var o *Options
+	var err error
+	var expected string
+
+	// Ensure nil if ReverseProxy not set.
+	o = testOptions()
+	o.RealClientIPHeader = "X-Real-IP"
+	assert.Equal(t, nil, o.Validate())
+	assert.Nil(t, o.realClientIPParser)
+
+	// Ensure simple use case works.
+	o = testOptions()
+	o.ReverseProxy = true
+	o.RealClientIPHeader = "X-Forwarded-For"
+	assert.Equal(t, nil, o.Validate())
+	assert.NotNil(t, o.realClientIPParser)
+
+	// Ensure unknown header format process an error.
+	o = testOptions()
+	o.ReverseProxy = true
+	o.RealClientIPHeader = "Forwarded"
+	err = o.Validate()
+	assert.NotEqual(t, nil, err)
+	expected = errorMsg([]string{
+		"real_client_ip_header (Forwarded) not accepted parameter value: the http header key (Forwarded) is either invalid or unsupported",
+	})
+	assert.Equal(t, expected, err.Error())
+	assert.Nil(t, o.realClientIPParser)
+
+	// Ensure invalid header format produces an error.
+	o = testOptions()
+	o.ReverseProxy = true
+	o.RealClientIPHeader = "!934invalidheader-23:"
+	err = o.Validate()
+	assert.NotEqual(t, nil, err)
+	expected = errorMsg([]string{
+		"real_client_ip_header (!934invalidheader-23:) not accepted parameter value: the http header key (!934invalidheader-23:) is either invalid or unsupported",
+	})
+	assert.Equal(t, expected, err.Error())
+	assert.Nil(t, o.realClientIPParser)
+}

@@ -89,6 +89,7 @@ type Options struct {
 	PassAuthorization             bool          `flag:"pass-authorization-header" cfg:"pass_authorization_header" env:"OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER"`
 	SkipAuthPreflight             bool          `flag:"skip-auth-preflight" cfg:"skip_auth_preflight" env:"OAUTH2_PROXY_SKIP_AUTH_PREFLIGHT"`
 	FlushInterval                 time.Duration `flag:"flush-interval" cfg:"flush_interval" env:"OAUTH2_PROXY_FLUSH_INTERVAL"`
+	RealClientIPHeader            string        `flag:"real-client-ip-header" cfg:"real_client_ip_header" env:"OAUTH2_PROXY_REAL_CLIENT_IP_HEADER"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -139,6 +140,7 @@ type Options struct {
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
+	realClientIPParser realClientIPParser
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -455,6 +457,13 @@ func (o *Options) Validate() error {
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)
 
+	if o.ReverseProxy {
+		o.realClientIPParser, err = getRealClientIPParser(o.RealClientIPHeader)
+		if err != nil {
+			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
+		}
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
@@ -692,7 +701,9 @@ func setupLogger(o *Options, msgs []string) []string {
 	logger.SetStandardTemplate(o.StandardLoggingFormat)
 	logger.SetAuthTemplate(o.AuthLoggingFormat)
 	logger.SetReqTemplate(o.RequestLoggingFormat)
-	logger.SetReverseProxy(o.ReverseProxy)
+	logger.SetGetClientFunc(func(r *http.Request) string {
+		return getClientString(o.realClientIPParser, r, false)
+	})
 
 	excludePaths := make([]string, 0)
 	excludePaths = append(excludePaths, strings.Split(o.ExcludeLoggingPaths, ",")...)
