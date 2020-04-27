@@ -32,18 +32,18 @@ func TestGetRealClientIPParser(t *testing.T) {
 			assert.Nil(t, err)
 		} else {
 			assert.NotNil(t, err)
-			assert.Equal(t, err.Error(), test.errString)
+			assert.Equal(t, test.errString, err.Error())
 		}
 
 		if test.parserType == nil {
 			assert.Nil(t, p)
 		} else {
 			assert.NotNil(t, p)
-			assert.Equal(t, reflect.TypeOf(p), test.parserType)
+			assert.Equal(t, test.parserType, reflect.TypeOf(p))
 		}
 
 		if xp, ok := p.(*xForwardedForClientIPParser); ok {
-			assert.Equal(t, xp.header, http.CanonicalHeaderKey(test.header))
+			assert.Equal(t, http.CanonicalHeaderKey(test.header), xp.header)
 		}
 	}
 }
@@ -77,14 +77,14 @@ func TestXForwardedForClientIPParser(t *testing.T) {
 			assert.Nil(t, err)
 		} else {
 			assert.NotNil(t, err)
-			assert.Equal(t, err.Error(), test.errString)
+			assert.Equal(t, test.errString, err.Error())
 		}
 
 		if test.expectedIP == nil {
 			assert.Nil(t, ip)
 		} else {
 			assert.NotNil(t, ip)
-			assert.Equal(t, ip, test.expectedIP)
+			assert.Equal(t, test.expectedIP, ip)
 		}
 	}
 }
