@@ -63,7 +63,7 @@ func (p xForwardedForClientIPParser) GetRealClientIP(h http.Header) (net.IP, err
 // getRemoteIP obtains the IP of the low-level connected network host
 func getRemoteIP(req *http.Request) (net.IP, error) {
 	if ipStr, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
-		return nil, fmt.Errorf("unable to parse address (%s) from http.RemoteAddr", req.RemoteAddr)
+		return nil, fmt.Errorf("unable to get ip and port from http.RemoteAddr (%s)", req.RemoteAddr)
 	} else if ip := net.ParseIP(ipStr); ip != nil {
 		return ip, nil
 	} else {
