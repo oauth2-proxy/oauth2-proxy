@@ -43,6 +43,8 @@ func (p xForwardedForClientIPParser) GetRealClientIP(h http.Header) (net.IP, err
 		return nil, nil
 	}
 
+	// Each successive proxy may append itself, comma separated, to the end of the X-Forwarded-for header.
+	// Select only the first IP listed, as it it is the client IP recorded by the first proxy.
 	if commaIndex := strings.IndexRune(ipStr, ','); commaIndex != -1 {
 		ipStr = ipStr[:commaIndex]
 	}
