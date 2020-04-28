@@ -147,6 +147,8 @@ func main() {
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
+	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
+
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
