@@ -100,7 +100,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `-resource` | string | The resource that is protected (Azure AD only) | |
 | `-reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false |
-| `-real-client-ip-header` | string | Header used to determine the real IP of the client, has no effect without the `-reverse-proxy` (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP) | X-Real-IP |
+| `-real-client-ip-header` | string | Header used to determine the real IP of the client, requires `-reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP) | X-Real-IP |
 | `-scope` | string | OAuth scope specification | |
 | `-session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
 | `-set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode) | false |
