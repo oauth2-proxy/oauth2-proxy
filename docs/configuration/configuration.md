@@ -27,7 +27,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-auth-logging` | bool | Log authentication attempts | true |
 | `-auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `-authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
-| `-azure-tenant string` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
+| `-azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
 | `-basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
 | `-client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
 | `-client-secret` | string | the OAuth Client Secret | |
@@ -120,6 +120,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-tls-cert-file` | string | path to certificate file | |
 | `-tls-key-file` | string | path to private key file | |
 | `-upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
+| `-user-id-claim` | string | which claim contains the user ID | \["email"\] |
 | `-validate-url` | string | Access token validation endpoint | |
 | `-version` | n/a | print version string | |
 | `-whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |

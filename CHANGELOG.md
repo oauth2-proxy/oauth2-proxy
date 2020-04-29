@@ -20,6 +20,7 @@
 ## Changes since v5.1.0
 
 - [#503](https://github.com/oauth2-proxy/oauth2-proxy/pull/503) Implements -real-client-ip-header option to select the header from which to obtain a proxied client's IP (@Izzette)
+- [#499](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support generic claims in addition to email
 - [#486](https://github.com/oauth2-proxy/oauth2-proxy/pull/486) Add new linters (@johejo)
 - [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
 - [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Prevent browser caching during auth flow (@johejo)

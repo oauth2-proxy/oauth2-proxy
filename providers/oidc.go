@@ -14,12 +14,15 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
+const emailClaim = "email"
+
 // OIDCProvider represents an OIDC based Identity Provider
 type OIDCProvider struct {
 	*ProviderData
 
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
+	UserIDClaim          string
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
@@ -148,24 +151,15 @@ func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.To
 
 func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
 
-	newSession := &sessions.SessionState{}
+	var newSession *sessions.SessionState
 
-	if idToken != nil {
-		claims, err := findClaimsFromIDToken(idToken, token.AccessToken, p.ProfileURL.String())
+	if idToken == nil {
+		newSession = &sessions.SessionState{}
+	} else {
+		var err error
+		newSession, err = p.createSessionStateInternal(token.Extra("id_token").(string), idToken, token)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
-		}
-
-		if claims != nil {
-
-			if !p.AllowUnverifiedEmail && claims.Verified != nil && !*claims.Verified {
-				return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-			}
-
-			newSession.IDToken = token.Extra("id_token").(string)
-			newSession.Email = claims.Email
-			newSession.User = claims.Subject
-			newSession.PreferredUsername = claims.PreferredUsername
+			return nil, err
 		}
 	}
 
@@ -173,6 +167,52 @@ func (p *OIDCProvider) createSessionState(token *oauth2.Token, idToken *oidc.IDT
 	newSession.RefreshToken = token.RefreshToken
 	newSession.CreatedAt = time.Now()
 	newSession.ExpiresOn = token.Expiry
+	return newSession, nil
+}
+
+func (p *OIDCProvider) CreateSessionStateFromBearerToken(rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+	newSession, err := p.createSessionStateInternal(rawIDToken, idToken, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	newSession.AccessToken = rawIDToken
+	newSession.IDToken = rawIDToken
+	newSession.RefreshToken = ""
+	newSession.ExpiresOn = idToken.Expiry
+
+	return newSession, nil
+}
+
+func (p *OIDCProvider) createSessionStateInternal(rawIDToken string, idToken *oidc.IDToken, token *oauth2.Token) (*sessions.SessionState, error) {
+
+	newSession := &sessions.SessionState{}
+
+	if idToken == nil {
+		return newSession, nil
+	}
+	accessToken := ""
+	if token != nil {
+		accessToken = token.AccessToken
+	}
+
+	claims, err := p.findClaimsFromIDToken(idToken, accessToken, p.ProfileURL.String())
+	if err != nil {
+		return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
+	}
+
+	newSession.IDToken = rawIDToken
+
+	newSession.Email = claims.UserID // TODO Rename SessionState.Email to .UserID in the near future
+
+	newSession.User = claims.Subject
+	newSession.PreferredUsername = claims.PreferredUsername
+
+	verifyEmail := (p.UserIDClaim == emailClaim) && !p.AllowUnverifiedEmail
+	if verifyEmail && claims.Verified != nil && !*claims.Verified {
+		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.UserID)
+	}
+
 	return newSession, nil
 }
 
@@ -190,15 +230,25 @@ func getOIDCHeader(accessToken string) http.Header {
 	return header
 }
 
-func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
+func (p *OIDCProvider) findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
 
-	// Extract custom claims.
 	claims := &OIDCClaims{}
-	if err := idToken.Claims(claims); err != nil {
-		return nil, fmt.Errorf("failed to parse id_token claims: %v", err)
+	// Extract default claims.
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
+	}
+	// Extract custom claims.
+	if err := idToken.Claims(&claims.rawClaims); err != nil {
+		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)
 	}
 
-	if claims.Email == "" {
+	userID := claims.rawClaims[p.UserIDClaim]
+	if userID == nil {
+		return nil, fmt.Errorf("claims did not contains the required user-id-claim '%s'", p.UserIDClaim)
+	}
+	claims.UserID = fmt.Sprint(userID)
+
+	if p.UserIDClaim == emailClaim && claims.UserID == "" {
 		if profileURL == "" {
 			return nil, fmt.Errorf("id_token did not contain an email")
 		}
@@ -223,15 +273,16 @@ func findClaimsFromIDToken(idToken *oidc.IDToken, accessToken string, profileURL
 			return nil, fmt.Errorf("neither id_token nor userinfo endpoint contained an email")
 		}
 
-		claims.Email = email
+		claims.UserID = email
 	}
 
 	return claims, nil
 }
 
 type OIDCClaims struct {
+	rawClaims         map[string]interface{}
+	UserID            string
 	Subject           string `json:"sub"`
-	Email             string `json:"email"`
 	Verified          *bool  `json:"email_verified"`
 	PreferredUsername string `json:"preferred_username"`
 }

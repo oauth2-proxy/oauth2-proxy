@@ -31,6 +31,7 @@ const secret = "secret"
 type idTokenClaims struct {
 	Name    string `json:"name,omitempty"`
 	Email   string `json:"email,omitempty"`
+	Phone   string `json:"phone_number,omitempty"`
 	Picture string `json:"picture,omitempty"`
 	jwt.StandardClaims
 }
@@ -46,6 +47,7 @@ type redeemTokenResponse struct {
 var defaultIDToken idTokenClaims = idTokenClaims{
 	"Jane Dobbs",
 	"janed@me.com",
+	"+4798765432",
 	"http://mugbook.com/janed/me.jpg",
 	jwt.StandardClaims{
 		Audience:  "https://test.myapp.com",
@@ -106,6 +108,7 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 			fakeKeySetStub{},
 			&oidc.Config{ClientID: clientID},
 		),
+		UserIDClaim: "email",
 	}
 
 	return p
@@ -163,6 +166,26 @@ func TestOIDCProviderRedeem(t *testing.T) {
 	assert.Equal(t, idToken, session.IDToken)
 	assert.Equal(t, refreshToken, session.RefreshToken)
 	assert.Equal(t, "123456789", session.User)
+}
+
+func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
+
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	})
+
+	server, provider := newTestSetup(body)
+	provider.UserIDClaim = "phone_number"
+	defer server.Close()
+
+	session, err := provider.Redeem(provider.RedeemURL.String(), "code1234")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, defaultIDToken.Phone, session.Email)
 }
 
 func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {

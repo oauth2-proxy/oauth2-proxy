@@ -108,6 +108,7 @@ type Options struct {
 	Scope                              string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
 	Prompt                             string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
 	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
+	UserIDClaim                        string `flag:"user-id-claim" cfg:"user_id_claim" env:"OAUTH2_PROXY_USER_ID_CLAIM"`
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
@@ -181,6 +182,7 @@ func NewOptions() *Options {
 		PreferEmailToUser:                false,
 		Prompt:                           "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                   "force",
+		UserIDClaim:                      "email",
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
 		LoggingFilename:                  "",
@@ -509,6 +511,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		p.SetRepository(o.BitbucketRepository)
 	case *providers.OIDCProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
+		p.UserIDClaim = o.UserIDClaim
 		if o.oidcVerifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {

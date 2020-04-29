@@ -148,6 +148,8 @@ func main() {
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 	flagSet.String("real-client-ip-header", "X-Real-IP", "Header used to determine the real IP of the client (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP)")
 
+	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
+
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
