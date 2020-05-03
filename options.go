@@ -64,11 +64,8 @@ type Options struct {
 	Banner                   string   `flag:"banner" cfg:"banner" env:"OAUTH2_PROXY_BANNER"`
 	Footer                   string   `flag:"footer" cfg:"footer" env:"OAUTH2_PROXY_FOOTER"`
 
-	// Embed CookieOptions
-	options.CookieOptions
-
-	// Embed SessionOptions
-	options.SessionOptions
+	Cookie  options.CookieOptions  `cfg:",squash"`
+	Session options.SessionOptions `cfg:",squash"`
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
@@ -134,7 +131,7 @@ type Options struct {
 	// internal values that are set after config validation
 	redirectURL        *url.URL
 	proxyURLs          []*url.URL
-	CompiledRegex      []*regexp.Regexp
+	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
 	sessionStore       sessionsapi.SessionStore
 	signatureData      *SignatureData
@@ -158,14 +155,14 @@ func NewOptions() *Options {
 		HTTPSAddress:        ":443",
 		ForceHTTPS:          false,
 		DisplayHtpasswdForm: true,
-		CookieOptions: options.CookieOptions{
-			CookieName:     "_oauth2_proxy",
-			CookieSecure:   true,
-			CookieHTTPOnly: true,
-			CookieExpire:   time.Duration(168) * time.Hour,
-			CookieRefresh:  time.Duration(0),
+		Cookie: options.CookieOptions{
+			Name:     "_oauth2_proxy",
+			Secure:   true,
+			HTTPOnly: true,
+			Expire:   time.Duration(168) * time.Hour,
+			Refresh:  time.Duration(0),
 		},
-		SessionOptions: options.SessionOptions{
+		Session: options.SessionOptions{
 			Type: "cookie",
 		},
 		SetXAuthRequest:                  false,
@@ -227,7 +224,7 @@ func (o *Options) Validate() error {
 	}
 
 	msgs := make([]string, 0)
-	if o.CookieSecret == "" {
+	if o.Cookie.Secret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
 	}
 	if o.ClientID == "" {
@@ -372,61 +369,61 @@ func (o *Options) Validate() error {
 	}
 
 	for _, u := range o.SkipAuthRegex {
-		CompiledRegex, err := regexp.Compile(u)
+		compiledRegex, err := regexp.Compile(u)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("error compiling regex=%q %s", u, err))
 			continue
 		}
-		o.CompiledRegex = append(o.CompiledRegex, CompiledRegex)
+		o.compiledRegex = append(o.compiledRegex, compiledRegex)
 	}
 	msgs = parseProviderInfo(o, msgs)
 
 	var cipher *encryption.Cipher
-	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.CookieRefresh != time.Duration(0)) {
+	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.Cookie.Refresh != time.Duration(0)) {
 		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
-			if len(secretBytes(o.CookieSecret)) == i {
+			if len(secretBytes(o.Cookie.Secret)) == i {
 				validCookieSecretSize = true
 			}
 		}
 		var decoded bool
-		if string(secretBytes(o.CookieSecret)) != o.CookieSecret {
+		if string(secretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
 			decoded = true
 		}
 		if !validCookieSecretSize {
 			var suffix string
 			if decoded {
-				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.CookieSecret)
+				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.Cookie.Secret)
 			}
 			msgs = append(msgs, fmt.Sprintf(
 				"cookie_secret must be 16, 24, or 32 bytes "+
 					"to create an AES cipher when "+
 					"pass_access_token == true or "+
 					"cookie_refresh != 0, but is %d bytes.%s",
-				len(secretBytes(o.CookieSecret)), suffix))
+				len(secretBytes(o.Cookie.Secret)), suffix))
 		} else {
 			var err error
-			cipher, err = encryption.NewCipher(secretBytes(o.CookieSecret))
+			cipher, err = encryption.NewCipher(secretBytes(o.Cookie.Secret))
 			if err != nil {
 				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
 			}
 		}
 	}
 
-	o.SessionOptions.Cipher = cipher
-	sessionStore, err := sessions.NewSessionStore(&o.SessionOptions, &o.CookieOptions)
+	o.Session.Cipher = cipher
+	sessionStore, err := sessions.NewSessionStore(&o.Session, &o.Cookie)
 	if err != nil {
 		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
 	} else {
 		o.sessionStore = sessionStore
 	}
 
-	if o.CookieRefresh >= o.CookieExpire {
+	if o.Cookie.Refresh >= o.Cookie.Expire {
 		msgs = append(msgs, fmt.Sprintf(
 			"cookie_refresh (%s) must be less than "+
 				"cookie_expire (%s)",
-			o.CookieRefresh.String(),
-			o.CookieExpire.String()))
+			o.Cookie.Refresh.String(),
+			o.Cookie.Expire.String()))
 	}
 
 	if len(o.GoogleGroups) > 0 || o.GoogleAdminEmail != "" || o.GoogleServiceAccountJSON != "" {
@@ -441,16 +438,16 @@ func (o *Options) Validate() error {
 		}
 	}
 
-	switch o.CookieSameSite {
+	switch o.Cookie.SameSite {
 	case "", "none", "lax", "strict":
 	default:
-		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
+		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.Cookie.SameSite))
 	}
 
 	// Sort cookie domains by length, so that we try longer (and more specific)
 	// domains first
-	sort.Slice(o.CookieDomains, func(i, j int) bool {
-		return len(o.CookieDomains[i]) > len(o.CookieDomains[j])
+	sort.Slice(o.Cookie.Domains, func(i, j int) bool {
+		return len(o.Cookie.Domains[i]) > len(o.Cookie.Domains[j])
 	})
 
 	msgs = parseSignatureKey(o, msgs)
@@ -627,9 +624,9 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 }
 
 func validateCookieName(o *Options, msgs []string) []string {
-	cookie := &http.Cookie{Name: o.CookieName}
+	cookie := &http.Cookie{Name: o.Cookie.Name}
 	if cookie.String() == "" {
-		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.CookieName))
+		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.Cookie.Name))
 	}
 	return msgs
 }
