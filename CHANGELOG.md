@@ -19,9 +19,13 @@
   - Flags now require a `--` prefix before the option
   - Previously flags allowed either `-` or `--` to prefix the option name
   - Eg `-provider` must now be `--provider`
+- - [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to StringSlice instead of StringArray
+  - Options that take multiple arguments now split strings on commas if present
+  - Eg `--foo=a,b,c,d` would result in the values `a`, `b`, `c` and `d` instead of a single `a,b,c,d` value as before
 
 ## Changes since v5.1.0
 
+- [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to PFlag to remove StringArray (@JoelSpeed)
 - [#484](https://github.com/oauth2-proxy/oauth2-proxy/pull/484) Replace configuration loading with Viper (@JoelSpeed)
 - [#499](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support generic claims in addition to email
 - [#486](https://github.com/oauth2-proxy/oauth2-proxy/pull/486) Add new linters (@johejo)
