@@ -191,7 +191,7 @@ func newFakeUpstreamSetup(upstreamPath string) *fakeUpstreamSetup {
 	opts := NewOptions()
 	opts.ClientID = "asdlkjx"
 	opts.ClientSecret = "alkgks"
-	opts.CookieSecret = "asdkugkj"
+	opts.Cookie.Secret = "asdkugkj"
 	opts.SkipAuthRegex = []string{".*"} // don't want auth here
 	opts.Upstreams = []string{
 		setup.backend.URL + upstreamPath,
