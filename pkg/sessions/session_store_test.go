@@ -170,7 +170,7 @@ var _ = Describe("NewSessionStore", func() {
 				BeforeEach(func() {
 					By("Using a valid cookie with a different providers session encoding")
 					broken := "BrokenSessionFromADifferentSessionImplementation"
-					value := encryption.SignedValue(cookieOpts.Secret, cookieOpts.Name, broken, time.Now())
+					value := encryption.SignedValue(cookieOpts.Secret, cookieOpts.Name, []byte(broken), time.Now())
 					cookie := cookiesapi.MakeCookieFromOptions(request, cookieOpts.Name, value, cookieOpts, cookieOpts.Expire, time.Now())
 					request.AddCookie(cookie)
 

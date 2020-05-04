@@ -59,7 +59,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := sessionFromCookie(val, s.CookieCipher)
+	session, err := sessionFromCookie(string(val), s.CookieCipher)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
 	if value != "" {
-		value = encryption.SignedValue(s.CookieOptions.Secret, s.CookieOptions.Name, value, now)
+		value = encryption.SignedValue(s.CookieOptions.Secret, s.CookieOptions.Name, []byte(value), now)
 	}
 	c := s.makeCookie(req, s.CookieOptions.Name, value, s.CookieOptions.Expire, now)
 	if len(c.Value) > 4096-len(s.CookieOptions.Name) {
