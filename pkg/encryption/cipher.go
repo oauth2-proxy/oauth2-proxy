@@ -125,15 +125,12 @@ func NewCipher(secret []byte) (*Cipher, error) {
 
 // Encrypt a value for use in a cookie
 func (c *Cipher) Encrypt(value string) (string, error) {
-	ciphertext := make([]byte, aes.BlockSize+len(value))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", fmt.Errorf("failed to create initialization vector %s", err)
+	encrypted, err := c.EncryptCFB([]byte(value))
+	if err != nil {
+		return "", err
 	}
 
-	stream := cipher.NewCFBEncrypter(c.Block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], []byte(value))
-	return base64.StdEncoding.EncodeToString(ciphertext), nil
+	return base64.StdEncoding.EncodeToString(encrypted), nil
 }
 
 // Decrypt a value from a cookie to it's original string
@@ -143,18 +140,41 @@ func (c *Cipher) Decrypt(s string) (string, error) {
 		return "", fmt.Errorf("failed to decrypt cookie value %s", err)
 	}
 
-	if len(encrypted) < aes.BlockSize {
-		return "", fmt.Errorf("encrypted cookie value should be "+
-			"at least %d bytes, but is only %d bytes",
-			aes.BlockSize, len(encrypted))
+	decrypted, err := c.DecryptCFB(encrypted)
+	if err != nil {
+		return "", err
 	}
 
-	iv := encrypted[:aes.BlockSize]
-	encrypted = encrypted[aes.BlockSize:]
-	stream := cipher.NewCFBDecrypter(c.Block, iv)
-	stream.XORKeyStream(encrypted, encrypted)
+	return string(decrypted), nil
+}
 
-	return string(encrypted), nil
+// Encrypt with AES CFB on raw bytes
+func (c *Cipher) EncryptCFB(value []byte) ([]byte, error) {
+	ciphertext := make([]byte, aes.BlockSize+len(value))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, fmt.Errorf("failed to create initialization vector %s", err)
+	}
+
+	stream := cipher.NewCFBEncrypter(c.Block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], value)
+	return ciphertext, nil
+}
+
+// Decrypt a AES CFB ciphertext
+func (c *Cipher) DecryptCFB(ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) < aes.BlockSize {
+		return nil, fmt.Errorf("encrypted value should be "+
+			"at least %d bytes, but is only %d bytes",
+			aes.BlockSize, len(ciphertext))
+	}
+
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+	stream := cipher.NewCFBDecrypter(c.Block, iv)
+	stream.XORKeyStream(ciphertext, ciphertext)
+
+	return ciphertext, nil
 }
 
 // EncryptInto encrypts the value and stores it back in the string pointer
