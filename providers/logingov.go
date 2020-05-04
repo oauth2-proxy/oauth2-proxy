@@ -183,7 +183,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 		Issuer:    p.ClientID,
 		Subject:   p.ClientID,
 		Audience:  p.RedeemURL.String(),
-		ExpiresAt: int64(time.Now().Add(time.Duration(5 * time.Minute)).Unix()),
+		ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
 		Id:        randSeq(32),
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
@@ -260,8 +260,7 @@ func (p *LoginGovProvider) Redeem(redirectURL, code string) (s *sessions.Session
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
 func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
-	var a url.URL
-	a = *p.LoginURL
+	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
 	params.Set("approval_prompt", p.ApprovalPrompt)

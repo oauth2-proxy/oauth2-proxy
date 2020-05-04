@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/coreos/go-oidc"
+
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
@@ -86,8 +88,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 
 // GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	var a url.URL
-	a = *p.LoginURL
+	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
 	params.Add("acr_values", p.AcrValues)
@@ -144,4 +145,38 @@ func (p *ProviderData) ValidateSessionState(s *sessions.SessionState) bool {
 // do nothing if a refresh is not required
 func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
 	return false, nil
+}
+
+func (p *ProviderData) CreateSessionStateFromBearerToken(rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+	var claims struct {
+		Subject           string `json:"sub"`
+		Email             string `json:"email"`
+		Verified          *bool  `json:"email_verified"`
+		PreferredUsername string `json:"preferred_username"`
+	}
+
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
+	}
+
+	if claims.Email == "" {
+		claims.Email = claims.Subject
+	}
+
+	if claims.Verified != nil && !*claims.Verified {
+		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	}
+
+	newSession := &sessions.SessionState{
+		Email:             claims.Email,
+		User:              claims.Email,
+		PreferredUsername: claims.PreferredUsername,
+	}
+
+	newSession.AccessToken = rawIDToken
+	newSession.IDToken = rawIDToken
+	newSession.RefreshToken = ""
+	newSession.ExpiresOn = idToken.Expiry
+
+	return newSession, nil
 }

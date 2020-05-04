@@ -9,5 +9,27 @@ linters:
     - deadcode
     - gofmt
     - goimports
-  enable-all: false
+    - gosimple
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+    - bodyclose
+    - dogsled
+    - goprintffuncname
+    - misspell
+    - prealloc
+    - scopelint
+    - stylecheck
+    - unconvert
+    - gocritic
   disable-all: true
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - scopelint
+        - bodyclose
+        - unconvert
+        - gocritic

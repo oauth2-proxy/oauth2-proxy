@@ -338,6 +338,9 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, muxPath string, opts *Options, a
 		wsScheme := "ws" + strings.TrimPrefix(u.Scheme, "http")
 		wsURL := &url.URL{Scheme: wsScheme, Host: u.Host}
 		wsProxy = wsutil.NewSingleHostReverseProxy(wsURL)
+		if opts.SSLUpstreamInsecureSkipVerify {
+			wsProxy.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
 	}
 	return &UpstreamProxy{
 		upstream:  u.Host,
@@ -417,7 +420,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
 		}
 	}
-	for _, u := range opts.CompiledRegex {
+	for _, u := range opts.compiledRegex {
 		logger.Printf("compiled skip-auth-regex => %q", u)
 	}
 
@@ -434,23 +437,23 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
 	refresh := "disabled"
-	if opts.CookieRefresh != time.Duration(0) {
-		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
+	if opts.Cookie.Refresh != time.Duration(0) {
+		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, strings.Join(opts.CookieDomains, ","), opts.CookiePath, opts.CookieSameSite, refresh)
+	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	return &OAuthProxy{
-		CookieName:     opts.CookieName,
-		CSRFCookieName: fmt.Sprintf("%v_%v", opts.CookieName, "csrf"),
-		CookieSeed:     opts.CookieSecret,
-		CookieDomains:  opts.CookieDomains,
-		CookiePath:     opts.CookiePath,
-		CookieSecure:   opts.CookieSecure,
-		CookieHTTPOnly: opts.CookieHTTPOnly,
-		CookieExpire:   opts.CookieExpire,
-		CookieRefresh:  opts.CookieRefresh,
-		CookieSameSite: opts.CookieSameSite,
+		CookieName:     opts.Cookie.Name,
+		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
+		CookieSeed:     opts.Cookie.Secret,
+		CookieDomains:  opts.Cookie.Domains,
+		CookiePath:     opts.Cookie.Path,
+		CookieSecure:   opts.Cookie.Secure,
+		CookieHTTPOnly: opts.Cookie.HTTPOnly,
+		CookieExpire:   opts.Cookie.Expire,
+		CookieRefresh:  opts.Cookie.Refresh,
+		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
 		RobotsPath:        "/robots.txt",
@@ -473,7 +476,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
-		compiledRegex:        opts.CompiledRegex,
+		compiledRegex:        opts.compiledRegex,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
 		SetBasicAuth:         opts.SetBasicAuth,
@@ -497,8 +500,7 @@ func (p *OAuthProxy) GetRedirectURI(host string) string {
 	if p.redirectURL.Host != "" {
 		return p.redirectURL.String()
 	}
-	var u url.URL
-	u = *p.redirectURL
+	u := *p.redirectURL
 	if u.Scheme == "" {
 		if p.CookieSecure {
 			u.Scheme = httpsScheme
@@ -869,7 +871,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	if ok {
 		session := &sessionsapi.SessionState{User: user}
 		p.SaveSession(rw, req, session)
-		http.Redirect(rw, req, redirect, 302)
+		http.Redirect(rw, req, redirect, http.StatusFound)
 	} else {
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
@@ -908,7 +910,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	p.ClearSessionCookie(rw, req)
-	http.Redirect(rw, req, redirect, 302)
+	http.Redirect(rw, req, redirect, http.StatusFound)
 }
 
 // OAuthStart starts the OAuth2 authentication flow
@@ -928,7 +930,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	redirectURI := p.GetRedirectURI(req.Host)
-	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonce, redirect)), 302)
+	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonce, redirect)), http.StatusFound)
 }
 
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
@@ -991,7 +993,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
 			return
 		}
-		http.Redirect(rw, req, redirect, 302)
+		http.Redirect(rw, req, redirect, http.StatusFound)
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
@@ -1270,10 +1272,7 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*sessionsapi.SessionStat
 
 // isAjax checks if a request is an ajax request
 func isAjax(req *http.Request) bool {
-	acceptValues, ok := req.Header["accept"]
-	if !ok {
-		acceptValues = req.Header["Accept"]
-	}
+	acceptValues := req.Header.Values("Accept")
 	const ajaxReq = applicationJSON
 	for _, v := range acceptValues {
 		if v == ajaxReq {
@@ -1290,6 +1289,7 @@ func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
 }
 
 // GetJwtSession loads a session based on a JWT token in the authorization header.
+// (see the config options skip-jwt-bearer-tokens and extra-jwt-issuers)
 func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState, error) {
 	rawBearerToken, err := p.findBearerToken(req)
 	if err != nil {
@@ -1297,7 +1297,6 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 	}
 
 	ctx := context.Background()
-	var session *sessionsapi.SessionState
 	for _, verifier := range p.jwtBearerVerifiers {
 		bearerToken, err := verifier.Verify(ctx, rawBearerToken)
 
@@ -1306,35 +1305,7 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 			continue
 		}
 
-		var claims struct {
-			Subject           string `json:"sub"`
-			Email             string `json:"email"`
-			Verified          *bool  `json:"email_verified"`
-			PreferredUsername string `json:"preferred_username"`
-		}
-
-		if err := bearerToken.Claims(&claims); err != nil {
-			return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
-		}
-
-		if claims.Email == "" {
-			claims.Email = claims.Subject
-		}
-
-		if claims.Verified != nil && !*claims.Verified {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-		}
-
-		session = &sessionsapi.SessionState{
-			AccessToken:       rawBearerToken,
-			IDToken:           rawBearerToken,
-			RefreshToken:      "",
-			ExpiresOn:         bearerToken.Expiry,
-			Email:             claims.Email,
-			User:              claims.Email,
-			PreferredUsername: claims.PreferredUsername,
-		}
-		return session, nil
+		return p.provider.CreateSessionStateFromBearerToken(rawBearerToken, bearerToken)
 	}
 	return nil, fmt.Errorf("unable to verify jwt token %s", req.Header.Get("Authorization"))
 }

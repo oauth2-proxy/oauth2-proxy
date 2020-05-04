@@ -116,7 +116,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 				break
 			}
 		}
-		if found != true {
+		if !found {
 			logger.Print("team membership test failed, access denied")
 			return "", nil
 		}
@@ -147,7 +147,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 				break
 			}
 		}
-		if found != true {
+		if !found {
 			logger.Print("repository access test failed, access denied")
 			return "", nil
 		}

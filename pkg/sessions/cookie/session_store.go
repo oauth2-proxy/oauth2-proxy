@@ -49,14 +49,14 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 // Load reads sessions.SessionState information from Cookies within the
 // HTTP request object
 func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
-	c, err := loadCookie(req, s.CookieOptions.CookieName)
+	c, err := loadCookie(req, s.CookieOptions.Name)
 	if err != nil {
 		// always http.ErrNoCookie
-		return nil, fmt.Errorf("Cookie %q not present", s.CookieOptions.CookieName)
+		return nil, fmt.Errorf("cookie %q not present", s.CookieOptions.Name)
 	}
-	val, _, ok := encryption.Validate(c, s.CookieOptions.CookieSecret, s.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(c, s.CookieOptions.Secret, s.CookieOptions.Expire)
 	if !ok {
-		return nil, errors.New("Cookie Signature not valid")
+		return nil, errors.New("cookie signature not valid")
 	}
 
 	session, err := utils.SessionFromCookie(val, s.CookieCipher)
@@ -69,17 +69,14 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 // Clear clears any saved session information by writing a cookie to
 // clear the session
 func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
-	var cookies []*http.Cookie
-
 	// matches CookieName, CookieName_<number>
-	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieOptions.CookieName))
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieOptions.Name))
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
 			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
 
 			http.SetCookie(rw, clearCookie)
-			cookies = append(cookies, clearCookie)
 		}
 	}
 
@@ -97,10 +94,10 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
 	if value != "" {
-		value = encryption.SignedValue(s.CookieOptions.CookieSecret, s.CookieOptions.CookieName, value, now)
+		value = encryption.SignedValue(s.CookieOptions.Secret, s.CookieOptions.Name, value, now)
 	}
-	c := s.makeCookie(req, s.CookieOptions.CookieName, value, s.CookieOptions.CookieExpire, now)
-	if len(c.Value) > 4096-len(s.CookieOptions.CookieName) {
+	c := s.makeCookie(req, s.CookieOptions.Name, value, s.CookieOptions.Expire, now)
+	if len(c.Value) > 4096-len(s.CookieOptions.Name) {
 		return splitCookie(c)
 	}
 	return []*http.Cookie{c}
@@ -174,7 +171,7 @@ func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {
 		}
 	}
 	if len(cookies) == 0 {
-		return nil, fmt.Errorf("Could not find cookie %s", cookieName)
+		return nil, fmt.Errorf("could not find cookie %s", cookieName)
 	}
 	return joinCookies(cookies)
 }

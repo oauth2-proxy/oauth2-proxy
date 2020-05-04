@@ -65,7 +65,6 @@ func TestWebSocketProxy(t *testing.T) {
 			if err != nil {
 				t.Fatalf("err %s", err)
 			}
-			return
 		}),
 	}
 	backend := httptest.NewServer(&handler)
@@ -445,7 +444,7 @@ func TestRobotsTxt(t *testing.T) {
 	opts := NewOptions()
 	opts.ClientID = "asdlkjx"
 	opts.ClientSecret = "alkgks"
-	opts.CookieSecret = "asdkugkj"
+	opts.Cookie.Secret = "asdkugkj"
 	opts.Validate()
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return true })
@@ -460,7 +459,7 @@ func TestIsValidRedirect(t *testing.T) {
 	opts := NewOptions()
 	opts.ClientID = "skdlfj"
 	opts.ClientSecret = "fgkdsgj"
-	opts.CookieSecret = "ljgiogbj"
+	opts.Cookie.Secret = "ljgiogbj"
 	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
 	opts.WhitelistDomains = []string{
 		"foo.bar",
@@ -679,10 +678,10 @@ func TestBasicAuthPassword(t *testing.T) {
 	opts.Upstreams = append(opts.Upstreams, providerServer.URL)
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
-	opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
+	opts.Cookie.Secret = "xyzzyplughxyzzyplughxyzzyplughxp"
 	opts.ClientID = "dlgkj"
 	opts.ClientSecret = "alkgret"
-	opts.CookieSecure = false
+	opts.Cookie.Secure = false
 	opts.PassBasicAuth = true
 	opts.SetBasicAuth = true
 	opts.PassUserHeaders = true
@@ -706,7 +705,7 @@ func TestBasicAuthPassword(t *testing.T) {
 	if rw.Code >= 400 {
 		t.Fatalf("expected 3xx got %d", rw.Code)
 	}
-	cookie := rw.HeaderMap["Set-Cookie"][1]
+	cookie := rw.Header().Values("Set-Cookie")[1]
 
 	cookieName := proxy.CookieName
 	var value string
@@ -863,10 +862,10 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 	}
 	// The CookieSecret must be 32 bytes in order to create the AES
 	// cipher.
-	t.opts.CookieSecret = "xyzzyplughxyzzyplughxyzzyplughxp"
+	t.opts.Cookie.Secret = "xyzzyplughxyzzyplughxyzzyplughxp"
 	t.opts.ClientID = "slgkj"
 	t.opts.ClientSecret = "gfjgojl"
-	t.opts.CookieSecure = false
+	t.opts.Cookie.Secure = false
 	t.opts.PassAccessToken = opts.PassAccessToken
 	t.opts.Validate()
 
@@ -894,7 +893,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int,
 	}
 	req.AddCookie(patTest.proxy.MakeCSRFCookie(req, "nonce", time.Hour, time.Now()))
 	patTest.proxy.ServeHTTP(rw, req)
-	return rw.Code, rw.HeaderMap["Set-Cookie"][1]
+	return rw.Code, rw.Header().Values("Set-Cookie")[1]
 }
 
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
@@ -971,7 +970,7 @@ func TestStaticProxyUpstream(t *testing.T) {
 	}
 	assert.NotEqual(t, nil, cookie)
 
-	// Now we make a regular request againts the upstream proxy; And validate
+	// Now we make a regular request against the upstream proxy; And validate
 	// the returned status code through the static proxy.
 	code, payload := patTest.getEndpointWithCookie(cookie, "/static-proxy")
 	if code != 200 {
@@ -1016,7 +1015,7 @@ func NewSignInPageTest(skipProvider bool) *SignInPageTest {
 	var sipTest SignInPageTest
 
 	sipTest.opts = NewOptions()
-	sipTest.opts.CookieSecret = "adklsj2"
+	sipTest.opts.Cookie.Secret = "adklsj2"
 	sipTest.opts.ClientID = "lkdgj"
 	sipTest.opts.ClientSecret = "sgiufgoi"
 	sipTest.opts.SkipProviderButton = skipProvider
@@ -1104,8 +1103,6 @@ type ProcessCookieTest struct {
 	proxy        *OAuthProxy
 	rw           *httptest.ResponseRecorder
 	req          *http.Request
-	provider     TestProvider
-	responseCode int
 	validateUser bool
 }
 
@@ -1124,10 +1121,10 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	}
 	pcTest.opts.ClientID = "asdfljk"
 	pcTest.opts.ClientSecret = "lkjfdsig"
-	pcTest.opts.CookieSecret = "0123456789abcdefabcd"
+	pcTest.opts.Cookie.Secret = "0123456789abcdefabcd"
 	// First, set the CookieRefresh option so proxy.AesCipher is created,
 	// needed to encrypt the access_token.
-	pcTest.opts.CookieRefresh = time.Hour
+	pcTest.opts.Cookie.Refresh = time.Hour
 	pcTest.opts.Validate()
 
 	pcTest.proxy = NewOAuthProxy(pcTest.opts, func(email string) bool {
@@ -1190,7 +1187,7 @@ func TestProcessCookieNoCookieError(t *testing.T) {
 	pcTest := NewProcessCookieTestWithDefaults()
 
 	session, err := pcTest.LoadCookiedSession()
-	assert.Equal(t, "Cookie \"_oauth2_proxy\" not present", err.Error())
+	assert.Equal(t, "cookie \"_oauth2_proxy\" not present", err.Error())
 	if session != nil {
 		t.Errorf("expected nil session. got %#v", session)
 	}
@@ -1198,7 +1195,7 @@ func TestProcessCookieNoCookieError(t *testing.T) {
 
 func TestProcessCookieRefreshNotSet(t *testing.T) {
 	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *Options) {
-		opts.CookieExpire = time.Duration(23) * time.Hour
+		opts.Cookie.Expire = time.Duration(23) * time.Hour
 	})
 	reference := time.Now().Add(time.Duration(-2) * time.Hour)
 
@@ -1215,7 +1212,7 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 
 func TestProcessCookieFailIfCookieExpired(t *testing.T) {
 	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *Options) {
-		opts.CookieExpire = time.Duration(24) * time.Hour
+		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
@@ -1230,7 +1227,7 @@ func TestProcessCookieFailIfCookieExpired(t *testing.T) {
 
 func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *Options) {
-		opts.CookieExpire = time.Duration(24) * time.Hour
+		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: reference}
@@ -1300,7 +1297,7 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 	test := NewAuthOnlyEndpointTest(func(opts *Options) {
-		opts.CookieExpire = time.Duration(24) * time.Hour
+		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{
@@ -1352,8 +1349,8 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
 	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
-	assert.Equal(t, "oauth_user", pcTest.rw.HeaderMap["X-Auth-Request-User"][0])
-	assert.Equal(t, "oauth_user@example.com", pcTest.rw.HeaderMap["X-Auth-Request-Email"][0])
+	assert.Equal(t, "oauth_user", pcTest.rw.Header().Get("X-Auth-Request-User"))
+	assert.Equal(t, "oauth_user@example.com", pcTest.rw.Header().Get("X-Auth-Request-Email"))
 }
 
 func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
@@ -1383,10 +1380,10 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
 	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
-	assert.Equal(t, "oauth_user", pcTest.rw.HeaderMap["X-Auth-Request-User"][0])
-	assert.Equal(t, "oauth_user@example.com", pcTest.rw.HeaderMap["X-Auth-Request-Email"][0])
+	assert.Equal(t, "oauth_user", pcTest.rw.Header().Values("X-Auth-Request-User")[0])
+	assert.Equal(t, "oauth_user@example.com", pcTest.rw.Header().Values("X-Auth-Request-Email")[0])
 	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte("oauth_user:"+pcTest.opts.BasicAuthPassword))
-	assert.Equal(t, expectedHeader, pcTest.rw.HeaderMap["Authorization"][0])
+	assert.Equal(t, expectedHeader, pcTest.rw.Header().Values("Authorization")[0])
 }
 
 func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
@@ -1416,9 +1413,9 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
 	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
-	assert.Equal(t, "oauth_user", pcTest.rw.HeaderMap["X-Auth-Request-User"][0])
-	assert.Equal(t, "oauth_user@example.com", pcTest.rw.HeaderMap["X-Auth-Request-Email"][0])
-	assert.Equal(t, 0, len(pcTest.rw.HeaderMap["Authorization"]), "should not have Authorization header entries")
+	assert.Equal(t, "oauth_user", pcTest.rw.Header().Values("X-Auth-Request-User")[0])
+	assert.Equal(t, "oauth_user@example.com", pcTest.rw.Header().Values("X-Auth-Request-Email")[0])
+	assert.Equal(t, 0, len(pcTest.rw.Header().Values("Authorization")), "should not have Authorization header entries")
 }
 
 func TestAuthSkippedForPreflightRequests(t *testing.T) {
@@ -1432,7 +1429,7 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	opts.Upstreams = append(opts.Upstreams, upstream.URL)
 	opts.ClientID = "aljsal"
 	opts.ClientSecret = "jglkfsdgj"
-	opts.CookieSecret = "dkfjgdls"
+	opts.Cookie.Secret = "dkfjgdls"
 	opts.SkipAuthPreflight = true
 	opts.Validate()
 
@@ -1479,7 +1476,7 @@ type SignatureTest struct {
 
 func NewSignatureTest() *SignatureTest {
 	opts := NewOptions()
-	opts.CookieSecret = "cookie secret"
+	opts.Cookie.Secret = "cookie secret"
 	opts.ClientID = "client ID"
 	opts.ClientSecret = "client secret"
 	opts.EmailDomains = []string{"acm.org"}
@@ -1626,7 +1623,7 @@ type ajaxRequestTest struct {
 func newAjaxRequestTest() *ajaxRequestTest {
 	test := &ajaxRequestTest{}
 	test.opts = NewOptions()
-	test.opts.CookieSecret = "sdflsw"
+	test.opts.Cookie.Secret = "sdflsw"
 	test.opts.ClientID = "gkljfdl"
 	test.opts.ClientSecret = "sdflkjs"
 	test.opts.Validate()
@@ -1684,11 +1681,11 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 
 func TestClearSplitCookie(t *testing.T) {
 	opts := NewOptions()
-	opts.CookieName = "oauth2"
-	opts.CookieDomains = []string{"abc"}
-	store, err := cookie.NewCookieSessionStore(&opts.SessionOptions, &opts.CookieOptions)
+	opts.Cookie.Name = "oauth2"
+	opts.Cookie.Domains = []string{"abc"}
+	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
 	assert.Equal(t, err, nil)
-	p := OAuthProxy{CookieName: opts.CookieName, CookieDomains: opts.CookieDomains, sessionStore: store}
+	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -1713,11 +1710,11 @@ func TestClearSplitCookie(t *testing.T) {
 
 func TestClearSingleCookie(t *testing.T) {
 	opts := NewOptions()
-	opts.CookieName = "oauth2"
-	opts.CookieDomains = []string{"abc"}
-	store, err := cookie.NewCookieSessionStore(&opts.SessionOptions, &opts.CookieOptions)
+	opts.Cookie.Name = "oauth2"
+	opts.Cookie.Domains = []string{"abc"}
+	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
 	assert.Equal(t, err, nil)
-	p := OAuthProxy{CookieName: opts.CookieName, CookieDomains: opts.CookieDomains, sessionStore: store}
+	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -1742,8 +1739,7 @@ type NoOpKeySet struct {
 func (NoOpKeySet) VerifySignature(ctx context.Context, jwt string) (payload []byte, err error) {
 	splitStrings := strings.Split(jwt, ".")
 	payloadString := splitStrings[1]
-	jsonString, err := base64.RawURLEncoding.DecodeString(payloadString)
-	return []byte(jsonString), err
+	return base64.RawURLEncoding.DecodeString(payloadString)
 }
 
 func TestGetJwtSession(t *testing.T) {

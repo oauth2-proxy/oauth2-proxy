@@ -27,7 +27,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-auth-logging` | bool | Log authentication attempts | true |
 | `-auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `-authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
-| `-azure-tenant string` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
+| `-azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
 | `-basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
 | `-client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
 | `-client-secret` | string | the OAuth Client Secret | |
@@ -71,6 +71,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-jwt-key-file` | string | path to the private key file in PEM format used to sign the JWT so that you can say something like `-jwt-key-file=/etc/ssl/private/jwt_signing_key.pem`: required by login.gov | |
 | `-login-url` | string | Authentication endpoint | |
 | `-insecure-oidc-allow-unverified-email` | bool | don't fail if an email address in an id_token is not verified | false |
+| `-insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
 | `-oidc-issuer-url` | string | the OpenID Connect issuer URL. ie: `"https://accounts.google.com"` | |
 | `-oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `-pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
@@ -103,7 +104,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
 | `-set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode) | false |
 | `-set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
-| `-set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | true |
+| `-set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
 | `-signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
 | `-silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
 | `-skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
@@ -118,6 +119,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `-tls-cert-file` | string | path to certificate file | |
 | `-tls-key-file` | string | path to private key file | |
 | `-upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
+| `-user-id-claim` | string | which claim contains the user ID | \["email"\] |
 | `-validate-url` | string | Access token validation endpoint | |
 | `-version` | n/a | print version string | |
 | `-whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
