@@ -305,7 +305,7 @@ If you encounter this, then you can create a `jwt_signing_key.pem` file in the t
 directory of the repo which contains the key in PEM format and then do your docker build.
 The docker build process will copy that file into your image which you can then access by
 setting the `OAUTH2_PROXY_JWT_KEY_FILE=/etc/ssl/private/jwt_signing_key.pem`
-environment variable, or by setting `-jwt-key-file=/etc/ssl/private/jwt_signing_key.pem` on the commandline.
+environment variable, or by setting `--jwt-key-file=/etc/ssl/private/jwt_signing_key.pem` on the commandline.
 
 Once it is running, you should be able to go to `http://localhost:4180/` in your browser,
 get authenticated by the login.gov integration server, and then get proxied on to your
@@ -317,7 +317,7 @@ proxy, and you would use real hostnames everywhere.
 
 Some providers do not support OIDC discovery via their issuer URL, so oauth2-proxy cannot simply grab the authorization, token and jwks URI endpoints from the provider's metadata.
 
-In this case, you can set the `-skip-oidc-discovery` option, and supply those required endpoints manually:
+In this case, you can set the `--skip-oidc-discovery` option, and supply those required endpoints manually:
 
 ```
     -provider oidc
