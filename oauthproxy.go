@@ -248,7 +248,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
 		}
 	}
-	for _, u := range opts.CompiledRegex {
+	for _, u := range opts.compiledRegex {
 		logger.Printf("compiled skip-auth-regex => %q", u)
 	}
 
@@ -265,23 +265,23 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
 	refresh := "disabled"
-	if opts.CookieRefresh != time.Duration(0) {
-		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
+	if opts.Cookie.Refresh != time.Duration(0) {
+		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHTTPOnly, opts.CookieExpire, strings.Join(opts.CookieDomains, ","), opts.CookiePath, opts.CookieSameSite, refresh)
+	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	return &OAuthProxy{
-		CookieName:     opts.CookieName,
-		CSRFCookieName: fmt.Sprintf("%v_%v", opts.CookieName, "csrf"),
-		CookieSeed:     opts.CookieSecret,
-		CookieDomains:  opts.CookieDomains,
-		CookiePath:     opts.CookiePath,
-		CookieSecure:   opts.CookieSecure,
-		CookieHTTPOnly: opts.CookieHTTPOnly,
-		CookieExpire:   opts.CookieExpire,
-		CookieRefresh:  opts.CookieRefresh,
-		CookieSameSite: opts.CookieSameSite,
+		CookieName:     opts.Cookie.Name,
+		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
+		CookieSeed:     opts.Cookie.Secret,
+		CookieDomains:  opts.Cookie.Domains,
+		CookiePath:     opts.Cookie.Path,
+		CookieSecure:   opts.Cookie.Secure,
+		CookieHTTPOnly: opts.Cookie.HTTPOnly,
+		CookieExpire:   opts.Cookie.Expire,
+		CookieRefresh:  opts.Cookie.Refresh,
+		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
 		RobotsPath:        "/robots.txt",
@@ -304,7 +304,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
-		compiledRegex:        opts.CompiledRegex,
+		compiledRegex:        opts.compiledRegex,
 		realClientIPParser:   opts.realClientIPParser,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,

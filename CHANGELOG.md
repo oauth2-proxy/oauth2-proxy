@@ -11,15 +11,23 @@
 - Migration from Pusher to independent org may have introduced breaking changes for your environment.
   - See the changes listed below for PR [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) for full details
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
-
 - [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
-    - The Azure AD Graph API has been [deprecated](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api) and is being replaced by the Microsoft Graph API.
+  - The Azure AD Graph API has been [deprecated](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api) and is being replaced by the Microsoft Graph API.
       If your application relies on the access token being passed to it to access the Azure AD Graph API, you should migrate your application to use the Microsoft Graph API.
       Existing behaviour can be retained by setting  `-resource=https://graph.windows.net`.
+- [#484](https://github.com/oauth2-proxy/oauth2-proxy/pull/484) Configuration loading has been replaced with Viper and PFlag
+  - Flags now require a `--` prefix before the option
+  - Previously flags allowed either `-` or `--` to prefix the option name
+  - Eg `-provider` must now be `--provider`
+- - [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to StringSlice instead of StringArray
+  - Options that take multiple arguments now split strings on commas if present
+  - Eg `--foo=a,b,c,d` would result in the values `a`, `b`, `c` and `d` instead of a single `a,b,c,d` value as before
 
 ## Changes since v5.1.0
 
-- [#503](https://github.com/oauth2-proxy/oauth2-proxy/pull/503) Implements -real-client-ip-header option to select the header from which to obtain a proxied client's IP (@Izzette)
+- [#503](https://github.com/oauth2-proxy/oauth2-proxy/pull/503) Implements --real-client-ip-header option to select the header from which to obtain a proxied client's IP (@Izzette)
+- [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to PFlag to remove StringArray (@JoelSpeed)
+- [#484](https://github.com/oauth2-proxy/oauth2-proxy/pull/484) Replace configuration loading with Viper (@JoelSpeed)
 - [#499](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support generic claims in addition to email
 - [#486](https://github.com/oauth2-proxy/oauth2-proxy/pull/486) Add new linters (@johejo)
 - [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
