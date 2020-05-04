@@ -1,9 +1,17 @@
-include .env
+GO ?= go
+GOLANGCILINT ?= golangci-lint
+
 BINARY := oauth2-proxy
 VERSION := $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
 REGISTRY ?= quay.io/oauth2-proxy
 .NOTPARALLEL:
+
+GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
+GO_MINOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f2)
+MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
+MINIMUM_SUPPORTED_GO_MINOR_VERSION = 14
+GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
 
 .PHONY: all
 all: lint $(BINARY)
@@ -18,11 +26,11 @@ distclean: clean
 	rm -rf vendor
 
 .PHONY: lint
-lint:
+lint: validate-go-version
 	GO111MODULE=on $(GOLANGCILINT) run
 
 .PHONY: build
-build: clean $(BINARY)
+build: validate-go-version clean $(BINARY)
 
 $(BINARY):
 	GO111MODULE=on CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy
@@ -62,3 +70,15 @@ test: lint
 .PHONY: release
 release: lint test
 	BINARY=${BINARY} VERSION=${VERSION} ./dist.sh
+
+.PHONY: validate-go-version
+validate-go-version: ## Validates the installed version of go against Mattermost's minimum requirement.
+	@if [ $(GO_MAJOR_VERSION) -gt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
+		exit 0 ;\
+	elif [ $(GO_MAJOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
+		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
+		exit 1; \
+	elif [ $(GO_MINOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MINOR_VERSION) ] ; then \
+		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
+		exit 1; \
+	fi
