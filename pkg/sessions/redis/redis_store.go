@@ -152,7 +152,7 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 		return nil, fmt.Errorf("cookie signature not valid")
 	}
 	ctx := req.Context()
-	session, err := store.loadSessionFromString(ctx, val)
+	session, err := store.loadSessionFromString(ctx, string(val))
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
@@ -214,7 +214,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 
 	// We only return an error if we had an issue with redis
 	// If there's an issue decoding the ticket, ignore it
-	ticket, _ := decodeTicket(store.CookieOptions.Name, val)
+	ticket, _ := decodeTicket(store.CookieOptions.Name, string(val))
 	if ticket != nil {
 		ctx := req.Context()
 		err := store.Client.Del(ctx, ticket.asHandle(store.CookieOptions.Name))
@@ -228,7 +228,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 // makeCookie makes a cookie, signing the value if present
 func (store *SessionStore) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
 	if value != "" {
-		value = encryption.SignedValue(store.CookieOptions.Secret, store.CookieOptions.Name, value, now)
+		value = encryption.SignedValue(store.CookieOptions.Secret, store.CookieOptions.Name, []byte(value), now)
 	}
 	return cookies.MakeCookieFromOptions(
 		req,
@@ -279,7 +279,7 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
 	}
 
 	// Valid cookie, decode the ticket
-	ticket, err := decodeTicket(store.CookieOptions.Name, val)
+	ticket, err := decodeTicket(store.CookieOptions.Name, string(val))
 	if err != nil {
 		// If we can't decode the ticket we have to create a new one
 		return newTicket()

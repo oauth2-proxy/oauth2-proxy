@@ -19,7 +19,7 @@ import (
 // additionally, the 'value' is encrypted so it's opaque to the browser
 
 // Validate ensures a cookie is properly signed
-func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value string, t time.Time, ok bool) {
+func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value []byte, t time.Time, ok bool) {
 	// value, timestamp, sig
 	parts := strings.Split(cookie.Value, "|")
 	if len(parts) != 3 {
@@ -40,7 +40,7 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 			// it's a valid cookie. now get the contents
 			rawValue, err := base64.URLEncoding.DecodeString(parts[0])
 			if err == nil {
-				value = string(rawValue)
+				value = rawValue
 				ok = true
 				return
 			}
@@ -50,8 +50,8 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 }
 
 // SignedValue returns a cookie that is signed and can later be checked with Validate
-func SignedValue(seed string, key string, value string, now time.Time) string {
-	encodedValue := base64.URLEncoding.EncodeToString([]byte(value))
+func SignedValue(seed string, key string, value []byte, now time.Time) string {
+	encodedValue := base64.URLEncoding.EncodeToString(value)
 	timeStr := fmt.Sprintf("%d", now.Unix())
 	sig := cookieSignature(seed, key, encodedValue, timeStr)
 	cookieVal := fmt.Sprintf("%s|%s|%s", encodedValue, timeStr, sig)
