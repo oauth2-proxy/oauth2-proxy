@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 type LinkedInProvider struct {
 	*ProviderData
 }
+
+var _ Provider = (*LinkedInProvider)(nil)
 
 // NewLinkedInProvider initiates a new LinkedInProvider
 func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
@@ -51,11 +54,11 @@ func getLinkedInHeader(accessToken string) http.Header {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *LinkedInProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequest("GET", p.ProfileURL.String()+"?format=json", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String()+"?format=json", nil)
 	if err != nil {
 		return "", err
 	}
@@ -74,6 +77,6 @@ func (p *LinkedInProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *LinkedInProvider) ValidateSessionState(s *sessions.SessionState) bool {
-	return validateToken(p, s.AccessToken, getLinkedInHeader(s.AccessToken))
+func (p *LinkedInProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, getLinkedInHeader(s.AccessToken))
 }
