@@ -1,32 +1,50 @@
 package sessions
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/pierrec/lz4"
+	"github.com/vmihailenco/msgpack/v4"
 )
 
 // SessionState is used to store information about the currently authenticated user session
+// MessagePack naming aligned to match with internal JWT claims for compression synergy
 type SessionState struct {
-	AccessToken       string    `json:",omitempty"`
-	IDToken           string    `json:",omitempty"`
-	CreatedAt         time.Time `json:"-"`
-	ExpiresOn         time.Time `json:"-"`
-	RefreshToken      string    `json:",omitempty"`
-	Email             string    `json:",omitempty"`
-	User              string    `json:",omitempty"`
-	PreferredUsername string    `json:",omitempty"`
+	AccessToken       string    `json:",omitempty" msgpack:"at,omitempty"`
+	IDToken           string    `json:",omitempty" msgpack:"id,omitempty"`
+	CreatedAt         time.Time `json:"-" msgpack:"-"`
+	ExpiresOn         time.Time `json:"-" msgpack:"-"`
+	RefreshToken      string    `json:",omitempty" msgpack:"rt,omitempty"`
+	Email             string    `json:",omitempty" msgpack:"email,omitempty"`
+	User              string    `json:",omitempty" msgpack:"sub,omitempty"`
+	PreferredUsername string    `json:",omitempty" msgpack:"preferred_username,omitempty"`
 }
 
-// SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
-type SessionStateJSON struct {
+// SessionStateEncoded is used to encode SessionState into JSON/MessagePack
+// without exposing time.Time zero value
+type SessionStateEncoded struct {
 	*SessionState
-	CreatedAt *time.Time `json:",omitempty"`
-	ExpiresOn *time.Time `json:",omitempty"`
+	CreatedAt *time.Time `json:",omitempty" msgpack:"iat,omitempty"`
+	ExpiresOn *time.Time `json:",omitempty" msgpack:"exp,omitempty"`
+}
+
+// SessionStateCompressed holds decoded JWTs if possible for better compression
+type SessionStateCompressed struct {
+	*SessionState
+	DecodedAccessToken  []byte     `msgpack:"dat,omitempty"`
+	DecodedIDToken      []byte     `msgpack:"did,omitempty"`
+	DecodedRefreshToken []byte     `msgpack:"drt,omitempty"`
+	CreatedAt           *time.Time `msgpack:"iat,omitempty"`
+	ExpiresOn           *time.Time `msgpack:"exp,omitempty"`
 }
 
 // IsExpired checks whether the session has expired
@@ -114,8 +132,8 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 			}
 		}
 	}
-	// Embed SessionState and ExpiresOn pointer into SessionStateJSON
-	ssj := &SessionStateJSON{SessionState: &ss}
+	// Embed SessionState and ExpiresOn pointer into SessionStateEncoded
+	ssj := &SessionStateEncoded{SessionState: &ss}
 	if !ss.CreatedAt.IsZero() {
 		ssj.CreatedAt = &ss.CreatedAt
 	}
@@ -185,11 +203,11 @@ func legacyDecodeSessionState(v string, c *encryption.Cipher) (*SessionState, er
 
 // DecodeSessionState decodes the session cookie string into a SessionState
 func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
-	var ssj SessionStateJSON
+	var ssj SessionStateEncoded
 	var ss *SessionState
 	err := json.Unmarshal([]byte(v), &ssj)
 	if err == nil && ssj.SessionState != nil {
-		// Extract SessionState and CreatedAt,ExpiresOn value from SessionStateJSON
+		// Extract SessionState and CreatedAt,ExpiresOn value from SessionStateEncoded
 		ss = ssj.SessionState
 		if ssj.CreatedAt != nil {
 			ss.CreatedAt = *ssj.CreatedAt
@@ -254,5 +272,156 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 	if ss.User == "" {
 		ss.User = ss.Email
 	}
+	return ss, nil
+}
+
+// CompressedSessionState returns an lz4 compression of a MessagePack encoded session
+// Encryption & Base64 encoding are delegated to downstream consumers of this method.
+func (s *SessionState) CompressedSessionState(level int) ([]byte, error) {
+	var (
+		ss  SessionState
+		err error
+
+		// Base64 Decode JWTs (if possible)
+		decodedAccessToken  []byte
+		decodedIDToken      []byte
+		decodedRefreshToken []byte
+
+		// LZ4 & MessagePack
+		packed []byte
+		reader *bytes.Reader
+		buf    *bytes.Buffer
+		zw     *lz4.Writer
+	)
+
+	ss = *s
+
+	// We assume if a token successfully base64 decodes, we can encode back later
+	// Otherwise we leave the original token
+	if ss.AccessToken != "" {
+		decodedAccessToken, err = base64.URLEncoding.DecodeString(ss.AccessToken)
+		if err == nil {
+			ss.AccessToken = ""
+		} else {
+			decodedAccessToken = []byte{}
+		}
+	}
+	if ss.IDToken != "" {
+		decodedIDToken, err = base64.URLEncoding.DecodeString(ss.IDToken)
+		if err == nil {
+			ss.IDToken = ""
+		} else {
+			decodedIDToken = []byte{}
+		}
+	}
+	if ss.RefreshToken != "" {
+		decodedRefreshToken, err = base64.URLEncoding.DecodeString(ss.RefreshToken)
+		if err == nil {
+			ss.RefreshToken = ""
+		} else {
+			decodedRefreshToken = []byte{}
+		}
+	}
+
+	// Embed SessionState, Decoded Tokens and Expires pointers into SessionStateCompressed
+	ssc := &SessionStateCompressed{
+		SessionState:        &ss,
+		DecodedAccessToken:  decodedAccessToken,
+		DecodedIDToken:      decodedIDToken,
+		DecodedRefreshToken: decodedRefreshToken,
+	}
+	if !ss.CreatedAt.IsZero() {
+		ssc.CreatedAt = &ss.CreatedAt
+	}
+	if !ss.ExpiresOn.IsZero() {
+		ssc.ExpiresOn = &ss.ExpiresOn
+	}
+
+	//Marshal & Compress the SessionStateCompressed
+	packed, err = msgpack.Marshal(ssc)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	// The Compress:Decompress ratio is 1:Many. LZ4 gives fastest decompress speeds
+	buf = new(bytes.Buffer)
+	zw = lz4.NewWriter(nil)
+	if level < 0 {
+		level = 0
+	}
+	if level > 9 {
+		level = 9
+	}
+	zw.Header = lz4.Header{
+		BlockMaxSize:     65536,
+		CompressionLevel: level,
+	}
+	zw.Reset(buf)
+
+	reader = bytes.NewReader(packed)
+	_, err = io.Copy(zw, reader)
+	if err != nil {
+		return []byte{}, err
+	}
+	_ = zw.Close()
+
+	return ioutil.ReadAll(buf)
+}
+
+// DecompressSessionState decodeds a LZ4 compressed MessagePack into a Session State
+func DecompressSessionState(compressed []byte) (*SessionState, error) {
+	var (
+		ssc SessionStateCompressed
+		ss  *SessionState
+		err error
+
+		// LZ4 & MessagePack
+		buf    *bytes.Buffer
+		reader *bytes.Reader
+		zr     *lz4.Reader
+		packed []byte
+	)
+
+	reader = bytes.NewReader(compressed)
+	buf = new(bytes.Buffer)
+	zr = lz4.NewReader(nil)
+	zr.Reset(reader)
+	_, err = io.Copy(buf, zr)
+	if err != nil {
+		return nil, err
+	}
+
+	packed, err = ioutil.ReadAll(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	err = msgpack.Unmarshal(packed, &ssc)
+	if err != nil {
+		return nil, err
+	}
+	if ssc.SessionState == nil {
+		return nil, fmt.Errorf("failed to decode the session state")
+	}
+
+	ss = ssc.SessionState
+	if ssc.CreatedAt != nil {
+		ss.CreatedAt = *ssc.CreatedAt
+	}
+	if ssc.ExpiresOn != nil {
+		ss.ExpiresOn = *ssc.ExpiresOn
+	}
+
+	// Re-encode Tokens to form original JWTs (if they were decoded)
+	if ss.AccessToken == "" && len(ssc.DecodedAccessToken) > 0 {
+		ss.AccessToken = base64.URLEncoding.EncodeToString(ssc.DecodedAccessToken)
+	}
+	if ss.IDToken == "" && len(ssc.DecodedIDToken) > 0 {
+		ss.IDToken = base64.URLEncoding.EncodeToString(ssc.DecodedIDToken)
+	}
+	if ss.RefreshToken == "" && len(ssc.DecodedRefreshToken) > 0 {
+		ss.RefreshToken = base64.URLEncoding.EncodeToString(ssc.DecodedRefreshToken)
+	}
+
 	return ss, nil
 }

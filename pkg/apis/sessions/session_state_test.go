@@ -1,6 +1,7 @@
 package sessions_test
 
 import (
+	"encoding/base64"
 	"fmt"
 	"testing"
 	"time"
@@ -350,4 +351,177 @@ func TestSessionStateAge(t *testing.T) {
 	// Set CreatedAt to 1 hour ago
 	ss.CreatedAt = time.Now().Add(-1 * time.Hour)
 	assert.Equal(t, time.Hour, ss.Age().Round(time.Minute))
+}
+
+func TestCompressAndDecompressSessionState(t *testing.T) {
+	created := time.Now()
+	expires := time.Now().Add(time.Duration(1) * time.Hour)
+
+	testCases := []testCase{
+		{
+			SessionState: sessions.SessionState{
+				Email: "user@domain.com",
+				User:  "just-user",
+			},
+		},
+		{
+			SessionState: sessions.SessionState{
+				Email: "user@domain.com",
+				User:  "user@domain.com",
+			},
+		},
+		{
+			SessionState: sessions.SessionState{
+				User: "just-user",
+			},
+		},
+		{
+			SessionState: sessions.SessionState{
+				Email:             "user@domain.com",
+				User:              "just-user",
+				PreferredUsername: "preferred",
+			},
+		},
+		{
+			SessionState: sessions.SessionState{
+				Email:             "user@domain.com",
+				User:              "just-user",
+				PreferredUsername: "preferred",
+				AccessToken:       base64.URLEncoding.EncodeToString([]byte("token1234")),
+				IDToken:           base64.URLEncoding.EncodeToString([]byte("idtoken1234")),
+				CreatedAt:         created,
+				ExpiresOn:         expires,
+				RefreshToken:      base64.URLEncoding.EncodeToString([]byte("refresh4321")),
+			},
+		},
+		{
+			SessionState: sessions.SessionState{
+				Email:             "user@domain.com",
+				User:              "just-user",
+				PreferredUsername: "preferred",
+				AccessToken:       base64.URLEncoding.EncodeToString([]byte("token1234")),
+				IDToken:           "rawtoken1234",
+				CreatedAt:         created,
+				ExpiresOn:         expires,
+				RefreshToken:      base64.URLEncoding.EncodeToString([]byte("refresh4321")),
+			},
+		},
+		{
+			SessionState: sessions.SessionState{
+				Email:             "user@domain.com",
+				User:              "just-user",
+				PreferredUsername: "preferred",
+				AccessToken:       "token1234",
+				IDToken:           "idtoken1234",
+				CreatedAt:         created,
+				ExpiresOn:         expires,
+				RefreshToken:      "refresh4321",
+			},
+		},
+		{
+			SessionState: sessions.SessionState{
+				Email:        "user@domain.com",
+				User:         "just-user",
+				AccessToken:  base64.URLEncoding.EncodeToString([]byte("token1234")),
+				ExpiresOn:    expires,
+				RefreshToken: base64.URLEncoding.EncodeToString([]byte("refresh4321")),
+			},
+		},
+		{
+			SessionState: sessions.SessionState{
+				Email:        "user@domain.com",
+				User:         "just-user",
+				AccessToken:  base64.URLEncoding.EncodeToString([]byte("token1234")),
+				IDToken:      base64.URLEncoding.EncodeToString([]byte("idtoken1234")),
+				ExpiresOn:    expires,
+				RefreshToken: base64.URLEncoding.EncodeToString([]byte("refresh4321")),
+			},
+		},
+	}
+
+	for i, tc := range testCases {
+		compressed, err := tc.CompressedSessionState(i % 9)
+		ss, err := sessions.DecompressSessionState(compressed)
+
+		assert.NoError(t, err)
+		if assert.NotNil(t, ss) {
+			assert.Equal(t, tc.User, ss.User)
+			assert.Equal(t, tc.PreferredUsername, ss.PreferredUsername)
+			assert.Equal(t, tc.Email, ss.Email)
+			assert.Equal(t, tc.AccessToken, ss.AccessToken)
+			assert.Equal(t, tc.RefreshToken, ss.RefreshToken)
+			assert.Equal(t, tc.IDToken, ss.IDToken)
+			assert.Equal(t, tc.CreatedAt.Unix(), ss.CreatedAt.Unix())
+			assert.Equal(t, tc.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
+		}
+	}
+}
+
+// Confirm default uncompressed cookies passed into DecompressSessionState throw errors
+func TestDecompressSessionStateBadData(t *testing.T) {
+	created := time.Now()
+	createdJSON, _ := created.MarshalJSON()
+	createdString := string(createdJSON)
+	e := time.Now().Add(time.Duration(1) * time.Hour)
+	eJSON, _ := e.MarshalJSON()
+	eString := string(eJSON)
+	eUnix := e.Unix()
+
+	c, err := encryption.NewCipher([]byte(secret))
+	assert.NoError(t, err)
+
+	testCases := []testCase{
+		{
+			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+		},
+		{
+			Encoded: `{"Email":"user@domain.com"}`,
+		},
+		{
+			Encoded: `{"User":"just-user"}`,
+		},
+		{
+			Encoded: fmt.Sprintf(`{"Email":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
+		},
+		{
+			Encoded: fmt.Sprintf(`{"Email":"FsKKYrTWZWrxSOAqA/fTNAUZS5QWCqOBjuAbBlbVOw==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw==","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
+		},
+		{
+			Encoded: `{"Email":"EGTllJcOFC16b7LBYzLekaHAC5SMMSPdyUrg8hd25g==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw=="}`,
+		},
+		{
+			Encoded: `{"Email":"user@domain.com","User":"just-user","AccessToken":"X"}`,
+		},
+		{
+			Encoded: `{"Email":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
+		},
+		{
+			Encoded: "email:user@domain.com user:just-user",
+		},
+		{
+			Encoded: "email:user@domain.com user:just-user||||",
+		},
+		{
+			Encoded: "email:user@domain.com user:just-user",
+		},
+		{
+			Encoded: "email:user@domain.com user:just-user|||99999999999999999999|",
+		},
+		{
+			Encoded: fmt.Sprintf("email:user@domain.com user:just-user|I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==|%d|qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K", eUnix),
+		},
+		{
+			Encoded: fmt.Sprintf("email:user@domain.com user:just-user|I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==|xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==|%d|qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K", eUnix),
+		},
+	}
+
+	// Compressed Cookie code will attempt to decrypt and mangle the data
+	// The resulting LZ4 Decompression & MessagePack Unmarshal will error
+	for _, tc := range testCases {
+		b, err := c.DecryptCFB([]byte(tc.Encoded))
+		assert.NoError(t, err)
+
+		_, err = sessions.DecompressSessionState(b)
+		assert.Error(t, err)
+	}
 }
