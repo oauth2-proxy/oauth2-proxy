@@ -42,7 +42,7 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 
 	// A CookieCipher must exist to use compressed sessions (since they always include tokens)
 	if s.SessionOptions.CompressedSession && s.CookieCipher != nil {
-		value, err := utils.CompressedCookieForSession(ss, s.CookieCipher, s.SessionOptions.CompressionLevel)
+		value, err := utils.CompressedCookieForSession(ss, s.CookieCipher)
 		if err != nil {
 			return err
 		}
@@ -78,13 +78,13 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 			return nil, err
 		}
 		return session, nil
-	} else {
-		session, err := utils.SessionFromCookie(string(val), s.CookieCipher)
-		if err != nil {
-			return nil, err
-		}
-		return session, nil
 	}
+
+	session, err := utils.SessionFromCookie(string(val), s.CookieCipher)
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
 }
 
 // Clear clears any saved session information by writing a cookie to

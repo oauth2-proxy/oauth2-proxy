@@ -6,7 +6,6 @@ import "github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 type SessionOptions struct {
 	Type              string             `flag:"session-store-type" cfg:"session_store_type" env:"OAUTH2_PROXY_SESSION_STORE_TYPE"`
 	CompressedSession bool               `flag:"session-store-compression" cfg:"session_store_compression" env:"OAUTH2_PROXY_SESSION_STORE_COMPRESSION"`
-	CompressionLevel  int                `flag:"session-store-compression-level" cfg:"session_store_compression_level" env:"OAUTH2_PROXY_SESSION_STORE_COMPRESSION_LEVEL"`
 	Cipher            *encryption.Cipher `cfg:",internal"`
 	Redis             RedisStoreOptions  `cfg:",squash"`
 }

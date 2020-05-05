@@ -19,8 +19,8 @@ func SessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState
 }
 
 // CompressedCookieForSession serializes an lz4 compressed session state for storage in a cookie
-func CompressedCookieForSession(s *sessions.SessionState, c *encryption.Cipher, level int) ([]byte, error) {
-	compressed, err := s.CompressedSessionState(level)
+func CompressedCookieForSession(s *sessions.SessionState, c *encryption.Cipher) ([]byte, error) {
+	compressed, err := s.CompressedSessionState()
 	if err != nil {
 		return []byte{}, err
 	}

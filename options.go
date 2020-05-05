@@ -165,7 +165,6 @@ func NewOptions() *Options {
 		Session: options.SessionOptions{
 			Type:              "cookie",
 			CompressedSession: false,
-			CompressionLevel:  0,
 		},
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,

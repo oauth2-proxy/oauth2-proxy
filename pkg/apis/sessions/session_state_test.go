@@ -439,10 +439,10 @@ func TestCompressAndDecompressSessionState(t *testing.T) {
 		},
 	}
 
-	for i, tc := range testCases {
-		compressed, err := tc.CompressedSessionState(i % 9)
+	for _, tc := range testCases {
+		compressed, err := tc.CompressedSessionState()
+		assert.NoError(t, err)
 		ss, err := sessions.DecompressSessionState(compressed)
-
 		assert.NoError(t, err)
 		if assert.NotNil(t, ss) {
 			assert.Equal(t, tc.User, ss.User)

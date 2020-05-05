@@ -277,7 +277,7 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 
 // CompressedSessionState returns an lz4 compression of a MessagePack encoded session
 // Encryption & Base64 encoding are delegated to downstream consumers of this method.
-func (s *SessionState) CompressedSessionState(level int) ([]byte, error) {
+func (s *SessionState) CompressedSessionState() ([]byte, error) {
 	var (
 		ss  SessionState
 		err error
@@ -346,15 +346,9 @@ func (s *SessionState) CompressedSessionState(level int) ([]byte, error) {
 	// The Compress:Decompress ratio is 1:Many. LZ4 gives fastest decompress speeds
 	buf = new(bytes.Buffer)
 	zw = lz4.NewWriter(nil)
-	if level < 0 {
-		level = 0
-	}
-	if level > 9 {
-		level = 9
-	}
 	zw.Header = lz4.Header{
 		BlockMaxSize:     65536,
-		CompressionLevel: level,
+		CompressionLevel: 0,
 	}
 	zw.Reset(buf)
 

@@ -17,9 +17,8 @@ func (s *SessionEnvelope) Marshal() ([]byte, error) {
 
 func UnmarshalSessionEnvelope(packed []byte) (*SessionEnvelope, error) {
 	var se SessionEnvelope
-	var err error
 
-	err = msgpack.Unmarshal(packed, &se)
+	err := msgpack.Unmarshal(packed, &se)
 	if err != nil {
 		return nil, err
 	}

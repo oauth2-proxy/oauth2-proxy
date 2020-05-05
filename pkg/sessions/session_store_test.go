@@ -398,28 +398,6 @@ var _ = Describe("NewSessionStore", func() {
 			SessionStoreInterfaceTests(persistent)
 		})
 
-		Context("with compressed sessions & a custom compression level", func() {
-			BeforeEach(func() {
-				// Ciphers are required for compressed sessions
-				secret := make([]byte, 32)
-				_, err := rand.Read(secret)
-				Expect(err).ToNot(HaveOccurred())
-				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
-				cipher, err := encryption.NewCipher(utils.SecretBytes(cookieOpts.Secret))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(cipher).ToNot(BeNil())
-				opts.Cipher = cipher
-
-				opts.CompressedSession = true
-				opts.CompressionLevel = 5
-
-				ss, err = sessions.NewSessionStore(opts, cookieOpts)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			SessionStoreInterfaceTests(persistent)
-		})
-
 		Context("with compressed sessions enabled but no cipher", func() {
 			BeforeEach(func() {
 				opts.CompressedSession = true
@@ -437,7 +415,6 @@ var _ = Describe("NewSessionStore", func() {
 		ss = nil
 		opts = &options.SessionOptions{
 			CompressedSession: false,
-			CompressionLevel:  0,
 		}
 
 		// Set default options in CookieOptions
