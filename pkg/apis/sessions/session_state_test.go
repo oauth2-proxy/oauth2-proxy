@@ -467,9 +467,6 @@ func TestDecompressSessionStateBadData(t *testing.T) {
 	eString := string(eJSON)
 	eUnix := e.Unix()
 
-	c, err := encryption.NewCipher([]byte(secret))
-	assert.NoError(t, err)
-
 	testCases := []testCase{
 		{
 			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
@@ -515,13 +512,10 @@ func TestDecompressSessionStateBadData(t *testing.T) {
 		},
 	}
 
-	// Compressed Cookie code will attempt to decrypt and mangle the data
-	// The resulting LZ4 Decompression & MessagePack Unmarshal will error
+	// If uncompressed data sneaks in (ie Legacy Sessions), this should fail
+	var err error
 	for _, tc := range testCases {
-		b, err := c.DecryptCFB([]byte(tc.Encoded))
-		assert.NoError(t, err)
-
-		_, err = sessions.DecompressSessionState(b)
+		_, err = sessions.DecompressSessionState([]byte(tc.Encoded))
 		assert.Error(t, err)
 	}
 }

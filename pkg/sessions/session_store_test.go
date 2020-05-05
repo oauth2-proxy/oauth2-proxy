@@ -376,11 +376,69 @@ var _ = Describe("NewSessionStore", func() {
 
 			SessionStoreInterfaceTests(persistent)
 		})
+
+		Context("with compressed sessions enabled", func() {
+			BeforeEach(func() {
+				// Ciphers are required for compressed sessions
+				secret := make([]byte, 32)
+				_, err := rand.Read(secret)
+				Expect(err).ToNot(HaveOccurred())
+				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
+				cipher, err := encryption.NewCipher(utils.SecretBytes(cookieOpts.Secret))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cipher).ToNot(BeNil())
+				opts.Cipher = cipher
+
+				opts.CompressedSession = true
+
+				ss, err = sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			SessionStoreInterfaceTests(persistent)
+		})
+
+		Context("with compressed sessions & a custom compression level", func() {
+			BeforeEach(func() {
+				// Ciphers are required for compressed sessions
+				secret := make([]byte, 32)
+				_, err := rand.Read(secret)
+				Expect(err).ToNot(HaveOccurred())
+				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
+				cipher, err := encryption.NewCipher(utils.SecretBytes(cookieOpts.Secret))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cipher).ToNot(BeNil())
+				opts.Cipher = cipher
+
+				opts.CompressedSession = true
+				opts.CompressionLevel = 5
+
+				ss, err = sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			SessionStoreInterfaceTests(persistent)
+		})
+
+		Context("with compressed sessions enabled but no cipher", func() {
+			BeforeEach(func() {
+				opts.CompressedSession = true
+
+				var err error
+				ss, err = sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			SessionStoreInterfaceTests(persistent)
+		})
 	}
 
 	BeforeEach(func() {
 		ss = nil
-		opts = &options.SessionOptions{}
+		opts = &options.SessionOptions{
+			CompressedSession: false,
+			CompressionLevel:  0,
+		}
 
 		// Set default options in CookieOptions
 		cookieOpts = &options.CookieOptions{
@@ -394,12 +452,13 @@ var _ = Describe("NewSessionStore", func() {
 		}
 
 		session = &sessionsapi.SessionState{
-			AccessToken:  "AccessToken",
-			IDToken:      "IDToken",
-			ExpiresOn:    time.Now().Add(1 * time.Hour),
-			RefreshToken: "RefreshToken",
-			Email:        "john.doe@example.com",
-			User:         "john.doe",
+			AccessToken:       base64.URLEncoding.EncodeToString([]byte("AccessToken")),
+			IDToken:           base64.URLEncoding.EncodeToString([]byte("IDToken")),
+			ExpiresOn:         time.Now().Add(1 * time.Hour),
+			RefreshToken:      base64.URLEncoding.EncodeToString([]byte("RefreshToken")),
+			Email:             "john.doe@example.com",
+			User:              "john.doe",
+			PreferredUsername: "john",
 		}
 
 		request = httptest.NewRequest("GET", "http://example.com/", nil)

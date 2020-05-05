@@ -28,8 +28,9 @@ var _ sessions.SessionStore = &SessionStore{}
 // SessionStore is an implementation of the sessions.SessionStore
 // interface that stores sessions in client side cookies
 type SessionStore struct {
-	CookieOptions *options.CookieOptions
-	CookieCipher  *encryption.Cipher
+	SessionOptions *options.SessionOptions
+	CookieOptions  *options.CookieOptions
+	CookieCipher   *encryption.Cipher
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -38,11 +39,21 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 	if ss.CreatedAt.IsZero() {
 		ss.CreatedAt = time.Now()
 	}
-	value, err := utils.CookieForSession(ss, s.CookieCipher)
-	if err != nil {
-		return err
+
+	// A CookieCipher must exist to use compressed sessions (since they always include tokens)
+	if s.SessionOptions.CompressedSession && s.CookieCipher != nil {
+		value, err := utils.CompressedCookieForSession(ss, s.CookieCipher, s.SessionOptions.CompressionLevel)
+		if err != nil {
+			return err
+		}
+		s.setSessionCookie(rw, req, value, ss.CreatedAt)
+	} else {
+		value, err := utils.CookieForSession(ss, s.CookieCipher)
+		if err != nil {
+			return err
+		}
+		s.setSessionCookie(rw, req, []byte(value), ss.CreatedAt)
 	}
-	s.setSessionCookie(rw, req, value, ss.CreatedAt)
 	return nil
 }
 
@@ -59,11 +70,21 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := utils.SessionFromCookie(string(val), s.CookieCipher)
-	if err != nil {
-		return nil, err
+	// A CookieCipher must exist to use compressed sessions (since they always include tokens)
+	// TODO: As SessionEnvelope adopted widely, use that to pick up legacy/former sessions seamlessly
+	if s.SessionOptions.CompressedSession && s.CookieCipher != nil {
+		session, err := utils.SessionFromCompressedCookie(val, s.CookieCipher)
+		if err != nil {
+			return nil, err
+		}
+		return session, nil
+	} else {
+		session, err := utils.SessionFromCookie(string(val), s.CookieCipher)
+		if err != nil {
+			return nil, err
+		}
+		return session, nil
 	}
-	return session, nil
 }
 
 // Clear clears any saved session information by writing a cookie to
@@ -84,7 +105,7 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 }
 
 // setSessionCookie adds the user's session cookie to the response
-func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val string, created time.Time) {
+func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val []byte, created time.Time) {
 	for _, c := range s.makeSessionCookie(req, val, created) {
 		http.SetCookie(rw, c)
 	}
@@ -92,11 +113,12 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 
 // makeSessionCookie creates an http.Cookie containing the authenticated user's
 // authentication details
-func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
-	if value != "" {
-		value = encryption.SignedValue(s.CookieOptions.Secret, s.CookieOptions.Name, []byte(value), now)
+func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now time.Time) []*http.Cookie {
+	strValue := string(value)
+	if strValue != "" {
+		strValue = encryption.SignedValue(s.CookieOptions.Secret, s.CookieOptions.Name, value, now)
 	}
-	c := s.makeCookie(req, s.CookieOptions.Name, value, s.CookieOptions.Expire, now)
+	c := s.makeCookie(req, s.CookieOptions.Name, strValue, s.CookieOptions.Expire, now)
 	if len(c.Value) > 4096-len(s.CookieOptions.Name) {
 		return splitCookie(c)
 	}
@@ -118,8 +140,9 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 // the configuration given
 func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
 	return &SessionStore{
-		CookieCipher:  opts.Cipher,
-		CookieOptions: cookieOpts,
+		SessionOptions: opts,
+		CookieCipher:   opts.Cipher,
+		CookieOptions:  cookieOpts,
 	}, nil
 }
 
