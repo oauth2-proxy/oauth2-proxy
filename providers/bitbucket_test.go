@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -120,7 +121,7 @@ func TestBitbucketProviderGetEmailAddress(t *testing.T) {
 	p := testBitbucketProvider(bURL.Host, "", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -133,7 +134,7 @@ func TestBitbucketProviderGetEmailAddressAndGroup(t *testing.T) {
 	p := testBitbucketProvider(bURL.Host, "bioinformatics", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -151,7 +152,7 @@ func TestBitbucketProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -164,7 +165,7 @@ func TestBitbucketProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) 
 	p := testBitbucketProvider(bURL.Host, "", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, "", email)
 	assert.Equal(t, nil, err)
 }

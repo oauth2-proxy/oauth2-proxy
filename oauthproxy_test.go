@@ -397,6 +397,8 @@ type TestProvider struct {
 	GroupValidator func(string) bool
 }
 
+var _ providers.Provider = (*TestProvider)(nil)
+
 func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 	return &TestProvider{
 		ProviderData: &providers.ProviderData{
@@ -425,11 +427,11 @@ func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 	}
 }
 
-func (tp *TestProvider) GetEmailAddress(session *sessions.SessionState) (string, error) {
+func (tp *TestProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {
 	return tp.EmailAddress, nil
 }
 
-func (tp *TestProvider) ValidateSessionState(session *sessions.SessionState) bool {
+func (tp *TestProvider) ValidateSessionState(ctx context.Context, session *sessions.SessionState) bool {
 	return tp.ValidToken
 }
 

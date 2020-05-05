@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -62,8 +63,8 @@ func RequestJSON(req *http.Request, v interface{}) error {
 }
 
 // RequestUnparsedResponse performs a GET and returns the raw response object
-func RequestUnparsedResponse(url string, header http.Header) (resp *http.Response, err error) {
-	req, err := http.NewRequest("GET", url, nil)
+func RequestUnparsedResponse(ctx context.Context, url string, header http.Header) (resp *http.Response, err error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error performing get request: %w", err)
 	}

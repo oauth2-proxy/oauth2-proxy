@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -13,6 +14,8 @@ import (
 type NextcloudProvider struct {
 	*ProviderData
 }
+
+var _ Provider = (*NextcloudProvider)(nil)
 
 // NewNextcloudProvider initiates a new NextcloudProvider
 func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
@@ -27,8 +30,8 @@ func getNextcloudHeader(accessToken string) http.Header {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *NextcloudProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
-	req, err := http.NewRequest("GET",
+func (p *NextcloudProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET",
 		p.ValidateURL.String(), nil)
 	if err != nil {
 		logger.Printf("failed building request %s", err)

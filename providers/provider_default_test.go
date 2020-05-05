@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 
 func TestRefresh(t *testing.T) {
 	p := &ProviderData{}
-	refreshed, err := p.RefreshSessionIfNeeded(&sessions.SessionState{
+	refreshed, err := p.RefreshSessionIfNeeded(context.Background(), &sessions.SessionState{
 		ExpiresOn: time.Now().Add(time.Duration(-11) * time.Minute),
 	})
 	assert.Equal(t, false, refreshed)
