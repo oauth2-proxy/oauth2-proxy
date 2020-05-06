@@ -6,7 +6,26 @@
 
 ## Breaking Changes
 
+## Changes since v5.1.1
+
+# v5.1.1
+
+## Release Highlights
+
+N/A
+
+## Important Notes
+
+- (Security) Fix for [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-j7px-6hwj-hpjg).
+  - A bad actor using encoded whitespace in redirect URIs can redirect a session to another domain
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v5.1.0
+
+- [GHSA-j7px-6hwj-hpjg](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-j7px-6hwj-hpjg) Fix Open Redirect Vulnerability with encoded Whitespace characters (@JoelSpeed)
 
 # v5.1.0
 

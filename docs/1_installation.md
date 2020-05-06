@@ -9,7 +9,7 @@ nav_order: 1
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v4.0.0`)
+    a. Download [Prebuilt Binary](https://github.com/pusher/oauth2_proxy/releases) (current release is `v5.1.1`)
 
     b. Build with `$ go get github.com/pusher/oauth2_proxy` which will put the binary in `$GOROOT/bin`
 
@@ -19,7 +19,7 @@ Prebuilt binaries can be validated by extracting the file and verifying it again
 
 ```
 $ sha256sum -c sha256sum.txt 2>&1 | grep OK
-oauth2_proxy-4.0.0.linux-amd64: OK
+oauth2_proxy-5.1.1.linux-amd64: OK
 ```
 
 2.  [Select a Provider and Register an OAuth Application with a Provider](auth-configuration)
