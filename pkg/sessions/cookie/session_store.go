@@ -41,7 +41,7 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 	}
 
 	// A CookieCipher must exist to use compressed sessions (since they always include tokens)
-	if s.SessionOptions.CompressedSession && s.CookieCipher != nil {
+	if s.SessionOptions.CompressSession && s.CookieCipher != nil {
 		value, err := utils.CompressedCookieForSession(ss, s.CookieCipher)
 		if err != nil {
 			return err
@@ -72,7 +72,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 
 	// A CookieCipher must exist to use compressed sessions (since they always include tokens)
 	// TODO: As SessionEnvelope adopted widely, use that to pick up legacy/former sessions seamlessly
-	if s.SessionOptions.CompressedSession && s.CookieCipher != nil {
+	if s.SessionOptions.CompressSession && s.CookieCipher != nil {
 		session, err := utils.SessionFromCompressedCookie(val, s.CookieCipher)
 		if err != nil {
 			return nil, err

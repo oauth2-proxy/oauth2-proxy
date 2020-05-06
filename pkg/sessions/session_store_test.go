@@ -389,7 +389,7 @@ var _ = Describe("NewSessionStore", func() {
 				Expect(cipher).ToNot(BeNil())
 				opts.Cipher = cipher
 
-				opts.CompressedSession = true
+				opts.CompressSession = true
 
 				ss, err = sessions.NewSessionStore(opts, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
@@ -400,7 +400,7 @@ var _ = Describe("NewSessionStore", func() {
 
 		Context("with compressed sessions enabled but no cipher", func() {
 			BeforeEach(func() {
-				opts.CompressedSession = true
+				opts.CompressSession = true
 
 				var err error
 				ss, err = sessions.NewSessionStore(opts, cookieOpts)
@@ -414,7 +414,7 @@ var _ = Describe("NewSessionStore", func() {
 	BeforeEach(func() {
 		ss = nil
 		opts = &options.SessionOptions{
-			CompressedSession: false,
+			CompressSession: false,
 		}
 
 		// Set default options in CookieOptions

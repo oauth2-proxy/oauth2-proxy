@@ -4,10 +4,10 @@ import "github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 
 // SessionOptions contains configuration options for the SessionStore providers.
 type SessionOptions struct {
-	Type              string             `flag:"session-store-type" cfg:"session_store_type" env:"OAUTH2_PROXY_SESSION_STORE_TYPE"`
-	CompressedSession bool               `flag:"session-store-compression" cfg:"session_store_compression" env:"OAUTH2_PROXY_SESSION_STORE_COMPRESSION"`
-	Cipher            *encryption.Cipher `cfg:",internal"`
-	Redis             RedisStoreOptions  `cfg:",squash"`
+	Type            string             `flag:"session-store-type" cfg:"session_store_type" env:"OAUTH2_PROXY_SESSION_STORE_TYPE"`
+	CompressSession bool               `flag:"session-store-compression" cfg:"session_store_compression" env:"OAUTH2_PROXY_SESSION_STORE_COMPRESSION"`
+	Cipher          *encryption.Cipher `cfg:",internal"`
+	Redis           RedisStoreOptions  `cfg:",squash"`
 }
 
 // CookieSessionStoreType is used to indicate the CookieSessionStore should be

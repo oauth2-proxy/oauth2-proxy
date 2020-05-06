@@ -163,8 +163,8 @@ func NewOptions() *Options {
 			Refresh:  time.Duration(0),
 		},
 		Session: options.SessionOptions{
-			Type:              "cookie",
-			CompressedSession: false,
+			Type:            "cookie",
+			CompressSession: false,
 		},
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
