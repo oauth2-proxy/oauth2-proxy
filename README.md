@@ -21,7 +21,7 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v5.1.0`)
+    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v5.1.1`)
 
     b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy` which will put the binary in `$GOROOT/bin`
 
@@ -41,7 +41,8 @@ oauth2-proxy-x.y.z.linux-amd64: OK
 
 ## Security
 
-If you are running a version older than v5.0.0 we **strongly recommend you please update** to a current version. RE: [open redirect vulnverability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-qqxw-m5fj-f7gv)
+If you are running a version older than v5.1.0 we **strongly recommend you please update** to a current version.
+See [open redirect vulnverability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-j7px-6hwj-hpjg) for details.
 
 ## Docs
 
