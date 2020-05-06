@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -46,6 +47,26 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 			}
 		}
 	}
+
+	// Fallack to lingering SHA1 legacy cookies
+	// TODO: Remove this
+	legacySig := LegacyCookieSignature(seed, cookie.Name, parts[0], parts[1])
+	if checkHmac(parts[2], legacySig) {
+		ts, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return
+		}
+		t = time.Unix(int64(ts), 0)
+		if t.After(time.Now().Add(expiration*-1)) && t.Before(time.Now().Add(time.Minute*5)) {
+			// it's a valid cookie. now get the contents
+			rawValue, err := base64.URLEncoding.DecodeString(parts[0])
+			if err == nil {
+				value = string(rawValue)
+				ok = true
+				return
+			}
+		}
+	}
 	return
 }
 
@@ -59,6 +80,17 @@ func SignedValue(seed string, key string, value string, now time.Time) string {
 }
 
 func cookieSignature(args ...string) string {
+	h := hmac.New(sha256.New, []byte(args[0]))
+	for _, arg := range args[1:] {
+		h.Write([]byte(arg))
+	}
+	var b []byte
+	b = h.Sum(b)
+	return base64.URLEncoding.EncodeToString(b)
+}
+
+// TODO: Remove this after appropriate time so existing SHA1 sessions are expired
+func LegacyCookieSignature(args ...string) string {
 	h := hmac.New(sha1.New, []byte(args[0]))
 	for _, arg := range args[1:] {
 		h.Write([]byte(arg))
