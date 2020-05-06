@@ -323,6 +323,61 @@ func TestIsValidRedirect(t *testing.T) {
 			Redirect:       "http://a.sub.anyport.bar:8081/redirect",
 			ExpectedResult: true,
 		},
+		{
+			Desc:           "openRedirect1",
+			Redirect:       "/\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectSpace1",
+			Redirect:       "/ /evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectSpace2",
+			Redirect:       "/ \\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectTab1",
+			Redirect:       "/\t/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectTab2",
+			Redirect:       "/\t\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectVerticalTab1",
+			Redirect:       "/\v/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectVerticalTab2",
+			Redirect:       "/\v\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectNewLine1",
+			Redirect:       "/\n/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectNewLine2",
+			Redirect:       "/\n\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectCarriageReturn1",
+			Redirect:       "/\r/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectCarriageReturn2",
+			Redirect:       "/\r\\evil.com",
+			ExpectedResult: false,
+		},
 	}
 
 	for _, tc := range testCases {
