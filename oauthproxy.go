@@ -57,6 +57,10 @@ var SignatureHeaders = []string{
 var (
 	// ErrNeedsLogin means the user should be redirected to the login page
 	ErrNeedsLogin = errors.New("redirect to login page")
+
+	// Used to check final redirects are not susceptible to open redirects.
+	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
+	invalidRedirectRegex = regexp.MustCompile(`^/(\s|\v)?(/|\\)`)
 )
 
 // OAuthProxy is the main authentication proxy
@@ -578,7 +582,7 @@ func validOptionalPort(port string) bool {
 // IsValidRedirect checks whether the redirect URL is whitelisted
 func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	switch {
-	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !strings.HasPrefix(redirect, "/\\"):
+	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !invalidRedirectRegex.MatchString(redirect):
 		return true
 	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
 		redirectURL, err := url.Parse(redirect)
