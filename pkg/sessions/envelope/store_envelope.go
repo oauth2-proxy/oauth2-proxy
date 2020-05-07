@@ -4,6 +4,17 @@ import (
 	"github.com/vmihailenco/msgpack/v4"
 )
 
+const (
+	// Types
+	CookieType = 0
+	RedisType  = 1
+
+	// Encryption Algorithms
+	NoEncryption  = 0
+	CFBEncryption = 1
+	GCMEncryption = 2
+)
+
 // StoreEnvelope wraps cookies that various session stores use
 // This allows easy detection of improper session formats as configurations change
 type StoreEnvelope struct {

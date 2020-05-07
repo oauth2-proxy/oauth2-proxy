@@ -311,6 +311,10 @@ func (store *SessionStore) storeValue(ctx context.Context, value []byte, expirat
 	if err != nil {
 		return "", fmt.Errorf("error initiating cipher block: %s", err)
 	}
+
+	// Use AES-GCM since it provides authenticated encryption
+	// AES-CFB used in cookies has the cookie signing SHA to get around the lack of
+	// authentication in AES-CFB
 	ciphertext, err := c.EncryptGCM(value)
 	if err != nil {
 		return "", fmt.Errorf("error encrypting session: %s", err)

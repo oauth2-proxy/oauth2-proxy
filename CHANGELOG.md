@@ -25,7 +25,7 @@
 
 ## Changes since v5.1.0
 
-- [#523](https://github.com/oauth2-proxy/oauth2-proxy/pull/523) Allow compressing a cookie session with --session-store-compression (@NickMeves)
+- [#523](https://github.com/oauth2-proxy/oauth2-proxy/pull/523) Allow compressing a session with --session-store-compression (@NickMeves)
 - [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to PFlag to remove StringArray (@JoelSpeed)
 - [#484](https://github.com/oauth2-proxy/oauth2-proxy/pull/484) Replace configuration loading with Viper (@JoelSpeed)
 - [#499](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support generic claims in addition to email

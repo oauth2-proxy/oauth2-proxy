@@ -19,6 +19,9 @@ func CookieForSession(s *sessions.SessionState, c *encryption.Cipher, compressed
 	encType := envelope.NoEncryption
 	if c != nil {
 		encType = envelope.CFBEncryption
+		// Use AES-CFB on encrypted data in cookies since the same cookie secret is reused
+		// AES-GCM is weak to a repeat of the IV Nonce + Secret
+		// The AES-CFB lack of authentication is mitigated by SHA signing the cookie.
 		data, err = c.EncryptCFB(data)
 		if err != nil {
 			return []byte{}, err
