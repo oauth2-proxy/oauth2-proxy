@@ -12,6 +12,23 @@ import (
 )
 
 func TestLoadTemplates(t *testing.T) {
+	data := struct {
+		TestString string
+	}{
+		TestString: "Testing",
+	}
+	
+	templates := loadTemplates("")
+	assert.NotEqual(t, templates, nil)
+
+	var defaultSignin bytes.Buffer
+	templates.ExecuteTemplate(&defaultSignin, "sign_in.html", data)
+	assert.Equal(t, "\n<!DOCTYPE html>", defaultSignin.String()[0:16])
+
+	var defaultError bytes.Buffer
+	templates.ExecuteTemplate(&defaultError, "error.html", data)
+	assert.Equal(t, "\n<!DOCTYPE html>", defaultError.String()[0:16])
+
 	dir, err := ioutil.TempDir("", "templatetest")
 	if err != nil {
 		log.Fatal(err)
@@ -27,14 +44,8 @@ func TestLoadTemplates(t *testing.T) {
 	if err := ioutil.WriteFile(errorFile, []byte(templateHTML), 0666); err != nil {
 		log.Fatal(err)
 	}
-	templates := loadTemplates(dir)
+	templates = loadTemplates(dir)
 	assert.NotEqual(t, templates, nil)
-
-	data := struct {
-		TestString string
-	}{
-		TestString: "Testing",
-	}
 
 	var sitpl bytes.Buffer
 	templates.ExecuteTemplate(&sitpl, "sign_in.html", data)
