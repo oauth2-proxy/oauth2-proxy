@@ -17,7 +17,7 @@ func TestLoadTemplates(t *testing.T) {
 	}{
 		TestString: "Testing",
 	}
-	
+
 	templates := loadTemplates("")
 	assert.NotEqual(t, templates, nil)
 
