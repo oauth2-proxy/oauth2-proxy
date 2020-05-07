@@ -721,6 +721,45 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 		proxy.addHeadersForProxying(rw, req, session)
 		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
 	}
+
+	// If stripping is disabled (default), headers set by client persist to backend
+	{
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase3", nil)
+		req.Header.Set("X-Forwarded-User", userName)
+		req.Header.Set("X-Forwarded-Email", emailAddress)
+		req.Header.Set("X-Forwarded-Preferred-Username", userName)
+
+		proxy, err := NewOAuthProxy(opts, func(email string) bool {
+			return email == emailAddress
+		})
+		assert.NoError(t, err)
+		if proxy.skipAuthStripHeaders {
+			proxy.stripAuthHeaders(req)
+		}
+		assert.Equal(t, userName, req.Header.Get("X-Forwarded-User"))
+		assert.Equal(t, emailAddress, req.Header.Get("X-Forwarded-Email"))
+		assert.Equal(t, userName, req.Header.Get("X-Forwarded-Preferred-Username"))
+	}
+
+	// If stripping is enabled, headers set by client persist to backend
+	opts.SkipAuthStripHeaders = true
+	{
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase2", nil)
+		req.Header.Set("X-Forwarded-User", userName)
+		req.Header.Set("X-Forwarded-Email", emailAddress)
+		req.Header.Set("X-Forwarded-Preferred-Username", userName)
+
+		proxy, err := NewOAuthProxy(opts, func(email string) bool {
+			return email == emailAddress
+		})
+		assert.NoError(t, err)
+		if proxy.skipAuthStripHeaders {
+			proxy.stripAuthHeaders(req)
+		}
+		assert.Equal(t, "", req.Header.Get("X-Forwarded-User"))
+		assert.Equal(t, "", req.Header.Get("X-Forwarded-Email"))
+		assert.Equal(t, "", req.Header.Get("X-Forwarded-Preferred-Username"))
+	}
 }
 
 type PassAccessTokenTest struct {

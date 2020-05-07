@@ -116,6 +116,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
 | `--skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
 | `--skip-auth-regex` | string | bypass authentication for requests paths that match (may be given multiple times) | |
+| `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers for request paths in --skip-auth-regex | false |
 | `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
 | `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
 | `--skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
