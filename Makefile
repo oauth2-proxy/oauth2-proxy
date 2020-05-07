@@ -88,6 +88,11 @@ validate-go-version:
 	fi
 
 # local-env can be used to interact with the local development environment
+# eg:
+#    make local-env-up 					# Bring up a basic test environment
+#    make local-env-down 				# Tear down the basic test environment
+#    make local-env-nginx-up 		# Bring up an nginx based test environment
+#    make local-env-nginx-down 	# Tead down the nginx based test environment
 .PHONY: local-env-%
 local-env-%:
 	make -C contrib/local-environment $*
