@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"strconv"
@@ -26,8 +27,7 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 	if len(parts) != 3 {
 		return
 	}
-	sig := cookieSignature(seed, cookie.Name, parts[0], parts[1])
-	if checkHmac(parts[2], sig) {
+	if checkSignature(parts[2], seed, cookie.Name, parts[0], parts[1]) {
 		ts, err := strconv.Atoi(parts[1])
 		if err != nil {
 			return
@@ -47,26 +47,6 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 			}
 		}
 	}
-
-	// Fallack to lingering SHA1 legacy cookies
-	// TODO: Remove this
-	legacySig := LegacyCookieSignature(seed, cookie.Name, parts[0], parts[1])
-	if checkHmac(parts[2], legacySig) {
-		ts, err := strconv.Atoi(parts[1])
-		if err != nil {
-			return
-		}
-		t = time.Unix(int64(ts), 0)
-		if t.After(time.Now().Add(expiration*-1)) && t.Before(time.Now().Add(time.Minute*5)) {
-			// it's a valid cookie. now get the contents
-			rawValue, err := base64.URLEncoding.DecodeString(parts[0])
-			if err == nil {
-				value = string(rawValue)
-				ok = true
-				return
-			}
-		}
-	}
 	return
 }
 
@@ -74,13 +54,13 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 func SignedValue(seed string, key string, value string, now time.Time) string {
 	encodedValue := base64.URLEncoding.EncodeToString([]byte(value))
 	timeStr := fmt.Sprintf("%d", now.Unix())
-	sig := cookieSignature(seed, key, encodedValue, timeStr)
+	sig := cookieSignature(sha256.New, seed, key, encodedValue, timeStr)
 	cookieVal := fmt.Sprintf("%s|%s|%s", encodedValue, timeStr, sig)
 	return cookieVal
 }
 
-func cookieSignature(args ...string) string {
-	h := hmac.New(sha256.New, []byte(args[0]))
+func cookieSignature(signer func() hash.Hash, args ...string) string {
+	h := hmac.New(signer, []byte(args[0]))
 	for _, arg := range args[1:] {
 		h.Write([]byte(arg))
 	}
@@ -89,15 +69,15 @@ func cookieSignature(args ...string) string {
 	return base64.URLEncoding.EncodeToString(b)
 }
 
-// TODO: Remove this after appropriate time so existing SHA1 sessions are expired
-func LegacyCookieSignature(args ...string) string {
-	h := hmac.New(sha1.New, []byte(args[0]))
-	for _, arg := range args[1:] {
-		h.Write([]byte(arg))
+func checkSignature(signature string, args ...string) bool {
+	checkSig := cookieSignature(sha256.New, args...)
+	if checkHmac(signature, checkSig) {
+		return true
 	}
-	var b []byte
-	b = h.Sum(b)
-	return base64.URLEncoding.EncodeToString(b)
+
+	// TODO: After appropriate rollout window, remove support for SHA1
+	legacySig := cookieSignature(sha1.New, args...)
+	return checkHmac(signature, legacySig)
 }
 
 func checkHmac(input, expected string) bool {
