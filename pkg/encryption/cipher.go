@@ -93,31 +93,6 @@ func NewCipher(secret []byte) (*Cipher, error) {
 	return &Cipher{Block: c}, err
 }
 
-// Encrypt a value for use in a cookie
-func (c *Cipher) Encrypt(value string) (string, error) {
-	encrypted, err := c.EncryptCFB([]byte(value))
-	if err != nil {
-		return "", err
-	}
-
-	return base64.StdEncoding.EncodeToString(encrypted), nil
-}
-
-// Decrypt a value from a cookie to it's original string
-func (c *Cipher) Decrypt(s string) (string, error) {
-	encrypted, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		return "", fmt.Errorf("failed to decrypt cookie value %s", err)
-	}
-
-	decrypted, err := c.DecryptCFB(encrypted)
-	if err != nil {
-		return "", err
-	}
-
-	return string(decrypted), nil
-}
-
 // Encrypt with AES CFB on raw bytes
 func (c *Cipher) EncryptCFB(value []byte) ([]byte, error) {
 	ciphertext := make([]byte, aes.BlockSize+len(value))
@@ -145,4 +120,51 @@ func (c *Cipher) DecryptCFB(ciphertext []byte) ([]byte, error) {
 	stream.XORKeyStream(ciphertext, ciphertext)
 
 	return ciphertext, nil
+}
+
+// Encrypt with AES GCM on raw bytes
+func (c *Cipher) EncryptGCM(value []byte) ([]byte, error) {
+	gcm, err := cipher.NewGCM(c.Block)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	ciphertext := gcm.Seal(nonce, nonce, value, nil)
+	return ciphertext, nil
+}
+
+// Decrypt a AES GCM ciphertext
+func (c *Cipher) DecryptGCM(ciphertext []byte) ([]byte, error) {
+	gcm, err := cipher.NewGCM(c.Block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+	return plaintext, nil
+}
+
+// Decrypt a value from a cookie to it's original string
+// Legacy included automatic base64 encoding in the encrypt stage
+func (c *Cipher) LegacyDecrypt(s string) (string, error) {
+	encrypted, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt cookie value %s", err)
+	}
+
+	decrypted, err := c.DecryptCFB(encrypted)
+	if err != nil {
+		return "", err
+	}
+
+	return string(decrypted), nil
 }

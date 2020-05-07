@@ -245,26 +245,18 @@ var _ = Describe("NewSessionStore", func() {
 				})
 
 				It("loads a session equal to the original session", func() {
-					if cookieOpts.Secret == "" {
-						// Only Email and User stored in session when encrypted
-						Expect(loadedSession.Email).To(Equal(session.Email))
-						Expect(loadedSession.User).To(Equal(session.User))
-					} else {
-						// All fields stored in session if encrypted
+					// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
+					l := *loadedSession
+					l.CreatedAt = time.Time{}
+					l.ExpiresOn = time.Time{}
+					s := *session
+					s.CreatedAt = time.Time{}
+					s.ExpiresOn = time.Time{}
+					Expect(l).To(Equal(s))
 
-						// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
-						l := *loadedSession
-						l.CreatedAt = time.Time{}
-						l.ExpiresOn = time.Time{}
-						s := *session
-						s.CreatedAt = time.Time{}
-						s.ExpiresOn = time.Time{}
-						Expect(l).To(Equal(s))
-
-						// Compare time.Time separately
-						Expect(loadedSession.CreatedAt.Equal(session.CreatedAt)).To(BeTrue())
-						Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
-					}
+					// Compare time.Time separately
+					Expect(loadedSession.CreatedAt.Equal(session.CreatedAt)).To(BeTrue())
+					Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
 				})
 			}
 

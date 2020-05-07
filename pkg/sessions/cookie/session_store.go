@@ -40,20 +40,11 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 		ss.CreatedAt = time.Now()
 	}
 
-	// A CookieCipher must exist to use compressed sessions (since they always include tokens)
-	if s.SessionOptions.CompressSession && s.CookieCipher != nil {
-		value, err := utils.CompressedCookieForSession(ss, s.CookieCipher)
-		if err != nil {
-			return err
-		}
-		s.setSessionCookie(rw, req, value, ss.CreatedAt)
-	} else {
-		value, err := utils.CookieForSession(ss, s.CookieCipher)
-		if err != nil {
-			return err
-		}
-		s.setSessionCookie(rw, req, []byte(value), ss.CreatedAt)
+	value, err := utils.CookieForSession(ss, s.CookieCipher, s.SessionOptions.CompressSession)
+	if err != nil {
+		return err
 	}
+	s.setSessionCookie(rw, req, []byte(value), ss.CreatedAt)
 	return nil
 }
 
@@ -70,17 +61,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	// A CookieCipher must exist to use compressed sessions (since they always include tokens)
-	// TODO: As SessionEnvelope adopted widely, use that to pick up legacy/former sessions seamlessly
-	if s.SessionOptions.CompressSession && s.CookieCipher != nil {
-		session, err := utils.SessionFromCompressedCookie(val, s.CookieCipher)
-		if err != nil {
-			return nil, err
-		}
-		return session, nil
-	}
-
-	session, err := utils.SessionFromCookie(string(val), s.CookieCipher)
+	session, err := utils.SessionFromCookie(val, s.CookieCipher)
 	if err != nil {
 		return nil, err
 	}

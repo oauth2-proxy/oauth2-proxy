@@ -8,7 +8,9 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/envelope"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -32,9 +34,10 @@ type TicketData struct {
 // SessionStore is an implementation of the sessions.SessionStore
 // interface that stores sessions in redis
 type SessionStore struct {
-	CookieCipher  *encryption.Cipher
-	CookieOptions *options.CookieOptions
-	Client        Client
+	SessionOptions *options.SessionOptions
+	CookieCipher   *encryption.Cipher
+	CookieOptions  *options.CookieOptions
+	Client         Client
 }
 
 // NewRedisSessionStore initialises a new instance of the SessionStore from
@@ -46,9 +49,10 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 	}
 
 	rs := &SessionStore{
-		Client:        client,
-		CookieCipher:  opts.Cipher,
-		CookieOptions: cookieOpts,
+		SessionOptions: opts,
+		Client:         client,
+		CookieCipher:   opts.Cipher,
+		CookieOptions:  cookieOpts,
 	}
 	return rs, nil
 
@@ -109,7 +113,7 @@ func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
 }
 
 // Save takes a sessions.SessionState and stores the information from it
-// to redies, and adds a new ticket cookie on the HTTP response writer
+// to redis, and adds a new ticket cookie on the HTTP response writer
 func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
 	if s.CreatedAt.IsZero() {
 		s.CreatedAt = time.Now()
@@ -118,7 +122,7 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 	// Old sessions that we are refreshing would have a request cookie
 	// New sessions don't, so we ignore the error. storeValue will check requestCookie
 	requestCookie, _ := req.Cookie(store.CookieOptions.Name)
-	value, err := s.EncodeSessionState(store.CookieCipher)
+	value, err := s.EncodeSessionState(store.SessionOptions.CompressSession)
 	if err != nil {
 		return err
 	}
@@ -128,9 +132,20 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 		return err
 	}
 
+	se := &envelope.StoreEnvelope{
+		Type:       envelope.RedisType,
+		Encryption: envelope.GCMEncryption,
+		Compressed: store.SessionOptions.CompressSession,
+		Data:       []byte(ticketString),
+	}
+	envelopedTicket, err := se.Marshal()
+	if err != nil {
+		return err
+	}
+
 	ticketCookie := store.makeCookie(
 		req,
-		ticketString,
+		envelopedTicket,
 		store.CookieOptions.Expire,
 		s.CreatedAt,
 	)
@@ -152,15 +167,54 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 		return nil, fmt.Errorf("cookie signature not valid")
 	}
 	ctx := req.Context()
-	session, err := store.loadSessionFromString(ctx, string(val))
+	session, err := store.loadSessionFromTicket(ctx, val)
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %s", err)
 	}
 	return session, nil
 }
 
-// loadSessionFromString loads the session based on the ticket value
-func (store *SessionStore) loadSessionFromString(ctx context.Context, value string) (*sessions.SessionState, error) {
+// loadSessionFromTicket loads the session based on the ticket value
+func (store *SessionStore) loadSessionFromTicket(ctx context.Context, value []byte) (*sessions.SessionState, error) {
+	se, err := envelope.UnmarshalStoreEnvelope(value)
+	if err != nil {
+		// If we fail, assume a legacy ticket cookie was passed
+		return store.legacyV5LoadSessionFromTicket(ctx, string(value))
+	}
+
+	if se.Type != envelope.RedisType {
+		return nil, errors.New("invalid session store type")
+	}
+
+	ticket, err := decodeTicket(store.CookieOptions.Name, string(se.Data))
+	if err != nil {
+		return nil, err
+	}
+
+	resultBytes, err := store.Client.Get(ctx, ticket.asHandle(store.CookieOptions.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	if se.Encryption == envelope.GCMEncryption {
+		c, err := encryption.NewCipher(ticket.Secret)
+		if err != nil {
+			return nil, fmt.Errorf("error initiating cipher block: %s", err)
+		}
+		resultBytes, err = c.DecryptGCM(resultBytes)
+		if err != nil {
+			return nil, fmt.Errorf("error decrypting session: %s", err)
+		}
+	}
+
+	session, err := sessions.DecodeSessionState(resultBytes, store.SessionOptions.CompressSession)
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+func (store *SessionStore) legacyV5LoadSessionFromTicket(ctx context.Context, value string) (*sessions.SessionState, error) {
 	ticket, err := decodeTicket(store.CookieOptions.Name, value)
 	if err != nil {
 		return nil, err
@@ -179,7 +233,7 @@ func (store *SessionStore) loadSessionFromString(ctx context.Context, value stri
 	stream := cipher.NewCFBDecrypter(block, ticket.Secret)
 	stream.XORKeyStream(resultBytes, resultBytes)
 
-	session, err := sessions.DecodeSessionState(string(resultBytes), store.CookieCipher)
+	session, err := sessions.LegacyV5DecodeSessionState(string(resultBytes), store.CookieCipher)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +246,7 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 	// We go ahead and clear the cookie first, always.
 	clearCookie := store.makeCookie(
 		req,
-		"",
+		[]byte(""),
 		time.Hour*-1,
 		time.Now(),
 	)
@@ -212,9 +266,15 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 		return fmt.Errorf("cookie signature not valid")
 	}
 
+	strValue := string(val)
+	se, err := envelope.UnmarshalStoreEnvelope(val)
+	if err == nil && se.Type == envelope.RedisType {
+		strValue = string(se.Data)
+	}
+
 	// We only return an error if we had an issue with redis
 	// If there's an issue decoding the ticket, ignore it
-	ticket, _ := decodeTicket(store.CookieOptions.Name, string(val))
+	ticket, _ := decodeTicket(store.CookieOptions.Name, strValue)
 	if ticket != nil {
 		ctx := req.Context()
 		err := store.Client.Del(ctx, ticket.asHandle(store.CookieOptions.Name))
@@ -226,35 +286,35 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 }
 
 // makeCookie makes a cookie, signing the value if present
-func (store *SessionStore) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
-	if value != "" {
-		value = encryption.SignedValue(store.CookieOptions.Secret, store.CookieOptions.Name, []byte(value), now)
+func (store *SessionStore) makeCookie(req *http.Request, value []byte, expires time.Duration, now time.Time) *http.Cookie {
+	strValue := string(value)
+	if strValue != "" {
+		strValue = encryption.SignedValue(store.CookieOptions.Secret, store.CookieOptions.Name, value, now)
 	}
 	return cookies.MakeCookieFromOptions(
 		req,
 		store.CookieOptions.Name,
-		value,
+		strValue,
 		store.CookieOptions,
 		expires,
 		now,
 	)
 }
 
-func (store *SessionStore) storeValue(ctx context.Context, value string, expiration time.Duration, requestCookie *http.Cookie) (string, error) {
+func (store *SessionStore) storeValue(ctx context.Context, value []byte, expiration time.Duration, requestCookie *http.Cookie) (string, error) {
 	ticket, err := store.getTicket(requestCookie)
 	if err != nil {
 		return "", fmt.Errorf("error getting ticket: %v", err)
 	}
 
-	ciphertext := make([]byte, len(value))
-	block, err := aes.NewCipher(ticket.Secret)
+	c, err := encryption.NewCipher(ticket.Secret)
 	if err != nil {
-		return "", fmt.Errorf("error initiating cipher block %s", err)
+		return "", fmt.Errorf("error initiating cipher block: %s", err)
 	}
-
-	// Use secret as the Initialization Vector too, because each entry has it's own key
-	stream := cipher.NewCFBEncrypter(block, ticket.Secret)
-	stream.XORKeyStream(ciphertext, []byte(value))
+	ciphertext, err := c.EncryptGCM(value)
+	if err != nil {
+		return "", fmt.Errorf("error encrypting session: %s", err)
+	}
 
 	handle := ticket.asHandle(store.CookieOptions.Name)
 	err = store.Client.Set(ctx, handle, ciphertext, expiration)
@@ -278,8 +338,14 @@ func (store *SessionStore) getTicket(requestCookie *http.Cookie) (*TicketData, e
 		return newTicket()
 	}
 
+	strValue := string(val)
+	se, err := envelope.UnmarshalStoreEnvelope(val)
+	if err == nil && se.Type == envelope.RedisType {
+		strValue = string(se.Data)
+	}
+
 	// Valid cookie, decode the ticket
-	ticket, err := decodeTicket(store.CookieOptions.Name, string(val))
+	ticket, err := decodeTicket(store.CookieOptions.Name, strValue)
 	if err != nil {
 		// If we can't decode the ticket we have to create a new one
 		return newTicket()

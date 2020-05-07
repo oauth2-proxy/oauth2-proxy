@@ -15,10 +15,6 @@ const secret = "0123456789abcdefghijklmnopqrstuv"
 const altSecret = "0000000000abcdefghijklmnopqrstuv"
 
 func TestSessionStateSerialization(t *testing.T) {
-	c, err := encryption.NewCipher([]byte(secret))
-	assert.Equal(t, nil, err)
-	c2, err := encryption.NewCipher([]byte(altSecret))
-	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
@@ -28,10 +24,11 @@ func TestSessionStateSerialization(t *testing.T) {
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken:      "refresh4321",
 	}
-	encoded, err := s.EncodeSessionState(c)
+	encoded, err := s.EncodeSessionState(false)
 	assert.Equal(t, nil, err)
 
-	ss, err := sessions.DecodeSessionState(encoded, c)
+	// No user results in a user auto-decoded and set from email
+	ss, err := sessions.DecodeSessionState(encoded, false)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@domain.com", ss.User)
@@ -42,26 +39,9 @@ func TestSessionStateSerialization(t *testing.T) {
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
-
-	// ensure a different cipher can't decode properly (ie: it gets gibberish)
-	ss, err = sessions.DecodeSessionState(encoded, c2)
-	t.Logf("%#v", ss)
-	assert.Equal(t, nil, err)
-	assert.NotEqual(t, "user@domain.com", ss.User)
-	assert.NotEqual(t, s.Email, ss.Email)
-	assert.NotEqual(t, s.PreferredUsername, ss.PreferredUsername)
-	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
-	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
-	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
-	assert.NotEqual(t, s.IDToken, ss.IDToken)
-	assert.NotEqual(t, s.RefreshToken, ss.RefreshToken)
 }
 
 func TestSessionStateSerializationWithUser(t *testing.T) {
-	c, err := encryption.NewCipher([]byte(secret))
-	assert.Equal(t, nil, err)
-	c2, err := encryption.NewCipher([]byte(altSecret))
-	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
 		User:              "just-user",
 		PreferredUsername: "ju",
@@ -71,10 +51,10 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken:      "refresh4321",
 	}
-	encoded, err := s.EncodeSessionState(c)
+	encoded, err := s.EncodeSessionState(false)
 	assert.Equal(t, nil, err)
 
-	ss, err := sessions.DecodeSessionState(encoded, c)
+	ss, err := sessions.DecodeSessionState(encoded, false)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, s.User, ss.User)
@@ -84,21 +64,9 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
-
-	// ensure a different cipher can't decode properly (ie: it gets gibberish)
-	ss, err = sessions.DecodeSessionState(encoded, c2)
-	t.Logf("%#v", ss)
-	assert.Equal(t, nil, err)
-	assert.NotEqual(t, s.User, ss.User)
-	assert.NotEqual(t, s.Email, ss.Email)
-	assert.NotEqual(t, s.PreferredUsername, ss.PreferredUsername)
-	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
-	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
-	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
-	assert.NotEqual(t, s.RefreshToken, ss.RefreshToken)
 }
 
-func TestSessionStateSerializationNoCipher(t *testing.T) {
+func TestSessionStateSerializationCompressed(t *testing.T) {
 	s := &sessions.SessionState{
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
@@ -107,20 +75,20 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken:      "refresh4321",
 	}
-	encoded, err := s.EncodeSessionState(nil)
+	encoded, err := s.EncodeSessionState(true)
 	assert.Equal(t, nil, err)
 
-	// only email should have been serialized
-	ss, err := sessions.DecodeSessionState(encoded, nil)
+	// No user results in a user auto-decoded and set from email
+	ss, err := sessions.DecodeSessionState(encoded, true)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@domain.com", ss.User)
 	assert.Equal(t, s.Email, ss.Email)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
-	assert.Equal(t, "", ss.AccessToken)
-	assert.Equal(t, "", ss.RefreshToken)
+	assert.Equal(t, s.AccessToken, ss.AccessToken)
+	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
 }
 
-func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
+func TestSessionStateSerializationCompressedWithUser(t *testing.T) {
 	s := &sessions.SessionState{
 		User:              "just-user",
 		Email:             "user@domain.com",
@@ -130,17 +98,16 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken:      "refresh4321",
 	}
-	encoded, err := s.EncodeSessionState(nil)
+	encoded, err := s.EncodeSessionState(true)
 	assert.Equal(t, nil, err)
 
-	// only email should have been serialized
-	ss, err := sessions.DecodeSessionState(encoded, nil)
+	ss, err := sessions.DecodeSessionState(encoded, true)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, s.User, ss.User)
 	assert.Equal(t, s.Email, ss.Email)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
-	assert.Equal(t, "", ss.AccessToken)
-	assert.Equal(t, "", ss.RefreshToken)
+	assert.Equal(t, s.AccessToken, ss.AccessToken)
+	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
 }
 
 func TestExpired(t *testing.T) {
@@ -161,51 +128,8 @@ type testCase struct {
 	Error   bool
 }
 
-// TestEncodeSessionState tests EncodeSessionState with the test vector
-//
-// Currently only tests without cipher here because we have no way to mock
-// the random generator used in EncodeSessionState.
-func TestEncodeSessionState(t *testing.T) {
-	c := time.Now()
-	e := time.Now().Add(time.Duration(1) * time.Hour)
-
-	testCases := []testCase{
-		{
-			SessionState: sessions.SessionState{
-				Email: "user@domain.com",
-				User:  "just-user",
-			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
-		},
-		{
-			SessionState: sessions.SessionState{
-				Email:        "user@domain.com",
-				User:         "just-user",
-				AccessToken:  "token1234",
-				IDToken:      "rawtoken1234",
-				CreatedAt:    c,
-				ExpiresOn:    e,
-				RefreshToken: "refresh4321",
-			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
-		},
-	}
-
-	for i, tc := range testCases {
-		encoded, err := tc.EncodeSessionState(tc.Cipher)
-		t.Logf("i:%d Encoded:%#vsessions.SessionState:%#v Error:%#v", i, encoded, tc.SessionState, err)
-		if tc.Error {
-			assert.Error(t, err)
-			assert.Empty(t, encoded)
-			continue
-		}
-		assert.NoError(t, err)
-		assert.JSONEq(t, tc.Encoded, encoded)
-	}
-}
-
-// TestDecodeSessionState testssessions.DecodeSessionState with the test vector
-func TestDecodeSessionState(t *testing.T) {
+// TestDecodeSessionState tests sessions.LegacyV5DecodeSessionState with the test vector
+func TestLegacyV5DecodeSessionState(t *testing.T) {
 	created := time.Now()
 	createdJSON, _ := created.MarshalJSON()
 	createdString := string(createdJSON)
@@ -323,7 +247,7 @@ func TestDecodeSessionState(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		ss, err := sessions.DecodeSessionState(tc.Encoded, tc.Cipher)
+		ss, err := sessions.LegacyV5DecodeSessionState(tc.Encoded, tc.Cipher)
 		t.Logf("i:%d Encoded:%#vsessions.SessionState:%#v Error:%#v", i, tc.Encoded, ss, err)
 		if tc.Error {
 			assert.Error(t, err)
@@ -353,7 +277,7 @@ func TestSessionStateAge(t *testing.T) {
 	assert.Equal(t, time.Hour, ss.Age().Round(time.Minute))
 }
 
-func TestCompressAndDecompressSessionState(t *testing.T) {
+func TestEncodeAndDecodeSessionState(t *testing.T) {
 	created := time.Now()
 	expires := time.Now().Add(time.Duration(1) * time.Hour)
 
@@ -439,10 +363,29 @@ func TestCompressAndDecompressSessionState(t *testing.T) {
 		},
 	}
 
+	// Without Compression
 	for _, tc := range testCases {
-		compressed, err := tc.CompressedSessionState()
+		data, err := tc.EncodeSessionState(false)
 		assert.NoError(t, err)
-		ss, err := sessions.DecompressSessionState(compressed)
+		ss, err := sessions.DecodeSessionState(data, false)
+		assert.NoError(t, err)
+		if assert.NotNil(t, ss) {
+			assert.Equal(t, tc.User, ss.User)
+			assert.Equal(t, tc.PreferredUsername, ss.PreferredUsername)
+			assert.Equal(t, tc.Email, ss.Email)
+			assert.Equal(t, tc.AccessToken, ss.AccessToken)
+			assert.Equal(t, tc.RefreshToken, ss.RefreshToken)
+			assert.Equal(t, tc.IDToken, ss.IDToken)
+			assert.Equal(t, tc.CreatedAt.Unix(), ss.CreatedAt.Unix())
+			assert.Equal(t, tc.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
+		}
+	}
+
+	// With Compression
+	for _, tc := range testCases {
+		data, err := tc.EncodeSessionState(false)
+		assert.NoError(t, err)
+		ss, err := sessions.DecodeSessionState(data, false)
 		assert.NoError(t, err)
 		if assert.NotNil(t, ss) {
 			assert.Equal(t, tc.User, ss.User)
@@ -457,8 +400,8 @@ func TestCompressAndDecompressSessionState(t *testing.T) {
 	}
 }
 
-// Confirm default uncompressed cookies passed into DecompressSessionState throw errors
-func TestDecompressSessionStateBadData(t *testing.T) {
+// Confirm legacy JSON cookies passed into DecodeSessionState throw errors
+func TestDecodeSessionStateBadData(t *testing.T) {
 	created := time.Now()
 	createdJSON, _ := created.MarshalJSON()
 	createdString := string(createdJSON)
@@ -515,7 +458,11 @@ func TestDecompressSessionStateBadData(t *testing.T) {
 	// If uncompressed data sneaks in (ie Legacy Sessions), this should fail
 	var err error
 	for _, tc := range testCases {
-		_, err = sessions.DecompressSessionState([]byte(tc.Encoded))
+		_, err = sessions.DecodeSessionState([]byte(tc.Encoded), false)
+		assert.Error(t, err)
+	}
+	for _, tc := range testCases {
+		_, err = sessions.DecodeSessionState([]byte(tc.Encoded), true)
 		assert.Error(t, err)
 	}
 }

@@ -8,4 +8,5 @@ const (
 	// Encryption Algorithms
 	NoEncryption  = 0
 	CFBEncryption = 1
+	GCMEncryption = 2
 )
