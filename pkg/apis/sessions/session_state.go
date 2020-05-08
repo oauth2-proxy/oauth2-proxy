@@ -67,39 +67,15 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 		ss.PreferredUsername = s.PreferredUsername
 	} else {
 		ss = *s
-		var err error
-		if ss.Email != "" {
-			ss.Email, err = c.Encrypt(ss.Email)
-			if err != nil {
-				return "", err
-			}
-		}
-		if ss.User != "" {
-			ss.User, err = c.Encrypt(ss.User)
-			if err != nil {
-				return "", err
-			}
-		}
-		if ss.PreferredUsername != "" {
-			ss.PreferredUsername, err = c.Encrypt(ss.PreferredUsername)
-			if err != nil {
-				return "", err
-			}
-		}
-		if ss.AccessToken != "" {
-			ss.AccessToken, err = c.Encrypt(ss.AccessToken)
-			if err != nil {
-				return "", err
-			}
-		}
-		if ss.IDToken != "" {
-			ss.IDToken, err = c.Encrypt(ss.IDToken)
-			if err != nil {
-				return "", err
-			}
-		}
-		if ss.RefreshToken != "" {
-			ss.RefreshToken, err = c.Encrypt(ss.RefreshToken)
+		for _, s := range []*string{
+			&ss.Email,
+			&ss.User,
+			&ss.PreferredUsername,
+			&ss.AccessToken,
+			&ss.IDToken,
+			&ss.RefreshToken,
+		} {
+			err := c.EncryptInto(s)
 			if err != nil {
 				return "", err
 			}
@@ -140,26 +116,14 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 				ss.User = decryptedUser
 			}
 		}
-		if ss.PreferredUsername != "" {
-			ss.PreferredUsername, err = c.Decrypt(ss.PreferredUsername)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if ss.AccessToken != "" {
-			ss.AccessToken, err = c.Decrypt(ss.AccessToken)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if ss.IDToken != "" {
-			ss.IDToken, err = c.Decrypt(ss.IDToken)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if ss.RefreshToken != "" {
-			ss.RefreshToken, err = c.Decrypt(ss.RefreshToken)
+
+		for _, s := range []*string{
+			&ss.PreferredUsername,
+			&ss.AccessToken,
+			&ss.IDToken,
+			&ss.RefreshToken,
+		} {
+			err := c.DecryptInto(s)
 			if err != nil {
 				return nil, err
 			}
