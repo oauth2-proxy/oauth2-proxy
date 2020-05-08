@@ -11,7 +11,9 @@ import (
 
 // CookieForSession serializes a session state for storage in a cookie
 func CookieForSession(s *sessions.SessionState, c *encryption.Cipher, compressed bool) ([]byte, error) {
-	data, err := s.EncodeSessionState(compressed)
+	// if no cipher, don't include tokens
+	minimal := c == nil
+	data, err := s.EncodeSessionState(compressed, minimal)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -67,7 +69,6 @@ func SessionFromCookie(v []byte, c *encryption.Cipher) (*sessions.SessionState, 
 		}
 	}
 
-	// We assume data in this method is compressed
 	ss, err = sessions.DecodeSessionState(se.Data, se.Compressed)
 	if err != nil {
 		return nil, err

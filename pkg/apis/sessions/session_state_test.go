@@ -24,7 +24,7 @@ func TestSessionStateSerialization(t *testing.T) {
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken:      "refresh4321",
 	}
-	encoded, err := s.EncodeSessionState(false)
+	encoded, err := s.EncodeSessionState(false, false)
 	assert.Equal(t, nil, err)
 
 	// No user results in a user auto-decoded and set from email
@@ -41,6 +41,33 @@ func TestSessionStateSerialization(t *testing.T) {
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
 }
 
+func TestSessionStateSerializationMinimal(t *testing.T) {
+	s := &sessions.SessionState{
+		Email:             "user@domain.com",
+		PreferredUsername: "user",
+		AccessToken:       "token1234",
+		IDToken:           "rawtoken1234",
+		CreatedAt:         time.Now(),
+		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		RefreshToken:      "refresh4321",
+	}
+	encoded, err := s.EncodeSessionState(false, true)
+	assert.Equal(t, nil, err)
+
+	// No user results in a user auto-decoded and set from email
+	ss, err := sessions.DecodeSessionState(encoded, false)
+	t.Logf("%#v", ss)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "user@domain.com", ss.User)
+	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
+	assert.Equal(t, "", ss.AccessToken)
+	assert.Equal(t, "", ss.IDToken)
+	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
+	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
+	assert.Equal(t, "", ss.RefreshToken)
+}
+
 func TestSessionStateSerializationWithUser(t *testing.T) {
 	s := &sessions.SessionState{
 		User:              "just-user",
@@ -51,7 +78,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken:      "refresh4321",
 	}
-	encoded, err := s.EncodeSessionState(false)
+	encoded, err := s.EncodeSessionState(false, false)
 	assert.Equal(t, nil, err)
 
 	ss, err := sessions.DecodeSessionState(encoded, false)
@@ -75,7 +102,7 @@ func TestSessionStateSerializationCompressed(t *testing.T) {
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken:      "refresh4321",
 	}
-	encoded, err := s.EncodeSessionState(true)
+	encoded, err := s.EncodeSessionState(true, false)
 	assert.Equal(t, nil, err)
 
 	// No user results in a user auto-decoded and set from email
@@ -98,7 +125,7 @@ func TestSessionStateSerializationCompressedWithUser(t *testing.T) {
 		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
 		RefreshToken:      "refresh4321",
 	}
-	encoded, err := s.EncodeSessionState(true)
+	encoded, err := s.EncodeSessionState(true, false)
 	assert.Equal(t, nil, err)
 
 	ss, err := sessions.DecodeSessionState(encoded, true)
@@ -365,7 +392,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 
 	// Without Compression
 	for _, tc := range testCases {
-		data, err := tc.EncodeSessionState(false)
+		data, err := tc.EncodeSessionState(false, false)
 		assert.NoError(t, err)
 		ss, err := sessions.DecodeSessionState(data, false)
 		assert.NoError(t, err)
@@ -381,9 +408,27 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 		}
 	}
 
+	// Minimal
+	for _, tc := range testCases {
+		data, err := tc.EncodeSessionState(false, true)
+		assert.NoError(t, err)
+		ss, err := sessions.DecodeSessionState(data, false)
+		assert.NoError(t, err)
+		if assert.NotNil(t, ss) {
+			assert.Equal(t, tc.User, ss.User)
+			assert.Equal(t, tc.PreferredUsername, ss.PreferredUsername)
+			assert.Equal(t, tc.Email, ss.Email)
+			assert.Equal(t, "", ss.AccessToken)
+			assert.Equal(t, "", ss.RefreshToken)
+			assert.Equal(t, "", ss.IDToken)
+			assert.Equal(t, tc.CreatedAt.Unix(), ss.CreatedAt.Unix())
+			assert.Equal(t, tc.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
+		}
+	}
+
 	// With Compression
 	for _, tc := range testCases {
-		data, err := tc.EncodeSessionState(false)
+		data, err := tc.EncodeSessionState(false, false)
 		assert.NoError(t, err)
 		ss, err := sessions.DecodeSessionState(data, false)
 		assert.NoError(t, err)

@@ -245,18 +245,27 @@ var _ = Describe("NewSessionStore", func() {
 				})
 
 				It("loads a session equal to the original session", func() {
-					// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
-					l := *loadedSession
-					l.CreatedAt = time.Time{}
-					l.ExpiresOn = time.Time{}
-					s := *session
-					s.CreatedAt = time.Time{}
-					s.ExpiresOn = time.Time{}
-					Expect(l).To(Equal(s))
+					if cookieOpts.Secret == "" {
+						// Tokens skipped with no secret in minimal mode (for cookie sessions at least)
+						Expect(loadedSession.Email).To(Equal(session.Email))
+						Expect(loadedSession.User).To(Equal(session.User))
+						Expect(loadedSession.PreferredUsername).To(Equal(session.PreferredUsername))
+					} else {
+						// All fields stored in session if encrypted
 
-					// Compare time.Time separately
-					Expect(loadedSession.CreatedAt.Equal(session.CreatedAt)).To(BeTrue())
-					Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
+						// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
+						l := *loadedSession
+						l.CreatedAt = time.Time{}
+						l.ExpiresOn = time.Time{}
+						s := *session
+						s.CreatedAt = time.Time{}
+						s.ExpiresOn = time.Time{}
+						Expect(l).To(Equal(s))
+
+						// Compare time.Time separately
+						Expect(loadedSession.CreatedAt.Equal(session.CreatedAt)).To(BeTrue())
+						Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
+					}
 				})
 			}
 
@@ -369,7 +378,7 @@ var _ = Describe("NewSessionStore", func() {
 			SessionStoreInterfaceTests(persistent)
 		})
 
-		Context("with compressed sessions enabled", func() {
+		Context("with compressed sessions & cipher enabled", func() {
 			BeforeEach(func() {
 				// Ciphers are required for compressed sessions
 				secret := make([]byte, 32)
@@ -421,10 +430,10 @@ var _ = Describe("NewSessionStore", func() {
 		}
 
 		session = &sessionsapi.SessionState{
-			AccessToken:       base64.URLEncoding.EncodeToString([]byte("AccessToken")),
-			IDToken:           base64.URLEncoding.EncodeToString([]byte("IDToken")),
+			AccessToken:       "AccessToken",
+			IDToken:           "IDToken",
 			ExpiresOn:         time.Now().Add(1 * time.Hour),
-			RefreshToken:      base64.URLEncoding.EncodeToString([]byte("RefreshToken")),
+			RefreshToken:      "RefreshToken",
 			Email:             "john.doe@example.com",
 			User:              "john.doe",
 			PreferredUsername: "john",

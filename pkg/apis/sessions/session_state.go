@@ -75,7 +75,7 @@ func (s *SessionState) String() string {
 
 // EncodeSessionState returns an lz4 compression (optional) of a MessagePack encoded session
 // Encryption & Base64 encoding are delegated to downstream consumers of this method.
-func (s *SessionState) EncodeSessionState(compress bool) ([]byte, error) {
+func (s *SessionState) EncodeSessionState(compress bool, minimal bool) ([]byte, error) {
 	var (
 		ss  SessionState
 		err error
@@ -96,6 +96,11 @@ func (s *SessionState) EncodeSessionState(compress bool) ([]byte, error) {
 	}
 	if !ss.ExpiresOn.IsZero() {
 		sse.ExpiresOn = &ss.ExpiresOn
+	}
+	if minimal {
+		sse.AccessToken = ""
+		sse.IDToken = ""
+		sse.RefreshToken = ""
 	}
 
 	//Marshal & Compress the SessionStateCompressed

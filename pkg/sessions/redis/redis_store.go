@@ -122,7 +122,7 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 	// Old sessions that we are refreshing would have a request cookie
 	// New sessions don't, so we ignore the error. storeValue will check requestCookie
 	requestCookie, _ := req.Cookie(store.CookieOptions.Name)
-	value, err := s.EncodeSessionState(store.SessionOptions.CompressSession)
+	value, err := s.EncodeSessionState(store.SessionOptions.CompressSession, false)
 	if err != nil {
 		return err
 	}
