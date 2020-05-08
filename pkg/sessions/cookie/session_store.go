@@ -30,7 +30,6 @@ var _ sessions.SessionStore = &SessionStore{}
 type SessionStore struct {
 	SessionOptions *options.SessionOptions
 	CookieOptions  *options.CookieOptions
-	CookieCipher   *encryption.Cipher
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -40,7 +39,7 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 		ss.CreatedAt = time.Now()
 	}
 
-	value, err := utils.CookieForSession(ss, s.CookieCipher, s.SessionOptions.CompressSession)
+	value, err := utils.CookieForSession(ss, s.SessionOptions.Cipher, s.SessionOptions.CompressSession)
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := utils.SessionFromCookie(val, s.CookieCipher)
+	session, err := utils.SessionFromCookie(val, s.SessionOptions.Cipher)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +121,6 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
 	return &SessionStore{
 		SessionOptions: opts,
-		CookieCipher:   opts.Cipher,
 		CookieOptions:  cookieOpts,
 	}, nil
 }

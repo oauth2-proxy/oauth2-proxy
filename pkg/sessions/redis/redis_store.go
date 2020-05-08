@@ -35,7 +35,6 @@ type TicketData struct {
 // interface that stores sessions in redis
 type SessionStore struct {
 	SessionOptions *options.SessionOptions
-	CookieCipher   *encryption.Cipher
 	CookieOptions  *options.CookieOptions
 	Client         Client
 }
@@ -51,7 +50,6 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 	rs := &SessionStore{
 		SessionOptions: opts,
 		Client:         client,
-		CookieCipher:   opts.Cipher,
 		CookieOptions:  cookieOpts,
 	}
 	return rs, nil
@@ -125,7 +123,7 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 
 	// If no cipher, don't include tokens
 	// Presence of a Cipher is an indicator if options are set that require tokens.
-	minimal := store.CookieCipher == nil
+	minimal := store.SessionOptions.Cipher == nil
 	value, err := s.EncodeSessionState(store.SessionOptions.CompressSession, minimal)
 	if err != nil {
 		return err
@@ -238,7 +236,7 @@ func (store *SessionStore) legacyV5LoadSessionFromTicket(ctx context.Context, va
 	stream := cipher.NewCFBDecrypter(block, ticket.Secret)
 	stream.XORKeyStream(resultBytes, resultBytes)
 
-	session, err := sessions.LegacyV5DecodeSessionState(string(resultBytes), store.CookieCipher)
+	session, err := sessions.LegacyV5DecodeSessionState(string(resultBytes), store.SessionOptions.Cipher)
 	if err != nil {
 		return nil, err
 	}
