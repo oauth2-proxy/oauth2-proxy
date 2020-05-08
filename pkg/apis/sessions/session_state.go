@@ -2,7 +2,6 @@ package sessions
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,26 +10,19 @@ import (
 
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	AccessToken       string    `json:",omitempty"`
-	IDToken           string    `json:",omitempty"`
-	CreatedAt         time.Time `json:"-"`
-	ExpiresOn         time.Time `json:"-"`
-	RefreshToken      string    `json:",omitempty"`
-	Email             string    `json:",omitempty"`
-	User              string    `json:",omitempty"`
-	PreferredUsername string    `json:",omitempty"`
-}
-
-// SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
-type SessionStateJSON struct {
-	*SessionState
-	CreatedAt *time.Time `json:",omitempty"`
-	ExpiresOn *time.Time `json:",omitempty"`
+	AccessToken       string     `json:",omitempty"`
+	IDToken           string     `json:",omitempty"`
+	CreatedAt         *time.Time `json:",omitempty"`
+	ExpiresOn         *time.Time `json:",omitempty"`
+	RefreshToken      string     `json:",omitempty"`
+	Email             string     `json:",omitempty"`
+	User              string     `json:",omitempty"`
+	PreferredUsername string     `json:",omitempty"`
 }
 
 // IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
-	if !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(time.Now()) {
+	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(time.Now()) {
 		return true
 	}
 	return false
@@ -38,8 +30,8 @@ func (s *SessionState) IsExpired() bool {
 
 // Age returns the age of a session
 func (s *SessionState) Age() time.Duration {
-	if !s.CreatedAt.IsZero() {
-		return time.Now().Truncate(time.Second).Sub(s.CreatedAt)
+	if s.CreatedAt != nil && !s.CreatedAt.IsZero() {
+		return time.Now().Truncate(time.Second).Sub(*s.CreatedAt)
 	}
 	return 0
 }
@@ -113,42 +105,22 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 			}
 		}
 	}
-	// Embed SessionState and ExpiresOn pointer into SessionStateJSON
-	ssj := &SessionStateJSON{SessionState: &ss}
-	if !ss.CreatedAt.IsZero() {
-		ssj.CreatedAt = &ss.CreatedAt
-	}
-	if !ss.ExpiresOn.IsZero() {
-		ssj.ExpiresOn = &ss.ExpiresOn
-	}
-	b, err := json.Marshal(ssj)
+
+	b, err := json.Marshal(ss)
 	return string(b), err
 }
 
 // DecodeSessionState decodes the session cookie string into a SessionState
 func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
-	var ssj SessionStateJSON
-	var ss *SessionState
-	err := json.Unmarshal([]byte(v), &ssj)
+	var ss SessionState
+	err := json.Unmarshal([]byte(v), &ss)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling session: %w", err)
-	}
-	if ssj.SessionState == nil {
-		return nil, errors.New("expected session state to not be nil")
-	}
-
-	// Extract SessionState and CreatedAt,ExpiresOn value from SessionStateJSON
-	ss = ssj.SessionState
-	if ssj.CreatedAt != nil {
-		ss.CreatedAt = *ssj.CreatedAt
-	}
-	if ssj.ExpiresOn != nil {
-		ss.ExpiresOn = *ssj.ExpiresOn
 	}
 
 	if c == nil {
 		// Load only Email and User when cipher is unavailable
-		ss = &SessionState{
+		ss = SessionState{
 			Email:             ss.Email,
 			User:              ss.User,
 			PreferredUsername: ss.PreferredUsername,
@@ -193,5 +165,5 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 			}
 		}
 	}
-	return ss, nil
+	return &ss, nil
 }

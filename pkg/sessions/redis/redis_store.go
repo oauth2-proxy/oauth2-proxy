@@ -111,8 +111,9 @@ func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
 // Save takes a sessions.SessionState and stores the information from it
 // to redies, and adds a new ticket cookie on the HTTP response writer
 func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
-	if s.CreatedAt.IsZero() {
-		s.CreatedAt = time.Now()
+	if s.CreatedAt == nil || s.CreatedAt.IsZero() {
+		now := time.Now()
+		s.CreatedAt = &now
 	}
 
 	// Old sessions that we are refreshing would have a request cookie
@@ -132,7 +133,7 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 		req,
 		ticketString,
 		store.CookieOptions.Expire,
-		s.CreatedAt,
+		*s.CreatedAt,
 	)
 
 	http.SetCookie(rw, ticketCookie)
