@@ -250,6 +250,10 @@ var _ = Describe("NewSessionStore", func() {
 						Expect(loadedSession.Email).To(Equal(session.Email))
 						Expect(loadedSession.User).To(Equal(session.User))
 						Expect(loadedSession.PreferredUsername).To(Equal(session.PreferredUsername))
+						Expect(loadedSession.IDToken).To(Equal(""))
+						Expect(loadedSession.AccessToken).To(Equal(""))
+						Expect(loadedSession.RefreshToken).To(Equal(""))
+
 					} else {
 						// All fields stored in session if encrypted
 

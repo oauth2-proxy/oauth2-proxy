@@ -122,10 +122,15 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 	// Old sessions that we are refreshing would have a request cookie
 	// New sessions don't, so we ignore the error. storeValue will check requestCookie
 	requestCookie, _ := req.Cookie(store.CookieOptions.Name)
-	value, err := s.EncodeSessionState(store.SessionOptions.CompressSession, false)
+
+	// If no cipher, don't include tokens
+	// Presence of a Cipher is an indicator if options are set that require tokens.
+	minimal := store.CookieCipher == nil
+	value, err := s.EncodeSessionState(store.SessionOptions.CompressSession, minimal)
 	if err != nil {
 		return err
 	}
+
 	ctx := req.Context()
 	ticketString, err := store.storeValue(ctx, value, store.CookieOptions.Expire, requestCookie)
 	if err != nil {
