@@ -6,6 +6,7 @@ release
 *.exe
 .env
 .bundle
+c.out
 
 # Go.gitignore
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
