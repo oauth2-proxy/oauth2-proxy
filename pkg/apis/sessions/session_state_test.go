@@ -15,13 +15,15 @@ const secret = "0123456789abcdefghijklmnopqrstuv"
 const altSecret = "0000000000abcdefghijklmnopqrstuv"
 
 func TestSessionStateSerialization(t *testing.T) {
+	created := time.Now()
+	expires := time.Now().Add(time.Duration(1) * time.Hour)
 	s := &sessions.SessionState{
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
 		IDToken:           "rawtoken1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		CreatedAt:         created,
+		ExpiresOn:         expires,
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(false, false)
@@ -39,22 +41,33 @@ func TestSessionStateSerialization(t *testing.T) {
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
+
+	// Assert original object wasn't mangled
+	assert.Equal(t, s.Email, "user@domain.com")
+	assert.Equal(t, s.PreferredUsername, "user")
+	assert.Equal(t, s.AccessToken, "token1234")
+	assert.Equal(t, s.IDToken, "rawtoken1234")
+	assert.Equal(t, s.CreatedAt, created)
+	assert.Equal(t, s.ExpiresOn, expires)
+	assert.Equal(t, s.RefreshToken, "refresh4321")
 }
 
 func TestSessionStateSerializationMinimal(t *testing.T) {
+	created := time.Now()
+	expires := time.Now().Add(time.Duration(1) * time.Hour)
 	s := &sessions.SessionState{
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
 		IDToken:           "rawtoken1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		CreatedAt:         created,
+		ExpiresOn:         expires,
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(false, true)
 	assert.Equal(t, nil, err)
 
-	// No user results in a user auto-decoded and set from email
+	// Minimal results in tokens not encoded (and not decoded)
 	ss, err := sessions.DecodeSessionState(encoded, false)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
@@ -66,16 +79,27 @@ func TestSessionStateSerializationMinimal(t *testing.T) {
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.Equal(t, "", ss.RefreshToken)
+
+	// Assert original object wasn't mangled
+	assert.Equal(t, s.Email, "user@domain.com")
+	assert.Equal(t, s.PreferredUsername, "user")
+	assert.Equal(t, s.AccessToken, "token1234")
+	assert.Equal(t, s.IDToken, "rawtoken1234")
+	assert.Equal(t, s.CreatedAt, created)
+	assert.Equal(t, s.ExpiresOn, expires)
+	assert.Equal(t, s.RefreshToken, "refresh4321")
 }
 
 func TestSessionStateSerializationWithUser(t *testing.T) {
+	created := time.Now()
+	expires := time.Now().Add(time.Duration(1) * time.Hour)
 	s := &sessions.SessionState{
 		User:              "just-user",
-		PreferredUsername: "ju",
+		PreferredUsername: "user",
 		Email:             "user@domain.com",
 		AccessToken:       "token1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		CreatedAt:         created,
+		ExpiresOn:         expires,
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(false, false)
@@ -91,15 +115,25 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
 	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
+
+	// Assert original object wasn't mangled
+	assert.Equal(t, s.Email, "user@domain.com")
+	assert.Equal(t, s.PreferredUsername, "user")
+	assert.Equal(t, s.AccessToken, "token1234")
+	assert.Equal(t, s.CreatedAt, created)
+	assert.Equal(t, s.ExpiresOn, expires)
+	assert.Equal(t, s.RefreshToken, "refresh4321")
 }
 
 func TestSessionStateSerializationCompressed(t *testing.T) {
+	created := time.Now()
+	expires := time.Now().Add(time.Duration(1) * time.Hour)
 	s := &sessions.SessionState{
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		CreatedAt:         created,
+		ExpiresOn:         expires,
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(true, false)
@@ -113,16 +147,27 @@ func TestSessionStateSerializationCompressed(t *testing.T) {
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.AccessToken, ss.AccessToken)
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
+
+	// Assert original object wasn't mangled
+	assert.Equal(t, s.Email, "user@domain.com")
+	assert.Equal(t, s.PreferredUsername, "user")
+	assert.Equal(t, s.AccessToken, "token1234")
+	assert.Equal(t, s.CreatedAt, created)
+	assert.Equal(t, s.ExpiresOn, expires)
+	assert.Equal(t, s.RefreshToken, "refresh4321")
 }
 
 func TestSessionStateSerializationCompressedWithUser(t *testing.T) {
+	created := time.Now()
+	expires := time.Now().Add(time.Duration(1) * time.Hour)
 	s := &sessions.SessionState{
 		User:              "just-user",
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		IDToken:           "rawtoken1234",
+		CreatedAt:         created,
+		ExpiresOn:         expires,
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(true, false)
@@ -134,7 +179,17 @@ func TestSessionStateSerializationCompressedWithUser(t *testing.T) {
 	assert.Equal(t, s.Email, ss.Email)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.AccessToken, ss.AccessToken)
+	assert.Equal(t, s.IDToken, ss.IDToken)
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
+
+	// Assert original object wasn't mangled
+	assert.Equal(t, s.Email, "user@domain.com")
+	assert.Equal(t, s.PreferredUsername, "user")
+	assert.Equal(t, s.AccessToken, "token1234")
+	assert.Equal(t, s.IDToken, "rawtoken1234")
+	assert.Equal(t, s.CreatedAt, created)
+	assert.Equal(t, s.ExpiresOn, expires)
+	assert.Equal(t, s.RefreshToken, "refresh4321")
 }
 
 func TestExpired(t *testing.T) {
