@@ -211,7 +211,6 @@ func TestDecodeSessionState(t *testing.T) {
 	e := time.Now().Add(time.Duration(1) * time.Hour)
 	eJSON, _ := e.MarshalJSON()
 	eString := string(eJSON)
-	eUnix := e.Unix()
 
 	c, err := encryption.NewCipher([]byte(secret))
 	assert.NoError(t, err)
@@ -274,50 +273,6 @@ func TestDecodeSessionState(t *testing.T) {
 			Encoded: `{"Email":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
 			Cipher:  c,
 			Error:   true,
-		},
-		{
-			SessionState: sessions.SessionState{
-				User:  "just-user",
-				Email: "user@domain.com",
-			},
-			Encoded: "email:user@domain.com user:just-user",
-		},
-		{
-			Encoded: "email:user@domain.com user:just-user||||",
-			Error:   true,
-		},
-		{
-			Encoded: "email:user@domain.com user:just-user",
-			Cipher:  c,
-			Error:   true,
-		},
-		{
-			Encoded: "email:user@domain.com user:just-user|||99999999999999999999|",
-			Cipher:  c,
-			Error:   true,
-		},
-		{
-			SessionState: sessions.SessionState{
-				Email:        "user@domain.com",
-				User:         "just-user",
-				AccessToken:  "token1234",
-				ExpiresOn:    e,
-				RefreshToken: "refresh4321",
-			},
-			Encoded: fmt.Sprintf("email:user@domain.com user:just-user|I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==|%d|qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K", eUnix),
-			Cipher:  c,
-		},
-		{
-			SessionState: sessions.SessionState{
-				Email:        "user@domain.com",
-				User:         "just-user",
-				AccessToken:  "token1234",
-				IDToken:      "rawtoken1234",
-				ExpiresOn:    e,
-				RefreshToken: "refresh4321",
-			},
-			Encoded: fmt.Sprintf("email:user@domain.com user:just-user|I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==|xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==|%d|qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K", eUnix),
-			Cipher:  c,
 		},
 	}
 
