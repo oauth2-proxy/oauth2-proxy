@@ -121,10 +121,7 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 	// New sessions don't, so we ignore the error. storeValue will check requestCookie
 	requestCookie, _ := req.Cookie(store.CookieOptions.Name)
 
-	// If no cipher, don't include tokens
-	// Presence of a Cipher is an indicator if options are set that require tokens.
-	minimal := store.SessionOptions.Cipher == nil
-	value, err := s.EncodeSessionState(store.SessionOptions.CompressSession, minimal)
+	value, err := s.EncodeSessionState(store.SessionOptions.CompressSession, false)
 	if err != nil {
 		return err
 	}
@@ -182,6 +179,10 @@ func (store *SessionStore) loadSessionFromTicket(ctx context.Context, value []by
 	se, err := envelope.UnmarshalStoreEnvelope(value)
 	if err != nil {
 		// If we fail, assume a legacy ticket cookie was passed
+		// We can only attempt a legacy load if a valid Cipher is available
+		if store.SessionOptions.Cipher == nil {
+			return nil, err
+		}
 		return store.legacyV5LoadSessionFromTicket(ctx, string(value))
 	}
 

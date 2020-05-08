@@ -391,16 +391,18 @@ func (o *Options) Validate() error {
 			decoded = true
 		}
 		if !validCookieSecretSize {
-			var suffix string
-			if decoded {
-				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.Cookie.Secret)
+			if o.Session.Type == options.CookieSessionStoreType {
+				var suffix string
+				if decoded {
+					suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.Cookie.Secret)
+				}
+				msgs = append(msgs, fmt.Sprintf(
+					"cookie_secret must be 16, 24, or 32 bytes (but it is %d bytes)"+
+						"to create an AES cipher (128, 196, or 256 bit) to encrypt cookie session stores when "+
+						"any of pass_access_token, set_authorization_header, or pass_authorization_header "+
+						"are true or cookie_refresh != 0.%s",
+					len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
 			}
-			msgs = append(msgs, fmt.Sprintf(
-				"cookie_secret must be 16, 24, or 32 bytes "+
-					"to create an AES cipher when "+
-					"pass_access_token == true or "+
-					"cookie_refresh != 0, but is %d bytes.%s",
-				len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
 		} else {
 			var err error
 			cipher, err = encryption.NewCipher(encryption.SecretBytes(o.Cookie.Secret))

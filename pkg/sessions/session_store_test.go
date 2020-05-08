@@ -244,7 +244,7 @@ var _ = Describe("NewSessionStore", func() {
 				})
 
 				It("loads a session equal to the original session", func() {
-					if cookieOpts.Secret == "" {
+					if cookieOpts.Secret == "" && opts.Type == options.CookieSessionStoreType {
 						// Tokens skipped with no secret in minimal mode (for cookie sessions at least)
 						Expect(loadedSession.Email).To(Equal(session.Email))
 						Expect(loadedSession.User).To(Equal(session.User))
@@ -383,7 +383,8 @@ var _ = Describe("NewSessionStore", func() {
 
 		Context("with compressed sessions & cipher enabled", func() {
 			BeforeEach(func() {
-				// Ciphers are required for compressed sessions
+				// Ciphers are required for compressed sessions in cookie session
+				// Otherwise they omit tokens and become minimally encoded
 				secret := make([]byte, 32)
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())

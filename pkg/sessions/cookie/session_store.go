@@ -88,7 +88,8 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 func cookieForSession(s *sessions.SessionState, c *encryption.Cipher, compressed bool) ([]byte, error) {
 	// if no cipher, don't include tokens
 	minimal := c == nil
-	data, err := s.EncodeSessionState(compressed, minimal)
+	// If minimal, skip compression even if toggled (will be too small to be worth it)
+	data, err := s.EncodeSessionState(compressed && !minimal, minimal)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -108,7 +109,7 @@ func cookieForSession(s *sessions.SessionState, c *encryption.Cipher, compressed
 	se := &envelope.StoreEnvelope{
 		Type:       envelope.CookieType,
 		Encryption: encType,
-		Compressed: compressed,
+		Compressed: compressed && !minimal,
 		Data:       data,
 	}
 	value, err := se.Marshal()
