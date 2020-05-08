@@ -13,7 +13,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/envelope"
 )
 
 const (
@@ -39,7 +39,7 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 		ss.CreatedAt = time.Now()
 	}
 
-	value, err := utils.CookieForSession(ss, s.SessionOptions.Cipher, s.SessionOptions.CompressSession)
+	value, err := cookieForSession(ss, s.SessionOptions.Cipher, s.SessionOptions.CompressSession)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := utils.SessionFromCookie(val, s.SessionOptions.Cipher)
+	session, err := sessionFromCookie(val, s.SessionOptions.Cipher)
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +82,73 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	}
 
 	return nil
+}
+
+// cookieForSession serializes a session state for storage in a cookie
+func cookieForSession(s *sessions.SessionState, c *encryption.Cipher, compressed bool) ([]byte, error) {
+	// if no cipher, don't include tokens
+	minimal := c == nil
+	data, err := s.EncodeSessionState(compressed, minimal)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	encType := envelope.NoEncryption
+	if c != nil {
+		encType = envelope.CFBEncryption
+		// Use AES-CFB on encrypted data in cookies since the same cookie secret is reused
+		// AES-GCM is weak to a repeat of the IV Nonce + Secret
+		// The AES-CFB lack of authentication is mitigated by SHA signing the cookie.
+		data, err = c.EncryptCFB(data)
+		if err != nil {
+			return []byte{}, err
+		}
+	}
+
+	se := &envelope.StoreEnvelope{
+		Type:       envelope.CookieType,
+		Encryption: encType,
+		Compressed: compressed,
+		Data:       data,
+	}
+	value, err := se.Marshal()
+	if err != nil {
+		return []byte{}, err
+	}
+	return value, nil
+}
+
+// sessionFromCookie deserializes a session from a cookie value
+func sessionFromCookie(v []byte, c *encryption.Cipher) (*sessions.SessionState, error) {
+	var (
+		se  *envelope.StoreEnvelope
+		ss  *sessions.SessionState
+		err error
+	)
+
+	se, err = envelope.UnmarshalStoreEnvelope(v)
+	if err != nil {
+		// If we fail, assume an uncompressed cookie was passed
+		return sessions.LegacyV5DecodeSessionState(string(v), c)
+	}
+
+	if se.Type != envelope.CookieType {
+		return nil, errors.New("invalid session store type")
+	}
+
+	// Future: allows differing encryption algorithms
+	if se.Encryption == envelope.CFBEncryption {
+		se.Data, err = c.DecryptCFB(se.Data)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	ss, err = sessions.DecodeSessionState(se.Data, se.Compressed)
+	if err != nil {
+		return nil, err
+	}
+	return ss, nil
 }
 
 // setSessionCookie adds the user's session cookie to the response
