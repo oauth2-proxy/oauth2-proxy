@@ -16,113 +16,113 @@ To generate a strong cookie secret use `python -c 'import os,base64; print(base6
 
 Every command line argument can be specified in a config file by replacing hypens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
 
-An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2-proxy.cfg`
+An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `--config=/etc/oauth2-proxy.cfg`
 
 ### Command Line Options
 
 | Option | Type | Description | Default |
 | ------ | ---- | ----------- | ------- |
-| `-acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
-| `-approval-prompt` | string | OAuth approval_prompt | `"force"` |
-| `-auth-logging` | bool | Log authentication attempts | true |
-| `-auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
-| `-authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
-| `-azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
-| `-basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
-| `-client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
-| `-client-secret` | string | the OAuth Client Secret | |
-| `-client-secret-file` | string | the file with OAuth Client Secret | |
-| `-config` | string | path to config file | |
-| `-cookie-domain` | string \| list | Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
-| `-cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
-| `-cookie-httponly` | bool | set HttpOnly cookie flag | true |
-| `-cookie-name` | string | the name of the cookie that the oauth_proxy creates | `"_oauth2_proxy"` |
-| `-cookie-path` | string | an optional cookie path to force cookies to (ie: `/poc/`) | `"/"` |
-| `-cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable | |
-| `-cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
-| `-cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
-| `-cookie-samesite` | string | set SameSite cookie attribute (ie: `"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
-| `-custom-templates-dir` | string | path to custom html templates | |
-| `-display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
-| `-email-domain` | string | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
-| `-extra-jwt-issuers` | string | if `-skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
-| `-exclude-logging-paths` | string | comma separated list of paths to exclude from logging, eg: `"/ping,/path2"` |`""` (no paths excluded) |
-| `-flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
-| `-force-https` | bool | enforce https redirect | `false` |
-| `-banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
-| `-footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
-| `-gcp-healthchecks` | bool | will enable `/liveness_check`, `/readiness_check`, and `/` (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses | false |
-| `-github-org` | string | restrict logins to members of this organisation | |
-| `-github-team` | string | restrict logins to members of any of these teams (slug), separated by a comma | |
-| `-gitlab-group` | string | restrict logins to members of any of these groups (slug), separated by a comma | |
-| `-google-admin-email` | string | the google admin to impersonate for api calls | |
-| `-google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
-| `-google-service-account-json` | string | the path to the service account json credentials | |
-| `-htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -s` for SHA encryption | |
-| `-http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients | `"127.0.0.1:4180"` |
-| `-https-address` | string | `<addr>:<port>` to listen on for HTTPS clients | `":443"` |
-| `-logging-compress` | bool | Should rotated log files be compressed using gzip | false |
-| `-logging-filename` | string | File to log requests to, empty for `stdout` | `""` (stdout) |
-| `-logging-local-time` | bool | Use local time in log files and backup filenames instead of UTC | true (local time) |
-| `-logging-max-age` | int | Maximum number of days to retain old log files | 7 |
-| `-logging-max-backups` | int | Maximum number of old log files to retain; 0 to disable | 0  |
-| `-logging-max-size` | int | Maximum size in megabytes of the log file before rotation | 100 |
-| `-jwt-key` | string | private key in PEM format used to sign JWT, so that you can say something like `-jwt-key="${OAUTH2_PROXY_JWT_KEY}"`: required by login.gov | |
-| `-jwt-key-file` | string | path to the private key file in PEM format used to sign the JWT so that you can say something like `-jwt-key-file=/etc/ssl/private/jwt_signing_key.pem`: required by login.gov | |
-| `-login-url` | string | Authentication endpoint | |
-| `-insecure-oidc-allow-unverified-email` | bool | don't fail if an email address in an id_token is not verified | false |
-| `-insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
-| `-oidc-issuer-url` | string | the OpenID Connect issuer URL. ie: `"https://accounts.google.com"` | |
-| `-oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
-| `-pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
-| `-pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
-| `-pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
-| `-prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with `-pass-basic-auth` and `-pass-user-headers` | false |
-| `-pass-host-header` | bool | pass the request Host Header to upstream | true |
-| `-pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
-| `-profile-url` | string | Profile access endpoint | |
-| `-prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
-| `-provider` | string | OAuth provider | google |
-| `-provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
-| `-ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
-| `-proxy-prefix` | string | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`) | `"/oauth2"` |
-| `-proxy-websockets` | bool | enables WebSocket proxying | true |
-| `-pubjwk-url` | string | JWK pubkey access endpoint: required by login.gov | |
-| `-redeem-url` | string | Token redemption endpoint | |
-| `-redirect-url` | string | the OAuth Redirect URL. ie: `"https://internalapp.yourcompany.com/oauth2/callback"` | |
-| `-redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with `--redis-use-cluster` | |
-| `-redis-connection-url` | string | URL of redis server for redis session storage (eg: `redis://HOST[:PORT]`) | |
-| `-redis-sentinel-master-name` | string | Redis sentinel master name. Used in conjunction with `--redis-use-sentinel` | |
-| `-redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (eg `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
-| `-redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
-| `-redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
-| `-request-logging` | bool | Log requests | true |
-| `-request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
-| `-resource` | string | The resource that is protected (Azure AD only) | |
-| `-reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false |
-| `-scope` | string | OAuth scope specification | |
-| `-session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
-| `-set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode) | false |
-| `-set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
-| `-set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
-| `-signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
-| `-silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
-| `-skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
-| `-skip-auth-regex` | string | bypass authentication for requests paths that match (may be given multiple times) | |
-| `-skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
-| `-skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `-login-url`, `-redeem-url` and `-oidc-jwks-url` must be configured in this case | false |
-| `-skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
-| `-ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |
-| `-ssl-upstream-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS upstreams | false |
-| `-standard-logging` | bool | Log standard runtime information | true |
-| `-standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
-| `-tls-cert-file` | string | path to certificate file | |
-| `-tls-key-file` | string | path to private key file | |
-| `-upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
-| `-user-id-claim` | string | which claim contains the user ID | \["email"\] |
-| `-validate-url` | string | Access token validation endpoint | |
-| `-version` | n/a | print version string | |
-| `-whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
+| `--acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
+| `--approval-prompt` | string | OAuth approval_prompt | `"force"` |
+| `--auth-logging` | bool | Log authentication attempts | true |
+| `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
+| `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
+| `--azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
+| `--basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
+| `--client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
+| `--client-secret` | string | the OAuth Client Secret | |
+| `--client-secret-file` | string | the file with OAuth Client Secret | |
+| `--config` | string | path to config file | |
+| `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
+| `--cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
+| `--cookie-httponly` | bool | set HttpOnly cookie flag | true |
+| `--cookie-name` | string | the name of the cookie that the oauth_proxy creates | `"_oauth2_proxy"` |
+| `--cookie-path` | string | an optional cookie path to force cookies to (ie: `/poc/`) | `"/"` |
+| `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable | |
+| `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
+| `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
+| `--cookie-samesite` | string | set SameSite cookie attribute (ie: `"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
+| `--custom-templates-dir` | string | path to custom html templates | |
+| `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
+| `--email-domain` | string | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
+| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
+| `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, eg: `"/ping,/path2"` |`""` (no paths excluded) |
+| `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
+| `--force-https` | bool | enforce https redirect | `false` |
+| `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
+| `--footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
+| `--gcp-healthchecks` | bool | will enable `/liveness_check`, `/readiness_check`, and `/` (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses | false |
+| `--github-org` | string | restrict logins to members of this organisation | |
+| `--github-team` | string | restrict logins to members of any of these teams (slug), separated by a comma | |
+| `--gitlab-group` | string | restrict logins to members of any of these groups (slug), separated by a comma | |
+| `--google-admin-email` | string | the google admin to impersonate for api calls | |
+| `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
+| `--google-service-account-json` | string | the path to the service account json credentials | |
+| `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -s` for SHA encryption | |
+| `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients | `"127.0.0.1:4180"` |
+| `--https-address` | string | `<addr>:<port>` to listen on for HTTPS clients | `":443"` |
+| `--logging-compress` | bool | Should rotated log files be compressed using gzip | false |
+| `--logging-filename` | string | File to log requests to, empty for `stdout` | `""` (stdout) |
+| `--logging-local-time` | bool | Use local time in log files and backup filenames instead of UTC | true (local time) |
+| `--logging-max-age` | int | Maximum number of days to retain old log files | 7 |
+| `--logging-max-backups` | int | Maximum number of old log files to retain; 0 to disable | 0  |
+| `--logging-max-size` | int | Maximum size in megabytes of the log file before rotation | 100 |
+| `--jwt-key` | string | private key in PEM format used to sign JWT, so that you can say something like `--jwt-key="${OAUTH2_PROXY_JWT_KEY}"`: required by login.gov | |
+| `--jwt-key-file` | string | path to the private key file in PEM format used to sign the JWT so that you can say something like `--jwt-key-file=/etc/ssl/private/jwt_signing_key.pem`: required by login.gov | |
+| `--login-url` | string | Authentication endpoint | |
+| `--insecure-oidc-allow-unverified-email` | bool | don't fail if an email address in an id_token is not verified | false |
+| `--insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
+| `--oidc-issuer-url` | string | the OpenID Connect issuer URL. ie: `"https://accounts.google.com"` | |
+| `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
+| `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
+| `--pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
+| `--pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
+| `--prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with `--pass-basic-auth` and `--pass-user-headers` | false |
+| `--pass-host-header` | bool | pass the request Host Header to upstream | true |
+| `--pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
+| `--profile-url` | string | Profile access endpoint | |
+| `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
+| `--provider` | string | OAuth provider | google |
+| `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
+| `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
+| `--proxy-prefix` | string | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`) | `"/oauth2"` |
+| `--proxy-websockets` | bool | enables WebSocket proxying | true |
+| `--pubjwk-url` | string | JWK pubkey access endpoint: required by login.gov | |
+| `--redeem-url` | string | Token redemption endpoint | |
+| `--redirect-url` | string | the OAuth Redirect URL. ie: `"https://internalapp.yourcompany.com/oauth2/callback"` | |
+| `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with `--redis-use-cluster` | |
+| `--redis-connection-url` | string | URL of redis server for redis session storage (eg: `redis://HOST[:PORT]`) | |
+| `--redis-sentinel-master-name` | string | Redis sentinel master name. Used in conjunction with `--redis-use-sentinel` | |
+| `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (eg `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
+| `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
+| `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
+| `--request-logging` | bool | Log requests | true |
+| `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
+| `--resource` | string | The resource that is protected (Azure AD only) | |
+| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false |
+| `--scope` | string | OAuth scope specification | |
+| `--session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
+| `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode) | false |
+| `--set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
+| `--set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
+| `--signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
+| `--silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
+| `--skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
+| `--skip-auth-regex` | string | bypass authentication for requests paths that match (may be given multiple times) | |
+| `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
+| `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
+| `--skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
+| `--ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |
+| `--ssl-upstream-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS upstreams | false |
+| `--standard-logging` | bool | Log standard runtime information | true |
+| `--standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
+| `--tls-cert-file` | string | path to certificate file | |
+| `--tls-key-file` | string | path to private key file | |
+| `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
+| `--user-id-claim` | string | which claim contains the user ID | \["email"\] |
+| `--validate-url` | string | Access token validation endpoint | |
+| `--version` | n/a | print version string | |
+| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
 
 Note: when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
@@ -134,7 +134,7 @@ See below for provider specific options
 
 Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at. `file:///var/www/static/#/static/` will ie. make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
 
-Multiple upstreams can either be configured by supplying a comma separated list to the `-upstream` parameter, supplying the parameter multiple times or provinding a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
+Multiple upstreams can either be configured by supplying a comma separated list to the `--upstream` parameter, supplying the parameter multiple times or provinding a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
 
 ### Environment variables
 
@@ -151,15 +151,15 @@ and the `--email-domain` flag becomes `OAUTH2_PROXY_EMAIL_DOMAINS`.
 
 ## Logging Configuration
 
-By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the `-logging-filename` command.
+By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the `--logging-filename` command.
 
-If logging to a file you can also configure the maximum file size (`-logging-max-size`), age (`-logging-max-age`), max backup logs (`-logging-max-backups`), and if backup logs should be compressed (`-logging-compress`).
+If logging to a file you can also configure the maximum file size (`--logging-max-size`), age (`--logging-max-age`), max backup logs (`--logging-max-backups`), and if backup logs should be compressed (`--logging-compress`).
 
-There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `-standard-logging`, `-auth-logging`, and `-request-logging`.
+There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
 
 Each type of logging has their own configurable format and variables. By default these formats are similar to the Apache Combined Log.
 
-Logging of requests to the `/ping` endpoint can be disabled with `-silence-ping-logging` reducing log volume. This flag appends the `-ping-path` to `-exclude-logging-paths`.
+Logging of requests to the `/ping` endpoint can be disabled with `--silence-ping-logging` reducing log volume. This flag appends the `--ping-path` to `--exclude-logging-paths`.
 
 ### Auth Log Format
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
@@ -174,7 +174,7 @@ The status block will contain one of the below strings:
 - `AuthFailure` If the user failed to authenticate explicitly
 - `AuthError` If there was an unexpected error during authentication
 
-If you require a different format than that, you can configure it with the `-auth-logging-format` flag.
+If you require a different format than that, you can configure it with the `--auth-logging-format` flag.
 The default format is configured as follows:
 
 ```
@@ -202,7 +202,7 @@ HTTP request logs will output by default in the below format:
 <REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
 ```
 
-If you require a different format than that, you can configure it with the `-request-logging-format` flag.
+If you require a different format than that, you can configure it with the `--request-logging-format` flag.
 The default format is configured as follows:
 
 ```
@@ -233,7 +233,7 @@ All other logging that is not covered by the above two types of logging will be 
 [19/Mar/2015:17:20:19 -0400] [main.go:40] <MESSAGE>
 ```
 
-If you require a different format than that, you can configure it with the `-standard-logging-format` flag. The default format is configured as follows:
+If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default format is configured as follows:
 
 ```
 {% raw %}[{{.Timestamp}}] [{{.File}}] {{.Message}}{% endraw %}
@@ -337,7 +337,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
     end
   }
 ```
-It is recommended to use `-session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
+It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
 
