@@ -954,7 +954,7 @@ func TestLoadCookiedSession(t *testing.T) {
 	session, err := pcTest.LoadCookiedSession()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, startSession.Email, session.Email)
-	assert.Equal(t, "john.doe@example.com", session.User)
+	assert.Equal(t, "", session.User)
 	assert.Equal(t, startSession.AccessToken, session.AccessToken)
 }
 

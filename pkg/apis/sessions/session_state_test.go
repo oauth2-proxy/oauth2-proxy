@@ -33,7 +33,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	ss, err := sessions.DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@domain.com", ss.User)
+	assert.Equal(t, "", ss.User)
 	assert.Equal(t, s.Email, ss.Email)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, s.AccessToken, ss.AccessToken)
@@ -112,7 +112,7 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 	// only email should have been serialized
 	ss, err := sessions.DecodeSessionState(encoded, nil)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@domain.com", ss.User)
+	assert.Equal(t, "", ss.User)
 	assert.Equal(t, s.Email, ss.Email)
 	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
 	assert.Equal(t, "", ss.AccessToken)
@@ -226,7 +226,7 @@ func TestDecodeSessionState(t *testing.T) {
 		{
 			SessionState: sessions.SessionState{
 				Email: "user@domain.com",
-				User:  "user@domain.com",
+				User:  "",
 			},
 			Encoded: `{"Email":"user@domain.com"}`,
 		},
