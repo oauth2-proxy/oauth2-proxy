@@ -19,7 +19,7 @@ COPY . .
 #  build the key into the container and then tell it where it is
 #  by setting OAUTH2_PROXY_JWT_KEY_FILE=/etc/ssl/private/jwt_signing_key.pem
 #  in app.yaml instead.
-RUN ./configure && GOARCH=arm GOARM=6 make build && touch jwt_signing_key.pem
+RUN GOARCH=arm GOARM=6 make build && touch jwt_signing_key.pem
 
 # Copy binary to alpine
 FROM arm32v6/alpine:3.11
