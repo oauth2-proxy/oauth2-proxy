@@ -50,7 +50,7 @@ func NewBase64Cipher(initCipher func([]byte) (Cipher, error), secret []byte) (Ci
 	return &Base64Cipher{Cipher: c}, nil
 }
 
-// Encrypt encrypts a value with AES CFB & base64 encodes it
+// Encrypt encrypts a value with AES CFB & Base64 encodes it
 func (c *Base64Cipher) Encrypt(value []byte) ([]byte, error) {
 	encrypted, err := c.Cipher.Encrypt([]byte(value))
 	if err != nil {
