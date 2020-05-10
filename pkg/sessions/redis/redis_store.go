@@ -32,7 +32,7 @@ type TicketData struct {
 // SessionStore is an implementation of the sessions.SessionStore
 // interface that stores sessions in redis
 type SessionStore struct {
-	CookieCipher  *encryption.Cipher
+	CookieCipher  encryption.Cipher
 	CookieOptions *options.CookieOptions
 	Client        Client
 }

@@ -109,47 +109,79 @@ func checkHmac(input, expected string) bool {
 	return false
 }
 
-// Cipher provides methods to encrypt and decrypt cookie values
-type Cipher struct {
-	cipher.Block
+// Cipher provides methods to encrypt and decrypt
+type Cipher interface {
+	Encrypt(value []byte) ([]byte, error)
+	Decrypt(ciphertext []byte) ([]byte, error)
+    EncryptInto(s *string) error
+	DecryptInto(s *string) error
 }
 
 // NewCipher returns a new aes Cipher for encrypting cookie values
-func NewCipher(secret []byte) (*Cipher, error) {
+// This defaults to the Base64 Cipher to align with legacy Encrypt/Decrypt functionality
+func NewCipher(secret []byte) (*Base64Cipher, error) {
+	cfb, err := NewCFBCipher(secret)
+	if err != nil {
+		return nil, err
+	}
+	return NewBase64Cipher(cfb)
+}
+
+type Base64Cipher struct {
+	Cipher Cipher
+}
+
+// NewBase64Cipher returns a new AES CFB Cipher for encrypting cookie values
+// And wrapping them in Base64 -- Supports Legacy encryption scheme
+func NewBase64Cipher(c Cipher) (*Base64Cipher, error) {
+	return &Base64Cipher{Cipher: c}, nil
+}
+
+// Encrypt encrypts a value with AES CFB & base64 encodes it
+func (c *Base64Cipher) Encrypt(value []byte) ([]byte, error) {
+	encrypted, err := c.Cipher.Encrypt([]byte(value))
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(base64.StdEncoding.EncodeToString(encrypted)), nil
+}
+
+// Decrypt Base64 decodes a value & decrypts it with AES CFB
+func (c *Base64Cipher) Decrypt(ciphertext []byte) ([]byte, error) {
+	encrypted, err := base64.StdEncoding.DecodeString(string(ciphertext))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt cookie value %s", err)
+	}
+
+	return c.Cipher.Decrypt(encrypted)
+}
+
+// EncryptInto encrypts the value and stores it back in the string pointer
+func (c *Base64Cipher) EncryptInto(s *string) error {
+	return into(c.Encrypt, s)
+}
+
+// DecryptInto decrypts the value and stores it back in the string pointer
+func (c *Base64Cipher) DecryptInto(s *string) error {
+	return into(c.Decrypt, s)
+}
+
+type CFBCipher struct {
+	cipher.Block
+}
+
+// NewCFBCipher returns a new AES CFB Cipher
+func NewCFBCipher(secret []byte) (*CFBCipher, error) {
 	c, err := aes.NewCipher(secret)
 	if err != nil {
 		return nil, err
 	}
-	return &Cipher{Block: c}, err
+	return &CFBCipher{Block: c}, err
 }
 
-// Encrypt a value for use in a cookie
-func (c *Cipher) Encrypt(value string) (string, error) {
-	encrypted, err := c.EncryptCFB([]byte(value))
-	if err != nil {
-		return "", err
-	}
-
-	return base64.StdEncoding.EncodeToString(encrypted), nil
-}
-
-// Decrypt a value from a cookie to it's original string
-func (c *Cipher) Decrypt(s string) (string, error) {
-	encrypted, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		return "", fmt.Errorf("failed to decrypt cookie value %s", err)
-	}
-
-	decrypted, err := c.DecryptCFB(encrypted)
-	if err != nil {
-		return "", err
-	}
-
-	return string(decrypted), nil
-}
-
-// Encrypt with AES CFB on raw bytes
-func (c *Cipher) EncryptCFB(value []byte) ([]byte, error) {
+// Encrypt with AES CFB
+func (c *CFBCipher) Encrypt(value []byte) ([]byte, error) {
 	ciphertext := make([]byte, aes.BlockSize+len(value))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
@@ -162,7 +194,7 @@ func (c *Cipher) EncryptCFB(value []byte) ([]byte, error) {
 }
 
 // Decrypt a AES CFB ciphertext
-func (c *Cipher) DecryptCFB(ciphertext []byte) ([]byte, error) {
+func (c *CFBCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < aes.BlockSize {
 		return nil, fmt.Errorf("encrypted value should be "+
 			"at least %d bytes, but is only %d bytes",
@@ -178,17 +210,18 @@ func (c *Cipher) DecryptCFB(ciphertext []byte) ([]byte, error) {
 }
 
 // EncryptInto encrypts the value and stores it back in the string pointer
-func (c *Cipher) EncryptInto(s *string) error {
+func (c *CFBCipher) EncryptInto(s *string) error {
 	return into(c.Encrypt, s)
 }
 
 // DecryptInto decrypts the value and stores it back in the string pointer
-func (c *Cipher) DecryptInto(s *string) error {
+func (c *CFBCipher) DecryptInto(s *string) error {
 	return into(c.Decrypt, s)
 }
 
 // codecFunc is a function that takes a string and encodes/decodes it
-type codecFunc func(string) (string, error)
+type codecFunc func([]byte) ([]byte, error)
+
 
 func into(f codecFunc, s *string) error {
 	// Do not encrypt/decrypt nil or empty strings
@@ -196,10 +229,10 @@ func into(f codecFunc, s *string) error {
 		return nil
 	}
 
-	d, err := f(*s)
+	d, err := f([]byte(*s))
 	if err != nil {
 		return err
 	}
-	*s = d
+	*s = string(d)
 	return nil
 }

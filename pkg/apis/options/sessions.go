@@ -5,7 +5,7 @@ import "github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 // SessionOptions contains configuration options for the SessionStore providers.
 type SessionOptions struct {
 	Type   string             `flag:"session-store-type" cfg:"session_store_type"`
-	Cipher *encryption.Cipher `cfg:",internal"`
+	Cipher encryption.Cipher `cfg:",internal"`
 	Redis  RedisStoreOptions  `cfg:",squash"`
 }
 

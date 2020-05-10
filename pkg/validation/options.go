@@ -38,7 +38,7 @@ func Validate(o *options.Options) error {
 
 	msgs := make([]string, 0)
 
-	var cipher *encryption.Cipher
+	var cipher encryption.Cipher
 	if o.Cookie.Secret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
 	} else {

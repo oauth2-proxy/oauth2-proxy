@@ -60,7 +60,7 @@ func (s *SessionState) String() string {
 }
 
 // EncodeSessionState returns string representation of the current session
-func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) {
+func (s *SessionState) EncodeSessionState(c encryption.Cipher) (string, error) {
 	var ss SessionState
 	if c == nil {
 		// Store only Email and User when cipher is unavailable
@@ -89,7 +89,7 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 }
 
 // DecodeSessionState decodes the session cookie string into a SessionState
-func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
+func DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
 	var ss SessionState
 	err := json.Unmarshal([]byte(v), &ss)
 	if err != nil {
@@ -106,7 +106,7 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 	} else {
 		// Backward compatibility with using unencrypted Email
 		if ss.Email != "" {
-			decryptedEmail, errEmail := c.Decrypt(ss.Email)
+			decryptedEmail, errEmail := stringDecrypt(ss.Email, c)
 			if errEmail == nil {
 				if !utf8.ValidString(decryptedEmail) {
 					return nil, errors.New("invalid value for decrypted email")
@@ -116,7 +116,7 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		}
 		// Backward compatibility with using unencrypted User
 		if ss.User != "" {
-			decryptedUser, errUser := c.Decrypt(ss.User)
+			decryptedUser, errUser := stringDecrypt(ss.User, c)
 			if errUser == nil {
 				if !utf8.ValidString(decryptedUser) {
 					return nil, errors.New("invalid value for decrypted user")
@@ -138,4 +138,13 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		}
 	}
 	return &ss, nil
+}
+
+// stringDecrypt wraps a Base64Cipher to make it string => string
+func stringDecrypt(ciphertext string, c encryption.Cipher) (string, error) {
+	value, err := c.Decrypt([]byte(ciphertext))
+	if err != nil {
+		return "", err
+	}
+	return string(value), nil
 }

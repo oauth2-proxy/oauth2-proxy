@@ -28,7 +28,7 @@ var _ sessions.SessionStore = &SessionStore{}
 // interface that stores sessions in client side cookies
 type SessionStore struct {
 	CookieOptions *options.CookieOptions
-	CookieCipher  *encryption.Cipher
+	CookieCipher  encryption.Cipher
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -84,12 +84,12 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 }
 
 // cookieForSession serializes a session state for storage in a cookie
-func cookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
+func cookieForSession(s *sessions.SessionState, c encryption.Cipher) (string, error) {
 	return s.EncodeSessionState(c)
 }
 
 // sessionFromCookie deserializes a session from a cookie value
-func sessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState, err error) {
+func sessionFromCookie(v string, c encryption.Cipher) (s *sessions.SessionState, err error) {
 	return sessions.DecodeSessionState(v, c)
 }
 

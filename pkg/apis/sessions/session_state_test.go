@@ -145,7 +145,7 @@ func TestExpired(t *testing.T) {
 type testCase struct {
 	sessions.SessionState
 	Encoded string
-	Cipher  *encryption.Cipher
+	Cipher  encryption.Cipher
 	Error   bool
 }
 
