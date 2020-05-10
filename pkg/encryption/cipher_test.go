@@ -1,13 +1,45 @@
 package encryption
 
 import (
+	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestSecretBytesEncoded(t *testing.T) {
+	for _, secretSize := range []int{16, 24, 32} {
+		t.Run(string(secretSize), func(t *testing.T) {
+			secret := make([]byte, secretSize)
+			_, err := io.ReadFull(rand.Reader, secret)
+			assert.Equal(t, nil, err)
+
+			base64Padded := base64.URLEncoding.EncodeToString(secret)
+			sb := SecretBytes(base64Padded)
+			assert.Equal(t, secret, sb)
+			assert.Equal(t, len(sb), secretSize)
+
+			base64Raw := base64.RawURLEncoding.EncodeToString(secret)
+			sb = SecretBytes(base64Raw)
+			assert.Equal(t, secret, sb)
+			assert.Equal(t, len(sb), secretSize)
+		})
+	}
+}
+
+func TestSecretBytesRaw(t *testing.T) {
+	trailer := "equals=========="
+	assert.Equal(t, trailer, string(SecretBytes(trailer)))
+
+	// A string that isn't intended as Base64 and still decodes (but to unintended length)
+	// will return the original secret as bytes
+	pseudoBase64 := "0123456789abcdef"
+	assert.Equal(t, pseudoBase64, string(SecretBytes(pseudoBase64)))
+}
 
 func TestSignAndValidate(t *testing.T) {
 	seed := "0123456789abcdef"

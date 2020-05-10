@@ -233,7 +233,7 @@ func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, o.Validate())
 
-	o.Cookie.Secret = "0123456789abcdefabcd"
+	o.Cookie.Secret = "0123456789abcdef"
 	o.Cookie.Refresh = o.Cookie.Expire
 	assert.NotEqual(t, nil, o.Validate())
 
