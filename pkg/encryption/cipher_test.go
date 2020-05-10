@@ -3,6 +3,7 @@ package encryption
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"testing"
 
@@ -46,62 +47,76 @@ func TestEncodeAndDecodeAccessTokenB64(t *testing.T) {
 
 func TestEncryptAndDecrypt(t *testing.T) {
 	// Test our 2 cipher types
-	for _, initCipher := range []func([]byte) (Cipher, error){NewCFBCipher, NewGCMCipher} {
+	ciphers := map[string]func([]byte) (Cipher, error){
+		"CFB": NewCFBCipher,
+		"GCM": NewGCMCipher,
+	}
+	for name, initCipher := range ciphers {
 		// Test all 3 valid AES sizes
 		for _, secretSize := range []int{16, 24, 32} {
-			secret := make([]byte, secretSize)
-			_, err := io.ReadFull(rand.Reader, secret)
-			assert.Equal(t, nil, err)
-
-			c, err := initCipher(secret)
-			assert.Equal(t, nil, err)
-
-			// Test various sizes sessions might be
-			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-				data := make([]byte, dataSize)
-				_, err := io.ReadFull(rand.Reader, data)
+			subTestName := fmt.Sprintf("%s::%d", name, secretSize)
+			t.Run(subTestName, func(t *testing.T) {
+				secret := make([]byte, secretSize)
+				_, err := io.ReadFull(rand.Reader, secret)
 				assert.Equal(t, nil, err)
 
-				encrypted, err := c.Encrypt(data)
+				c, err := initCipher(secret)
 				assert.Equal(t, nil, err)
-				assert.NotEqual(t, encrypted, data)
 
-				decrypted, err := c.Decrypt(encrypted)
-				assert.Equal(t, nil, err)
-				assert.Equal(t, data, decrypted)
-				assert.NotEqual(t, encrypted, decrypted)
-			}
+				// Test various sizes sessions might be
+				for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
+					data := make([]byte, dataSize)
+					_, err := io.ReadFull(rand.Reader, data)
+					assert.Equal(t, nil, err)
+
+					encrypted, err := c.Encrypt(data)
+					assert.Equal(t, nil, err)
+					assert.NotEqual(t, encrypted, data)
+
+					decrypted, err := c.Decrypt(encrypted)
+					assert.Equal(t, nil, err)
+					assert.Equal(t, data, decrypted)
+					assert.NotEqual(t, encrypted, decrypted)
+				}
+			})
 		}
 	}
 }
 
 func TestEncryptAndDecryptBase64(t *testing.T) {
 	// Test our cipher types wrapped in Base64 encoder
-	for _, initCipher := range []func([]byte) (Cipher, error){NewCFBCipher, NewGCMCipher} {
+	ciphers := map[string]func([]byte) (Cipher, error){
+		"CFB": NewCFBCipher,
+		"GCM": NewGCMCipher,
+	}
+	for name, initCipher := range ciphers {
 		// Test all 3 valid AES sizes
 		for _, secretSize := range []int{16, 24, 32} {
-			secret := make([]byte, secretSize)
-			_, err := io.ReadFull(rand.Reader, secret)
-			assert.Equal(t, nil, err)
-
-			c, err := NewBase64Cipher(initCipher, secret)
-			assert.Equal(t, nil, err)
-
-			// Test various sizes sessions might be
-			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-				data := make([]byte, dataSize)
-				_, err := io.ReadFull(rand.Reader, data)
+			subTestName := fmt.Sprintf("%s::%d", name, secretSize)
+			t.Run(subTestName, func(t *testing.T) {
+				secret := make([]byte, secretSize)
+				_, err := io.ReadFull(rand.Reader, secret)
 				assert.Equal(t, nil, err)
 
-				encrypted, err := c.Encrypt(data)
+				c, err := NewBase64Cipher(initCipher, secret)
 				assert.Equal(t, nil, err)
-				assert.NotEqual(t, encrypted, data)
 
-				decrypted, err := c.Decrypt(encrypted)
-				assert.Equal(t, nil, err)
-				assert.Equal(t, data, decrypted)
-				assert.NotEqual(t, encrypted, decrypted)
-			}
+				// Test various sizes sessions might be
+				for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
+					data := make([]byte, dataSize)
+					_, err := io.ReadFull(rand.Reader, data)
+					assert.Equal(t, nil, err)
+
+					encrypted, err := c.Encrypt(data)
+					assert.Equal(t, nil, err)
+					assert.NotEqual(t, encrypted, data)
+
+					decrypted, err := c.Decrypt(encrypted)
+					assert.Equal(t, nil, err)
+					assert.Equal(t, data, decrypted)
+					assert.NotEqual(t, encrypted, decrypted)
+				}
+			})
 		}
 	}
 }
@@ -150,61 +165,67 @@ func TestIntermixCiphersErrors(t *testing.T) {
 	// Encrypt with GCM, Decrypt with CFB: Results in Garbage data
 	// Test all 3 valid AES sizes
 	for _, secretSize := range []int{16, 24, 32} {
-		secret := make([]byte, secretSize)
-		_, err := io.ReadFull(rand.Reader, secret)
-		assert.Equal(t, nil, err)
-
-		gcm, err := NewGCMCipher(secret)
-		assert.Equal(t, nil, err)
-
-		cfb, err := NewCFBCipher(secret)
-		assert.Equal(t, nil, err)
-
-		// Test various sizes sessions might be
-		for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-			data := make([]byte, dataSize)
-			_, err := io.ReadFull(rand.Reader, data)
+		subTestName := fmt.Sprintf("GCM->CFB::%d", secretSize)
+		t.Run(subTestName, func(t *testing.T) {
+			secret := make([]byte, secretSize)
+			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
 
-			encrypted, err := gcm.Encrypt(data)
+			gcm, err := NewGCMCipher(secret)
 			assert.Equal(t, nil, err)
-			assert.NotEqual(t, encrypted, data)
 
-			decrypted, err := cfb.Decrypt(encrypted)
+			cfb, err := NewCFBCipher(secret)
 			assert.Equal(t, nil, err)
-			// Data is mangled
-			assert.NotEqual(t, data, decrypted)
-			assert.NotEqual(t, encrypted, decrypted)
-		}
+
+			// Test various sizes sessions might be
+			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
+				data := make([]byte, dataSize)
+				_, err := io.ReadFull(rand.Reader, data)
+				assert.Equal(t, nil, err)
+
+				encrypted, err := gcm.Encrypt(data)
+				assert.Equal(t, nil, err)
+				assert.NotEqual(t, encrypted, data)
+
+				decrypted, err := cfb.Decrypt(encrypted)
+				assert.Equal(t, nil, err)
+				// Data is mangled
+				assert.NotEqual(t, data, decrypted)
+				assert.NotEqual(t, encrypted, decrypted)
+			}
+		})
 	}
 
 	// Encrypt with CFB, Decrypt with GCM: Results in errors
 	// Test all 3 valid AES sizes
 	for _, secretSize := range []int{16, 24, 32} {
-		secret := make([]byte, secretSize)
-		_, err := io.ReadFull(rand.Reader, secret)
-		assert.Equal(t, nil, err)
-
-		gcm, err := NewGCMCipher(secret)
-		assert.Equal(t, nil, err)
-
-		cfb, err := NewCFBCipher(secret)
-		assert.Equal(t, nil, err)
-
-		// Test various sizes sessions might be
-		for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-			data := make([]byte, dataSize)
-			_, err := io.ReadFull(rand.Reader, data)
+		subTestName := fmt.Sprintf("CFB->GCM::%d", secretSize)
+		t.Run(subTestName, func(t *testing.T) {
+			secret := make([]byte, secretSize)
+			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
 
-			encrypted, err := cfb.Encrypt(data)
+			gcm, err := NewGCMCipher(secret)
 			assert.Equal(t, nil, err)
-			assert.NotEqual(t, encrypted, data)
 
-			// GCM is authenticated - this should lead to message authentication failed
-			_, err = gcm.Decrypt(encrypted)
-			assert.Error(t, err)
-		}
+			cfb, err := NewCFBCipher(secret)
+			assert.Equal(t, nil, err)
+
+			// Test various sizes sessions might be
+			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
+				data := make([]byte, dataSize)
+				_, err := io.ReadFull(rand.Reader, data)
+				assert.Equal(t, nil, err)
+
+				encrypted, err := cfb.Encrypt(data)
+				assert.Equal(t, nil, err)
+				assert.NotEqual(t, encrypted, data)
+
+				// GCM is authenticated - this should lead to message authentication failed
+				_, err = gcm.Decrypt(encrypted)
+				assert.Error(t, err)
+			}
+		})
 	}
 }
 
