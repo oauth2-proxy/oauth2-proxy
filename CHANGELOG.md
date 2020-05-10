@@ -22,9 +22,13 @@
 - [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to StringSlice instead of StringArray
   - Options that take multiple arguments now split strings on commas if present
   - Eg `--foo=a,b,c,d` would result in the values `a`, `b`, `c` and `d` instead of a single `a,b,c,d` value as before
+- [#535](https://github.com/oauth2-proxy/oauth2-proxy/pull/535) Drop support for pre v3.1 cookies
+  - The encoding for session cookies was changed starting in v3.1.0, support for the previous encoding is now dropped
+  - If you are upgrading from a version earlier than this, please upgrade via a version between v3.1.0 and v5.1.1
 
 ## Changes since v5.1.1
 
+- [#535](https://github.com/oauth2-proxy/oauth2-proxy/pull/535) Drop support for pre v3.1 cookies (@JoelSpeed)
 - [#533](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Set up code coverage within Travis for Code Climate (@JoelSpeed)
 - [#514](https://github.com/oauth2-proxy/oauth2-proxy/pull/514) Add basic string functions to templates
 - [#524](https://github.com/oauth2-proxy/oauth2-proxy/pull/524) Sign cookies with SHA256 (@NickMeves)
