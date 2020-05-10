@@ -117,9 +117,27 @@ type Cipher interface {
 	DecryptInto(s *string) error
 }
 
+type DefaultCipher struct {}
+
+// Encrypt is a dummy method for CommonCipher.EncryptInto support
+func (c *DefaultCipher) Encrypt(value []byte) ([]byte, error) { return value, nil }
+
+// Decrypt is a dummy method for CommonCipher.DecryptInto support
+func (c *DefaultCipher) Decrypt(ciphertext []byte) ([]byte, error) { return ciphertext, nil }
+
+// EncryptInto encrypts the value and stores it back in the string pointer
+func (c *DefaultCipher) EncryptInto(s *string) error {
+	return into(c.Encrypt, s)
+}
+
+// DecryptInto decrypts the value and stores it back in the string pointer
+func (c *DefaultCipher) DecryptInto(s *string) error {
+	return into(c.Decrypt, s)
+}
+
 // NewCipher returns a new aes Cipher for encrypting cookie values
 // This defaults to the Base64 Cipher to align with legacy Encrypt/Decrypt functionality
-func NewCipher(secret []byte) (*Base64Cipher, error) {
+func NewCipher(secret []byte) (Cipher, error) {
 	cfb, err := NewCFBCipher(secret)
 	if err != nil {
 		return nil, err
@@ -128,12 +146,13 @@ func NewCipher(secret []byte) (*Base64Cipher, error) {
 }
 
 type Base64Cipher struct {
+	DefaultCipher
 	Cipher Cipher
 }
 
-// NewBase64Cipher returns a new AES CFB Cipher for encrypting cookie values
-// And wrapping them in Base64 -- Supports Legacy encryption scheme
-func NewBase64Cipher(c Cipher) (*Base64Cipher, error) {
+// NewBase64Cipher returns a new AES Cipher for encrypting cookie values
+// and wrapping them in Base64 -- Supports Legacy encryption scheme
+func NewBase64Cipher(c Cipher) (Cipher, error) {
 	return &Base64Cipher{Cipher: c}, nil
 }
 
@@ -157,22 +176,13 @@ func (c *Base64Cipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	return c.Cipher.Decrypt(encrypted)
 }
 
-// EncryptInto encrypts the value and stores it back in the string pointer
-func (c *Base64Cipher) EncryptInto(s *string) error {
-	return into(c.Encrypt, s)
-}
-
-// DecryptInto decrypts the value and stores it back in the string pointer
-func (c *Base64Cipher) DecryptInto(s *string) error {
-	return into(c.Decrypt, s)
-}
-
 type CFBCipher struct {
+	DefaultCipher
 	cipher.Block
 }
 
 // NewCFBCipher returns a new AES CFB Cipher
-func NewCFBCipher(secret []byte) (*CFBCipher, error) {
+func NewCFBCipher(secret []byte) (Cipher, error) {
 	c, err := aes.NewCipher(secret)
 	if err != nil {
 		return nil, err
@@ -193,7 +203,7 @@ func (c *CFBCipher) Encrypt(value []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-// Decrypt a AES CFB ciphertext
+// Decrypt an AES CFB ciphertext
 func (c *CFBCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < aes.BlockSize {
 		return nil, fmt.Errorf("encrypted value should be "+
@@ -209,19 +219,53 @@ func (c *CFBCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-// EncryptInto encrypts the value and stores it back in the string pointer
-func (c *CFBCipher) EncryptInto(s *string) error {
-	return into(c.Encrypt, s)
+type GCMCipher struct {
+	DefaultCipher
+	cipher.Block
 }
 
-// DecryptInto decrypts the value and stores it back in the string pointer
-func (c *CFBCipher) DecryptInto(s *string) error {
-	return into(c.Decrypt, s)
+// NewGCMCipher returns a new AES GCM Cipher
+func NewGCMCipher(secret []byte) (Cipher, error) {
+	c, err := aes.NewCipher(secret)
+	if err != nil {
+		return nil, err
+	}
+	return &GCMCipher{Block: c}, err
+}
+
+// Encrypt with AES GCM on raw bytes
+func (c *GCMCipher) Encrypt(value []byte) ([]byte, error) {
+	gcm, err := cipher.NewGCM(c.Block)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	ciphertext := gcm.Seal(nonce, nonce, value, nil)
+	return ciphertext, nil
+}
+
+// Decrypt an AES GCM ciphertext
+func (c *GCMCipher) Decrypt(ciphertext []byte) ([]byte, error) {
+	gcm, err := cipher.NewGCM(c.Block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+	return plaintext, nil
 }
 
 // codecFunc is a function that takes a string and encodes/decodes it
 type codecFunc func([]byte) ([]byte, error)
-
 
 func into(f codecFunc, s *string) error {
 	// Do not encrypt/decrypt nil or empty strings
