@@ -102,7 +102,7 @@ func TestSignAndValidate(t *testing.T) {
 func TestEncodeAndDecodeAccessToken(t *testing.T) {
 	const secret = "0123456789abcdefghijklmnopqrstuv"
 	const token = "my access token"
-	c, err := NewCipher([]byte(secret))
+	c, err := NewBase64Cipher(NewCFBCipher, []byte(secret))
 	assert.Equal(t, nil, err)
 
 	encoded, err := c.Encrypt([]byte(token))
@@ -121,7 +121,7 @@ func TestEncodeAndDecodeAccessTokenB64(t *testing.T) {
 
 	secret, err := base64.URLEncoding.DecodeString(secretBase64)
 	assert.Equal(t, nil, err)
-	c, err := NewCipher([]byte(secret))
+	c, err := NewBase64Cipher(NewCFBCipher, []byte(secret))
 	assert.Equal(t, nil, err)
 
 	encoded, err := c.Encrypt([]byte(token))
@@ -135,14 +135,12 @@ func TestEncodeAndDecodeAccessTokenB64(t *testing.T) {
 }
 
 func TestEncryptAndDecrypt(t *testing.T) {
-	var err error
-
-	// Test our 3 cipher types
-	for _, initCipher := range []func([]byte) (Cipher, error){NewCipher, NewCFBCipher, NewGCMCipher} {
+	// Test our 2 cipher types
+	for _, initCipher := range []func([]byte) (Cipher, error){NewCFBCipher, NewGCMCipher} {
 		// Test all 3 valid AES sizes
 		for _, secretSize := range []int{16, 24, 32} {
 			secret := make([]byte, secretSize)
-			_, err = io.ReadFull(rand.Reader, secret)
+			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
 
 			c, err := initCipher(secret)
@@ -167,27 +165,55 @@ func TestEncryptAndDecrypt(t *testing.T) {
 	}
 }
 
-func TestDecryptWrongSecret(t *testing.T) {
+func TestEncryptAndDecryptBase64(t *testing.T) {
+	// Test our cipher types wrapped in Base64 encoder
+	for _, initCipher := range []func([]byte) (Cipher, error){NewCFBCipher, NewGCMCipher} {
+		// Test all 3 valid AES sizes
+		for _, secretSize := range []int{16, 24, 32} {
+			secret := make([]byte, secretSize)
+			_, err := io.ReadFull(rand.Reader, secret)
+			assert.Equal(t, nil, err)
+
+			c, err := NewBase64Cipher(initCipher, secret)
+			assert.Equal(t, nil, err)
+
+			// Test various sizes sessions might be
+			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
+				data := make([]byte, dataSize)
+				_, err := io.ReadFull(rand.Reader, data)
+				assert.Equal(t, nil, err)
+
+				encrypted, err := c.Encrypt(data)
+				assert.Equal(t, nil, err)
+				assert.NotEqual(t, encrypted, data)
+
+				decrypted, err := c.Decrypt(encrypted)
+				assert.Equal(t, nil, err)
+				assert.Equal(t, data, decrypted)
+				assert.NotEqual(t, encrypted, decrypted)
+			}
+		}
+	}
+}
+
+func TestDecryptCFBWrongSecret(t *testing.T) {
 	secret1 := []byte("0123456789abcdefghijklmnopqrstuv")
 	secret2 := []byte("9876543210abcdefghijklmnopqrstuv")
 
-	// Test CFB & Base64 (GCM is authenticated, it errors differently)
-	for _, initCipher := range []func([]byte) (Cipher, error){NewCipher, NewCFBCipher} {
-		c1, err := initCipher(secret1)
-		assert.Equal(t, nil, err)
+	c1, err := NewCFBCipher(secret1)
+	assert.Equal(t, nil, err)
 
-		c2, err := initCipher(secret2)
-		assert.Equal(t, nil, err)
+	c2, err := NewCFBCipher(secret2)
+	assert.Equal(t, nil, err)
 
-		data := []byte("f3928pufm982374dj02y485dsl34890u2t9nd4028s94dm58y2394087dhmsyt29h8df")
+	data := []byte("f3928pufm982374dj02y485dsl34890u2t9nd4028s94dm58y2394087dhmsyt29h8df")
 
-		ciphertext, err := c1.Encrypt(data)
-		assert.Equal(t, nil, err)
+	ciphertext, err := c1.Encrypt(data)
+	assert.Equal(t, nil, err)
 
-		wrongData, err := c2.Decrypt(ciphertext)
-		assert.Equal(t, nil, err)
-		assert.NotEqual(t, data, wrongData)
-	}
+	wrongData, err := c2.Decrypt(ciphertext)
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, data, wrongData)
 }
 
 func TestDecryptGCMWrongSecret(t *testing.T) {
@@ -211,13 +237,11 @@ func TestDecryptGCMWrongSecret(t *testing.T) {
 }
 
 func TestIntermixCiphersErrors(t *testing.T) {
-	var err error
-
 	// Encrypt with GCM, Decrypt with CFB: Results in Garbage data
 	// Test all 3 valid AES sizes
 	for _, secretSize := range []int{16, 24, 32} {
 		secret := make([]byte, secretSize)
-		_, err = io.ReadFull(rand.Reader, secret)
+		_, err := io.ReadFull(rand.Reader, secret)
 		assert.Equal(t, nil, err)
 
 		gcm, err := NewGCMCipher(secret)
@@ -248,7 +272,7 @@ func TestIntermixCiphersErrors(t *testing.T) {
 	// Test all 3 valid AES sizes
 	for _, secretSize := range []int{16, 24, 32} {
 		secret := make([]byte, secretSize)
-		_, err = io.ReadFull(rand.Reader, secret)
+		_, err := io.ReadFull(rand.Reader, secret)
 		assert.Equal(t, nil, err)
 
 		gcm, err := NewGCMCipher(secret)

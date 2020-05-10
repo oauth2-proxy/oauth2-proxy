@@ -62,7 +62,7 @@ func Validate(o *options.Options) error {
 					len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
 		} else {
 			var err error
-			cipher, err = encryption.NewCipher(encryption.SecretBytes(o.Cookie.Secret))
+			cipher, err = encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(o.Cookie.Secret))
 			if err != nil {
 				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
 			}

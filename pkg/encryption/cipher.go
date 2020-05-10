@@ -135,16 +135,6 @@ func (c *DefaultCipher) DecryptInto(s *string) error {
 	return into(c.Decrypt, s)
 }
 
-// NewCipher returns a new aes Cipher for encrypting cookie values
-// This defaults to the Base64 Cipher to align with legacy Encrypt/Decrypt functionality
-func NewCipher(secret []byte) (Cipher, error) {
-	cfb, err := NewCFBCipher(secret)
-	if err != nil {
-		return nil, err
-	}
-	return NewBase64Cipher(cfb)
-}
-
 type Base64Cipher struct {
 	DefaultCipher
 	Cipher Cipher
@@ -152,7 +142,11 @@ type Base64Cipher struct {
 
 // NewBase64Cipher returns a new AES Cipher for encrypting cookie values
 // and wrapping them in Base64 -- Supports Legacy encryption scheme
-func NewBase64Cipher(c Cipher) (Cipher, error) {
+func NewBase64Cipher(initCipher func([]byte) (Cipher, error), secret []byte) (Cipher, error) {
+	c, err := initCipher(secret)
+	if err != nil {
+		return nil, err
+	}
 	return &Base64Cipher{Cipher: c}, nil
 }
 
@@ -170,7 +164,7 @@ func (c *Base64Cipher) Encrypt(value []byte) ([]byte, error) {
 func (c *Base64Cipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	encrypted, err := base64.StdEncoding.DecodeString(string(ciphertext))
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt cookie value %s", err)
+		return nil, fmt.Errorf("failed to base64 decode value %s", err)
 	}
 
 	return c.Cipher.Decrypt(encrypted)
@@ -206,9 +200,7 @@ func (c *CFBCipher) Encrypt(value []byte) ([]byte, error) {
 // Decrypt an AES CFB ciphertext
 func (c *CFBCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < aes.BlockSize {
-		return nil, fmt.Errorf("encrypted value should be "+
-			"at least %d bytes, but is only %d bytes",
-			aes.BlockSize, len(ciphertext))
+		return nil, fmt.Errorf("encrypted value should be at least %d bytes, but is only %d bytes", aes.BlockSize, len(ciphertext))
 	}
 
 	iv := ciphertext[:aes.BlockSize]

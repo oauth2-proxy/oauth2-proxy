@@ -17,10 +17,14 @@ func timePtr(t time.Time) *time.Time {
 	return &t
 }
 
+func NewCipher(secret []byte) (encryption.Cipher, error) {
+	return encryption.NewBase64Cipher(encryption.NewCFBCipher, secret)
+}
+
 func TestSessionStateSerialization(t *testing.T) {
-	c, err := encryption.NewCipher([]byte(secret))
+	c, err := NewCipher([]byte(secret))
 	assert.Equal(t, nil, err)
-	c2, err := encryption.NewCipher([]byte(altSecret))
+	c2, err := NewCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
 		Email:             "user@domain.com",
@@ -53,9 +57,9 @@ func TestSessionStateSerialization(t *testing.T) {
 }
 
 func TestSessionStateSerializationWithUser(t *testing.T) {
-	c, err := encryption.NewCipher([]byte(secret))
+	c, err := NewCipher([]byte(secret))
 	assert.Equal(t, nil, err)
-	c2, err := encryption.NewCipher([]byte(altSecret))
+	c2, err := NewCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
 	s := &sessions.SessionState{
 		User:              "just-user",
@@ -201,7 +205,7 @@ func TestDecodeSessionState(t *testing.T) {
 	eJSON, _ := e.MarshalJSON()
 	eString := string(eJSON)
 
-	c, err := encryption.NewCipher([]byte(secret))
+	c, err := NewCipher([]byte(secret))
 	assert.NoError(t, err)
 
 	testCases := []testCase{

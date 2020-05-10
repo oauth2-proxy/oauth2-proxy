@@ -367,7 +367,7 @@ var _ = Describe("NewSessionStore", func() {
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
-				cipher, err := encryption.NewCipher(encryption.SecretBytes(cookieOpts.Secret))
+				cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cipher).ToNot(BeNil())
 				opts.Cipher = cipher
