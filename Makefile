@@ -13,6 +13,10 @@ MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
 MINIMUM_SUPPORTED_GO_MINOR_VERSION = 14
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
 
+ifeq ($(COVER),true)
+TESTCOVER ?= -coverprofile c.out
+endif
+
 .PHONY: all
 all: lint $(BINARY)
 
@@ -65,7 +69,7 @@ docker-push-all: docker-push
 
 .PHONY: test
 test: lint
-	GO111MODULE=on $(GO) test -v -race ./...
+	GO111MODULE=on $(GO) test $(TESTCOVER) -v -race ./...
 
 .PHONY: release
 release: lint test

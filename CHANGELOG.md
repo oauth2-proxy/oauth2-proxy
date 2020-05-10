@@ -25,6 +25,7 @@
 
 ## Changes since v5.1.1
 
+- [#533](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Set up code coverage within Travis for Code Climate (@JoelSpeed)
 - [#514](https://github.com/oauth2-proxy/oauth2-proxy/pull/514) Add basic string functions to templates
 - [#524](https://github.com/oauth2-proxy/oauth2-proxy/pull/524) Sign cookies with SHA256 (@NickMeves)
 - [#515](https://github.com/oauth2-proxy/oauth2-proxy/pull/515) Drop configure script in favour of native Makefile env and checks (@JoelSpeed)
