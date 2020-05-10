@@ -1,9 +1,14 @@
 package sessions
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pierrec/lz4"
+	"github.com/vmihailenco/msgpack/v4"
+	"io"
+	"io/ioutil"
 	"time"
 	"unicode/utf8"
 
@@ -12,14 +17,14 @@ import (
 
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	AccessToken       string     `json:",omitempty"`
-	IDToken           string     `json:",omitempty"`
-	CreatedAt         *time.Time `json:",omitempty"`
-	ExpiresOn         *time.Time `json:",omitempty"`
-	RefreshToken      string     `json:",omitempty"`
-	Email             string     `json:",omitempty"`
-	User              string     `json:",omitempty"`
-	PreferredUsername string     `json:",omitempty"`
+	AccessToken       string    `json:",omitempty" msgpack:"at,omitempty"`
+	IDToken           string    `json:",omitempty" msgpack:"it,omitempty"`
+	CreatedAt         *time.Time `json:",omitempty" msgpack:"ca,omitempty"`
+	ExpiresOn         *time.Time `json:",omitempty" msgpack:"eo,omitempty"`
+	RefreshToken      string    `json:",omitempty" msgpack:"rt,omitempty"`
+	Email             string    `json:",omitempty" msgpack:"e,omitempty"`
+	User              string    `json:",omitempty" msgpack:"u,omitempty"`
+	PreferredUsername string    `json:",omitempty" msgpack:"pu,omitempty"`
 }
 
 // IsExpired checks whether the session has expired
@@ -59,37 +64,83 @@ func (s *SessionState) String() string {
 	return o + "}"
 }
 
-// EncodeSessionState returns string representation of the current session
-func (s *SessionState) EncodeSessionState(c encryption.Cipher) (string, error) {
-	var ss SessionState
-	if c == nil {
-		// Store only Email and User when cipher is unavailable
-		ss.Email = s.Email
-		ss.User = s.User
-		ss.PreferredUsername = s.PreferredUsername
-	} else {
-		ss = *s
-		for _, s := range []*string{
-			&ss.Email,
-			&ss.User,
-			&ss.PreferredUsername,
-			&ss.AccessToken,
-			&ss.IDToken,
-			&ss.RefreshToken,
-		} {
-			err := into(s, c.Encrypt)
-			if err != nil {
-				return "", err
-			}
+// EncodeSessionState returns an encrypted, lz4 compressed, MessagePack encoded session
+func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([]byte, error) {
+	// Marshal to MessagePack
+	packed, err := msgpack.Marshal(s)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if !compress {
+		// Encrypt the msgpack encoded
+		return c.Encrypt(packed)
+	}
+
+	// Compress the packed encoding
+	// The Compress:Decompress ratio is 1:Many. LZ4 gives fastest decompress speeds
+	buf := new(bytes.Buffer)
+	zw := lz4.NewWriter(nil)
+	zw.Header = lz4.Header{
+		BlockMaxSize:     65536,
+		CompressionLevel: 0,
+	}
+	zw.Reset(buf)
+
+	reader := bytes.NewReader(packed)
+	_, err = io.Copy(zw, reader)
+	if err != nil {
+		return []byte{}, err
+	}
+	_ = zw.Close()
+
+	compressed, err := ioutil.ReadAll(buf)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	// Encrypt the compressed
+	return c.Encrypt(compressed)
+}
+
+// DecodeSessionState decodes a LZ4 compressed MessagePack into a Session State
+func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*SessionState, error) {
+	// Decrypt
+	decrypted, err := c.Decrypt(data)
+	if err != nil {
+		return nil, err
+	}
+
+	packed := decrypted
+	if compressed {
+		// LZ4 Decompress
+		reader := bytes.NewReader(decrypted)
+		buf := new(bytes.Buffer)
+		zr := lz4.NewReader(nil)
+		zr.Reset(reader)
+		_, err = io.Copy(buf, zr)
+		if err != nil {
+			return nil, err
+		}
+
+		packed, err = ioutil.ReadAll(buf)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	b, err := json.Marshal(ss)
-	return string(b), err
+	// Decode MessagePack
+	var ss *SessionState
+	err = msgpack.Unmarshal(packed, &ss)
+	if err != nil {
+		return nil, err
+	}
+
+	return ss, nil
 }
 
-// DecodeSessionState decodes the session cookie string into a SessionState
-func DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
+// LegacyV5DecodeSessionState decodes a legacy JSON session cookie string into a SessionState
+func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
 	var ss SessionState
 	err := json.Unmarshal([]byte(v), &ss)
 	if err != nil {

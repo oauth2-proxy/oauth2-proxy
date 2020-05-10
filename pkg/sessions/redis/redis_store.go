@@ -40,7 +40,7 @@ type SessionStore struct {
 // NewRedisSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
-	cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
+	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(cookieOpts.Secret))
 	if err != nil {
 		return nil, fmt.Errorf("error initialising cipher: %v", err)
 	}
@@ -146,12 +146,8 @@ func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *se
 	// Old sessions that we are refreshing would have a request cookie
 	// New sessions don't, so we ignore the error. storeValue will check requestCookie
 	requestCookie, _ := req.Cookie(store.Cookie.Name)
-	value, err := s.EncodeSessionState(store.CookieCipher)
-	if err != nil {
-		return err
-	}
 	ctx := req.Context()
-	ticketString, err := store.storeValue(ctx, value, store.Cookie.Expire, requestCookie)
+	ticketString, err := store.saveSession(ctx, s, store.Cookie.Expire, requestCookie)
 	if err != nil {
 		return err
 	}
@@ -180,36 +176,9 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 		return nil, fmt.Errorf("cookie signature not valid")
 	}
 	ctx := req.Context()
-	session, err := store.loadSessionFromString(ctx, string(val))
+	session, err := store.loadSessionFromTicket(ctx, string(val))
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %s", err)
-	}
-	return session, nil
-}
-
-// loadSessionFromString loads the session based on the ticket value
-func (store *SessionStore) loadSessionFromString(ctx context.Context, value string) (*sessions.SessionState, error) {
-	ticket, err := decodeTicket(store.Cookie.Name, value)
-	if err != nil {
-		return nil, err
-	}
-
-	resultBytes, err := store.Client.Get(ctx, ticket.asHandle(store.Cookie.Name))
-	if err != nil {
-		return nil, err
-	}
-
-	block, err := aes.NewCipher(ticket.Secret)
-	if err != nil {
-		return nil, err
-	}
-	// Use secret as the IV too, because each entry has it's own key
-	stream := cipher.NewCFBDecrypter(block, ticket.Secret)
-	stream.XORKeyStream(resultBytes, resultBytes)
-
-	session, err := sessions.DecodeSessionState(string(resultBytes), store.CookieCipher)
-	if err != nil {
-		return nil, err
 	}
 	return session, nil
 }
@@ -253,6 +222,90 @@ func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 	return nil
 }
 
+// saveSession encodes a session with a GCM cipher & saves the data into Redis
+func (store *SessionStore) saveSession(ctx context.Context, s *sessions.SessionState, expiration time.Duration, requestCookie *http.Cookie) (string, error) {
+	ticket, err := store.getTicket(requestCookie)
+	if err != nil {
+		return "", fmt.Errorf("error getting ticket: %v", err)
+	}
+
+	c, err := encryption.NewGCMCipher(ticket.Secret)
+	if err != nil {
+		return "", fmt.Errorf("error initiating cipher block %s", err)
+	}
+
+	// Use AES-GCM since it provides authenticated encryption
+	// AES-CFB used in cookies has the cookie signing SHA to get around the lack of
+	// authentication in AES-CFB
+	ciphertext, err := s.EncodeSessionState(c)
+	if err != nil {
+		return "", err
+	}
+
+	handle := ticket.asHandle(store.Cookie.Name)
+	err = store.Client.Set(ctx, handle, ciphertext, expiration)
+	if err != nil {
+		return "", err
+	}
+	return ticket.encodeTicket(store.Cookie.Name), nil
+}
+
+// loadSessionFromTicket loads the session based on the ticket value
+func (store *SessionStore) loadSessionFromTicket(ctx context.Context, value string) (*sessions.SessionState, error) {
+	ticket, err := decodeTicket(store.Cookie.Name, value)
+	if err != nil {
+		return nil, err
+	}
+
+	resultBytes, err := store.Client.Get(ctx, ticket.asHandle(store.Cookie.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := encryption.NewGCMCipher(ticket.Secret)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := sessions.DecodeSessionState(resultBytes, c)
+	if err != nil {
+		// The GCM cipher will error due to a legacy JSON payload not passing
+		// the authentication check part of AES GCM encryption.
+		// In that case, we can attempt to fallback to try a legacy load
+		return store.legacyV5LoadSessionFromTicket(ctx, value)
+	}
+	return session, nil
+}
+
+// legacyV5LoadSessionFromTicket loads the session based on the ticket value
+// This falls uses V5 style encryption of Base64 + AES CFB
+func (store *SessionStore) legacyV5LoadSessionFromTicket(ctx context.Context, value string) (*sessions.SessionState, error) {
+	ticket, err := decodeTicket(store.Cookie.Name, value)
+	if err != nil {
+		return nil, err
+	}
+
+	resultBytes, err := store.Client.Get(ctx, ticket.asHandle(store.Cookie.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(ticket.Secret)
+	if err != nil {
+		return nil, err
+	}
+	// Use secret as the IV too, because each entry has it's own key
+	stream := cipher.NewCFBDecrypter(block, ticket.Secret)
+	stream.XORKeyStream(resultBytes, resultBytes)
+
+	legacyCipher := &encryption.Base64Cipher{Cipher: store.CookieCipher}
+	session, err := sessions.LegacyV5DecodeSessionState(string(resultBytes), legacyCipher)
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
 // makeCookie makes a cookie, signing the value if present
 func (store *SessionStore) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
 	if value != "" {
@@ -266,30 +319,6 @@ func (store *SessionStore) makeCookie(req *http.Request, value string, expires t
 		expires,
 		now,
 	)
-}
-
-func (store *SessionStore) storeValue(ctx context.Context, value string, expiration time.Duration, requestCookie *http.Cookie) (string, error) {
-	ticket, err := store.getTicket(requestCookie)
-	if err != nil {
-		return "", fmt.Errorf("error getting ticket: %v", err)
-	}
-
-	ciphertext := make([]byte, len(value))
-	block, err := aes.NewCipher(ticket.Secret)
-	if err != nil {
-		return "", fmt.Errorf("error initiating cipher block %s", err)
-	}
-
-	// Use secret as the Initialization Vector too, because each entry has it's own key
-	stream := cipher.NewCFBEncrypter(block, ticket.Secret)
-	stream.XORKeyStream(ciphertext, []byte(value))
-
-	handle := ticket.asHandle(store.Cookie.Name)
-	err = store.Client.Set(ctx, handle, ciphertext, expiration)
-	if err != nil {
-		return "", err
-	}
-	return ticket.encodeTicket(store.Cookie.Name), nil
 }
 
 // getTicket retrieves an existing ticket from the cookie if present,
