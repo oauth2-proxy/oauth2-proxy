@@ -84,9 +84,17 @@ func TestEncryptAndDecrypt(t *testing.T) {
 									assert.Equal(t, nil, err)
 									assert.NotEqual(t, encrypted, data)
 
+									// Ensure our Decrypt function doesn't decrypt in place
+									immutable := make([]byte, len(encrypted))
+									copy(immutable, encrypted)
+
 									decrypted, err := c.Decrypt(encrypted)
 									assert.Equal(t, nil, err)
+									// Original data back
 									assert.Equal(t, data, decrypted)
+									// Decrypt didn't operate in-place on []byte
+									assert.Equal(t, encrypted, immutable)
+									// Encrypt/Decrypt actually did something
 									assert.NotEqual(t, encrypted, decrypted)
 								})
 							}
