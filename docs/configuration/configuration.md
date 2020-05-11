@@ -54,6 +54,8 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--gcp-healthchecks` | bool | will enable `/liveness_check`, `/readiness_check`, and `/` (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses | false |
 | `--github-org` | string | restrict logins to members of this organisation | |
 | `--github-team` | string | restrict logins to members of any of these teams (slug), separated by a comma | |
+| `--github-repo` | string | restrict logins to collaborators of this repository formatted as `orgname/repo` | |
+| `--github-token` | string | the token to use when verifying repository collaborators (must have push access to the repository) | |
 | `--gitlab-group` | string | restrict logins to members of any of these groups (slug), separated by a comma | |
 | `--google-admin-email` | string | the google admin to impersonate for api calls | |
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
