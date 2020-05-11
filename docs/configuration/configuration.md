@@ -38,7 +38,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--cookie-httponly` | bool | set HttpOnly cookie flag | true |
 | `--cookie-name` | string | the name of the cookie that the oauth_proxy creates | `"_oauth2_proxy"` |
 | `--cookie-path` | string | an optional cookie path to force cookies to (ie: `/poc/`) | `"/"` |
-| `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable | |
+| `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;\[[1](#footnote1)\] | |
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (ie: `"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
@@ -128,10 +128,12 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--user-id-claim` | string | which claim contains the user ID | \["email"\] |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
-| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
+| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`)&nbsp;\[[2](#footnote2)\] | |
 | `--trusted-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in a HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
 
-Note: when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
+\[<a name="footnote1">1</a>\]: Only these providers do support `--cookie-refresh`: GitLab, Google and OIDC
+
+\[<a name="footnote2">2</a>\]: When using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
 See below for provider specific options
 
