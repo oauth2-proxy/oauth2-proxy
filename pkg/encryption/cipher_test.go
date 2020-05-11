@@ -80,20 +80,26 @@ func TestEncryptAndDecrypt(t *testing.T) {
 									_, err := io.ReadFull(rand.Reader, data)
 									assert.Equal(t, nil, err)
 
+									// Ensure our Encrypt function doesn't encrypt in place
+									immutableData := make([]byte, len(data))
+									copy(immutableData, data)
+
 									encrypted, err := c.Encrypt(data)
 									assert.Equal(t, nil, err)
 									assert.NotEqual(t, encrypted, data)
+									// Encrypt didn't operate in-place on []byte
+									assert.Equal(t, data, immutableData)
 
 									// Ensure our Decrypt function doesn't decrypt in place
-									immutable := make([]byte, len(encrypted))
-									copy(immutable, encrypted)
+									immutableEnc := make([]byte, len(encrypted))
+									copy(immutableEnc, encrypted)
 
 									decrypted, err := c.Decrypt(encrypted)
 									assert.Equal(t, nil, err)
 									// Original data back
 									assert.Equal(t, data, decrypted)
 									// Decrypt didn't operate in-place on []byte
-									assert.Equal(t, encrypted, immutable)
+									assert.Equal(t, encrypted, immutableEnc)
 									// Encrypt/Decrypt actually did something
 									assert.NotEqual(t, encrypted, decrypted)
 								})
