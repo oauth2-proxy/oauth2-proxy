@@ -1,5 +1,10 @@
 package options
 
+import (
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/spf13/pflag"
+)
+
 // Logging contains all options required for configuring the logging
 type Logging struct {
 	AuthEnabled     bool           `flag:"auth-logging" cfg:"auth_logging"`
@@ -21,4 +26,48 @@ type LogFileOptions struct {
 	MaxAge     int    `flag:"logging-max-age" cfg:"logging_max_age"`
 	MaxBackups int    `flag:"logging-max-backups" cfg:"logging_max_backups"`
 	Compress   bool   `flag:"logging-compress" cfg:"logging_compress"`
+}
+
+func loggingFlagSet() *pflag.FlagSet {
+	flagSet := pflag.NewFlagSet("logging", pflag.ExitOnError)
+
+	flagSet.Bool("auth-logging", true, "Log authentication attempts")
+	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")
+	flagSet.Bool("standard-logging", true, "Log standard runtime information")
+	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
+	flagSet.Bool("request-logging", true, "Log HTTP requests")
+	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
+
+	flagSet.String("exclude-logging-paths", "", "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
+	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
+	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping endpoint")
+
+	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
+	flagSet.Int("logging-max-size", 100, "Maximum size in megabytes of the log file before rotation")
+	flagSet.Int("logging-max-age", 7, "Maximum number of days to retain old log files")
+	flagSet.Int("logging-max-backups", 0, "Maximum number of old log files to retain; 0 to disable")
+	flagSet.Bool("logging-compress", false, "Should rotated log files be compressed using gzip")
+
+	return flagSet
+}
+
+// loggingDefaults creates a Logging structure, populating each field with its default value
+func loggingDefaults() Logging {
+	return Logging{
+		LocalTime:       true,
+		SilencePing:     false,
+		AuthEnabled:     true,
+		AuthFormat:      logger.DefaultAuthLoggingFormat,
+		RequestEnabled:  true,
+		RequestFormat:   logger.DefaultRequestLoggingFormat,
+		StandardEnabled: true,
+		StandardFormat:  logger.DefaultStandardLoggingFormat,
+		File: LogFileOptions{
+			Filename:   "",
+			MaxSize:    100,
+			MaxAge:     7,
+			MaxBackups: 0,
+			Compress:   false,
+		},
+	}
 }
