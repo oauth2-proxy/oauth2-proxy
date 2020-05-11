@@ -169,7 +169,7 @@ func TestGitHubProviderGetEmailAddressWithWriteAccessToPublicRepo(t *testing.T) 
 	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -186,7 +186,7 @@ func TestGitHubProviderGetEmailAddressWithReadOnlyAccessToPrivateRepo(t *testing
 	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -203,7 +203,7 @@ func TestGitHubProviderGetEmailAddressWithWriteAccessToPrivateRepo(t *testing.T)
 	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -219,7 +219,7 @@ func TestGitHubProviderGetEmailAddressWithNoAccessToPrivateRepo(t *testing.T) {
 	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -235,7 +235,7 @@ func TestGitHubProviderGetEmailAddressWithToken(t *testing.T) {
 	p.SetRepo("oauth2-proxy/oauth2-proxy", "token")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -283,7 +283,7 @@ func TestGitHubProviderGetUserName(t *testing.T) {
 	p := testGitHubProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetUserName(session)
+	email, err := p.GetUserName(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "mbland", email)
 }
@@ -314,7 +314,7 @@ func TestGitHubProviderGetUserNameWithRepoAndTokenWithoutPushAccess(t *testing.T
 	p.SetRepo("oauth2-proxy/oauth2-proxy", "token")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetUserName(session)
+	email, err := p.GetUserName(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }

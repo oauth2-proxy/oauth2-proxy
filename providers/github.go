@@ -271,7 +271,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 	return false, nil
 }
 
-func (p *GitHubProvider) hasRepo(accessToken string) (bool, error) {
+func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool, error) {
 	// https://developer.github.com/v3/repos/#get-a-repository
 
 	type permissions struct {
@@ -290,7 +290,7 @@ func (p *GitHubProvider) hasRepo(accessToken string) (bool, error) {
 		Path:   path.Join(p.ValidateURL.Path, "/repo/", p.Repo),
 	}
 
-	req, _ := http.NewRequest("GET", endpoint.String(), nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
 	req.Header = getGitHubHeader(accessToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -317,7 +317,7 @@ func (p *GitHubProvider) hasRepo(accessToken string) (bool, error) {
 	return repo.Permissions.Push || (repo.Private && repo.Permissions.Pull), nil
 }
 
-func (p *GitHubProvider) isCollaborator(username, accessToken string) (bool, error) {
+func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessToken string) (bool, error) {
 	//https://developer.github.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
 
 	endpoint := &url.URL{
@@ -325,7 +325,7 @@ func (p *GitHubProvider) isCollaborator(username, accessToken string) (bool, err
 		Host:   p.ValidateURL.Host,
 		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo, "/collaborators/", username),
 	}
-	req, _ := http.NewRequest("GET", endpoint.String(), nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
 	req.Header = getGitHubHeader(accessToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -368,7 +368,7 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 			}
 		}
 	} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
-		if ok, err := p.hasRepo(s.AccessToken); err != nil || !ok {
+		if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
 			return "", err
 		}
 	}
@@ -457,7 +457,7 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 
 	// Now that we have the username we can check collaborator status
 	if p.Org == "" && p.Repo != "" && p.Token != "" {
-		if ok, err := p.isCollaborator(user.Login, p.Token); err != nil || !ok {
+		if ok, err := p.isCollaborator(ctx, user.Login, p.Token); err != nil || !ok {
 			return "", err
 		}
 	}
