@@ -455,55 +455,55 @@ func validateCookieName(o *options.Options, msgs []string) []string {
 
 func setupLogger(o *options.Options, msgs []string) []string {
 	// Setup the log file
-	if len(o.LoggingFilename) > 0 {
+	if len(o.Logging.File.Filename) > 0 {
 		// Validate that the file/dir can be written
-		file, err := os.OpenFile(o.LoggingFilename, os.O_WRONLY|os.O_CREATE, 0666)
+		file, err := os.OpenFile(o.Logging.File.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
 			if os.IsPermission(err) {
-				return append(msgs, "unable to write to log file: "+o.LoggingFilename)
+				return append(msgs, "unable to write to log file: "+o.Logging.File.Filename)
 			}
 		}
 		file.Close()
 
-		logger.Printf("Redirecting logging to file: %s", o.LoggingFilename)
+		logger.Printf("Redirecting logging to file: %s", o.Logging.File.Filename)
 
 		logWriter := &lumberjack.Logger{
-			Filename:   o.LoggingFilename,
-			MaxSize:    o.LoggingMaxSize, // megabytes
-			MaxAge:     o.LoggingMaxAge,  // days
-			MaxBackups: o.LoggingMaxBackups,
-			LocalTime:  o.LoggingLocalTime,
-			Compress:   o.LoggingCompress,
+			Filename:   o.Logging.File.Filename,
+			MaxSize:    o.Logging.File.MaxSize, // megabytes
+			MaxAge:     o.Logging.File.MaxAge,  // days
+			MaxBackups: o.Logging.File.MaxBackups,
+			LocalTime:  o.Logging.LocalTime,
+			Compress:   o.Logging.File.Compress,
 		}
 
 		logger.SetOutput(logWriter)
 	}
 
 	// Supply a sanity warning to the logger if all logging is disabled
-	if !o.StandardLogging && !o.AuthLogging && !o.RequestLogging {
+	if !o.Logging.StandardEnabled && !o.Logging.AuthEnabled && !o.Logging.RequestEnabled {
 		logger.Print("Warning: Logging disabled. No further logs will be shown.")
 	}
 
 	// Pass configuration values to the standard logger
-	logger.SetStandardEnabled(o.StandardLogging)
-	logger.SetAuthEnabled(o.AuthLogging)
-	logger.SetReqEnabled(o.RequestLogging)
-	logger.SetStandardTemplate(o.StandardLoggingFormat)
-	logger.SetAuthTemplate(o.AuthLoggingFormat)
-	logger.SetReqTemplate(o.RequestLoggingFormat)
+	logger.SetStandardEnabled(o.Logging.StandardEnabled)
+	logger.SetAuthEnabled(o.Logging.AuthEnabled)
+	logger.SetReqEnabled(o.Logging.RequestEnabled)
+	logger.SetStandardTemplate(o.Logging.StandardFormat)
+	logger.SetAuthTemplate(o.Logging.AuthFormat)
+	logger.SetReqTemplate(o.Logging.RequestFormat)
 	logger.SetGetClientFunc(func(r *http.Request) string {
 		return ip.GetClientString(o.GetRealClientIPParser(), r, false)
 	})
 
 	excludePaths := make([]string, 0)
-	excludePaths = append(excludePaths, strings.Split(o.ExcludeLoggingPaths, ",")...)
-	if o.SilencePingLogging {
+	excludePaths = append(excludePaths, strings.Split(o.Logging.ExcludePaths, ",")...)
+	if o.Logging.SilencePing {
 		excludePaths = append(excludePaths, o.PingPath)
 	}
 
 	logger.SetExcludePaths(excludePaths)
 
-	if !o.LoggingLocalTime {
+	if !o.Logging.LocalTime {
 		logger.SetFlags(logger.Flags() | logger.LUTC)
 	}
 

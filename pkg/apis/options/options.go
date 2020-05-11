@@ -61,6 +61,7 @@ type Options struct {
 
 	Cookie  CookieOptions  `cfg:",squash"`
 	Session SessionOptions `cfg:",squash"`
+	Logging Logging        `cfg:",squash"`
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
@@ -101,27 +102,12 @@ type Options struct {
 	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
 	UserIDClaim                        string `flag:"user-id-claim" cfg:"user_id_claim"`
 
-	// Configuration values for logging
-	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename"`
-	LoggingMaxSize        int    `flag:"logging-max-size" cfg:"logging_max_size"`
-	LoggingMaxAge         int    `flag:"logging-max-age" cfg:"logging_max_age"`
-	LoggingMaxBackups     int    `flag:"logging-max-backups" cfg:"logging_max_backups"`
-	LoggingLocalTime      bool   `flag:"logging-local-time" cfg:"logging_local_time"`
-	LoggingCompress       bool   `flag:"logging-compress" cfg:"logging_compress"`
-	StandardLogging       bool   `flag:"standard-logging" cfg:"standard_logging"`
-	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format"`
-	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging"`
-	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format"`
-	ExcludeLoggingPaths   string `flag:"exclude-logging-paths" cfg:"exclude_logging_paths"`
-	SilencePingLogging    bool   `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
-	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging"`
-	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format"`
-	SignatureKey          string `flag:"signature-key" cfg:"signature_key"`
-	AcrValues             string `flag:"acr-values" cfg:"acr_values"`
-	JWTKey                string `flag:"jwt-key" cfg:"jwt_key"`
-	JWTKeyFile            string `flag:"jwt-key-file" cfg:"jwt_key_file"`
-	PubJWKURL             string `flag:"pubjwk-url" cfg:"pubjwk_url"`
-	GCPHealthChecks       bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
+	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
+	AcrValues       string `flag:"acr-values" cfg:"acr_values"`
+	JWTKey          string `flag:"jwt-key" cfg:"jwt_key"`
+	JWTKeyFile      string `flag:"jwt-key-file" cfg:"jwt_key_file"`
+	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url"`
+	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
@@ -197,20 +183,24 @@ func NewOptions() *Options {
 		UserIDClaim:                      "email",
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
-		LoggingFilename:                  "",
-		LoggingMaxSize:                   100,
-		LoggingMaxAge:                    7,
-		LoggingMaxBackups:                0,
-		LoggingLocalTime:                 true,
-		LoggingCompress:                  false,
-		ExcludeLoggingPaths:              "",
-		SilencePingLogging:               false,
-		StandardLogging:                  true,
-		StandardLoggingFormat:            logger.DefaultStandardLoggingFormat,
-		RequestLogging:                   true,
-		RequestLoggingFormat:             logger.DefaultRequestLoggingFormat,
-		AuthLogging:                      true,
-		AuthLoggingFormat:                logger.DefaultAuthLoggingFormat,
+		Logging: Logging{
+			ExcludePaths:    "",
+			LocalTime:       true,
+			SilencePing:     false,
+			AuthEnabled:     true,
+			AuthFormat:      logger.DefaultAuthLoggingFormat,
+			RequestEnabled:  true,
+			RequestFormat:   logger.DefaultRequestLoggingFormat,
+			StandardEnabled: true,
+			StandardFormat:  logger.DefaultStandardLoggingFormat,
+			File: LogFileOptions{
+				Filename:   "",
+				MaxSize:    100,
+				MaxAge:     7,
+				MaxBackups: 0,
+				Compress:   false,
+			},
+		},
 	}
 }
 
