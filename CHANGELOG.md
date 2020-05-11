@@ -1,6 +1,6 @@
 # Vx.x.x (Pre-release)
 
-## Release Hightlights
+## Release Highlights
 
 ## Important Notes
 
@@ -8,27 +8,37 @@
 
 ## Breaking Changes
 
-- Migration from Pusher to independent org may have introduced breaking changes for your environment.
+- [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) Migration from Pusher to independent org may have introduced breaking changes for your environment.
   - See the changes listed below for PR [#464](https://github.com/oauth2-proxy/oauth2-proxy/pull/464) for full details
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
-- [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
+- [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API
   - The Azure AD Graph API has been [deprecated](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api) and is being replaced by the Microsoft Graph API.
-      If your application relies on the access token being passed to it to access the Azure AD Graph API, you should migrate your application to use the Microsoft Graph API.
-      Existing behaviour can be retained by setting  `-resource=https://graph.windows.net`.
+    If your application relies on the access token being passed to it to access the Azure AD Graph API, you should migrate your application to use the Microsoft Graph API.
+    Existing behaviour can be retained by setting  `-resource=https://graph.windows.net`.
 - [#484](https://github.com/oauth2-proxy/oauth2-proxy/pull/484) Configuration loading has been replaced with Viper and PFlag
   - Flags now require a `--` prefix before the option
   - Previously flags allowed either `-` or `--` to prefix the option name
   - Eg `-provider` must now be `--provider`
-- - [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to StringSlice instead of StringArray
+- [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to StringSlice instead of StringArray
   - Options that take multiple arguments now split strings on commas if present
   - Eg `--foo=a,b,c,d` would result in the values `a`, `b`, `c` and `d` instead of a single `a,b,c,d` value as before
 
-## Changes since v5.1.0
+- [#535](https://github.com/oauth2-proxy/oauth2-proxy/pull/535) Drop support for pre v3.1 cookies
+  - The encoding for session cookies was changed starting in v3.1.0, support for the previous encoding is now dropped
+  - If you are upgrading from a version earlier than this, please upgrade via a version between v3.1.0 and v5.1.1
+
+## Changes since v5.1.1
 
 - [#503](https://github.com/oauth2-proxy/oauth2-proxy/pull/503) Implements --real-client-ip-header option to select the header from which to obtain a proxied client's IP (@Izzette)
+- [#535](https://github.com/oauth2-proxy/oauth2-proxy/pull/535) Drop support for pre v3.1 cookies (@JoelSpeed)
+- [#533](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Set up code coverage within Travis for Code Climate (@JoelSpeed)
+- [#514](https://github.com/oauth2-proxy/oauth2-proxy/pull/514) Add basic string functions to templates
+- [#524](https://github.com/oauth2-proxy/oauth2-proxy/pull/524) Sign cookies with SHA256 (@NickMeves)
+- [#515](https://github.com/oauth2-proxy/oauth2-proxy/pull/515) Drop configure script in favour of native Makefile env and checks (@JoelSpeed)
+- [#519](https://github.com/oauth2-proxy/oauth2-proxy/pull/519) Support context in providers (@johejo)
 - [#487](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Switch flags to PFlag to remove StringArray (@JoelSpeed)
 - [#484](https://github.com/oauth2-proxy/oauth2-proxy/pull/484) Replace configuration loading with Viper (@JoelSpeed)
-- [#499](https://github.com/oauth2-proxy/oauth2-proxy/pull/469) Add `-user-id-claim` to support generic claims in addition to email
+- [#499](https://github.com/oauth2-proxy/oauth2-proxy/pull/499) Add `-user-id-claim` to support generic claims in addition to email (@holyjak)
 - [#486](https://github.com/oauth2-proxy/oauth2-proxy/pull/486) Add new linters (@johejo)
 - [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API (@johejo)
 - [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Prevent browser caching during auth flow (@johejo)
@@ -44,16 +54,35 @@
   - Binaries renamed from `oauth2_proxy` to `oauth2-proxy`
 - [#432](https://github.com/oauth2-proxy/oauth2-proxy/pull/432) Update ruby dependencies for documentation (@theobarberbany)
 - [#471](https://github.com/oauth2-proxy/oauth2-proxy/pull/471) Add logging in case of invalid redirects (@gargath)
-- [#462](https://github.com/oauth2-proxy/oauth2-proxy/pull/462) Allow HTML in banner message (@eritikass).
-- [#412](https://github.com/pusher/oauth2_proxy/pull/412) Allow multiple cookie domains to be specified (@edahlseng)
-- [#413](https://github.com/oauth2-proxy/oauth2-proxy/pull/413) Add -set-basic-auth param to set the Basic Authorization header for upstreams (@morarucostel).
+- [#462](https://github.com/oauth2-proxy/oauth2-proxy/pull/462) Allow HTML in banner message (@eritikass)
+- [#412](https://github.com/oauth2-proxy/oauth2-proxy/pull/412) Allow multiple cookie domains to be specified (@edahlseng)
+- [#413](https://github.com/oauth2-proxy/oauth2-proxy/pull/413) Add -set-basic-auth param to set the Basic Authorization header for upstreams (@morarucostel)
 - [#483](https://github.com/oauth2-proxy/oauth2-proxy/pull/483) Warn users when session cookies are split (@JoelSpeed)
 - [#488](https://github.com/oauth2-proxy/oauth2-proxy/pull/488) Set-Basic-Auth should default to false (@JoelSpeed)
-- [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify
+- [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify (@yaroslavros)
+
+# v5.1.1
+
+## Release Highlights
+
+N/A
+
+## Important Notes
+
+- (Security) Fix for [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-j7px-6hwj-hpjg).
+  - A bad actor using encoded whitespace in redirect URIs can redirect a session to another domain
+
+## Breaking Changes
+
+N/A
+
+## Changes since v5.1.0
+
+- [GHSA-j7px-6hwj-hpjg](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-j7px-6hwj-hpjg) Fix Open Redirect Vulnerability with encoded Whitespace characters (@JoelSpeed)
 
 # v5.1.0
 
-## Release Hightlights
+## Release Highlights
 - Bump to Go 1.14
 - Reduced number of Google API requests for group validation
 - Support for Redis Cluster
@@ -85,7 +114,7 @@ N/A
 
 # v5.0.0
 
-## Release Hightlights
+## Release Highlights
 - Disabled CGO (binaries will work regardless og glibc/musl)
 - Allow whitelisted redirect ports
 - Nextcloud provider support added

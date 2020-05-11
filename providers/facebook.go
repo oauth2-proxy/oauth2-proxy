@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 type FacebookProvider struct {
 	*ProviderData
 }
+
+var _ Provider = (*FacebookProvider)(nil)
 
 // NewFacebookProvider initiates a new FacebookProvider
 func NewFacebookProvider(p *ProviderData) *FacebookProvider {
@@ -55,11 +58,11 @@ func getFacebookHeader(accessToken string) http.Header {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *FacebookProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *FacebookProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequest("GET", p.ProfileURL.String()+"?fields=name,email", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String()+"?fields=name,email", nil)
 	if err != nil {
 		return "", err
 	}
@@ -80,6 +83,6 @@ func (p *FacebookProvider) GetEmailAddress(s *sessions.SessionState) (string, er
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *FacebookProvider) ValidateSessionState(s *sessions.SessionState) bool {
-	return validateToken(p, s.AccessToken, getFacebookHeader(s.AccessToken))
+func (p *FacebookProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, getFacebookHeader(s.AccessToken))
 }

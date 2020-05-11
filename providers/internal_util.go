@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -46,7 +47,7 @@ func stripParam(param, endpoint string) string {
 }
 
 // validateToken returns true if token is valid
-func validateToken(p Provider, accessToken string, header http.Header) bool {
+func validateToken(ctx context.Context, p Provider, accessToken string, header http.Header) bool {
 	if accessToken == "" || p.Data().ValidateURL == nil || p.Data().ValidateURL.String() == "" {
 		return false
 	}
@@ -55,7 +56,7 @@ func validateToken(p Provider, accessToken string, header http.Header) bool {
 		params := url.Values{"access_token": {accessToken}}
 		endpoint = endpoint + "?" + params.Encode()
 	}
-	resp, err := requests.RequestUnparsedResponse(endpoint, header)
+	resp, err := requests.RequestUnparsedResponse(ctx, endpoint, header)
 	if err != nil {
 		logger.Printf("GET %s", stripToken(endpoint))
 		logger.Printf("token validation request failed: %s", err)

@@ -19,7 +19,7 @@ COPY . .
 #  build the key into the container and then tell it where it is
 #  by setting OAUTH2_PROXY_JWT_KEY_FILE=/etc/ssl/private/jwt_signing_key.pem
 #  in app.yaml instead.
-RUN ./configure && make build && touch jwt_signing_key.pem
+RUN make build && touch jwt_signing_key.pem
 
 # Copy binary to alpine
 FROM alpine:3.11
