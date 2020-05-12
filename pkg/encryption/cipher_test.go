@@ -3,6 +3,7 @@ package encryption
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"testing"
 
@@ -54,7 +55,7 @@ func TestEncryptAndDecrypt(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// Test all 3 valid AES sizes
 			for _, secretSize := range []int{16, 24, 32} {
-				t.Run(string(secretSize), func(t *testing.T) {
+				t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
 					secret := make([]byte, secretSize)
 					_, err := io.ReadFull(rand.Reader, secret)
 					assert.Equal(t, nil, err)
@@ -75,33 +76,8 @@ func TestEncryptAndDecrypt(t *testing.T) {
 						t.Run(cName, func(t *testing.T) {
 							// Test various sizes sessions might be
 							for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-								t.Run(string(dataSize), func(t *testing.T) {
-									data := make([]byte, dataSize)
-									_, err := io.ReadFull(rand.Reader, data)
-									assert.Equal(t, nil, err)
-
-									// Ensure our Encrypt function doesn't encrypt in place
-									immutableData := make([]byte, len(data))
-									copy(immutableData, data)
-
-									encrypted, err := c.Encrypt(data)
-									assert.Equal(t, nil, err)
-									assert.NotEqual(t, encrypted, data)
-									// Encrypt didn't operate in-place on []byte
-									assert.Equal(t, data, immutableData)
-
-									// Ensure our Decrypt function doesn't decrypt in place
-									immutableEnc := make([]byte, len(encrypted))
-									copy(immutableEnc, encrypted)
-
-									decrypted, err := c.Decrypt(encrypted)
-									assert.Equal(t, nil, err)
-									// Original data back
-									assert.Equal(t, data, decrypted)
-									// Decrypt didn't operate in-place on []byte
-									assert.Equal(t, encrypted, immutableEnc)
-									// Encrypt/Decrypt actually did something
-									assert.NotEqual(t, encrypted, decrypted)
+								t.Run(fmt.Sprintf("%d", dataSize), func(t *testing.T) {
+									runEncryptAndDecrypt(t, c, dataSize)
 								})
 							}
 						})
@@ -110,6 +86,35 @@ func TestEncryptAndDecrypt(t *testing.T) {
 			}
 		})
 	}
+}
+
+func runEncryptAndDecrypt(t *testing.T, c Cipher, dataSize int) {
+	data := make([]byte, dataSize)
+	_, err := io.ReadFull(rand.Reader, data)
+	assert.Equal(t, nil, err)
+
+	// Ensure our Encrypt function doesn't encrypt in place
+	immutableData := make([]byte, len(data))
+	copy(immutableData, data)
+
+	encrypted, err := c.Encrypt(data)
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, encrypted, data)
+	// Encrypt didn't operate in-place on []byte
+	assert.Equal(t, data, immutableData)
+
+	// Ensure our Decrypt function doesn't decrypt in place
+	immutableEnc := make([]byte, len(encrypted))
+	copy(immutableEnc, encrypted)
+
+	decrypted, err := c.Decrypt(encrypted)
+	assert.Equal(t, nil, err)
+	// Original data back
+	assert.Equal(t, data, decrypted)
+	// Decrypt didn't operate in-place on []byte
+	assert.Equal(t, encrypted, immutableEnc)
+	// Encrypt/Decrypt actually did something
+	assert.NotEqual(t, encrypted, decrypted)
 }
 
 func TestDecryptCFBWrongSecret(t *testing.T) {
@@ -156,7 +161,7 @@ func TestDecryptGCMWrongSecret(t *testing.T) {
 func TestGCMtoCFBErrors(t *testing.T) {
 	// Test all 3 valid AES sizes
 	for _, secretSize := range []int{16, 24, 32} {
-		t.Run(string(secretSize), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
 			secret := make([]byte, secretSize)
 			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
@@ -169,7 +174,7 @@ func TestGCMtoCFBErrors(t *testing.T) {
 
 			// Test various sizes sessions might be
 			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-				t.Run(string(dataSize), func(t *testing.T) {
+				t.Run(fmt.Sprintf("%d", dataSize), func(t *testing.T) {
 					data := make([]byte, dataSize)
 					_, err := io.ReadFull(rand.Reader, data)
 					assert.Equal(t, nil, err)
@@ -193,7 +198,7 @@ func TestGCMtoCFBErrors(t *testing.T) {
 func TestCFBtoGCMErrors(t *testing.T) {
 	// Test all 3 valid AES sizes
 	for _, secretSize := range []int{16, 24, 32} {
-		t.Run(string(secretSize), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
 			secret := make([]byte, secretSize)
 			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
@@ -206,7 +211,7 @@ func TestCFBtoGCMErrors(t *testing.T) {
 
 			// Test various sizes sessions might be
 			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-				t.Run(string(dataSize), func(t *testing.T) {
+				t.Run(fmt.Sprintf("%d", dataSize), func(t *testing.T) {
 					data := make([]byte, dataSize)
 					_, err := io.ReadFull(rand.Reader, data)
 					assert.Equal(t, nil, err)
