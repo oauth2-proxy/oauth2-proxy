@@ -20,7 +20,7 @@ _oauth2_proxy() {
 			COMPREPLY=( $(compgen -W "google azure facebook github keycloak gitlab linkedin login.gov digitalocean" -- ${cur}) )
 			return 0
 			;;
-		-real-client-ip-header)
+		--real-client-ip-header)
 			COMPREPLY=( $(compgen -W 'X-Real-IP X-Forwarded-For X-ProxyUser-IP' -- ${cur}) )
 			return 0
 			;;
