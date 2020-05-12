@@ -76,7 +76,7 @@ release: lint test
 	BINARY=${BINARY} VERSION=${VERSION} ./dist.sh
 
 .PHONY: validate-go-version
-validate-go-version: ## Validates the installed version of go against Mattermost's minimum requirement.
+validate-go-version:
 	@if [ $(GO_MAJOR_VERSION) -gt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
 		exit 0 ;\
 	elif [ $(GO_MAJOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
@@ -86,3 +86,13 @@ validate-go-version: ## Validates the installed version of go against Mattermost
 		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
 		exit 1; \
 	fi
+
+# local-env can be used to interact with the local development environment
+# eg:
+#    make local-env-up 					# Bring up a basic test environment
+#    make local-env-down 				# Tear down the basic test environment
+#    make local-env-nginx-up 		# Bring up an nginx based test environment
+#    make local-env-nginx-down 	# Tead down the nginx based test environment
+.PHONY: local-env-%
+local-env-%:
+	make -C contrib/local-environment $*

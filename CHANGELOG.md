@@ -35,6 +35,7 @@
 
 ## Changes since v5.1.1
 
+- [#529](https://github.com/oauth2-proxy/oauth2-proxy/pull/529) Add local test environments for testing changes and new features (@JoelSpeed)
 - [#537](https://github.com/oauth2-proxy/oauth2-proxy/pull/537) Drop Fallback to Email if User not set (@JoelSpeed)
 - [#535](https://github.com/oauth2-proxy/oauth2-proxy/pull/535) Drop support for pre v3.1 cookies (@JoelSpeed)
 - [#533](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Set up code coverage within Travis for Code Climate (@JoelSpeed)
