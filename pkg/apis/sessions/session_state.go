@@ -193,8 +193,5 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 			}
 		}
 	}
-	if ss.User == "" {
-		ss.User = ss.Email
-	}
 	return ss, nil
 }
