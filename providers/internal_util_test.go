@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -20,13 +21,15 @@ type ValidateSessionStateTestProvider struct {
 	*ProviderData
 }
 
-func (tp *ValidateSessionStateTestProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+var _ Provider = (*ValidateSessionStateTestProvider)(nil)
+
+func (tp *ValidateSessionStateTestProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
 // Note that we're testing the internal validateToken() used to implement
 // several Provider's ValidateSessionState() implementations
-func (tp *ValidateSessionStateTestProvider) ValidateSessionState(s *sessions.SessionState) bool {
+func (tp *ValidateSessionStateTestProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
 	return false
 }
 
@@ -87,7 +90,7 @@ func (vtTest *ValidateSessionStateTest) Close() {
 func TestValidateSessionStateValidToken(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
-	assert.Equal(t, true, validateToken(vtTest.provider, "foobar", nil))
+	assert.Equal(t, true, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
 func TestValidateSessionStateValidTokenWithHeaders(t *testing.T) {
@@ -96,34 +99,34 @@ func TestValidateSessionStateValidTokenWithHeaders(t *testing.T) {
 	vtTest.header = make(http.Header)
 	vtTest.header.Set("Authorization", "Bearer foobar")
 	assert.Equal(t, true,
-		validateToken(vtTest.provider, "foobar", vtTest.header))
+		validateToken(context.Background(), vtTest.provider, "foobar", vtTest.header))
 }
 
 func TestValidateSessionStateEmptyToken(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
-	assert.Equal(t, false, validateToken(vtTest.provider, "", nil))
+	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "", nil))
 }
 
 func TestValidateSessionStateEmptyValidateURL(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
 	vtTest.provider.Data().ValidateURL = nil
-	assert.Equal(t, false, validateToken(vtTest.provider, "foobar", nil))
+	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
 func TestValidateSessionStateRequestNetworkFailure(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	// Close immediately to simulate a network failure
 	vtTest.Close()
-	assert.Equal(t, false, validateToken(vtTest.provider, "foobar", nil))
+	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
 func TestValidateSessionStateExpiredToken(t *testing.T) {
 	vtTest := NewValidateSessionStateTest()
 	defer vtTest.Close()
 	vtTest.responseCode = 401
-	assert.Equal(t, false, validateToken(vtTest.provider, "foobar", nil))
+	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
 func TestStripTokenNotPresent(t *testing.T) {
