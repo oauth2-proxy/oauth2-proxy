@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -76,6 +75,9 @@ type reqLogMessageData struct {
 	Username string
 }
 
+// Returns the apparent "real client IP" as a string.
+type GetClientFunc = func(r *http.Request) string
+
 // A Logger represents an active logging object that generates lines of
 // output to an io.Writer passed through a formatter. Each logging
 // operation makes a single call to the Writer's Write method. A Logger
@@ -88,7 +90,7 @@ type Logger struct {
 	stdEnabled     bool
 	authEnabled    bool
 	reqEnabled     bool
-	reverseProxy   bool
+	getClientFunc  GetClientFunc
 	excludePaths   map[string]struct{}
 	stdLogTemplate *template.Template
 	authTemplate   *template.Template
@@ -103,7 +105,7 @@ func New(flag int) *Logger {
 		stdEnabled:     true,
 		authEnabled:    true,
 		reqEnabled:     true,
-		reverseProxy:   false,
+		getClientFunc:  func(r *http.Request) string { return r.RemoteAddr },
 		excludePaths:   nil,
 		stdLogTemplate: template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
 		authTemplate:   template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
@@ -153,7 +155,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 		username = "-"
 	}
 
-	client := GetClient(req, l.reverseProxy)
+	client := l.getClientFunc(req)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -201,7 +203,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		}
 	}
 
-	client := GetClient(req, l.reverseProxy)
+	client := l.getClientFunc(req)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -252,22 +254,6 @@ func (l *Logger) GetFileLineString(calldepth int) string {
 	return fmt.Sprintf("%s:%d", file, line)
 }
 
-// GetClient parses an HTTP request for the client/remote IP address.
-func GetClient(req *http.Request, reverseProxy bool) string {
-	client := req.RemoteAddr
-	if reverseProxy {
-		if ip := req.Header.Get("X-Real-IP"); ip != "" {
-			client = ip
-		}
-	}
-
-	if c, _, err := net.SplitHostPort(client); err == nil {
-		client = c
-	}
-
-	return client
-}
-
 // FormatTimestamp returns a formatted timestamp.
 func (l *Logger) FormatTimestamp(ts time.Time) string {
 	if l.flag&LUTC != 0 {
@@ -312,11 +298,11 @@ func (l *Logger) SetReqEnabled(e bool) {
 	l.reqEnabled = e
 }
 
-// SetReverseProxy controls whether logging will trust headers that can be set by a reverse proxy.
-func (l *Logger) SetReverseProxy(e bool) {
+// SetGetClientFunc sets the function which determines the apparent "real client IP".
+func (l *Logger) SetGetClientFunc(f GetClientFunc) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.reverseProxy = e
+	l.getClientFunc = f
 }
 
 // SetExcludePaths sets the paths to exclude from logging.
@@ -392,10 +378,10 @@ func SetReqEnabled(e bool) {
 	std.SetReqEnabled(e)
 }
 
-// SetReverseProxy controls whether logging will trust headers that can be set
-// by a reverse proxy for the standard logger.
-func SetReverseProxy(e bool) {
-	std.SetReverseProxy(e)
+// SetGetClientFunc sets the function which determines the apparent IP address
+// set by a reverse proxy for the standard logger.
+func SetGetClientFunc(f GetClientFunc) {
+	std.SetGetClientFunc(f)
 }
 
 // SetExcludePaths sets the path to exclude from logging, eg: health checks

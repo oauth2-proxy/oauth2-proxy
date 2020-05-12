@@ -31,19 +31,20 @@ import (
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix      string `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
-	PingPath         string `flag:"ping-path" cfg:"ping_path" env:"OAUTH2_PROXY_PING_PATH"`
-	ProxyWebSockets  bool   `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
-	HTTPAddress      string `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
-	HTTPSAddress     string `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
-	ReverseProxy     bool   `flag:"reverse-proxy" cfg:"reverse_proxy" env:"OAUTH2_PROXY_REVERSE_PROXY"`
-	ForceHTTPS       bool   `flag:"force-https" cfg:"force_https" env:"OAUTH2_PROXY_FORCE_HTTPS"`
-	RedirectURL      string `flag:"redirect-url" cfg:"redirect_url" env:"OAUTH2_PROXY_REDIRECT_URL"`
-	ClientID         string `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
-	ClientSecret     string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
-	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file" env:"OAUTH2_PROXY_CLIENT_SECRET_FILE"`
-	TLSCertFile      string `flag:"tls-cert-file" cfg:"tls_cert_file" env:"OAUTH2_PROXY_TLS_CERT_FILE"`
-	TLSKeyFile       string `flag:"tls-key-file" cfg:"tls_key_file" env:"OAUTH2_PROXY_TLS_KEY_FILE"`
+	ProxyPrefix        string `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
+	PingPath           string `flag:"ping-path" cfg:"ping_path" env:"OAUTH2_PROXY_PING_PATH"`
+	ProxyWebSockets    bool   `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
+	HTTPAddress        string `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
+	HTTPSAddress       string `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
+	ReverseProxy       bool   `flag:"reverse-proxy" cfg:"reverse_proxy" env:"OAUTH2_PROXY_REVERSE_PROXY"`
+	RealClientIPHeader string `flag:"real-client-ip-header" cfg:"real_client_ip_header" env:"OAUTH2_PROXY_REAL_CLIENT_IP_HEADER"`
+	ForceHTTPS         bool   `flag:"force-https" cfg:"force_https" env:"OAUTH2_PROXY_FORCE_HTTPS"`
+	RedirectURL        string `flag:"redirect-url" cfg:"redirect_url" env:"OAUTH2_PROXY_REDIRECT_URL"`
+	ClientID           string `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
+	ClientSecret       string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
+	ClientSecretFile   string `flag:"client-secret-file" cfg:"client_secret_file" env:"OAUTH2_PROXY_CLIENT_SECRET_FILE"`
+	TLSCertFile        string `flag:"tls-cert-file" cfg:"tls_cert_file" env:"OAUTH2_PROXY_TLS_CERT_FILE"`
+	TLSKeyFile         string `flag:"tls-key-file" cfg:"tls_key_file" env:"OAUTH2_PROXY_TLS_KEY_FILE"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file" env:"OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group" env:"OAUTH2_PROXY_KEYCLOAK_GROUP"`
@@ -139,6 +140,7 @@ type Options struct {
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
+	realClientIPParser realClientIPParser
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -456,6 +458,13 @@ func (o *Options) Validate() error {
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)
 
+	if o.ReverseProxy {
+		o.realClientIPParser, err = getRealClientIPParser(o.RealClientIPHeader)
+		if err != nil {
+			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
+		}
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
@@ -695,7 +704,9 @@ func setupLogger(o *Options, msgs []string) []string {
 	logger.SetStandardTemplate(o.StandardLoggingFormat)
 	logger.SetAuthTemplate(o.AuthLoggingFormat)
 	logger.SetReqTemplate(o.RequestLoggingFormat)
-	logger.SetReverseProxy(o.ReverseProxy)
+	logger.SetGetClientFunc(func(r *http.Request) string {
+		return getClientString(o.realClientIPParser, r, false)
+	})
 
 	excludePaths := make([]string, 0)
 	excludePaths = append(excludePaths, strings.Split(o.ExcludeLoggingPaths, ",")...)
