@@ -79,6 +79,8 @@ type OAuthProxy struct {
 
 	RobotsPath        string
 	PingPath          string
+	PingUserAgent     string
+	GagPingRequests   bool
 	SignInPath        string
 	SignOutPath       string
 	OAuthStartPath    string
@@ -290,6 +292,8 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 
 		RobotsPath:        "/robots.txt",
 		PingPath:          opts.PingPath,
+		PingUserAgent:     opts.PingUserAgent,
+		GagPingRequests:   opts.SilencePingLogging,
 		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
 		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
@@ -444,6 +448,11 @@ func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 
 // PingPage responds 200 OK to requests
 func (p *OAuthProxy) PingPage(rw http.ResponseWriter) {
+	if p.GagPingRequests {
+		if gl, ok := rw.(GaggableResponseLogger); ok {
+			gl.GagLogging()
+		}
+	}
 	rw.WriteHeader(http.StatusOK)
 	fmt.Fprintf(rw, "OK")
 }
@@ -534,7 +543,7 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	if req.Form.Get("rd") != "" {
 		redirect = req.Form.Get("rd")
 	}
-	if !p.IsValidRedirect(redirect) {
+	if redirect == "" || !p.IsValidRedirect(redirect) {
 		redirect = req.URL.Path
 		if strings.HasPrefix(redirect, p.ProxyPrefix) {
 			redirect = "/"
@@ -653,6 +662,17 @@ func prepareNoCache(w http.ResponseWriter) {
 	}
 }
 
+// IsPingRequest will check if the request appears to be performing a health check
+// either via the path it's requesting or by a special User-Agent configuration.
+func (p *OAuthProxy) IsPingRequest(req *http.Request) bool {
+
+	if req.URL.EscapedPath() == p.PingPath {
+		return true
+	}
+
+	return p.PingUserAgent != "" && req.Header.Get("User-Agent") == p.PingUserAgent
+}
+
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
 		prepareNoCache(rw)
@@ -661,7 +681,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	switch path := req.URL.Path; {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
-	case path == p.PingPath:
+	case p.IsPingRequest(req):
 		p.PingPage(rw)
 	case p.IsWhitelistedRequest(req):
 		p.serveMux.ServeHTTP(rw, req)
@@ -714,8 +734,8 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	userInfo := struct {
-		Email             string `json:"email"`
-		PreferredUsername string `json:"preferredUsername,omitempty"`
+		Email             string           `json:"email"`
+		PreferredUsername string           `json:"preferredUsername,omitempty"`
 	}{
 		Email:             session.Email,
 		PreferredUsername: session.PreferredUsername,

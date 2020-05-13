@@ -13,6 +13,10 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
+type GaggableResponseLogger interface {
+	GagLogging()
+}
+
 // responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP status
 // code and body size
 type responseLogger struct {
@@ -21,6 +25,7 @@ type responseLogger struct {
 	size     int
 	upstream string
 	authInfo string
+	gag      bool
 }
 
 // Header returns the ResponseWriter's Header
@@ -34,6 +39,10 @@ func (l *responseLogger) Hijack() (rwc net.Conn, buf *bufio.ReadWriter, err erro
 		return hj.Hijack()
 	}
 	return nil, nil, errors.New("http.Hijacker is not available on writer")
+}
+
+func (l *responseLogger) GagLogging() {
+	l.gag = true
 }
 
 // ExtractGAPMetadata extracts and removes GAP headers from the ResponseWriter's
@@ -104,5 +113,7 @@ func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	url := *req.URL
 	responseLogger := &responseLogger{w: w}
 	h.handler.ServeHTTP(responseLogger, req)
-	logger.PrintReq(responseLogger.authInfo, responseLogger.upstream, req, url, t, responseLogger.Status(), responseLogger.Size())
+	if !responseLogger.gag {
+		logger.PrintReq(responseLogger.authInfo, responseLogger.upstream, req, url, t, responseLogger.Status(), responseLogger.Size())
+	}
 }
