@@ -113,6 +113,7 @@ type OAuthProxy struct {
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
 	realClientIPParser   realClientIPParser
+	ipWhitelist          *IPWhitelist
 	Banner               string
 	Footer               string
 }
@@ -267,6 +268,8 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 	}
 
+	ipWhitelist := NewIPWhitelist(opts.ipWhitelist)
+
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
 	refresh := "disabled"
 	if opts.Cookie.Refresh != time.Duration(0) {
@@ -310,6 +313,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
 		compiledRegex:        opts.compiledRegex,
 		realClientIPParser:   opts.realClientIPParser,
+		ipWhitelist:          ipWhitelist,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
 		SetBasicAuth:         opts.SetBasicAuth,
@@ -625,7 +629,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 // IsWhitelistedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsWhitelistedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path)
+	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path) || p.IsWhitelistedIP(req)
 }
 
 // IsWhitelistedPath is used to check if the request path is allowed without auth
@@ -651,6 +655,25 @@ func prepareNoCache(w http.ResponseWriter) {
 	for k, v := range noCacheHeaders {
 		w.Header().Set(k, v)
 	}
+}
+
+func (p *OAuthProxy) IsWhitelistedIP(req *http.Request) bool {
+	if p.realClientIPParser == nil || p.ipWhitelist == nil {
+		return false
+	}
+
+	remoteAddr, err := p.realClientIPParser.GetRealClientIP(req.Header)
+	if err != nil {
+		logger.Printf("Error obtaining real IP for whitelist: %s", err.Error())
+		// Possibly spoofed X-Real-IP header
+		return false
+	}
+
+	if remoteAddr == nil {
+		return false
+	}
+
+	return p.ipWhitelist.has(remoteAddr)
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

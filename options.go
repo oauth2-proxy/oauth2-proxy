@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -31,20 +32,21 @@ import (
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix        string `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
-	PingPath           string `flag:"ping-path" cfg:"ping_path" env:"OAUTH2_PROXY_PING_PATH"`
-	ProxyWebSockets    bool   `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
-	HTTPAddress        string `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
-	HTTPSAddress       string `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
-	ReverseProxy       bool   `flag:"reverse-proxy" cfg:"reverse_proxy" env:"OAUTH2_PROXY_REVERSE_PROXY"`
-	RealClientIPHeader string `flag:"real-client-ip-header" cfg:"real_client_ip_header" env:"OAUTH2_PROXY_REAL_CLIENT_IP_HEADER"`
-	ForceHTTPS         bool   `flag:"force-https" cfg:"force_https" env:"OAUTH2_PROXY_FORCE_HTTPS"`
-	RedirectURL        string `flag:"redirect-url" cfg:"redirect_url" env:"OAUTH2_PROXY_REDIRECT_URL"`
-	ClientID           string `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
-	ClientSecret       string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
-	ClientSecretFile   string `flag:"client-secret-file" cfg:"client_secret_file" env:"OAUTH2_PROXY_CLIENT_SECRET_FILE"`
-	TLSCertFile        string `flag:"tls-cert-file" cfg:"tls_cert_file" env:"OAUTH2_PROXY_TLS_CERT_FILE"`
-	TLSKeyFile         string `flag:"tls-key-file" cfg:"tls_key_file" env:"OAUTH2_PROXY_TLS_KEY_FILE"`
+	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
+	PingPath           string   `flag:"ping-path" cfg:"ping_path" env:"OAUTH2_PROXY_PING_PATH"`
+	ProxyWebSockets    bool     `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
+	HTTPAddress        string   `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
+	HTTPSAddress       string   `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
+	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy" env:"OAUTH2_PROXY_REVERSE_PROXY"`
+	RealClientIPHeader string   `flag:"real-client-ip-header" cfg:"real_client_ip_header" env:"OAUTH2_PROXY_REAL_CLIENT_IP_HEADER"`
+	IPWhitelist        []string `flag:"ip-whitelist" cfg:"ip_whitelist" env:"OAUTH2_PROXY_IP_WHITELIST"`
+	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https" env:"OAUTH2_PROXY_FORCE_HTTPS"`
+	RedirectURL        string   `flag:"redirect-url" cfg:"redirect_url" env:"OAUTH2_PROXY_REDIRECT_URL"`
+	ClientID           string   `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
+	ClientSecret       string   `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
+	ClientSecretFile   string   `flag:"client-secret-file" cfg:"client_secret_file" env:"OAUTH2_PROXY_CLIENT_SECRET_FILE"`
+	TLSCertFile        string   `flag:"tls-cert-file" cfg:"tls_cert_file" env:"OAUTH2_PROXY_TLS_CERT_FILE"`
+	TLSKeyFile         string   `flag:"tls-key-file" cfg:"tls_key_file" env:"OAUTH2_PROXY_TLS_KEY_FILE"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file" env:"OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group" env:"OAUTH2_PROXY_KEYCLOAK_GROUP"`
@@ -141,6 +143,7 @@ type Options struct {
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
 	realClientIPParser realClientIPParser
+	ipWhitelist        []*net.IPNet
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -465,6 +468,12 @@ func (o *Options) Validate() error {
 		}
 	}
 
+	if o.IPWhitelist != nil && len(o.IPWhitelist) > 0 {
+		parsedIPNets, whiteListMsgs := parseIPWhitelist(o.IPWhitelist, msgs)
+		msgs = append(msgs, whiteListMsgs...)
+		o.ipWhitelist = append(o.ipWhitelist, parsedIPNets...)
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
@@ -610,6 +619,41 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 		parsedIssuers = append(parsedIssuers, jwtIssuer{issuerURI: uri, audience: audience})
 	}
 	return parsedIssuers, msgs
+}
+
+func parseIPWhitelist(ipWhitelistStrs []string, msgs []string) ([]*net.IPNet, []string) {
+	parsedIPNets := make([]*net.IPNet, 0, len(ipWhitelistStrs))
+
+	for ipIndex, ipStr := range ipWhitelistStrs {
+		if !strings.ContainsRune(ipStr, '/') {
+			ip := net.ParseIP(ipStr)
+			if ip == nil {
+				msgs = append(msgs, fmt.Sprintf(
+					"ip_whitelist[%d] (%s) looks like a IP address, but could not be recognized", ipIndex, ipStr))
+				continue
+			}
+
+			// nolint:gocritic
+			if ip.To4() != nil {
+				ipStr += "/32"
+			} else if ip.To16() != nil {
+				ipStr += "/128"
+			} else {
+				msgs = append(msgs, fmt.Sprintf("ip_whitelist[%d] (%s) address neither IPv4 or IPv6", ipIndex, ipStr))
+				continue
+			}
+		}
+
+		_, ipNet, err := net.ParseCIDR(ipStr)
+		if err != nil {
+			msgs = append(msgs, fmt.Sprintf("ip_whitelist[%d] (%s) can't parse as CIDR: %s", ipIndex, ipStr, err.Error()))
+			continue
+		}
+
+		parsedIPNets = append(parsedIPNets, ipNet)
+	}
+
+	return parsedIPNets, msgs
 }
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
