@@ -2,6 +2,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -15,10 +16,10 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 )
 
 // GoogleProvider represents an Google based Identity Provider
@@ -29,6 +30,8 @@ type GoogleProvider struct {
 	// the configured Google group.
 	GroupValidator func(string) bool
 }
+
+var _ Provider = (*GoogleProvider)(nil)
 
 type claims struct {
 	Subject       string `json:"sub"`
@@ -97,7 +100,7 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GoogleProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -114,7 +117,7 @@ func (p *GoogleProvider) Redeem(redirectURL, code string) (s *sessions.SessionSt
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return
 	}
@@ -184,8 +187,9 @@ func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Serv
 	}
 	conf.Subject = adminEmail
 
-	client := conf.Client(oauth2.NoContext)
-	adminService, err := admin.New(client)
+	ctx := context.Background()
+	client := conf.Client(ctx)
+	adminService, err := admin.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -240,12 +244,12 @@ func (p *GoogleProvider) ValidateGroup(email string) bool {
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *GoogleProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
+func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
 		return false, nil
 	}
 
-	newToken, newIDToken, duration, err := p.redeemRefreshToken(s.RefreshToken)
+	newToken, newIDToken, duration, err := p.redeemRefreshToken(ctx, s.RefreshToken)
 	if err != nil {
 		return false, err
 	}
@@ -263,7 +267,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(s *sessions.SessionState) (bool,
 	return true, nil
 }
 
-func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, idToken string, expires time.Duration, err error) {
+func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken string) (token string, idToken string, expires time.Duration, err error) {
 	// https://developers.google.com/identity/protocols/OAuth2WebServer#refresh
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
@@ -276,7 +280,7 @@ func (p *GoogleProvider) redeemRefreshToken(refreshToken string) (token string, 
 	params.Add("refresh_token", refreshToken)
 	params.Add("grant_type", "refresh_token")
 	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return
 	}

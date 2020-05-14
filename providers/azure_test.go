@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -41,9 +42,9 @@ func TestAzureProviderDefaults(t *testing.T) {
 		p.Data().LoginURL.String())
 	assert.Equal(t, "https://login.microsoftonline.com/common/oauth2/token",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://graph.windows.net/me?api-version=1.6",
+	assert.Equal(t, "https://graph.microsoft.com/v1.0/me",
 		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://graph.windows.net",
+	assert.Equal(t, "https://graph.microsoft.com",
 		p.Data().ProtectedResource.String())
 	assert.Equal(t, "",
 		p.Data().ValidateURL.String())
@@ -97,9 +98,9 @@ func TestAzureSetTenant(t *testing.T) {
 		p.Data().LoginURL.String())
 	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/token",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://graph.windows.net/me?api-version=1.6",
+	assert.Equal(t, "https://graph.microsoft.com/v1.0/me",
 		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://graph.windows.net",
+	assert.Equal(t, "https://graph.microsoft.com",
 		p.Data().ProtectedResource.String())
 	assert.Equal(t, "",
 		p.Data().ValidateURL.String())
@@ -107,12 +108,11 @@ func TestAzureSetTenant(t *testing.T) {
 }
 
 func testAzureBackend(payload string) *httptest.Server {
-	path := "/me"
-	query := "api-version=1.6"
+	path := "/v1.0/me"
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if (r.URL.Path != path || r.URL.RawQuery != query) && r.Method != http.MethodPost {
+			if (r.URL.Path != path) && r.Method != http.MethodPost {
 				w.WriteHeader(404)
 			} else if r.Method == http.MethodPost && r.Body != nil {
 				w.WriteHeader(200)
@@ -134,7 +134,7 @@ func TestAzureProviderGetEmailAddress(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
 }
@@ -147,7 +147,7 @@ func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
 }
@@ -160,7 +160,7 @@ func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "user@windows.net", email)
 }
@@ -173,7 +173,7 @@ func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
 	assert.Equal(t, "", email)
 }
@@ -186,7 +186,7 @@ func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -199,7 +199,7 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
 	assert.Equal(t, "", email)
 }
@@ -213,7 +213,7 @@ func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 	p.Data().RedeemURL.Path = "/common/oauth2/token"
-	s, err := p.Redeem("https://localhost", "1234")
+	s, err := p.Redeem(context.Background(), "https://localhost", "1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "testtoken1234", s.IDToken)
 	assert.Equal(t, timestamp, s.ExpiresOn.UTC())

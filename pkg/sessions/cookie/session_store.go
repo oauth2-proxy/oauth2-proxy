@@ -12,7 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 const (
@@ -37,7 +37,7 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 	if ss.CreatedAt.IsZero() {
 		ss.CreatedAt = time.Now()
 	}
-	value, err := utils.CookieForSession(ss, s.CookieCipher)
+	value, err := cookieForSession(ss, s.CookieCipher)
 	if err != nil {
 		return err
 	}
@@ -48,17 +48,17 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 // Load reads sessions.SessionState information from Cookies within the
 // HTTP request object
 func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
-	c, err := loadCookie(req, s.CookieOptions.CookieName)
+	c, err := loadCookie(req, s.CookieOptions.Name)
 	if err != nil {
 		// always http.ErrNoCookie
-		return nil, fmt.Errorf("Cookie %q not present", s.CookieOptions.CookieName)
+		return nil, fmt.Errorf("cookie %q not present", s.CookieOptions.Name)
 	}
-	val, _, ok := encryption.Validate(c, s.CookieOptions.CookieHmacKey, s.CookieOptions.CookieExpire)
+	val, _, ok := encryption.Validate(c, s.CookieOptions.HmacKey, s.CookieOptions.Expire)
 	if !ok {
-		return nil, errors.New("Cookie Signature not valid")
+		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := utils.SessionFromCookie(val, s.CookieCipher)
+	session, err := sessionFromCookie(val, s.CookieCipher)
 	if err != nil {
 		return nil, err
 	}
@@ -68,21 +68,28 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 // Clear clears any saved session information by writing a cookie to
 // clear the session
 func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
-	var cookies []*http.Cookie
-
 	// matches CookieName, CookieName_<number>
-	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieOptions.CookieName))
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieOptions.Name))
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
 			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
 
 			http.SetCookie(rw, clearCookie)
-			cookies = append(cookies, clearCookie)
 		}
 	}
 
 	return nil
+}
+
+// cookieForSession serializes a session state for storage in a cookie
+func cookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
+	return s.EncodeSessionState(c)
+}
+
+// sessionFromCookie deserializes a session from a cookie value
+func sessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState, err error) {
+	return sessions.DecodeSessionState(v, c)
 }
 
 // setSessionCookie adds the user's session cookie to the response
@@ -96,10 +103,10 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
 	if value != "" {
-		value = encryption.SignedValue(s.CookieOptions.CookieHmacKey, s.CookieOptions.CookieName, value, now)
+		value = encryption.SignedValue(s.CookieOptions.HmacKey, s.CookieOptions.Name, value, now)
 	}
-	c := s.makeCookie(req, s.CookieOptions.CookieName, value, s.CookieOptions.CookieExpire, now)
-	if len(c.Value) > 4096-len(s.CookieOptions.CookieName) {
+	c := s.makeCookie(req, s.CookieOptions.Name, value, s.CookieOptions.Expire, now)
+	if len(c.Value) > 4096-len(s.CookieOptions.Name) {
 		return splitCookie(c)
 	}
 	return []*http.Cookie{c}
@@ -129,6 +136,7 @@ func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Coo
 // it into a slice of cookies which fit within the 4kb cookie limit indexing
 // the cookies from 0
 func splitCookie(c *http.Cookie) []*http.Cookie {
+	logger.Printf("WARNING: Multiple cookies are required for this session as it exceeds the 4kb cookie limit. Please use server side session storage (eg. Redis) instead.")
 	if len(c.Value) < maxCookieLength {
 		return []*http.Cookie{c}
 	}
@@ -172,7 +180,7 @@ func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {
 		}
 	}
 	if len(cookies) == 0 {
-		return nil, fmt.Errorf("Could not find cookie %s", cookieName)
+		return nil, fmt.Errorf("could not find cookie %s", cookieName)
 	}
 	return joinCookies(cookies)
 }

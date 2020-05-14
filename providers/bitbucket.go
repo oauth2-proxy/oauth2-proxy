@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,6 +17,8 @@ type BitbucketProvider struct {
 	Team       string
 	Repository string
 }
+
+var _ Provider = (*BitbucketProvider)(nil)
 
 // NewBitbucketProvider initiates a new BitbucketProvider
 func NewBitbucketProvider(p *ProviderData) *BitbucketProvider {
@@ -64,7 +67,7 @@ func (p *BitbucketProvider) SetRepository(repository string) {
 }
 
 // GetEmailAddress returns the email of the authenticated user
-func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 
 	var emails struct {
 		Values []struct {
@@ -82,7 +85,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 			FullName string `json:"full_name"`
 		}
 	}
-	req, err := http.NewRequest("GET",
+	req, err := http.NewRequestWithContext(ctx, "GET",
 		p.ValidateURL.String()+"?access_token="+s.AccessToken, nil)
 	if err != nil {
 		logger.Printf("failed building request %s", err)
@@ -98,7 +101,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 		teamURL := &url.URL{}
 		*teamURL = *p.ValidateURL
 		teamURL.Path = "/2.0/teams"
-		req, err = http.NewRequest("GET",
+		req, err = http.NewRequestWithContext(ctx, "GET",
 			teamURL.String()+"?role=member&access_token="+s.AccessToken, nil)
 		if err != nil {
 			logger.Printf("failed building request %s", err)
@@ -116,7 +119,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 				break
 			}
 		}
-		if found != true {
+		if !found {
 			logger.Print("team membership test failed, access denied")
 			return "", nil
 		}
@@ -126,7 +129,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 		repositoriesURL := &url.URL{}
 		*repositoriesURL = *p.ValidateURL
 		repositoriesURL.Path = "/2.0/repositories/" + strings.Split(p.Repository, "/")[0]
-		req, err = http.NewRequest("GET",
+		req, err = http.NewRequestWithContext(ctx, "GET",
 			repositoriesURL.String()+"?role=contributor"+
 				"&q=full_name="+url.QueryEscape("\""+p.Repository+"\"")+
 				"&access_token="+s.AccessToken,
@@ -147,7 +150,7 @@ func (p *BitbucketProvider) GetEmailAddress(s *sessions.SessionState) (string, e
 				break
 			}
 		}
-		if found != true {
+		if !found {
 			logger.Print("repository access test failed, access denied")
 			return "", nil
 		}

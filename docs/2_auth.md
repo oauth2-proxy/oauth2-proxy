@@ -24,6 +24,7 @@ Valid providers are :
 - [Nextcloud](#nextcloud-provider)
 - [DigitalOcean](#digitalocean-auth-provider)
 - [Bitbucket](#bitbucket-auth-provider)
+- [Gitea](#gitea-auth-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -100,10 +101,23 @@ Note: When using the Azure Auth provider with nginx and the cookie session store
 1.  Create a new project: https://github.com/settings/developers
 2.  Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
 
-The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
+The GitHub auth provider supports two additional ways to restrict authentication to either organization and optional team level access, or to collaborators of a repository. Restricting by these options is normally accompanied with `--email-domain=*`
+
+To restrict by organization only, include the following flag:
 
     -github-org="": restrict logins to members of this organisation
+
+To restrict within an organization to specific teams, include the following flag in addition to `-github-org`:
+
     -github-team="": restrict logins to members of any of these teams (slug), separated by a comma
+
+If you would rather restrict access to collaborators of a repository, those users must either have push access to a public repository or any access to a private repository:
+
+    -github-repo="": restrict logins to collaborators of this repository formatted as orgname/repo
+
+If you'd like to allow access to users with **read only** access to a **public** repository you will need to provide a [token](https://github.com/settings/tokens) for a user that has write access to the repository. The token must be created with at least the `public_repo` scope:
+
+    -github-token="": the token to use when verifying repository collaborators
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 
@@ -203,7 +217,7 @@ you may wish to configure an authorization server for each application. Otherwis
 
 ```
 provider = "oidc"
-redirect_url = "https://example.corp.com"
+redirect_url = "https://example.corp.com/oauth2/callback"
 oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
 upstreams = [
     "https://example.corp.com"
@@ -224,6 +238,39 @@ Generate a unique `client_secret` to encrypt the cookie.
 
 Then you can start the oauth2-proxy with `./oauth2-proxy -config /etc/example.cfg`
 
+#### Configuring the OIDC Provider with Okta - localhost
+1. Signup for developer account: https://developer.okta.com/signup/
+2. Create New `Web` Application: https://${your-okta-domain}/dev/console/apps/new
+3. Example Application Settings for localhost:
+   * **Name:** My Web App
+   * **Base URIs:** http://localhost:4180/
+   * **Login redirect URIs:** http://localhost:4180/oauth2/callback
+   * **Logout redirect URIs:** http://localhost:4180/
+   * **Group assignments:** `Everyone`
+   * **Grant type allowed:** `Authorization Code` and `Refresh Token`
+4. Make note of the `Client ID` and `Client secret`, they are needed in a future step
+5. Make note of the **default** Authorization Server Issuer URI from: https://${your-okta-domain}/admin/oauth2/as
+6. Example config file `/etc/localhost.cfg`
+   ```
+   provider = "oidc"
+   redirect_url = "http://localhost:4180/oauth2/callback"
+   oidc_issuer_url = "https://${your-okta-domain}/oauth2/default"
+   upstreams = [
+       "http://0.0.0.0:8080"
+   ]
+   email_domains = [
+       "*"
+   ]
+   client_id = "XXX"
+   client_secret = "YYY"
+   pass_access_token = true
+   cookie_secret = "ZZZ"
+   cookie_secure = false
+   skip_provider_button = true
+   # Note: use the following for testing within a container
+   # http_address = "0.0.0.0:4180"
+   ```
+7. Then you can start the oauth2-proxy with `./oauth2-proxy -config /etc/localhost.cfg`
 
 ### login.gov Provider
 
@@ -272,7 +319,7 @@ If you encounter this, then you can create a `jwt_signing_key.pem` file in the t
 directory of the repo which contains the key in PEM format and then do your docker build.
 The docker build process will copy that file into your image which you can then access by
 setting the `OAUTH2_PROXY_JWT_KEY_FILE=/etc/ssl/private/jwt_signing_key.pem`
-environment variable, or by setting `-jwt-key-file=/etc/ssl/private/jwt_signing_key.pem` on the commandline.
+environment variable, or by setting `--jwt-key-file=/etc/ssl/private/jwt_signing_key.pem` on the commandline.
 
 Once it is running, you should be able to go to `http://localhost:4180/` in your browser,
 get authenticated by the login.gov integration server, and then get proxied on to your
@@ -284,7 +331,7 @@ proxy, and you would use real hostnames everywhere.
 
 Some providers do not support OIDC discovery via their issuer URL, so oauth2-proxy cannot simply grab the authorization, token and jwks URI endpoints from the provider's metadata.
 
-In this case, you can set the `-skip-oidc-discovery` option, and supply those required endpoints manually:
+In this case, you can set the `--skip-oidc-discovery` option, and supply those required endpoints manually:
 
 ```
     -provider oidc
@@ -362,6 +409,25 @@ To use the provider, pass the following options:
 ```
 
 The default configuration allows everyone with Bitbucket account to authenticate. To restrict the access to the team members use additional configuration option: `--bitbucket-team=<Team name>`. To restrict the access to only these users who has access to one selected repository use `--bitbucket-repository=<Repository name>`.
+
+
+### Gitea Auth Provider
+
+1. Create a new application: `https://< your gitea host >/user/settings/applications`
+2. Under `Redirect URI` enter the correct URL i.e. `https://<proxied host>/oauth2/callback`
+3. Note the Client ID and Client Secret.
+4. Pass the following options to the proxy:
+
+```
+    --provider="github"
+    --redirect-url="https://<proxied host>/oauth2/callback"
+    --provider-display-name="Gitea"
+    --client-id="< client_id as generated by Gitea >"
+    --client-secret="< client_secret as generated by Gitea >"
+    --login-url="https://< your gitea host >/login/oauth/authorize"
+    --redeem-url="https://< your gitea host >/login/oauth/access_token"
+    --validate-url="https://< your gitea host >/api/v1"
+```
 
 
 ## Email Authentication

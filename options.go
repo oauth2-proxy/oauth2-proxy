@@ -6,7 +6,6 @@ import (
 	"crypto"
 	"crypto/md5"
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -24,6 +24,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -32,19 +33,20 @@ import (
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix      string `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
-	PingPath         string `flag:"ping-path" cfg:"ping_path" env:"OAUTH2_PROXY_PING_PATH"`
-	ProxyWebSockets  bool   `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
-	HTTPAddress      string `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
-	HTTPSAddress     string `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
-	ReverseProxy     bool   `flag:"reverse-proxy" cfg:"reverse_proxy" env:"OAUTH2_PROXY_REVERSE_PROXY"`
-	ForceHTTPS       bool   `flag:"force-https" cfg:"force_https" env:"OAUTH2_PROXY_FORCE_HTTPS"`
-	RedirectURL      string `flag:"redirect-url" cfg:"redirect_url" env:"OAUTH2_PROXY_REDIRECT_URL"`
-	ClientID         string `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
-	ClientSecret     string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
-	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file" env:"OAUTH2_PROXY_CLIENT_SECRET_FILE"`
-	TLSCertFile      string `flag:"tls-cert-file" cfg:"tls_cert_file" env:"OAUTH2_PROXY_TLS_CERT_FILE"`
-	TLSKeyFile       string `flag:"tls-key-file" cfg:"tls_key_file" env:"OAUTH2_PROXY_TLS_KEY_FILE"`
+	ProxyPrefix        string `flag:"proxy-prefix" cfg:"proxy_prefix" env:"OAUTH2_PROXY_PROXY_PREFIX"`
+	PingPath           string `flag:"ping-path" cfg:"ping_path" env:"OAUTH2_PROXY_PING_PATH"`
+	ProxyWebSockets    bool   `flag:"proxy-websockets" cfg:"proxy_websockets" env:"OAUTH2_PROXY_PROXY_WEBSOCKETS"`
+	HTTPAddress        string `flag:"http-address" cfg:"http_address" env:"OAUTH2_PROXY_HTTP_ADDRESS"`
+	HTTPSAddress       string `flag:"https-address" cfg:"https_address" env:"OAUTH2_PROXY_HTTPS_ADDRESS"`
+	ReverseProxy       bool   `flag:"reverse-proxy" cfg:"reverse_proxy" env:"OAUTH2_PROXY_REVERSE_PROXY"`
+	RealClientIPHeader string `flag:"real-client-ip-header" cfg:"real_client_ip_header" env:"OAUTH2_PROXY_REAL_CLIENT_IP_HEADER"`
+	ForceHTTPS         bool   `flag:"force-https" cfg:"force_https" env:"OAUTH2_PROXY_FORCE_HTTPS"`
+	RedirectURL        string `flag:"redirect-url" cfg:"redirect_url" env:"OAUTH2_PROXY_REDIRECT_URL"`
+	ClientID           string `flag:"client-id" cfg:"client_id" env:"OAUTH2_PROXY_CLIENT_ID"`
+	ClientSecret       string `flag:"client-secret" cfg:"client_secret" env:"OAUTH2_PROXY_CLIENT_SECRET"`
+	ClientSecretFile   string `flag:"client-secret-file" cfg:"client_secret_file" env:"OAUTH2_PROXY_CLIENT_SECRET_FILE"`
+	TLSCertFile        string `flag:"tls-cert-file" cfg:"tls_cert_file" env:"OAUTH2_PROXY_TLS_CERT_FILE"`
+	TLSKeyFile         string `flag:"tls-key-file" cfg:"tls_key_file" env:"OAUTH2_PROXY_TLS_KEY_FILE"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file" env:"OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group" env:"OAUTH2_PROXY_KEYCLOAK_GROUP"`
@@ -55,6 +57,8 @@ type Options struct {
 	WhitelistDomains         []string `flag:"whitelist-domain" cfg:"whitelist_domains" env:"OAUTH2_PROXY_WHITELIST_DOMAINS"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org" env:"OAUTH2_PROXY_GITHUB_ORG"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team" env:"OAUTH2_PROXY_GITHUB_TEAM"`
+	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo" env:"OAUTH2_PROXY_GITHUB_REPO"`
+	GitHubToken              string   `flag:"github-token" cfg:"github_token" env:"OAUTH2_PROXY_GITHUB_TOKEN"`
 	GitLabGroup              string   `flag:"gitlab-group" cfg:"gitlab_group" env:"OAUTH2_PROXY_GITLAB_GROUP"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group" env:"OAUTH2_PROXY_GOOGLE_GROUPS"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email" env:"OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL"`
@@ -65,17 +69,15 @@ type Options struct {
 	Banner                   string   `flag:"banner" cfg:"banner" env:"OAUTH2_PROXY_BANNER"`
 	Footer                   string   `flag:"footer" cfg:"footer" env:"OAUTH2_PROXY_FOOTER"`
 
-	// Embed CookieOptions
-	options.CookieOptions
-
-	// Embed SessionOptions
-	options.SessionOptions
+	Cookie  options.CookieOptions  `cfg:",squash"`
+	Session options.SessionOptions `cfg:",squash"`
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
 	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
+	SetBasicAuth                  bool          `flag:"set-basic-auth" cfg:"set_basic_auth" env:"OAUTH2_PROXY_SET_BASIC_AUTH"`
 	PreferEmailToUser             bool          `flag:"prefer-email-to-user" cfg:"prefer_email_to_user" env:"OAUTH2_PROXY_PREFER_EMAIL_TO_USER"`
 	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password" env:"OAUTH2_PROXY_BASIC_AUTH_PASSWORD"`
 	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token" env:"OAUTH2_PROXY_PASS_ACCESS_TOKEN"`
@@ -92,22 +94,24 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	Provider                         string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
-	ProviderName                     string `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
-	OIDCIssuerURL                    string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
-	InsecureOIDCAllowUnverifiedEmail bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
-	SkipOIDCDiscovery                bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
-	OIDCJwksURL                      string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
-	LoginURL                         string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
-	RedeemURL                        string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
-	ProfileURL                       string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
-	ProtectedResource                string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
-	ValidateURL                      string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
-	Scope                            string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
-	Prompt                           string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
-	ApprovalPrompt                   string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
-	ClaimAuthorization               string `flag:"claim-authorization" cfg:"claim_authorization" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATION"`
-	ClaimAuthorizationsFile          string `flag:"claim-authorizations-file" cfg:"claim_authorizations_file" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATIONS_FILE"`
+	Provider                           string `flag:"provider" cfg:"provider" env:"OAUTH2_PROXY_PROVIDER"`
+	ProviderName                       string `flag:"provider-display-name" cfg:"provider_display_name" env:"OAUTH2_PROXY_PROVIDER_DISPLAY_NAME"`
+	OIDCIssuerURL                      string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url" env:"OAUTH2_PROXY_OIDC_ISSUER_URL"`
+	InsecureOIDCAllowUnverifiedEmail   bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email" env:"OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL"`
+	InsecureOIDCSkipIssuerVerification bool   `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification" env:"OAUTH2_PROXY_INSECURE_OIDC_SKIP_ISSUER_VERIFICATION"`
+	SkipOIDCDiscovery                  bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery" env:"OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"`
+	OIDCJwksURL                        string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url" env:"OAUTH2_PROXY_OIDC_JWKS_URL"`
+	LoginURL                           string `flag:"login-url" cfg:"login_url" env:"OAUTH2_PROXY_LOGIN_URL"`
+	RedeemURL                          string `flag:"redeem-url" cfg:"redeem_url" env:"OAUTH2_PROXY_REDEEM_URL"`
+	ProfileURL                         string `flag:"profile-url" cfg:"profile_url" env:"OAUTH2_PROXY_PROFILE_URL"`
+	ProtectedResource                  string `flag:"resource" cfg:"resource" env:"OAUTH2_PROXY_RESOURCE"`
+	ValidateURL                        string `flag:"validate-url" cfg:"validate_url" env:"OAUTH2_PROXY_VALIDATE_URL"`
+	Scope                              string `flag:"scope" cfg:"scope" env:"OAUTH2_PROXY_SCOPE"`
+	Prompt                             string `flag:"prompt" cfg:"prompt" env:"OAUTH2_PROXY_PROMPT"`
+	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt" env:"OAUTH2_PROXY_APPROVAL_PROMPT"` // Deprecated by OIDC 1.0
+	ClaimAuthorization                 string `flag:"claim-authorization" cfg:"claim_authorization" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATION"`
+	ClaimAuthorizationsFile            string `flag:"claim-authorizations-file" cfg:"claim_authorizations_file" env:"OAUTH2_PROXY_CLAIM_AUTHORIZATIONS_FILE"`
+	UserIDClaim                        string `flag:"user-id-claim" cfg:"user_id_claim" env:"OAUTH2_PROXY_USER_ID_CLAIM"`
 
 	// Configuration values for logging
 	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename" env:"OAUTH2_PROXY_LOGGING_FILENAME"`
@@ -134,13 +138,14 @@ type Options struct {
 	// internal values that are set after config validation
 	redirectURL        *url.URL
 	proxyURLs          []*url.URL
-	CompiledRegex      []*regexp.Regexp
+	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
 	sessionStore       sessionsapi.SessionStore
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
 	claimsAuthorizer   *JMESValidator
+	realClientIPParser realClientIPParser
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -159,19 +164,20 @@ func NewOptions() *Options {
 		HTTPSAddress:        ":443",
 		ForceHTTPS:          false,
 		DisplayHtpasswdForm: true,
-		CookieOptions: options.CookieOptions{
-			CookieName:     "_oauth2_proxy",
-			CookieSecure:   true,
-			CookieHTTPOnly: true,
-			CookieExpire:   time.Duration(168) * time.Hour,
-			CookieRefresh:  time.Duration(0),
+		Cookie: options.CookieOptions{
+			Name:     "_oauth2_proxy",
+			Secure:   true,
+			HTTPOnly: true,
+			Expire:   time.Duration(168) * time.Hour,
+			Refresh:  time.Duration(0),
 		},
-		SessionOptions: options.SessionOptions{
+		Session: options.SessionOptions{
 			Type: "cookie",
 		},
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
 		PassBasicAuth:                    true,
+		SetBasicAuth:                     false,
 		PassUserHeaders:                  true,
 		PassAccessToken:                  false,
 		PassHostHeader:                   true,
@@ -180,6 +186,7 @@ func NewOptions() *Options {
 		PreferEmailToUser:                false,
 		Prompt:                           "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                   "force",
+		UserIDClaim:                      "email",
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
 		LoggingFilename:                  "",
@@ -226,7 +233,7 @@ func (o *Options) Validate() error {
 	}
 
 	msgs := make([]string, 0)
-	if o.CookieSecret == "" {
+	if o.Cookie.Secret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
 	}
 	if o.ClientID == "" {
@@ -249,9 +256,51 @@ func (o *Options) Validate() error {
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 
+	if o.SetBasicAuth && o.SetAuthorization {
+		msgs = append(msgs, "mutually exclusive: set-basic-auth and set-authorization-header can not both be true")
+	}
+
 	if o.OIDCIssuerURL != "" {
 
 		ctx := context.Background()
+
+		if o.InsecureOIDCSkipIssuerVerification && !o.SkipOIDCDiscovery {
+			// go-oidc doesn't let us pass bypass the issuer check this in the oidc.NewProvider call
+			// (which uses discovery to get the URLs), so we'll do a quick check ourselves and if
+			// we get the URLs, we'll just use the non-discovery path.
+
+			logger.Printf("Performing OIDC Discovery...")
+
+			if req, err := http.NewRequest("GET", strings.TrimSuffix(o.OIDCIssuerURL, "/")+"/.well-known/openid-configuration", nil); err == nil {
+				if body, err := requests.Request(req); err == nil {
+
+					// Prefer manually configured URLs. It's a bit unclear
+					// why you'd be doing discovery and also providing the URLs
+					// explicitly though...
+					if o.LoginURL == "" {
+						o.LoginURL = body.Get("authorization_endpoint").MustString()
+					}
+
+					if o.RedeemURL == "" {
+						o.RedeemURL = body.Get("token_endpoint").MustString()
+					}
+
+					if o.OIDCJwksURL == "" {
+						o.OIDCJwksURL = body.Get("jwks_uri").MustString()
+					}
+
+					if o.ProfileURL == "" {
+						o.ProfileURL = body.Get("userinfo_endpoint").MustString()
+					}
+
+					o.SkipOIDCDiscovery = true
+				} else {
+					logger.Printf("error: failed to discover OIDC configuration: %v", err)
+				}
+			} else {
+				logger.Printf("error: failed parsing OIDC discovery URL: %v", err)
+			}
+		}
 
 		// Construct a manual IDTokenVerifier from issuer URL & JWKS URI
 		// instead of metadata discovery if we enable -skip-oidc-discovery.
@@ -269,7 +318,8 @@ func (o *Options) Validate() error {
 			}
 			keySet := oidc.NewRemoteKeySet(ctx, o.OIDCJwksURL)
 			o.oidcVerifier = oidc.NewVerifier(o.OIDCIssuerURL, keySet, &oidc.Config{
-				ClientID: o.ClientID,
+				ClientID:        o.ClientID,
+				SkipIssuerCheck: o.InsecureOIDCSkipIssuerVerification,
 			})
 		} else {
 			// Configure discoverable provider data.
@@ -278,7 +328,8 @@ func (o *Options) Validate() error {
 				return err
 			}
 			o.oidcVerifier = provider.Verifier(&oidc.Config{
-				ClientID: o.ClientID,
+				ClientID:        o.ClientID,
+				SkipIssuerCheck: o.InsecureOIDCSkipIssuerVerification,
 			})
 
 			o.LoginURL = provider.Endpoint().AuthURL
@@ -289,7 +340,7 @@ func (o *Options) Validate() error {
 		}
 	}
 
-	if o.PreferEmailToUser == true && o.PassBasicAuth == false && o.PassUserHeaders == false {
+	if o.PreferEmailToUser && !o.PassBasicAuth && !o.PassUserHeaders {
 		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
 	}
 
@@ -327,61 +378,61 @@ func (o *Options) Validate() error {
 	}
 
 	for _, u := range o.SkipAuthRegex {
-		CompiledRegex, err := regexp.Compile(u)
+		compiledRegex, err := regexp.Compile(u)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("error compiling regex=%q %s", u, err))
 			continue
 		}
-		o.CompiledRegex = append(o.CompiledRegex, CompiledRegex)
+		o.compiledRegex = append(o.compiledRegex, compiledRegex)
 	}
 	msgs = parseProviderInfo(o, msgs)
 
 	var cipher *encryption.Cipher
-	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.CookieRefresh != time.Duration(0)) {
+	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.Cookie.Refresh != time.Duration(0)) {
 		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
-			if len(secretBytes(o.CookieSecret)) == i {
+			if len(encryption.SecretBytes(o.Cookie.Secret)) == i {
 				validCookieSecretSize = true
 			}
 		}
 		var decoded bool
-		if string(secretBytes(o.CookieSecret)) != o.CookieSecret {
+		if string(encryption.SecretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
 			decoded = true
 		}
-		if validCookieSecretSize == false {
+		if !validCookieSecretSize {
 			var suffix string
 			if decoded {
-				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.CookieSecret)
+				suffix = fmt.Sprintf(" note: cookie secret was base64 decoded from %q", o.Cookie.Secret)
 			}
 			msgs = append(msgs, fmt.Sprintf(
 				"cookie_secret must be 16, 24, or 32 bytes "+
 					"to create an AES cipher when "+
 					"pass_access_token == true or "+
 					"cookie_refresh != 0, but is %d bytes.%s",
-				len(secretBytes(o.CookieSecret)), suffix))
+				len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
 		} else {
 			var err error
-			cipher, err = encryption.NewCipher(secretBytes(o.CookieSecret))
+			cipher, err = encryption.NewCipher(encryption.SecretBytes(o.Cookie.Secret))
 			if err != nil {
 				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
 			}
 		}
 	}
 
-	o.SessionOptions.Cipher = cipher
-	sessionStore, err := sessions.NewSessionStore(&o.SessionOptions, &o.CookieOptions)
+	o.Session.Cipher = cipher
+	sessionStore, err := sessions.NewSessionStore(&o.Session, &o.Cookie)
 	if err != nil {
 		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
 	} else {
 		o.sessionStore = sessionStore
 	}
 
-	if o.CookieRefresh >= o.CookieExpire {
+	if o.Cookie.Refresh >= o.Cookie.Expire {
 		msgs = append(msgs, fmt.Sprintf(
 			"cookie_refresh (%s) must be less than "+
 				"cookie_expire (%s)",
-			o.CookieRefresh.String(),
-			o.CookieExpire.String()))
+			o.Cookie.Refresh.String(),
+			o.Cookie.Expire.String()))
 	}
 
 	if len(o.GoogleGroups) > 0 || o.GoogleAdminEmail != "" || o.GoogleServiceAccountJSON != "" {
@@ -396,32 +447,44 @@ func (o *Options) Validate() error {
 		}
 	}
 
-	switch o.CookieSameSite {
+	switch o.Cookie.SameSite {
 	case "", "none", "lax", "strict":
 	default:
-		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
+		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.Cookie.SameSite))
 	}
 
+	// Sort cookie domains by length, so that we try longer (and more specific)
+	// domains first
+	sort.Slice(o.Cookie.Domains, func(i, j int) bool {
+		return len(o.Cookie.Domains[i]) > len(o.Cookie.Domains[j])
+	})
 	msgs = parseClaimAuthorizations(o, msgs)
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
 	msgs = setupLogger(o, msgs)
 
+	if o.ReverseProxy {
+		o.realClientIPParser, err = getRealClientIPParser(o.RealClientIPHeader)
+		if err != nil {
+			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
+		}
+	}
+
 	// Create a key that's unique to the configured instance of the proxy. If this changes, all
 	// existing signed cookies (and thus their sessions) will be considered invalid and the user
 	// will be forced to re-authenticate (even if the provider does so silently). The CookieSecret
 	// is a key bit of salt in the process.
-	hmacKey := append(o.claimsAuthorizer.RulesHash(), o.CookieSecret...)
+	hmacKey := append(o.claimsAuthorizer.RulesHash(), o.Cookie.Secret...)
 	for _, domain := range o.EmailDomains {
 		hmacKey = append(hmacKey, domain...)
 	}
 	hmacKey, msgs = applyFileDigestSalt(hmacKey, msgs, o.AuthenticatedEmailsFile)
 	hmacKey, msgs = applyFileDigestSalt(hmacKey, msgs, o.HtpasswdFile)
 	hmacKey = o.provider.ApplyConfigSalt(hmacKey)
-	o.CookieHmacKey = hmacKey
+	o.Cookie.HmacKey = hmacKey
 
 	if len(msgs) != 0 {
-		return fmt.Errorf("Invalid configuration:\n  %s",
+		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
 	}
 	return nil
@@ -471,6 +534,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		p.Configure(o.AzureTenant)
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
+		p.SetRepo(o.GitHubRepo, o.GitHubToken)
 	case *providers.KeycloakProvider:
 		p.SetGroup(o.KeycloakGroup)
 	case *providers.GoogleProvider:
@@ -487,6 +551,7 @@ func parseProviderInfo(o *Options, msgs []string) []string {
 		p.SetRepository(o.BitbucketRepository)
 	case *providers.OIDCProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
+		p.UserIDClaim = o.UserIDClaim
 		if o.oidcVerifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {
@@ -618,7 +683,7 @@ func parseClaimAuthorizations(o *Options, msgs []string) []string {
 // parseJwtIssuers takes in an array of strings in the form of issuer=audience
 // and parses to an array of jwtIssuer structs.
 func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
-	var parsedIssuers []jwtIssuer
+	parsedIssuers := make([]jwtIssuer, 0, len(issuers))
 	for _, jwtVerifier := range issuers {
 		components := strings.Split(jwtVerifier, "=")
 		if len(components) < 2 {
@@ -655,34 +720,11 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 }
 
 func validateCookieName(o *Options, msgs []string) []string {
-	cookie := &http.Cookie{Name: o.CookieName}
+	cookie := &http.Cookie{Name: o.Cookie.Name}
 	if cookie.String() == "" {
-		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.CookieName))
+		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.Cookie.Name))
 	}
 	return msgs
-}
-
-func addPadding(secret string) string {
-	padding := len(secret) % 4
-	switch padding {
-	case 1:
-		return secret + "==="
-	case 2:
-		return secret + "=="
-	case 3:
-		return secret + "="
-	default:
-		return secret
-	}
-}
-
-// secretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
-func secretBytes(secret string) []byte {
-	b, err := base64.URLEncoding.DecodeString(addPadding(secret))
-	if err == nil {
-		return []byte(addPadding(string(b)))
-	}
-	return []byte(secret)
 }
 
 func setupLogger(o *Options, msgs []string) []string {
@@ -723,7 +765,9 @@ func setupLogger(o *Options, msgs []string) []string {
 	logger.SetStandardTemplate(o.StandardLoggingFormat)
 	logger.SetAuthTemplate(o.AuthLoggingFormat)
 	logger.SetReqTemplate(o.RequestLoggingFormat)
-	logger.SetReverseProxy(o.ReverseProxy)
+	logger.SetGetClientFunc(func(r *http.Request) string {
+		return getClientString(o.realClientIPParser, r, false)
+	})
 
 	excludePaths := make([]string, 0)
 	excludePaths = append(excludePaths, strings.Split(o.ExcludeLoggingPaths, ",")...)

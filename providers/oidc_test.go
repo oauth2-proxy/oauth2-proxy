@@ -31,6 +31,7 @@ const secret = "secret"
 type idTokenClaims struct {
 	Name    string `json:"name,omitempty"`
 	Email   string `json:"email,omitempty"`
+	Phone   string `json:"phone_number,omitempty"`
 	Picture string `json:"picture,omitempty"`
 	jwt.StandardClaims
 }
@@ -46,6 +47,7 @@ type redeemTokenResponse struct {
 var defaultIDToken idTokenClaims = idTokenClaims{
 	"Jane Dobbs",
 	"janed@me.com",
+	"+4798765432",
 	"http://mugbook.com/janed/me.jpg",
 	jwt.StandardClaims{
 		Audience:  "https://test.myapp.com",
@@ -62,6 +64,9 @@ type fakeKeySetStub struct{}
 
 func (fakeKeySetStub) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
 	decodeString, err := base64.RawURLEncoding.DecodeString(strings.Split(jwt, ".")[1])
+	if err != nil {
+		return nil, err
+	}
 	tokenClaims := &idTokenClaims{}
 	err = json.Unmarshal(decodeString, tokenClaims)
 
@@ -103,6 +108,7 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 			fakeKeySetStub{},
 			&oidc.Config{ClientID: clientID},
 		),
+		UserIDClaim: "email",
 	}
 
 	return p
@@ -153,13 +159,33 @@ func TestOIDCProviderRedeem(t *testing.T) {
 	server, provider := newTestSetup(body)
 	defer server.Close()
 
-	session, err := provider.Redeem(provider.RedeemURL.String(), "code1234")
+	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Email, session.Email)
 	assert.Equal(t, accessToken, session.AccessToken)
 	assert.Equal(t, idToken, session.IDToken)
 	assert.Equal(t, refreshToken, session.RefreshToken)
 	assert.Equal(t, "123456789", session.User)
+}
+
+func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
+
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	})
+
+	server, provider := newTestSetup(body)
+	provider.UserIDClaim = "phone_number"
+	defer server.Close()
+
+	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, defaultIDToken.Phone, session.Email)
 }
 
 func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
@@ -185,7 +211,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 		User:         "11223344",
 	}
 
-	refreshed, err := provider.RefreshSessionIfNeeded(existingSession)
+	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), existingSession)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, refreshed, true)
 	assert.Equal(t, "janedoe@example.com", existingSession.Email)
@@ -218,7 +244,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 		Email:        "changeit",
 		User:         "changeit",
 	}
-	refreshed, err := provider.RefreshSessionIfNeeded(existingSession)
+	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), existingSession)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, refreshed, true)
 	assert.Equal(t, defaultIDToken.Email, existingSession.Email)
@@ -242,7 +268,9 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 
 	verifiedIDToken, err := provider.findVerifiedIDToken(context.Background(), tokenWithIDToken)
 	assert.Equal(t, true, err == nil)
-	assert.Equal(t, true, verifiedIDToken != nil)
+	if verifiedIDToken == nil {
+		t.Fatal("verifiedIDToken is nil")
+	}
 	assert.Equal(t, defaultIDToken.Issuer, verifiedIDToken.Issuer)
 	assert.Equal(t, defaultIDToken.Subject, verifiedIDToken.Subject)
 

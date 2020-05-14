@@ -22,7 +22,7 @@ const (
 func testOptions() *Options {
 	o := NewOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
-	o.CookieSecret = cookieSecret
+	o.Cookie.Secret = cookieSecret
 	o.ClientID = clientID
 	o.ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
@@ -31,7 +31,7 @@ func testOptions() *Options {
 
 func errorMsg(msgs []string) string {
 	result := make([]string, 0)
-	result = append(result, "Invalid configuration:")
+	result = append(result, "invalid configuration:")
 	result = append(result, msgs...)
 	return strings.Join(result, "\n  ")
 }
@@ -51,7 +51,7 @@ func TestNewOptions(t *testing.T) {
 
 func TestClientSecretFileOptionFails(t *testing.T) {
 	o := NewOptions()
-	o.CookieSecret = cookieSecret
+	o.Cookie.Secret = cookieSecret
 	o.ClientID = clientID
 	o.ClientSecretFile = clientSecret
 	o.EmailDomains = []string{"*"}
@@ -81,7 +81,7 @@ func TestClientSecretFileOption(t *testing.T) {
 	defer os.Remove(clientSecretFileName)
 
 	o := NewOptions()
-	o.CookieSecret = cookieSecret
+	o.Cookie.Secret = cookieSecret
 	o.ClientID = clientID
 	o.ClientSecretFile = clientSecretFileName
 	o.EmailDomains = []string{"*"}
@@ -165,7 +165,7 @@ func TestCompiledRegex(t *testing.T) {
 	o.SkipAuthRegex = regexps
 	assert.Equal(t, nil, o.Validate())
 	actual := make([]string, 0)
-	for _, regex := range o.CompiledRegex {
+	for _, regex := range o.compiledRegex {
 		actual = append(actual, regex.String())
 	}
 	assert.Equal(t, regexps, actual)
@@ -212,20 +212,20 @@ func TestPassAccessTokenRequiresSpecificCookieSecretLengths(t *testing.T) {
 
 	assert.Equal(t, false, o.PassAccessToken)
 	o.PassAccessToken = true
-	o.CookieSecret = "cookie of invalid length-"
+	o.Cookie.Secret = "cookie of invalid length-"
 	assert.NotEqual(t, nil, o.Validate())
 
 	o.PassAccessToken = false
-	o.CookieRefresh = time.Duration(24) * time.Hour
+	o.Cookie.Refresh = time.Duration(24) * time.Hour
 	assert.NotEqual(t, nil, o.Validate())
 
-	o.CookieSecret = "16 bytes AES-128"
+	o.Cookie.Secret = "16 bytes AES-128"
 	assert.Equal(t, nil, o.Validate())
 
-	o.CookieSecret = "24 byte secret AES-192--"
+	o.Cookie.Secret = "24 byte secret AES-192--"
 	assert.Equal(t, nil, o.Validate())
 
-	o.CookieSecret = "32 byte secret for AES-256------"
+	o.Cookie.Secret = "32 byte secret for AES-256------"
 	assert.Equal(t, nil, o.Validate())
 }
 
@@ -233,11 +233,11 @@ func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, o.Validate())
 
-	o.CookieSecret = "0123456789abcdefabcd"
-	o.CookieRefresh = o.CookieExpire
+	o.Cookie.Secret = "0123456789abcdefabcd"
+	o.Cookie.Refresh = o.Cookie.Expire
 	assert.NotEqual(t, nil, o.Validate())
 
-	o.CookieRefresh -= time.Duration(1)
+	o.Cookie.Refresh -= time.Duration(1)
 	assert.Equal(t, nil, o.Validate())
 }
 
@@ -246,23 +246,23 @@ func TestBase64CookieSecret(t *testing.T) {
 	assert.Equal(t, nil, o.Validate())
 
 	// 32 byte, base64 (urlsafe) encoded key
-	o.CookieSecret = "yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ="
+	o.Cookie.Secret = "yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ="
 	assert.Equal(t, nil, o.Validate())
 
 	// 32 byte, base64 (urlsafe) encoded key, w/o padding
-	o.CookieSecret = "yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ"
+	o.Cookie.Secret = "yHBw2lh2Cvo6aI_jn_qMTr-pRAjtq0nzVgDJNb36jgQ"
 	assert.Equal(t, nil, o.Validate())
 
 	// 24 byte, base64 (urlsafe) encoded key
-	o.CookieSecret = "Kp33Gj-GQmYtz4zZUyUDdqQKx5_Hgkv3"
+	o.Cookie.Secret = "Kp33Gj-GQmYtz4zZUyUDdqQKx5_Hgkv3"
 	assert.Equal(t, nil, o.Validate())
 
 	// 16 byte, base64 (urlsafe) encoded key
-	o.CookieSecret = "LFEqZYvYUwKwzn0tEuTpLA=="
+	o.Cookie.Secret = "LFEqZYvYUwKwzn0tEuTpLA=="
 	assert.Equal(t, nil, o.Validate())
 
 	// 16 byte, base64 (urlsafe) encoded key, w/o padding
-	o.CookieSecret = "LFEqZYvYUwKwzn0tEuTpLA"
+	o.Cookie.Secret = "LFEqZYvYUwKwzn0tEuTpLA"
 	assert.Equal(t, nil, o.Validate())
 }
 
@@ -278,7 +278,7 @@ func TestValidateSignatureKeyInvalidSpec(t *testing.T) {
 	o := testOptions()
 	o.SignatureKey = "invalid spec"
 	err := o.Validate()
-	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
+	assert.Equal(t, err.Error(), "invalid configuration:\n"+
 		"  invalid signature hash:key spec: "+o.SignatureKey)
 }
 
@@ -286,22 +286,22 @@ func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 	o := testOptions()
 	o.SignatureKey = "unsupported:default secret"
 	err := o.Validate()
-	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
+	assert.Equal(t, err.Error(), "invalid configuration:\n"+
 		"  unsupported signature hash algorithm: "+o.SignatureKey)
 }
 
 func TestValidateCookie(t *testing.T) {
 	o := testOptions()
-	o.CookieName = "_valid_cookie_name"
+	o.Cookie.Name = "_valid_cookie_name"
 	assert.Equal(t, nil, o.Validate())
 }
 
 func TestValidateCookieBadName(t *testing.T) {
 	o := testOptions()
-	o.CookieName = "_bad_cookie_name{}"
+	o.Cookie.Name = "_bad_cookie_name{}"
 	err := o.Validate()
-	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
-		fmt.Sprintf("  invalid cookie name: %q", o.CookieName))
+	assert.Equal(t, err.Error(), "invalid configuration:\n"+
+		fmt.Sprintf("  invalid cookie name: %q", o.Cookie.Name))
 }
 
 func TestSkipOIDCDiscovery(t *testing.T) {
@@ -311,8 +311,8 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 	o.SkipOIDCDiscovery = true
 
 	err := o.Validate()
-	assert.Equal(t, "Invalid configuration:\n"+
-		fmt.Sprintf("  missing setting: login-url\n  missing setting: redeem-url\n  missing setting: oidc-jwks-url"), err.Error())
+	assert.Equal(t, "invalid configuration:\n"+
+		"  missing setting: login-url\n  missing setting: redeem-url\n  missing setting: oidc-jwks-url", err.Error())
 
 	o.LoginURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/authorize?p=b2c_1_sign_in"
 	o.RedeemURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/token?p=b2c_1_sign_in"
@@ -325,4 +325,47 @@ func TestGCPHealthcheck(t *testing.T) {
 	o := testOptions()
 	o.GCPHealthChecks = true
 	assert.Equal(t, nil, o.Validate())
+}
+
+func TestRealClientIPHeader(t *testing.T) {
+	var o *Options
+	var err error
+	var expected string
+
+	// Ensure nil if ReverseProxy not set.
+	o = testOptions()
+	o.RealClientIPHeader = "X-Real-IP"
+	assert.Equal(t, nil, o.Validate())
+	assert.Nil(t, o.realClientIPParser)
+
+	// Ensure simple use case works.
+	o = testOptions()
+	o.ReverseProxy = true
+	o.RealClientIPHeader = "X-Forwarded-For"
+	assert.Equal(t, nil, o.Validate())
+	assert.NotNil(t, o.realClientIPParser)
+
+	// Ensure unknown header format process an error.
+	o = testOptions()
+	o.ReverseProxy = true
+	o.RealClientIPHeader = "Forwarded"
+	err = o.Validate()
+	assert.NotEqual(t, nil, err)
+	expected = errorMsg([]string{
+		"real_client_ip_header (Forwarded) not accepted parameter value: the http header key (Forwarded) is either invalid or unsupported",
+	})
+	assert.Equal(t, expected, err.Error())
+	assert.Nil(t, o.realClientIPParser)
+
+	// Ensure invalid header format produces an error.
+	o = testOptions()
+	o.ReverseProxy = true
+	o.RealClientIPHeader = "!934invalidheader-23:"
+	err = o.Validate()
+	assert.NotEqual(t, nil, err)
+	expected = errorMsg([]string{
+		"real_client_ip_header (!934invalidheader-23:) not accepted parameter value: the http header key (!934invalidheader-23:) is either invalid or unsupported",
+	})
+	assert.Equal(t, expected, err.Error())
+	assert.Nil(t, o.realClientIPParser)
 }

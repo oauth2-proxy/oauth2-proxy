@@ -2,6 +2,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,22 +23,23 @@ type AzureProvider struct {
 	Tenant string
 }
 
+var _ Provider = (*AzureProvider)(nil)
+
 // NewAzureProvider initiates a new AzureProvider
 func NewAzureProvider(p *ProviderData) *AzureProvider {
 	p.ProviderName = "Azure"
 
 	if p.ProfileURL == nil || p.ProfileURL.String() == "" {
 		p.ProfileURL = &url.URL{
-			Scheme:   "https",
-			Host:     "graph.windows.net",
-			Path:     "/me",
-			RawQuery: "api-version=1.6",
+			Scheme: "https",
+			Host:   "graph.microsoft.com",
+			Path:   "/v1.0/me",
 		}
 	}
 	if p.ProtectedResource == nil || p.ProtectedResource.String() == "" {
 		p.ProtectedResource = &url.URL{
 			Scheme: "https",
-			Host:   "graph.windows.net",
+			Host:   "graph.microsoft.com",
 		}
 	}
 	if p.Scope == "" {
@@ -69,7 +71,7 @@ func (p *AzureProvider) Configure(tenant string) {
 	}
 }
 
-func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -90,7 +92,7 @@ func (p *AzureProvider) Redeem(redirectURL, code string) (s *sessions.SessionSta
 	}
 
 	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return
 	}
@@ -158,14 +160,14 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *AzureProvider) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	var email string
 	var err error
 
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String(), nil)
 	if err != nil {
 		return "", err
 	}

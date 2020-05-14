@@ -2,6 +2,7 @@ package providers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,12 +11,15 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/coreos/go-oidc"
+
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
+var _ Provider = (*ProviderData)(nil)
+
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -36,7 +40,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 	}
 
 	var req *http.Request
-	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
+	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return
 	}
@@ -86,8 +90,7 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *sessions.SessionStat
 
 // GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	var a url.URL
-	a = *p.LoginURL
+	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
 	params.Add("acr_values", p.AcrValues)
@@ -104,28 +107,18 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	return a.String()
 }
 
-// CookieForSession serializes a session state for storage in a cookie
-func (p *ProviderData) CookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
-	return s.EncodeSessionState(c)
-}
-
-// SessionFromCookie deserializes a session from a cookie value
-func (p *ProviderData) SessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState, err error) {
-	return sessions.DecodeSessionState(v, c)
-}
-
 // GetEmailAddress returns the Account email address
-func (p *ProviderData) GetEmailAddress(s *sessions.SessionState) (string, error) {
+func (p *ProviderData) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
 // GetUserName returns the Account username
-func (p *ProviderData) GetUserName(s *sessions.SessionState) (string, error) {
+func (p *ProviderData) GetUserName(ctx context.Context, s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
 // GetPreferredUsername returns the Account preferred username
-func (p *ProviderData) GetPreferredUsername(s *sessions.SessionState) (string, error) {
+func (p *ProviderData) GetPreferredUsername(ctx context.Context, s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
@@ -154,12 +147,50 @@ func (p *ProviderData) ValidateGroup(email string) bool {
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *ProviderData) ValidateSessionState(s *sessions.SessionState) bool {
-	return validateToken(p, s.AccessToken, nil)
+func (p *ProviderData) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, nil)
 }
 
 // RefreshSessionIfNeeded should refresh the user's session if required and
 // do nothing if a refresh is not required
-func (p *ProviderData) RefreshSessionIfNeeded(s *sessions.SessionState) (bool, error) {
+func (p *ProviderData) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	return false, nil
+}
+
+func (p *ProviderData) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+	var claims struct {
+		Subject           string `json:"sub"`
+		Email             string `json:"email"`
+		Verified          *bool  `json:"email_verified"`
+		PreferredUsername string `json:"preferred_username"`
+	}
+
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
+	}
+
+	if claims.Email == "" {
+		claims.Email = claims.Subject
+	}
+
+	if claims.Verified != nil && !*claims.Verified {
+		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	}
+
+	newSession := &sessions.SessionState{
+		Email:             claims.Email,
+		User:              claims.Email,
+		PreferredUsername: claims.PreferredUsername,
+	}
+
+	newSession.AccessToken = rawIDToken
+	newSession.IDToken = rawIDToken
+	newSession.RefreshToken = ""
+	newSession.ExpiresOn = idToken.Expiry
+
+	if err := newSession.SetRawClaimsFromIDToken(idToken); err != nil {
+		return nil, err
+	}
+
+	return newSession, nil
 }

@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -87,10 +88,10 @@ func TestRequestUnparsedResponseUsingAccessTokenParameter(t *testing.T) {
 	defer backend.Close()
 
 	response, err := RequestUnparsedResponse(
-		backend.URL+"?access_token=my_token", nil)
+		context.Background(), backend.URL+"?access_token=my_token", nil)
+	assert.Equal(t, nil, err)
 	defer response.Body.Close()
 
-	assert.Equal(t, nil, err)
 	assert.Equal(t, 200, response.StatusCode)
 	body, err := ioutil.ReadAll(response.Body)
 	assert.Equal(t, nil, err)
@@ -103,7 +104,7 @@ func TestRequestUnparsedResponseUsingAccessTokenParameterFailedResponse(t *testi
 	backend.Close()
 
 	response, err := RequestUnparsedResponse(
-		backend.URL+"?access_token=my_token", nil)
+		context.Background(), backend.URL+"?access_token=my_token", nil)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, (*http.Response)(nil), response)
 }
@@ -123,10 +124,10 @@ func TestRequestUnparsedResponseUsingHeaders(t *testing.T) {
 
 	headers := make(http.Header)
 	headers.Set("Auth", "my_token")
-	response, err := RequestUnparsedResponse(backend.URL, headers)
+	response, err := RequestUnparsedResponse(context.Background(), backend.URL, headers)
+	assert.Equal(t, nil, err)
 	defer response.Body.Close()
 
-	assert.Equal(t, nil, err)
 	assert.Equal(t, 200, response.StatusCode)
 	body, err := ioutil.ReadAll(response.Body)
 	assert.Equal(t, nil, err)
