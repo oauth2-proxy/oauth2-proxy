@@ -105,12 +105,16 @@ func NewValidator(domains []string, usersFile string) func(string) bool {
 	return newValidatorImpl(domains, usersFile, nil, func() {})
 }
 
+// JMESValidator contains a set of compiled <https://jmespath.org> expressions
+// that can be used validate a deserialized json value (such as an OAuth claims
+// object) using the MatchesAny() function.
 type JMESValidator struct {
 	rules         []string
 	compiledRules []*jmespath.JMESPath
 	rulesHash     []byte
 }
 
+// IsEmpty will return true if no valid rules have been added.
 func (v *JMESValidator) IsEmpty() bool {
 	return len(v.rules) == 0
 }
@@ -155,6 +159,12 @@ func truthy(result interface{}) bool {
 	return true
 }
 
+// AddRule will attempt to compile the given JMESpath expression and append it
+// to the list of rules to check if it is valid. If the expression is empty
+// or the first non-whitespace character starts with a "#", it is ignored and
+// treated as a comment.
+// Returns true if a rule was successfully added to the validator. If there
+// was an error with the expression, an error will be returned.
 func (v *JMESValidator) AddRule(jmespathExpr string) (bool, error) {
 
 	// TODO: Check for duplicate rules and warn?
@@ -169,7 +179,7 @@ func (v *JMESValidator) AddRule(jmespathExpr string) (bool, error) {
 	var err error
 
 	if compiled, err = jmespath.Compile(rule); err != nil {
-		return false, fmt.Errorf("invalid claim assertion (%q): %v", rule, err)
+		return false, fmt.Errorf("invalid jmespath expression (%q): %v", rule, err)
 	}
 
 	// Invalidate the hash if it had been requested yet
