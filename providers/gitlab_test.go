@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -63,7 +64,7 @@ func TestGitLabProviderBadToken(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "unexpected_gitlab_access_token"}
-	_, err := p.GetEmailAddress(session)
+	_, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 }
 
@@ -75,7 +76,7 @@ func TestGitLabProviderUnverifiedEmailDenied(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	_, err := p.GetEmailAddress(session)
+	_, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 }
 
@@ -88,7 +89,7 @@ func TestGitLabProviderUnverifiedEmailAllowed(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "foo@bar.com", email)
 }
@@ -102,7 +103,7 @@ func TestGitLabProviderUsername(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	username, err := p.GetUserName(session)
+	username, err := p.GetUserName(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "FooBar", username)
 }
@@ -117,7 +118,7 @@ func TestGitLabProviderGroupMembershipValid(t *testing.T) {
 	p.Group = "foo"
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "foo@bar.com", email)
 }
@@ -132,7 +133,7 @@ func TestGitLabProviderGroupMembershipMissing(t *testing.T) {
 	p.Group = "baz"
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	_, err := p.GetEmailAddress(session)
+	_, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 }
 
@@ -146,7 +147,7 @@ func TestGitLabProviderEmailDomainValid(t *testing.T) {
 	p.EmailDomains = []string{"bar.com"}
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "foo@bar.com", email)
 }
@@ -161,6 +162,6 @@ func TestGitLabProviderEmailDomainInvalid(t *testing.T) {
 	p.EmailDomains = []string{"baz.com"}
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	_, err := p.GetEmailAddress(session)
+	_, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 }

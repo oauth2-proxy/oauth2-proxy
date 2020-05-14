@@ -6,14 +6,39 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
+func SecretBytes(secret string) []byte {
+	b, err := base64.URLEncoding.DecodeString(addPadding(secret))
+	if err == nil {
+		return []byte(addPadding(string(b)))
+	}
+	return []byte(secret)
+}
+
+func addPadding(secret string) string {
+	padding := len(secret) % 4
+	switch padding {
+	case 1:
+		return secret + "==="
+	case 2:
+		return secret + "=="
+	case 3:
+		return secret + "="
+	default:
+		return secret
+	}
+}
 
 // cookies are stored in a 3 part (value + timestamp + signature) to enforce that the values are as originally set.
 // additionally, the 'value' is encrypted so it's opaque to the browser
@@ -25,8 +50,7 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 	if len(parts) != 3 {
 		return
 	}
-	sig := cookieSignature(seed, cookie.Name, parts[0], parts[1])
-	if checkHmac(parts[2], sig) {
+	if checkSignature(parts[2], seed, cookie.Name, parts[0], parts[1]) {
 		ts, err := strconv.Atoi(parts[1])
 		if err != nil {
 			return
@@ -53,19 +77,30 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 func SignedValue(seed string, key string, value string, now time.Time) string {
 	encodedValue := base64.URLEncoding.EncodeToString([]byte(value))
 	timeStr := fmt.Sprintf("%d", now.Unix())
-	sig := cookieSignature(seed, key, encodedValue, timeStr)
+	sig := cookieSignature(sha256.New, seed, key, encodedValue, timeStr)
 	cookieVal := fmt.Sprintf("%s|%s|%s", encodedValue, timeStr, sig)
 	return cookieVal
 }
 
-func cookieSignature(args ...string) string {
-	h := hmac.New(sha1.New, []byte(args[0]))
+func cookieSignature(signer func() hash.Hash, args ...string) string {
+	h := hmac.New(signer, []byte(args[0]))
 	for _, arg := range args[1:] {
 		h.Write([]byte(arg))
 	}
 	var b []byte
 	b = h.Sum(b)
 	return base64.URLEncoding.EncodeToString(b)
+}
+
+func checkSignature(signature string, args ...string) bool {
+	checkSig := cookieSignature(sha256.New, args...)
+	if checkHmac(signature, checkSig) {
+		return true
+	}
+
+	// TODO: After appropriate rollout window, remove support for SHA1
+	legacySig := cookieSignature(sha1.New, args...)
+	return checkHmac(signature, legacySig)
 }
 
 func checkHmac(input, expected string) bool {

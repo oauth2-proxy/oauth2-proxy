@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -97,7 +98,7 @@ func TestNextcloudProviderGetEmailAddress(t *testing.T) {
 	p.ValidateURL.RawQuery = formatJSON
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "michael.bland@gsa.gov", email)
 }
@@ -117,7 +118,7 @@ func TestNextcloudProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }
@@ -132,7 +133,7 @@ func TestNextcloudProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) 
 	p.ValidateURL.RawQuery = formatJSON
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(session)
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }

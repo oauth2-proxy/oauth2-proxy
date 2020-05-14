@@ -57,6 +57,10 @@ var SignatureHeaders = []string{
 var (
 	// ErrNeedsLogin means the user should be redirected to the login page
 	ErrNeedsLogin = errors.New("redirect to login page")
+
+	// Used to check final redirects are not susceptible to open redirects.
+	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
+	invalidRedirectRegex = regexp.MustCompile(`^/(\s|\v)?(/|\\)`)
 )
 
 // OAuthProxy is the main authentication proxy
@@ -108,6 +112,7 @@ type OAuthProxy struct {
 	jwtBearerVerifiers   []*oidc.IDTokenVerifier
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
+	realClientIPParser   realClientIPParser
 	Banner               string
 	Footer               string
 }
@@ -477,6 +482,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
 		compiledRegex:        opts.compiledRegex,
+		realClientIPParser:   opts.realClientIPParser,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
 		SetBasicAuth:         opts.SetBasicAuth,
@@ -516,29 +522,29 @@ func (p *OAuthProxy) displayCustomLoginForm() bool {
 	return p.HtpasswdFile != nil && p.DisplayHtpasswdForm
 }
 
-func (p *OAuthProxy) redeemCode(host, code string) (s *sessionsapi.SessionState, err error) {
+func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (s *sessionsapi.SessionState, err error) {
 	if code == "" {
 		return nil, errors.New("missing code")
 	}
 	redirectURI := p.GetRedirectURI(host)
-	s, err = p.provider.Redeem(redirectURI, code)
+	s, err = p.provider.Redeem(ctx, redirectURI, code)
 	if err != nil {
 		return
 	}
 
 	if s.Email == "" {
-		s.Email, err = p.provider.GetEmailAddress(s)
+		s.Email, err = p.provider.GetEmailAddress(ctx, s)
 	}
 
 	if s.PreferredUsername == "" {
-		s.PreferredUsername, err = p.provider.GetPreferredUsername(s)
+		s.PreferredUsername, err = p.provider.GetPreferredUsername(ctx, s)
 		if err != nil && err.Error() == "not implemented" {
 			err = nil
 		}
 	}
 
 	if s.User == "" {
-		s.User, err = p.provider.GetUserName(s)
+		s.User, err = p.provider.GetUserName(ctx, s)
 		if err != nil && err.Error() == "not implemented" {
 			err = nil
 		}
@@ -751,7 +757,7 @@ func validOptionalPort(port string) bool {
 // IsValidRedirect checks whether the redirect URL is whitelisted
 func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	switch {
-	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !strings.HasPrefix(redirect, "/\\"):
+	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !invalidRedirectRegex.MatchString(redirect):
 		return true
 	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
 		redirectURL, err := url.Parse(redirect)
@@ -803,14 +809,6 @@ func (p *OAuthProxy) IsWhitelistedPath(path string) bool {
 		}
 	}
 	return false
-}
-
-func getRemoteAddr(req *http.Request) (s string) {
-	s = req.RemoteAddr
-	if req.Header.Get("X-Real-IP") != "" {
-		s += fmt.Sprintf(" (%q)", req.Header.Get("X-Real-IP"))
-	}
-	return
 }
 
 // See https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=en
@@ -936,7 +934,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
-	remoteAddr := getRemoteAddr(req)
+	remoteAddr := getClientString(p.realClientIPParser, req, true)
 
 	// finish the oauth cycle
 	err := req.ParseForm()
@@ -952,7 +950,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, err := p.redeemCode(req.Host, req.Form.Get("code"))
+	session, err := p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
 	if err != nil {
 		logger.Printf("Error redeeming code during OAuth2 callback: %s ", err.Error())
 		p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
@@ -1064,7 +1062,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		}
 	}
 
-	remoteAddr := getRemoteAddr(req)
+	remoteAddr := getClientString(p.realClientIPParser, req, true)
 	if session == nil {
 		session, err = p.LoadCookiedSession(req)
 		if err != nil {
@@ -1077,7 +1075,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 				saveSession = true
 			}
 
-			if ok, err := p.provider.RefreshSessionIfNeeded(session); err != nil {
+			if ok, err := p.provider.RefreshSessionIfNeeded(req.Context(), session); err != nil {
 				logger.Printf("%s removing session. error refreshing access token %s %s", remoteAddr, err, session)
 				clearSession = true
 				session = nil
@@ -1096,7 +1094,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	if saveSession && !revalidated && session != nil && session.AccessToken != "" {
-		if !p.provider.ValidateSessionState(session) {
+		if !p.provider.ValidateSessionState(req.Context(), session) {
 			logger.Printf("Removing session: error validating %s", session)
 			saveSession = false
 			session = nil
@@ -1218,10 +1216,14 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		}
 	}
 	if p.SetBasicAuth {
-		if session.User != "" {
+		switch {
+		case p.PreferEmailToUser && session.Email != "":
+			authVal := b64.StdEncoding.EncodeToString([]byte(session.Email + ":" + p.BasicAuthPassword))
+			rw.Header().Set("Authorization", "Basic "+authVal)
+		case session.User != "":
 			authVal := b64.StdEncoding.EncodeToString([]byte(session.User + ":" + p.BasicAuthPassword))
 			rw.Header().Set("Authorization", "Basic "+authVal)
-		} else {
+		default:
 			rw.Header().Del("Authorization")
 		}
 	}
@@ -1296,16 +1298,15 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		return nil, err
 	}
 
-	ctx := context.Background()
 	for _, verifier := range p.jwtBearerVerifiers {
-		bearerToken, err := verifier.Verify(ctx, rawBearerToken)
+		bearerToken, err := verifier.Verify(req.Context(), rawBearerToken)
 
 		if err != nil {
 			logger.Printf("failed to verify bearer token: %v", err)
 			continue
 		}
 
-		return p.provider.CreateSessionStateFromBearerToken(rawBearerToken, bearerToken)
+		return p.provider.CreateSessionStateFromBearerToken(req.Context(), rawBearerToken, bearerToken)
 	}
 	return nil, fmt.Errorf("unable to verify jwt token %s", req.Header.Get("Authorization"))
 }

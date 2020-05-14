@@ -602,6 +602,61 @@ func TestIsValidRedirect(t *testing.T) {
 			Redirect:       "http://a.sub.anyport.bar:8081/redirect",
 			ExpectedResult: true,
 		},
+		{
+			Desc:           "openRedirect1",
+			Redirect:       "/\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectSpace1",
+			Redirect:       "/ /evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectSpace2",
+			Redirect:       "/ \\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectTab1",
+			Redirect:       "/\t/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectTab2",
+			Redirect:       "/\t\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectVerticalTab1",
+			Redirect:       "/\v/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectVerticalTab2",
+			Redirect:       "/\v\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectNewLine1",
+			Redirect:       "/\n/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectNewLine2",
+			Redirect:       "/\n\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectCarriageReturn1",
+			Redirect:       "/\r/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectCarriageReturn2",
+			Redirect:       "/\r\\evil.com",
+			ExpectedResult: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -621,6 +676,8 @@ type TestProvider struct {
 	ValidToken     bool
 	GroupValidator func(string) bool
 }
+
+var _ providers.Provider = (*TestProvider)(nil)
 
 func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 	return &TestProvider{
@@ -650,11 +707,11 @@ func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 	}
 }
 
-func (tp *TestProvider) GetEmailAddress(session *sessions.SessionState) (string, error) {
+func (tp *TestProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {
 	return tp.EmailAddress, nil
 }
 
-func (tp *TestProvider) ValidateSessionState(session *sessions.SessionState) bool {
+func (tp *TestProvider) ValidateSessionState(ctx context.Context, session *sessions.SessionState) bool {
 	return tp.ValidToken
 }
 
@@ -1179,7 +1236,7 @@ func TestLoadCookiedSession(t *testing.T) {
 	session, err := pcTest.LoadCookiedSession()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, startSession.Email, session.Email)
-	assert.Equal(t, "john.doe@example.com", session.User)
+	assert.Equal(t, "", session.User)
 	assert.Equal(t, startSession.AccessToken, session.AccessToken)
 }
 
