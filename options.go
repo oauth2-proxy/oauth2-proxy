@@ -72,6 +72,7 @@ type Options struct {
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams" env:"OAUTH2_PROXY_UPSTREAMS"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex" env:"OAUTH2_PROXY_SKIP_AUTH_REGEX"`
+	APIPathRegex                  []string      `flag:"api-path-regex" cfg:"api_path_regex" env:"OAUTH2_PROXY_API_PATH_REGEX"`
 	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens" env:"OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS"`
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers" env:"OAUTH2_PROXY_EXTRA_JWT_ISSUERS"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth" env:"OAUTH2_PROXY_PASS_BASIC_AUTH"`
@@ -132,15 +133,16 @@ type Options struct {
 	GCPHealthChecks       bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks" env:"OAUTH2_PROXY_GCP_HEALTHCHECKS"`
 
 	// internal values that are set after config validation
-	redirectURL        *url.URL
-	proxyURLs          []*url.URL
-	compiledRegex      []*regexp.Regexp
-	provider           providers.Provider
-	sessionStore       sessionsapi.SessionStore
-	signatureData      *SignatureData
-	oidcVerifier       *oidc.IDTokenVerifier
-	jwtBearerVerifiers []*oidc.IDTokenVerifier
-	realClientIPParser realClientIPParser
+	redirectURL          *url.URL
+	proxyURLs            []*url.URL
+	compiledRegex        []*regexp.Regexp
+	compiledAPIPathRegex []*regexp.Regexp
+	provider             providers.Provider
+	sessionStore         sessionsapi.SessionStore
+	signatureData        *SignatureData
+	oidcVerifier         *oidc.IDTokenVerifier
+	jwtBearerVerifiers   []*oidc.IDTokenVerifier
+	realClientIPParser   realClientIPParser
 }
 
 // SignatureData holds hmacauth signature hash and key
@@ -381,6 +383,15 @@ func (o *Options) Validate() error {
 		o.compiledRegex = append(o.compiledRegex, compiledRegex)
 	}
 	msgs = parseProviderInfo(o, msgs)
+
+	for _, u := range o.APIPathRegex {
+		compiledAPIPathRegex, err := regexp.Compile(u)
+		if err != nil {
+			msgs = append(msgs, fmt.Sprintf("error compiling api path regex=%q %s", u, err))
+			continue
+		}
+		o.compiledAPIPathRegex = append(o.compiledAPIPathRegex, compiledAPIPathRegex)
+	}
 
 	var cipher *encryption.Cipher
 	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.Cookie.Refresh != time.Duration(0)) {

@@ -1456,6 +1456,26 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 	assert.NotEqual(t, applicationJSON, mime)
 }
 
+func TestAPIUnauthorizedRequest(t *testing.T) {
+	opts := NewOptions()
+	opts.APIPathRegex = []string{"^/api"}
+	opts.Cookie.Secret = "sdflsw"
+	opts.ClientID = "gkljfdl"
+	opts.ClientSecret = "sdflkjs"
+	opts.EmailDomains = []string{"*"}
+	opts.RedirectURL = "http://auth/authorize"
+	err := opts.Validate()
+	assert.NoError(t, err)
+	p := NewOAuthProxy(opts, func(email string) bool {
+		return false
+	})
+	var rw = httptest.NewRecorder()
+	// Test API paths return unauthorized
+	req := httptest.NewRequest("get", "/api/test", nil)
+	p.ServeHTTP(rw, req)
+	assert.Equal(t, http.StatusUnauthorized, rw.Code)
+}
+
 func TestClearSplitCookie(t *testing.T) {
 	opts := NewOptions()
 	opts.Cookie.Name = "oauth2"

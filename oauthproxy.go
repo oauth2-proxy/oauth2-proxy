@@ -107,6 +107,7 @@ type OAuthProxy struct {
 	PassAuthorization    bool
 	PreferEmailToUser    bool
 	skipAuthRegex        []string
+	apiPathRegex         []string
 	skipAuthPreflight    bool
 	skipJwtBearerTokens  bool
 	jwtBearerVerifiers   []*oidc.IDTokenVerifier
@@ -115,6 +116,7 @@ type OAuthProxy struct {
 	realClientIPParser   realClientIPParser
 	Banner               string
 	Footer               string
+	compiledAPIPathRegex []*regexp.Regexp
 }
 
 // UpstreamProxy represents an upstream server to proxy to
@@ -255,6 +257,9 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 	for _, u := range opts.compiledRegex {
 		logger.Printf("compiled skip-auth-regex => %q", u)
 	}
+	for _, u := range opts.compiledAPIPathRegex {
+		logger.Printf("compilex api-path-regex => %q", u)
+	}
 
 	if opts.SkipJwtBearerTokens {
 		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.OIDCIssuerURL)
@@ -305,10 +310,12 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		redirectURL:          redirectURL,
 		whitelistDomains:     opts.WhitelistDomains,
 		skipAuthRegex:        opts.SkipAuthRegex,
+		apiPathRegex:         opts.APIPathRegex,
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
 		jwtBearerVerifiers:   opts.jwtBearerVerifiers,
 		compiledRegex:        opts.compiledRegex,
+		compiledAPIPathRegex: opts.compiledAPIPathRegex,
 		realClientIPParser:   opts.realClientIPParser,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
@@ -638,6 +645,16 @@ func (p *OAuthProxy) IsWhitelistedPath(path string) bool {
 	return false
 }
 
+// IsAPIPath is used to determine if the request path matches a configured API path
+func (p *OAuthProxy) IsAPIPath(path string) bool {
+	for _, u := range p.compiledAPIPathRegex {
+		if u.MatchString(path) {
+			return true
+		}
+	}
+	return false
+}
+
 // See https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=en
 var noCacheHeaders = map[string]string{
 	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
@@ -849,8 +866,8 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
-		if isAjax(req) {
-			// no point redirecting an AJAX request
+		if p.IsAPIPath(req.URL.Path) || isAjax(req) {
+			// no point redirecting an API request
 			p.ErrorJSON(rw, http.StatusUnauthorized)
 			return
 		}
