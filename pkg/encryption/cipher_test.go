@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"testing"
 
@@ -13,7 +14,7 @@ import (
 
 func TestSecretBytesEncoded(t *testing.T) {
 	for _, secretSize := range []int{16, 24, 32} {
-		t.Run(string(secretSize), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
 			secret := make([]byte, secretSize)
 			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
@@ -31,14 +32,50 @@ func TestSecretBytesEncoded(t *testing.T) {
 	}
 }
 
-func TestSecretBytesRaw(t *testing.T) {
+// A string that isn't intended as Base64 and still decodes (but to unintended length)
+// will return the original secret as bytes
+func TestSecretBytesEncodedWrongSize(t *testing.T) {
+	for _, secretSize := range []int{15, 20, 28, 33, 44} {
+		t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
+			secret := make([]byte, secretSize)
+			_, err := io.ReadFull(rand.Reader, secret)
+			assert.Equal(t, nil, err)
+
+			base64Padded := base64.URLEncoding.EncodeToString(secret)
+			sb := SecretBytes(base64Padded)
+			assert.NotEqual(t, secret, sb)
+			assert.NotEqual(t, len(sb), secretSize)
+			// The given secret is returned as []byte
+			assert.Equal(t, base64Padded, string(sb))
+
+			base64Raw := base64.RawURLEncoding.EncodeToString(secret)
+			sb = SecretBytes(base64Raw)
+			assert.NotEqual(t, secret, sb)
+			assert.NotEqual(t, len(sb), secretSize)
+			// The given secret is returned as []byte
+			assert.Equal(t, base64Raw, string(sb))
+		})
+	}
+}
+
+func TestSecretBytesNonBase64(t *testing.T) {
 	trailer := "equals=========="
 	assert.Equal(t, trailer, string(SecretBytes(trailer)))
 
-	// A string that isn't intended as Base64 and still decodes (but to unintended length)
-	// will return the original secret as bytes
-	pseudoBase64 := "0123456789abcdef"
-	assert.Equal(t, pseudoBase64, string(SecretBytes(pseudoBase64)))
+	raw16 := "asdflkjhqwer)(*&"
+	sb16 := SecretBytes(raw16)
+	assert.Equal(t, raw16, string(sb16))
+	assert.Equal(t, 16, len(sb16))
+
+	raw24 := "asdflkjhqwer)(*&CJEN#$%^"
+	sb24 := SecretBytes(raw24)
+	assert.Equal(t, raw24, string(sb24))
+	assert.Equal(t, 24, len(sb24))
+
+	raw32 := "asdflkjhqwer)(*&1234lkjhqwer)(*&"
+	sb32 := SecretBytes(raw32)
+	assert.Equal(t, raw32, string(sb32))
+	assert.Equal(t, 32, len(sb32))
 }
 
 func TestSignAndValidate(t *testing.T) {
