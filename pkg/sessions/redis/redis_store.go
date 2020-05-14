@@ -237,7 +237,7 @@ func (store *SessionStore) saveSession(ctx context.Context, s *sessions.SessionS
 	// Use AES-GCM since it provides authenticated encryption
 	// AES-CFB used in cookies has the cookie signing SHA to get around the lack of
 	// authentication in AES-CFB
-	ciphertext, err := s.EncodeSessionState(c)
+	ciphertext, err := s.EncodeSessionState(c, false)
 	if err != nil {
 		return "", err
 	}
@@ -267,7 +267,7 @@ func (store *SessionStore) loadSessionFromTicket(ctx context.Context, value stri
 		return nil, err
 	}
 
-	session, err := sessions.DecodeSessionState(resultBytes, c)
+	session, err := sessions.DecodeSessionState(resultBytes, c, false)
 	if err != nil {
 		// The GCM cipher will error due to a legacy JSON payload not passing
 		// the authentication check part of AES GCM encryption.

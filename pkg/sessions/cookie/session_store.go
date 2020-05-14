@@ -86,12 +86,12 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 
 // cookieForSession serializes a session state for storage in a cookie
 func cookieForSession(s *sessions.SessionState, c encryption.Cipher) ([]byte, error) {
-	return s.EncodeSessionState(c)
+	return s.EncodeSessionState(c, true)
 }
 
 // sessionFromCookie deserializes a session from a cookie value
 func sessionFromCookie(v []byte, c encryption.Cipher) (s *sessions.SessionState, err error) {
-	ss, err := sessions.DecodeSessionState(v, c)
+	ss, err := sessions.DecodeSessionState(v, c, true)
 	// If anything fails (Decrypt, LZ4, MessagePack), try legacy JSON decode
 	// LZ4 will likely fail for wrong header after AES-CFB spits out garbage
 	// data from trying to decrypt JSON it things is ciphertext
