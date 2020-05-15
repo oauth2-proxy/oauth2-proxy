@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto"
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -397,12 +396,12 @@ func (o *Options) Validate() error {
 	if o.PassAccessToken || o.SetAuthorization || o.PassAuthorization || (o.Cookie.Refresh != time.Duration(0)) {
 		validCookieSecretSize := false
 		for _, i := range []int{16, 24, 32} {
-			if len(secretBytes(o.Cookie.Secret)) == i {
+			if len(encryption.SecretBytes(o.Cookie.Secret)) == i {
 				validCookieSecretSize = true
 			}
 		}
 		var decoded bool
-		if string(secretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
+		if string(encryption.SecretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
 			decoded = true
 		}
 		if !validCookieSecretSize {
@@ -415,10 +414,10 @@ func (o *Options) Validate() error {
 					"to create an AES cipher when "+
 					"pass_access_token == true or "+
 					"cookie_refresh != 0, but is %d bytes.%s",
-				len(secretBytes(o.Cookie.Secret)), suffix))
+				len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
 		} else {
 			var err error
-			cipher, err = encryption.NewCipher(secretBytes(o.Cookie.Secret))
+			cipher, err = encryption.NewCipher(encryption.SecretBytes(o.Cookie.Secret))
 			if err != nil {
 				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
 			}
@@ -652,29 +651,6 @@ func validateCookieName(o *Options, msgs []string) []string {
 		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.Cookie.Name))
 	}
 	return msgs
-}
-
-func addPadding(secret string) string {
-	padding := len(secret) % 4
-	switch padding {
-	case 1:
-		return secret + "==="
-	case 2:
-		return secret + "=="
-	case 3:
-		return secret + "="
-	default:
-		return secret
-	}
-}
-
-// secretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
-func secretBytes(secret string) []byte {
-	b, err := base64.URLEncoding.DecodeString(addPadding(secret))
-	if err == nil {
-		return []byte(addPadding(string(b)))
-	}
-	return []byte(secret)
 }
 
 func setupLogger(o *Options, msgs []string) []string {

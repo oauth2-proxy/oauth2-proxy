@@ -14,7 +14,6 @@ import (
 	"github.com/coreos/go-oidc"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
 var _ Provider = (*ProviderData)(nil)
@@ -106,16 +105,6 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	params.Add("state", state)
 	a.RawQuery = params.Encode()
 	return a.String()
-}
-
-// CookieForSession serializes a session state for storage in a cookie
-func (p *ProviderData) CookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
-	return s.EncodeSessionState(c)
-}
-
-// SessionFromCookie deserializes a session from a cookie value
-func (p *ProviderData) SessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState, err error) {
-	return sessions.DecodeSessionState(v, c)
 }
 
 // GetEmailAddress returns the Account email address
