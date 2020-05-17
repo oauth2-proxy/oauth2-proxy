@@ -6,7 +6,7 @@ import "time"
 type CookieOptions struct {
 	Name     string        `flag:"cookie-name" cfg:"cookie_name"`
 	Secret   string        `flag:"cookie-secret" cfg:"cookie_secret"`
-	Domains  []string      `flag:"cookie-domain" cfg:"cookie_domain"`
+	Domains  []string      `flag:"cookie-domain" cfg:"cookie_domains"`
 	Path     string        `flag:"cookie-path" cfg:"cookie_path"`
 	Expire   time.Duration `flag:"cookie-expire" cfg:"cookie_expire"`
 	Refresh  time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh"`
