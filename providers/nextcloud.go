@@ -3,7 +3,6 @@ package providers
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
@@ -24,17 +23,11 @@ func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
 	return &NextcloudProvider{ProviderData: p}
 }
 
-func getNextcloudHeader(accessToken string) http.Header {
-	header := make(http.Header)
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	return header
-}
-
 // GetEmailAddress returns the Account email address
 func (p *NextcloudProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
-		WithHeaders(getNextcloudHeader(s.AccessToken)).
+		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalJSON()
 	if err != nil {
