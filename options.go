@@ -481,7 +481,7 @@ func (o *Options) Validate() error {
 	hmacKey, msgs = applyFileDigestSalt(hmacKey, msgs, o.AuthenticatedEmailsFile)
 	hmacKey, msgs = applyFileDigestSalt(hmacKey, msgs, o.HtpasswdFile)
 	hmacKey = o.provider.ApplyConfigSalt(hmacKey)
-	o.Cookie.HmacKey = hmacKey
+	o.Cookie.SetHmacKey(hmacKey)
 
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",

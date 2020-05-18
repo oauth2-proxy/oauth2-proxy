@@ -15,5 +15,17 @@ type CookieOptions struct {
 	SameSite string        `flag:"cookie-samesite" cfg:"cookie_samesite" env:"OAUTH2_PROXY_COOKIE_SAMESITE"`
 
 	// Intentionally not exposed via config (for now)
-	HmacKey []byte
+	hmacKey []byte
+}
+
+// HmacKey returns the current key that should be used when signing cookies.
+func (o *CookieOptions) HmacKey() []byte {
+	return o.hmacKey
+}
+
+// SetHmacKey to be used when generating signatures for cookies. Note, this
+// is usually derived from Secret, but may be modified to incorporate other
+// factors as well.
+func (o *CookieOptions) SetHmacKey(hmacKey []byte) {
+	o.hmacKey = hmacKey
 }
