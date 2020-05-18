@@ -318,3 +318,78 @@ func TestGitHubProviderGetUserNameWithRepoAndTokenWithoutPushAccess(t *testing.T
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", email)
 }
+
+func TestGitHubProviderGetEmailAddressWithUsername(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetUsers([]string{"mbland", "octcat"})
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestGitHubProviderGetEmailAddressWithNotAllowedUsername(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetUsers([]string{"octcat"})
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "", email)
+}
+
+func TestGitHubProviderGetEmailAddressWithUsernameAndNotBelongToOrg(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/user/orgs": {
+			`[ {"login":"testorg"} ]`,
+			`[ ]`,
+		},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetOrgTeam("not_belong_to", "")
+	p.SetUsers([]string{"mbland"})
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestGitHubProviderGetEmailAddressWithUsernameAndNoAccessToPrivateRepo(t *testing.T) {
+	b := testGitHubBackend(map[string][]string{
+		"/user":                           {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/repo/oauth2-proxy/oauth2-proxy": {},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGitHubProvider(bURL.Host)
+	p.SetRepo("oauth2-proxy/oauth2-proxy", "")
+	p.SetUsers([]string{"mbland"})
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
