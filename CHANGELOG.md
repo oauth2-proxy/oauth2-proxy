@@ -33,9 +33,9 @@
   - In some scenarios, this may break setting Basic Auth on upstream or responses.
     Use `--prefer-email-to-user` to restore falling back to the Email in these cases.
 - [#556](https://github.com/oauth2-proxy/oauth2-proxy/pull/556) Remove unintentional auto-padding of secrets that were too short
-  - Previously, after cookie-secrets were potentially opportunistically base64 decoded to raw bytes,
-    they were unintentionally padded to a multiple of 4.
-  - This led to many wrong sized secrets to still end up valid AES lengths of 16, 24, or 32. Or it led to confusing errors
+  - Previously, after cookie-secrets were opportunistically base64 decoded to raw bytes,
+    they were padded to have a length divisible by 4.
+  - This led to wrong sized secrets being valid AES lengths of 16, 24, or 32  bytes. Or it led to confusing errors
     reporting an invalid length of 20 or 28 when the user input cookie-secret was not that length.
   - Now we will only base64 decode a cookie-secret to raw bytes if it is 16, 24, or 32 bytes long. Otherwise, we will convert
     the direct cookie-secret to bytes without silent padding added.

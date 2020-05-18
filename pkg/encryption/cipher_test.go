@@ -19,6 +19,8 @@ func TestSecretBytesEncoded(t *testing.T) {
 			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
 
+			// We test both padded & raw Base64 to ensure we handle both
+			// potential user input routes for Base64
 			base64Padded := base64.URLEncoding.EncodeToString(secret)
 			sb := SecretBytes(base64Padded)
 			assert.Equal(t, secret, sb)
@@ -41,6 +43,8 @@ func TestSecretBytesEncodedWrongSize(t *testing.T) {
 			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
 
+			// We test both padded & raw Base64 to ensure we handle both
+			// potential user input routes for Base64
 			base64Padded := base64.URLEncoding.EncodeToString(secret)
 			sb := SecretBytes(base64Padded)
 			assert.NotEqual(t, secret, sb)
