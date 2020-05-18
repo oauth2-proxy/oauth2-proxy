@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
@@ -101,6 +102,7 @@ type OAuthProxy struct {
 	SetBasicAuth         bool
 	SkipProviderButton   bool
 	PassUserHeaders      bool
+	TokenTapping         bool
 	BasicAuthPassword    string
 	PassAccessToken      bool
 	SetAuthorization     bool
@@ -314,6 +316,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		PassBasicAuth:        opts.PassBasicAuth,
 		SetBasicAuth:         opts.SetBasicAuth,
 		PassUserHeaders:      opts.PassUserHeaders,
+		TokenTapping:         opts.TokenTapping,
 		BasicAuthPassword:    opts.BasicAuthPassword,
 		PassAccessToken:      opts.PassAccessToken,
 		SetAuthorization:     opts.SetAuthorization,
@@ -705,14 +708,68 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func extractJWTPayload(jwt string) ([]byte, error) {
+	parts := strings.Split(jwt, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid jwt: expects 3 parts, got %d", len(parts))
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func (p *OAuthProxy) setAccessTokenResponseHeaders(rw http.ResponseWriter, session *sessionsapi.SessionState) {
+	// Expose the access token so clients could in theory use it. It won't refresh
+	// or anything, but it does let a client tap into an existing authenticated session
+	// and use the access token to make API calls (or whatever) while still letting
+	// oauth2-proxy worry about storing/refreshing the tokens. However, you have make sure
+	// to call this endpoint again to obtain any refreshed token. Also, an auth provider
+	// is free to invalidate previous access token(s) when issuing new ones, so if you're
+	// dealing with one of these and not careful about timing this refresh (or properly
+	// retrying things in your client code), you'll probably get weird behavior. For that
+	// reason, we also provide the expiration time so an update can be timed if required.
+	if session.AccessToken != "" {
+		rw.Header().Set("X-Auth-Request-Access-Token", session.AccessToken)
+		rw.Header().Set("X-Auth-Request-Expires-On", session.ExpiresOn.UTC().Format(time.RFC3339))
+	} else {
+		rw.Header().Del("X-Auth-Request-Access-Token")
+		rw.Header().Del("X-Auth-Request-Expires-On")
+	}
+}
+
 //UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
-	session, err := p.getAuthenticatedSession(rw, req)
+	forceRefresh := req.URL.Query().Get("forceRefresh") != "0"
+	session, err := p.getAuthenticatedSession(rw, req, forceRefresh)
 	if err != nil {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
+
+	if p.TokenTapping {
+		p.setAccessTokenResponseHeaders(rw, session)
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+
+	if p.TokenTapping {
+		// If we have an idToken here at all, it's been verified already as part of having an
+		// authenticated session, and we don't need to re-verify things. Just unpack and echo
+		// the JSON payload (per OIDC spec) that has all the user claims.
+		payload, err := extractJWTPayload(session.IDToken)
+		if err == nil {
+			rw.Write(payload)
+			return
+		}
+	}
+
+	// Otherwise just return very basic info.
 	userInfo := struct {
 		Email             string `json:"email"`
 		PreferredUsername string `json:"preferredUsername,omitempty"`
@@ -720,8 +777,6 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		Email:             session.Email,
 		PreferredUsername: session.PreferredUsername,
 	}
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
 	json.NewEncoder(rw).Encode(userInfo)
 }
 
@@ -826,7 +881,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 // AuthenticateOnly checks whether the user is currently logged in
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
-	session, err := p.getAuthenticatedSession(rw, req)
+	forceRefresh := req.URL.Query().Get("forceRefresh") != "0"
+	session, err := p.getAuthenticatedSession(rw, req, forceRefresh)
 	if err != nil {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
 		return
@@ -834,13 +890,16 @@ func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request)
 
 	// we are authenticated
 	p.addHeadersForProxying(rw, req, session)
+	if p.TokenTapping {
+		p.setAccessTokenResponseHeaders(rw, session)
+	}
 	rw.WriteHeader(http.StatusAccepted)
 }
 
 // Proxy proxies the user request if the user is authenticated else it prompts
 // them to authenticate
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
-	session, err := p.getAuthenticatedSession(rw, req)
+	session, err := p.getAuthenticatedSession(rw, req, false)
 	switch err {
 	case nil:
 		// we are authenticated
@@ -870,10 +929,11 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 }
 
-// getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
+// getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so.
+// If forceRefresh is true and a valid session is found, it will ignore the expiration time and try to refresh immediately.
 // Returns nil, ErrNeedsLogin if user needs to login.
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
-func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
+func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request, forceRefresh bool) (*sessionsapi.SessionState, error) {
 	var session *sessionsapi.SessionState
 	var err error
 	var saveSession, clearSession, revalidated bool
@@ -898,6 +958,11 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		if session != nil {
 			if session.Age() > p.CookieRefresh && p.CookieRefresh != time.Duration(0) {
 				logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, p.CookieRefresh)
+				saveSession = true
+			} else if forceRefresh {
+				// Force refresh by faking the expiration time in the past.
+				logger.Printf("Refreshing %s old session cookie for %s (explicit refresh)", session.Age(), session)
+				session.ExpiresOn = time.Now().Add(time.Duration(-11) * time.Minute)
 				saveSession = true
 			}
 

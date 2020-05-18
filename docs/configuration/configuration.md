@@ -121,6 +121,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
 | `--tls-cert-file` | string | path to certificate file | |
 | `--tls-key-file` | string | path to private key file | |
+| `--token-tapping` | bool | allow the access and id tokens to be accessed via the proxy's auth and userinfo endpoints | false |
 | `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
 | `--user-id-claim` | string | which claim contains the user ID | \["email"\] |
 | `--validate-url` | string | Access token validation endpoint | |
@@ -151,6 +152,21 @@ or the command line.
 
 For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET`,
 and the `--email-domain` flag becomes `OAUTH2_PROXY_EMAIL_DOMAINS`.
+
+## Token "Tapping"
+
+Usually oauth2-proxy will handle all the tokens dealing with authentication for you and forward requests on to various upstream locations as needed (using settings such as `--pass-authorization-header`). Often this is all that's required. However, in some cases it would be useful to know what access token is being used under the hood so you can make requests using a javascript client library or to use extra claims information that may be part of the id token returned from the authentication server.
+
+By using the `--token-tapping` option, it will enable extra information to be returned from the `/oauth2/auth` and `/oauth2/userinfo` endpoints that oauth2-proxy provides (note: the `/oauth2` prefix is the default, and can be changed using `--proxy-prefix`):
+
+- HTTP headers (for both auth and userinfo endpoints):
+    - `X-Auth-Request-Access-Token` will contain the access token defined for the user's session (similar to `--set-xauthrequest`).
+    - `X-Auth-Request-Expires-On` will contain the expiration time for the access token in UTC (RFC3339 format)
+- For userinfo endpoint only: returned json will be the raw claims of the id token as originally received from the authentication server (any [distributed/aggregated claims](https://openid.net/specs/openid-connect-core-1_0.html#AggregatedDistributedClaims) will be passed through unchanged)
+
+Further, these two endpoints (auth and userinfo) can also be used to force a token refresh with the authentication server by including `?forceRefresh=1` in the URL when accessing with a valid session. This is important if you are trying to ensure a clean refresh when performing operations near a token's expiration time (i.e. you can issue the request a couple minutes before it's expected to expire) or when performing operations that may invalidate a token (such as an admin changing access settings or updating profile information).
+
+> **_Warning:_** The nature of token based authentication means that *exposing tokens using this mechanism should only be done over a secure HTTPS connection*. Otherwise, someone could be sniffing traffic and any tokens sent over an unprotected channels could be used by attackers to access the system.
 
 ## Logging Configuration
 
