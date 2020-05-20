@@ -223,7 +223,7 @@ func (p *OIDCProvider) ValidateSessionState(ctx context.Context, s *sessions.Ses
 	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
 	if err != nil {
 		return false
-	
+
 	}
 	if p.ExtractRawClaims {
 		// Stash these since the proxy is going to need them...
@@ -250,7 +250,6 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	if err := idToken.Claims(&claims.rawClaims); err != nil {
 		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)
 	}
-
 
 	userID := claims.rawClaims[p.UserIDClaim]
 	if userID == nil {
