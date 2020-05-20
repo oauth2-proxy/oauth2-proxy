@@ -973,7 +973,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 
 				// Token was refreshed, make sure authorization still applies.
 				if ok, reason := p.AuthorizeSession(session); !ok {
-					logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Removing re-validated session because it failed authorization (rule: %s): %s", reason, session)
+					logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Removing re-validated session because it failed authorization (%s): %s", reason, session)
 					session = nil
 					saveSession = false
 					clearSession = true

@@ -202,23 +202,41 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 	return ss, nil
 }
 
+// RawClaims access the unmodified claims that have been associated with this session or nil if
+// none have been.
+// Note: these claims are not serialized, and are meant only as a transient "handoff" during authentication.
 func (s *SessionState) RawClaims() map[string]interface{} {
 	return s.rawClaims
 }
 
+// RawClaimsValid is true when the RawClaims() will return a non-nil value.
 func (s *SessionState) RawClaimsValid() bool {
 	return s.rawClaimsValid
 }
 
+// SetRawClaims will assign the raw claims and mark them as valid if the value is
+// not nil. This does not clone the map assigned, only assigns it so if you need
+// to ensure the original is not modified, create a clone yourself.
 func (s *SessionState) SetRawClaims(rawClaims map[string]interface{}) {
 	s.rawClaims = rawClaims
-	s.rawClaimsValid = true
+	s.rawClaimsValid = rawClaims != nil
 }
 
+// SetRawClaimsFromIDToken will extract the full rawClaims from the ID token and
+// mark them as valid.
 func (s *SessionState) SetRawClaimsFromIDToken(idToken *oidc.IDToken) error {
 	if err := idToken.Claims(&s.rawClaims); err != nil {
 		return err
 	}
 	s.rawClaimsValid = true
 	return nil
+}
+
+// SetRawClaimsFromSession will assign the rawClaims directly (not copy) if the
+// other session `os` has them set.
+func (s *SessionState) SetRawClaimsFromSession(os *SessionState) {
+	if os != nil && os.rawClaimsValid {
+		s.rawClaims = os.rawClaims
+		s.rawClaimsValid = true
+	}
 }

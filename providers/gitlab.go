@@ -113,6 +113,7 @@ func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.Ses
 	s.CreatedAt = newSession.CreatedAt
 	s.ExpiresOn = newSession.ExpiresOn
 	s.Email = newSession.Email
+	s.SetRawClaimsFromSession(newSession)
 	return
 }
 
