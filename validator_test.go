@@ -218,9 +218,7 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 
 func TestTruthiness(t *testing.T) {
 
-	type Obj struct {
-		foo int
-	}
+	type Obj struct{}
 
 	mm := make(map[string]interface{})
 	mm["foo"] = 1
@@ -254,7 +252,7 @@ func TestTruthiness(t *testing.T) {
 	assert.False(t, truthy([]int{}))
 	assert.False(t, truthy(make([]interface{}, 0)))
 	assert.False(t, truthy(make(map[string]interface{}, 1)))
-	assert.False(t, truthy(make(map[string]interface{}, 0)))
+	assert.False(t, truthy(make(map[string]interface{})))
 }
 
 func assertJmesTruthy(t *testing.T, data map[string]interface{}, expr string, expected bool) {
