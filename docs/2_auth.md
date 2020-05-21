@@ -28,7 +28,7 @@ Valid providers are :
 
 The provider can be selected using the `provider` configuration value.
 
-Please note that not all provides support all claims. The `preferred_username` claim is currently only supported by the OpenID Connect provider.
+Please note that not all providers support all claims. The `preferred_username` claim is currently only supported by the OpenID Connect provider.
 
 ### Google Auth Provider
 
