@@ -56,7 +56,7 @@ type Options struct {
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team" env:"OAUTH2_PROXY_GITHUB_TEAM"`
 	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo" env:"OAUTH2_PROXY_GITHUB_REPO"`
 	GitHubToken              string   `flag:"github-token" cfg:"github_token" env:"OAUTH2_PROXY_GITHUB_TOKEN"`
-	GitHubUsers              []string `flag:"github-user" cfg:"github_user" env:"OAUTH2_PROXY_GITHUB_USER"`
+	GitHubUsers              []string `flag:"github-users" cfg:"github_users" env:"OAUTH2_PROXY_GITHUB_USERS"`
 	GitLabGroup              string   `flag:"gitlab-group" cfg:"gitlab_group" env:"OAUTH2_PROXY_GITLAB_GROUP"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group" env:"OAUTH2_PROXY_GOOGLE_GROUPS"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email" env:"OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL"`
