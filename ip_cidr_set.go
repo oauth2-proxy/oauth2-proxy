@@ -6,17 +6,14 @@ import (
 )
 
 type ipCIDRSet struct {
-	ip4NetMaps *[]*ipNetMap
-	ip6NetMaps *[]*ipNetMap
+	ip4NetMaps []ipNetMap
+	ip6NetMaps []ipNetMap
 }
 
 func newIPCIDRSet(nets []*net.IPNet) *ipCIDRSet {
-	ip4NetMaps := make([]*ipNetMap, 0)
-	ip6NetMaps := make([]*ipNetMap, 0)
-
 	w := &ipCIDRSet{
-		ip4NetMaps: &ip4NetMaps,
-		ip6NetMaps: &ip6NetMaps,
+		ip4NetMaps: make([]ipNetMap, 0),
+		ip6NetMaps: make([]ipNetMap, 0),
 	}
 
 	for _, net := range nets {
@@ -26,12 +23,12 @@ func newIPCIDRSet(nets []*net.IPNet) *ipCIDRSet {
 	return w
 }
 
-func (w ipCIDRSet) getNetMaps(ip net.IP) (netMaps *[]*ipNetMap) {
+func (w *ipCIDRSet) getNetMaps(ip net.IP) (netMaps *[]ipNetMap) {
 	// nolint:gocritic
 	if ip.To4() != nil {
-		netMaps = w.ip4NetMaps
+		netMaps = &w.ip4NetMaps
 	} else if ip.To16() != nil {
-		netMaps = w.ip6NetMaps
+		netMaps = &w.ip6NetMaps
 	} else {
 		panic(fmt.Sprintf("IP (%s) is neither 4-byte nor 16-byte?", ip.String()))
 	}
@@ -39,7 +36,7 @@ func (w ipCIDRSet) getNetMaps(ip net.IP) (netMaps *[]*ipNetMap) {
 	return netMaps
 }
 
-func (w ipCIDRSet) has(ip net.IP) bool {
+func (w *ipCIDRSet) has(ip net.IP) bool {
 	netMaps := w.getNetMaps(ip)
 	for _, netMap := range *netMaps {
 		if netMap.has(ip) {
@@ -56,7 +53,7 @@ func (w *ipCIDRSet) addIP(ip net.IP, mask net.IPMask) {
 	var netMap *ipNetMap
 	for i := 0; len(*netMaps) > i; i++ {
 		if netMapOnes, _ := (*netMaps)[i].mask.Size(); netMapOnes == ones {
-			netMap = (*netMaps)[i]
+			netMap = &(*netMaps)[i]
 			break
 		}
 	}
@@ -65,7 +62,9 @@ func (w *ipCIDRSet) addIP(ip net.IP, mask net.IPMask) {
 			mask: mask,
 			ips:  make(map[string]bool),
 		}
-		*netMaps = append(*netMaps, netMap)
+		*netMaps = append(*netMaps, *netMap)
+		w.addIP(ip, mask)
+		return
 	}
 
 	netMap.ips[ip.String()] = true
