@@ -19,25 +19,20 @@ import (
 
 // SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
 func SecretBytes(secret string) []byte {
-	b, err := base64.URLEncoding.DecodeString(addPadding(secret))
+	b, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(secret, "="))
 	if err == nil {
-		return []byte(addPadding(string(b)))
+		// Only return decoded form if a valid AES length
+		// Don't want unintentional decoding resulting in invalid lengths confusing a user
+		// that thought they used a 16, 24, 32 length string
+		for _, i := range []int{16, 24, 32} {
+			if len(b) == i {
+				return b
+			}
+		}
 	}
+	// If decoding didn't work or resulted in non-AES compliant length,
+	// assume the raw string was the intended secret
 	return []byte(secret)
-}
-
-func addPadding(secret string) string {
-	padding := len(secret) % 4
-	switch padding {
-	case 1:
-		return secret + "==="
-	case 2:
-		return secret + "=="
-	case 3:
-		return secret + "="
-	default:
-		return secret
-	}
 }
 
 // cookies are stored in a 3 part (value + timestamp + signature) to enforce that the values are as originally set.
