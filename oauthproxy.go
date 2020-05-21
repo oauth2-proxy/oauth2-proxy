@@ -744,7 +744,7 @@ func (p *OAuthProxy) setAccessTokenResponseHeaders(rw http.ResponseWriter, sessi
 //UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
-	forceRefresh := req.URL.Query().Get("forceRefresh") != "0"
+	forceRefresh := isTruthyQueryValue(req.URL.Query().Get("forceRefresh"))
 	session, err := p.getAuthenticatedSession(rw, req, forceRefresh)
 	if err != nil {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
@@ -879,9 +879,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func isTruthyQueryValue(s string) bool {
+	return s != "" && s != "0" && strings.ToLower(s) != "false"
+}
+
 // AuthenticateOnly checks whether the user is currently logged in
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
-	forceRefresh := req.URL.Query().Get("forceRefresh") != "0"
+	forceRefresh := isTruthyQueryValue(req.URL.Query().Get("forceRefresh"))
 	session, err := p.getAuthenticatedSession(rw, req, forceRefresh)
 	if err != nil {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
