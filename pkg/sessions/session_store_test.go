@@ -18,7 +18,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -365,7 +364,7 @@ var _ = Describe("NewSessionStore", func() {
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
-				cipher, err := encryption.NewCipher(utils.SecretBytes(cookieOpts.Secret))
+				cipher, err := encryption.NewCipher(encryption.SecretBytes(cookieOpts.Secret))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cipher).ToNot(BeNil())
 				opts.Cipher = cipher
