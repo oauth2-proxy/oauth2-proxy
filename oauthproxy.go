@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
@@ -714,7 +713,7 @@ func extractJWTPayload(jwt string) ([]byte, error) {
 		return nil, fmt.Errorf("invalid jwt: expects 3 parts, got %d", len(parts))
 	}
 
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	payload, err := b64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, err
 	}
