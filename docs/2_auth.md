@@ -103,7 +103,7 @@ Note: When using the Azure Auth provider with nginx and the cookie session store
 
 The GitHub auth provider supports two additional ways to restrict authentication to either organization and optional team level access, or to collaborators of a repository. Restricting by these options is normally accompanied with `--email-domain=*`
 
-NOTE: When `--github-user` is set, the specified users are allowed logins even if they do not belong to the specified org and team or collaborators.
+NOTE: When `--github-users` is set, the specified users are allowed logins even if they do not belong to the specified org and team or collaborators.
 
 To restrict by organization only, include the following flag:
 
@@ -123,7 +123,7 @@ If you'd like to allow access to users with **read only** access to a **public**
 
 To allow logins by usernames even if they do not belong to the specified org and team or collaborators, separated by a comma
 
-    -github-user="": allow logins by username, separated by a comma
+    -github-users="": allow logins by username, separated by a comma
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 
