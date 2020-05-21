@@ -113,7 +113,7 @@ type OAuthProxy struct {
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
 	realClientIPParser   realClientIPParser
-	ipWhitelist          *IPWhitelist
+	ipWhitelist          *ipCIDRSet
 	Banner               string
 	Footer               string
 }
@@ -268,7 +268,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 	}
 
-	ipWhitelist := NewIPWhitelist(opts.ipWhitelist)
+	ipWhitelist := newIPCIDRSet(opts.ipWhitelist)
 
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.provider.Data().ProviderName, opts.ClientID)
 	refresh := "disabled"

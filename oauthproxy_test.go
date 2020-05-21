@@ -1687,7 +1687,7 @@ func Test_noCacheHeadersDoesNotExistsInResponseHeadersFromUpstream(t *testing.T)
 	}
 }
 
-func TestIPWhitelist(t *testing.T) {
+func TestIPCIDRSet(t *testing.T) {
 	opts := NewOptions()
 	opts.IPWhitelist = []string{
 		"127.0.0.0/8",

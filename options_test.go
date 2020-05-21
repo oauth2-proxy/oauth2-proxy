@@ -371,7 +371,7 @@ func TestRealClientIPHeader(t *testing.T) {
 	assert.Nil(t, o.realClientIPParser)
 }
 
-func TestIPWhitelistOption(t *testing.T) {
+func TestIPCIDRSetOption(t *testing.T) {
 	var o *Options
 	var err error
 

@@ -5,18 +5,18 @@ import (
 	"net"
 )
 
-type IPWhitelist struct {
-	ip4Whitelist *[]*ipNetMap
-	ip6Whitelist *[]*ipNetMap
+type ipCIDRSet struct {
+	ip4NetMaps *[]*ipNetMap
+	ip6NetMaps *[]*ipNetMap
 }
 
-func NewIPWhitelist(nets []*net.IPNet) *IPWhitelist {
-	ip4Whitelist := make([]*ipNetMap, 0)
-	ip6Whitelist := make([]*ipNetMap, 0)
+func newIPCIDRSet(nets []*net.IPNet) *ipCIDRSet {
+	ip4NetMaps := make([]*ipNetMap, 0)
+	ip6NetMaps := make([]*ipNetMap, 0)
 
-	w := &IPWhitelist{
-		ip4Whitelist: &ip4Whitelist,
-		ip6Whitelist: &ip6Whitelist,
+	w := &ipCIDRSet{
+		ip4NetMaps: &ip4NetMaps,
+		ip6NetMaps: &ip6NetMaps,
 	}
 
 	for _, net := range nets {
@@ -26,12 +26,12 @@ func NewIPWhitelist(nets []*net.IPNet) *IPWhitelist {
 	return w
 }
 
-func (w IPWhitelist) getNetMaps(ip net.IP) (netMaps *[]*ipNetMap) {
+func (w ipCIDRSet) getNetMaps(ip net.IP) (netMaps *[]*ipNetMap) {
 	// nolint:gocritic
 	if ip.To4() != nil {
-		netMaps = w.ip4Whitelist
+		netMaps = w.ip4NetMaps
 	} else if ip.To16() != nil {
-		netMaps = w.ip6Whitelist
+		netMaps = w.ip6NetMaps
 	} else {
 		panic(fmt.Sprintf("IP (%s) is neither 4-byte nor 16-byte?", ip.String()))
 	}
@@ -39,7 +39,7 @@ func (w IPWhitelist) getNetMaps(ip net.IP) (netMaps *[]*ipNetMap) {
 	return netMaps
 }
 
-func (w IPWhitelist) has(ip net.IP) bool {
+func (w ipCIDRSet) has(ip net.IP) bool {
 	netMaps := w.getNetMaps(ip)
 	for _, netMap := range *netMaps {
 		if netMap.has(ip) {
@@ -49,7 +49,7 @@ func (w IPWhitelist) has(ip net.IP) bool {
 	return false
 }
 
-func (w *IPWhitelist) addIP(ip net.IP, mask net.IPMask) {
+func (w *ipCIDRSet) addIP(ip net.IP, mask net.IPMask) {
 	netMaps := w.getNetMaps(ip)
 
 	ones, _ := mask.Size()
