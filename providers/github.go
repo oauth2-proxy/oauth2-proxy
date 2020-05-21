@@ -85,15 +85,7 @@ func (p *GitHubProvider) SetRepo(repo, token string) {
 
 // SetUsers configures allowed usernames
 func (p *GitHubProvider) SetUsers(users []string) {
-	for _, user := range users {
-		us := strings.Split(user, ",")
-		for _, u := range us {
-			// Validate empty string (e.g. --github-user="octcat,,")
-			if len(u) > 0 {
-				p.Users = append(p.Users, u)
-			}
-		}
-	}
+	p.Users = append(p.Users, users...)
 }
 
 func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, error) {
@@ -368,7 +360,6 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 	}
 
 	if p.isVerifiedUser(user.Login) {
-		log.Printf("Found Github User: %q", user.Login)
 		return true, nil
 	}
 	log.Printf("Missing Github User: %q in %v", user.Login, p.Users)
@@ -439,11 +430,9 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 					return "", err
 				}
 			}
-		} else if p.Repo != "" {
-			if p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
-				if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
-					return "", err
-				}
+		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
+			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
+				return "", err
 			}
 		}
 	}
