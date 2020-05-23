@@ -7,7 +7,7 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/logging"
+	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
@@ -132,30 +132,30 @@ type Options struct {
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
-	realClientIPParser logging.RealClientIPParser
+	realClientIPParser ipapi.RealClientIPParser
 }
 
 // Options for Getting internal values
-func (o *Options) GetRedirectURL() *url.URL                          { return o.redirectURL }
-func (o *Options) GetProxyURLs() []*url.URL                          { return o.proxyURLs }
-func (o *Options) GetCompiledRegex() []*regexp.Regexp                { return o.compiledRegex }
-func (o *Options) GetProvider() providers.Provider                   { return o.provider }
-func (o *Options) GetSessionStore() sessionsapi.SessionStore         { return o.sessionStore }
-func (o *Options) GetSignatureData() *SignatureData                  { return o.signatureData }
-func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier            { return o.oidcVerifier }
-func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier    { return o.jwtBearerVerifiers }
-func (o *Options) GetRealClientIPParser() logging.RealClientIPParser { return o.realClientIPParser }
+func (o *Options) GetRedirectURL() *url.URL                        { return o.redirectURL }
+func (o *Options) GetProxyURLs() []*url.URL                        { return o.proxyURLs }
+func (o *Options) GetCompiledRegex() []*regexp.Regexp              { return o.compiledRegex }
+func (o *Options) GetProvider() providers.Provider                 { return o.provider }
+func (o *Options) GetSessionStore() sessionsapi.SessionStore       { return o.sessionStore }
+func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
+func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
+func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jwtBearerVerifiers }
+func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
 
 // Options for Setting internal values
-func (o *Options) SetRedirectURL(s *url.URL)                          { o.redirectURL = s }
-func (o *Options) SetProxyURLs(s []*url.URL)                          { o.proxyURLs = s }
-func (o *Options) SetCompiledRegex(s []*regexp.Regexp)                { o.compiledRegex = s }
-func (o *Options) SetProvider(s providers.Provider)                   { o.provider = s }
-func (o *Options) SetSessionStore(s sessionsapi.SessionStore)         { o.sessionStore = s }
-func (o *Options) SetSignatureData(s *SignatureData)                  { o.signatureData = s }
-func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)            { o.oidcVerifier = s }
-func (o *Options) SetJWTBearerVerifiers(s []*oidc.IDTokenVerifier)    { o.jwtBearerVerifiers = s }
-func (o *Options) SetRealClientIPParser(s logging.RealClientIPParser) { o.realClientIPParser = s }
+func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
+func (o *Options) SetProxyURLs(s []*url.URL)                        { o.proxyURLs = s }
+func (o *Options) SetCompiledRegex(s []*regexp.Regexp)              { o.compiledRegex = s }
+func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
+func (o *Options) SetSessionStore(s sessionsapi.SessionStore)       { o.sessionStore = s }
+func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
+func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
+func (o *Options) SetJWTBearerVerifiers(s []*oidc.IDTokenVerifier)  { o.jwtBearerVerifiers = s }
+func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClientIPParser = s }
 
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {

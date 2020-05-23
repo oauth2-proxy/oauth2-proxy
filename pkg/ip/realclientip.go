@@ -1,18 +1,15 @@
-package logging
+package ip
 
 import (
 	"fmt"
 	"net"
 	"net/http"
 	"strings"
+
+	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
 )
 
-// RealClientIPParser is an interface for a getting the client's real IP to be used for logging.
-type RealClientIPParser interface {
-	GetRealClientIP(http.Header) (net.IP, error)
-}
-
-func GetRealClientIPParser(headerKey string) (RealClientIPParser, error) {
+func GetRealClientIPParser(headerKey string) (ipapi.RealClientIPParser, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
 	switch headerKey {
@@ -73,7 +70,7 @@ func getRemoteIP(req *http.Request) (net.IP, error) {
 }
 
 // GetClientString obtains the human readable string of the remote IP and optionally the real client IP if available
-func GetClientString(p RealClientIPParser, req *http.Request, full bool) (s string) {
+func GetClientString(p ipapi.RealClientIPParser, req *http.Request, full bool) (s string) {
 	var realClientIPStr string
 	if p != nil {
 		if realClientIP, err := p.GetRealClientIP(req.Header); err == nil && realClientIP != nil {

@@ -1,4 +1,4 @@
-package logging
+package ip
 
 import (
 	"net"
@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -144,7 +145,7 @@ func TestGetClientString(t *testing.T) {
 	p := &xForwardedForClientIPParser{header: http.CanonicalHeaderKey("X-Forwarded-For")}
 
 	tests := []struct {
-		parser             RealClientIPParser
+		parser             ipapi.RealClientIPParser
 		remoteAddr         string
 		headerValue        string
 		expectedClient     string

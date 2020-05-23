@@ -17,9 +17,9 @@ import (
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/logging"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
@@ -272,7 +272,7 @@ func Validate(o *options.Options) error {
 	msgs = setupLogger(o, msgs)
 
 	if o.ReverseProxy {
-		parser, err := logging.GetRealClientIPParser(o.RealClientIPHeader)
+		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
 		}
@@ -496,7 +496,7 @@ func setupLogger(o *options.Options, msgs []string) []string {
 	logger.SetAuthTemplate(o.AuthLoggingFormat)
 	logger.SetReqTemplate(o.RequestLoggingFormat)
 	logger.SetGetClientFunc(func(r *http.Request) string {
-		return logging.GetClientString(o.GetRealClientIPParser(), r, false)
+		return ip.GetClientString(o.GetRealClientIPParser(), r, false)
 	})
 
 	excludePaths := make([]string, 0)
