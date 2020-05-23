@@ -41,6 +41,8 @@
     the direct cookie-secret to bytes without silent padding added.
 
 ## Changes since v5.1.1
+
+- [#489](https://github.com/oauth2-proxy/oauth2-proxy/pull/489) Move Options and Validation to separate packages (@JoelSpeed)
 - [#556](https://github.com/oauth2-proxy/oauth2-proxy/pull/556) Remove unintentional auto-padding of secrets that were too short (@NickMeves)
 - [#538](https://github.com/oauth2-proxy/oauth2-proxy/pull/538) Refactor sessions/utils.go functionality to other areas (@NickMeves)
 - [#503](https://github.com/oauth2-proxy/oauth2-proxy/pull/503) Implements --real-client-ip-header option to select the header from which to obtain a proxied client's IP (@Izzette)
