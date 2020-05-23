@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"path"
@@ -362,7 +361,6 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 	if p.isVerifiedUser(user.Login) {
 		return true, nil
 	}
-	log.Printf("Missing Github User: %q in %v", user.Login, p.Users)
 	return false, nil
 }
 
