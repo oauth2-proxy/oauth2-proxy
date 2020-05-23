@@ -60,16 +60,24 @@ func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
 	}
 
 	if opts.UseSentinel {
+		addrs, err := parseRedisURLs(opts.SentinelConnectionURLs)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse redis urls: %v", err)
+		}
 		client := redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    opts.SentinelMasterName,
-			SentinelAddrs: opts.SentinelConnectionURLs,
+			SentinelAddrs: addrs,
 		})
 		return newClient(client), nil
 	}
 
 	if opts.UseCluster {
+		addrs, err := parseRedisURLs(opts.ClusterConnectionURLs)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse redis urls: %v", err)
+		}
 		client := redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs: opts.ClusterConnectionURLs,
+			Addrs: addrs,
 		})
 		return newClusterClient(client), nil
 	}
@@ -106,6 +114,20 @@ func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
 
 	client := redis.NewClient(opt)
 	return newClient(client), nil
+}
+
+// parseRedisURLs parses a list of redis urls and returns a list
+// of addresses in the form of host:port that can be used to connnect to Redis
+func parseRedisURLs(urls []string) ([]string, error) {
+	addrs := []string{}
+	for _, u := range urls {
+		parsedURL, err := redis.ParseURL(u)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse redis url: %s", err)
+		}
+		addrs = append(addrs, parsedURL.Addr)
+	}
+	return addrs, nil
 }
 
 // Save takes a sessions.SessionState and stores the information from it
