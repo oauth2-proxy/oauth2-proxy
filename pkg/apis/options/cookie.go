@@ -1,6 +1,10 @@
 package options
 
-import "time"
+import (
+	"time"
+
+	"github.com/spf13/pflag"
+)
 
 // CookieOptions contains configuration options relating to Cookie configuration
 type CookieOptions struct {
@@ -13,4 +17,35 @@ type CookieOptions struct {
 	Secure   bool          `flag:"cookie-secure" cfg:"cookie_secure"`
 	HTTPOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
 	SameSite string        `flag:"cookie-samesite" cfg:"cookie_samesite"`
+}
+
+func cookieFlagSet() *pflag.FlagSet {
+	flagSet := pflag.NewFlagSet("cookie", pflag.ExitOnError)
+
+	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
+	flagSet.String("cookie-secret", "", "the seed string for secure cookies (optionally base64 encoded)")
+	flagSet.StringSlice("cookie-domain", []string{}, "Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).")
+	flagSet.String("cookie-path", "/", "an optional cookie path to force cookies to (ie: /poc/)*")
+	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
+	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
+	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
+	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
+	flagSet.String("cookie-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
+
+	return flagSet
+}
+
+// defaultCookieOptions creates a CookieOptions populating each field with its default value
+func defaultCookieOptions() CookieOptions {
+	return CookieOptions{
+		Name:     "_oauth2_proxy",
+		Secret:   "",
+		Domains:  nil,
+		Path:     "/",
+		Expire:   time.Duration(168) * time.Hour,
+		Refresh:  time.Duration(0),
+		Secure:   true,
+		HTTPOnly: true,
+		SameSite: "",
+	}
 }
