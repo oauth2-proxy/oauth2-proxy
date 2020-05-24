@@ -154,7 +154,26 @@ func NewReverseProxy(target *url.URL, opts *options.Options) (proxy *httputil.Re
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
+	setProxyErrorHandler(proxy, opts)
 	return proxy
+}
+
+func setProxyErrorHandler(proxy *httputil.ReverseProxy, opts *options.Options) {
+	templates := loadTemplates(opts.CustomTemplatesDir)
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, proxyErr error) {
+		logger.Printf("Error proxying to upstream server: %v", proxyErr)
+		w.WriteHeader(http.StatusBadGateway)
+		data := struct {
+			Title       string
+			Message     string
+			ProxyPrefix string
+		}{
+			Title:       "Bad Gateway",
+			Message:     "Error proxying to upstream server",
+			ProxyPrefix: opts.ProxyPrefix,
+		}
+		templates.ExecuteTemplate(w, "error.html", data)
+	}
 }
 
 func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
