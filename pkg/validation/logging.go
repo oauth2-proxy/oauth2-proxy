@@ -2,7 +2,6 @@ package validation
 
 import (
 	"os"
-	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
@@ -49,12 +48,10 @@ func configureLogger(o options.Logging, pingPath string, msgs []string) []string
 	logger.SetAuthTemplate(o.AuthFormat)
 	logger.SetReqTemplate(o.RequestFormat)
 
-	excludePaths := make([]string, 0)
-	excludePaths = append(excludePaths, strings.Split(o.ExcludePaths, ",")...)
+	excludePaths := o.ExcludePaths
 	if o.SilencePing {
 		excludePaths = append(excludePaths, pingPath)
 	}
-
 	logger.SetExcludePaths(excludePaths)
 
 	if !o.LocalTime {

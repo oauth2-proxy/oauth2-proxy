@@ -13,7 +13,7 @@ type Logging struct {
 	RequestFormat   string         `flag:"request-logging-format" cfg:"request_logging_format"`
 	StandardEnabled bool           `flag:"standard-logging" cfg:"standard_logging"`
 	StandardFormat  string         `flag:"standard-logging-format" cfg:"standard_logging_format"`
-	ExcludePaths    string         `flag:"exclude-logging-paths" cfg:"exclude_logging_paths"`
+	ExcludePaths    []string       `flag:"exclude-logging-path" cfg:"exclude_logging_paths"`
 	LocalTime       bool           `flag:"logging-local-time" cfg:"logging_local_time"`
 	SilencePing     bool           `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
 	File            LogFileOptions `cfg:",squash"`
@@ -38,7 +38,7 @@ func loggingFlagSet() *pflag.FlagSet {
 	flagSet.Bool("request-logging", true, "Log HTTP requests")
 	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
 
-	flagSet.String("exclude-logging-paths", "", "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
+	flagSet.StringSlice("exclude-logging-path", []string{}, "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
 	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
 	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping endpoint")
 
@@ -54,6 +54,7 @@ func loggingFlagSet() *pflag.FlagSet {
 // loggingDefaults creates a Logging structure, populating each field with its default value
 func loggingDefaults() Logging {
 	return Logging{
+		ExcludePaths:    nil,
 		LocalTime:       true,
 		SilencePing:     false,
 		AuthEnabled:     true,
