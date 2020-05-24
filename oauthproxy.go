@@ -657,6 +657,7 @@ func prepareNoCache(w http.ResponseWriter) {
 	}
 }
 
+// IsWhitelistedIP is used to check if a request comes from a whitelisted IP address.
 func (p *OAuthProxy) IsWhitelistedIP(req *http.Request) bool {
 	if p.realClientIPParser == nil || p.ipWhitelist == nil {
 		return false
