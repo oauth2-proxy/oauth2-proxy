@@ -5,11 +5,22 @@ import (
 	"net"
 )
 
+// Fast lookup table for intersection of a single IP address within a collection of CIDR networks.
+//
+// Supports 4-byte (IPv4) and 16-byte (IPv6) networks.
+//
+// Provides O(1) best-case, O(log(n)) worst-case performance.
+// In practice netmasks included will generally only be of standard lengths:
+// - /8, /16, /24, and /32 for IPv4
+// - /64 and /128 for IPv6.
+// As a result, typical lookup times will lean closer to best-case rather than worst-case even when most of the internet
+// is included.
 type ipCIDRSet struct {
 	ip4NetMaps []ipNetMap
 	ip6NetMaps []ipNetMap
 }
 
+// Create a new ipCIDRSet with all of the provided networks.
 func newIPCIDRSet(nets []*net.IPNet) *ipCIDRSet {
 	w := &ipCIDRSet{
 		ip4NetMaps: make([]ipNetMap, 0),
@@ -23,6 +34,7 @@ func newIPCIDRSet(nets []*net.IPNet) *ipCIDRSet {
 	return w
 }
 
+// Get the appropriate array of networks for the given IP version.
 func (w *ipCIDRSet) getNetMaps(ip net.IP) (netMaps *[]ipNetMap) {
 	// nolint:gocritic
 	if ip.To4() != nil {
@@ -36,8 +48,11 @@ func (w *ipCIDRSet) getNetMaps(ip net.IP) (netMaps *[]ipNetMap) {
 	return netMaps
 }
 
+// Check if `ip` is in the set, true if within the set otherwise false.
 func (w *ipCIDRSet) has(ip net.IP) bool {
 	netMaps := w.getNetMaps(ip)
+
+	// Check all ipNetMaps for intersection with `ip`.
 	for _, netMap := range *netMaps {
 		if netMap.has(ip) {
 			return true
@@ -46,17 +61,24 @@ func (w *ipCIDRSet) has(ip net.IP) bool {
 	return false
 }
 
+// Add an CIDR network to the set.
 func (w *ipCIDRSet) addIP(ip net.IP, mask net.IPMask) {
 	netMaps := w.getNetMaps(ip)
 
+	// Determine the size / number of ones in the CIDR network mask.
 	ones, _ := mask.Size()
+
 	var netMap *ipNetMap
+
+	// Search for the ipNetMap containing networks with the same number of ones.
 	for i := 0; len(*netMaps) > i; i++ {
 		if netMapOnes, _ := (*netMaps)[i].mask.Size(); netMapOnes == ones {
 			netMap = &(*netMaps)[i]
 			break
 		}
 	}
+
+	// Create a new ipNetMap if none with this number of ones have been created yet.
 	if netMap == nil {
 		netMap = &ipNetMap{
 			mask: mask,
@@ -67,15 +89,19 @@ func (w *ipCIDRSet) addIP(ip net.IP, mask net.IPMask) {
 		return
 	}
 
+	// Add the IP to the ipNetMap.
 	netMap.ips[ip.String()] = true
 }
 
+// Hash-set of CIDR networks with the same mask size.
 type ipNetMap struct {
 	mask net.IPMask
 	ips  map[string]bool
 }
 
+// Check if the IP is in any of the CIDR networks contained in this map.
 func (m ipNetMap) has(ip net.IP) bool {
+	// Apply the mask to the IP to remove any irrelevant bits in the IP.
 	ipMasked := ip.Mask(m.mask)
 	if ipMasked == nil {
 		panic(fmt.Sprintf(
@@ -83,6 +109,7 @@ func (m ipNetMap) has(ip net.IP) bool {
 			m.mask.String(), ip.String()))
 	}
 
+	// Check if the masked IP is the same as any of the networks.
 	if _, ok := m.ips[ipMasked.String()]; ok {
 		return true
 	}
