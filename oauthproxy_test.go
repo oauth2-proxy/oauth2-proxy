@@ -1695,6 +1695,42 @@ func TestIPCIDRSet(t *testing.T) {
 		req                *http.Request
 		expectWhitelisted  bool
 	}{
+		// Check unconfigured behavior.
+		{
+			whitelistedIPs:     nil,
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				return req
+			}(),
+			expectWhitelisted: false,
+		},
+		// Check using req.RemoteAddr (Options.ReverseProxy == false).
+		{
+			whitelistedIPs:     []string{"127.0.0.1"},
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "127.0.0.1:43670"
+				return req
+			}(),
+			expectWhitelisted: true,
+		},
+		// Check ignores req.RemoteAddr match when behind a reverse proxy.
+		{
+			whitelistedIPs:     []string{"127.0.0.1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "127.0.0.1:44324"
+				return req
+			}(),
+			expectWhitelisted: false,
+		},
+		// Check successful whitelisting of localhost in IPv4.
 		{
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
@@ -1706,6 +1742,7 @@ func TestIPCIDRSet(t *testing.T) {
 			}(),
 			expectWhitelisted: true,
 		},
+		// Check successful whitelisting of localhost in IPv6.
 		{
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
@@ -1717,6 +1754,7 @@ func TestIPCIDRSet(t *testing.T) {
 			}(),
 			expectWhitelisted: true,
 		},
+		// Check does not whitelist random IPv4 address.
 		{
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
@@ -1728,6 +1766,7 @@ func TestIPCIDRSet(t *testing.T) {
 			}(),
 			expectWhitelisted: false,
 		},
+		// Check does not whitelist random IPv6 address.
 		{
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
