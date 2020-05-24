@@ -1688,41 +1688,75 @@ func Test_noCacheHeadersDoesNotExistsInResponseHeadersFromUpstream(t *testing.T)
 }
 
 func TestIPCIDRSet(t *testing.T) {
-	opts := NewOptions()
-	opts.IPWhitelist = []string{
-		"127.0.0.0/8",
-		"::1",
+	tests := []struct {
+		whitelistedIPs     []string
+		reverseProxy       bool
+		realClientIPHeader string
+		req                *http.Request
+		expectWhitelisted  bool
+	}{
+		{
+			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "127.0.0.1")
+				return req
+			}(),
+			expectWhitelisted: true,
+		},
+		{
+			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "::1")
+				return req
+			}(),
+			expectWhitelisted: true,
+		},
+		{
+			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "12.34.56.78")
+				return req
+			}(),
+			expectWhitelisted: false,
+		},
+		{
+			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "::2")
+				return req
+			}(),
+			expectWhitelisted: true,
+		},
 	}
-	opts.ReverseProxy = true
-	opts.RealClientIPHeader = "X-Forwarded-For"
-	opts.Validate()
 
-	proxy := NewOAuthProxy(opts, func(string) bool { return true })
+	for _, tt := range tests {
+		opts := NewOptions()
+		opts.Upstreams = []string{"static://200"}
+		opts.IPWhitelist = tt.whitelistedIPs
+		opts.ReverseProxy = tt.reverseProxy
+		opts.RealClientIPHeader = tt.realClientIPHeader
+		opts.Validate()
 
-	var rw *httptest.ResponseRecorder
-	var req *http.Request
+		proxy := NewOAuthProxy(opts, func(string) bool { return true })
+		rw := httptest.NewRecorder()
 
-	rw = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/", nil)
-	req.Header.Add("X-Forwarded-For", "127.0.0.1")
-	proxy.ServeHTTP(rw, req)
-	assert.Equal(t, 404, rw.Code)
-
-	rw = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/", nil)
-	req.Header.Add("X-Forwarded-For", "::1")
-	proxy.ServeHTTP(rw, req)
-	assert.Equal(t, 404, rw.Code)
-
-	rw = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/", nil)
-	req.Header.Add("X-Forwarded-For", "12.34.56.78")
-	proxy.ServeHTTP(rw, req)
-	assert.Equal(t, 403, rw.Code)
-
-	rw = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/", nil)
-	req.Header.Add("X-Forwarded-For", "::2")
-	proxy.ServeHTTP(rw, req)
-	assert.Equal(t, 403, rw.Code)
+		proxy.ServeHTTP(rw, tt.req)
+		if tt.expectWhitelisted {
+			assert.Equal(t, 200, rw.Code)
+		} else {
+			assert.Equal(t, 403, rw.Code)
+		}
+	}
 }
