@@ -468,8 +468,7 @@ func (o *Options) Validate() error {
 	}
 
 	if o.IPWhitelist != nil && len(o.IPWhitelist) > 0 {
-		parsedIPNets, whiteListMsgs := parseIPWhitelist(o.IPWhitelist, msgs)
-		msgs = append(msgs, whiteListMsgs...)
+		parsedIPNets := parseIPWhitelist(o.IPWhitelist, &msgs)
 		o.ipWhitelist = append(o.ipWhitelist, parsedIPNets...)
 	}
 
@@ -620,15 +619,14 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 	return parsedIssuers, msgs
 }
 
-func parseIPWhitelist(ipWhitelistStrs []string, msgs []string) ([]*net.IPNet, []string) {
+func parseIPWhitelist(ipWhitelistStrs []string, msgs *[]string) []*net.IPNet {
 	parsedIPNets := make([]*net.IPNet, 0, len(ipWhitelistStrs))
 
-	for ipIndex, ipStr := range ipWhitelistStrs {
+	for _, ipStr := range ipWhitelistStrs {
 		if !strings.ContainsRune(ipStr, '/') {
 			ip := net.ParseIP(ipStr)
 			if ip == nil {
-				msgs = append(msgs, fmt.Sprintf(
-					"ip_whitelist[%d] (%s) looks like a IP address, but could not be recognized", ipIndex, ipStr))
+				*msgs = append(*msgs, fmt.Sprintf("whitelisted IP (%q) looks like an IP address, but could not be recognized", ipStr))
 				continue
 			}
 
@@ -638,21 +636,21 @@ func parseIPWhitelist(ipWhitelistStrs []string, msgs []string) ([]*net.IPNet, []
 			} else if ip.To16() != nil {
 				ipStr += "/128"
 			} else {
-				msgs = append(msgs, fmt.Sprintf("ip_whitelist[%d] (%s) address neither IPv4 or IPv6", ipIndex, ipStr))
+				*msgs = append(*msgs, fmt.Sprintf("whitelisted IP (%q) address neither IPv4 or IPv6", ipStr))
 				continue
 			}
 		}
 
 		_, ipNet, err := net.ParseCIDR(ipStr)
 		if err != nil {
-			msgs = append(msgs, fmt.Sprintf("ip_whitelist[%d] (%s) can't parse as CIDR: %v", ipIndex, ipStr, err))
+			*msgs = append(*msgs, fmt.Sprintf("whitelisted IP (%q) can't parse as CIDR: %v", ipStr, err))
 			continue
 		}
 
 		parsedIPNets = append(parsedIPNets, ipNet)
 	}
 
-	return parsedIPNets, msgs
+	return parsedIPNets
 }
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns

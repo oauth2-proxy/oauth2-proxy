@@ -429,8 +429,8 @@ func TestIPCIDRSetOption(t *testing.T) {
 	err = o.Validate()
 	assert.Equal(t,
 		"invalid configuration:\n"+
-			"  ip_whitelist[0] ([::1]) looks like a IP address, but could not be recognized\n"+
-			"  ip_whitelist[1] (alkwlkbn/32) can't parse as CIDR: invalid CIDR address: alkwlkbn/32",
+			"  whitelisted IP (\"[::1]\") looks like an IP address, but could not be recognized\n"+
+			"  whitelisted IP (\"alkwlkbn/32\") can't parse as CIDR: invalid CIDR address: alkwlkbn/32",
 		err.Error(),
 	)
 }
