@@ -10,14 +10,12 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
@@ -28,7 +26,8 @@ import (
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
-	msgs := make([]string, 0)
+	msgs := validateCookieOptions(o.Cookie)
+
 	if o.SSLInsecureSkipVerify {
 		insecureTransport := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -46,30 +45,6 @@ func Validate(o *options.Options) error {
 			http.DefaultClient = &http.Client{Transport: transport}
 		} else {
 			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
-		}
-	}
-
-	if o.Cookie.Secret == "" {
-		msgs = append(msgs, "missing setting: cookie-secret")
-	} else {
-		validCookieSecretSize := false
-		for _, i := range []int{16, 24, 32} {
-			if len(encryption.SecretBytes(o.Cookie.Secret)) == i {
-				validCookieSecretSize = true
-			}
-		}
-		var decoded bool
-		if string(encryption.SecretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
-			decoded = true
-		}
-		if !validCookieSecretSize {
-			var suffix string
-			if decoded {
-				suffix = " note: cookie secret was base64 decoded"
-			}
-			msgs = append(msgs,
-				fmt.Sprintf("Cookie secret must be 16, 24, or 32 bytes to create an AES cipher. Got %d bytes.%s",
-					len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
 		}
 	}
 
@@ -222,14 +197,6 @@ func Validate(o *options.Options) error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
-	if o.Cookie.Refresh >= o.Cookie.Expire {
-		msgs = append(msgs, fmt.Sprintf(
-			"cookie_refresh (%s) must be less than "+
-				"cookie_expire (%s)",
-			o.Cookie.Refresh.String(),
-			o.Cookie.Expire.String()))
-	}
-
 	if len(o.GoogleGroups) > 0 || o.GoogleAdminEmail != "" || o.GoogleServiceAccountJSON != "" {
 		if len(o.GoogleGroups) < 1 {
 			msgs = append(msgs, "missing setting: google-group")
@@ -242,20 +209,7 @@ func Validate(o *options.Options) error {
 		}
 	}
 
-	switch o.Cookie.SameSite {
-	case "", "none", "lax", "strict":
-	default:
-		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.Cookie.SameSite))
-	}
-
-	// Sort cookie domains by length, so that we try longer (and more specific)
-	// domains first
-	sort.Slice(o.Cookie.Domains, func(i, j int) bool {
-		return len(o.Cookie.Domains[i]) > len(o.Cookie.Domains[j])
-	})
-
 	msgs = parseSignatureKey(o, msgs)
-	msgs = validateCookieName(o, msgs)
 	msgs = configureLogger(o.Logging, msgs)
 
 	if o.ReverseProxy {
@@ -440,14 +394,6 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 		verifier = provider.Verifier(config)
 	}
 	return verifier, nil
-}
-
-func validateCookieName(o *options.Options, msgs []string) []string {
-	cookie := &http.Cookie{Name: o.Cookie.Name}
-	if cookie.String() == "" {
-		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.Cookie.Name))
-	}
-	return msgs
 }
 
 // jwtIssuer hold parsed JWT issuer info that's used to construct a verifier.
