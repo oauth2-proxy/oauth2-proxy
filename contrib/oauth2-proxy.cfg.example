@@ -39,7 +39,7 @@
 # pass_user_headers = true
 ## pass the request Host Header to upstream
 ## when disabled the upstream Host is used as the Host Header
-# pass_host_header = true 
+# pass_host_header = true
 
 ## Email Domains to allow authentication for (this authorizes any email on this domain)
 ## for more granular authorization use `authenticated_emails_file`
@@ -80,13 +80,13 @@
 ## Expire   - (duration) expire timeframe for cookie
 ## Refresh  - (duration) refresh the cookie when duration has elapsed after cookie was initially set.
 ##            Should be less than cookie_expire; set to 0 to disable.
-##            On refresh, OAuth token is re-validated. 
+##            On refresh, OAuth token is re-validated.
 ##            (ie: 1h means tokens are refreshed on request 1hr+ after it was set)
 ## Secure   - secure cookies are only sent by the browser of a HTTPS connection (recommended)
 ## HttpOnly - httponly cookies are not readable by javascript (recommended)
 # cookie_name = "_oauth2_proxy"
 # cookie_secret = ""
-# cookie_domain = ""
+# cookie_domains = ""
 # cookie_expire = "168h"
 # cookie_refresh = ""
 # cookie_secure = true
