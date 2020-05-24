@@ -29,6 +29,13 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+const (
+	// The rawCookieSecret is 32 bytes and the base64CookieSecret is the base64
+	// encoded version of this.
+	rawCookieSecret    = "secretthirtytwobytes+abcdefghijk"
+	base64CookieSecret = "c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpamsK"
+)
+
 func init() {
 	logger.SetFlags(logger.Lshortfile)
 
@@ -166,7 +173,7 @@ func TestRobotsTxt(t *testing.T) {
 	opts := options.NewOptions()
 	opts.ClientID = "asdlkjx"
 	opts.ClientSecret = "alkgks"
-	opts.Cookie.Secret = "asdkugkj"
+	opts.Cookie.Secret = rawCookieSecret
 	validation.Validate(opts)
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return true })
@@ -181,7 +188,7 @@ func TestIsValidRedirect(t *testing.T) {
 	opts := options.NewOptions()
 	opts.ClientID = "skdlfj"
 	opts.ClientSecret = "fgkdsgj"
-	opts.Cookie.Secret = "ljgiogbj"
+	opts.Cookie.Secret = base64CookieSecret
 	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
 	opts.WhitelistDomains = []string{
 		"foo.bar",
@@ -794,7 +801,7 @@ func NewSignInPageTest(skipProvider bool) *SignInPageTest {
 	var sipTest SignInPageTest
 
 	sipTest.opts = options.NewOptions()
-	sipTest.opts.Cookie.Secret = "adklsj2"
+	sipTest.opts.Cookie.Secret = rawCookieSecret
 	sipTest.opts.ClientID = "lkdgj"
 	sipTest.opts.ClientSecret = "sgiufgoi"
 	sipTest.opts.SkipProviderButton = skipProvider
@@ -1208,7 +1215,7 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	opts.Upstreams = append(opts.Upstreams, upstream.URL)
 	opts.ClientID = "aljsal"
 	opts.ClientSecret = "jglkfsdgj"
-	opts.Cookie.Secret = "dkfjgdls"
+	opts.Cookie.Secret = base64CookieSecret
 	opts.SkipAuthPreflight = true
 	validation.Validate(opts)
 
@@ -1255,7 +1262,7 @@ type SignatureTest struct {
 
 func NewSignatureTest() *SignatureTest {
 	opts := options.NewOptions()
-	opts.Cookie.Secret = "cookie secret"
+	opts.Cookie.Secret = rawCookieSecret
 	opts.ClientID = "client ID"
 	opts.ClientSecret = "client secret"
 	opts.EmailDomains = []string{"acm.org"}
@@ -1402,7 +1409,7 @@ type ajaxRequestTest struct {
 func newAjaxRequestTest() *ajaxRequestTest {
 	test := &ajaxRequestTest{}
 	test.opts = options.NewOptions()
-	test.opts.Cookie.Secret = "sdflsw"
+	test.opts.Cookie.Secret = base64CookieSecret
 	test.opts.ClientID = "gkljfdl"
 	test.opts.ClientSecret = "sdflkjs"
 	validation.Validate(test.opts)

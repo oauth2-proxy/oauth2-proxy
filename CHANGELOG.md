@@ -43,6 +43,11 @@
   - Multiple cookie domains may now be configured. The longest domain that matches will be used.
   - The config options `cookie_domain` is now `cookie_domains`
   - The environment variable `OAUTH2_PROXY_COOKIE_DOMAIN` is now `OAUTH2_PROXY_COOKIE_DOMAINS`
+- [#414](https://github.com/oauth2-proxy/oauth2-proxy/pull/414) Always encrypt sessions regardless of config
+  - Previously, sessions were encrypted only when certain options were configured.
+    This lead to confusion and misconfiguration as it was not obvious when a session should be encrypted.
+  - Cookie Secrets must now be 16, 24 or 32 bytes.
+  - If you need to change your secret, this will force users to reauthenticate.
 
 ## Changes since v5.1.1
 
@@ -86,6 +91,7 @@
 - [#488](https://github.com/oauth2-proxy/oauth2-proxy/pull/488) Set-Basic-Auth should default to false (@JoelSpeed)
 - [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify (@yaroslavros)
 - [#497](https://github.com/oauth2-proxy/oauth2-proxy/pull/497) Restrict access using Github collaborators (@jsclayton)
+- [#414](https://github.com/oauth2-proxy/oauth2-proxy/pull/414) Always encrypt sessions regardless of config (@ti-mo)
 
 # v5.1.1
 
