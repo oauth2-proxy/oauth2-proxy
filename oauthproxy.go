@@ -664,7 +664,7 @@ func (p *OAuthProxy) IsWhitelistedIP(req *http.Request) bool {
 
 	remoteAddr, err := p.realClientIPParser.GetRealClientIP(req.Header)
 	if err != nil {
-		logger.Printf("Error obtaining real IP for whitelist: %s", err.Error())
+		logger.Printf("Error obtaining real IP for whitelist: %v", err)
 		// Possibly spoofed X-Real-IP header
 		return false
 	}

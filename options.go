@@ -645,7 +645,7 @@ func parseIPWhitelist(ipWhitelistStrs []string, msgs []string) ([]*net.IPNet, []
 
 		_, ipNet, err := net.ParseCIDR(ipStr)
 		if err != nil {
-			msgs = append(msgs, fmt.Sprintf("ip_whitelist[%d] (%s) can't parse as CIDR: %s", ipIndex, ipStr, err.Error()))
+			msgs = append(msgs, fmt.Sprintf("ip_whitelist[%d] (%s) can't parse as CIDR: %v", ipIndex, ipStr, err))
 			continue
 		}
 
