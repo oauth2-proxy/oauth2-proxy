@@ -659,11 +659,11 @@ func prepareNoCache(w http.ResponseWriter) {
 
 // IsWhitelistedIP is used to check if a request comes from a whitelisted IP address.
 func (p *OAuthProxy) IsWhitelistedIP(req *http.Request) bool {
-	if p.realClientIPParser == nil || p.ipWhitelist == nil {
+	if p.ipWhitelist == nil {
 		return false
 	}
 
-	remoteAddr, err := p.realClientIPParser.GetRealClientIP(req.Header)
+	remoteAddr, err := getClientIP(p.realClientIPParser, req)
 	if err != nil {
 		logger.Printf("Error obtaining real IP for whitelist: %v", err)
 		// Possibly spoofed X-Real-IP header
