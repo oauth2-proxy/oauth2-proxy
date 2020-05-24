@@ -1737,7 +1737,7 @@ func TestIPCIDRSet(t *testing.T) {
 				req.Header.Add("X-Forwarded-For", "::2")
 				return req
 			}(),
-			expectWhitelisted: true,
+			expectWhitelisted: false,
 		},
 	}
 
