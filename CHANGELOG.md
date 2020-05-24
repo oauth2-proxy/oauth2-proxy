@@ -47,6 +47,7 @@
 ## Changes since v5.1.1
 
 - [#559](https://github.com/oauth2-proxy/oauth2-proxy/pull/559) Rename cookie-domain config to cookie-domains (@JoelSpeed)
+- [#569](https://github.com/oauth2-proxy/oauth2-proxy/pull/569) Updated autocompletion for `--` long options. (@Izzette)
 - [#489](https://github.com/oauth2-proxy/oauth2-proxy/pull/489) Move Options and Validation to separate packages (@JoelSpeed)
 - [#556](https://github.com/oauth2-proxy/oauth2-proxy/pull/556) Remove unintentional auto-padding of secrets that were too short (@NickMeves)
 - [#538](https://github.com/oauth2-proxy/oauth2-proxy/pull/538) Refactor sessions/utils.go functionality to other areas (@NickMeves)
