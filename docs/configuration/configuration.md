@@ -69,7 +69,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--logging-max-age` | int | Maximum number of days to retain old log files | 7 |
 | `--logging-max-backups` | int | Maximum number of old log files to retain; 0 to disable | 0  |
 | `--logging-max-size` | int | Maximum size in megabytes of the log file before rotation | 100 |
-| `--ip-whitelist` | string \| list | list of IPs or CIDR ranges to allow bypass of oauth2 (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will whitelist the IP stored in a header by a reverse proxy rather than the layer-3/4 remote address. | |
+| `--ip-whitelist` | string \| list | list of IPs or CIDR ranges to allow bypassing authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will whitelist the IP stored in a header by a reverse proxy rather than the layer-3/4 remote address. | |
 | `--jwt-key` | string | private key in PEM format used to sign JWT, so that you can say something like `--jwt-key="${OAUTH2_PROXY_JWT_KEY}"`: required by login.gov | |
 | `--jwt-key-file` | string | path to the private key file in PEM format used to sign the JWT so that you can say something like `--jwt-key-file=/etc/ssl/private/jwt_signing_key.pem`: required by login.gov | |
 | `--login-url` | string | Authentication endpoint | |
