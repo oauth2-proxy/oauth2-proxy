@@ -21,7 +21,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 )
 
@@ -209,13 +208,6 @@ func Validate(o *options.Options) error {
 		o.SetCompiledRegex(append(o.GetCompiledRegex(), compiledRegex))
 	}
 	msgs = parseProviderInfo(o, msgs)
-
-	sessionStore, err := sessions.NewSessionStore(&o.Session, &o.Cookie)
-	if err != nil {
-		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
-	} else {
-		o.SetSessionStore(sessionStore)
-	}
 
 	if o.Cookie.Refresh >= o.Cookie.Expire {
 		msgs = append(msgs, fmt.Sprintf(
