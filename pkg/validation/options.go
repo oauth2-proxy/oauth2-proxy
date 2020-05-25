@@ -26,7 +26,7 @@ import (
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
-	msgs := validateCookieOptions(o.Cookie)
+	msgs := validateCookie(o.Cookie)
 
 	if o.SSLInsecureSkipVerify {
 		insecureTransport := &http.Transport{

@@ -24,7 +24,7 @@ func TestSessionStore(t *testing.T) {
 
 var _ = Describe("NewSessionStore", func() {
 	var opts *options.SessionOptions
-	var cookieOpts *options.CookieOptions
+	var cookieOpts *options.Cookie
 
 	BeforeEach(func() {
 		opts = &options.SessionOptions{}
@@ -36,7 +36,7 @@ var _ = Describe("NewSessionStore", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		// Set default options in CookieOptions
-		cookieOpts = &options.CookieOptions{
+		cookieOpts = &options.Cookie{
 			Name:     "_oauth2_proxy",
 			Secret:   base64.URLEncoding.EncodeToString(secret),
 			Path:     "/",

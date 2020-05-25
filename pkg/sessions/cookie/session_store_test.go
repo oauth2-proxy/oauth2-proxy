@@ -25,7 +25,7 @@ func TestSessionStore(t *testing.T) {
 
 var _ = Describe("Cookie SessionStore Tests", func() {
 	tests.RunSessionStoreTests(
-		func(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessionsapi.SessionStore, error) {
+		func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 			// Set the connection URL
 			opts.Type = options.CookieSessionStoreType
 			return NewCookieSessionStore(opts, cookieOpts)

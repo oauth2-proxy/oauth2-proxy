@@ -33,12 +33,12 @@ func TestValidateCookie(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		cookie     options.CookieOptions
+		cookie     options.Cookie
 		errStrings []string
 	}{
 		{
 			name: "with valid configuration",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   validSecret,
 				Domains:  domains,
@@ -53,7 +53,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with no cookie secret",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   "",
 				Domains:  emptyDomains,
@@ -70,7 +70,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with an invalid cookie secret",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   invalidSecret,
 				Domains:  emptyDomains,
@@ -87,7 +87,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with a valid Base64 secret",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   validBase64Secret,
 				Domains:  emptyDomains,
@@ -102,7 +102,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with an invalid Base64 secret",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   invalidBase64Secret,
 				Domains:  emptyDomains,
@@ -119,7 +119,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with an invalid name",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     invalidName,
 				Secret:   validSecret,
 				Domains:  emptyDomains,
@@ -136,7 +136,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with refresh longer than expire",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   validSecret,
 				Domains:  emptyDomains,
@@ -153,7 +153,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with samesite \"none\"",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   validSecret,
 				Domains:  emptyDomains,
@@ -168,7 +168,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with samesite \"lax\"",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   validSecret,
 				Domains:  emptyDomains,
@@ -183,7 +183,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with samesite \"strict\"",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   validSecret,
 				Domains:  emptyDomains,
@@ -198,7 +198,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with samesite \"invalid\"",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     validName,
 				Secret:   validSecret,
 				Domains:  emptyDomains,
@@ -215,7 +215,7 @@ func TestValidateCookie(t *testing.T) {
 		},
 		{
 			name: "with a combination of configuration errors",
-			cookie: options.CookieOptions{
+			cookie: options.Cookie{
 				Name:     invalidName,
 				Secret:   invalidSecret,
 				Domains:  domains,
@@ -237,7 +237,7 @@ func TestValidateCookie(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			errStrings := validateCookieOptions(tc.cookie)
+			errStrings := validateCookie(tc.cookie)
 			g := NewWithT(t)
 
 			g.Expect(errStrings).To(ConsistOf(tc.errStrings))

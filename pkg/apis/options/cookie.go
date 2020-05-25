@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// CookieOptions contains configuration options relating to Cookie configuration
-type CookieOptions struct {
+// Cookie contains configuration options relating to Cookie configuration
+type Cookie struct {
 	Name     string        `flag:"cookie-name" cfg:"cookie_name"`
 	Secret   string        `flag:"cookie-secret" cfg:"cookie_secret"`
 	Domains  []string      `flag:"cookie-domain" cfg:"cookie_domains"`
@@ -35,9 +35,9 @@ func cookieFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-// defaultCookieOptions creates a CookieOptions populating each field with its default value
-func defaultCookieOptions() CookieOptions {
-	return CookieOptions{
+// cookieDefaults creates a Cookie populating each field with its default value
+func cookieDefaults() Cookie {
+	return Cookie{
 		Name:     "_oauth2_proxy",
 		Secret:   "",
 		Domains:  nil,

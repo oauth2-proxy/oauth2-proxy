@@ -9,7 +9,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
-func validateCookieOptions(o options.CookieOptions) []string {
+func validateCookie(o options.Cookie) []string {
 	msgs := validateCookieSecret(o.Secret)
 
 	if o.Refresh >= o.Expire {
