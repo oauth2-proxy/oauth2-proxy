@@ -28,34 +28,49 @@ type GitHubProvider struct {
 
 var _ Provider = (*GitHubProvider)(nil)
 
+const (
+	githubProviderName = "GitHub"
+	githubDefaultScope = "user:email"
+)
+
+var (
+	// Default Login URL for GitHub.
+	// Pre-parsed URL of https://github.org/login/oauth/authorize.
+	githubDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "github.com",
+		Path:   "/login/oauth/authorize",
+	}
+
+	// Default Redeem URL for GitHub.
+	// Pre-parsed URL of https://github.org/login/oauth/access_token.
+	githubDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "github.com",
+		Path:   "/login/oauth/access_token",
+	}
+
+	// Default Validation URL for GitHub.
+	// ValidationURL is the API Base URL.
+	// Other API requests are based off of this (eg to fetch users/groups).
+	// Pre-parsed URL of https://api.github.com/.
+	githubDefaultValidateURL = &url.URL{
+		Scheme: "https",
+		Host:   "api.github.com",
+		Path:   "/",
+	}
+)
+
 // NewGitHubProvider initiates a new GitHubProvider
 func NewGitHubProvider(p *ProviderData) *GitHubProvider {
-	p.ProviderName = "GitHub"
-	if p.LoginURL == nil || p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{
-			Scheme: "https",
-			Host:   "github.com",
-			Path:   "/login/oauth/authorize",
-		}
-	}
-	if p.RedeemURL == nil || p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{
-			Scheme: "https",
-			Host:   "github.com",
-			Path:   "/login/oauth/access_token",
-		}
-	}
-	// ValidationURL is the API Base URL
-	if p.ValidateURL == nil || p.ValidateURL.String() == "" {
-		p.ValidateURL = &url.URL{
-			Scheme: "https",
-			Host:   "api.github.com",
-			Path:   "/",
-		}
-	}
-	if p.Scope == "" {
-		p.Scope = "user:email"
-	}
+	p.setProviderDefaults(providerDefaults{
+		name:        githubProviderName,
+		loginURL:    githubDefaultLoginURL,
+		redeemURL:   githubDefaultRedeemURL,
+		profileURL:  nil,
+		validateURL: githubDefaultValidateURL,
+		scope:       githubDefaultScope,
+	})
 	return &GitHubProvider{ProviderData: p}
 }
 

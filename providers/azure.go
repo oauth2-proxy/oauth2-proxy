@@ -23,49 +23,84 @@ type AzureProvider struct {
 
 var _ Provider = (*AzureProvider)(nil)
 
+const (
+	azureProviderName = "Azure"
+	azureDefaultScope = "openid"
+)
+
+var (
+	// Default Login URL for Azure.
+	// Pre-parsed URL of https://login.microsoftonline.com/common/oauth2/authorize.
+	azureDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "login.microsoftonline.com",
+		Path:   "/common/oauth2/authorize",
+	}
+
+	// Default Redeem URL for Azure.
+	// Pre-parsed URL of https://login.microsoftonline.com/common/oauth2/token.
+	azureDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "login.microsoftonline.com",
+		Path:   "/common/oauth2/token",
+	}
+
+	// Default Profile URL for Azure.
+	// Pre-parsed URL of https://graph.microsoft.com/v1.0/me.
+	azureDefaultProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "graph.microsoft.com",
+		Path:   "/v1.0/me",
+	}
+
+	// Default ProtectedResource URL for Azure.
+	// Pre-parsed URL of https://graph.microsoft.com.
+	azureDefaultProtectResourceURL = &url.URL{
+		Scheme: "https",
+		Host:   "graph.microsoft.com",
+	}
+)
+
 // NewAzureProvider initiates a new AzureProvider
 func NewAzureProvider(p *ProviderData) *AzureProvider {
-	p.ProviderName = "Azure"
+	p.setProviderDefaults(providerDefaults{
+		name:        azureProviderName,
+		loginURL:    azureDefaultLoginURL,
+		redeemURL:   azureDefaultRedeemURL,
+		profileURL:  azureDefaultProfileURL,
+		validateURL: nil,
+		scope:       azureDefaultScope,
+	})
 
-	if p.ProfileURL == nil || p.ProfileURL.String() == "" {
-		p.ProfileURL = &url.URL{
-			Scheme: "https",
-			Host:   "graph.microsoft.com",
-			Path:   "/v1.0/me",
-		}
-	}
 	if p.ProtectedResource == nil || p.ProtectedResource.String() == "" {
-		p.ProtectedResource = &url.URL{
-			Scheme: "https",
-			Host:   "graph.microsoft.com",
-		}
-	}
-	if p.Scope == "" {
-		p.Scope = "openid"
+		p.ProtectedResource = azureDefaultProtectResourceURL
 	}
 
-	return &AzureProvider{ProviderData: p}
+	return &AzureProvider{
+		ProviderData: p,
+		Tenant:       "common",
+	}
 }
 
 // Configure defaults the AzureProvider configuration options
 func (p *AzureProvider) Configure(tenant string) {
-	p.Tenant = tenant
-	if tenant == "" {
-		p.Tenant = "common"
+	if tenant == "" || tenant == "common" {
+		// tenant is empty or default, remain on the default "common" tenant
+		return
 	}
 
-	if p.LoginURL == nil || p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{
+	// Specific tennant specified, override the Login and RedeemURLs
+	p.Tenant = tenant
+	overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
+	overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
+}
+
+func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
+	if current == nil || current.String() == "" || current.String() == defaultURL.String() {
+		*current = url.URL{
 			Scheme: "https",
 			Host:   "login.microsoftonline.com",
-			Path:   "/" + p.Tenant + "/oauth2/authorize"}
-	}
-	if p.RedeemURL == nil || p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{
-			Scheme: "https",
-			Host:   "login.microsoftonline.com",
-			Path:   "/" + p.Tenant + "/oauth2/token",
-		}
+			Path:   "/" + tenant + "/oauth2/" + path}
 	}
 }
 

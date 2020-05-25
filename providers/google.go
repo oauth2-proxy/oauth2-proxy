@@ -39,31 +39,49 @@ type claims struct {
 	EmailVerified bool   `json:"email_verified"`
 }
 
-// NewGoogleProvider initiates a new GoogleProvider
-func NewGoogleProvider(p *ProviderData) *GoogleProvider {
-	p.ProviderName = "Google"
-	if p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{Scheme: "https",
-			Host: "accounts.google.com",
-			Path: "/o/oauth2/auth",
-			// to get a refresh token. see https://developers.google.com/identity/protocols/OAuth2WebServer#offline
-			RawQuery: "access_type=offline",
-		}
-	}
-	if p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{Scheme: "https",
-			Host: "www.googleapis.com",
-			Path: "/oauth2/v3/token"}
-	}
-	if p.ValidateURL.String() == "" {
-		p.ValidateURL = &url.URL{Scheme: "https",
-			Host: "www.googleapis.com",
-			Path: "/oauth2/v1/tokeninfo"}
-	}
-	if p.Scope == "" {
-		p.Scope = "profile email"
+const (
+	googleProviderName = "Google"
+	googleDefaultScope = "profile email"
+)
+
+var (
+	// Default Login URL for Google.
+	// Pre-parsed URL of https://accounts.google.com/o/oauth2/auth?access_type=offline.
+	googleDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "accounts.google.com",
+		Path:   "/o/oauth2/auth",
+		// to get a refresh token. see https://developers.google.com/identity/protocols/OAuth2WebServer#offline
+		RawQuery: "access_type=offline",
 	}
 
+	// Default Redeem URL for Google.
+	// Pre-parsed URL of https://www.googleapis.com/oauth2/v3/token.
+	googleDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/oauth2/v3/token",
+	}
+
+	// Default Validation URL for Google.
+	// Pre-parsed URL of https://www.googleapis.com/oauth2/v1/tokeninfo.
+	googleDefaultValidateURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/oauth2/v1/tokeninfo",
+	}
+)
+
+// NewGoogleProvider initiates a new GoogleProvider
+func NewGoogleProvider(p *ProviderData) *GoogleProvider {
+	p.setProviderDefaults(providerDefaults{
+		name:        googleProviderName,
+		loginURL:    googleDefaultLoginURL,
+		redeemURL:   googleDefaultRedeemURL,
+		profileURL:  nil,
+		validateURL: googleDefaultValidateURL,
+		scope:       googleDefaultScope,
+	})
 	return &GoogleProvider{
 		ProviderData: p,
 		// Set a default GroupValidator to just always return valid (true), it will

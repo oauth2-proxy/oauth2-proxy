@@ -43,35 +43,47 @@ func randSeq(n int) string {
 	return string(b)
 }
 
+const (
+	loginGovProviderName = "login.gov"
+	loginGovDefaultScope = "email openid"
+)
+
+var (
+	// Default Login URL for LoginGov.
+	// Pre-parsed URL of https://secure.login.gov/openid_connect/authorize.
+	loginGovDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "secure.login.gov",
+		Path:   "/openid_connect/authorize",
+	}
+
+	// Default Redeem URL for LoginGov.
+	// Pre-parsed URL of https://secure.login.gov/api/openid_connect/token.
+	loginGovDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "secure.login.gov",
+		Path:   "/api/openid_connect/token",
+	}
+
+	// Default Profile URL for LoginGov.
+	// Pre-parsed URL of https://graph.loginGov.com/v2.5/me.
+	loginGovDefaultProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "secure.login.gov",
+		Path:   "/api/openid_connect/userinfo",
+	}
+)
+
 // NewLoginGovProvider initiates a new LoginGovProvider
 func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
-	p.ProviderName = "login.gov"
-
-	if p.LoginURL == nil || p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{
-			Scheme: "https",
-			Host:   "secure.login.gov",
-			Path:   "/openid_connect/authorize",
-		}
-	}
-	if p.RedeemURL == nil || p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{
-			Scheme: "https",
-			Host:   "secure.login.gov",
-			Path:   "/api/openid_connect/token",
-		}
-	}
-	if p.ProfileURL == nil || p.ProfileURL.String() == "" {
-		p.ProfileURL = &url.URL{
-			Scheme: "https",
-			Host:   "secure.login.gov",
-			Path:   "/api/openid_connect/userinfo",
-		}
-	}
-	if p.Scope == "" {
-		p.Scope = "email openid"
-	}
-
+	p.setProviderDefaults(providerDefaults{
+		name:        loginGovProviderName,
+		loginURL:    loginGovDefaultLoginURL,
+		redeemURL:   loginGovDefaultRedeemURL,
+		profileURL:  loginGovDefaultProfileURL,
+		validateURL: nil,
+		scope:       loginGovDefaultScope,
+	})
 	return &LoginGovProvider{
 		ProviderData: p,
 		Nonce:        randSeq(32),

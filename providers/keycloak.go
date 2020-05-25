@@ -16,32 +16,46 @@ type KeycloakProvider struct {
 
 var _ Provider = (*KeycloakProvider)(nil)
 
+const (
+	keycloakProviderName = "Keycloak"
+	keycloakDefaultScope = "api"
+)
+
+var (
+	// Default Login URL for Keycloak.
+	// Pre-parsed URL of https://keycloak.org/oauth/authorize.
+	keycloakDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "keycloak.org",
+		Path:   "/oauth/authorize",
+	}
+
+	// Default Redeem URL for Keycloak.
+	// Pre-parsed URL of ttps://keycloak.org/oauth/token.
+	keycloakDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "keycloak.org",
+		Path:   "/oauth/token",
+	}
+
+	// Default Validation URL for Keycloak.
+	// Pre-parsed URL of https://keycloak.org/api/v3/user.
+	keycloakDefaultValidateURL = &url.URL{
+		Scheme: "https",
+		Host:   "keycloak.org",
+		Path:   "/api/v3/user",
+	}
+)
+
 func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
-	p.ProviderName = "Keycloak"
-	if p.LoginURL == nil || p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{
-			Scheme: "https",
-			Host:   "keycloak.org",
-			Path:   "/oauth/authorize",
-		}
-	}
-	if p.RedeemURL == nil || p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{
-			Scheme: "https",
-			Host:   "keycloak.org",
-			Path:   "/oauth/token",
-		}
-	}
-	if p.ValidateURL == nil || p.ValidateURL.String() == "" {
-		p.ValidateURL = &url.URL{
-			Scheme: "https",
-			Host:   "keycloak.org",
-			Path:   "/api/v3/user",
-		}
-	}
-	if p.Scope == "" {
-		p.Scope = "api"
-	}
+	p.setProviderDefaults(providerDefaults{
+		name:        keycloakProviderName,
+		loginURL:    keycloakDefaultLoginURL,
+		redeemURL:   keycloakDefaultRedeemURL,
+		profileURL:  nil,
+		validateURL: keycloakDefaultValidateURL,
+		scope:       keycloakDefaultScope,
+	})
 	return &KeycloakProvider{ProviderData: p}
 }
 

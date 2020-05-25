@@ -16,9 +16,11 @@ type NextcloudProvider struct {
 
 var _ Provider = (*NextcloudProvider)(nil)
 
+const nextCloudProviderName = "Nextcloud"
+
 // NewNextcloudProvider initiates a new NextcloudProvider
 func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
-	p.ProviderName = "Nextcloud"
+	p.ProviderName = nextCloudProviderName
 	return &NextcloudProvider{ProviderData: p}
 }
 

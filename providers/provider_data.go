@@ -44,3 +44,38 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	}
 	return string(fileClientSecret), nil
 }
+
+type providerDefaults struct {
+	name        string
+	loginURL    *url.URL
+	redeemURL   *url.URL
+	profileURL  *url.URL
+	validateURL *url.URL
+	scope       string
+}
+
+func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
+	p.ProviderName = defaults.name
+	p.LoginURL = defaultURL(p.LoginURL, defaults.loginURL)
+	p.RedeemURL = defaultURL(p.RedeemURL, defaults.redeemURL)
+	p.ProfileURL = defaultURL(p.ProfileURL, defaults.profileURL)
+	p.ValidateURL = defaultURL(p.ValidateURL, defaults.validateURL)
+
+	if p.Scope == "" {
+		p.Scope = defaults.scope
+	}
+}
+
+// defaultURL will set return a default value if the given value is not set.
+func defaultURL(u *url.URL, d *url.URL) *url.URL {
+	if u != nil && u.String() != "" {
+		// The value is already set
+		return u
+	}
+
+	// If the default is given, return that
+	if d != nil {
+		return d
+	}
+	return &url.URL{}
+}

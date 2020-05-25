@@ -19,33 +19,49 @@ type BitbucketProvider struct {
 
 var _ Provider = (*BitbucketProvider)(nil)
 
+const (
+	bitbucketProviderName = "Bitbucket"
+	bitbucketDefaultScope = "email"
+)
+
+var (
+	// Default Login URL for Bitbucket.
+	// Pre-parsed URL of https://bitbucket.org/site/oauth2/authorize.
+	bitbucketDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "bitbucket.org",
+		Path:   "/site/oauth2/authorize",
+	}
+
+	// Default Redeem URL for Bitbucket.
+	// Pre-parsed URL of https://bitbucket.org/site/oauth2/access_token.
+	bitbucketDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "bitbucket.org",
+		Path:   "/site/oauth2/access_token",
+	}
+
+	// Default Validation URL for Bitbucket.
+	// This simply returns the email of the authenticated user.
+	// Bitbucket does not have a Profile URL to use.
+	// Pre-parsed URL of https://api.bitbucket.org/2.0/user/emails.
+	bitbucketDefaultValidateURL = &url.URL{
+		Scheme: "https",
+		Host:   "api.bitbucket.org",
+		Path:   "/2.0/user/emails",
+	}
+)
+
 // NewBitbucketProvider initiates a new BitbucketProvider
 func NewBitbucketProvider(p *ProviderData) *BitbucketProvider {
-	p.ProviderName = "Bitbucket"
-	if p.LoginURL == nil || p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{
-			Scheme: "https",
-			Host:   "bitbucket.org",
-			Path:   "/site/oauth2/authorize",
-		}
-	}
-	if p.RedeemURL == nil || p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{
-			Scheme: "https",
-			Host:   "bitbucket.org",
-			Path:   "/site/oauth2/access_token",
-		}
-	}
-	if p.ValidateURL == nil || p.ValidateURL.String() == "" {
-		p.ValidateURL = &url.URL{
-			Scheme: "https",
-			Host:   "api.bitbucket.org",
-			Path:   "/2.0/user/emails",
-		}
-	}
-	if p.Scope == "" {
-		p.Scope = "email"
-	}
+	p.setProviderDefaults(providerDefaults{
+		name:        bitbucketProviderName,
+		loginURL:    bitbucketDefaultLoginURL,
+		redeemURL:   bitbucketDefaultRedeemURL,
+		profileURL:  nil,
+		validateURL: bitbucketDefaultValidateURL,
+		scope:       bitbucketDefaultScope,
+	})
 	return &BitbucketProvider{ProviderData: p}
 }
 
