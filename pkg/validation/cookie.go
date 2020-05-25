@@ -55,15 +55,8 @@ func validateCookieSecret(secret string) []string {
 		return []string{}
 	}
 	// Invalid secret size found, return a message
-
-	// If the secretBytes is different to the raw secret, it was decoded from Base64
-	// Add a note to the error message
-	var decodedSuffix string
-	if string(secretBytes) != secret {
-		decodedSuffix = " note: cookie secret was base64 decoded"
-	}
-
 	return []string{fmt.Sprintf(
-		"cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is %d bytes.%s",
-		len(secretBytes), decodedSuffix)}
+		"cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is %d bytes",
+		len(secretBytes)),
+	}
 }
