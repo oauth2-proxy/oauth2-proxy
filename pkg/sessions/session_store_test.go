@@ -353,24 +353,11 @@ var _ = Describe("NewSessionStore", func() {
 					SameSite: "strict",
 				}
 
-				var err error
-				ss, err = sessions.NewSessionStore(opts, cookieOpts)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			SessionStoreInterfaceTests(persistent)
-		})
-
-		Context("with a cipher", func() {
-			BeforeEach(func() {
+				// A secret is required but not defaulted
 				secret := make([]byte, 32)
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
-				cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(cipher).ToNot(BeNil())
-				opts.Cipher = cipher
 
 				ss, err = sessions.NewSessionStore(opts, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
@@ -384,9 +371,16 @@ var _ = Describe("NewSessionStore", func() {
 		ss = nil
 		opts = &options.SessionOptions{}
 
+		// A secret is required to create a Cipher, validation ensures it is the correct
+		// length before a session store is initialised.
+		secret := make([]byte, 32)
+		_, err := rand.Read(secret)
+		Expect(err).ToNot(HaveOccurred())
+
 		// Set default options in CookieOptions
 		cookieOpts = &options.CookieOptions{
 			Name:     "_oauth2_proxy",
+			Secret:   base64.URLEncoding.EncodeToString(secret),
 			Path:     "/",
 			Expire:   time.Duration(168) * time.Hour,
 			Refresh:  time.Duration(1) * time.Hour,

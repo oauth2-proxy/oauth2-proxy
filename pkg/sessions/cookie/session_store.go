@@ -126,9 +126,9 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
 // the configuration given
-func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
+func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions, cipher encryption.Cipher) (sessions.SessionStore, error) {
 	return &SessionStore{
-		CookieCipher:  opts.Cipher,
+		CookieCipher:  cipher,
 		CookieOptions: cookieOpts,
 	}, nil
 }
