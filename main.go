@@ -32,10 +32,16 @@ func main() {
 		return
 	}
 
-	opts := options.NewOptions()
-	err := options.Load(*config, flagSet, opts)
+	legacyOpts := options.NewLegacyOptions()
+	err := options.Load(*config, flagSet, legacyOpts)
 	if err != nil {
 		logger.Printf("ERROR: Failed to load config: %v", err)
+		os.Exit(1)
+	}
+
+	opts, err := legacyOpts.ToOptions()
+	if err != nil {
+		logger.Printf("ERROR: Failed to convert config: %v", err)
 		os.Exit(1)
 	}
 
