@@ -176,17 +176,7 @@ func Validate(o *options.Options) error {
 	redirectURL, msgs = parseURL(o.RawRedirectURL, "redirect", msgs)
 	o.SetRedirectURL(redirectURL)
 
-	for _, u := range o.Upstreams {
-		upstreamURL, err := url.Parse(u)
-		if err != nil {
-			msgs = append(msgs, fmt.Sprintf("error parsing upstream: %s", err))
-		} else {
-			if upstreamURL.Path == "" {
-				upstreamURL.Path = "/"
-			}
-			o.SetProxyURLs(append(o.GetProxyURLs(), upstreamURL))
-		}
-	}
+	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
 
 	for _, u := range o.SkipAuthRegex {
 		compiledRegex, err := regexp.Compile(u)
