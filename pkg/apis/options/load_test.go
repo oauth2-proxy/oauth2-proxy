@@ -295,6 +295,11 @@ var _ = Describe("Load", func() {
 					},
 				},
 			}),
+			Entry("with an empty Options struct, should return default values", &testOptionsTableInput{
+				flagSet:        NewFlagSet,
+				input:          &Options{},
+				expectedOutput: NewOptions(),
+			}),
 		)
 	})
 })

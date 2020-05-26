@@ -1,4 +1,4 @@
-package main
+package ip
 
 import (
 	"fmt"
@@ -6,14 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
 )
 
-type realClientIPParser interface {
-	GetRealClientIP(http.Header) (net.IP, error)
-}
-
-func getRealClientIPParser(headerKey string) (realClientIPParser, error) {
+func GetRealClientIPParser(headerKey string) (ipapi.RealClientIPParser, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
 	switch headerKey {
@@ -62,8 +58,8 @@ func (p xForwardedForClientIPParser) GetRealClientIP(h http.Header) (net.IP, err
 	return ip, nil
 }
 
-// getClientIP obtains the perceived end-user IP address from headers if p != nil else from req.RemoteAddr.
-func getClientIP(p realClientIPParser, req *http.Request) (net.IP, error) {
+// GetClientIP obtains the perceived end-user IP address from headers if p != nil else from req.RemoteAddr.
+func GetClientIP(p ipapi.RealClientIPParser, req *http.Request) (net.IP, error) {
 	if p != nil {
 		return p.GetRealClientIP(req.Header)
 	}
@@ -81,13 +77,11 @@ func getRemoteIP(req *http.Request) (net.IP, error) {
 	}
 }
 
-// getClientString obtains the human readable string of the remote IP and optionally the real client IP if available
-func getClientString(p realClientIPParser, req *http.Request, full bool) (s string) {
+// GetClientString obtains the human readable string of the remote IP and optionally the real client IP if available
+func GetClientString(p ipapi.RealClientIPParser, req *http.Request, full bool) (s string) {
 	var realClientIPStr string
 	if p != nil {
-		if realClientIP, err := p.GetRealClientIP(req.Header); err != nil {
-			logger.Printf("Unable to get real client IP: %v", err)
-		} else if realClientIP != nil {
+		if realClientIP, err := p.GetRealClientIP(req.Header); err == nil && realClientIP != nil {
 			realClientIPStr = realClientIP.String()
 		}
 	}
@@ -95,9 +89,6 @@ func getClientString(p realClientIPParser, req *http.Request, full bool) (s stri
 	var remoteIPStr string
 	if remoteIP, err := getRemoteIP(req); err == nil {
 		remoteIPStr = remoteIP.String()
-	} else {
-		// Should not happen, if it does, likely a bug.
-		logger.Printf("Unable to get remote IP(?!?!): %v", err)
 	}
 
 	if !full && realClientIPStr != "" {

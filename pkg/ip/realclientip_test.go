@@ -1,4 +1,4 @@
-package main
+package ip
 
 import (
 	"net"
@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +27,7 @@ func TestGetRealClientIPParser(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		p, err := getRealClientIPParser(test.header)
+		p, err := GetRealClientIPParser(test.header)
 
 		if test.errString == "" {
 			assert.Nil(t, err)
@@ -144,7 +145,7 @@ func TestGetClientString(t *testing.T) {
 	p := &xForwardedForClientIPParser{header: http.CanonicalHeaderKey("X-Forwarded-For")}
 
 	tests := []struct {
-		parser             realClientIPParser
+		parser             ipapi.RealClientIPParser
 		remoteAddr         string
 		headerValue        string
 		expectedClient     string
@@ -167,10 +168,10 @@ func TestGetClientString(t *testing.T) {
 			RemoteAddr: test.remoteAddr,
 		}
 
-		client := getClientString(test.parser, req, false)
+		client := GetClientString(test.parser, req, false)
 		assert.Equal(t, test.expectedClient, client)
 
-		clientFull := getClientString(test.parser, req, true)
+		clientFull := GetClientString(test.parser, req, true)
 		assert.Equal(t, test.expectedClientFull, clientFull)
 	}
 }
