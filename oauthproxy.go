@@ -80,7 +80,7 @@ type OAuthProxy struct {
 	RobotsPath        string
 	PingPath          string
 	PingUserAgent     string
-	GagPingRequests   bool
+	SilencePings      bool
 	SignInPath        string
 	SignOutPath       string
 	OAuthStartPath    string
@@ -293,7 +293,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		RobotsPath:        "/robots.txt",
 		PingPath:          opts.PingPath,
 		PingUserAgent:     opts.PingUserAgent,
-		GagPingRequests:   opts.SilencePingLogging,
+		SilencePings:      opts.SilencePingLogging,
 		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
 		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
@@ -448,9 +448,9 @@ func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 
 // PingPage responds 200 OK to requests
 func (p *OAuthProxy) PingPage(rw http.ResponseWriter) {
-	if p.GagPingRequests {
-		if gl, ok := rw.(GaggableResponseLogger); ok {
-			gl.GagLogging()
+	if p.SilencePings {
+		if rl, ok := rw.(*responseLogger); ok {
+			rl.silent = true
 		}
 	}
 	rw.WriteHeader(http.StatusOK)
