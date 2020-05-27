@@ -1696,7 +1696,7 @@ func Test_noCacheHeadersDoesNotExistsInResponseHeadersFromUpstream(t *testing.T)
 	}
 }
 
-func TestIPCIDRSet(t *testing.T) {
+func TestIPWhitelist(t *testing.T) {
 	tests := []struct {
 		whitelistedIPs     []string
 		reverseProxy       bool
@@ -1727,7 +1727,7 @@ func TestIPCIDRSet(t *testing.T) {
 			}(),
 			expectWhitelisted: true,
 		},
-		// Check ignores req.RemoteAddr match when behind a reverse proxy.
+		// Check ignores req.RemoteAddr match when behind a reverse proxy / missing header.
 		{
 			whitelistedIPs:     []string{"127.0.0.1"},
 			reverseProxy:       true,
@@ -1783,6 +1783,42 @@ func TestIPCIDRSet(t *testing.T) {
 			req: func() *http.Request {
 				req, _ := http.NewRequest("GET", "/", nil)
 				req.Header.Add("X-Forwarded-For", "::2")
+				return req
+			}(),
+			expectWhitelisted: false,
+		},
+		// Check respects correct header.
+		{
+			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Real-IP", "::1")
+				return req
+			}(),
+			expectWhitelisted: false,
+		},
+		// Check doesn't whitelist if garbage is provided.
+		{
+			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "adsfljk29242as!!")
+				return req
+			}(),
+			expectWhitelisted: false,
+		},
+		// Check doesn't whitelist if garbage is provided (no reverse-proxy).
+		{
+			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "adsfljk29242as!!"
 				return req
 			}(),
 			expectWhitelisted: false,
