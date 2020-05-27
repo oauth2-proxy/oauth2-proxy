@@ -123,7 +123,7 @@ func parseRedisURLs(urls []string) ([]string, error) {
 	for _, u := range urls {
 		parsedURL, err := redis.ParseURL(u)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse redis url: %s", err)
+			return nil, fmt.Errorf("unable to parse redis url: %v", err)
 		}
 		addrs = append(addrs, parsedURL.Addr)
 	}
