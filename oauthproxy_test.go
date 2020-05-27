@@ -1698,6 +1698,7 @@ func Test_noCacheHeadersDoesNotExistsInResponseHeadersFromUpstream(t *testing.T)
 
 func TestIPWhitelist(t *testing.T) {
 	tests := []struct {
+		name               string
 		whitelistedIPs     []string
 		reverseProxy       bool
 		realClientIPHeader string
@@ -1706,6 +1707,7 @@ func TestIPWhitelist(t *testing.T) {
 	}{
 		// Check unconfigured behavior.
 		{
+			name:               "Default",
 			whitelistedIPs:     nil,
 			reverseProxy:       false,
 			realClientIPHeader: "X-Real-IP", // Default value
@@ -1717,6 +1719,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check using req.RemoteAddr (Options.ReverseProxy == false).
 		{
+			name:               "WithRemoteAddr",
 			whitelistedIPs:     []string{"127.0.0.1"},
 			reverseProxy:       false,
 			realClientIPHeader: "X-Real-IP", // Default value
@@ -1729,6 +1732,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check ignores req.RemoteAddr match when behind a reverse proxy / missing header.
 		{
+			name:               "IgnoresRemoteAddrInReverseProxyMode",
 			whitelistedIPs:     []string{"127.0.0.1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Real-IP", // Default value
@@ -1741,6 +1745,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check successful whitelisting of localhost in IPv4.
 		{
+			name:               "WhitelistsLocalhostInReverseProxyMode",
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
@@ -1753,6 +1758,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check successful whitelisting of localhost in IPv6.
 		{
+			name:               "WhitelistsIP6LocalostInReverseProxyMode",
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
@@ -1765,6 +1771,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check does not whitelist random IPv4 address.
 		{
+			name:               "DoesNotWhitelistRandomIP4Address",
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
@@ -1777,6 +1784,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check does not whitelist random IPv6 address.
 		{
+			name:               "DoesNotWhitelistRandomIP6Address",
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
@@ -1789,6 +1797,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check respects correct header.
 		{
+			name:               "RespectsCorrectHeaderInReverseProxyMode",
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
@@ -1801,6 +1810,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check doesn't whitelist if garbage is provided.
 		{
+			name:               "DoesNotWhitelistGarbageInReverseProxyMode",
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
@@ -1813,6 +1823,7 @@ func TestIPWhitelist(t *testing.T) {
 		},
 		// Check doesn't whitelist if garbage is provided (no reverse-proxy).
 		{
+			name:               "DoesNotWhitelistGarbage",
 			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       false,
 			realClientIPHeader: "X-Real-IP",
@@ -1826,21 +1837,23 @@ func TestIPWhitelist(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		opts := options.NewOptions()
-		opts.Upstreams = []string{"static://200"}
-		opts.IPWhitelist = tt.whitelistedIPs
-		opts.ReverseProxy = tt.reverseProxy
-		opts.RealClientIPHeader = tt.realClientIPHeader
-		validation.Validate(opts)
+		t.Run(tt.name, func(t *testing.T) {
+			opts := options.NewOptions()
+			opts.Upstreams = []string{"static://200"}
+			opts.IPWhitelist = tt.whitelistedIPs
+			opts.ReverseProxy = tt.reverseProxy
+			opts.RealClientIPHeader = tt.realClientIPHeader
+			validation.Validate(opts)
 
-		proxy := NewOAuthProxy(opts, func(string) bool { return true })
-		rw := httptest.NewRecorder()
+			proxy := NewOAuthProxy(opts, func(string) bool { return true })
+			rw := httptest.NewRecorder()
 
-		proxy.ServeHTTP(rw, tt.req)
-		if tt.expectWhitelisted {
-			assert.Equal(t, 200, rw.Code)
-		} else {
-			assert.Equal(t, 403, rw.Code)
-		}
+			proxy.ServeHTTP(rw, tt.req)
+			if tt.expectWhitelisted {
+				assert.Equal(t, 200, rw.Code)
+			} else {
+				assert.Equal(t, 403, rw.Code)
+			}
+		})
 	}
 }
