@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
@@ -96,7 +97,12 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
 	// Configure options on the SingleHostReverseProxy
-	proxy.FlushInterval = *upstream.FlushInterval
+	if upstream.FlushInterval != nil {
+		proxy.FlushInterval = *upstream.FlushInterval
+	} else {
+		proxy.FlushInterval = 1 * time.Second
+	}
+
 	if upstream.InsecureSkipTLSVerify {
 		proxy.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
