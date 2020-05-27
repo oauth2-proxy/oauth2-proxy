@@ -147,7 +147,6 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // NewReverseProxy creates a new reverse proxy for proxying requests to upstream
 // servers
 func NewReverseProxy(target *url.URL, opts *options.Options) (proxy *httputil.ReverseProxy) {
-
 	proxy = httputil.NewSingleHostReverseProxy(target)
 	proxy.Transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
