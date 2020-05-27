@@ -440,12 +440,12 @@ func parseIPWhitelist(ipWhitelistStrs []string, msgs *[]string) []*net.IPNet {
 			}
 
 			// Normalize IP addresses specified without a netmask to their single-host CIDR network equivalent.
-			// nolint:gocritic
-			if ip.To4() != nil {
+			switch {
+			case ip.To4() != nil:
 				ipStr = fmt.Sprintf("%s/32", ipStr)
-			} else if ip.To16() != nil {
+			case ip.To16() != nil:
 				ipStr = fmt.Sprintf("%s/128", ipStr)
-			} else {
+			default:
 				*msgs = append(*msgs, fmt.Sprintf("whitelisted IP (%q) address neither IPv4 or IPv6", ipStr))
 				continue
 			}

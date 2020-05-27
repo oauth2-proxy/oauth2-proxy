@@ -82,12 +82,12 @@ func (w *NetSet) AddIPNet(ip net.IP, mask net.IPMask) {
 
 // Get the appropriate array of networks for the given IP version.
 func (w *NetSet) getNetMaps(ip net.IP) (netMaps *[]ipNetMap) {
-	// nolint:gocritic
-	if ip.To4() != nil {
+	switch {
+	case ip.To4() != nil:
 		netMaps = &w.ip4NetMaps
-	} else if ip.To16() != nil {
+	case ip.To16() != nil:
 		netMaps = &w.ip6NetMaps
-	} else {
+	default:
 		panic(fmt.Sprintf("IP (%s) is neither 4-byte nor 16-byte?", ip.String()))
 	}
 
