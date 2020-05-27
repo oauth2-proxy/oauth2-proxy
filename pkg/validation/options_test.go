@@ -142,9 +142,9 @@ func TestRedirectURL(t *testing.T) {
 
 func TestProxyTimeOut(t *testing.T) {
 	o := testOptions()
-	o.ProxyTimeOut = 40
-	assert.Equal(t, nil, o.Validate())
-	expected := 40
+	o.ProxyTimeOut = 40 * time.Second
+	assert.Equal(t, nil, Validate(o))
+	expected := 40 * time.Second
 	assert.Equal(t, expected, o.ProxyTimeOut)
 }
 

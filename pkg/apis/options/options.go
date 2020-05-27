@@ -167,7 +167,7 @@ func NewOptions() *Options {
 		ProxyWebSockets:     true,
 		HTTPAddress:         "127.0.0.1:4180",
 		HTTPSAddress:        ":443",
-		ProxyTimeOut:        30, //TIME_OUT in seconds
+		ProxyTimeOut:        time.Duration(30) * time.Second,
 		RealClientIPHeader:  "X-Real-IP",
 		ForceHTTPS:          false,
 		DisplayHtpasswdForm: true,

@@ -148,10 +148,11 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // servers
 func NewReverseProxy(target *url.URL, opts *options.Options) (proxy *httputil.ReverseProxy) {
 	proxy = httputil.NewSingleHostReverseProxy(target)
+	// Settings from net/http DefaultTransport except timeout
 	proxy.Transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   time.Duration(opts.ProxyTimeOut) * time.Second,
+			Timeout:   opts.ProxyTimeOut,
 			KeepAlive: 30 * time.Second,
 			DualStack: true,
 		}).DialContext,
