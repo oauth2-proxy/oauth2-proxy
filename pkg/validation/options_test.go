@@ -140,6 +140,14 @@ func TestRedirectURL(t *testing.T) {
 	assert.Equal(t, expected, o.GetRedirectURL())
 }
 
+func TestProxyTimeOut(t *testing.T) {
+	o := testOptions()
+	o.ProxyTimeOut = 40
+	assert.Equal(t, nil, o.Validate())
+	expected := 40
+	assert.Equal(t, expected, o.ProxyTimeOut)
+}
+
 func TestProxyURLs(t *testing.T) {
 	o := testOptions()
 	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8081")

@@ -23,20 +23,21 @@ type SignatureData struct {
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix        string `flag:"proxy-prefix" cfg:"proxy_prefix"`
-	PingPath           string `flag:"ping-path" cfg:"ping_path"`
-	ProxyWebSockets    bool   `flag:"proxy-websockets" cfg:"proxy_websockets"`
-	HTTPAddress        string `flag:"http-address" cfg:"http_address"`
-	HTTPSAddress       string `flag:"https-address" cfg:"https_address"`
-	ReverseProxy       bool   `flag:"reverse-proxy" cfg:"reverse_proxy"`
-	RealClientIPHeader string `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
-	ForceHTTPS         bool   `flag:"force-https" cfg:"force_https"`
-	RawRedirectURL     string `flag:"redirect-url" cfg:"redirect_url"`
-	ClientID           string `flag:"client-id" cfg:"client_id"`
-	ClientSecret       string `flag:"client-secret" cfg:"client_secret"`
-	ClientSecretFile   string `flag:"client-secret-file" cfg:"client_secret_file"`
-	TLSCertFile        string `flag:"tls-cert-file" cfg:"tls_cert_file"`
-	TLSKeyFile         string `flag:"tls-key-file" cfg:"tls_key_file"`
+	ProxyPrefix        string        `flag:"proxy-prefix" cfg:"proxy_prefix"`
+	PingPath           string        `flag:"ping-path" cfg:"ping_path"`
+	ProxyWebSockets    bool          `flag:"proxy-websockets" cfg:"proxy_websockets"`
+	HTTPAddress        string        `flag:"http-address" cfg:"http_address"`
+	HTTPSAddress       string        `flag:"https-address" cfg:"https_address"`
+	ReverseProxy       bool          `flag:"reverse-proxy" cfg:"reverse_proxy"`
+	RealClientIPHeader string        `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
+	ForceHTTPS         bool          `flag:"force-https" cfg:"force_https"`
+	RawRedirectURL     string        `flag:"redirect-url" cfg:"redirect_url"`
+	ClientID           string        `flag:"client-id" cfg:"client_id"`
+	ClientSecret       string        `flag:"client-secret" cfg:"client_secret"`
+	ClientSecretFile   string        `flag:"client-secret-file" cfg:"client_secret_file"`
+	TLSCertFile        string        `flag:"tls-cert-file" cfg:"tls_cert_file"`
+	TLSKeyFile         string        `flag:"tls-key-file" cfg:"tls_key_file"`
+	ProxyTimeOut       time.Duration `flag:"proxy-time-out" cfg:"proxy_time_out" env:"OAUTH2_PROXY_PROXY_TIME_OUT"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group"`
@@ -166,6 +167,7 @@ func NewOptions() *Options {
 		ProxyWebSockets:     true,
 		HTTPAddress:         "127.0.0.1:4180",
 		HTTPSAddress:        ":443",
+		ProxyTimeOut:        30, //TIME_OUT in seconds
 		RealClientIPHeader:  "X-Real-IP",
 		ForceHTTPS:          false,
 		DisplayHtpasswdForm: true,
