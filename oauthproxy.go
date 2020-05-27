@@ -116,7 +116,7 @@ type OAuthProxy struct {
 	compiledRegex        []*regexp.Regexp
 	templates            *template.Template
 	realClientIPParser   ipapi.RealClientIPParser
-	ipWhitelist          *ipCIDRSet
+	ipWhitelist          *ip.NetSet
 	Banner               string
 	Footer               string
 }
@@ -333,7 +333,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		jwtBearerVerifiers:   opts.GetJWTBearerVerifiers(),
 		compiledRegex:        opts.GetCompiledRegex(),
 		realClientIPParser:   opts.GetRealClientIPParser(),
-		ipWhitelist:          newIPCIDRSet(opts.GetIPWhitelist()),
+		ipWhitelist:          ip.NewNetSet(opts.GetIPWhitelist()),
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
 		SetBasicAuth:         opts.SetBasicAuth,
@@ -694,7 +694,7 @@ func (p *OAuthProxy) IsWhitelistedIP(req *http.Request) bool {
 		return false
 	}
 
-	return p.ipWhitelist.has(remoteAddr)
+	return p.ipWhitelist.Has(remoteAddr)
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
