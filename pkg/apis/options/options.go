@@ -37,7 +37,7 @@ type Options struct {
 	ClientSecretFile   string        `flag:"client-secret-file" cfg:"client_secret_file"`
 	TLSCertFile        string        `flag:"tls-cert-file" cfg:"tls_cert_file"`
 	TLSKeyFile         string        `flag:"tls-key-file" cfg:"tls_key_file"`
-	ProxyTimeOut       time.Duration `flag:"proxy-time-out" cfg:"proxy_time_out" env:"OAUTH2_PROXY_PROXY_TIME_OUT"`
+	ProxyTimeOut       time.Duration `flag:"proxy-time-out" cfg:"proxy_time_out"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group"`
