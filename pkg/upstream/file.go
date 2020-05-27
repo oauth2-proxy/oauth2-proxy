@@ -1,6 +1,10 @@
 package upstream
 
-import "net/http"
+import (
+	"net/http"
+	"runtime"
+	"strings"
+)
 
 const fileScheme = "file"
 
@@ -15,6 +19,12 @@ func newFileServer(id, path, fileSystemPath string) http.Handler {
 
 // newFileServerForPath creates a http.Handler to serve files from the filesystem
 func newFileServerForPath(path string, filesystemPath string) http.Handler {
+	// Windows fileSSystemPath will be be prefixed with `/`, eg`/C:/...,
+	// if they were parsed by url.Parse`
+	if runtime.GOOS == "windows" {
+		filesystemPath = strings.TrimPrefix(filesystemPath, "/")
+	}
+
 	return http.StripPrefix(path, http.FileServer(http.Dir(filesystemPath)))
 }
 
