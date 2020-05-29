@@ -281,6 +281,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
+	flagSet.Bool("cookie-compress", false, "compress the cookie with gzip before store")
 	flagSet.String("cookie-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
 
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")

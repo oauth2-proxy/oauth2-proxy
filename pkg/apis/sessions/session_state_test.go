@@ -2,6 +2,7 @@ package sessions_test
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -305,4 +306,83 @@ func TestSessionStateAge(t *testing.T) {
 	// Set CreatedAt to 1 hour ago
 	ss.CreatedAt = time.Now().Add(-1 * time.Hour)
 	assert.Equal(t, time.Hour, ss.Age().Round(time.Minute))
+}
+
+func TestSessionCompressLargeStateSerializationCipher(t *testing.T) {
+
+	rand.Seed(time.Now().UnixNano())
+
+	c, err := encryption.NewCipher([]byte(secret))
+	assert.Equal(t, nil, err)
+	s := &sessions.SessionState{
+		Email:             "user@domain.com",
+		PreferredUsername: "user",
+		AccessToken:       randStringRunes(1024 * 2),
+		IDToken:           randStringRunes(1024 * 2),
+		CreatedAt:         time.Now(),
+		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		RefreshToken:      randStringRunes(1024 * 2),
+		Compress:          false,
+	}
+
+	encodedUncompress, errUncompress := s.EncodeSessionState(c)
+	assert.Equal(t, nil, errUncompress)
+
+	s.Compress = true
+	encoded, err := s.EncodeSessionState(c)
+	assert.Equal(t, nil, err)
+
+	t.Logf("Compare sizes compress %d and uncompress %d", len(encoded), len(encodedUncompress))
+
+	ss, err := sessions.DecodeSessionState(encoded, c)
+	t.Logf("%#v", ss)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", ss.User)
+	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
+	assert.Equal(t, s.AccessToken, ss.AccessToken)
+	assert.Equal(t, s.IDToken, ss.IDToken)
+	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
+	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
+	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
+}
+
+func TestSessionCompressLargeStateSerializationNoCipher(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
+
+	s := &sessions.SessionState{
+		Email:             "user@domain.com",
+		PreferredUsername: randStringRunes(1024),
+		CreatedAt:         time.Now(),
+		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		Compress:          false,
+	}
+	encodedUncompress, errUncompress := s.EncodeSessionState(nil)
+	assert.Equal(t, nil, errUncompress)
+
+	s.Compress = true
+	encoded, err := s.EncodeSessionState(nil)
+	assert.Equal(t, nil, err)
+
+	t.Logf("Compare sizes compress %d and uncompress %d", len(encoded), len(encodedUncompress))
+
+	// only email should have been serialized
+	ss, err := sessions.DecodeSessionState(encoded, nil)
+	t.Logf("%#v", ss)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, s.User, ss.User)
+	assert.Equal(t, s.Email, ss.Email)
+	assert.Equal(t, s.PreferredUsername, ss.PreferredUsername)
+	assert.Equal(t, "", ss.AccessToken)
+	assert.Equal(t, "", ss.RefreshToken)
+}
+
+var letterRunes = []rune("abcdABCD")
+
+func randStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

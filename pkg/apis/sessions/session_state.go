@@ -1,9 +1,13 @@
 package sessions
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
@@ -19,6 +23,7 @@ type SessionState struct {
 	Email             string    `json:",omitempty"`
 	User              string    `json:",omitempty"`
 	PreferredUsername string    `json:",omitempty"`
+	Compress          bool      `json:",omitempty"`
 }
 
 // SessionStateJSON is used to encode SessionState into JSON without exposing time.Time zero value
@@ -27,6 +32,10 @@ type SessionStateJSON struct {
 	CreatedAt *time.Time `json:",omitempty"`
 	ExpiresOn *time.Time `json:",omitempty"`
 }
+
+const (
+	minBytesToCompress = 256
+)
 
 // IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
@@ -122,14 +131,23 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 		ssj.ExpiresOn = &ss.ExpiresOn
 	}
 	b, err := json.Marshal(ssj)
-	return string(b), err
+	if !s.Compress || len(b) < minBytesToCompress || err != nil {
+		return string(b), err
+	}
+	return compressToString(b), err
 }
 
 // DecodeSessionState decodes the session cookie string into a SessionState
 func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
+
+	jsonBody, err := uncompressStringToBytes(v)
+	if err != nil {
+		return nil, fmt.Errorf("error uncompress session: %w", err)
+	}
+
 	var ssj SessionStateJSON
 	var ss *SessionState
-	err := json.Unmarshal([]byte(v), &ssj)
+	err = json.Unmarshal(jsonBody, &ssj)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling session: %w", err)
 	}
@@ -194,4 +212,30 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		}
 	}
 	return ss, nil
+}
+
+func compress(v []byte) *bytes.Buffer {
+	buf := &bytes.Buffer{}
+	w, _ := gzip.NewWriterLevel(buf, gzip.BestSpeed)
+	w.Write(v)
+	w.Close()
+	return buf
+}
+
+func compressToString(v []byte) string {
+	return compress(v).String()
+}
+
+func uncompressStringToBytes(v string) ([]byte, error) {
+	var b bytes.Buffer
+	r, err := gzip.NewReader(strings.NewReader(v))
+	if err != nil {
+		if err == gzip.ErrHeader {
+			return []byte(v), nil
+		}
+		return nil, err
+	}
+	_, err = io.Copy(&b, r)
+	r.Close()
+	return b.Bytes(), err
 }

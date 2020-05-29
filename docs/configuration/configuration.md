@@ -42,6 +42,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (ie: `"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
+| `--cookie-compress` | bool | compress the cookie with gzip before store | false |
 | `--custom-templates-dir` | string | path to custom html templates | |
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
