@@ -14,7 +14,7 @@ func (a *StringArray) Get() interface{} {
 
 // Set appends a string to the StringArray
 func (a *StringArray) Set(s string) error {
-	*a = append(*a, s)
+	*a = append(*a, strings.Split(s, ",")...)
 	return nil
 }
 
