@@ -3,6 +3,8 @@ module github.com/oauth2-proxy/oauth2-proxy
 go 1.14
 
 require (
+	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
+	github.com/alicebob/miniredis v2.5.0+incompatible // indirect
 	github.com/alicebob/miniredis/v2 v2.11.2
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
