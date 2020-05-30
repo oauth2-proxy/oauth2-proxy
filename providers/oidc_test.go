@@ -204,8 +204,8 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 	existingSession := &sessions.SessionState{
 		AccessToken:  "changeit",
 		IDToken:      idToken,
-		CreatedAt:    time.Time{},
-		ExpiresOn:    time.Time{},
+		CreatedAt:    nil,
+		ExpiresOn:    nil,
 		RefreshToken: refreshToken,
 		Email:        "janedoe@example.com",
 		User:         "11223344",
@@ -238,8 +238,8 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	existingSession := &sessions.SessionState{
 		AccessToken:  "changeit",
 		IDToken:      "changeit",
-		CreatedAt:    time.Time{},
-		ExpiresOn:    time.Time{},
+		CreatedAt:    nil,
+		ExpiresOn:    nil,
 		RefreshToken: refreshToken,
 		Email:        "changeit",
 		User:         "changeit",
