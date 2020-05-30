@@ -88,35 +88,36 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	redirectURL          *url.URL // the url to receive requests at
-	whitelistDomains     []string
-	provider             providers.Provider
-	providerNameOverride string
-	sessionStore         sessionsapi.SessionStore
-	ProxyPrefix          string
-	SignInMessage        string
-	HtpasswdFile         *HtpasswdFile
-	DisplayHtpasswdForm  bool
-	serveMux             http.Handler
-	SetXAuthRequest      bool
-	PassBasicAuth        bool
-	SetBasicAuth         bool
-	SkipProviderButton   bool
-	PassUserHeaders      bool
-	BasicAuthPassword    string
-	PassAccessToken      bool
-	SetAuthorization     bool
-	PassAuthorization    bool
-	PreferEmailToUser    bool
-	skipAuthRegex        []string
-	skipAuthPreflight    bool
-	skipJwtBearerTokens  bool
-	jwtBearerVerifiers   []*oidc.IDTokenVerifier
-	compiledRegex        []*regexp.Regexp
-	templates            *template.Template
-	realClientIPParser   ipapi.RealClientIPParser
-	Banner               string
-	Footer               string
+	redirectURL             *url.URL // the url to receive requests at
+	whitelistDomains        []string
+	provider                providers.Provider
+	providerNameOverride    string
+	sessionStore            sessionsapi.SessionStore
+	ProxyPrefix             string
+	SignInMessage           string
+	HtpasswdFile            *HtpasswdFile
+	DisplayHtpasswdForm     bool
+	serveMux                http.Handler
+	SetXAuthRequest         bool
+	PassBasicAuth           bool
+	SetBasicAuth            bool
+	SkipProviderButton      bool
+	PassUserHeaders         bool
+	BasicAuthPassword       string
+	PassAccessToken         bool
+	SetAuthorization        bool
+	PassAuthorization       bool
+	PreferEmailToUser       bool
+	skipAuthRegex           []string
+	skipAuthPreflight       bool
+	skipJwtBearerTokens     bool
+	mainJwtBearerVerifier   *oidc.IDTokenVerifier
+	extraJwtBearerVerifiers []*oidc.IDTokenVerifier
+	compiledRegex           []*regexp.Regexp
+	templates               *template.Template
+	realClientIPParser      ipapi.RealClientIPParser
+	Banner                  string
+	Footer                  string
 }
 
 // UpstreamProxy represents an upstream server to proxy to
@@ -317,32 +318,33 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
-		ProxyPrefix:          opts.ProxyPrefix,
-		provider:             opts.GetProvider(),
-		providerNameOverride: opts.ProviderName,
-		sessionStore:         opts.GetSessionStore(),
-		serveMux:             serveMux,
-		redirectURL:          redirectURL,
-		whitelistDomains:     opts.WhitelistDomains,
-		skipAuthRegex:        opts.SkipAuthRegex,
-		skipAuthPreflight:    opts.SkipAuthPreflight,
-		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
-		jwtBearerVerifiers:   opts.GetJWTBearerVerifiers(),
-		compiledRegex:        opts.GetCompiledRegex(),
-		realClientIPParser:   opts.GetRealClientIPParser(),
-		SetXAuthRequest:      opts.SetXAuthRequest,
-		PassBasicAuth:        opts.PassBasicAuth,
-		SetBasicAuth:         opts.SetBasicAuth,
-		PassUserHeaders:      opts.PassUserHeaders,
-		BasicAuthPassword:    opts.BasicAuthPassword,
-		PassAccessToken:      opts.PassAccessToken,
-		SetAuthorization:     opts.SetAuthorization,
-		PassAuthorization:    opts.PassAuthorization,
-		PreferEmailToUser:    opts.PreferEmailToUser,
-		SkipProviderButton:   opts.SkipProviderButton,
-		templates:            loadTemplates(opts.CustomTemplatesDir),
-		Banner:               opts.Banner,
-		Footer:               opts.Footer,
+		ProxyPrefix:             opts.ProxyPrefix,
+		provider:                opts.GetProvider(),
+		providerNameOverride:    opts.ProviderName,
+		sessionStore:            opts.GetSessionStore(),
+		serveMux:                serveMux,
+		redirectURL:             redirectURL,
+		whitelistDomains:        opts.WhitelistDomains,
+		skipAuthRegex:           opts.SkipAuthRegex,
+		skipAuthPreflight:       opts.SkipAuthPreflight,
+		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
+		mainJwtBearerVerifier:   opts.GetOIDCVerifier(),
+		extraJwtBearerVerifiers: opts.GetJWTBearerVerifiers(),
+		compiledRegex:           opts.GetCompiledRegex(),
+		realClientIPParser:      opts.GetRealClientIPParser(),
+		SetXAuthRequest:         opts.SetXAuthRequest,
+		PassBasicAuth:           opts.PassBasicAuth,
+		SetBasicAuth:            opts.SetBasicAuth,
+		PassUserHeaders:         opts.PassUserHeaders,
+		BasicAuthPassword:       opts.BasicAuthPassword,
+		PassAccessToken:         opts.PassAccessToken,
+		SetAuthorization:        opts.SetAuthorization,
+		PassAuthorization:       opts.PassAuthorization,
+		PreferEmailToUser:       opts.PreferEmailToUser,
+		SkipProviderButton:      opts.SkipProviderButton,
+		templates:               loadTemplates(opts.CustomTemplatesDir),
+		Banner:                  opts.Banner,
+		Footer:                  opts.Footer,
 	}
 }
 
@@ -1139,15 +1141,24 @@ func (p *OAuthProxy) GetJwtSession(req *http.Request) (*sessionsapi.SessionState
 		return nil, err
 	}
 
-	for _, verifier := range p.jwtBearerVerifiers {
-		bearerToken, err := verifier.Verify(req.Context(), rawBearerToken)
+	// If we are using an oidc provider, go ahead and try that provider first with its Verifier
+	// and Bearer Token -> Session converter
+	if p.mainJwtBearerVerifier != nil {
+		bearerToken, err := p.mainJwtBearerVerifier.Verify(req.Context(), rawBearerToken)
+		if err == nil {
+			return p.provider.CreateSessionStateFromBearerToken(req.Context(), rawBearerToken, bearerToken)
+		}
+	}
 
+	// Otherwise, attempt to verify against the extra JWT issuers and use a more generic
+	// Bearer Token -> Session converter
+	for _, verifier := range p.extraJwtBearerVerifiers {
+		bearerToken, err := verifier.Verify(req.Context(), rawBearerToken)
 		if err != nil {
-			logger.Printf("failed to verify bearer token: %v", err)
 			continue
 		}
 
-		return p.provider.CreateSessionStateFromBearerToken(req.Context(), rawBearerToken, bearerToken)
+		return (*providers.ProviderData)(nil).CreateSessionStateFromBearerToken(req.Context(), rawBearerToken, bearerToken)
 	}
 	return nil, fmt.Errorf("unable to verify jwt token %s", req.Header.Get("Authorization"))
 }
