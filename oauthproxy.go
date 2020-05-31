@@ -598,6 +598,9 @@ func validOptionalPort(port string) bool {
 // IsValidRedirect checks whether the redirect URL is whitelisted
 func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	switch {
+	case redirect == "":
+		// The user didn't specify a redirect, should fallback to `/`
+		return false
 	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !invalidRedirectRegex.MatchString(redirect):
 		return true
 	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
