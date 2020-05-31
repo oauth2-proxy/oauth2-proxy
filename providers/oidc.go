@@ -72,7 +72,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (s 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new Access Token (and optional ID token) if required
 func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
 		return false, nil
 	}
 
@@ -163,10 +163,11 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		}
 	}
 
+	created := time.Now()
 	newSession.AccessToken = token.AccessToken
 	newSession.RefreshToken = token.RefreshToken
-	newSession.CreatedAt = time.Now()
-	newSession.ExpiresOn = token.Expiry
+	newSession.CreatedAt = &created
+	newSession.ExpiresOn = &token.Expiry
 	return newSession, nil
 }
 
@@ -179,7 +180,7 @@ func (p *OIDCProvider) CreateSessionStateFromBearerToken(ctx context.Context, ra
 	newSession.AccessToken = rawIDToken
 	newSession.IDToken = rawIDToken
 	newSession.RefreshToken = ""
-	newSession.ExpiresOn = idToken.Expiry
+	newSession.ExpiresOn = &idToken.Expiry
 
 	return newSession, nil
 }

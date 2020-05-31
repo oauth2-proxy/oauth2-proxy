@@ -13,6 +13,10 @@ import (
 const secret = "0123456789abcdefghijklmnopqrstuv"
 const altSecret = "0000000000abcdefghijklmnopqrstuv"
 
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
+
 func TestSessionStateSerialization(t *testing.T) {
 	c, err := encryption.NewCipher([]byte(secret))
 	assert.Equal(t, nil, err)
@@ -23,8 +27,8 @@ func TestSessionStateSerialization(t *testing.T) {
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
 		IDToken:           "rawtoken1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		CreatedAt:         timePtr(time.Now()),
+		ExpiresOn:         timePtr(time.Now().Add(time.Duration(1) * time.Hour)),
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(c)
@@ -66,8 +70,8 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 		PreferredUsername: "ju",
 		Email:             "user@domain.com",
 		AccessToken:       "token1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		CreatedAt:         timePtr(time.Now()),
+		ExpiresOn:         timePtr(time.Now().Add(time.Duration(1) * time.Hour)),
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(c)
@@ -102,8 +106,8 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		CreatedAt:         timePtr(time.Now()),
+		ExpiresOn:         timePtr(time.Now().Add(time.Duration(1) * time.Hour)),
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(nil)
@@ -125,8 +129,8 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
-		CreatedAt:         time.Now(),
-		ExpiresOn:         time.Now().Add(time.Duration(1) * time.Hour),
+		CreatedAt:         timePtr(time.Now()),
+		ExpiresOn:         timePtr(time.Now().Add(time.Duration(1) * time.Hour)),
 		RefreshToken:      "refresh4321",
 	}
 	encoded, err := s.EncodeSessionState(nil)
@@ -143,10 +147,10 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 }
 
 func TestExpired(t *testing.T) {
-	s := &sessions.SessionState{ExpiresOn: time.Now().Add(time.Duration(-1) * time.Minute)}
+	s := &sessions.SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(-1) * time.Minute))}
 	assert.Equal(t, true, s.IsExpired())
 
-	s = &sessions.SessionState{ExpiresOn: time.Now().Add(time.Duration(1) * time.Minute)}
+	s = &sessions.SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(1) * time.Minute))}
 	assert.Equal(t, false, s.IsExpired())
 
 	s = &sessions.SessionState{}
@@ -182,8 +186,8 @@ func TestEncodeSessionState(t *testing.T) {
 				User:         "just-user",
 				AccessToken:  "token1234",
 				IDToken:      "rawtoken1234",
-				CreatedAt:    c,
-				ExpiresOn:    e,
+				CreatedAt:    &c,
+				ExpiresOn:    &e,
 				RefreshToken: "refresh4321",
 			},
 			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
@@ -249,8 +253,8 @@ func TestDecodeSessionState(t *testing.T) {
 				User:         "just-user",
 				AccessToken:  "token1234",
 				IDToken:      "rawtoken1234",
-				CreatedAt:    created,
-				ExpiresOn:    e,
+				CreatedAt:    &created,
+				ExpiresOn:    &e,
 				RefreshToken: "refresh4321",
 			},
 			Encoded: fmt.Sprintf(`{"Email":"FsKKYrTWZWrxSOAqA/fTNAUZS5QWCqOBjuAbBlbVOw==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw==","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
@@ -291,7 +295,10 @@ func TestDecodeSessionState(t *testing.T) {
 			assert.Equal(t, tc.AccessToken, ss.AccessToken)
 			assert.Equal(t, tc.RefreshToken, ss.RefreshToken)
 			assert.Equal(t, tc.IDToken, ss.IDToken)
-			assert.Equal(t, tc.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
+			if tc.ExpiresOn != nil {
+				assert.NotEqual(t, nil, ss.ExpiresOn)
+				assert.Equal(t, tc.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
+			}
 		}
 	}
 }
@@ -303,6 +310,6 @@ func TestSessionStateAge(t *testing.T) {
 	assert.Equal(t, time.Duration(0), ss.Age())
 
 	// Set CreatedAt to 1 hour ago
-	ss.CreatedAt = time.Now().Add(-1 * time.Hour)
+	ss.CreatedAt = timePtr(time.Now().Add(-1 * time.Hour))
 	assert.Equal(t, time.Hour, ss.Age().Round(time.Minute))
 }

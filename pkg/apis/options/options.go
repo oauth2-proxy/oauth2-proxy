@@ -9,7 +9,6 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"github.com/spf13/pflag"
 )
@@ -62,6 +61,7 @@ type Options struct {
 
 	Cookie  CookieOptions  `cfg:",squash"`
 	Session SessionOptions `cfg:",squash"`
+	Logging Logging        `cfg:",squash"`
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
@@ -102,27 +102,12 @@ type Options struct {
 	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
 	UserIDClaim                        string `flag:"user-id-claim" cfg:"user_id_claim"`
 
-	// Configuration values for logging
-	LoggingFilename       string `flag:"logging-filename" cfg:"logging_filename"`
-	LoggingMaxSize        int    `flag:"logging-max-size" cfg:"logging_max_size"`
-	LoggingMaxAge         int    `flag:"logging-max-age" cfg:"logging_max_age"`
-	LoggingMaxBackups     int    `flag:"logging-max-backups" cfg:"logging_max_backups"`
-	LoggingLocalTime      bool   `flag:"logging-local-time" cfg:"logging_local_time"`
-	LoggingCompress       bool   `flag:"logging-compress" cfg:"logging_compress"`
-	StandardLogging       bool   `flag:"standard-logging" cfg:"standard_logging"`
-	StandardLoggingFormat string `flag:"standard-logging-format" cfg:"standard_logging_format"`
-	RequestLogging        bool   `flag:"request-logging" cfg:"request_logging"`
-	RequestLoggingFormat  string `flag:"request-logging-format" cfg:"request_logging_format"`
-	ExcludeLoggingPaths   string `flag:"exclude-logging-paths" cfg:"exclude_logging_paths"`
-	SilencePingLogging    bool   `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
-	AuthLogging           bool   `flag:"auth-logging" cfg:"auth_logging"`
-	AuthLoggingFormat     string `flag:"auth-logging-format" cfg:"auth_logging_format"`
-	SignatureKey          string `flag:"signature-key" cfg:"signature_key"`
-	AcrValues             string `flag:"acr-values" cfg:"acr_values"`
-	JWTKey                string `flag:"jwt-key" cfg:"jwt_key"`
-	JWTKeyFile            string `flag:"jwt-key-file" cfg:"jwt_key_file"`
-	PubJWKURL             string `flag:"pubjwk-url" cfg:"pubjwk_url"`
-	GCPHealthChecks       bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
+	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
+	AcrValues       string `flag:"acr-values" cfg:"acr_values"`
+	JWTKey          string `flag:"jwt-key" cfg:"jwt_key"`
+	JWTKeyFile      string `flag:"jwt-key-file" cfg:"jwt_key_file"`
+	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url"`
+	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
@@ -198,20 +183,7 @@ func NewOptions() *Options {
 		UserIDClaim:                      "email",
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
-		LoggingFilename:                  "",
-		LoggingMaxSize:                   100,
-		LoggingMaxAge:                    7,
-		LoggingMaxBackups:                0,
-		LoggingLocalTime:                 true,
-		LoggingCompress:                  false,
-		ExcludeLoggingPaths:              "",
-		SilencePingLogging:               false,
-		StandardLogging:                  true,
-		StandardLoggingFormat:            logger.DefaultStandardLoggingFormat,
-		RequestLogging:                   true,
-		RequestLoggingFormat:             logger.DefaultRequestLoggingFormat,
-		AuthLogging:                      true,
-		AuthLoggingFormat:                logger.DefaultAuthLoggingFormat,
+		Logging:                          loggingDefaults(),
 	}
 }
 
@@ -295,24 +267,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-cluster")
 
-	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
-	flagSet.Int("logging-max-size", 100, "Maximum size in megabytes of the log file before rotation")
-	flagSet.Int("logging-max-age", 7, "Maximum number of days to retain old log files")
-	flagSet.Int("logging-max-backups", 0, "Maximum number of old log files to retain; 0 to disable")
-	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
-	flagSet.Bool("logging-compress", false, "Should rotated log files be compressed using gzip")
-
-	flagSet.Bool("standard-logging", true, "Log standard runtime information")
-	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
-
-	flagSet.Bool("request-logging", true, "Log HTTP requests")
-	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
-	flagSet.String("exclude-logging-paths", "", "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
-	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping endpoint")
-
-	flagSet.Bool("auth-logging", true, "Log authentication attempts")
-	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")
-
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
@@ -337,6 +291,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
 	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
+
+	flagSet.AddFlagSet(loggingFlagSet())
 
 	return flagSet
 }
