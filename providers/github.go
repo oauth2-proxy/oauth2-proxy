@@ -84,7 +84,7 @@ func (p *GitHubProvider) SetRepo(repo, token string) {
 
 // SetUsers configures allowed usernames
 func (p *GitHubProvider) SetUsers(users []string) {
-	p.Users = append(p.Users, users...)
+	p.Users = users
 }
 
 func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, error) {
