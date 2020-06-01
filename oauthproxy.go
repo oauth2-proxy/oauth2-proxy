@@ -149,6 +149,7 @@ func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func NewReverseProxy(target *url.URL, opts *options.Options) (proxy *httputil.ReverseProxy) {
 	proxy = httputil.NewSingleHostReverseProxy(target)
 	// Settings from net/http DefaultTransport except timeout
+	// https://go.googlesource.com/go/+/refs/tags/go1.14.3/src/net/http/transport.go#42
 	proxy.Transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -156,6 +157,7 @@ func NewReverseProxy(target *url.URL, opts *options.Options) (proxy *httputil.Re
 			KeepAlive: 30 * time.Second,
 			DualStack: true,
 		}).DialContext,
+		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,

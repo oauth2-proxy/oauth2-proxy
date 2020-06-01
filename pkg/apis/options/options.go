@@ -37,7 +37,7 @@ type Options struct {
 	ClientSecretFile   string        `flag:"client-secret-file" cfg:"client_secret_file"`
 	TLSCertFile        string        `flag:"tls-cert-file" cfg:"tls_cert_file"`
 	TLSKeyFile         string        `flag:"tls-key-file" cfg:"tls_key_file"`
-	ProxyTimeOut       time.Duration `flag:"proxy-time-out" cfg:"proxy_time_out"`
+	ProxyTimeOut       time.Duration `flag:"upstream-request-timeout" cfg:"upstream_request_timeout"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group"`
@@ -167,7 +167,7 @@ func NewOptions() *Options {
 		ProxyWebSockets:     true,
 		HTTPAddress:         "127.0.0.1:4180",
 		HTTPSAddress:        ":443",
-		ProxyTimeOut:        time.Duration(30) * time.Second,
+		ProxyTimeOut:        30 * time.Second,
 		RealClientIPHeader:  "X-Real-IP",
 		ForceHTTPS:          false,
 		DisplayHtpasswdForm: true,
@@ -245,7 +245,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
 	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
-	flagSet.Duration("proxy-time-out", time.Duration(30)*time.Second, "timeout for upstream proxy")
+	flagSet.Duration("upstream-request-timeout", time.Duration(30)*time.Second, "timeout for requests to upstream servers, if response is not returned within timeout, request is cancelled")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 
