@@ -84,7 +84,6 @@
 ##            (ie: 1h means tokens are refreshed on request 1hr+ after it was set)
 ## Secure   - secure cookies are only sent by the browser of a HTTPS connection (recommended)
 ## HttpOnly - httponly cookies are not readable by javascript (recommended)
-## Compress - compress the cookie with gzip before store (recommended for large tokens like MS Azure)
 # cookie_name = "_oauth2_proxy"
 # cookie_secret = ""
 # cookie_domains = ""
@@ -92,4 +91,3 @@
 # cookie_refresh = ""
 # cookie_secure = true
 # cookie_httponly = true
-# cookie_compress = false
