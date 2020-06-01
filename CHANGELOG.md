@@ -48,10 +48,16 @@
     This lead to confusion and misconfiguration as it was not obvious when a session should be encrypted.
   - Cookie Secrets must now be 16, 24 or 32 bytes.
   - If you need to change your secret, this will force users to reauthenticate.
+- [#548](https://github.com/oauth2-proxy/oauth2-proxy/pull/548) Separate logging options out of main options structure
+  - Fixes an inconsistency in the `--exclude-logging-paths` option by renaming it to `--exclude-logging-option`.
+  - This flag may now be given multiple times as with other list options
+  - This flag also accepts comma separated values
 
 ## Changes since v5.1.1
 
 - [#583](https://github.com/oauth2-proxy/oauth2-proxy/pull/583) Add configurable proxy timeout (@RO-29, @TeroPihlaja)
+- [#548](https://github.com/oauth2-proxy/oauth2-proxy/pull/548) Separate logging options out of main options structure (@JoelSpeed)
+- [#536](https://github.com/oauth2-proxy/oauth2-proxy/pull/536) Improvements to Session State code (@JoelSpeed)
 - [#573](https://github.com/oauth2-proxy/oauth2-proxy/pull/573) Properly parse redis urls for cluster and sentinel connections (@amnay-mo)
 - [#574](https://github.com/oauth2-proxy/oauth2-proxy/pull/574) render error page on 502 proxy status (@amnay-mo)
 - [#559](https://github.com/oauth2-proxy/oauth2-proxy/pull/559) Rename cookie-domain config to cookie-domains (@JoelSpeed)

@@ -156,3 +156,30 @@ func (c *Cipher) Decrypt(s string) (string, error) {
 
 	return string(encrypted), nil
 }
+
+// EncryptInto encrypts the value and stores it back in the string pointer
+func (c *Cipher) EncryptInto(s *string) error {
+	return into(c.Encrypt, s)
+}
+
+// DecryptInto decrypts the value and stores it back in the string pointer
+func (c *Cipher) DecryptInto(s *string) error {
+	return into(c.Decrypt, s)
+}
+
+// codecFunc is a function that takes a string and encodes/decodes it
+type codecFunc func(string) (string, error)
+
+func into(f codecFunc, s *string) error {
+	// Do not encrypt/decrypt nil or empty strings
+	if s == nil || *s == "" {
+		return nil
+	}
+
+	d, err := f(*s)
+	if err != nil {
+		return err
+	}
+	*s = d
+	return nil
+}

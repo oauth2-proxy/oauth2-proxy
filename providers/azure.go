@@ -126,11 +126,13 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s
 		return
 	}
 
+	created := time.Now()
+	expires := time.Unix(jsonResponse.ExpiresOn, 0)
 	s = &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
-		CreatedAt:    time.Now(),
-		ExpiresOn:    time.Unix(jsonResponse.ExpiresOn, 0),
+		CreatedAt:    &created,
+		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
 	}
 	return

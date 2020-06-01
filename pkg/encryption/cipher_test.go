@@ -133,3 +133,25 @@ func TestEncodeAndDecodeAccessTokenB64(t *testing.T) {
 	assert.NotEqual(t, token, encoded)
 	assert.Equal(t, token, decoded)
 }
+
+func TestEncodeIntoAndDecodeIntoAccessToken(t *testing.T) {
+	const secret = "0123456789abcdefghijklmnopqrstuv"
+	c, err := NewCipher([]byte(secret))
+	assert.Equal(t, nil, err)
+
+	token := "my access token"
+	originalToken := token
+
+	assert.Equal(t, nil, c.EncryptInto(&token))
+	assert.NotEqual(t, originalToken, token)
+
+	assert.Equal(t, nil, c.DecryptInto(&token))
+	assert.Equal(t, originalToken, token)
+
+	// Check no errors with empty or nil strings
+	empty := ""
+	assert.Equal(t, nil, c.EncryptInto(&empty))
+	assert.Equal(t, nil, c.DecryptInto(&empty))
+	assert.Equal(t, nil, c.EncryptInto(nil))
+	assert.Equal(t, nil, c.DecryptInto(nil))
+}
