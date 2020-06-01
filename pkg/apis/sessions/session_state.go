@@ -104,24 +104,18 @@ func DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
 			PreferredUsername: ss.PreferredUsername,
 		}
 	} else {
-		// Backward compatibility with using unencrypted Email
-		if ss.Email != "" {
-			decryptedEmail, errEmail := stringDecrypt(ss.Email, c)
-			if errEmail == nil {
-				if !utf8.ValidString(decryptedEmail) {
-					return nil, errors.New("invalid value for decrypted email")
-				}
-				ss.Email = decryptedEmail
+		// Backward compatibility with using unencrypted Email or User
+		// Decryption errors will leave original string
+		err = c.DecryptInto(&ss.Email)
+		if err == nil {
+			if !utf8.ValidString(ss.Email) {
+				return nil, errors.New("invalid value for decrypted email")
 			}
 		}
-		// Backward compatibility with using unencrypted User
-		if ss.User != "" {
-			decryptedUser, errUser := stringDecrypt(ss.User, c)
-			if errUser == nil {
-				if !utf8.ValidString(decryptedUser) {
-					return nil, errors.New("invalid value for decrypted user")
-				}
-				ss.User = decryptedUser
+		err = c.DecryptInto(&ss.User)
+		if err == nil {
+			if !utf8.ValidString(ss.User) {
+				return nil, errors.New("invalid value for decrypted user")
 			}
 		}
 
@@ -138,13 +132,4 @@ func DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
 		}
 	}
 	return &ss, nil
-}
-
-// stringDecrypt wraps a Base64Cipher to make it string => string
-func stringDecrypt(ciphertext string, c encryption.Cipher) (string, error) {
-	value, err := c.Decrypt([]byte(ciphertext))
-	if err != nil {
-		return "", err
-	}
-	return string(value), nil
 }

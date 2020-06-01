@@ -13,30 +13,11 @@ import (
 type Cipher interface {
 	Encrypt(value []byte) ([]byte, error)
 	Decrypt(ciphertext []byte) ([]byte, error)
-    EncryptInto(s *string) error
+	EncryptInto(s *string) error
 	DecryptInto(s *string) error
 }
 
-type DefaultCipher struct {}
-
-// Encrypt is a dummy method for CommonCipher.EncryptInto support
-func (c *DefaultCipher) Encrypt(value []byte) ([]byte, error) { return value, nil }
-
-// Decrypt is a dummy method for CommonCipher.DecryptInto support
-func (c *DefaultCipher) Decrypt(ciphertext []byte) ([]byte, error) { return ciphertext, nil }
-
-// EncryptInto encrypts the value and stores it back in the string pointer
-func (c *DefaultCipher) EncryptInto(s *string) error {
-	return into(c.Encrypt, s)
-}
-
-// DecryptInto decrypts the value and stores it back in the string pointer
-func (c *DefaultCipher) DecryptInto(s *string) error {
-	return into(c.Decrypt, s)
-}
-
 type Base64Cipher struct {
-	DefaultCipher
 	Cipher Cipher
 }
 
@@ -52,7 +33,7 @@ func NewBase64Cipher(initCipher func([]byte) (Cipher, error), secret []byte) (Ci
 
 // Encrypt encrypts a value with the embedded Cipher & Base64 encodes it
 func (c *Base64Cipher) Encrypt(value []byte) ([]byte, error) {
-	encrypted, err := c.Cipher.Encrypt([]byte(value))
+	encrypted, err := c.Cipher.Encrypt(value)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +51,17 @@ func (c *Base64Cipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	return c.Cipher.Decrypt(encrypted)
 }
 
+// EncryptInto encrypts the value and stores it back in the string pointer
+func (c *Base64Cipher) EncryptInto(s *string) error {
+	return into(c.Encrypt, s)
+}
+
+// DecryptInto decrypts the value and stores it back in the string pointer
+func (c *Base64Cipher) DecryptInto(s *string) error {
+	return into(c.Decrypt, s)
+}
+
 type CFBCipher struct {
-	DefaultCipher
 	cipher.Block
 }
 
@@ -111,8 +101,17 @@ func (c *CFBCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
+// EncryptInto returns an error since the encrypted data is a []byte that isn't string cast-able
+func (c *CFBCipher) EncryptInto(s *string) error {
+	return fmt.Errorf("CFBCipher is not a string->string compatible cipher")
+}
+
+// EncryptInto returns an error since the encrypted data needs to be a []byte
+func (c *CFBCipher) DecryptInto(s *string) error {
+	return fmt.Errorf("CFBCipher is not a string->string compatible cipher")
+}
+
 type GCMCipher struct {
-	DefaultCipher
 	cipher.Block
 }
 
@@ -156,6 +155,16 @@ func (c *GCMCipher) Decrypt(ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 	return plaintext, nil
+}
+
+// EncryptInto returns an error since the encrypted data is a []byte that isn't string cast-able
+func (c *GCMCipher) EncryptInto(s *string) error {
+	return fmt.Errorf("CFBCipher is not a string->string compatible cipher")
+}
+
+// EncryptInto returns an error since the encrypted data needs to be a []byte
+func (c *GCMCipher) DecryptInto(s *string) error {
+	return fmt.Errorf("CFBCipher is not a string->string compatible cipher")
 }
 
 // codecFunc is a function that takes a string and encodes/decodes it

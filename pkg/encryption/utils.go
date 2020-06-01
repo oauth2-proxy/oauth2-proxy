@@ -104,4 +104,3 @@ func checkHmac(input, expected string) bool {
 	}
 	return false
 }
-
