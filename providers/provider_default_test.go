@@ -4,11 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"github.com/coreos/go-oidc"
-	"github.com/dgrijalva/jwt-go"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/coreos/go-oidc"
+	"github.com/dgrijalva/jwt-go"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
@@ -71,7 +72,7 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	rawIDToken, _ := jwt.NewWithClaims(jwt.SigningMethodRS256, minimalIDToken).SignedString(key)
-	idToken, err := verifier.Verify(context.Background(), rawIDToken)
+	idToken, _ := verifier.Verify(context.Background(), rawIDToken)
 
 	session, err := (*ProviderData)(nil).CreateSessionStateFromBearerToken(context.Background(), rawIDToken, idToken)
 

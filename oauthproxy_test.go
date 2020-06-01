@@ -1578,7 +1578,7 @@ func TestGetJwtSession(t *testing.T) {
 	// Bearer
 	expires := time.Unix(1912151821, 0)
 	session, _ := test.proxy.GetJwtSession(test.req)
-	assert.Equal(t, session.User, "john@example.com")
+	assert.Equal(t, session.User, "1234567890")
 	assert.Equal(t, session.Email, "john@example.com")
 	assert.Equal(t, session.ExpiresOn, &expires)
 	assert.Equal(t, session.IDToken, goodJwt)
@@ -1590,12 +1590,12 @@ func TestGetJwtSession(t *testing.T) {
 
 	// Check PassAuthorization, should overwrite Basic header
 	assert.Equal(t, test.req.Header.Get("Authorization"), authHeader)
-	assert.Equal(t, test.req.Header.Get("X-Forwarded-User"), "john@example.com")
+	assert.Equal(t, test.req.Header.Get("X-Forwarded-User"), "1234567890")
 	assert.Equal(t, test.req.Header.Get("X-Forwarded-Email"), "john@example.com")
 
 	// SetAuthorization and SetXAuthRequest
 	assert.Equal(t, test.rw.Header().Get("Authorization"), authHeader)
-	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-User"), "john@example.com")
+	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-User"), "1234567890")
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
 }
 
