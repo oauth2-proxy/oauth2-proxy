@@ -22,21 +22,21 @@ type SignatureData struct {
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix        string        `flag:"proxy-prefix" cfg:"proxy_prefix"`
-	PingPath           string        `flag:"ping-path" cfg:"ping_path"`
-	ProxyWebSockets    bool          `flag:"proxy-websockets" cfg:"proxy_websockets"`
-	HTTPAddress        string        `flag:"http-address" cfg:"http_address"`
-	HTTPSAddress       string        `flag:"https-address" cfg:"https_address"`
-	ReverseProxy       bool          `flag:"reverse-proxy" cfg:"reverse_proxy"`
-	RealClientIPHeader string        `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
-	ForceHTTPS         bool          `flag:"force-https" cfg:"force_https"`
-	RawRedirectURL     string        `flag:"redirect-url" cfg:"redirect_url"`
-	ClientID           string        `flag:"client-id" cfg:"client_id"`
-	ClientSecret       string        `flag:"client-secret" cfg:"client_secret"`
-	ClientSecretFile   string        `flag:"client-secret-file" cfg:"client_secret_file"`
-	TLSCertFile        string        `flag:"tls-cert-file" cfg:"tls_cert_file"`
-	TLSKeyFile         string        `flag:"tls-key-file" cfg:"tls_key_file"`
-	ProxyTimeOut       time.Duration `flag:"upstream-request-timeout" cfg:"upstream_request_timeout"`
+	ProxyPrefix            string        `flag:"proxy-prefix" cfg:"proxy_prefix"`
+	PingPath               string        `flag:"ping-path" cfg:"ping_path"`
+	ProxyWebSockets        bool          `flag:"proxy-websockets" cfg:"proxy_websockets"`
+	HTTPAddress            string        `flag:"http-address" cfg:"http_address"`
+	HTTPSAddress           string        `flag:"https-address" cfg:"https_address"`
+	ReverseProxy           bool          `flag:"reverse-proxy" cfg:"reverse_proxy"`
+	RealClientIPHeader     string        `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
+	ForceHTTPS             bool          `flag:"force-https" cfg:"force_https"`
+	RawRedirectURL         string        `flag:"redirect-url" cfg:"redirect_url"`
+	ClientID               string        `flag:"client-id" cfg:"client_id"`
+	ClientSecret           string        `flag:"client-secret" cfg:"client_secret"`
+	ClientSecretFile       string        `flag:"client-secret-file" cfg:"client_secret_file"`
+	TLSCertFile            string        `flag:"tls-cert-file" cfg:"tls_cert_file"`
+	TLSKeyFile             string        `flag:"tls-key-file" cfg:"tls_key_file"`
+	UpstreamRequestTimeout time.Duration `flag:"upstream-request-timeout" cfg:"upstream_request_timeout"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group"`
@@ -146,16 +146,16 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClie
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:         "/oauth2",
-		ProviderType:        "google",
-		PingPath:            "/ping",
-		ProxyWebSockets:     true,
-		HTTPAddress:         "127.0.0.1:4180",
-		HTTPSAddress:        ":443",
-		ProxyTimeOut:        30 * time.Second,
-		RealClientIPHeader:  "X-Real-IP",
-		ForceHTTPS:          false,
-		DisplayHtpasswdForm: true,
+		ProxyPrefix:            "/oauth2",
+		ProviderType:           "google",
+		PingPath:               "/ping",
+		ProxyWebSockets:        true,
+		HTTPAddress:            "127.0.0.1:4180",
+		HTTPSAddress:           ":443",
+		UpstreamRequestTimeout: 30 * time.Second,
+		RealClientIPHeader:     "X-Real-IP",
+		ForceHTTPS:             false,
+		DisplayHtpasswdForm:    true,
 		Cookie: CookieOptions{
 			Name:     "_oauth2_proxy",
 			Secure:   true,

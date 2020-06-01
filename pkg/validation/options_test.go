@@ -140,12 +140,12 @@ func TestRedirectURL(t *testing.T) {
 	assert.Equal(t, expected, o.GetRedirectURL())
 }
 
-func TestProxyTimeOut(t *testing.T) {
+func TestUpstreamRequestTimeout(t *testing.T) {
 	o := testOptions()
-	o.ProxyTimeOut = 40 * time.Second
+	o.UpstreamRequestTimeout = 40 * time.Second
 	assert.Equal(t, nil, Validate(o))
 	expected := 40 * time.Second
-	assert.Equal(t, expected, o.ProxyTimeOut)
+	assert.Equal(t, expected, o.UpstreamRequestTimeout)
 }
 
 func TestProxyURLs(t *testing.T) {
