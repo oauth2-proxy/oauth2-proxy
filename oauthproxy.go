@@ -80,6 +80,8 @@ type OAuthProxy struct {
 	CookieSameSite string
 	Validator      func(string) bool
 
+	SessionCompress bool
+
 	RobotsPath        string
 	PingPath          string
 	SignInPath        string
@@ -310,6 +312,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
+		SessionCompress: opts.SessionCompress,
+
 		RobotsPath:        "/robots.txt",
 		PingPath:          opts.PingPath,
 		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
@@ -380,6 +384,8 @@ func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (s *sess
 	if err != nil {
 		return
 	}
+
+	s.Compress = p.SessionCompress
 
 	if s.Email == "" {
 		s.Email, err = p.provider.GetEmailAddress(ctx, s)

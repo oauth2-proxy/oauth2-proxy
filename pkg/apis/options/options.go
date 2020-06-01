@@ -59,8 +59,9 @@ type Options struct {
 	Banner                   string   `flag:"banner" cfg:"banner"`
 	Footer                   string   `flag:"footer" cfg:"footer"`
 
-	Cookie  CookieOptions  `cfg:",squash"`
-	Session SessionOptions `cfg:",squash"`
+	Cookie          CookieOptions  `cfg:",squash"`
+	Session         SessionOptions `cfg:",squash"`
+	SessionCompress bool           `flag:"session-compress" cfg:"session_compress"`
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
@@ -281,10 +282,11 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
-	flagSet.Bool("cookie-compress", false, "compress the cookie with gzip before store")
+
 	flagSet.String("cookie-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
 
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
+	flagSet.Bool("session-compress", false, "session compressed using gzip")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
 	flagSet.Bool("redis-use-sentinel", false, "Connect to redis via sentinels. Must set --redis-sentinel-master-name and --redis-sentinel-connection-urls to use this feature")
 	flagSet.String("redis-sentinel-master-name", "", "Redis sentinel master name. Used in conjunction with --redis-use-sentinel")
