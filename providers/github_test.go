@@ -328,7 +328,7 @@ func TestGitHubProviderGetEmailAddressWithUsername(t *testing.T) {
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGitHubProvider(bURL.Host)
-	p.SetUsers([]string{"mbland", "octcat"})
+	p.SetUsers([]string{"mbland", "octocat"})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
@@ -345,7 +345,7 @@ func TestGitHubProviderGetEmailAddressWithNotAllowedUsername(t *testing.T) {
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGitHubProvider(bURL.Host)
-	p.SetUsers([]string{"octcat"})
+	p.SetUsers([]string{"octocat"})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
