@@ -100,6 +100,7 @@
 - [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify (@yaroslavros)
 - [#497](https://github.com/oauth2-proxy/oauth2-proxy/pull/497) Restrict access using Github collaborators (@jsclayton)
 - [#414](https://github.com/oauth2-proxy/oauth2-proxy/pull/414) Always encrypt sessions regardless of config (@ti-mo)
+- [#421](https://github.com/oauth2-proxy/oauth2-proxy/pull/421) Allow logins by usernames even if they do not belong to the specified org and team or collaborators (@yyoshiki41)
 
 # v5.1.1
 

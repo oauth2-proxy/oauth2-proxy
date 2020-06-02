@@ -309,6 +309,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
 		p.SetRepo(o.GitHubRepo, o.GitHubToken)
+		p.SetUsers(o.GitHubUsers)
 	case *providers.KeycloakProvider:
 		p.SetGroup(o.KeycloakGroup)
 	case *providers.GoogleProvider:

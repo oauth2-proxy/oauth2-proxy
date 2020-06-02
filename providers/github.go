@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -23,6 +24,7 @@ type GitHubProvider struct {
 	Team  string
 	Repo  string
 	Token string
+	Users []string
 }
 
 var _ Provider = (*GitHubProvider)(nil)
@@ -78,6 +80,11 @@ func (p *GitHubProvider) SetOrgTeam(org, team string) {
 func (p *GitHubProvider) SetRepo(repo, token string) {
 	p.Repo = repo
 	p.Token = token
+}
+
+// SetUsers configures allowed usernames
+func (p *GitHubProvider) SetUsers(users []string) {
+	p.Users = users
 }
 
 func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, error) {
@@ -317,6 +324,46 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 	return repo.Permissions.Push || (repo.Private && repo.Permissions.Pull), nil
 }
 
+func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool, error) {
+	// https://developer.github.com/v3/users/#get-the-authenticated-user
+
+	var user struct {
+		Login string `json:"login"`
+		Email string `json:"email"`
+	}
+
+	endpoint := &url.URL{
+		Scheme: p.ValidateURL.Scheme,
+		Host:   p.ValidateURL.Host,
+		Path:   path.Join(p.ValidateURL.Path, "/user"),
+	}
+	req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
+	req.Header = getGitHubHeader(accessToken)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != 200 {
+		return false, fmt.Errorf("got %d from %q %s",
+			resp.StatusCode, stripToken(endpoint.String()), body)
+	}
+
+	if err := json.Unmarshal(body, &user); err != nil {
+		return false, err
+	}
+
+	if p.isVerifiedUser(user.Login) {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessToken string) (bool, error) {
 	//https://developer.github.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
 
@@ -356,20 +403,35 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 		Verified bool   `json:"verified"`
 	}
 
-	// if we require an Org or Team, check that first
-	if p.Org != "" {
-		if p.Team != "" {
-			if ok, err := p.hasOrgAndTeam(ctx, s.AccessToken); err != nil || !ok {
-				return "", err
-			}
-		} else {
-			if ok, err := p.hasOrg(ctx, s.AccessToken); err != nil || !ok {
-				return "", err
-			}
-		}
-	} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
-		if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
+	// If usernames are set, check that first
+	verifiedUser := false
+	if len(p.Users) > 0 {
+		var err error
+		verifiedUser, err = p.hasUser(ctx, s.AccessToken)
+		if err != nil {
 			return "", err
+		}
+		// org and repository options are not configured
+		if !verifiedUser && p.Org == "" && p.Repo == "" {
+			return "", errors.New("missing github user")
+		}
+	}
+	// If a user is verified by username options, skip the following restrictions
+	if !verifiedUser {
+		if p.Org != "" {
+			if p.Team != "" {
+				if ok, err := p.hasOrgAndTeam(ctx, s.AccessToken); err != nil || !ok {
+					return "", err
+				}
+			} else {
+				if ok, err := p.hasOrg(ctx, s.AccessToken); err != nil || !ok {
+					return "", err
+				}
+			}
+		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
+			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
+				return "", err
+			}
 		}
 	}
 
@@ -456,7 +518,7 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 	}
 
 	// Now that we have the username we can check collaborator status
-	if p.Org == "" && p.Repo != "" && p.Token != "" {
+	if !p.isVerifiedUser(user.Login) && p.Org == "" && p.Repo != "" && p.Token != "" {
 		if ok, err := p.isCollaborator(ctx, user.Login, p.Token); err != nil || !ok {
 			return "", err
 		}
@@ -468,4 +530,14 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 // ValidateSessionState validates the AccessToken
 func (p *GitHubProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, getGitHubHeader(s.AccessToken))
+}
+
+// isVerifiedUser
+func (p *GitHubProvider) isVerifiedUser(username string) bool {
+	for _, u := range p.Users {
+		if username == u {
+			return true
+		}
+	}
+	return false
 }

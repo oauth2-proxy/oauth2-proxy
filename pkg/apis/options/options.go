@@ -48,6 +48,7 @@ type Options struct {
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
 	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
 	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
+	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
 	GitLabGroup              string   `flag:"gitlab-group" cfg:"gitlab_group"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
@@ -228,6 +229,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("github-team", "", "restrict logins to members of this team")
 	flagSet.String("github-repo", "", "restrict logins to collaborators of this repository")
 	flagSet.String("github-token", "", "the token to use when verifying repository collaborators (must have push access to the repository)")
+	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.String("gitlab-group", "", "restrict logins to members of this group")
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
