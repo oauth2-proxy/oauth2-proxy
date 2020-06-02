@@ -94,7 +94,9 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-	params.Add("acr_values", p.AcrValues)
+	if p.AcrValues != "" {
+		params.Add("acr_values", p.AcrValues)
+	}
 	if p.Prompt != "" {
 		params.Set("prompt", p.Prompt)
 	} else { // Legacy variant of the prompt param:

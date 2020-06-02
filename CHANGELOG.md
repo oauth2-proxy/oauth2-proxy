@@ -55,6 +55,7 @@
 
 ## Changes since v5.1.1
 
+- [#598](https://github.com/oauth2-proxy/oauth2-proxy/pull/598) acr_values no longer sent to IdP when empty (@ScottGuymer)
 - [#548](https://github.com/oauth2-proxy/oauth2-proxy/pull/548) Separate logging options out of main options structure (@JoelSpeed)
 - [#536](https://github.com/oauth2-proxy/oauth2-proxy/pull/536) Improvements to Session State code (@JoelSpeed)
 - [#573](https://github.com/oauth2-proxy/oauth2-proxy/pull/573) Properly parse redis urls for cluster and sentinel connections (@amnay-mo)
