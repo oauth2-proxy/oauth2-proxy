@@ -2,8 +2,10 @@ package sessions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
@@ -106,6 +108,9 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		if ss.Email != "" {
 			decryptedEmail, errEmail := c.Decrypt(ss.Email)
 			if errEmail == nil {
+				if !utf8.ValidString(decryptedEmail) {
+					return nil, errors.New("invalid value for decrypted email")
+				}
 				ss.Email = decryptedEmail
 			}
 		}
@@ -113,6 +118,9 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 		if ss.User != "" {
 			decryptedUser, errUser := c.Decrypt(ss.User)
 			if errUser == nil {
+				if !utf8.ValidString(decryptedUser) {
+					return nil, errors.New("invalid value for decrypted user")
+				}
 				ss.User = decryptedUser
 			}
 		}
