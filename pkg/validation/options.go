@@ -24,7 +24,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // Validate checks that required options are set and validates those that they
@@ -266,7 +265,7 @@ func Validate(o *options.Options) error {
 
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
-	msgs = setupLogger(o, msgs)
+	msgs = configureLogger(o.Logging, o.PingPath, msgs)
 
 	if o.ReverseProxy {
 		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
@@ -274,6 +273,11 @@ func Validate(o *options.Options) error {
 			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
 		}
 		o.SetRealClientIPParser(parser)
+
+		// Allow the logger to get client IPs
+		logger.SetGetClientFunc(func(r *http.Request) string {
+			return ip.GetClientString(o.GetRealClientIPParser(), r, false)
+		})
 	}
 
 	if o.IPWhitelist != nil && len(o.IPWhitelist) > 0 {
@@ -311,6 +315,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
 		p.SetRepo(o.GitHubRepo, o.GitHubToken)
+		p.SetUsers(o.GitHubUsers)
 	case *providers.KeycloakProvider:
 		p.SetGroup(o.KeycloakGroup)
 	case *providers.GoogleProvider:
@@ -491,63 +496,6 @@ func validateCookieName(o *options.Options, msgs []string) []string {
 	if cookie.String() == "" {
 		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.Cookie.Name))
 	}
-	return msgs
-}
-
-func setupLogger(o *options.Options, msgs []string) []string {
-	// Setup the log file
-	if len(o.LoggingFilename) > 0 {
-		// Validate that the file/dir can be written
-		file, err := os.OpenFile(o.LoggingFilename, os.O_WRONLY|os.O_CREATE, 0666)
-		if err != nil {
-			if os.IsPermission(err) {
-				return append(msgs, "unable to write to log file: "+o.LoggingFilename)
-			}
-		}
-		file.Close()
-
-		logger.Printf("Redirecting logging to file: %s", o.LoggingFilename)
-
-		logWriter := &lumberjack.Logger{
-			Filename:   o.LoggingFilename,
-			MaxSize:    o.LoggingMaxSize, // megabytes
-			MaxAge:     o.LoggingMaxAge,  // days
-			MaxBackups: o.LoggingMaxBackups,
-			LocalTime:  o.LoggingLocalTime,
-			Compress:   o.LoggingCompress,
-		}
-
-		logger.SetOutput(logWriter)
-	}
-
-	// Supply a sanity warning to the logger if all logging is disabled
-	if !o.StandardLogging && !o.AuthLogging && !o.RequestLogging {
-		logger.Print("Warning: Logging disabled. No further logs will be shown.")
-	}
-
-	// Pass configuration values to the standard logger
-	logger.SetStandardEnabled(o.StandardLogging)
-	logger.SetAuthEnabled(o.AuthLogging)
-	logger.SetReqEnabled(o.RequestLogging)
-	logger.SetStandardTemplate(o.StandardLoggingFormat)
-	logger.SetAuthTemplate(o.AuthLoggingFormat)
-	logger.SetReqTemplate(o.RequestLoggingFormat)
-	logger.SetGetClientFunc(func(r *http.Request) string {
-		return ip.GetClientString(o.GetRealClientIPParser(), r, false)
-	})
-
-	excludePaths := make([]string, 0)
-	excludePaths = append(excludePaths, strings.Split(o.ExcludeLoggingPaths, ",")...)
-	if o.SilencePingLogging {
-		excludePaths = append(excludePaths, o.PingPath)
-	}
-
-	logger.SetExcludePaths(excludePaths)
-
-	if !o.LoggingLocalTime {
-		logger.SetFlags(logger.Flags() | logger.LUTC)
-	}
-
 	return msgs
 }
 
