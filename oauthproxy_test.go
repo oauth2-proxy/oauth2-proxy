@@ -1848,7 +1848,7 @@ func TestIPWhitelist(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := options.NewOptions()
 			opts.Upstreams = []string{"static://200"}
-			opts.IPWhitelist = tt.whitelistedIPs
+			opts.WhitelistIPs = tt.whitelistedIPs
 			opts.ReverseProxy = tt.reverseProxy
 			opts.RealClientIPHeader = tt.realClientIPHeader
 			validation.Validate(opts)

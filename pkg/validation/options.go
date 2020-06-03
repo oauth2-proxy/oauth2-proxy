@@ -280,9 +280,9 @@ func Validate(o *options.Options) error {
 		})
 	}
 
-	if o.IPWhitelist != nil && len(o.IPWhitelist) > 0 {
-		parsedIPNets := parseIPWhitelist(o.IPWhitelist, &msgs)
-		o.SetIPWhitelist(append(o.GetIPWhitelist(), parsedIPNets...))
+	if o.WhitelistIPs != nil && len(o.WhitelistIPs) > 0 {
+		parsedIPNets := parseWhitelistIPs(o.WhitelistIPs, &msgs)
+		o.SetWhitelistIPNets(append(o.GetWhitelistIPNets(), parsedIPNets...))
 	}
 
 	if len(msgs) != 0 {
@@ -433,7 +433,7 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 	return parsedIssuers, msgs
 }
 
-func parseIPWhitelist(ipWhitelistStrs []string, msgs *[]string) []*net.IPNet {
+func parseWhitelistIPs(ipWhitelistStrs []string, msgs *[]string) []*net.IPNet {
 	parsedIPNets := make([]*net.IPNet, 0, len(ipWhitelistStrs))
 
 	for _, ipStr := range ipWhitelistStrs {

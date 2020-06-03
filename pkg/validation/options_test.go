@@ -373,7 +373,7 @@ func TestIPCIDRSetOption(t *testing.T) {
 	var err error
 
 	o = testOptions()
-	o.IPWhitelist = []string{
+	o.WhitelistIPs = []string{
 		"127.0.0.1",
 		"10.32.0.1/32",
 		"43.36.201.0/24",
@@ -384,33 +384,33 @@ func TestIPCIDRSetOption(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t,
 		net.IPNet{IP: net.IP{127, 0, 0, 1}, Mask: net.IPMask{255, 255, 255, 255}},
-		*o.GetIPWhitelist()[0],
+		*o.GetWhitelistIPNets()[0],
 	)
 	assert.Equal(t,
 		net.IPNet{IP: net.IP{10, 32, 0, 1}, Mask: net.IPMask{255, 255, 255, 255}},
-		*o.GetIPWhitelist()[1],
+		*o.GetWhitelistIPNets()[1],
 	)
 	assert.Equal(t,
 		net.IPNet{IP: net.IP{43, 36, 201, 0}, Mask: net.IPMask{255, 255, 255, 0}},
-		*o.GetIPWhitelist()[2],
+		*o.GetWhitelistIPNets()[2],
 	)
 	assert.Equal(t,
 		net.IPNet{
 			IP:   net.IP{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
 			Mask: net.IPMask{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
-		*o.GetIPWhitelist()[3],
+		*o.GetWhitelistIPNets()[3],
 	)
 	assert.Equal(t,
 		net.IPNet{
 			IP:   net.IP{0x2a, 0x12, 0x1, 0x5, 0xe, 0xe7, 0x92, 0x34, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 			Mask: net.IPMask{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 		},
-		*o.GetIPWhitelist()[4],
+		*o.GetWhitelistIPNets()[4],
 	)
 
 	o = testOptions()
-	o.IPWhitelist = []string{
+	o.WhitelistIPs = []string{
 		"135.180.78.199",
 		"135.180.78.199/32",
 		"d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4",
@@ -418,11 +418,11 @@ func TestIPCIDRSetOption(t *testing.T) {
 	}
 	err = Validate(o)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, o.GetIPWhitelist()[0], o.GetIPWhitelist()[1])
-	assert.Equal(t, o.GetIPWhitelist()[2], o.GetIPWhitelist()[3])
+	assert.Equal(t, o.GetWhitelistIPNets()[0], o.GetWhitelistIPNets()[1])
+	assert.Equal(t, o.GetWhitelistIPNets()[2], o.GetWhitelistIPNets()[3])
 
 	o = testOptions()
-	o.IPWhitelist = []string{"[::1]", "alkwlkbn/32"}
+	o.WhitelistIPs = []string{"[::1]", "alkwlkbn/32"}
 	err = Validate(o)
 	assert.Equal(t,
 		"invalid configuration:\n"+
