@@ -217,7 +217,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
 	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
-	flagSet.Duration("upstream-request-timeout", time.Duration(30)*time.Second, "timeout for requests to upstream servers, if response is not returned within timeout, request is cancelled")
+	flagSet.Duration("upstream-request-timeout", time.Duration(30)*time.Second, "timeout for requests to upstream servers, if a response is not returned within the timeout, the request is cancelled")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 
