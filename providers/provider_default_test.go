@@ -70,17 +70,21 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 		&oidc.Config{ClientID: "asdf1234"},
 	)
 
-	key, _ := rsa.GenerateKey(rand.Reader, 2048)
-	rawIDToken, _ := jwt.NewWithClaims(jwt.SigningMethodRS256, minimalIDToken).SignedString(key)
-	idToken, _ := verifier.Verify(context.Background(), rawIDToken)
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	assert.NoError(t, err)
+	rawIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, minimalIDToken).SignedString(key)
+	assert.NoError(t, err)
+	// Pass to a dummy Verifier to get an oidc.IDToken from the rawIDToken for our actual test below
+	idToken, err := verifier.Verify(context.Background(), rawIDToken)
+	assert.NoError(t, err)
 
 	session, err := (*ProviderData)(nil).CreateSessionStateFromBearerToken(context.Background(), rawIDToken, idToken)
+	assert.NoError(t, err)
 
-	assert.Equal(t, nil, err)
 	assert.Equal(t, rawIDToken, session.AccessToken)
 	assert.Equal(t, rawIDToken, session.IDToken)
-	assert.Equal(t, "", session.RefreshToken)
 	assert.Equal(t, "123456789", session.Email)
 	assert.Equal(t, "123456789", session.User)
-	assert.Equal(t, "", session.PreferredUsername)
+	assert.Empty(t, session.RefreshToken)
+	assert.Empty(t, session.PreferredUsername)
 }
