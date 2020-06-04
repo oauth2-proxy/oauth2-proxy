@@ -199,7 +199,7 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToke
 
 	claims, err := p.findClaimsFromIDToken(ctx, idToken, accessToken, p.ProfileURL.String())
 	if err != nil {
-		return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
+		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
 	}
 
 	newSession.IDToken = rawIDToken
@@ -243,20 +243,19 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	}
 
 	userID := claims.rawClaims[p.UserIDClaim]
-	if userID == nil {
-		return nil, fmt.Errorf("claims did not contains the required user-id-claim '%s'", p.UserIDClaim)
+	if userID != nil {
+		claims.UserID = fmt.Sprint(userID)
 	}
-	claims.UserID = fmt.Sprint(userID)
 
-	if p.UserIDClaim == emailClaim && claims.UserID == "" {
+	// userID claim was not present or was empty in the ID Token
+	if claims.UserID == "" {
 		if profileURL == "" {
-			return nil, fmt.Errorf("id_token did not contain an email")
+			return nil, fmt.Errorf("id_token did not contain user ID claim (%q)", p.UserIDClaim)
 		}
 
 		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
 		// contents at the profileURL contains the email.
 		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
-
 		req, err := http.NewRequestWithContext(ctx, "GET", profileURL, nil)
 		if err != nil {
 			return nil, err
@@ -268,12 +267,12 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 			return nil, err
 		}
 
-		email, err := respJSON.Get("email").String()
+		userID, err := respJSON.Get(p.UserIDClaim).String()
 		if err != nil {
-			return nil, fmt.Errorf("neither id_token nor userinfo endpoint contained an email")
+			return nil, fmt.Errorf("neither id_token nor userinfo endpoint contained user ID claim (%q)", p.UserIDClaim)
 		}
 
-		claims.UserID = email
+		claims.UserID = userID
 	}
 
 	return claims, nil
