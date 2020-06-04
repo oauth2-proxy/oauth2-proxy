@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"net/url"
 	"testing"
 	"time"
 
@@ -18,4 +19,31 @@ func TestRefresh(t *testing.T) {
 	})
 	assert.Equal(t, false, refreshed)
 	assert.Equal(t, nil, err)
+}
+
+func TestAcrValuesNotConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "")
+	assert.NotContains(t, result, "acr_values")
+}
+
+func TestAcrValuesConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+		AcrValues: "testValue",
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "")
+	assert.Contains(t, result, "acr_values=testValue")
 }

@@ -56,6 +56,7 @@
 ## Changes since v5.1.1
 
 - [#560](https://github.com/oauth2-proxy/oauth2-proxy/pull/560) Fallback to UserInfo is User ID claim not present (@JoelSpeed)
+- [#598](https://github.com/oauth2-proxy/oauth2-proxy/pull/598) acr_values no longer sent to IdP when empty (@ScottGuymer)
 - [#548](https://github.com/oauth2-proxy/oauth2-proxy/pull/548) Separate logging options out of main options structure (@JoelSpeed)
 - [#536](https://github.com/oauth2-proxy/oauth2-proxy/pull/536) Improvements to Session State code (@JoelSpeed)
 - [#573](https://github.com/oauth2-proxy/oauth2-proxy/pull/573) Properly parse redis urls for cluster and sentinel connections (@amnay-mo)
@@ -100,6 +101,7 @@
 - [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify (@yaroslavros)
 - [#497](https://github.com/oauth2-proxy/oauth2-proxy/pull/497) Restrict access using Github collaborators (@jsclayton)
 - [#414](https://github.com/oauth2-proxy/oauth2-proxy/pull/414) Always encrypt sessions regardless of config (@ti-mo)
+- [#421](https://github.com/oauth2-proxy/oauth2-proxy/pull/421) Allow logins by usernames even if they do not belong to the specified org and team or collaborators (@yyoshiki41)
 
 # v5.1.1
 
