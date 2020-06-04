@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	mathrand "math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -116,80 +115,6 @@ func runEncryptAndDecrypt(t *testing.T, c Cipher, dataSize int) {
 	assert.Equal(t, encrypted, immutableEnc)
 	// Encrypt/Decrypt actually did something
 	assert.NotEqual(t, encrypted, decrypted)
-}
-
-func TestEncryptIntoAndDecryptInto(t *testing.T) {
-	// Test our 2 cipher types
-	cipherInits := map[string]func([]byte) (Cipher, error){
-		"CFB": NewCFBCipher,
-		"GCM": NewGCMCipher,
-	}
-	for name, initCipher := range cipherInits {
-		t.Run(name, func(t *testing.T) {
-			// Test all 3 valid AES sizes
-			for _, secretSize := range []int{16, 24, 32} {
-				t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
-					secret := make([]byte, secretSize)
-					_, err := io.ReadFull(rand.Reader, secret)
-					assert.Equal(t, nil, err)
-
-					// Test Standard & Base64 wrapped
-					cstd, err := initCipher(secret)
-					assert.Equal(t, nil, err)
-
-					cb64, err := NewBase64Cipher(initCipher, secret)
-					assert.Equal(t, nil, err)
-
-					ciphers := map[string]Cipher{
-						"Standard": cstd,
-						"Base64":   cb64,
-					}
-
-					for cName, c := range ciphers {
-						// Check no errors with empty or nil strings
-						if cName == "Base64" {
-							empty := ""
-							assert.Equal(t, nil, c.EncryptInto(&empty))
-							assert.Equal(t, nil, c.DecryptInto(&empty))
-							assert.Equal(t, nil, c.EncryptInto(nil))
-							assert.Equal(t, nil, c.DecryptInto(nil))
-						}
-
-						t.Run(cName, func(t *testing.T) {
-							// Test various sizes sessions might be
-							for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-								t.Run(fmt.Sprintf("%d", dataSize), func(t *testing.T) {
-									runEncryptIntoAndDecryptInto(t, c, cName, dataSize)
-								})
-							}
-						})
-					}
-				})
-			}
-		})
-	}
-}
-
-func runEncryptIntoAndDecryptInto(t *testing.T, c Cipher, cipherType string, dataSize int) {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, dataSize)
-	for i := range b {
-		b[i] = charset[mathrand.Intn(len(charset))]
-	}
-	data := string(b)
-	originalData := data
-
-	// Base64 is the only cipher that supports string->string Encrypt/Decrypt Into methods
-	if cipherType == "Base64" {
-		assert.Equal(t, nil, c.EncryptInto(&data))
-		assert.NotEqual(t, originalData, data)
-
-		assert.Equal(t, nil, c.DecryptInto(&data))
-		assert.Equal(t, originalData, data)
-	} else {
-		assert.NotEqual(t, nil, c.EncryptInto(&data))
-		assert.NotEqual(t, nil, c.DecryptInto(&data))
-	}
 }
 
 func TestDecryptCFBWrongSecret(t *testing.T) {
