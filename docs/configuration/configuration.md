@@ -88,7 +88,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--proxy-prefix` | string | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`) | `"/oauth2"` |
-| `--upstream-request-timeout` | duration | timeout for upstream proxy | `"30s"` |
+| `--upstream-request-timeout` | duration | timeout for requests to upstream servers, if a response is not returned within the timeout, the request is cancelled | `"30s"` |
 | `--proxy-websockets` | bool | enables WebSocket proxying | true |
 | `--pubjwk-url` | string | JWK pubkey access endpoint: required by login.gov | |
 | `--real-client-ip-header` | string | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP) | X-Real-IP |
