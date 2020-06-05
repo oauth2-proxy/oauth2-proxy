@@ -118,6 +118,8 @@ type OAuthProxy struct {
 	realClientIPParser   ipapi.RealClientIPParser
 	Banner               string
 	Footer               string
+
+	CallbackErrorRedirects []options.CallbackErrorRedirect
 }
 
 // UpstreamProxy represents an upstream server to proxy to
@@ -345,6 +347,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		templates:            loadTemplates(opts.CustomTemplatesDir),
 		Banner:               opts.Banner,
 		Footer:               opts.Footer,
+
+		CallbackErrorRedirects: options.LoadCERs(opts.CallbackErrorRedirects),
 	}
 }
 
@@ -793,6 +797,22 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 	errorString := req.Form.Get("error")
 	if errorString != "" {
+		errorDescription := req.Form.Get("error_description")
+
+		if p.CallbackErrorRedirects != nil && len(p.CallbackErrorRedirects) > 0 {
+			for _, ceb := range p.CallbackErrorRedirects {
+				if errorString == ceb.ErrorString {
+					pat := ceb.Pattern
+					m, _ := regexp.MatchString(pat, errorDescription)
+					if m {
+						logger.Printf("Redirecting for error %s with pattern %s", errorString, pat)
+						http.Redirect(rw, req, ceb.RedirectUrl, http.StatusFound)
+						return
+					}
+				}
+			}
+		}
+
 		logger.Printf("Error while parsing OAuth2 callback: %s ", errorString)
 		p.ErrorPage(rw, 403, "Permission Denied", errorString)
 		return

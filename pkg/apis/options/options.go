@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
@@ -17,6 +18,13 @@ import (
 type SignatureData struct {
 	Hash crypto.Hash
 	Key  string
+}
+
+// CallbackErrorRedirect - Allow automated redirection to occur within the AuthCallback when an error occurs
+type CallbackErrorRedirect struct {
+	ErrorString string
+	Pattern     string
+	RedirectUrl string
 }
 
 // Options holds Configuration Options that can be set by Command Line Flag,
@@ -109,16 +117,19 @@ type Options struct {
 	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
+	CallbackErrorRedirects []string `flag:"callback-error-redirect" cfg:"callback-error-redirect"`
+
 	// internal values that are set after config validation
-	redirectURL        *url.URL
-	proxyURLs          []*url.URL
-	compiledRegex      []*regexp.Regexp
-	provider           providers.Provider
-	sessionStore       sessionsapi.SessionStore
-	signatureData      *SignatureData
-	oidcVerifier       *oidc.IDTokenVerifier
-	jwtBearerVerifiers []*oidc.IDTokenVerifier
-	realClientIPParser ipapi.RealClientIPParser
+	redirectURL            *url.URL
+	proxyURLs              []*url.URL
+	compiledRegex          []*regexp.Regexp
+	provider               providers.Provider
+	sessionStore           sessionsapi.SessionStore
+	signatureData          *SignatureData
+	oidcVerifier           *oidc.IDTokenVerifier
+	jwtBearerVerifiers     []*oidc.IDTokenVerifier
+	realClientIPParser     ipapi.RealClientIPParser
+	callbackErrorRedirects []CallbackErrorRedirect
 }
 
 // Options for Getting internal values
@@ -184,7 +195,31 @@ func NewOptions() *Options {
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
 		Logging:                          loggingDefaults(),
+
+		CallbackErrorRedirects: nil,
 	}
+}
+
+//LoadCERs - Convert the string versions of callback-error-redirect into structures
+func LoadCERs(CallbackErrorRedirects []string) []CallbackErrorRedirect {
+
+	spc := regexp.MustCompile(`\s+`)
+	cers := make([]CallbackErrorRedirect, len(CallbackErrorRedirects))
+	count := 0
+
+	for _, cer := range CallbackErrorRedirects {
+		bits := spc.Split(strings.TrimSpace(cer), 3)
+		if len(bits) == 3 {
+			cers[count] = CallbackErrorRedirect{
+				ErrorString: bits[0],
+				Pattern:     bits[1],
+				RedirectUrl: bits[2],
+			}
+			count++
+		}
+	}
+
+	return cers[0:count]
 }
 
 // NewFlagSet creates a new FlagSet with all of the flags required by Options
@@ -291,6 +326,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
 	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
+
+	flagSet.StringSlice("callback-error-redirect", []string{}, "the error string, regex to match text in error_description and a url to redirect to.")
 
 	flagSet.AddFlagSet(loggingFlagSet())
 
