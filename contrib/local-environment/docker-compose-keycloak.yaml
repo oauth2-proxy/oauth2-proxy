@@ -1,0 +1,92 @@
+# This docker-compose file can be used to bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features.
+# Alongside OAuth2-Proxy, this file also starts Keycloak to act as the identity provider,
+# HTTPBin as an example upstream.
+#
+# This can either be created using docker-compose
+#    docker-compose -f docker-compose-keycloak.yaml <command>
+# Or:
+#    make keycloak-<command> (eg. make keycloak-up, make keycloak-down)
+#
+# Access http://oauth2-proxy.localtest.me to initiate a login cycle using user=admin@example.com, password=password
+version: '3.0'
+services:
+
+  oauth2-proxy:
+    container_name: oauth2-proxy
+    image: quay.io/oauth2-proxy/oauth2-proxy:v5.1.1
+    command: --config /oauth2-proxy.cfg
+    environment:
+      VIRTUAL_HOST: oauth2-proxy.localtest.me
+      VIRTUAL_PORT: 4180
+    ports:
+      - 4180:4180/tcp
+    hostname: oauth2-proxy
+    volumes:
+      - "./oauth2-proxy-keycloak.cfg:/oauth2-proxy.cfg"
+    restart: unless-stopped
+    networks:
+      keycloak-80: {}
+      httpbin: {}
+      oauth2-proxy: {}
+    depends_on:
+      - httpbin
+      - keycloak-80
+
+  httpbin:
+    container_name: httpbin
+    image: kennethreitz/httpbin:latest
+    hostname: httpbin
+    networks:
+      httpbin: {}
+
+  keycloak:
+    container_name: keycloak
+    image: jboss/keycloak:10.0.0
+    hostname: keycloak
+    volumes:
+      - ./keycloak:/opt/jboss/keycloak/realm-config
+    environment:
+      VIRTUAL_HOST: keycloak.localtest.me
+      VIRTUAL_PORT: 8080
+      KEYCLOAK_USER: admin@example.com
+      KEYCLOAK_PASSWORD: password
+    ports:
+      - "8080:8080"
+    networks:
+      keycloak: {}
+  # ===========================================================================
+  # the easiest way to expose keycloak to oauth2-proxy container on port 80
+  # ===========================================================================
+  keycloak-80:
+    container_name: keycloak-80
+    image: alpine/socat:1.7.3.4-r0
+    hostname: keycloak-80
+    command: ["tcp-listen:80,fork,reuseaddr","tcp-connect:keycloak:8080"]
+    depends_on:
+      - keycloak
+    networks:
+      keycloak: {}
+      keycloak-80:
+        aliases:
+          - keycloak.localtest.me
+  # ===========================================================================
+  # nginx-proxy handles routing of requests to the keycloak and oauth2-proxy
+  # containers.  See its docs for more info:
+  # https://github.com/jwilder/nginx-proxy
+  # ===========================================================================
+  nginx-proxy:
+    image: jwilder/nginx-proxy:latest
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      keycloak: {}
+      oauth2-proxy: {}
+
+networks:
+  httpbin: {}
+  keycloak: {}
+  keycloak-80: {}
+  oauth2-proxy: {}
