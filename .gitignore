@@ -7,7 +7,7 @@ release
 .env
 .bundle
 c.out
-
+.DS_Store
 # Go.gitignore
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o

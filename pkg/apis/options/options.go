@@ -101,6 +101,7 @@ type Options struct {
 	Prompt                             string `flag:"prompt" cfg:"prompt"`
 	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
 	UserIDClaim                        string `flag:"user-id-claim" cfg:"user_id_claim"`
+	UseOIDCImplicitFlow bool   `flag:"use-oidc-implicit-flow" cfg:"use_oidc_implicit_flow" env:"Use_OIDC_Implicit_Flow"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	AcrValues       string `flag:"acr-values" cfg:"acr_values"`
@@ -184,6 +185,7 @@ func NewOptions() *Options {
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
 		Logging:                          loggingDefaults(),
+		UseOIDCImplicitFlow:              false,
 	}
 }
 
@@ -291,6 +293,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
 	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
+	flagSet.Bool("use-oidc-implicit-flow", false, "By default,OIDC provider is using standard flow, when turn on this flag, oidc will use implicit flow")
 
 	flagSet.AddFlagSet(loggingFlagSet())
 

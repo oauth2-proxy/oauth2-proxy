@@ -295,6 +295,8 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		Prompt:           o.Prompt,
 		ApprovalPrompt:   o.ApprovalPrompt,
 		AcrValues:        o.AcrValues,
+		UseOIDCImplicitFlow: o.UseOIDCImplicitFlow,
+		OIDCIssuerURL:      o.OIDCIssuerURL,
 	}
 	p.LoginURL, msgs = parseURL(o.LoginURL, "login", msgs)
 	p.RedeemURL, msgs = parseURL(o.RedeemURL, "redeem", msgs)
@@ -327,6 +329,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.OIDCProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.UserIDClaim = o.UserIDClaim
+		p.UseImplicitFlow = o.UseOIDCImplicitFlow
 		if o.GetOIDCVerifier() == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {

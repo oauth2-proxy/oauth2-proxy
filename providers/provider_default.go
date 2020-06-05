@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc"
@@ -104,8 +105,16 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	}
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
-	params.Set("response_type", "code")
 	params.Add("state", state)
+	if p.UseOIDCImplicitFlow{
+		params.Set("response_type", "token id_token")
+		s := strings.SplitN(state, ":", 2)
+		nonce := s[0]
+		params.Add("nonce", nonce)
+		params.Add("response_mode","form_post")
+	}else{
+		params.Set("response_type", "code")
+	}
 	a.RawQuery = params.Encode()
 	return a.String()
 }

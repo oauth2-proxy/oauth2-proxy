@@ -118,6 +118,7 @@ type OAuthProxy struct {
 	realClientIPParser   ipapi.RealClientIPParser
 	Banner               string
 	Footer               string
+	UseOIDCImplicitFlow  bool
 }
 
 // UpstreamProxy represents an upstream server to proxy to
@@ -345,6 +346,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		templates:            loadTemplates(opts.CustomTemplatesDir),
 		Banner:               opts.Banner,
 		Footer:               opts.Footer,
+		UseOIDCImplicitFlow:  opts.UseOIDCImplicitFlow,
 	}
 }
 
@@ -798,11 +800,25 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, err := p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
-	if err != nil {
-		logger.Printf("Error redeeming code during OAuth2 callback: %s ", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
-		return
+	var session *sessionsapi.SessionState
+	if p.UseOIDCImplicitFlow{
+		at := req.Form.Get("access_token")
+		it := req.Form.Get("id_token")
+
+
+		session, err = p.redeemCode(req.Context(), req.Host, at+","+it)
+		if err != nil {
+			logger.Printf("Error redeeming token during OAuth2 callback: %s ", err.Error())
+			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+			return
+		}
+	}else{
+		session, err = p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
+		if err != nil {
+			logger.Printf("Error redeeming code during OAuth2 callback: %s ", err.Error())
+			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+			return
+		}
 	}
 
 	s := strings.SplitN(req.Form.Get("state"), ":", 2)
