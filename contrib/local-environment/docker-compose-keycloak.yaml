@@ -18,9 +18,8 @@ services:
     command: --config /oauth2-proxy.cfg
     environment:
       VIRTUAL_HOST: oauth2-proxy.localtest.me
-      VIRTUAL_PORT: 4180
-    ports:
-      - 4180:4180/tcp
+    expose:
+      - 4180
     hostname: oauth2-proxy
     volumes:
       - "./oauth2-proxy-keycloak.cfg:/oauth2-proxy.cfg"
@@ -47,12 +46,8 @@ services:
     volumes:
       - ./keycloak:/opt/jboss/keycloak/realm-config
     environment:
-      VIRTUAL_HOST: keycloak.localtest.me
-      VIRTUAL_PORT: 8080
       KEYCLOAK_USER: admin@example.com
       KEYCLOAK_PASSWORD: password
-    ports:
-      - "8080:8080"
     networks:
       keycloak: {}
   # ===========================================================================
@@ -63,6 +58,10 @@ services:
     image: alpine/socat:1.7.3.4-r0
     hostname: keycloak-80
     command: ["tcp-listen:80,fork,reuseaddr","tcp-connect:keycloak:8080"]
+    environment:
+      VIRTUAL_HOST: keycloak.localtest.me
+    expose:
+      - 80
     depends_on:
       - keycloak
     networks:
@@ -82,7 +81,7 @@ services:
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
     networks:
-      keycloak: {}
+      keycloak-80: {}
       oauth2-proxy: {}
 
 networks:
