@@ -783,6 +783,22 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonce, redirect)), http.StatusFound)
 }
 
+func (p *OAuthProxy) findCallbackErrorRedirect(errorString string, errorDescription string) *options.CallbackErrorRedirect {
+	if p.CallbackErrorRedirects != nil && len(p.CallbackErrorRedirects) > 0 {
+		for _, ceb := range p.CallbackErrorRedirects {
+			if errorString == ceb.ErrorString {
+				pat := ceb.Pattern
+				m, _ := regexp.MatchString(pat, errorDescription)
+				if m {
+					logger.Printf("Can redirect for error %s with pattern %s", errorString, pat)
+					return &ceb
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
@@ -799,18 +815,12 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if errorString != "" {
 		errorDescription := req.Form.Get("error_description")
 
-		if p.CallbackErrorRedirects != nil && len(p.CallbackErrorRedirects) > 0 {
-			for _, ceb := range p.CallbackErrorRedirects {
-				if errorString == ceb.ErrorString {
-					pat := ceb.Pattern
-					m, _ := regexp.MatchString(pat, errorDescription)
-					if m {
-						logger.Printf("Redirecting for error %s with pattern %s", errorString, pat)
-						http.Redirect(rw, req, ceb.RedirectUrl, http.StatusFound)
-						return
-					}
-				}
-			}
+		ceb := p.findCallbackErrorRedirect(errorString, errorDescription)
+
+		if ceb != nil {
+			logger.Printf("Configured redirect to %s", ceb.RedirectUrl)
+			http.Redirect(rw, req, ceb.RedirectUrl, http.StatusFound)
+			return
 		}
 
 		logger.Printf("Error while parsing OAuth2 callback: %s ", errorString)
