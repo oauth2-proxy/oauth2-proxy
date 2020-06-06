@@ -8,7 +8,8 @@
 # Or:
 #    make keycloak-<command> (eg. make keycloak-up, make keycloak-down)
 #
-# Access http://oauth2-proxy.localtest.me to initiate a login cycle using user=admin@example.com, password=password
+# Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle using user=admin@example.com, password=password
+# Access http://keycloak.localtest.me:8080 with the same credential to check out the settings
 version: '3.0'
 services:
 
@@ -16,21 +17,19 @@ services:
     container_name: oauth2-proxy
     image: quay.io/oauth2-proxy/oauth2-proxy:v5.1.1
     command: --config /oauth2-proxy.cfg
-    environment:
-      VIRTUAL_HOST: oauth2-proxy.localtest.me
-    expose:
-      - 4180
     hostname: oauth2-proxy
     volumes:
       - "./oauth2-proxy-keycloak.cfg:/oauth2-proxy.cfg"
     restart: unless-stopped
     networks:
-      keycloak-80: {}
+      keycloak: {}
       httpbin: {}
       oauth2-proxy: {}
     depends_on:
       - httpbin
-      - keycloak-80
+      - keycloak
+    ports:
+      - 4180:4180/tcp
 
   httpbin:
     container_name: httpbin
@@ -49,43 +48,13 @@ services:
       KEYCLOAK_USER: admin@example.com
       KEYCLOAK_PASSWORD: password
     networks:
-      keycloak: {}
-  # ===========================================================================
-  # the easiest way to expose keycloak to oauth2-proxy container on port 80
-  # ===========================================================================
-  keycloak-80:
-    container_name: keycloak-80
-    image: alpine/socat:1.7.3.4-r0
-    hostname: keycloak-80
-    command: ["tcp-listen:80,fork,reuseaddr","tcp-connect:keycloak:8080"]
-    environment:
-      VIRTUAL_HOST: keycloak.localtest.me
-    expose:
-      - 80
-    depends_on:
-      - keycloak
-    networks:
-      keycloak: {}
-      keycloak-80:
+      keycloak:
         aliases:
           - keycloak.localtest.me
-  # ===========================================================================
-  # nginx-proxy handles routing of requests to the keycloak and oauth2-proxy
-  # containers.  See its docs for more info:
-  # https://github.com/jwilder/nginx-proxy
-  # ===========================================================================
-  nginx-proxy:
-    image: jwilder/nginx-proxy:latest
     ports:
-      - "80:80"
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-    networks:
-      keycloak-80: {}
-      oauth2-proxy: {}
+      - 8080:8080/tcp
 
 networks:
   httpbin: {}
   keycloak: {}
-  keycloak-80: {}
   oauth2-proxy: {}
