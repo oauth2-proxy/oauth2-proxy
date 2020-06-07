@@ -16,9 +16,6 @@ nginx-%:
 
 .PHONY: keycloak-up
 keycloak-up:
-	docker-compose -f docker-compose-keycloak.yaml up -d keycloak
-	keycloak/wait-for-keycloak.sh echo Keycloak is up
-	keycloak/init-keycloak.sh
 	docker-compose -f docker-compose-keycloak.yaml up -d
 
 .PHONY: keycloak-%

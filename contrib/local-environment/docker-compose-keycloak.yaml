@@ -9,7 +9,7 @@
 #    make keycloak-<command> (eg. make keycloak-up, make keycloak-down)
 #
 # Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle using user=admin@example.com, password=password
-# Access http://keycloak.localtest.me:8080 with the same credential to check out the settings
+# Access http://keycloak.localtest.me:9080 with the same credentials to check out the settings
 version: '3.0'
 services:
 
@@ -42,8 +42,18 @@ services:
     container_name: keycloak
     image: jboss/keycloak:10.0.0
     hostname: keycloak
+    command:
+      [
+        '-b',
+        '0.0.0.0',
+        '-Djboss.socket.binding.port-offset=1000',
+        '-Dkeycloak.migration.action=import',
+        '-Dkeycloak.migration.provider=dir',
+        '-Dkeycloak.migration.dir=/realm-config',
+        '-Dkeycloak.migration.strategy=IGNORE_EXISTING',
+      ]
     volumes:
-      - ./keycloak:/opt/jboss/keycloak/realm-config
+      - ./keycloak:/realm-config
     environment:
       KEYCLOAK_USER: admin@example.com
       KEYCLOAK_PASSWORD: password
@@ -52,7 +62,7 @@ services:
         aliases:
           - keycloak.localtest.me
     ports:
-      - 8080:8080/tcp
+      - 9080:9080/tcp
 
 networks:
   httpbin: {}
