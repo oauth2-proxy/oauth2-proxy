@@ -1,0 +1,41 @@
+graph TD
+    req(Request Initiated)
+    resp(Response closed)
+
+    subgraph RedirectToHTTPS
+        isRDHTTPs{Is redirect to HTTPs Enabled?}
+        requestNeedsRedirect{Request is HTTP or X-Forwarded-Proto not HTTPS}
+        redirectToHTTPS(Send redirect to HTTPs)
+        rdHTTPSNext(Send to next server)
+    end
+
+    isGCPHealthCheck{Is GCP HealthCheck enabled?}
+
+    subgraph GCPHealthCheck
+        livenessCheck{Request path is /liveness_check}
+        readinessCheck{Request path is /readiness_check}
+        gcpUserAgent{Path is / and user agent is 'GoogleHC/1.0'}
+        gcpOk(Send OK response)
+        gcpNext(Send to next server)
+    end
+
+    req --> isRDHTTPs
+
+    %% RedirectToHTTPS
+    isRDHTTPs -- yes --> requestNeedsRedirect
+    isRDHTTPs -- no --> rdHTTPSNext
+    requestNeedsRedirect -- yes --> redirectToHTTPS
+    requestNeedsRedirect -- no --> rdHTTPSNext
+    redirectToHTTPS --> resp
+
+    rdHTTPSNext --> isGCPHealthCheck
+
+    %% GCPHealthCheck
+    livenessCheck -- yes --> gcpOk
+    livenessCheck -- no --> readinessCheck
+    readinessCheck -- yes --> gcpOk
+    readinessCheck -- no --> gcpUserAgent
+    gcpUserAgent -- yes --> gcpOk
+    gcpUserAgent -- no --> gcpNext
+    gcpOk --> resp
+    isGCPHealthCheck -- yes --> livenessCheck
