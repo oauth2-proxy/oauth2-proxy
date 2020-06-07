@@ -1,0 +1,39 @@
+@startuml Request Flow
+
+start
+:User makes request;
+  'Redirect To HTTPS middleware, always installed'
+  partition RedirectToHTTPS {
+    if (Redirect To HTTPS Enabled) then (yes)
+      if (request is HTTP or X-Forwarded-Proto not HTTPS) then (yes)
+        :Return redirect to HTTPS;
+        stop
+        else (no)
+      endif
+      else (no)
+    endif
+    :Pass to next server;
+  }
+
+
+  if (GCP HealthCheck Enabled) then (yes)
+    'GCP HealthCheck middleware, optionally installed'
+    partition GCPHealthCheck {
+      if (Request path is /liveness_check) then (yes)
+        :Return OK;
+      stop
+      else if (Request path is /readiness_check) then (yes)
+        :Return OK;
+      stop
+      else if (Path is / and user agent is "GoogleHC/1.0") then (yes)
+        :Return OK;
+        stop
+      else (no)
+      endif
+    }
+  else (no)
+  endif
+
+stop
+
+@enduml
