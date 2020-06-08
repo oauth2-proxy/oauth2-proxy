@@ -127,7 +127,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
 | `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`) | |
-| `--whitelist-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will white-list the IP stored in a HTTP header by a reverse proxy rather than the layer-3/4 remote address. | |
+| `--whitelist-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will white-list the IP stored in a HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: IP whitelisting has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
 
 Note: when using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
