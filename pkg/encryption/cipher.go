@@ -17,6 +17,24 @@ import (
 	"time"
 )
 
+// SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
+func SecretBytes(secret string) []byte {
+	b, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(secret, "="))
+	if err == nil {
+		// Only return decoded form if a valid AES length
+		// Don't want unintentional decoding resulting in invalid lengths confusing a user
+		// that thought they used a 16, 24, 32 length string
+		for _, i := range []int{16, 24, 32} {
+			if len(b) == i {
+				return b
+			}
+		}
+	}
+	// If decoding didn't work or resulted in non-AES compliant length,
+	// assume the raw string was the intended secret
+	return []byte(secret)
+}
+
 // cookies are stored in a 3 part (value + timestamp + signature) to enforce that the values are as originally set.
 // additionally, the 'value' is encrypted so it's opaque to the browser
 
@@ -137,4 +155,31 @@ func (c *Cipher) Decrypt(s string) (string, error) {
 	stream.XORKeyStream(encrypted, encrypted)
 
 	return string(encrypted), nil
+}
+
+// EncryptInto encrypts the value and stores it back in the string pointer
+func (c *Cipher) EncryptInto(s *string) error {
+	return into(c.Encrypt, s)
+}
+
+// DecryptInto decrypts the value and stores it back in the string pointer
+func (c *Cipher) DecryptInto(s *string) error {
+	return into(c.Decrypt, s)
+}
+
+// codecFunc is a function that takes a string and encodes/decodes it
+type codecFunc func(string) (string, error)
+
+func into(f codecFunc, s *string) error {
+	// Do not encrypt/decrypt nil or empty strings
+	if s == nil || *s == "" {
+		return nil
+	}
+
+	d, err := f(*s)
+	if err != nil {
+		return err
+	}
+	*s = d
+	return nil
 }

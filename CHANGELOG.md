@@ -32,9 +32,40 @@
   - In some scenarios `X-Forwarded-User` will now be empty. Use `X-Forwarded-Email` instead.
   - In some scenarios, this may break setting Basic Auth on upstream or responses.
     Use `--prefer-email-to-user` to restore falling back to the Email in these cases.
+- [#556](https://github.com/oauth2-proxy/oauth2-proxy/pull/556) Remove unintentional auto-padding of secrets that were too short
+  - Previously, after cookie-secrets were opportunistically base64 decoded to raw bytes,
+    they were padded to have a length divisible by 4.
+  - This led to wrong sized secrets being valid AES lengths of 16, 24, or 32  bytes. Or it led to confusing errors
+    reporting an invalid length of 20 or 28 when the user input cookie-secret was not that length.
+  - Now we will only base64 decode a cookie-secret to raw bytes if it is 16, 24, or 32 bytes long. Otherwise, we will convert
+    the direct cookie-secret to bytes without silent padding added.
+- [#412](https://github.com/oauth2-proxy/oauth2-proxy/pull/412)/[#559](https://github.com/oauth2-proxy/oauth2-proxy/pull/559) Allow multiple cookie domains to be specified
+  - Multiple cookie domains may now be configured. The longest domain that matches will be used.
+  - The config options `cookie_domain` is now `cookie_domains`
+  - The environment variable `OAUTH2_PROXY_COOKIE_DOMAIN` is now `OAUTH2_PROXY_COOKIE_DOMAINS`
+- [#414](https://github.com/oauth2-proxy/oauth2-proxy/pull/414) Always encrypt sessions regardless of config
+  - Previously, sessions were encrypted only when certain options were configured.
+    This lead to confusion and misconfiguration as it was not obvious when a session should be encrypted.
+  - Cookie Secrets must now be 16, 24 or 32 bytes.
+  - If you need to change your secret, this will force users to reauthenticate.
+- [#548](https://github.com/oauth2-proxy/oauth2-proxy/pull/548) Separate logging options out of main options structure
+  - Fixes an inconsistency in the `--exclude-logging-paths` option by renaming it to `--exclude-logging-option`.
+  - This flag may now be given multiple times as with other list options
+  - This flag also accepts comma separated values
 
 ## Changes since v5.1.1
 
+- [#560](https://github.com/oauth2-proxy/oauth2-proxy/pull/560) Fallback to UserInfo is User ID claim not present (@JoelSpeed)
+- [#598](https://github.com/oauth2-proxy/oauth2-proxy/pull/598) acr_values no longer sent to IdP when empty (@ScottGuymer)
+- [#548](https://github.com/oauth2-proxy/oauth2-proxy/pull/548) Separate logging options out of main options structure (@JoelSpeed)
+- [#536](https://github.com/oauth2-proxy/oauth2-proxy/pull/536) Improvements to Session State code (@JoelSpeed)
+- [#573](https://github.com/oauth2-proxy/oauth2-proxy/pull/573) Properly parse redis urls for cluster and sentinel connections (@amnay-mo)
+- [#574](https://github.com/oauth2-proxy/oauth2-proxy/pull/574) render error page on 502 proxy status (@amnay-mo)
+- [#559](https://github.com/oauth2-proxy/oauth2-proxy/pull/559) Rename cookie-domain config to cookie-domains (@JoelSpeed)
+- [#569](https://github.com/oauth2-proxy/oauth2-proxy/pull/569) Updated autocompletion for `--` long options. (@Izzette)
+- [#489](https://github.com/oauth2-proxy/oauth2-proxy/pull/489) Move Options and Validation to separate packages (@JoelSpeed)
+- [#556](https://github.com/oauth2-proxy/oauth2-proxy/pull/556) Remove unintentional auto-padding of secrets that were too short (@NickMeves)
+- [#538](https://github.com/oauth2-proxy/oauth2-proxy/pull/538) Refactor sessions/utils.go functionality to other areas (@NickMeves)
 - [#503](https://github.com/oauth2-proxy/oauth2-proxy/pull/503) Implements --real-client-ip-header option to select the header from which to obtain a proxied client's IP (@Izzette)
 - [#529](https://github.com/oauth2-proxy/oauth2-proxy/pull/529) Add local test environments for testing changes and new features (@JoelSpeed)
 - [#537](https://github.com/oauth2-proxy/oauth2-proxy/pull/537) Drop Fallback to Email if User not set (@JoelSpeed)
@@ -69,6 +100,8 @@
 - [#488](https://github.com/oauth2-proxy/oauth2-proxy/pull/488) Set-Basic-Auth should default to false (@JoelSpeed)
 - [#494](https://github.com/oauth2-proxy/oauth2-proxy/pull/494) Upstream websockets TLS certificate validation now depends on ssl-upstream-insecure-skip-verify (@yaroslavros)
 - [#497](https://github.com/oauth2-proxy/oauth2-proxy/pull/497) Restrict access using Github collaborators (@jsclayton)
+- [#414](https://github.com/oauth2-proxy/oauth2-proxy/pull/414) Always encrypt sessions regardless of config (@ti-mo)
+- [#421](https://github.com/oauth2-proxy/oauth2-proxy/pull/421) Allow logins by usernames even if they do not belong to the specified org and team or collaborators (@yyoshiki41)
 
 # v5.1.1
 

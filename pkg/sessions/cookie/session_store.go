@@ -13,7 +13,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
 )
 
 const (
@@ -35,14 +34,15 @@ type SessionStore struct {
 // Save takes a sessions.SessionState and stores the information from it
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
-	if ss.CreatedAt.IsZero() {
-		ss.CreatedAt = time.Now()
+	if ss.CreatedAt == nil || ss.CreatedAt.IsZero() {
+		now := time.Now()
+		ss.CreatedAt = &now
 	}
-	value, err := utils.CookieForSession(ss, s.CookieCipher)
+	value, err := cookieForSession(ss, s.CookieCipher)
 	if err != nil {
 		return err
 	}
-	s.setSessionCookie(rw, req, value, ss.CreatedAt)
+	s.setSessionCookie(rw, req, value, *ss.CreatedAt)
 	return nil
 }
 
@@ -59,7 +59,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := utils.SessionFromCookie(val, s.CookieCipher)
+	session, err := sessionFromCookie(val, s.CookieCipher)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +81,16 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	}
 
 	return nil
+}
+
+// cookieForSession serializes a session state for storage in a cookie
+func cookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
+	return s.EncodeSessionState(c)
+}
+
+// sessionFromCookie deserializes a session from a cookie value
+func sessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState, err error) {
+	return sessions.DecodeSessionState(v, c)
 }
 
 // setSessionCookie adds the user's session cookie to the response

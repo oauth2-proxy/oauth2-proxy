@@ -67,7 +67,7 @@ func (p *GitLabProvider) Redeem(ctx context.Context, redirectURL, code string) (
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
 func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
 		return false, nil
 	}
 
@@ -209,12 +209,13 @@ func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.T
 		return nil, fmt.Errorf("could not verify id_token: %v", err)
 	}
 
+	created := time.Now()
 	return &sessions.SessionState{
 		AccessToken:  token.AccessToken,
 		IDToken:      rawIDToken,
 		RefreshToken: token.RefreshToken,
-		CreatedAt:    time.Now(),
-		ExpiresOn:    idToken.Expiry,
+		CreatedAt:    &created,
+		ExpiresOn:    &idToken.Expiry,
 	}, nil
 }
 

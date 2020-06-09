@@ -14,7 +14,6 @@ import (
 	"github.com/coreos/go-oidc"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
 var _ Provider = (*ProviderData)(nil)
@@ -82,7 +81,8 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 		return
 	}
 	if a := v.Get("access_token"); a != "" {
-		s = &sessions.SessionState{AccessToken: a, CreatedAt: time.Now()}
+		created := time.Now()
+		s = &sessions.SessionState{AccessToken: a, CreatedAt: &created}
 	} else {
 		err = fmt.Errorf("no access token found %s", body)
 	}
@@ -94,7 +94,9 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-	params.Add("acr_values", p.AcrValues)
+	if p.AcrValues != "" {
+		params.Add("acr_values", p.AcrValues)
+	}
 	if p.Prompt != "" {
 		params.Set("prompt", p.Prompt)
 	} else { // Legacy variant of the prompt param:
@@ -106,16 +108,6 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	params.Add("state", state)
 	a.RawQuery = params.Encode()
 	return a.String()
-}
-
-// CookieForSession serializes a session state for storage in a cookie
-func (p *ProviderData) CookieForSession(s *sessions.SessionState, c *encryption.Cipher) (string, error) {
-	return s.EncodeSessionState(c)
-}
-
-// SessionFromCookie deserializes a session from a cookie value
-func (p *ProviderData) SessionFromCookie(v string, c *encryption.Cipher) (s *sessions.SessionState, err error) {
-	return sessions.DecodeSessionState(v, c)
 }
 
 // GetEmailAddress returns the Account email address
@@ -179,7 +171,7 @@ func (p *ProviderData) CreateSessionStateFromBearerToken(ctx context.Context, ra
 	newSession.AccessToken = rawIDToken
 	newSession.IDToken = rawIDToken
 	newSession.RefreshToken = ""
-	newSession.ExpiresOn = idToken.Expiry
+	newSession.ExpiresOn = &idToken.Expiry
 
 	return newSession, nil
 }

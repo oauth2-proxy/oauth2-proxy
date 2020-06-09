@@ -15,15 +15,17 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	cookiesapi "github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestSessionStore(t *testing.T) {
+	logger.SetOutput(GinkgoWriter)
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "SessionStore")
 }
@@ -254,16 +256,16 @@ var _ = Describe("NewSessionStore", func() {
 
 						// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
 						l := *loadedSession
-						l.CreatedAt = time.Time{}
-						l.ExpiresOn = time.Time{}
+						l.CreatedAt = nil
+						l.ExpiresOn = nil
 						s := *session
-						s.CreatedAt = time.Time{}
-						s.ExpiresOn = time.Time{}
+						s.CreatedAt = nil
+						s.ExpiresOn = nil
 						Expect(l).To(Equal(s))
 
 						// Compare time.Time separately
-						Expect(loadedSession.CreatedAt.Equal(session.CreatedAt)).To(BeTrue())
-						Expect(loadedSession.ExpiresOn.Equal(session.ExpiresOn)).To(BeTrue())
+						Expect(loadedSession.CreatedAt.Equal(*session.CreatedAt)).To(BeTrue())
+						Expect(loadedSession.ExpiresOn.Equal(*session.ExpiresOn)).To(BeTrue())
 					}
 				})
 			}
@@ -365,7 +367,7 @@ var _ = Describe("NewSessionStore", func() {
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
-				cipher, err := encryption.NewCipher(utils.SecretBytes(cookieOpts.Secret))
+				cipher, err := encryption.NewCipher(encryption.SecretBytes(cookieOpts.Secret))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cipher).ToNot(BeNil())
 				opts.Cipher = cipher
@@ -393,10 +395,11 @@ var _ = Describe("NewSessionStore", func() {
 			SameSite: "",
 		}
 
+		expires := time.Now().Add(1 * time.Hour)
 		session = &sessionsapi.SessionState{
 			AccessToken:  "AccessToken",
 			IDToken:      "IDToken",
-			ExpiresOn:    time.Now().Add(1 * time.Hour),
+			ExpiresOn:    &expires,
 			RefreshToken: "RefreshToken",
 			Email:        "john.doe@example.com",
 			User:         "john.doe",
