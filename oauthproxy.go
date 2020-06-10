@@ -731,6 +731,21 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (p *OAuthProxy) addClaimToUserInfoMap(optionalClaim string, claims map[string]string, props map[string]string) {
+	bits := strings.Split(optionalClaim, "=")
+	outkey := strings.TrimSpace(bits[0])
+	inkey := outkey
+	if len(bits) > 1 {
+		inkey = strings.TrimSpace(strings.Join(bits[1:], "="))
+	}
+	if outkey != "" && inkey != "" {
+		val := strings.TrimSpace(claims[inkey])
+		if val != "" {
+			props[outkey] = val
+		}
+	}
+}
+
 //UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
@@ -759,18 +774,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 			logger.Printf("Error extracting claims from ID Token in user info endpoint: %s", err.Error())
 		} else {
 			for _, optionalClaim := range p.IncludeClaimsInUserInfo {
-				bits := strings.Split(optionalClaim, "=")
-				outkey := strings.TrimSpace(bits[0])
-				inkey := outkey
-				if len(bits) > 1 {
-					inkey = strings.TrimSpace(strings.Join(bits[1:], "="))
-					}
-				if outkey != "" && inkey != "" {
-					val := strings.TrimSpace(claims[inkey])
-					if val != "" {
-						props[outkey] = val
-					}
-				}
+				p.addClaimToUserInfoMap(optionalClaim, claims, props)
 			}
 		}
 	}
