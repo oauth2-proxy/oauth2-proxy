@@ -125,6 +125,12 @@ func (p *ProviderData) GetPreferredUsername(ctx context.Context, s *sessions.Ses
 	return "", errors.New("not implemented")
 }
 
+//Where an IDToken with claims is available, retrieve the values as a map[string]string
+func (p *ProviderData) GetIDTokenClaims(ctx context.Context, idToken string) (map[string]string, error) {
+	claimsmap := make(map[string]string)
+	return claimsmap, errors.New("not implemented")
+}
+
 // ValidateGroup validates that the provided email exists in the configured provider
 // email group(s).
 func (p *ProviderData) ValidateGroup(email string) bool {

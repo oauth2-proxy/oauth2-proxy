@@ -109,6 +109,8 @@ type Options struct {
 	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
+	IncludeClaimsInUserInfo []string `flag:"include-claim-in-user-info" cfg:"include_claims_in_user_info"`
+
 	// internal values that are set after config validation
 	redirectURL        *url.URL
 	proxyURLs          []*url.URL
@@ -291,6 +293,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
 	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
+
+	flagSet.StringSlice("include-claim-in-user-info", []string{}, "Include claims in the user info endpoint response (outputfield=idtokenfield)")
 
 	flagSet.AddFlagSet(loggingFlagSet())
 

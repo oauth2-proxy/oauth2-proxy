@@ -118,6 +118,8 @@ type OAuthProxy struct {
 	realClientIPParser   ipapi.RealClientIPParser
 	Banner               string
 	Footer               string
+
+	IncludeClaimsInUserInfo []string
 }
 
 // UpstreamProxy represents an upstream server to proxy to
@@ -345,6 +347,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		templates:            loadTemplates(opts.CustomTemplatesDir),
 		Banner:               opts.Banner,
 		Footer:               opts.Footer,
+
+		IncludeClaimsInUserInfo: opts.IncludeClaimsInUserInfo,
 	}
 }
 
@@ -735,16 +739,56 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
-	userInfo := struct {
-		Email             string `json:"email"`
-		PreferredUsername string `json:"preferredUsername,omitempty"`
-	}{
-		Email:             session.Email,
-		PreferredUsername: session.PreferredUsername,
+
+	props := make(map[string]string)
+
+	//Add the UserInfo items from existing list
+	if session.Email != "" {
+		props["email"] = session.Email
 	}
+	if session.PreferredUsername != "" {
+		props["preferredUsername"] = session.PreferredUsername
+	}
+
+	//Optionally add or override items in list
+	if len(p.IncludeClaimsInUserInfo) > 0 {
+
+		claims, err := p.provider.GetIDTokenClaims(req.Context(), session.IDToken)
+
+		if err != nil {
+			logger.Printf("Error extracting claims from ID Token in user info endpoint: %s", err.Error())
+		} else {
+			for _, optionalClaim := range p.IncludeClaimsInUserInfo {
+				bits := strings.Split(optionalClaim, "=")
+				outkey := strings.TrimSpace(bits[0])
+				if outkey != "" {
+					val := ""
+					if len(bits) == 1 {
+						val = strings.TrimSpace(claims[outkey])
+					} else {
+						inkey := strings.TrimSpace(strings.Join(bits[1:], "="))
+						if inkey != "" {
+							val = strings.TrimSpace(claims[inkey])
+						}
+					}
+					if val != "" {
+						props[outkey] = val
+					}
+				}
+			}
+		}
+	}
+
+	sJSON, err := json.Marshal(props)
+
+	if err != nil {
+		logger.Printf("Error marshalling json in user info endpoint: %s", err.Error())
+		return
+	}
+
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(userInfo)
+	rw.Write(sJSON)
 }
 
 // SignOut sends a response to clear the authentication cookie

@@ -2,6 +2,8 @@ package providers
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -276,6 +278,46 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	}
 
 	return claims, nil
+}
+
+//GetIDTokenClaims - Extract claims from id token in a map[string]string structure
+func (p *OIDCProvider) GetIDTokenClaims(ctx context.Context, idToken string) (map[string]string, error) {
+	claimsmap := make(map[string]string)
+
+	//TODO: Proper way might be via jwt.Paser.ParseUnvalidated, but I can't get it to work
+	//For now I'm decoding via base64 and json
+	bits := strings.Split(idToken, ".")
+	b64encoding := base64.StdEncoding
+	claimsjson, err := b64encoding.DecodeString(bits[1] + strings.Repeat("=", (4+((4-len(bits[1]))%4))%4))
+
+	if err != nil {
+		return claimsmap, err
+	}
+
+	props := make(map[string]interface{})
+
+	err = json.Unmarshal(claimsjson, &props)
+
+	if err != nil {
+		return claimsmap, err
+	}
+
+	for key, value := range props {
+		//To Do: Could do with some work in here on type specification, and maybe subscripting
+		//Currently times come in as float64 and don't render nicely - maybe allow a type request spec like exp=(int64)exp - note the type in brackets - could support some preset types
+		//Also note that Azure B2C retuns an emails array - maybe allow [0] at the end of a string to step into a top level array
+		//could be way better.
+
+		stype := fmt.Sprintf("%T", value)
+		//When we find an array step in and return the first item
+		if strings.Index(stype, "[]") == 0 {
+			value = value.([]interface{})[0]
+		}
+
+		claimsmap[key] = fmt.Sprintf("%s", value)
+	}
+
+	return claimsmap, nil
 }
 
 type OIDCClaims struct {

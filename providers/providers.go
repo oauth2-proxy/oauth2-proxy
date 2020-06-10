@@ -19,6 +19,7 @@ type Provider interface {
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error)
 	CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error)
+	GetIDTokenClaims(ctx context.Context, idToken string) (map[string]string, error)
 }
 
 // New provides a new Provider based on the configured provider string
