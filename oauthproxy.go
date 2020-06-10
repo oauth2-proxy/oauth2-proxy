@@ -761,16 +761,12 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 			for _, optionalClaim := range p.IncludeClaimsInUserInfo {
 				bits := strings.Split(optionalClaim, "=")
 				outkey := strings.TrimSpace(bits[0])
-				if outkey != "" {
-					val := ""
-					if len(bits) == 1 {
-						val = strings.TrimSpace(claims[outkey])
-					} else {
-						inkey := strings.TrimSpace(strings.Join(bits[1:], "="))
-						if inkey != "" {
-							val = strings.TrimSpace(claims[inkey])
-						}
+				inkey := outkey
+				if len(bits) > 1 {
+					inkey = strings.TrimSpace(strings.Join(bits[1:], "="))
 					}
+				if outkey != "" && inkey != "" {
+					val := strings.TrimSpace(claims[inkey])
 					if val != "" {
 						props[outkey] = val
 					}
