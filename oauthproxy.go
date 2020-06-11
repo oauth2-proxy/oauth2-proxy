@@ -789,6 +789,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 	rw.Write(sJSON)
+	rw.Write([]byte("\n"))
 }
 
 // SignOut sends a response to clear the authentication cookie

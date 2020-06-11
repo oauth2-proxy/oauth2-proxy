@@ -1048,6 +1048,21 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 	assert.Equal(t, "{\"email\":\"john.doe@example.com\"}\n", string(bodyBytes))
 }
 
+func TestUserInfoEndpointWithClaimsViaOIDCProviderAccepted(t *testing.T) {
+	test := NewUserInfoEndpointTest()
+	startSession := &sessions.SessionState{
+		Email: "john.doe@example.com", AccessToken: "my_access_token", IDToken: "e30=.eyJ0ZXN0LXN0cmluZyI6InRlc3R2YWx1ZSJ9."}
+	test.SaveSession(startSession)
+
+	test.proxy.provider = providers.NewOIDCProvider(&providers.ProviderData{})
+	test.proxy.IncludeClaimsInUserInfo = []string{"test-string"}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusOK, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "{\"email\":\"john.doe@example.com\",\"test-string\":\"testvalue\"}\n", string(bodyBytes))
+}
+
 func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	test := NewUserInfoEndpointTest()
 
