@@ -305,7 +305,7 @@ func (p *OIDCProvider) GetIDTokenClaims(ctx context.Context, idToken string) (ma
 	for key, value := range props {
 		//To Do: Could do with some work in here on type specification, and maybe subscripting
 		//Currently times come in as float64 and don't render nicely - maybe allow a type request spec like exp=(int64)exp - note the type in brackets - could support some preset types
-		//Also note that Azure B2C retuns an emails array - maybe allow [0] at the end of a string to step into a top level array
+		//Also note that Azure B2C returns an emails array - maybe allow [0] at the end of a string to step into a top level array
 		//could be way better.
 
 		stype := fmt.Sprintf("%T", value)
