@@ -3,12 +3,13 @@ package providers
 import (
 	"context"
 	"crypto/rsa"
-	"fmt"
-	"github.com/lestrrat-go/jwx/jwa"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/lestrrat-go/jwx/jwa"
 
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
@@ -79,20 +80,20 @@ func (p *OIDCProvider) RedeemStandardFlow(ctx context.Context, redirectURL, code
 func (p *OIDCProvider) RedeemImplicitFlow(redirectURL, code string) (s *sessions.SessionState, err error) {
 	// parse the code and get accessToken and idToken
 	split := strings.Split(code, ",")
-	accessToken, idToken:= split[0],split[1]
+	accessToken, idToken := split[0], split[1]
 	// get the public key
-	SigningKey,err := p.GetSigningKey(redirectURL)
-	if err !=nil{
-		return nil, fmt.Errorf("failed to get signingKey from RedeemImplicitFlow, err: %v",err)
+	signingKey, err := p.GetSigningKey(redirectURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get signingKey from RedeemImplicitFlow, err: %v", err)
 	}
 
 	// get implicit claims
-	implicitFlowClaims,err := verifyAndParseAccessToken(accessToken,SigningKey)
+	implicitFlowClaims, err := verifyAndParseAccessToken(accessToken, signingKey)
 	if err != nil {
-		return nil, fmt.Errorf("RedeemImplicitFlow failed to verify and parse access token,err:%v",err)
+		return nil, fmt.Errorf("RedeemImplicitFlow failed to verify and parse access token,err:%v", err)
 	}
 
-	s, err = p.createSessionStateFromImplicitFlow(accessToken, idToken,implicitFlowClaims)
+	s, err = p.createSessionStateFromImplicitFlow(accessToken, idToken, implicitFlowClaims)
 	if err != nil {
 		return nil, fmt.Errorf("RedeemImplicitFlow is unable to update session: %v", err)
 	}
@@ -100,8 +101,8 @@ func (p *OIDCProvider) RedeemImplicitFlow(redirectURL, code string) (s *sessions
 }
 
 // returns JWT token
-func verifyAndParseAccessToken(tokenString string,SigningKey *rsa.PublicKey) (iClaims *ImplicitFlowClaims,err error) {
-	verified, err := jws.Verify([]byte(tokenString), jwa.RS256, SigningKey)
+func verifyAndParseAccessToken(tokenString string, signingKey *rsa.PublicKey) (iClaims *ImplicitFlowClaims, err error) {
+	verified, err := jws.Verify([]byte(tokenString), jwa.RS256, signingKey)
 	if err != nil {
 		return
 	}
@@ -112,17 +113,16 @@ func verifyAndParseAccessToken(tokenString string,SigningKey *rsa.PublicKey) (iC
 }
 
 func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
-	if !p.UseImplicitFlow{
-		return p.RedeemStandardFlow(ctx,redirectURL,code)
-	}else {
-		return p.RedeemImplicitFlow(redirectURL,code)
+	if !p.UseImplicitFlow {
+		return p.RedeemStandardFlow(ctx, redirectURL, code)
 	}
+	return p.RedeemImplicitFlow(redirectURL, code)
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new Access Token (and optional ID token) if required
 func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
 		return false, nil
 	}
 
@@ -221,21 +221,21 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 	return newSession, nil
 }
 
-func (p *OIDCProvider) createSessionStateFromImplicitFlow(access_token string, idToken string,claims *ImplicitFlowClaims) (*sessions.SessionState, error) {
+func (p *OIDCProvider) createSessionStateFromImplicitFlow(accessToken string, idToken string, claims *ImplicitFlowClaims) (*sessions.SessionState, error) {
 	var newSession *sessions.SessionState
 	if idToken == "" {
 		newSession = &sessions.SessionState{}
 	} else {
 		var err error
-		newSession, err = p.createSessionStateInternalFromImplicitFlow(idToken, access_token,claims)
+		newSession, err = p.createSessionStateInternalFromImplicitFlow(idToken, accessToken, claims)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	created := time.Unix(claims.Auth_Time, 0)
-	expired := time.Unix(claims.Expire_Time, 0)
-	newSession.AccessToken = access_token
+	created := time.Unix(claims.AuthTime, 0)
+	expired := time.Unix(claims.ExpireTime, 0)
+	newSession.AccessToken = accessToken
 	newSession.RefreshToken = ""
 	newSession.CreatedAt = &created
 	newSession.ExpiresOn = &expired
@@ -270,7 +270,7 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToke
 
 	claims, err := p.findClaimsFromIDToken(ctx, idToken, accessToken, p.ProfileURL.String())
 	if err != nil {
-		return nil, fmt.Errorf("couldn't extract claims from id_token (%e)", err)
+		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
 	}
 
 	newSession.IDToken = rawIDToken
@@ -288,7 +288,7 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToke
 	return newSession, nil
 }
 
-func (p *OIDCProvider) createSessionStateInternalFromImplicitFlow(idToken string, accessToken string,claims *ImplicitFlowClaims) (*sessions.SessionState, error) {
+func (p *OIDCProvider) createSessionStateInternalFromImplicitFlow(idToken string, accessToken string, claims *ImplicitFlowClaims) (*sessions.SessionState, error) {
 	newSession := &sessions.SessionState{}
 	newSession.IDToken = idToken
 	newSession.Email = claims.Email
@@ -296,6 +296,7 @@ func (p *OIDCProvider) createSessionStateInternalFromImplicitFlow(idToken string
 	newSession.PreferredUsername = claims.Username
 	return newSession, nil
 }
+
 // ValidateSessionState checks that the session's IDToken is still valid
 func (p *OIDCProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
@@ -322,20 +323,19 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	}
 
 	userID := claims.rawClaims[p.UserIDClaim]
-	if userID == nil {
-		return nil, fmt.Errorf("claims did not contains the required user-id-claim '%s'", p.UserIDClaim)
+	if userID != nil {
+		claims.UserID = fmt.Sprint(userID)
 	}
-	claims.UserID = fmt.Sprint(userID)
 
-	if p.UserIDClaim == emailClaim && claims.UserID == "" {
+	// userID claim was not present or was empty in the ID Token
+	if claims.UserID == "" {
 		if profileURL == "" {
-			return nil, fmt.Errorf("id_token did not contain an email")
+			return nil, fmt.Errorf("id_token did not contain user ID claim (%q)", p.UserIDClaim)
 		}
 
 		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
 		// contents at the profileURL contains the email.
 		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
-
 		req, err := http.NewRequestWithContext(ctx, "GET", profileURL, nil)
 		if err != nil {
 			return nil, err
@@ -347,12 +347,12 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 			return nil, err
 		}
 
-		email, err := respJSON.Get("email").String()
+		userID, err := respJSON.Get(p.UserIDClaim).String()
 		if err != nil {
-			return nil, fmt.Errorf("neither id_token nor userinfo endpoint contained an email")
+			return nil, fmt.Errorf("neither id_token nor userinfo endpoint contained user ID claim (%q)", p.UserIDClaim)
 		}
 
-		claims.UserID = email
+		claims.UserID = userID
 	}
 
 	return claims, nil
@@ -378,6 +378,6 @@ type ImplicitFlowClaims struct {
 	FullName    string      `json:"given_name"`
 	Email       string      `json:"email"`
 	Subject     string      `json:"sub"`
-	Auth_Time   int64       `json:"auth_time"`
-	Expire_Time int64       `json:"exp"`
+	AuthTime    int64       `json:"auth_time"`
+	ExpireTime  int64       `json:"exp"`
 }

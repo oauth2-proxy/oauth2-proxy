@@ -288,15 +288,15 @@ func Validate(o *options.Options) error {
 
 func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p := &providers.ProviderData{
-		Scope:            o.Scope,
-		ClientID:         o.ClientID,
-		ClientSecret:     o.ClientSecret,
-		ClientSecretFile: o.ClientSecretFile,
-		Prompt:           o.Prompt,
-		ApprovalPrompt:   o.ApprovalPrompt,
-		AcrValues:        o.AcrValues,
+		Scope:               o.Scope,
+		ClientID:            o.ClientID,
+		ClientSecret:        o.ClientSecret,
+		ClientSecretFile:    o.ClientSecretFile,
+		Prompt:              o.Prompt,
+		ApprovalPrompt:      o.ApprovalPrompt,
+		AcrValues:           o.AcrValues,
 		UseOIDCImplicitFlow: o.UseOIDCImplicitFlow,
-		OIDCIssuerURL:      o.OIDCIssuerURL,
+		OIDCIssuerURL:       o.OIDCIssuerURL,
 	}
 	p.LoginURL, msgs = parseURL(o.LoginURL, "login", msgs)
 	p.RedeemURL, msgs = parseURL(o.RedeemURL, "redeem", msgs)
@@ -330,6 +330,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.UserIDClaim = o.UserIDClaim
 		p.UseImplicitFlow = o.UseOIDCImplicitFlow
+		p.OIDCIssuerURL = o.OIDCIssuerURL
 		if o.GetOIDCVerifier() == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {

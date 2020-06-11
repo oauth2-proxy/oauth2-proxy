@@ -2,16 +2,17 @@ package providers
 
 import (
 	"crypto/rsa"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/oauth2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
-	"encoding/json"
+
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"golang.org/x/oauth2"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -25,15 +26,15 @@ type ProviderData struct {
 	ValidateURL       *url.URL
 	// Auth request params & related, see
 	//https://openid.net/specs/openid-connect-basic-1_0.html#rfc.section.2.1.1.1
-	AcrValues        string
-	ApprovalPrompt   string // NOTE: Renamed to "prompt" in OAuth2
-	ClientID         string
-	ClientSecret     string
-	ClientSecretFile string
-	Scope            string
-	Prompt           string
-	UseOIDCImplicitFlow  bool
-	OIDCIssuerURL  string
+	AcrValues           string
+	ApprovalPrompt      string // NOTE: Renamed to "prompt" in OAuth2
+	ClientID            string
+	ClientSecret        string
+	ClientSecretFile    string
+	Scope               string
+	Prompt              string
+	UseOIDCImplicitFlow bool
+	OIDCIssuerURL       string
 }
 
 type TokenRelatedConfig struct {
@@ -41,6 +42,7 @@ type TokenRelatedConfig struct {
 	TokenEndpoint         string `json:"token_endpoint"`
 	JwksURI               string `json:"jwks_uri"`
 }
+
 var (
 	// ParsedConfig is the parsed config
 	ParsedConfig TokenRelatedConfig
@@ -63,7 +65,7 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	return string(fileClientSecret), nil
 }
 
-func (p *ProviderData) GetSigningKey(redirectURL string) (SigningKey *rsa.PublicKey, err error) {
+func (p *ProviderData) GetSigningKey(redirectURL string) (returnSigningKey *rsa.PublicKey, err error) {
 	OAuth2Config := oauth2.Config{
 		ClientID:     p.ClientID,
 		ClientSecret: p.ClientSecret,
@@ -73,25 +75,25 @@ func (p *ProviderData) GetSigningKey(redirectURL string) (SigningKey *rsa.Public
 
 	u, err := url.Parse(p.OIDCIssuerURL)
 	if err != nil {
-		return nil,fmt.Errorf("failed tp get oidc issuer url :%v",p.OIDCIssuerURL)
+		return nil, fmt.Errorf("failed tp get oidc issuer url :%v", p.OIDCIssuerURL)
 	}
 
 	u.Path = path.Join(u.Path, ".well-known/openid-configuration")
 	resp, err := http.Get(u.String())
 	if err != nil {
-		return nil,fmt.Errorf("failed to get openid configuration with path:%v, err:%v ",u.String(),err)
+		return nil, fmt.Errorf("failed to get openid configuration with path:%v, err:%v ", u.String(), err)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-        return nil, fmt.Errorf("failed to get response body, err:%v",err)
+		return nil, fmt.Errorf("failed to get response body, err:%v", err)
 	}
 
 	err = json.Unmarshal(body, &ParsedConfig)
 	if err != nil {
 		panic(err)
 	}
-
+	defer resp.Body.Close()
 	OAuth2Config.Endpoint = oauth2.Endpoint{
 		AuthURL:   ParsedConfig.AuthorizationEndpoint,
 		TokenURL:  ParsedConfig.TokenEndpoint,
@@ -108,6 +110,6 @@ func (p *ProviderData) GetSigningKey(redirectURL string) (SigningKey *rsa.Public
 	if err != nil {
 		panic(err)
 	}
-	SigningKey = &signingKey
-	return SigningKey,nil
+	returnSigningKey = &signingKey
+	return returnSigningKey, nil
 }

@@ -801,10 +801,9 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	var session *sessionsapi.SessionState
-	if p.UseOIDCImplicitFlow{
+	if p.UseOIDCImplicitFlow {
 		at := req.Form.Get("access_token")
 		it := req.Form.Get("id_token")
-
 
 		session, err = p.redeemCode(req.Context(), req.Host, at+","+it)
 		if err != nil {
@@ -812,7 +811,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
 			return
 		}
-	}else{
+	} else {
 		session, err = p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
 		if err != nil {
 			logger.Printf("Error redeeming code during OAuth2 callback: %s ", err.Error())
