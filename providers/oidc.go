@@ -42,24 +42,11 @@ var _ Provider = (*OIDCProvider)(nil)
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *OIDCProvider) RedeemStandardFlow(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
-	clientSecret, err := p.GetClientSecret()
-	if err != nil {
-		return
-	}
-
-	c := oauth2.Config{
-		ClientID:     p.ClientID,
-		ClientSecret: clientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: p.RedeemURL.String(),
-		},
-		RedirectURL: redirectURL,
-	}
-	token, err := c.Exchange(ctx, code)
+	// get token from code and redirectURL
+	token, err := p.getToken(ctx, redirectURL, code)
 	if err != nil {
 		return nil, fmt.Errorf("token exchange: %v", err)
 	}
-
 	// in the initial exchange the id token is mandatory
 	idToken, err := p.findVerifiedIDToken(ctx, token)
 	if err != nil {
@@ -69,10 +56,23 @@ func (p *OIDCProvider) RedeemStandardFlow(ctx context.Context, redirectURL, code
 	}
 
 	s, err = p.createSessionState(ctx, token, idToken)
-	if err != nil {
-		return nil, fmt.Errorf("unable to update session: %v", err)
-	}
+	return
+}
 
+func (p *OIDCProvider) getToken(ctx context.Context, redirectURL, code string) (token *oauth2.Token, err error) {
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return
+	}
+	c := oauth2.Config{
+		ClientID:     p.ClientID,
+		ClientSecret: clientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL: p.RedeemURL.String(),
+		},
+		RedirectURL: redirectURL,
+	}
+	token, err = c.Exchange(ctx, code)
 	return
 }
 
