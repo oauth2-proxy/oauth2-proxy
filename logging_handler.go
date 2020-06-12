@@ -21,6 +21,7 @@ type responseLogger struct {
 	size     int
 	upstream string
 	authInfo string
+	silent   bool
 }
 
 // Header returns the ResponseWriter's Header
@@ -104,5 +105,7 @@ func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	url := *req.URL
 	responseLogger := &responseLogger{w: w}
 	h.handler.ServeHTTP(responseLogger, req)
-	logger.PrintReq(responseLogger.authInfo, responseLogger.upstream, req, url, t, responseLogger.Status(), responseLogger.Size())
+	if !responseLogger.silent {
+		logger.PrintReq(responseLogger.authInfo, responseLogger.upstream, req, url, t, responseLogger.Status(), responseLogger.Size())
+	}
 }
