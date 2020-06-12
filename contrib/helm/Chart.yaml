@@ -1,0 +1,20 @@
+apiVersion: v2
+description: K8S example based on https://kind.sigs.k8s.io and https://helm.sh.
+name: helm
+version: 5.1.1
+appVersion: 5.1.1
+# helm search repo -l stable/nginx-ingress | head -n 5
+dependencies:
+  - name: dex
+    version: 2.11.0
+    repository: https://kubernetes-charts.storage.googleapis.com
+  - name: oauth2-proxy
+    version: 3.1.0
+    repository: https://kubernetes-charts.storage.googleapis.com
+  # https://github.com/postmanlabs/httpbin/issues/549 is still in progress, for now creating our own chart
+  - name: httpbin
+    version: 0.6.1
+    repository: file://./httpbin
+  - name: hello-world
+    version: 0.0.1
+    repository: file://./hello-world
