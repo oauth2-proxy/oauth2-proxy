@@ -3,7 +3,6 @@ description: K8S example based on https://kind.sigs.k8s.io and https://helm.sh.
 name: helm
 version: 5.1.1
 appVersion: 5.1.1
-# helm search repo -l stable/nginx-ingress | head -n 5
 dependencies:
   - name: dex
     version: 2.11.0
