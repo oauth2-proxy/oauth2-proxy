@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"os/signal"
 	"runtime"
@@ -79,7 +80,11 @@ func main() {
 	chain := alice.New()
 
 	if opts.ForceHTTPS {
-		chain = chain.Append(newRedirectToHTTPS(opts))
+		_, httpsPort, err := net.SplitHostPort(opts.HTTPSAddress)
+		if err != nil {
+			logger.Fatalf("FATAL: invalid HTTPS address %q: %v", opts.HTTPAddress, err)
+		}
+		chain = chain.Append(middleware.NewRedirectToHTTPS(httpsPort))
 	}
 
 	healthCheckPaths := []string{opts.PingPath}
