@@ -410,6 +410,21 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 	}
 }
 
+// ErrorPage writes an error response
+func (p *OAuthProxy) ErrorPageWithRedirect(rw http.ResponseWriter, code int, title string, message string, redirect string) {
+	rw.WriteHeader(code)
+	t := struct {
+		Title    string
+		Message  string
+		Redirect string
+	}{
+		Title:    fmt.Sprintf("%d %s", code, title),
+		Message:  message,
+		Redirect: redirect,
+	}
+	p.templates.ExecuteTemplate(rw, "error_with_redirect.html", t)
+}
+
 // SignInPage writes the sing in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
@@ -786,20 +801,20 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	nonce := s[0]
 	redirect := s[1]
 	c, err := req.Cookie(p.CSRFCookieName)
+	if !p.IsValidRedirect(redirect) {
+		redirect = "/"
+	}
+
 	if err != nil {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
-		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", err.Error())
+		p.ErrorPageWithRedirect(rw, http.StatusForbidden, "Permission Denied", "CSRF error: "+err.Error(), redirect)
 		return
 	}
 	p.ClearCSRFCookie(rw, req)
 	if c.Value != nonce {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
-		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", "CSRF Failed")
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: csrf token mismatch, potential attack")
+		p.ErrorPageWithRedirect(rw, http.StatusForbidden, "Permission Denied", "CSRF failed", redirect)
 		return
-	}
-
-	if !p.IsValidRedirect(redirect) {
-		redirect = "/"
 	}
 
 	// set cookie, or deny

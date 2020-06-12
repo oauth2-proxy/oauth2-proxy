@@ -25,7 +25,7 @@ func loadTemplates(dir string) *template.Template {
 }
 
 func getTemplates() *template.Template {
-	t, err := template.New("foo").Parse(`{{define "sign_in.html"}}
+	header :=  `
 <!DOCTYPE html>
 <html lang="en" charset="utf-8">
 <head>
@@ -115,6 +115,21 @@ func getTemplates() *template.Template {
 	</style>
 </head>
 <body>
+`
+	footer := `
+
+	<footer>
+	{{ if eq .Footer "-" }}
+	{{ else if eq .Footer ""}}
+	Secured with <a href="https://github.com/oauth2-proxy/oauth2-proxy#oauth2_proxy">OAuth2 Proxy</a> version {{.Version}}
+	{{ else }}
+	{{.Footer}}
+	{{ end }}
+	</footer>
+</body>
+</html>
+`
+	t, err := template.New("foo").Parse(`{{define "sign_in.html"}}` + header + `
 	<div class="signin center">
 	<form method="GET" action="{{.ProxyPrefix}}/start">
 	<input type="hidden" name="rd" value="{{.Redirect}}">
@@ -134,7 +149,6 @@ func getTemplates() *template.Template {
 		<button type="submit" class="btn">Sign In</button>
 	</form>
 	</div>
-	{{ end }}
 	<script>
 		if (window.location.hash) {
 			(function() {
@@ -151,35 +165,37 @@ func getTemplates() *template.Template {
 			})();
 		}
 	</script>
-	<footer>
-	{{ if eq .Footer "-" }}
-	{{ else if eq .Footer ""}}
-	Secured with <a href="https://github.com/oauth2-proxy/oauth2-proxy#oauth2_proxy">OAuth2 Proxy</a> version {{.Version}}
-	{{ else }}
-	{{.Footer}}
 	{{ end }}
-	</footer>
-</body>
-</html>
+` + footer + `
 {{end}}`)
 	if err != nil {
 		logger.Fatalf("failed parsing template %s", err)
 	}
 
-	t, err = t.Parse(`{{define "error.html"}}
-<!DOCTYPE html>
-<html lang="en" charset="utf-8">
-<head>
-	<title>{{.Title}}</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-</head>
-<body>
-	<h2>{{.Title}}</h2>
+	t, err = t.Parse(`{{define "error.html"}}` + header + `
+	<div class="signin center">
+	<p>{{.Title}}</p>
 	<p>{{.Message}}</p>
 	<hr>
-	<p><a href="{{.ProxyPrefix}}/sign_in">Sign In</a></p>
+	<p><a class="btn" href="{{.ProxyPrefix}}/sign_in">Sign In</a></p>	
+	</div>
 </body>
-</html>{{end}}`)
+` + footer + `
+{{end}}`)
+	if err != nil {
+		logger.Fatalf("failed parsing template %s", err)
+	}
+
+	t, err = t.Parse(`{{define "error_with_redirect.html"}}` + header + `
+	<div class="signin center">
+	<p>{{.Title}}</p>
+	<p>{{.Message}}</p>
+	<hr>
+	<p><a class="btn" href="{{.Redirect}}">Back to app</a></p>
+	</div>
+</body>
+` + footer + `
+{{end}}`)
 	if err != nil {
 		logger.Fatalf("failed parsing template %s", err)
 	}
