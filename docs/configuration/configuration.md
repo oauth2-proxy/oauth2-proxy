@@ -88,6 +88,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--provider` | string | OAuth provider | google |
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
+| `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |
 | `--proxy-prefix` | string | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`) | `"/oauth2"` |
 | `--proxy-websockets` | bool | enables WebSocket proxying | true |
 | `--pubjwk-url` | string | JWK pubkey access endpoint: required by login.gov | |
@@ -163,7 +164,7 @@ There are three different types of logging: standard, authentication, and HTTP r
 
 Each type of logging has their own configurable format and variables. By default these formats are similar to the Apache Combined Log.
 
-Logging of requests to the `/ping` endpoint can be disabled with `--silence-ping-logging` reducing log volume. This flag appends the `--ping-path` to `--exclude-logging-paths`.
+Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) can be disabled with `--silence-ping-logging` reducing log volume. This flag appends the `--ping-path` to `--exclude-logging-paths`.
 
 ### Auth Log Format
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:

@@ -49,15 +49,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	// ensure a different cipher can't decode properly (ie: it gets gibberish)
 	ss, err = sessions.DecodeSessionState(encoded, c2)
 	t.Logf("%#v", ss)
-	assert.Equal(t, nil, err)
-	assert.NotEqual(t, "user@domain.com", ss.User)
-	assert.NotEqual(t, s.Email, ss.Email)
-	assert.NotEqual(t, s.PreferredUsername, ss.PreferredUsername)
-	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
-	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
-	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
-	assert.NotEqual(t, s.IDToken, ss.IDToken)
-	assert.NotEqual(t, s.RefreshToken, ss.RefreshToken)
+	assert.NotEqual(t, nil, err)
 }
 
 func TestSessionStateSerializationWithUser(t *testing.T) {
@@ -91,14 +83,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	// ensure a different cipher can't decode properly (ie: it gets gibberish)
 	ss, err = sessions.DecodeSessionState(encoded, c2)
 	t.Logf("%#v", ss)
-	assert.Equal(t, nil, err)
-	assert.NotEqual(t, s.User, ss.User)
-	assert.NotEqual(t, s.Email, ss.Email)
-	assert.NotEqual(t, s.PreferredUsername, ss.PreferredUsername)
-	assert.Equal(t, s.CreatedAt.Unix(), ss.CreatedAt.Unix())
-	assert.Equal(t, s.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
-	assert.NotEqual(t, s.AccessToken, ss.AccessToken)
-	assert.NotEqual(t, s.RefreshToken, ss.RefreshToken)
+	assert.NotEqual(t, nil, err)
 }
 
 func TestSessionStateSerializationNoCipher(t *testing.T) {
@@ -277,6 +262,14 @@ func TestDecodeSessionState(t *testing.T) {
 			Encoded: `{"Email":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
 			Cipher:  c,
 			Error:   true,
+		},
+		{
+			SessionState: sessions.SessionState{
+				Email: "user@domain.com",
+				User:  "YmFzZTY0LWVuY29kZWQtdXNlcgo=", // Base64 encoding of base64-encoded-user
+			},
+			Error:  true,
+			Cipher: c,
 		},
 	}
 

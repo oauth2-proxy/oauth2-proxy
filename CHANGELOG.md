@@ -55,9 +55,11 @@
 
 ## Changes since v5.1.1
 
+- [#601](https://github.com/oauth2-proxy/oauth2-proxy/pull/601) Ensure decrypted user/email are valid UTF8 (@JoelSpeed)
 - [#560](https://github.com/oauth2-proxy/oauth2-proxy/pull/560) Fallback to UserInfo is User ID claim not present (@JoelSpeed)
 - [#598](https://github.com/oauth2-proxy/oauth2-proxy/pull/598) acr_values no longer sent to IdP when empty (@ScottGuymer)
 - [#548](https://github.com/oauth2-proxy/oauth2-proxy/pull/548) Separate logging options out of main options structure (@JoelSpeed)
+- [#567](https://github.com/oauth2-proxy/oauth2-proxy/pull/567) Allow health/ping request to be identified via User-Agent (@chkohner)
 - [#536](https://github.com/oauth2-proxy/oauth2-proxy/pull/536) Improvements to Session State code (@JoelSpeed)
 - [#573](https://github.com/oauth2-proxy/oauth2-proxy/pull/573) Properly parse redis urls for cluster and sentinel connections (@amnay-mo)
 - [#574](https://github.com/oauth2-proxy/oauth2-proxy/pull/574) render error page on 502 proxy status (@amnay-mo)
