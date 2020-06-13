@@ -33,7 +33,6 @@ type Options struct {
 	RealClientIPHeader string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
 	WhitelistIPs       []string `flag:"whitelist-ip" cfg:"whitelist_ips"`
 	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https"`
-	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https"`
 	RawRedirectURL     string   `flag:"redirect-url" cfg:"redirect_url"`
 	ClientID           string   `flag:"client-id" cfg:"client_id"`
 	ClientSecret       string   `flag:"client-secret" cfg:"client_secret"`
