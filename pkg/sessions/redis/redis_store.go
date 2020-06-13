@@ -186,17 +186,17 @@ func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, erro
 func (store *SessionStore) loadSessionFromString(ctx context.Context, value string) (*sessions.SessionState, error) {
 	ticket, err := decodeTicket(store.CookieOptions.Name, value)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding ticket: %s", err)
 	}
 
 	resultBytes, err := store.Client.Get(ctx, ticket.asHandle(store.CookieOptions.Name))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving from store: %s", err)
 	}
 
 	block, err := aes.NewCipher(ticket.Secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating new cipher: %s", err)
 	}
 	// Use secret as the IV too, because each entry has it's own key
 	stream := cipher.NewCFBDecrypter(block, ticket.Secret)
@@ -204,7 +204,7 @@ func (store *SessionStore) loadSessionFromString(ctx context.Context, value stri
 
 	session, err := sessions.DecodeSessionState(string(resultBytes), store.CookieCipher)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding session: %s", err)
 	}
 	return session, nil
 }
