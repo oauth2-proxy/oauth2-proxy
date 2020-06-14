@@ -55,7 +55,7 @@
 
 ## Changes since v5.1.1
 
-- [#552](https://github.com/oauth2-proxy/oauth2-proxy/pull/522) Implements --ip-whitelist option to whitelist IPs or CIDR ranges (@Izzette)
+- [#552](https://github.com/oauth2-proxy/oauth2-proxy/pull/522) Implements --whitelist-ip option to whitelist IPs or CIDR ranges (@Izzette)
 - [#601](https://github.com/oauth2-proxy/oauth2-proxy/pull/601) Ensure decrypted user/email are valid UTF8 (@JoelSpeed)
 - [#560](https://github.com/oauth2-proxy/oauth2-proxy/pull/560) Fallback to UserInfo is User ID claim not present (@JoelSpeed)
 - [#598](https://github.com/oauth2-proxy/oauth2-proxy/pull/598) acr_values no longer sent to IdP when empty (@ScottGuymer)
