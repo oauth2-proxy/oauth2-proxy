@@ -1,11 +1,13 @@
-package sessions_test
+package sessions
 
 import (
+	"crypto/rand"
 	"fmt"
+	"io"
+	mathrand "math/rand"
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,12 +19,16 @@ func timePtr(t time.Time) *time.Time {
 	return &t
 }
 
+func newTestCipher(secret []byte) (encryption.Cipher, error) {
+	return encryption.NewBase64Cipher(encryption.NewCFBCipher, secret)
+}
+
 func TestSessionStateSerialization(t *testing.T) {
-	c, err := encryption.NewCipher([]byte(secret))
+	c, err := newTestCipher([]byte(secret))
 	assert.Equal(t, nil, err)
-	c2, err := encryption.NewCipher([]byte(altSecret))
+	c2, err := newTestCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
-	s := &sessions.SessionState{
+	s := &SessionState{
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
@@ -34,7 +40,7 @@ func TestSessionStateSerialization(t *testing.T) {
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
 
-	ss, err := sessions.DecodeSessionState(encoded, c)
+	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", ss.User)
@@ -47,17 +53,17 @@ func TestSessionStateSerialization(t *testing.T) {
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
 
 	// ensure a different cipher can't decode properly (ie: it gets gibberish)
-	ss, err = sessions.DecodeSessionState(encoded, c2)
+	ss, err = DecodeSessionState(encoded, c2)
 	t.Logf("%#v", ss)
 	assert.NotEqual(t, nil, err)
 }
 
 func TestSessionStateSerializationWithUser(t *testing.T) {
-	c, err := encryption.NewCipher([]byte(secret))
+	c, err := newTestCipher([]byte(secret))
 	assert.Equal(t, nil, err)
-	c2, err := encryption.NewCipher([]byte(altSecret))
+	c2, err := newTestCipher([]byte(altSecret))
 	assert.Equal(t, nil, err)
-	s := &sessions.SessionState{
+	s := &SessionState{
 		User:              "just-user",
 		PreferredUsername: "ju",
 		Email:             "user@domain.com",
@@ -69,7 +75,7 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	encoded, err := s.EncodeSessionState(c)
 	assert.Equal(t, nil, err)
 
-	ss, err := sessions.DecodeSessionState(encoded, c)
+	ss, err := DecodeSessionState(encoded, c)
 	t.Logf("%#v", ss)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, s.User, ss.User)
@@ -81,13 +87,13 @@ func TestSessionStateSerializationWithUser(t *testing.T) {
 	assert.Equal(t, s.RefreshToken, ss.RefreshToken)
 
 	// ensure a different cipher can't decode properly (ie: it gets gibberish)
-	ss, err = sessions.DecodeSessionState(encoded, c2)
+	ss, err = DecodeSessionState(encoded, c2)
 	t.Logf("%#v", ss)
 	assert.NotEqual(t, nil, err)
 }
 
 func TestSessionStateSerializationNoCipher(t *testing.T) {
-	s := &sessions.SessionState{
+	s := &SessionState{
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
 		AccessToken:       "token1234",
@@ -99,7 +105,7 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// only email should have been serialized
-	ss, err := sessions.DecodeSessionState(encoded, nil)
+	ss, err := DecodeSessionState(encoded, nil)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "", ss.User)
 	assert.Equal(t, s.Email, ss.Email)
@@ -109,7 +115,7 @@ func TestSessionStateSerializationNoCipher(t *testing.T) {
 }
 
 func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
-	s := &sessions.SessionState{
+	s := &SessionState{
 		User:              "just-user",
 		Email:             "user@domain.com",
 		PreferredUsername: "user",
@@ -122,7 +128,7 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// only email should have been serialized
-	ss, err := sessions.DecodeSessionState(encoded, nil)
+	ss, err := DecodeSessionState(encoded, nil)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, s.User, ss.User)
 	assert.Equal(t, s.Email, ss.Email)
@@ -132,20 +138,20 @@ func TestSessionStateSerializationNoCipherWithUser(t *testing.T) {
 }
 
 func TestExpired(t *testing.T) {
-	s := &sessions.SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(-1) * time.Minute))}
+	s := &SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(-1) * time.Minute))}
 	assert.Equal(t, true, s.IsExpired())
 
-	s = &sessions.SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(1) * time.Minute))}
+	s = &SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(1) * time.Minute))}
 	assert.Equal(t, false, s.IsExpired())
 
-	s = &sessions.SessionState{}
+	s = &SessionState{}
 	assert.Equal(t, false, s.IsExpired())
 }
 
 type testCase struct {
-	sessions.SessionState
+	SessionState
 	Encoded string
-	Cipher  *encryption.Cipher
+	Cipher  encryption.Cipher
 	Error   bool
 }
 
@@ -159,14 +165,14 @@ func TestEncodeSessionState(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
 			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
 		},
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				Email:        "user@domain.com",
 				User:         "just-user",
 				AccessToken:  "token1234",
@@ -181,7 +187,7 @@ func TestEncodeSessionState(t *testing.T) {
 
 	for i, tc := range testCases {
 		encoded, err := tc.EncodeSessionState(tc.Cipher)
-		t.Logf("i:%d Encoded:%#vsessions.SessionState:%#v Error:%#v", i, encoded, tc.SessionState, err)
+		t.Logf("i:%d Encoded:%#vSessionState:%#v Error:%#v", i, encoded, tc.SessionState, err)
 		if tc.Error {
 			assert.Error(t, err)
 			assert.Empty(t, encoded)
@@ -201,39 +207,39 @@ func TestDecodeSessionState(t *testing.T) {
 	eJSON, _ := e.MarshalJSON()
 	eString := string(eJSON)
 
-	c, err := encryption.NewCipher([]byte(secret))
+	c, err := newTestCipher([]byte(secret))
 	assert.NoError(t, err)
 
 	testCases := []testCase{
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
 			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
 		},
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				Email: "user@domain.com",
 				User:  "",
 			},
 			Encoded: `{"Email":"user@domain.com"}`,
 		},
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				User: "just-user",
 			},
 			Encoded: `{"User":"just-user"}`,
 		},
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
 			Encoded: fmt.Sprintf(`{"Email":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
 		},
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				Email:        "user@domain.com",
 				User:         "just-user",
 				AccessToken:  "token1234",
@@ -246,7 +252,7 @@ func TestDecodeSessionState(t *testing.T) {
 			Cipher:  c,
 		},
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
@@ -264,7 +270,7 @@ func TestDecodeSessionState(t *testing.T) {
 			Error:   true,
 		},
 		{
-			SessionState: sessions.SessionState{
+			SessionState: SessionState{
 				Email: "user@domain.com",
 				User:  "YmFzZTY0LWVuY29kZWQtdXNlcgo=", // Base64 encoding of base64-encoded-user
 			},
@@ -274,8 +280,8 @@ func TestDecodeSessionState(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		ss, err := sessions.DecodeSessionState(tc.Encoded, tc.Cipher)
-		t.Logf("i:%d Encoded:%#vsessions.SessionState:%#v Error:%#v", i, tc.Encoded, ss, err)
+		ss, err := DecodeSessionState(tc.Encoded, tc.Cipher)
+		t.Logf("i:%d Encoded:%#vSessionState:%#v Error:%#v", i, tc.Encoded, ss, err)
 		if tc.Error {
 			assert.Error(t, err)
 			assert.Nil(t, ss)
@@ -297,7 +303,7 @@ func TestDecodeSessionState(t *testing.T) {
 }
 
 func TestSessionStateAge(t *testing.T) {
-	ss := &sessions.SessionState{}
+	ss := &SessionState{}
 
 	// Created at unset so should be 0
 	assert.Equal(t, time.Duration(0), ss.Age())
@@ -305,4 +311,45 @@ func TestSessionStateAge(t *testing.T) {
 	// Set CreatedAt to 1 hour ago
 	ss.CreatedAt = timePtr(time.Now().Add(-1 * time.Hour))
 	assert.Equal(t, time.Hour, ss.Age().Round(time.Minute))
+}
+
+func TestIntoEncryptAndIntoDecrypt(t *testing.T) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	// Test all 3 valid AES sizes
+	for _, secretSize := range []int{16, 24, 32} {
+		t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
+			secret := make([]byte, secretSize)
+			_, err := io.ReadFull(rand.Reader, secret)
+			assert.Equal(t, nil, err)
+
+			c, err := newTestCipher(secret)
+			assert.NoError(t, err)
+
+			// Check no errors with empty or nil strings
+			empty := ""
+			assert.Equal(t, nil, into(&empty, c.Encrypt))
+			assert.Equal(t, nil, into(&empty, c.Decrypt))
+			assert.Equal(t, nil, into(nil, c.Encrypt))
+			assert.Equal(t, nil, into(nil, c.Decrypt))
+
+			// Test various sizes tokens might be
+			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
+				t.Run(fmt.Sprintf("%d", dataSize), func(t *testing.T) {
+					b := make([]byte, dataSize)
+					for i := range b {
+						b[i] = charset[mathrand.Intn(len(charset))]
+					}
+					data := string(b)
+					originalData := data
+
+					assert.Equal(t, nil, into(&data, c.Encrypt))
+					assert.NotEqual(t, originalData, data)
+
+					assert.Equal(t, nil, into(&data, c.Decrypt))
+					assert.Equal(t, originalData, data)
+				})
+			}
+		})
+	}
 }
