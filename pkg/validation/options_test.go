@@ -369,10 +369,7 @@ func TestRealClientIPHeader(t *testing.T) {
 }
 
 func TestIPCIDRSetOption(t *testing.T) {
-	var o *options.Options
-	var err error
-
-	o = testOptions()
+	o := testOptions()
 	o.WhitelistIPs = []string{
 		"127.0.0.1",
 		"10.32.0.1/32",
@@ -380,7 +377,7 @@ func TestIPCIDRSetOption(t *testing.T) {
 		"::1",
 		"2a12:105:ee7:9234:0:0:0:0/64",
 	}
-	err = Validate(o)
+	err := Validate(o)
 	assert.Equal(t, nil, err)
 	assert.Equal(t,
 		net.IPNet{IP: net.IP{127, 0, 0, 1}, Mask: net.IPMask{255, 255, 255, 255}},
