@@ -27,7 +27,7 @@ func TestEmptyNetSet(t *testing.T) {
 	}
 }
 
-func TestV4ContainsEverythin(t *testing.T) {
+func TestV4ContainsEverything(t *testing.T) {
 	set := NewNetSet([]*net.IPNet{
 		{IP: net.ParseIP("0.0.0.0"), Mask: net.CIDRMask(0, 32)},
 	})
