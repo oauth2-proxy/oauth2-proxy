@@ -25,7 +25,7 @@ type SignatureData struct {
 type Options struct {
 	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
 	PingPath           string   `flag:"ping-path" cfg:"ping_path"`
-	PingUserAgent      string  ` flag:"ping-user-agent" cfg:"ping_user_agent"`
+	PingUserAgent      string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
 	ProxyWebSockets    bool     `flag:"proxy-websockets" cfg:"proxy_websockets"`
 	HTTPAddress        string   `flag:"http-address" cfg:"http_address"`
 	HTTPSAddress       string   `flag:"https-address" cfg:"https_address"`
