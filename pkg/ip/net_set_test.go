@@ -23,7 +23,7 @@ func TestEmptyNetSet(t *testing.T) {
 		"09d8:a74c:652f:3763:b87d:f068:b593:b588",
 	}
 	for _, ip := range ips {
-		assert.Falsef(t, set.Has(net.ParseIP(ip)), "Empty NetSet must ot have %q", ip)
+		assert.Falsef(t, set.Has(net.ParseIP(ip)), "Empty NetSet must not have %q", ip)
 	}
 }
 
