@@ -17,14 +17,14 @@ import (
 
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	AccessToken       string    `json:",omitempty" msgpack:"at,omitempty"`
-	IDToken           string    `json:",omitempty" msgpack:"it,omitempty"`
+	AccessToken       string     `json:",omitempty" msgpack:"at,omitempty"`
+	IDToken           string     `json:",omitempty" msgpack:"it,omitempty"`
 	CreatedAt         *time.Time `json:",omitempty" msgpack:"ca,omitempty"`
 	ExpiresOn         *time.Time `json:",omitempty" msgpack:"eo,omitempty"`
-	RefreshToken      string    `json:",omitempty" msgpack:"rt,omitempty"`
-	Email             string    `json:",omitempty" msgpack:"e,omitempty"`
-	User              string    `json:",omitempty" msgpack:"u,omitempty"`
-	PreferredUsername string    `json:",omitempty" msgpack:"pu,omitempty"`
+	RefreshToken      string     `json:",omitempty" msgpack:"rt,omitempty"`
+	Email             string     `json:",omitempty" msgpack:"e,omitempty"`
+	User              string     `json:",omitempty" msgpack:"u,omitempty"`
+	PreferredUsername string     `json:",omitempty" msgpack:"pu,omitempty"`
 }
 
 // IsExpired checks whether the session has expired
@@ -69,7 +69,7 @@ func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([
 	// Marshal to MessagePack
 	packed, err := msgpack.Marshal(s)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
 	if !compress {
@@ -90,13 +90,16 @@ func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([
 	reader := bytes.NewReader(packed)
 	_, err = io.Copy(zw, reader)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
-	_ = zw.Close()
+	err = zw.Close()
+	if err != nil {
+		return nil, err
+	}
 
 	compressed, err := ioutil.ReadAll(buf)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
 	// Encrypt the compressed
