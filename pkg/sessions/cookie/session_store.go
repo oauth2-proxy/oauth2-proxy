@@ -97,7 +97,7 @@ func sessionFromCookie(v []byte, c encryption.Cipher) (s *sessions.SessionState,
 	// data from trying to decrypt JSON it things is ciphertext
 	if err != nil {
 		// Legacy used Base64 + AES CFB
-		legacyCipher := &encryption.Base64Cipher{Cipher: c}
+		legacyCipher := encryption.NewBase64Cipher(c)
 		return sessions.LegacyV5DecodeSessionState(string(v), legacyCipher)
 	}
 	return ss, nil

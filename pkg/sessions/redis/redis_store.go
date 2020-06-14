@@ -298,7 +298,7 @@ func (store *SessionStore) legacyV5LoadSessionFromTicket(ctx context.Context, va
 	stream := cipher.NewCFBDecrypter(block, ticket.Secret)
 	stream.XORKeyStream(resultBytes, resultBytes)
 
-	legacyCipher := &encryption.Base64Cipher{Cipher: store.CookieCipher}
+	legacyCipher := encryption.NewBase64Cipher(store.CookieCipher)
 	session, err := sessions.LegacyV5DecodeSessionState(string(resultBytes), legacyCipher)
 	if err != nil {
 		return nil, err
