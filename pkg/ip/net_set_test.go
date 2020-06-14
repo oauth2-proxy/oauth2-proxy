@@ -54,7 +54,7 @@ func TestV4ContainsEverything(t *testing.T) {
 	}
 }
 
-func TestV6ContainsEverythin(t *testing.T) {
+func TestV6ContainsEverything(t *testing.T) {
 	set := NewNetSet([]*net.IPNet{
 		{IP: net.ParseIP("::"), Mask: net.CIDRMask(0, 128)},
 	})
