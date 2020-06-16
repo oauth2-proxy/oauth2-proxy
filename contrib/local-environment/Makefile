@@ -21,3 +21,12 @@ keycloak-up:
 .PHONY: keycloak-%
 keycloak-%:
 	docker-compose -f docker-compose-keycloak.yaml $*
+
+.PHONY: kubernetes-up
+kubernetes-up:
+	cd kubernetes && make create-cluster
+	cd kubernetes && make deploy
+
+.PHONY: kubernetes-down
+kubernetes-down:
+	cd kubernetes && make delete-cluster
