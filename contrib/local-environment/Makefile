@@ -13,3 +13,11 @@ nginx-up:
 .PHONY: nginx-%
 nginx-%:
 	docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml $*
+
+.PHONY: keycloak-up
+keycloak-up:
+	docker-compose -f docker-compose-keycloak.yaml up -d
+
+.PHONY: keycloak-%
+keycloak-%:
+	docker-compose -f docker-compose-keycloak.yaml $*

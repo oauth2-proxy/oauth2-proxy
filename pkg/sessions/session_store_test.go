@@ -170,7 +170,7 @@ var _ = Describe("NewSessionStore", func() {
 				BeforeEach(func() {
 					By("Using a valid cookie with a different providers session encoding")
 					broken := "BrokenSessionFromADifferentSessionImplementation"
-					value := encryption.SignedValue(cookieOpts.Secret, cookieOpts.Name, broken, time.Now())
+					value := encryption.SignedValue(cookieOpts.Secret, cookieOpts.Name, []byte(broken), time.Now())
 					cookie := cookiesapi.MakeCookieFromOptions(request, cookieOpts.Name, value, cookieOpts, cookieOpts.Expire, time.Now())
 					request.AddCookie(cookie)
 
@@ -367,7 +367,7 @@ var _ = Describe("NewSessionStore", func() {
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
-				cipher, err := encryption.NewCipher(encryption.SecretBytes(cookieOpts.Secret))
+				cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cipher).ToNot(BeNil())
 				opts.Cipher = cipher
