@@ -68,9 +68,7 @@ httpbin:
   ingress:
     enabled: true
     hosts:
-      - host: httpbin.localtest.me
-        paths:
-          - /
+      - httpbin.localtest.me
     annotations:
       nginx.ingress.kubernetes.io/auth-signin: http://oauth2-proxy.localtest.me/oauth2/start
       # That's what will be used in REAL LIFE
@@ -83,9 +81,7 @@ hello-world:
   ingress:
     enabled: true
     hosts:
-      - host: hello-world.localtest.me
-        paths:
-          - /
+      - hello-world.localtest.me
     annotations:
       nginx.ingress.kubernetes.io/auth-signin: http://oauth2-proxy.localtest.me/oauth2/start
       # That's what will be used in REAL LIFE
