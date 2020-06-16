@@ -62,5 +62,5 @@ helm-undeploy:
 
 # creates K8S manifest from helm chart
 .PHONY: helm-create-manifest
-helm-create-manifest:
+helm-create-manifest: helm-init
 	helm template --namespace default oauth2-proxy-example . > oauth2-proxy-example-full.yaml

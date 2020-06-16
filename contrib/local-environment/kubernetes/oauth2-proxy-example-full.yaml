@@ -17,7 +17,7 @@ kind: ServiceAccount
 metadata:
   name: oauth2-proxy-example-hello-world
   labels:
-    helm.sh/chart: hello-world-1.0.0
+    helm.sh/chart: hello-world-1.0.1
     app.kubernetes.io/name: hello-world
     app.kubernetes.io/instance: oauth2-proxy-example
     app.kubernetes.io/version: "1.0.0"
@@ -29,7 +29,7 @@ kind: ServiceAccount
 metadata:
   name: oauth2-proxy-example-httpbin
   labels:
-    helm.sh/chart: httpbin-1.0.0
+    helm.sh/chart: httpbin-1.0.1
     app.kubernetes.io/name: httpbin
     app.kubernetes.io/instance: oauth2-proxy-example
     app.kubernetes.io/version: "latest"
@@ -167,7 +167,7 @@ kind: Service
 metadata:
   name: oauth2-proxy-example-hello-world
   labels:
-    helm.sh/chart: hello-world-1.0.0
+    helm.sh/chart: hello-world-1.0.1
     app.kubernetes.io/name: hello-world
     app.kubernetes.io/instance: oauth2-proxy-example
     app.kubernetes.io/version: "1.0.0"
@@ -189,7 +189,7 @@ kind: Service
 metadata:
   name: oauth2-proxy-example-httpbin
   labels:
-    helm.sh/chart: httpbin-1.0.0
+    helm.sh/chart: httpbin-1.0.1
     app.kubernetes.io/name: httpbin
     app.kubernetes.io/instance: oauth2-proxy-example
     app.kubernetes.io/version: "latest"
@@ -312,7 +312,7 @@ kind: Deployment
 metadata:
   name: oauth2-proxy-example-hello-world
   labels:
-    helm.sh/chart: hello-world-1.0.0
+    helm.sh/chart: hello-world-1.0.1
     app.kubernetes.io/name: hello-world
     app.kubernetes.io/instance: oauth2-proxy-example
     app.kubernetes.io/version: "1.0.0"
@@ -359,7 +359,7 @@ kind: Deployment
 metadata:
   name: oauth2-proxy-example-httpbin
   labels:
-    helm.sh/chart: httpbin-1.0.0
+    helm.sh/chart: httpbin-1.0.1
     app.kubernetes.io/name: httpbin
     app.kubernetes.io/instance: oauth2-proxy-example
     app.kubernetes.io/version: "latest"
@@ -495,7 +495,7 @@ kind: Ingress
 metadata:
   name: oauth2-proxy-example-hello-world
   labels:
-    helm.sh/chart: hello-world-1.0.0
+    helm.sh/chart: hello-world-1.0.1
     app.kubernetes.io/name: hello-world
     app.kubernetes.io/instance: oauth2-proxy-example
     app.kubernetes.io/version: "1.0.0"
@@ -520,7 +520,7 @@ kind: Ingress
 metadata:
   name: oauth2-proxy-example-httpbin
   labels:
-    helm.sh/chart: httpbin-1.0.0
+    helm.sh/chart: httpbin-1.0.1
     app.kubernetes.io/name: httpbin
     app.kubernetes.io/instance: oauth2-proxy-example
     app.kubernetes.io/version: "latest"
@@ -561,45 +561,3 @@ spec:
             backend:
               serviceName: oauth2-proxy-example-oauth2-proxy-sample
               servicePort: 80
----
-# Source: kubernetes/charts/hello-world/templates/tests/test-connection.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: "oauth2-proxy-example-hello-world-test-connection"
-  labels:
-    helm.sh/chart: hello-world-1.0.0
-    app.kubernetes.io/name: hello-world
-    app.kubernetes.io/instance: oauth2-proxy-example
-    app.kubernetes.io/version: "1.0.0"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    "helm.sh/hook": test-success
-spec:
-  containers:
-    - name: wget
-      image: busybox
-      command: ['wget']
-      args: ['oauth2-proxy-example-hello-world:9080']
-  restartPolicy: Never
----
-# Source: kubernetes/charts/httpbin/templates/tests/test-connection.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: "oauth2-proxy-example-httpbin-test-connection"
-  labels:
-    helm.sh/chart: httpbin-1.0.0
-    app.kubernetes.io/name: httpbin
-    app.kubernetes.io/instance: oauth2-proxy-example
-    app.kubernetes.io/version: "latest"
-    app.kubernetes.io/managed-by: Helm
-  annotations:
-    "helm.sh/hook": test-success
-spec:
-  containers:
-    - name: wget
-      image: busybox
-      command: ['wget']
-      args: ['oauth2-proxy-example-httpbin:80']
-  restartPolicy: Never
