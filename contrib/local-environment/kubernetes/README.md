@@ -21,4 +21,4 @@ Visit http://httpbin.localtest.me or http://hello-world.localtest.me/
 
 ## Uninstall
 
-* `make delete-cluster` OR `make helm-undeploy` for helm
+* `make delete-cluster`
