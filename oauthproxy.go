@@ -893,6 +893,7 @@ func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request)
 	rw.WriteHeader(http.StatusAccepted)
 }
 
+// SkipAuthProxy proxies whitelisted requests and skips authentication
 func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
 	if p.skipAuthStripHeaders {
 		p.stripAuthHeaders(req)
@@ -1133,6 +1134,13 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 
 // stripAuthHeaders removes Auth headers for whitelisted routes from skipAuthRegex
 func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
+	if p.PassBasicAuth {
+		req.Header.Del("X-Forwarded-User")
+		req.Header.Del("X-Forwarded-Email")
+		req.Header.Del("X-Forwarded-Preferred-Username")
+		req.Header.Del("Authorization")
+	}
+
 	if p.PassUserHeaders {
 		req.Header.Del("X-Forwarded-User")
 		req.Header.Del("X-Forwarded-Email")
@@ -1141,6 +1149,10 @@ func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
 
 	if p.PassAccessToken {
 		req.Header.Del("X-Forwarded-Access-Token")
+	}
+
+	if p.PassAuthorization {
+		req.Header.Del("Authorization")
 	}
 }
 
