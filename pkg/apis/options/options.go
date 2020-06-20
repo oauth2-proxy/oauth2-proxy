@@ -162,9 +162,9 @@ func NewOptions() *Options {
 		AzureTenant:                      "common",
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
-		SkipAuthStripHeaders:             false,
+		SkipAuthStripHeaders:             true,
 		FlushInterval:                    time.Duration(1) * time.Second,
-		PassBasicAuth:                    true,
+		PassBasicAuth:                    false,
 		SetBasicAuth:                     false,
 		PassUserHeaders:                  true,
 		PassAccessToken:                  false,
@@ -196,7 +196,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
 	flagSet.Bool("set-xauthrequest", false, "set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)")
 	flagSet.StringSlice("upstream", []string{}, "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
-	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
+	flagSet.Bool("pass-basic-auth", false, "pass HTTP Basic Auth built from Username & --basic-auth-password to upstream")
 	flagSet.Bool("set-basic-auth", false, "set HTTP Basic Auth information in response (useful in Nginx auth_request mode)")
 	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
 	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
@@ -206,7 +206,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("pass-authorization-header", false, "pass the Authorization Header to upstream")
 	flagSet.Bool("set-authorization-header", false, "set Authorization response headers (useful in Nginx auth_request mode)")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "bypass authentication for requests path's that match (may be given multiple times)")
-	flagSet.Bool("skip-auth-strip-headers", false, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy for request paths in --skip-auth-regex")
+	flagSet.Bool("skip-auth-strip-headers", true, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy for request paths in --skip-auth-regex")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")

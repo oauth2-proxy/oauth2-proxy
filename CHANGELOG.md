@@ -6,8 +6,14 @@
 
 ## Breaking Changes
 
+- [#679](https://github.com/oauth2-proxy/oauth2-proxy/pull/679) Authentication headers will be stripped by default in whitelisted requests (@NickMeves)
+  - `--skip-auth-strip-headers` flag is now `true` by default. Can be set to `false` to preserve legacy behavior.
+  - `--pass-basic-auth` will now only control setting the `Authorization` header with basic auth. It no longer controls the `X-Forwarded-*` user headers (already configured with `--pass-user-headers`)
+  - `--pass-basic-auth` now is `false` by default to match related settings defaults.
+
 ## Changes since v6.0.0
 
+- [#679](https://github.com/oauth2-proxy/oauth2-proxy/pull/679) Authentication headers will be stripped by default in whitelisted requests (@NickMeves)
 - [#624](https://github.com/oauth2-proxy/oauth2-proxy/pull/624) Allow stripping authentication headers from whitelisted requests with `--skip-auth-strip-headers` (@NickMeves)
 - [#675](https://github.com/oauth2-proxy/oauth2-proxy/pull/675) Fix required ruby version and deprecated option for building docs (@mkontani)
 - [#669](https://github.com/oauth2-proxy/oauth2-proxy/pull/669) Reduce docker context to improve build times (@JoelSpeed)

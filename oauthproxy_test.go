@@ -643,8 +643,7 @@ func TestBasicAuthWithEmail(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		proxy.addHeadersForProxying(rw, req, session)
-		assert.Equal(t, expectedUserHeader, req.Header["Authorization"][0])
-		assert.Equal(t, userName, req.Header["X-Forwarded-User"][0])
+		assert.Equal(t, expectedUserHeader, req.Header.Get("Authorization"))
 	}
 
 	opts.PreferEmailToUser = true
@@ -657,8 +656,7 @@ func TestBasicAuthWithEmail(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		proxy.addHeadersForProxying(rw, req, session)
-		assert.Equal(t, expectedEmailHeader, req.Header["Authorization"][0])
-		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
+		assert.Equal(t, expectedEmailHeader, req.Header.Get("Authorization"))
 	}
 }
 
@@ -688,7 +686,7 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		proxy.addHeadersForProxying(rw, req, session)
-		assert.Equal(t, userName, req.Header["X-Forwarded-User"][0])
+		assert.Equal(t, userName, req.Header.Get("X-Forwarded-User"))
 	}
 
 	opts.PreferEmailToUser = true
@@ -701,7 +699,7 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		proxy.addHeadersForProxying(rw, req, session)
-		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
+		assert.Equal(t, emailAddress, req.Header.Get("X-Forwarded-User"))
 	}
 }
 
@@ -716,7 +714,7 @@ func TestStripAuthHeaders(t *testing.T) {
 	}{
 		"Default options": {
 			SkipAuthStripHeaders: true,
-			PassBasicAuth:        true,
+			PassBasicAuth:        false,
 			PassUserHeaders:      true,
 			PassAccessToken:      false,
 			PassAuthorization:    false,
@@ -725,24 +723,10 @@ func TestStripAuthHeaders(t *testing.T) {
 				"X-Forwarded-Email":              true,
 				"X-Forwarded-Preferred-Username": true,
 				"X-Forwarded-Access-Token":       false,
-				"Authorization":                  true,
+				"Authorization":                  false,
 			},
 		},
 		"Pass access token": {
-			SkipAuthStripHeaders: true,
-			PassBasicAuth:        true,
-			PassUserHeaders:      true,
-			PassAccessToken:      true,
-			PassAuthorization:    false,
-			StrippedHeaders: map[string]bool{
-				"X-Forwarded-User":               true,
-				"X-Forwarded-Email":              true,
-				"X-Forwarded-Preferred-Username": true,
-				"X-Forwarded-Access-Token":       true,
-				"Authorization":                  true,
-			},
-		},
-		"Nothing setting Authorization": {
 			SkipAuthStripHeaders: true,
 			PassBasicAuth:        false,
 			PassUserHeaders:      true,
@@ -754,6 +738,20 @@ func TestStripAuthHeaders(t *testing.T) {
 				"X-Forwarded-Preferred-Username": true,
 				"X-Forwarded-Access-Token":       true,
 				"Authorization":                  false,
+			},
+		},
+		"Pass basic auth": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      true,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               true,
+				"X-Forwarded-Email":              true,
+				"X-Forwarded-Preferred-Username": true,
+				"X-Forwarded-Access-Token":       true,
+				"Authorization":                  true,
 			},
 		},
 		"Only Authorization header modified": {

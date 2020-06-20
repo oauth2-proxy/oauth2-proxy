@@ -1030,21 +1030,8 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	if p.PassBasicAuth {
 		if p.PreferEmailToUser && session.Email != "" {
 			req.SetBasicAuth(session.Email, p.BasicAuthPassword)
-			req.Header["X-Forwarded-User"] = []string{session.Email}
-			req.Header.Del("X-Forwarded-Email")
 		} else {
 			req.SetBasicAuth(session.User, p.BasicAuthPassword)
-			req.Header["X-Forwarded-User"] = []string{session.User}
-			if session.Email != "" {
-				req.Header["X-Forwarded-Email"] = []string{session.Email}
-			} else {
-				req.Header.Del("X-Forwarded-Email")
-			}
-		}
-		if session.PreferredUsername != "" {
-			req.Header["X-Forwarded-Preferred-Username"] = []string{session.PreferredUsername}
-		} else {
-			req.Header.Del("X-Forwarded-Preferred-Username")
 		}
 	}
 
@@ -1134,13 +1121,6 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 
 // stripAuthHeaders removes Auth headers for whitelisted routes from skipAuthRegex
 func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
-	if p.PassBasicAuth {
-		req.Header.Del("X-Forwarded-User")
-		req.Header.Del("X-Forwarded-Email")
-		req.Header.Del("X-Forwarded-Preferred-Username")
-		req.Header.Del("Authorization")
-	}
-
 	if p.PassUserHeaders {
 		req.Header.Del("X-Forwarded-User")
 		req.Header.Del("X-Forwarded-Email")
@@ -1151,7 +1131,7 @@ func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
 		req.Header.Del("X-Forwarded-Access-Token")
 	}
 
-	if p.PassAuthorization {
+	if p.PassBasicAuth || p.PassAuthorization {
 		req.Header.Del("Authorization")
 	}
 }
