@@ -724,17 +724,15 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 }
 
 func TestStripAuthHeaders(t *testing.T) {
-	type testCase struct {
+	testCases := map[string]struct {
 		SkipAuthStripHeaders bool
 		PassBasicAuth        bool
 		PassUserHeaders      bool
 		PassAccessToken      bool
 		PassAuthorization    bool
 		StrippedHeaders      map[string]bool
-	}
-
-	testCases := []testCase{
-		{
+	}{
+		"Default options": {
 			SkipAuthStripHeaders: true,
 			PassBasicAuth:        true,
 			PassUserHeaders:      true,
@@ -748,7 +746,7 @@ func TestStripAuthHeaders(t *testing.T) {
 				"Authorization":                  true,
 			},
 		},
-		{
+		"Pass access token": {
 			SkipAuthStripHeaders: true,
 			PassBasicAuth:        true,
 			PassUserHeaders:      true,
@@ -762,7 +760,7 @@ func TestStripAuthHeaders(t *testing.T) {
 				"Authorization":                  true,
 			},
 		},
-		{
+		"Nothing setting Authorization": {
 			SkipAuthStripHeaders: true,
 			PassBasicAuth:        false,
 			PassUserHeaders:      true,
@@ -776,7 +774,7 @@ func TestStripAuthHeaders(t *testing.T) {
 				"Authorization":                  false,
 			},
 		},
-		{
+		"Only Authorization header modified": {
 			SkipAuthStripHeaders: true,
 			PassBasicAuth:        false,
 			PassUserHeaders:      false,
@@ -790,7 +788,7 @@ func TestStripAuthHeaders(t *testing.T) {
 				"Authorization":                  true,
 			},
 		},
-		{
+		"Don't strip any headers (default options)": {
 			SkipAuthStripHeaders: false,
 			PassBasicAuth:        true,
 			PassUserHeaders:      true,
@@ -804,7 +802,7 @@ func TestStripAuthHeaders(t *testing.T) {
 				"Authorization":                  false,
 			},
 		},
-		{
+		"Don't strip any headers (custom options)": {
 			SkipAuthStripHeaders: false,
 			PassBasicAuth:        true,
 			PassUserHeaders:      true,
@@ -828,34 +826,36 @@ func TestStripAuthHeaders(t *testing.T) {
 		"Authorization":                  "bearer IDToken",
 	}
 
-	for i, tc := range testCases {
-		opts := baseTestOptions()
-		opts.SkipAuthStripHeaders = tc.SkipAuthStripHeaders
-		opts.PassBasicAuth = tc.PassBasicAuth
-		opts.PassUserHeaders = tc.PassUserHeaders
-		opts.PassAccessToken = tc.PassAccessToken
-		opts.PassAuthorization = tc.PassAuthorization
-		err := validation.Validate(opts)
-		assert.NoError(t, err)
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			opts := baseTestOptions()
+			opts.SkipAuthStripHeaders = tc.SkipAuthStripHeaders
+			opts.PassBasicAuth = tc.PassBasicAuth
+			opts.PassUserHeaders = tc.PassUserHeaders
+			opts.PassAccessToken = tc.PassAccessToken
+			opts.PassAuthorization = tc.PassAuthorization
+			err := validation.Validate(opts)
+			assert.NoError(t, err)
 
-		req, _ := http.NewRequest("GET", fmt.Sprintf("%s/testCase/%d", opts.ProxyPrefix, i), nil)
-		for header, val := range initialHeaders {
-			req.Header.Set(header, val)
-		}
-
-		proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
-		assert.NoError(t, err)
-		if proxy.skipAuthStripHeaders {
-			proxy.stripAuthHeaders(req)
-		}
-
-		for header, stripped := range tc.StrippedHeaders {
-			if stripped {
-				assert.Equal(t, req.Header.Get(header), "")
-			} else {
-				assert.Equal(t, req.Header.Get(header), initialHeaders[header])
+			req, _ := http.NewRequest("GET", fmt.Sprintf("%s/testCase", opts.ProxyPrefix), nil)
+			for header, val := range initialHeaders {
+				req.Header.Set(header, val)
 			}
-		}
+
+			proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+			assert.NoError(t, err)
+			if proxy.skipAuthStripHeaders {
+				proxy.stripAuthHeaders(req)
+			}
+
+			for header, stripped := range tc.StrippedHeaders {
+				if stripped {
+					assert.Equal(t, req.Header.Get(header), "")
+				} else {
+					assert.Equal(t, req.Header.Get(header), initialHeaders[header])
+				}
+			}
+		})
 	}
 }
 
