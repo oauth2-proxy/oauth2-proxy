@@ -24,9 +24,9 @@ keycloak-%:
 
 .PHONY: kubernetes-up
 kubernetes-up:
-	cd kubernetes && make create-cluster
-	cd kubernetes && make deploy
+	make -C kubernetes create-cluster
+	make -C kubernetes deploy
 
 .PHONY: kubernetes-down
 kubernetes-down:
-	cd kubernetes && make delete-cluster
+	make -C kubernetes delete-cluster
