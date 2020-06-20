@@ -9,7 +9,7 @@ import (
 )
 
 // configureLogger is responsible for configuring the logger based on the options given
-func configureLogger(o options.Logging, pingPath string, msgs []string) []string {
+func configureLogger(o options.Logging, msgs []string) []string {
 	// Setup the log file
 	if len(o.File.Filename) > 0 {
 		// Validate that the file/dir can be written
@@ -48,11 +48,7 @@ func configureLogger(o options.Logging, pingPath string, msgs []string) []string
 	logger.SetAuthTemplate(o.AuthFormat)
 	logger.SetReqTemplate(o.RequestFormat)
 
-	excludePaths := o.ExcludePaths
-	if o.SilencePing {
-		excludePaths = append(excludePaths, pingPath)
-	}
-	logger.SetExcludePaths(excludePaths)
+	logger.SetExcludePaths(o.ExcludePaths)
 
 	if !o.LocalTime {
 		logger.SetFlags(logger.Flags() | logger.LUTC)

@@ -81,9 +81,6 @@ type OAuthProxy struct {
 	Validator      func(string) bool
 
 	RobotsPath        string
-	PingPath          string
-	PingUserAgent     string
-	SilencePings      bool
 	SignInPath        string
 	SignOutPath       string
 	OAuthStartPath    string
@@ -313,9 +310,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		Validator:      validator,
 
 		RobotsPath:        "/robots.txt",
-		PingPath:          opts.PingPath,
-		PingUserAgent:     opts.PingUserAgent,
-		SilencePings:      opts.Logging.SilencePing,
 		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
 		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
@@ -468,17 +462,6 @@ func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 	fmt.Fprintf(rw, "User-agent: *\nDisallow: /")
 }
 
-// PingPage responds 200 OK to requests
-func (p *OAuthProxy) PingPage(rw http.ResponseWriter) {
-	if p.SilencePings {
-		if rl, ok := rw.(*responseLogger); ok {
-			rl.silent = true
-		}
-	}
-	rw.WriteHeader(http.StatusOK)
-	fmt.Fprintf(rw, "OK")
-}
-
 // ErrorPage writes an error response
 func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	rw.WriteHeader(code)
@@ -615,6 +598,9 @@ func validOptionalPort(port string) bool {
 // IsValidRedirect checks whether the redirect URL is whitelisted
 func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	switch {
+	case redirect == "":
+		// The user didn't specify a redirect, should fallback to `/`
+		return false
 	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !invalidRedirectRegex.MatchString(redirect):
 		return true
 	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
@@ -684,17 +670,6 @@ func prepareNoCache(w http.ResponseWriter) {
 	}
 }
 
-// IsPingRequest will check if the request appears to be performing a health check
-// either via the path it's requesting or by a special User-Agent configuration.
-func (p *OAuthProxy) IsPingRequest(req *http.Request) bool {
-
-	if req.URL.EscapedPath() == p.PingPath {
-		return true
-	}
-
-	return p.PingUserAgent != "" && req.Header.Get("User-Agent") == p.PingUserAgent
-}
-
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
 		prepareNoCache(rw)
@@ -703,8 +678,6 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	switch path := req.URL.Path; {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
-	case p.IsPingRequest(req):
-		p.PingPage(rw)
 	case p.IsWhitelistedRequest(req):
 		p.serveMux.ServeHTTP(rw, req)
 	case path == p.SignInPath:
