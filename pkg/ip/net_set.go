@@ -21,17 +21,11 @@ type NetSet struct {
 }
 
 // Create a new NetSet with all of the provided networks.
-func NewNetSet(nets []*net.IPNet) *NetSet {
-	w := &NetSet{
+func NewNetSet() *NetSet {
+	return &NetSet{
 		ip4NetMaps: make([]ipNetMap, 0),
 		ip6NetMaps: make([]ipNetMap, 0),
 	}
-
-	for _, net := range nets {
-		w.AddIPNet(net.IP, net.Mask)
-	}
-
-	return w
 }
 
 // Check if `ip` is in the set, true if within the set otherwise false.
@@ -48,11 +42,11 @@ func (w *NetSet) Has(ip net.IP) bool {
 }
 
 // Add an CIDR network to the set.
-func (w *NetSet) AddIPNet(ip net.IP, mask net.IPMask) {
-	netMaps := w.getNetMaps(ip)
+func (w *NetSet) AddIPNet(ipNet net.IPNet) {
+	netMaps := w.getNetMaps(ipNet.IP)
 
 	// Determine the size / number of ones in the CIDR network mask.
-	ones, _ := mask.Size()
+	ones, _ := ipNet.Mask.Size()
 
 	var netMap *ipNetMap
 
@@ -67,17 +61,17 @@ func (w *NetSet) AddIPNet(ip net.IP, mask net.IPMask) {
 	// Create a new ipNetMap if none with this number of ones have been created yet.
 	if netMap == nil {
 		netMap = &ipNetMap{
-			mask: mask,
+			mask: ipNet.Mask,
 			ips:  make(map[string]bool),
 		}
 		*netMaps = append(*netMaps, *netMap)
 		// Recurse once now that there exists an netMap.
-		w.AddIPNet(ip, mask)
+		w.AddIPNet(ipNet)
 		return
 	}
 
 	// Add the IP to the ipNetMap.
-	netMap.ips[ip.String()] = true
+	netMap.ips[ipNet.IP.String()] = true
 }
 
 // Get the appropriate array of networks for the given IP version.

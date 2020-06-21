@@ -300,6 +300,15 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
+	whitelistIPs := ip.NewNetSet()
+	for _, ipStr := range opts.WhitelistIPs {
+		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
+			whitelistIPs.AddIPNet(*ipNet)
+		} else {
+			panic(fmt.Sprintf("Could not parse IP network (%s)", ipStr))
+		}
+	}
+
 	return &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
@@ -337,7 +346,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		jwtBearerVerifiers:   opts.GetJWTBearerVerifiers(),
 		compiledRegex:        opts.GetCompiledRegex(),
 		realClientIPParser:   opts.GetRealClientIPParser(),
-		whitelistIPs:         ip.NewNetSet(opts.GetWhitelistIPNets()),
+		whitelistIPs:         whitelistIPs,
 		SetXAuthRequest:      opts.SetXAuthRequest,
 		PassBasicAuth:        opts.PassBasicAuth,
 		SetBasicAuth:         opts.SetBasicAuth,

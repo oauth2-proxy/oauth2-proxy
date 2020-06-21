@@ -2,7 +2,6 @@ package options
 
 import (
 	"crypto"
-	"net"
 	"net/url"
 	"regexp"
 	"time"
@@ -122,7 +121,6 @@ type Options struct {
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
 	realClientIPParser ipapi.RealClientIPParser
-	whitelistIPNets    []*net.IPNet
 }
 
 // Options for Getting internal values
@@ -135,7 +133,6 @@ func (o *Options) GetSignatureData() *SignatureData                { return o.si
 func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
 func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jwtBearerVerifiers }
 func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
-func (o *Options) GetWhitelistIPNets() []*net.IPNet                { return o.whitelistIPNets }
 
 // Options for Setting internal values
 func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
@@ -147,7 +144,6 @@ func (o *Options) SetSignatureData(s *SignatureData)                { o.signatur
 func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
 func (o *Options) SetJWTBearerVerifiers(s []*oidc.IDTokenVerifier)  { o.jwtBearerVerifiers = s }
 func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClientIPParser = s }
-func (o *Options) SetWhitelistIPNets(s []*net.IPNet)                { o.whitelistIPNets = s }
 
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {

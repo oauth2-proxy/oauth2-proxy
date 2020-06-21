@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -280,9 +279,10 @@ func Validate(o *options.Options) error {
 		})
 	}
 
-	if o.WhitelistIPs != nil && len(o.WhitelistIPs) > 0 {
-		parsedIPNets := parseWhitelistIPs(o.WhitelistIPs, &msgs)
-		o.SetWhitelistIPNets(append(o.GetWhitelistIPNets(), parsedIPNets...))
+	for i, ipStr := range o.WhitelistIPs {
+		if nil == ip.ParseIPNet(ipStr) {
+			msgs = append(msgs, fmt.Sprintf("whitelist_ip[%d] (%s) could not be recognized", i, ipStr))
+		}
 	}
 
 	if len(msgs) != 0 {
@@ -431,41 +431,6 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 		parsedIssuers = append(parsedIssuers, jwtIssuer{issuerURI: uri, audience: audience})
 	}
 	return parsedIssuers, msgs
-}
-
-func parseWhitelistIPs(ipWhitelistStrs []string, msgs *[]string) []*net.IPNet {
-	parsedIPNets := make([]*net.IPNet, 0, len(ipWhitelistStrs))
-
-	for _, ipStr := range ipWhitelistStrs {
-		if !strings.ContainsRune(ipStr, '/') {
-			ip := net.ParseIP(ipStr)
-			if ip == nil {
-				*msgs = append(*msgs, fmt.Sprintf("whitelisted IP (%q) looks like an IP address, but could not be recognized", ipStr))
-				continue
-			}
-
-			// Normalize IP addresses specified without a netmask to their single-host CIDR network equivalent.
-			switch {
-			case ip.To4() != nil:
-				ipStr = fmt.Sprintf("%s/32", ipStr)
-			case ip.To16() != nil:
-				ipStr = fmt.Sprintf("%s/128", ipStr)
-			default:
-				*msgs = append(*msgs, fmt.Sprintf("whitelisted IP (%q) address neither IPv4 or IPv6", ipStr))
-				continue
-			}
-		}
-
-		_, ipNet, err := net.ParseCIDR(ipStr)
-		if err != nil {
-			*msgs = append(*msgs, fmt.Sprintf("whitelisted IP (%q) can't parse as CIDR: %v", ipStr, err))
-			continue
-		}
-
-		parsedIPNets = append(parsedIPNets, ipNet)
-	}
-
-	return parsedIPNets
 }
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns

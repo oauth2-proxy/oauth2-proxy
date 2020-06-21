@@ -8,7 +8,7 @@ import (
 )
 
 func TestEmptyNetSet(t *testing.T) {
-	set := NewNetSet([]*net.IPNet{})
+	set := NewNetSet()
 
 	ips := []string{
 		"127.0.0.1",
@@ -28,9 +28,8 @@ func TestEmptyNetSet(t *testing.T) {
 }
 
 func TestV4ContainsEverything(t *testing.T) {
-	set := NewNetSet([]*net.IPNet{
-		{IP: net.ParseIP("0.0.0.0"), Mask: net.CIDRMask(0, 32)},
-	})
+	set := NewNetSet()
+	set.AddIPNet(net.IPNet{IP: net.ParseIP("0.0.0.0"), Mask: net.CIDRMask(0, 32)})
 
 	ip4s := []string{
 		"127.0.0.1",
@@ -55,9 +54,8 @@ func TestV4ContainsEverything(t *testing.T) {
 }
 
 func TestV6ContainsEverything(t *testing.T) {
-	set := NewNetSet([]*net.IPNet{
-		{IP: net.ParseIP("::"), Mask: net.CIDRMask(0, 128)},
-	})
+	set := NewNetSet()
+	set.AddIPNet(net.IPNet{IP: net.ParseIP("::"), Mask: net.CIDRMask(0, 128)})
 
 	ip4s := []string{
 		"127.0.0.1",
@@ -82,10 +80,9 @@ func TestV6ContainsEverything(t *testing.T) {
 }
 
 func TestLocalhostOnly(t *testing.T) {
-	set := NewNetSet([]*net.IPNet{
-		{IP: net.ParseIP("127.0.0.0"), Mask: net.CIDRMask(8, 32)},
-		{IP: net.ParseIP("::1"), Mask: net.CIDRMask(128, 128)},
-	})
+	set := NewNetSet()
+	set.AddIPNet(net.IPNet{IP: net.ParseIP("127.0.0.0"), Mask: net.CIDRMask(8, 32)})
+	set.AddIPNet(net.IPNet{IP: net.ParseIP("::1"), Mask: net.CIDRMask(128, 128)})
 
 	included := []string{
 		"127.0.0.1",

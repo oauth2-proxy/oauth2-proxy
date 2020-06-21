@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -379,32 +378,6 @@ func TestIPCIDRSetOption(t *testing.T) {
 	}
 	err := Validate(o)
 	assert.Equal(t, nil, err)
-	assert.Equal(t,
-		net.IPNet{IP: net.IP{127, 0, 0, 1}, Mask: net.IPMask{255, 255, 255, 255}},
-		*o.GetWhitelistIPNets()[0],
-	)
-	assert.Equal(t,
-		net.IPNet{IP: net.IP{10, 32, 0, 1}, Mask: net.IPMask{255, 255, 255, 255}},
-		*o.GetWhitelistIPNets()[1],
-	)
-	assert.Equal(t,
-		net.IPNet{IP: net.IP{43, 36, 201, 0}, Mask: net.IPMask{255, 255, 255, 0}},
-		*o.GetWhitelistIPNets()[2],
-	)
-	assert.Equal(t,
-		net.IPNet{
-			IP:   net.IP{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
-			Mask: net.IPMask{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-		},
-		*o.GetWhitelistIPNets()[3],
-	)
-	assert.Equal(t,
-		net.IPNet{
-			IP:   net.IP{0x2a, 0x12, 0x1, 0x5, 0xe, 0xe7, 0x92, 0x34, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-			Mask: net.IPMask{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-		},
-		*o.GetWhitelistIPNets()[4],
-	)
 
 	o = testOptions()
 	o.WhitelistIPs = []string{
@@ -415,16 +388,14 @@ func TestIPCIDRSetOption(t *testing.T) {
 	}
 	err = Validate(o)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, o.GetWhitelistIPNets()[0], o.GetWhitelistIPNets()[1])
-	assert.Equal(t, o.GetWhitelistIPNets()[2], o.GetWhitelistIPNets()[3])
 
 	o = testOptions()
 	o.WhitelistIPs = []string{"[::1]", "alkwlkbn/32"}
 	err = Validate(o)
 	assert.Equal(t,
 		"invalid configuration:\n"+
-			"  whitelisted IP (\"[::1]\") looks like an IP address, but could not be recognized\n"+
-			"  whitelisted IP (\"alkwlkbn/32\") can't parse as CIDR: invalid CIDR address: alkwlkbn/32",
+			"  whitelist_ip[0] ([::1]) could not be recognized\n"+
+			"  whitelist_ip[1] (alkwlkbn/32) could not be recognized",
 		err.Error(),
 	)
 }
