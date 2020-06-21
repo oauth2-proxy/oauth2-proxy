@@ -3,10 +3,13 @@ package providers
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
 )
@@ -15,7 +18,10 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Groups               []string
+	Groups       []string
+	Projects     []string
+	EmailDomains []string
+
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
 }
@@ -62,6 +68,15 @@ func (p *GitLabProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		return nil, fmt.Errorf("unable to update session: %v", err)
 	}
 	return
+}
+
+// SetProjectScope ensure read_api is added to scope when filtering on projects
+func (p *GitLabProvider) SetProjectScope() {
+	if len(p.Projects) > 0 {
+		if !strings.Contains(p.Scope, "read_api") {
+			p.Scope += " read_api"
+		}
+	}
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -165,6 +180,34 @@ func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
 	return fmt.Errorf("user is not a member of '%s'", p.Groups)
 }
 
+type gitlabProjectInfo struct {
+	Name              string `json:"name"`
+	Archived          bool   `json:"archived"`
+	PathWithNamespace string `json:"path_with_namespace"`
+}
+
+func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.SessionState, project string) (*gitlabProjectInfo, error) {
+	var projectInfo gitlabProjectInfo
+
+	endpointURL := &url.URL{
+		Scheme: p.LoginURL.Scheme,
+		Host:   p.LoginURL.Host,
+		Path:   "/api/v4/projects/",
+	}
+
+	err := requests.New(fmt.Sprintf("%s%s", endpointURL.String(), url.QueryEscape(project))).
+		WithContext(ctx).
+		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		Do().
+		UnmarshalInto(&projectInfo)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project info: %v", err)
+	}
+
+	return &projectInfo, nil
+}
+
 func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
@@ -193,7 +236,7 @@ func (p *GitLabProvider) ValidateSession(ctx context.Context, s *sessions.Sessio
 	return err == nil
 }
 
-// GetEmailAddress returns the Account email address
+// EnrichSession with value from the Gitlab context
 func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Retrieve user info
 	userInfo, err := p.getUserInfo(ctx, s)
@@ -213,8 +256,37 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 		return fmt.Errorf("group membership check failed: %v", err)
 	}
 
+	p.addProjectMembershipToState(ctx, s)
+
 	s.User = userInfo.Username
 	s.Email = userInfo.Email
 
 	return nil
+
+}
+
+// addProjectMembership adds projects into session.Groups
+func (p *GitLabProvider) addProjectMembershipToState(ctx context.Context, s *sessions.SessionState) {
+	if len(p.Projects) == 0 {
+		return
+	}
+
+	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
+	for _, project := range p.Projects {
+		project, err := p.getProjectInfo(ctx, s, project)
+		// If no error, it's a member of the project
+		if err == nil && !project.Archived {
+			s.Groups = append(s.Groups, project.PathWithNamespace)
+		}
+
+		if err != nil {
+			logger.Printf("Warning: project info request failed: %v", err)
+		}
+
+		if project != nil && project.Archived {
+			logger.Printf("Warning: project %s is archived", project.Name)
+		}
+
+	}
+
 }

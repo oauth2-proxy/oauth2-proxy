@@ -282,6 +282,11 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
+		p.Projects = o.GitlabProjects
+		// TODO (@NickMeves): merge groups and projects when calling allowed groups - Refactor to Authorize
+		p.SetAllowedGroups(o.GitlabProjects)
+		p.SetProjectScope()
+		p.EmailDomains = o.EmailDomains
 
 		if p.Verifier == nil {
 			// Initialize with default verifier for gitlab.com
