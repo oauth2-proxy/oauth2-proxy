@@ -19,21 +19,20 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 		Format,
 		ExpectedLogMessage,
 		Path string
-		ExcludePaths       []string
-		SilencePingLogging bool
+		ExcludePaths []string
 	}{
-		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", []string{}, false},
-		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", []string{}, true},
-		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", []string{"/ping"}, false},
-		{logger.DefaultRequestLoggingFormat, "", "/foo/bar", []string{"/foo/bar"}, false},
-		{logger.DefaultRequestLoggingFormat, "", "/ping", []string{}, true},
-		{logger.DefaultRequestLoggingFormat, "", "/ping", []string{"/ping"}, false},
-		{logger.DefaultRequestLoggingFormat, "", "/ping", []string{"/ping"}, true},
-		{logger.DefaultRequestLoggingFormat, "", "/ping", []string{"/foo/bar", "/ping"}, false},
-		{"{{.RequestMethod}}", "GET\n", "/foo/bar", []string{}, true},
-		{"{{.RequestMethod}}", "GET\n", "/foo/bar", []string{"/ping"}, false},
-		{"{{.RequestMethod}}", "GET\n", "/ping", []string{}, false},
-		{"{{.RequestMethod}}", "", "/ping", []string{"/ping"}, true},
+		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", []string{}},
+		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", []string{}},
+		{logger.DefaultRequestLoggingFormat, fmt.Sprintf("127.0.0.1 - - [%s] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n", logger.FormatTimestamp(ts)), "/foo/bar", []string{"/ping"}},
+		{logger.DefaultRequestLoggingFormat, "", "/foo/bar", []string{"/foo/bar"}},
+		{logger.DefaultRequestLoggingFormat, "", "/ping", []string{}},
+		{logger.DefaultRequestLoggingFormat, "", "/ping", []string{"/ping"}},
+		{logger.DefaultRequestLoggingFormat, "", "/ping", []string{"/ping"}},
+		{logger.DefaultRequestLoggingFormat, "", "/ping", []string{"/foo/bar", "/ping"}},
+		{"{{.RequestMethod}}", "GET\n", "/foo/bar", []string{}},
+		{"{{.RequestMethod}}", "GET\n", "/foo/bar", []string{"/ping"}},
+		{"{{.RequestMethod}}", "GET\n", "/ping", []string{}},
+		{"{{.RequestMethod}}", "", "/ping", []string{"/ping"}},
 	}
 
 	for _, test := range tests {
@@ -49,9 +48,6 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 
 		logger.SetOutput(buf)
 		logger.SetReqTemplate(test.Format)
-		if test.SilencePingLogging {
-			test.ExcludePaths = append(test.ExcludePaths, "/ping")
-		}
 		logger.SetExcludePaths(test.ExcludePaths)
 		h := LoggingHandler(http.HandlerFunc(handler))
 

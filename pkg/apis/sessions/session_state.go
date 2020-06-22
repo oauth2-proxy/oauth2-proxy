@@ -2,8 +2,10 @@ package sessions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
@@ -58,7 +60,7 @@ func (s *SessionState) String() string {
 }
 
 // EncodeSessionState returns string representation of the current session
-func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) {
+func (s *SessionState) EncodeSessionState(c encryption.Cipher) (string, error) {
 	var ss SessionState
 	if c == nil {
 		// Store only Email and User when cipher is unavailable
@@ -75,7 +77,7 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 			&ss.IDToken,
 			&ss.RefreshToken,
 		} {
-			err := c.EncryptInto(s)
+			err := into(s, c.Encrypt)
 			if err != nil {
 				return "", err
 			}
@@ -87,7 +89,7 @@ func (s *SessionState) EncodeSessionState(c *encryption.Cipher) (string, error) 
 }
 
 // DecodeSessionState decodes the session cookie string into a SessionState
-func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
+func DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
 	var ss SessionState
 	err := json.Unmarshal([]byte(v), &ss)
 	if err != nil {
@@ -102,18 +104,18 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 			PreferredUsername: ss.PreferredUsername,
 		}
 	} else {
-		// Backward compatibility with using unencrypted Email
-		if ss.Email != "" {
-			decryptedEmail, errEmail := c.Decrypt(ss.Email)
-			if errEmail == nil {
-				ss.Email = decryptedEmail
+		// Backward compatibility with using unencrypted Email or User
+		// Decryption errors will leave original string
+		err = into(&ss.Email, c.Decrypt)
+		if err == nil {
+			if !utf8.ValidString(ss.Email) {
+				return nil, errors.New("invalid value for decrypted email")
 			}
 		}
-		// Backward compatibility with using unencrypted User
-		if ss.User != "" {
-			decryptedUser, errUser := c.Decrypt(ss.User)
-			if errUser == nil {
-				ss.User = decryptedUser
+		err = into(&ss.User, c.Decrypt)
+		if err == nil {
+			if !utf8.ValidString(ss.User) {
+				return nil, errors.New("invalid value for decrypted user")
 			}
 		}
 
@@ -123,11 +125,28 @@ func DecodeSessionState(v string, c *encryption.Cipher) (*SessionState, error) {
 			&ss.IDToken,
 			&ss.RefreshToken,
 		} {
-			err := c.DecryptInto(s)
+			err := into(s, c.Decrypt)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 	return &ss, nil
+}
+
+// codecFunc is a function that takes a []byte and encodes/decodes it
+type codecFunc func([]byte) ([]byte, error)
+
+func into(s *string, f codecFunc) error {
+	// Do not encrypt/decrypt nil or empty strings
+	if s == nil || *s == "" {
+		return nil
+	}
+
+	d, err := f([]byte(*s))
+	if err != nil {
+		return err
+	}
+	*s = string(d)
+	return nil
 }

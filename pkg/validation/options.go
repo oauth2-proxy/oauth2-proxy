@@ -38,7 +38,7 @@ func Validate(o *options.Options) error {
 
 	msgs := make([]string, 0)
 
-	var cipher *encryption.Cipher
+	var cipher encryption.Cipher
 	if o.Cookie.Secret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
 	} else {
@@ -62,7 +62,7 @@ func Validate(o *options.Options) error {
 					len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
 		} else {
 			var err error
-			cipher, err = encryption.NewCipher(encryption.SecretBytes(o.Cookie.Secret))
+			cipher, err = encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(o.Cookie.Secret))
 			if err != nil {
 				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
 			}
@@ -264,7 +264,7 @@ func Validate(o *options.Options) error {
 
 	msgs = parseSignatureKey(o, msgs)
 	msgs = validateCookieName(o, msgs)
-	msgs = configureLogger(o.Logging, o.PingPath, msgs)
+	msgs = configureLogger(o.Logging, msgs)
 
 	if o.ReverseProxy {
 		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
