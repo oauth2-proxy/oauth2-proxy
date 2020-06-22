@@ -202,43 +202,32 @@ func NewOptions() *Options {
 
 func loadCERsExtractFromRegexp(pat *regexp.Regexp, match []string, pcer *CallbackErrorRedirect, perr *error) {
 	for i, name := range pat.SubexpNames() {
-		if i != 0 && name != "" {
-			switch name {
-			case "error_string":
-				if pcer.ErrorString != "" {
-					if *perr == nil {
-						*perr = errors.New("Callback Error Redirect: error_string was specified more than once")
-					}
-					continue
-				} else {
-					pcer.ErrorString = match[i]
-				}
-				break
-			case "error_description":
-				if pcer.Pattern != "" {
-					if *perr == nil {
-						*perr = errors.New("Callback Error Redirect: error_description was specified more than once")
-					}
-					continue
-				} else {
-					pcer.Pattern = match[i]
-				}
-				break
-			case "redirect":
-				if pcer.RedirectURL != "" {
-					if *perr == nil {
-						*perr = errors.New("Callback Error Redirect: redirect was specified more than once")
-					}
-					continue
-				} else {
-					pcer.RedirectURL = match[i]
-				}
-				break
-			default:
-				if *perr == nil {
-					*perr = errors.New("Callback Error Redirect: Unrecognised setting '" + name + "'")
-				}
+		if i == 0 || name == "" {
+			continue
+		}
+
+		switch name {
+		case "error_string":
+			if pcer.ErrorString == "" {
+				pcer.ErrorString = match[i]
+			} else if *perr == nil {
+				*perr = errors.New("Callback Error Redirect: error_string was specified more than once")
 			}
+			break
+		case "error_description":
+			if pcer.Pattern == "" {
+				pcer.Pattern = match[i]
+			} else if *perr == nil {
+				*perr = errors.New("Callback Error Redirect: error_description was specified more than once")
+			}
+			break
+		case "redirect":
+			if pcer.RedirectURL == "" {
+				pcer.RedirectURL = match[i]
+			} else if *perr == nil {
+				*perr = errors.New("Callback Error Redirect: redirect was specified more than once")
+			}
+			break
 		}
 	}
 }
