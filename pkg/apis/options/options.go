@@ -120,15 +120,15 @@ type Options struct {
 	CallbackErrorRedirects []string `flag:"callback-error-redirect" cfg:"callback-error-redirect"`
 
 	// internal values that are set after config validation
-	redirectURL            *url.URL
-	proxyURLs              []*url.URL
-	compiledRegex          []*regexp.Regexp
-	provider               providers.Provider
-	sessionStore           sessionsapi.SessionStore
-	signatureData          *SignatureData
-	oidcVerifier           *oidc.IDTokenVerifier
-	jwtBearerVerifiers     []*oidc.IDTokenVerifier
-	realClientIPParser     ipapi.RealClientIPParser
+	redirectURL        *url.URL
+	proxyURLs          []*url.URL
+	compiledRegex      []*regexp.Regexp
+	provider           providers.Provider
+	sessionStore       sessionsapi.SessionStore
+	signatureData      *SignatureData
+	oidcVerifier       *oidc.IDTokenVerifier
+	jwtBearerVerifiers []*oidc.IDTokenVerifier
+	realClientIPParser ipapi.RealClientIPParser
 }
 
 // Options for Getting internal values
@@ -199,6 +199,49 @@ func NewOptions() *Options {
 	}
 }
 
+func loadCERsExtractFromRegexp(pat *regexp.Regexp, match []string, pcer *CallbackErrorRedirect, perr *error) {
+	for i, name := range pat.SubexpNames() {
+		if i != 0 && name != "" {
+			switch name {
+			case "error_string":
+				if pcer.ErrorString != "" {
+					if *perr == nil {
+						*perr = errors.New("Callback Error Redirect: error_string was specified more than once")
+					}
+					continue
+				} else {
+					pcer.ErrorString = match[i]
+				}
+				break
+			case "error_description":
+				if pcer.Pattern != "" {
+					if *perr == nil {
+						*perr = errors.New("Callback Error Redirect: error_description was specified more than once")
+					}
+					continue
+				} else {
+					pcer.Pattern = match[i]
+				}
+				break
+			case "redirect":
+				if pcer.RedirectURL != "" {
+					if *perr == nil {
+						*perr = errors.New("Callback Error Redirect: redirect was specified more than once")
+					}
+					continue
+				} else {
+					pcer.RedirectURL = match[i]
+				}
+				break
+			default:
+				if *perr == nil {
+					*perr = errors.New("Callback Error Redirect: Unrecognised setting '" + name + "'")
+				}
+			}
+		}
+	}
+}
+
 //LoadCERs - Convert the string versions of callback-error-redirect into structures
 func LoadCERs(callbackErrorRedirects []string) ([]CallbackErrorRedirect, error) {
 
@@ -219,52 +262,12 @@ func LoadCERs(callbackErrorRedirects []string) ([]CallbackErrorRedirect, error) 
 			continue
 		}
 
-			cers[count] = CallbackErrorRedirect{
+		cers[count] = CallbackErrorRedirect{
 			ErrorString: "",
 			Pattern:     "",
 			RedirectURL: "",
-			}
-		for i, name := range pat.SubexpNames() {
-			if i != 0 && name != "" {
-				switch name {
-				case "error_string":
-					if cers[count].ErrorString != "" {
-						if err == nil {
-							err = errors.New("Callback Error Redirect: error_string was specified more than once")
-						}
-						continue
-					} else {
-						cers[count].ErrorString = match[i]
-					}
-					break
-				case "error_description":
-					if cers[count].Pattern != "" {
-						if err == nil {
-							err = errors.New("Callback Error Redirect: error_description was specified more than once")
 		}
-						continue
-					} else {
-						cers[count].Pattern = match[i]
-					}
-					break
-				case "redirect":
-					if cers[count].RedirectURL != "" {
-						if err == nil {
-							err = errors.New("Callback Error Redirect: redirect was specified more than once")
-						}
-						continue
-					} else {
-						cers[count].RedirectURL = match[i]
-					}
-					break
-				default:
-					if err == nil {
-						err = errors.New("Callback Error Redirect: Unrecognised setting '" + name + "'")
-					}
-					continue
-				}
-			}
-		}
+		loadCERsExtractFromRegexp(pat, match, &cers[count], &err)
 		count++
 	}
 
