@@ -458,7 +458,7 @@ func TestNewCERSetting(t *testing.T) {
 	assert.Equal(t, cer.RedirectURL, "https://myredirect", "CallbackErrorRedirect mismatch in redirect/RedirectURL")
 
 	//ToDo: above only checks that the setting was read - a better test might run through the proxy to
-	//verify that a redirect to http://myredirect occured
+	//verify that a redirect to http://myredirect occurred
 }
 
 func (tp *TestProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {

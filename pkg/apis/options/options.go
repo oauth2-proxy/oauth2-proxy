@@ -213,21 +213,18 @@ func loadCERsExtractFromRegexp(pat *regexp.Regexp, match []string, pcer *Callbac
 			} else if *perr == nil {
 				*perr = errors.New("Callback Error Redirect: error_string was specified more than once")
 			}
-			break
 		case "error_description":
 			if pcer.Pattern == "" {
 				pcer.Pattern = match[i]
 			} else if *perr == nil {
 				*perr = errors.New("Callback Error Redirect: error_description was specified more than once")
 			}
-			break
 		case "redirect":
 			if pcer.RedirectURL == "" {
 				pcer.RedirectURL = match[i]
 			} else if *perr == nil {
 				*perr = errors.New("Callback Error Redirect: redirect was specified more than once")
 			}
-			break
 		}
 	}
 }
