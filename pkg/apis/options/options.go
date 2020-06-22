@@ -2,9 +2,9 @@ package options
 
 import (
 	"crypto"
+	"errors"
 	"net/url"
 	"regexp"
-	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
@@ -24,7 +24,7 @@ type SignatureData struct {
 type CallbackErrorRedirect struct {
 	ErrorString string
 	Pattern     string
-	RedirectUrl string
+	RedirectURL string
 }
 
 // Options holds Configuration Options that can be set by Command Line Flag,
@@ -129,7 +129,6 @@ type Options struct {
 	oidcVerifier           *oidc.IDTokenVerifier
 	jwtBearerVerifiers     []*oidc.IDTokenVerifier
 	realClientIPParser     ipapi.RealClientIPParser
-	callbackErrorRedirects []CallbackErrorRedirect
 }
 
 // Options for Getting internal values
@@ -201,25 +200,75 @@ func NewOptions() *Options {
 }
 
 //LoadCERs - Convert the string versions of callback-error-redirect into structures
-func LoadCERs(CallbackErrorRedirects []string) []CallbackErrorRedirect {
+func LoadCERs(callbackErrorRedirects []string) ([]CallbackErrorRedirect, error) {
 
-	spc := regexp.MustCompile(`\s+`)
-	cers := make([]CallbackErrorRedirect, len(CallbackErrorRedirects))
+	//error_string=foo,error_description=bar,redirect=baz
+
+	pat := regexp.MustCompile(`^\s*((error_string\s*=\s*(?P<error_string>[^,$]*)|error_description\s*=\s*(?P<error_description>[^,$]*)|redirect\s*=\s*(?P<redirect>[^,$]*)),?)+\s*`)
+	cers := make([]CallbackErrorRedirect, len(callbackErrorRedirects))
 	count := 0
+	err := error(nil)
 
-	for _, cer := range CallbackErrorRedirects {
-		bits := spc.Split(strings.TrimSpace(cer), 3)
-		if len(bits) == 3 {
-			cers[count] = CallbackErrorRedirect{
-				ErrorString: bits[0],
-				Pattern:     bits[1],
-				RedirectUrl: bits[2],
+	for _, cer := range callbackErrorRedirects {
+		match := pat.FindStringSubmatch(cer)
+
+		if match == nil {
+			if err == nil {
+				err = errors.New("Callback Error Redirect: invalid settings string check format")
 			}
-			count++
+			continue
 		}
+
+			cers[count] = CallbackErrorRedirect{
+			ErrorString: "",
+			Pattern:     "",
+			RedirectURL: "",
+			}
+		for i, name := range pat.SubexpNames() {
+			if i != 0 && name != "" {
+				switch name {
+				case "error_string":
+					if cers[count].ErrorString != "" {
+						if err == nil {
+							err = errors.New("Callback Error Redirect: error_string was specified more than once")
+						}
+						continue
+					} else {
+						cers[count].ErrorString = match[i]
+					}
+					break
+				case "error_description":
+					if cers[count].Pattern != "" {
+						if err == nil {
+							err = errors.New("Callback Error Redirect: error_description was specified more than once")
+		}
+						continue
+					} else {
+						cers[count].Pattern = match[i]
+					}
+					break
+				case "redirect":
+					if cers[count].RedirectURL != "" {
+						if err == nil {
+							err = errors.New("Callback Error Redirect: redirect was specified more than once")
+						}
+						continue
+					} else {
+						cers[count].RedirectURL = match[i]
+					}
+					break
+				default:
+					if err == nil {
+						err = errors.New("Callback Error Redirect: Unrecognised setting '" + name + "'")
+					}
+					continue
+				}
+			}
+		}
+		count++
 	}
 
-	return cers[0:count]
+	return cers[0:count], err
 }
 
 // NewFlagSet creates a new FlagSet with all of the flags required by Options

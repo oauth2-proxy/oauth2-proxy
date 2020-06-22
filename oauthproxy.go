@@ -299,6 +299,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
+	callbackErrorRedirects, err := options.LoadCERs(opts.CallbackErrorRedirects)
+
+	if err != nil {
+		logger.Printf(err.Error())
+	}
+
 	return &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
@@ -348,7 +354,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		Banner:               opts.Banner,
 		Footer:               opts.Footer,
 
-		CallbackErrorRedirects: options.LoadCERs(opts.CallbackErrorRedirects),
+		CallbackErrorRedirects: callbackErrorRedirects,
 	}
 }
 
@@ -818,8 +824,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		ceb := p.findCallbackErrorRedirect(errorString, errorDescription)
 
 		if ceb != nil {
-			logger.Printf("Configured redirect to %s", ceb.RedirectUrl)
-			http.Redirect(rw, req, ceb.RedirectUrl, http.StatusFound)
+			logger.Printf("Configured redirect to %s", ceb.RedirectURL)
+			http.Redirect(rw, req, ceb.RedirectURL, http.StatusFound)
 			return
 		}
 

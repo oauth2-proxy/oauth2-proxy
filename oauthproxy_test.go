@@ -436,6 +436,31 @@ func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 	}
 }
 
+func TestNewCERSetting(t *testing.T) {
+	opts := options.NewOptions()
+	opts.CallbackErrorRedirects = []string{
+		"error_string=error,error_description=^descr,redirect=https://myredirect",
+	}
+	providerURL, _ := url.Parse("https://server")
+	const emailAddress = "john.doe@example.com"
+	opts.SetProvider(NewTestProvider(providerURL, emailAddress))
+	redirectURL, _ := url.Parse("/")
+	opts.SetRedirectURL(redirectURL)
+	proxy := NewOAuthProxy(opts, func(email string) bool {
+		return true
+	})
+
+	//check the setting mapping
+	var cer = proxy.CallbackErrorRedirects[0]
+
+	assert.Equal(t, cer.ErrorString, "error", "CallbackErrorRedirect mismatch in error_string/ErrorString")
+	assert.Equal(t, cer.Pattern, "^descr", "CallbackErrorRedirect mismatch in error_description/Pattern")
+	assert.Equal(t, cer.RedirectURL, "https://myredirect", "CallbackErrorRedirect mismatch in redirect/RedirectURL")
+
+	//ToDo: above only checks that the setting was read - a better test might run through the proxy to
+	//verify that a redirect to http://myredirect occured
+}
+
 func (tp *TestProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {
 	return tp.EmailAddress, nil
 }
