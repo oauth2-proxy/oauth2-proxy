@@ -24,6 +24,7 @@ type SignatureData struct {
 type Options struct {
 	ProxyPrefix        string `flag:"proxy-prefix" cfg:"proxy_prefix"`
 	PingPath           string `flag:"ping-path" cfg:"ping_path"`
+	PingUserAgent      string `flag:"ping-user-agent" cfg:"ping_user_agent"`
 	ProxyWebSockets    bool   `flag:"proxy-websockets" cfg:"proxy_websockets"`
 	HTTPAddress        string `flag:"http-address" cfg:"http_address"`
 	HTTPSAddress       string `flag:"https-address" cfg:"https_address"`
@@ -247,6 +248,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("footer", "", "custom footer string. Use \"-\" to disable default footer.")
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
+	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 
 	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
