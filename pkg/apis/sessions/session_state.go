@@ -144,47 +144,43 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 
 // LegacyV5DecodeSessionState decodes a legacy JSON session cookie string into a SessionState
 func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
+	if c == nil {
+		return nil, errors.New("mandatory cipher for session decoding is missing")
+	}
+
 	var ss SessionState
 	err := json.Unmarshal([]byte(v), &ss)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling session: %w", err)
 	}
 
-	if c == nil {
-		// Load only Email and User when cipher is unavailable
-		ss = SessionState{
-			Email:             ss.Email,
-			User:              ss.User,
-			PreferredUsername: ss.PreferredUsername,
-		}
-	} else {
-		// Backward compatibility with using unencrypted Email or User
-		// Decryption errors will leave original string
-		err = into(&ss.Email, c.Decrypt)
-		if err == nil {
-			if !utf8.ValidString(ss.Email) {
-				return nil, errors.New("invalid value for decrypted email")
-			}
-		}
-		err = into(&ss.User, c.Decrypt)
-		if err == nil {
-			if !utf8.ValidString(ss.User) {
-				return nil, errors.New("invalid value for decrypted user")
-			}
-		}
-
-		for _, s := range []*string{
-			&ss.PreferredUsername,
-			&ss.AccessToken,
-			&ss.IDToken,
-			&ss.RefreshToken,
-		} {
-			err := into(s, c.Decrypt)
-			if err != nil {
-				return nil, err
-			}
+	// Backward compatibility with using unencrypted Email or User
+	// Decryption errors will leave original string
+	err = into(&ss.Email, c.Decrypt)
+	if err == nil {
+		if !utf8.ValidString(ss.Email) {
+			return nil, errors.New("invalid value for decrypted email")
 		}
 	}
+	err = into(&ss.User, c.Decrypt)
+	if err == nil {
+		if !utf8.ValidString(ss.User) {
+			return nil, errors.New("invalid value for decrypted user")
+		}
+	}
+
+	for _, s := range []*string{
+		&ss.PreferredUsername,
+		&ss.AccessToken,
+		&ss.IDToken,
+		&ss.RefreshToken,
+	} {
+		err := into(s, c.Decrypt)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &ss, nil
 }
 
