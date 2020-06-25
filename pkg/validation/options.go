@@ -178,10 +178,6 @@ func Validate(o *options.Options) error {
 	}
 
 	if o.SkipJwtBearerTokens {
-		// If we are using an oidc provider, go ahead and add that provider to the list
-		if o.GetOIDCVerifier() != nil {
-			o.SetJWTBearerVerifiers(append(o.GetJWTBearerVerifiers(), o.GetOIDCVerifier()))
-		}
 		// Configure extra issuers
 		if len(o.ExtraJwtIssuers) > 0 {
 			var jwtIssuers []jwtIssuer
