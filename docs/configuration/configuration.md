@@ -46,6 +46,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
+| `--extra-header` | string \| list | Add additional headers when talking to upstream in raw http header format. eg: `"Foo=Bar"` | |
 | `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, eg: `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |

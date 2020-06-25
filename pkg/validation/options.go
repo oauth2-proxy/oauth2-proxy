@@ -208,6 +208,14 @@ func Validate(o *options.Options) error {
 		}
 	}
 
+	headerSplitRegex := regexp.MustCompile(`^([^:]*)=[ \t]*(.*)$`)
+	for _, extraHeader := range o.ExtraHeaders {
+		match := headerSplitRegex.FindStringSubmatch(extraHeader)
+		if match == nil {
+			msgs = append(msgs, fmt.Sprintf("error parsing extra header. Expected name=value, got: %s", extraHeader))
+		}
+	}
+
 	for _, u := range o.SkipAuthRegex {
 		compiledRegex, err := regexp.Compile(u)
 		if err != nil {

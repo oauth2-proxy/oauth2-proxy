@@ -45,6 +45,7 @@ type Options struct {
 	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
 	EmailDomains             []string `flag:"email-domain" cfg:"email_domains"`
 	WhitelistDomains         []string `flag:"whitelist-domain" cfg:"whitelist_domains"`
+	ExtraHeaders             []string `flag:"extra-header" cfg:"extra_headers"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
 	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
@@ -222,6 +223,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
+	flagSet.StringArray("extra-header", []string{}, "extra headers to add to the upstream request.")
 	flagSet.String("keycloak-group", "", "restrict login to members of this group.")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")

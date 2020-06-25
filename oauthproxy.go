@@ -61,6 +61,9 @@ var (
 	// ErrNeedsLogin means the user should be redirected to the login page
 	ErrNeedsLogin = errors.New("redirect to login page")
 
+	// Used to parse extra Headers
+	headerSplitRegex = regexp.MustCompile(`^([^:]*)=[ \t]*(.*)$`)
+
 	// Used to check final redirects are not susceptible to open redirects.
 	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
 	invalidRedirectRegex = regexp.MustCompile(`^/(\s|\v)?(/|\\)`)
@@ -90,6 +93,7 @@ type OAuthProxy struct {
 
 	redirectURL             *url.URL // the url to receive requests at
 	whitelistDomains        []string
+	extraHeaders            http.Header
 	provider                providers.Provider
 	providerNameOverride    string
 	sessionStore            sessionsapi.SessionStore
@@ -297,6 +301,14 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
+	extraHeaders := make(http.Header)
+	for _, extraHeader := range opts.ExtraHeaders {
+		match := headerSplitRegex.FindStringSubmatch(extraHeader)
+		if match == nil {
+                  return nil
+		}
+		extraHeaders.Add(match[1], match[2])
+	}
 	return &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
@@ -325,6 +337,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		serveMux:                serveMux,
 		redirectURL:             redirectURL,
 		whitelistDomains:        opts.WhitelistDomains,
+		extraHeaders:            extraHeaders,
 		skipAuthRegex:           opts.SkipAuthRegex,
 		skipAuthPreflight:       opts.SkipAuthPreflight,
 		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
@@ -980,6 +993,11 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
 func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
+	for name, values := range p.extraHeaders {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
 	if p.PassBasicAuth {
 		if p.PreferEmailToUser && session.Email != "" {
 			req.SetBasicAuth(session.Email, p.BasicAuthPassword)
