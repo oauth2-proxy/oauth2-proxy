@@ -164,14 +164,13 @@ func (p *ProviderData) CreateSessionStateFromBearerToken(ctx context.Context, ra
 
 	newSession := &sessions.SessionState{
 		Email:             claims.Email,
-		User:              claims.Email,
+		User:              claims.Subject,
 		PreferredUsername: claims.PreferredUsername,
+		AccessToken:       rawIDToken,
+		IDToken:           rawIDToken,
+		RefreshToken:      "",
+		ExpiresOn:         &idToken.Expiry,
 	}
-
-	newSession.AccessToken = rawIDToken
-	newSession.IDToken = rawIDToken
-	newSession.RefreshToken = ""
-	newSession.ExpiresOn = &idToken.Expiry
 
 	return newSession, nil
 }
