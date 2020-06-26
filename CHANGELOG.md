@@ -56,6 +56,7 @@
   - Previously, the flag gitlab-group used comma seperated values, while the config option used space seperated values.
   - This fixes the config value to use slices internally.
   - The config option `gitlab_group` is now `gitlab_groups`
+  - The environment variable `OAUTH2_PROXY_GITLAB_GROUP` is now `OAUTH2_PROXY_GITLAB_GROUPS`
 
 ## Changes since v5.1.1
 
