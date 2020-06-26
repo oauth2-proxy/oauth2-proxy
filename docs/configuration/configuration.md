@@ -152,7 +152,7 @@ This is particularly useful for storing secrets outside of a configuration file
 or the command line.
 
 For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET`,
-and the `--email-domain` flag becomes `OAUTH2_PROXY_EMAIL_DOMAINS`.
+and the `--email-domain` flag becomes `OAUTH2_PROXY_EMAIL_DOMAIN`.
 
 ## Logging Configuration
 
