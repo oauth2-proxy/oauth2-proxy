@@ -115,7 +115,7 @@ func TestGitLabProviderGroupMembershipValid(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 	p.AllowUnverifiedEmail = true
-	p.Group = "foo"
+	p.Group = []string{"foo"}
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	email, err := p.GetEmailAddress(context.Background(), session)
@@ -130,7 +130,7 @@ func TestGitLabProviderGroupMembershipMissing(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 	p.AllowUnverifiedEmail = true
-	p.Group = "baz"
+	p.Group = []string{"baz"}
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 	_, err := p.GetEmailAddress(context.Background(), session)
