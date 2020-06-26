@@ -52,9 +52,14 @@
   - Fixes an inconsistency in the `--exclude-logging-paths` option by renaming it to `--exclude-logging-option`.
   - This flag may now be given multiple times as with other list options
   - This flag also accepts comma separated values
+- [#639](https://github.com/oauth2-proxy/oauth2-proxy/pull/639) Change how gitlab-group is parsed on options
+  - Previously, the flag gitlab-group used comma seperated values, while the config option used space seperated values.
+  - This fixes the config value to use slices internally.
+  - The config option `gitlab_group` is now `gitlab_groups`
 
 ## Changes since v5.1.1
 
+- [#639](https://github.com/oauth2-proxy/oauth2-proxy/pull/639) Change how gitlab-group is parsed on options
 - [#596](https://github.com/oauth2-proxy/oauth2-proxy/pull/596) Validate Bearer IDTokens in headers with correct provider/extra JWT Verifier (@NickMeves)
 - [#620](https://github.com/oauth2-proxy/oauth2-proxy/pull/620) Add HealthCheck middleware (@JoelSpeed)
 - [#597](https://github.com/oauth2-proxy/oauth2-proxy/pull/597) Don't log invalid redirect if redirect is empty (@JoelSpeed)
