@@ -61,6 +61,7 @@
 ## Changes since v5.1.1
 
 - [#639](https://github.com/oauth2-proxy/oauth2-proxy/pull/639) Change how gitlab-group is parsed on options (@linuxgemini)
+- [#615](https://github.com/oauth2-proxy/oauth2-proxy/pull/615) Kubernetes example based on Kind cluster and Nginx ingress (@EvgeniGordeev)
 - [#596](https://github.com/oauth2-proxy/oauth2-proxy/pull/596) Validate Bearer IDTokens in headers with correct provider/extra JWT Verifier (@NickMeves)
 - [#620](https://github.com/oauth2-proxy/oauth2-proxy/pull/620) Add HealthCheck middleware (@JoelSpeed)
 - [#597](https://github.com/oauth2-proxy/oauth2-proxy/pull/597) Don't log invalid redirect if redirect is empty (@JoelSpeed)
