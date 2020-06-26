@@ -1,0 +1,91 @@
+dex:
+  ingress:
+    enabled: true
+    hosts:
+      - dex.localtest.me
+  grpc: false
+  certs:
+    grpc:
+      create: false
+    web:
+      create: false
+
+  config:
+    issuer: http://dex.localtest.me
+    expiry:
+      signingKeys: "4h"
+      idTokens: "1h"
+    staticClients:
+      - id: oauth2-proxy
+        redirectURIs:
+          # These redirect URI points to the `--redirect-url` for OAuth2 proxy.
+          - 'http://oauth2-proxy.localtest.me/oauth2/callback'
+        name: 'OAuth2 Proxy'
+        secret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
+    staticPasswords:
+     - email: "admin@example.com"
+       # bcrypt hash of the string "password"
+       hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+       username: "admin"
+       userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+
+oauth2-proxy:
+  nameOverride: oauth2-proxy-sample
+  ingress:
+    enabled: true
+    hosts:
+      - oauth2-proxy.localtest.me
+    annotations:
+      nginx.ingress.kubernetes.io/server-snippet: |
+        large_client_header_buffers 4 32k;
+  # pick up client_id and client_secret from configFile as opposed to helm .Values.config.clientID and .Values.config.clientSecret
+  proxyVarsAsSecrets: false
+  config:
+    configFile: |-
+      cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+      cookie_domain=".localtest.me"
+      whitelist_domains=[".localtest.me"]
+      # only users with this domain will be let in
+      email_domains=["example.com"]
+
+      client_id="oauth2-proxy"
+      client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
+      cookie_secure="false"
+
+      redirect_url="http://oauth2-proxy.localtest.me/oauth2/callback"
+
+      # we don't want to proxy anything so pick a non-existent directory
+      upstreams = [ "file:///dev/null" ]
+
+      # return authenticated user to nginx
+      set_xauthrequest = true
+      # using http://dex.localtest.me/.well-known/openid-configuration oauth2-proxy will populate
+      # login_url, redeem_url, and oidc_jwks_url
+      provider="oidc"
+      oidc_issuer_url="http://dex.localtest.me"
+
+httpbin:
+  ingress:
+    enabled: true
+    hosts:
+      - httpbin.localtest.me
+    annotations:
+      nginx.ingress.kubernetes.io/auth-signin: http://oauth2-proxy.localtest.me/oauth2/start
+      # That's what will be used in REAL LIFE
+      #nginx.ingress.kubernetes.io/auth-url: http://oauth2-proxy.localtest.me/oauth2/auth
+      # but because of https://github.com/kubernetes/ingress-nginx/issues/3665
+      nginx.ingress.kubernetes.io/auth-url: http://oauth2-proxy-example-oauth2-proxy-sample.default.svc.cluster.local/oauth2/auth
+      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+
+hello-world:
+  ingress:
+    enabled: true
+    hosts:
+      - hello-world.localtest.me
+    annotations:
+      nginx.ingress.kubernetes.io/auth-signin: http://oauth2-proxy.localtest.me/oauth2/start
+      # That's what will be used in REAL LIFE
+      #nginx.ingress.kubernetes.io/auth-url: http://oauth2-proxy.localtest.me/oauth2/auth
+      # but because of https://github.com/kubernetes/ingress-nginx/issues/3665
+      nginx.ingress.kubernetes.io/auth-url: http://oauth2-proxy-example-oauth2-proxy-sample.default.svc.cluster.local/oauth2/auth
+      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
