@@ -789,7 +789,6 @@ func (p *OAuthProxy) findCallbackErrorRedirect(errorString string, errorDescript
 				pat := ceb.Pattern
 				m, _ := regexp.MatchString(pat, errorDescription)
 				if m {
-					logger.Printf("Can redirect for error %s with pattern %s", errorString, pat)
 					return &ceb
 				}
 			}
@@ -814,10 +813,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if errorString != "" {
 		errorDescription := req.Form.Get("error_description")
 
-		ceb := p.findCallbackErrorRedirect(errorString, errorDescription)
-
-		if ceb != nil {
-			logger.Printf("Configured redirect to %s", ceb.RedirectURL)
+		if ceb := p.findCallbackErrorRedirect(errorString, errorDescription); ceb != nil {
+			logger.Printf("Executing callback error redirect, redirecting to %s", ceb.RedirectURL)
 			http.Redirect(rw, req, ceb.RedirectURL, http.StatusFound)
 			return
 		}
