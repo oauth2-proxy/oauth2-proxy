@@ -50,7 +50,7 @@ type Options struct {
 	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
 	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
 	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
-	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_group"`
+	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
