@@ -330,7 +330,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		}
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
-		p.Group = o.GitLabGroup
+		p.Groups = o.GitLabGroup
 		p.EmailDomains = o.EmailDomains
 
 		if o.GetOIDCVerifier() != nil {

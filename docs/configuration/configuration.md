@@ -57,7 +57,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--github-repo` | string | restrict logins to collaborators of this repository formatted as `orgname/repo` | |
 | `--github-token` | string | the token to use when verifying repository collaborators (must have push access to the repository) | |
 | `--github-user` | string \| list | To allow users to login by username even if they do not belong to the specified org and team or collaborators | |
-| `--gitlab-group` | string | restrict logins to members of any of these groups (slug), separated by a comma | |
+| `--gitlab-group` | string \| list | restrict logins to members of any of these groups (slug), separated by a comma | |
 | `--google-admin-email` | string | the google admin to impersonate for api calls | |
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
 | `--google-service-account-json` | string | the path to the service account json credentials | |

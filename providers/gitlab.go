@@ -18,7 +18,7 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Group        string
+	Groups       []string
 	EmailDomains []string
 
 	Verifier             *oidc.IDTokenVerifier
@@ -162,7 +162,7 @@ func (p *GitLabProvider) getUserInfo(ctx context.Context, s *sessions.SessionSta
 }
 
 func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
-	if p.Group == "" {
+	if len(p.Groups) == 0 {
 		return nil
 	}
 
@@ -173,14 +173,13 @@ func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
 	}
 
 	// Find a valid group that they are a member of
-	validGroups := strings.Split(p.Group, " ")
-	for _, validGroup := range validGroups {
+	for _, validGroup := range p.Groups {
 		if _, ok := membershipSet[validGroup]; ok {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("user is not a member of '%s'", p.Group)
+	return fmt.Errorf("user is not a member of '%s'", p.Groups)
 }
 
 func (p *GitLabProvider) verifyEmailDomain(userInfo *gitlabUserInfo) error {
