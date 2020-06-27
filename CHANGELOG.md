@@ -4,6 +4,25 @@
 
 ## Important Notes
 
+## Breaking Changes
+
+## Changes since v6.0.0
+
+# v6.0.0
+
+## Release Highlights
+
+- Migrated to an independent GitHub organisation
+- Added local test environment examples using docker-compose and kind
+- Error pages will now be rendered when upstream connections fail
+- Non-Existent options in config files will now return errors on startup
+- Sessions are now always encrypted, independent of configuration
+
+## Important Notes
+
+- (Security) Fix for [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv).
+  - More invalid redirects that lead to open-redirects were reported
+  - An extensive test suite has been added to prevent future regressions
 - [#453](https://github.com/oauth2-proxy/oauth2-proxy/pull/453) Responses to endpoints with a proxy prefix will now return headers for preventing browser caching.
 
 ## Breaking Changes
@@ -60,6 +79,7 @@
 
 ## Changes since v5.1.1
 
+- [GHSA-5m6c-jp6f-2vcv](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) New OpenRedirect cases have been found (@JoelSpeed)
 - [#639](https://github.com/oauth2-proxy/oauth2-proxy/pull/639) Change how gitlab-group is parsed on options (@linuxgemini)
 - [#615](https://github.com/oauth2-proxy/oauth2-proxy/pull/615) Kubernetes example based on Kind cluster and Nginx ingress (@EvgeniGordeev)
 - [#596](https://github.com/oauth2-proxy/oauth2-proxy/pull/596) Validate Bearer IDTokens in headers with correct provider/extra JWT Verifier (@NickMeves)
@@ -85,7 +105,7 @@
 - [#537](https://github.com/oauth2-proxy/oauth2-proxy/pull/537) Drop Fallback to Email if User not set (@JoelSpeed)
 - [#535](https://github.com/oauth2-proxy/oauth2-proxy/pull/535) Drop support for pre v3.1 cookies (@JoelSpeed)
 - [#533](https://github.com/oauth2-proxy/oauth2-proxy/pull/487) Set up code coverage within Travis for Code Climate (@JoelSpeed)
-- [#514](https://github.com/oauth2-proxy/oauth2-proxy/pull/514) Add basic string functions to templates
+- [#514](https://github.com/oauth2-proxy/oauth2-proxy/pull/514) Add basic string functions to templates (@n-i-x)
 - [#524](https://github.com/oauth2-proxy/oauth2-proxy/pull/524) Sign cookies with SHA256 (@NickMeves)
 - [#515](https://github.com/oauth2-proxy/oauth2-proxy/pull/515) Drop configure script in favour of native Makefile env and checks (@JoelSpeed)
 - [#519](https://github.com/oauth2-proxy/oauth2-proxy/pull/519) Support context in providers (@johejo)

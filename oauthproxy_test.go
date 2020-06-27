@@ -437,10 +437,11 @@ func TestIsValidRedirect(t *testing.T) {
 }
 
 func TestOpenRedirects(t *testing.T) {
-	opts := NewOptions()
+	opts := options.NewOptions()
 	opts.ClientID = "skdlfj"
 	opts.ClientSecret = "fgkdsgj"
-	opts.Cookie.Secret = "ljgiogbj"
+	opts.Cookie.Secret = rawCookieSecret
+	opts.EmailDomains = []string{"*"}
 	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
 	opts.WhitelistDomains = []string{
 		"foo.bar",
@@ -451,7 +452,10 @@ func TestOpenRedirects(t *testing.T) {
 		".sub.anyport.bar:*",
 		"www.whitelisteddomain.tld",
 	}
-	opts.Validate()
+	err := validation.Validate(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return true })
 
