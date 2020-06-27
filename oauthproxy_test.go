@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto"
 	"encoding/base64"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -386,6 +388,41 @@ func TestIsValidRedirect(t *testing.T) {
 			Redirect:       "/\r\\evil.com",
 			ExpectedResult: false,
 		},
+		{
+			Desc:           "openRedirectTripleTab",
+			Redirect:       "/\t\t/\t/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectTripleTab2",
+			Redirect:       "/\t\t\\\t/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectQuadTab1",
+			Redirect:       "/\t\t/\t\t\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectQuadTab2",
+			Redirect:       "/\t\t\\\t\t/evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectPeriod1",
+			Redirect:       "/./\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectPeriod2",
+			Redirect:       "/./../../\\evil.com",
+			ExpectedResult: false,
+		},
+		{
+			Desc:           "openRedirectDoubleTab",
+			Redirect:       "/\t/\t\\evil.com",
+			ExpectedResult: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -396,6 +433,50 @@ func TestIsValidRedirect(t *testing.T) {
 				t.Errorf("expected %t got %t", tc.ExpectedResult, result)
 			}
 		})
+	}
+}
+
+func TestOpenRedirects(t *testing.T) {
+	opts := NewOptions()
+	opts.ClientID = "skdlfj"
+	opts.ClientSecret = "fgkdsgj"
+	opts.Cookie.Secret = "ljgiogbj"
+	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
+	opts.WhitelistDomains = []string{
+		"foo.bar",
+		".bar.foo",
+		"port.bar:8080",
+		".sub.port.bar:8080",
+		"anyport.bar:*",
+		".sub.anyport.bar:*",
+		"www.whitelisteddomain.tld",
+	}
+	opts.Validate()
+
+	proxy := NewOAuthProxy(opts, func(string) bool { return true })
+
+	file, err := os.Open("./test/openredirects.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		rd := scanner.Text()
+		t.Run(rd, func(t *testing.T) {
+			rdUnescaped, err := url.QueryUnescape(rd)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if proxy.IsValidRedirect(rdUnescaped) {
+				t.Errorf("Expected %q to not be valid (unescaped: %q)", rd, rdUnescaped)
+			}
+		})
+	}
+
+	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
 	}
 }
 
