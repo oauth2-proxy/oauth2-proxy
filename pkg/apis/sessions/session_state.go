@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pierrec/lz4"
-	"github.com/vmihailenco/msgpack/v4"
 	"io"
 	"io/ioutil"
 	"time"
 	"unicode/utf8"
+
+	"github.com/pierrec/lz4"
+	"github.com/vmihailenco/msgpack/v4"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
@@ -144,10 +145,6 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 
 // LegacyV5DecodeSessionState decodes a legacy JSON session cookie string into a SessionState
 func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
-	if c == nil {
-		return nil, errors.New("mandatory cipher for session decoding is missing")
-	}
-
 	var ss SessionState
 	err := json.Unmarshal([]byte(v), &ss)
 	if err != nil {
