@@ -3,7 +3,6 @@ package sessions
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -67,49 +66,24 @@ func (s *SessionState) String() string {
 
 // EncodeSessionState returns an encrypted, lz4 compressed, MessagePack encoded session
 func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([]byte, error) {
-	// Marshal to MessagePack
 	packed, err := msgpack.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
 
 	if !compress {
-		// Encrypt the msgpack encoded
 		return c.Encrypt(packed)
 	}
 
-	// Compress the packed encoding
-	// The Compress:Decompress ratio is 1:Many. LZ4 gives fastest decompress speeds
-	buf := new(bytes.Buffer)
-	zw := lz4.NewWriter(nil)
-	zw.Header = lz4.Header{
-		BlockMaxSize:     65536,
-		CompressionLevel: 0,
-	}
-	zw.Reset(buf)
-
-	reader := bytes.NewReader(packed)
-	_, err = io.Copy(zw, reader)
+	compressed, err := lz4Compress(packed)
 	if err != nil {
 		return nil, err
 	}
-	err = zw.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	compressed, err := ioutil.ReadAll(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	// Encrypt the compressed
 	return c.Encrypt(compressed)
 }
 
 // DecodeSessionState decodes a LZ4 compressed MessagePack into a Session State
 func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*SessionState, error) {
-	// Decrypt
 	decrypted, err := c.Decrypt(data)
 	if err != nil {
 		return nil, err
@@ -117,23 +91,12 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 
 	packed := decrypted
 	if compressed {
-		// LZ4 Decompress
-		reader := bytes.NewReader(decrypted)
-		buf := new(bytes.Buffer)
-		zr := lz4.NewReader(nil)
-		zr.Reset(reader)
-		_, err = io.Copy(buf, zr)
-		if err != nil {
-			return nil, err
-		}
-
-		packed, err = ioutil.ReadAll(buf)
+		packed, err = lz4Decompress(decrypted)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// Decode MessagePack
 	var ss *SessionState
 	err = msgpack.Unmarshal(packed, &ss)
 	if err != nil {
@@ -151,29 +114,16 @@ func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, e
 		return nil, fmt.Errorf("error unmarshalling session: %w", err)
 	}
 
-	// Backward compatibility with using unencrypted Email or User
-	// Decryption errors will leave original string
-	err = into(&ss.Email, c.Decrypt)
-	if err == nil {
-		if !utf8.ValidString(ss.Email) {
-			return nil, errors.New("invalid value for decrypted email")
-		}
-	}
-	err = into(&ss.User, c.Decrypt)
-	if err == nil {
-		if !utf8.ValidString(ss.User) {
-			return nil, errors.New("invalid value for decrypted user")
-		}
-	}
-
 	for _, s := range []*string{
+		&ss.User,
+		&ss.Email,
 		&ss.PreferredUsername,
 		&ss.AccessToken,
 		&ss.IDToken,
 		&ss.RefreshToken,
 	} {
 		err := into(s, c.Decrypt)
-		if err != nil {
+		if err != nil || !utf8.ValidString(*s) {
 			return nil, err
 		}
 	}
@@ -196,4 +146,51 @@ func into(s *string, f codecFunc) error {
 	}
 	*s = string(d)
 	return nil
+}
+
+// Compress & Decompress with LZ4
+// The Compress:Decompress ratio is 1:Many. LZ4 gives fastest decompress speeds
+func lz4Compress(payload []byte) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	zw := lz4.NewWriter(nil)
+	zw.Header = lz4.Header{
+		BlockMaxSize:     65536,
+		CompressionLevel: 0,
+	}
+	zw.Reset(buf)
+
+	reader := bytes.NewReader(payload)
+	_, err := io.Copy(zw, reader)
+	if err != nil {
+		return nil, err
+	}
+	err = zw.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	compressed, err := ioutil.ReadAll(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return compressed, nil
+}
+
+func lz4Decompress(compressed []byte) ([]byte, error) {
+	reader := bytes.NewReader(compressed)
+	buf := new(bytes.Buffer)
+	zr := lz4.NewReader(nil)
+	zr.Reset(reader)
+	_, err := io.Copy(buf, zr)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := ioutil.ReadAll(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return payload, nil
 }

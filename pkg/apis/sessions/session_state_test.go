@@ -116,7 +116,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 	}
 }
 
-// TestDecodeSessionState testssessions.DecodeSessionState with the test vector
+// TestLegacyV5DecodeSessionState confirms V5 JSON sessions decode
 func TestLegacyV5DecodeSessionState(t *testing.T) {
 	created := time.Now()
 	createdJSON, err := created.MarshalJSON()
@@ -132,44 +132,29 @@ func TestLegacyV5DecodeSessionState(t *testing.T) {
 	legacyCipher := encryption.NewBase64Cipher(cipher)
 
 	testCases := map[string]struct {
-		SessionState
-		Encoded string
-		Error   bool
+		Input  string
+		Error  bool
+		Output *SessionState
 	}{
 		"User & email unencrypted": {
-			SessionState: SessionState{
-				Email: "user@domain.com",
-				User:  "just-user",
-			},
-			Encoded: `{"Email":"user@domain.com","User":"just-user"}`,
+			Input: `{"Email":"user@domain.com","User":"just-user"}`,
+			Error: true,
 		},
 		"Only email unencrypted": {
-			SessionState: SessionState{
-				Email: "user@domain.com",
-				User:  "",
-			},
-			Encoded: `{"Email":"user@domain.com"}`,
+			Input: `{"Email":"user@domain.com"}`,
+			Error: true,
 		},
 		"Just user unencrypted": {
-			SessionState: SessionState{
-				User: "just-user",
-			},
-			Encoded: `{"User":"just-user"}`,
+			Input: `{"User":"just-user"}`,
+			Error: true,
 		},
 		"User and Email unencrypted while rest is encrypted": {
-			SessionState: SessionState{
-				Email:        "user@domain.com",
-				User:         "just-user",
-				AccessToken:  "token1234",
-				IDToken:      "rawtoken1234",
-				CreatedAt:    &created,
-				ExpiresOn:    &e,
-				RefreshToken: "refresh4321",
-			},
-			Encoded: fmt.Sprintf(`{"Email":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
+			Input: fmt.Sprintf(`{"Email":"user@domain.com","User":"just-user","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
+			Error: true,
 		},
 		"Full session with cipher": {
-			SessionState: SessionState{
+			Input: fmt.Sprintf(`{"Email":"FsKKYrTWZWrxSOAqA/fTNAUZS5QWCqOBjuAbBlbVOw==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw==","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
+			Output: &SessionState{
 				Email:        "user@domain.com",
 				User:         "just-user",
 				AccessToken:  "token1234",
@@ -178,57 +163,41 @@ func TestLegacyV5DecodeSessionState(t *testing.T) {
 				ExpiresOn:    &e,
 				RefreshToken: "refresh4321",
 			},
-			Encoded: fmt.Sprintf(`{"Email":"FsKKYrTWZWrxSOAqA/fTNAUZS5QWCqOBjuAbBlbVOw==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw==","AccessToken":"I6s+ml+/MldBMgHIiC35BTKTh57skGX24w==","IDToken":"xojNdyyjB1HgYWh6XMtXY/Ph5eCVxa1cNsklJw==","RefreshToken":"qEX0x6RmASxo4dhlBG6YuRs9Syn/e9sHu/+K","CreatedAt":%s,"ExpiresOn":%s}`, createdString, eString),
 		},
 		"Minimal session encrypted with cipher": {
-			SessionState: SessionState{
+			Input: `{"Email":"EGTllJcOFC16b7LBYzLekaHAC5SMMSPdyUrg8hd25g==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw=="}`,
+			Output: &SessionState{
 				Email: "user@domain.com",
 				User:  "just-user",
 			},
-			Encoded: `{"Email":"EGTllJcOFC16b7LBYzLekaHAC5SMMSPdyUrg8hd25g==","User":"rT6JP3dxQhxUhkWrrd7yt6c1mDVyQCVVxw=="}`,
 		},
 		"Unencrypted User, Email and AccessToken": {
-			Encoded: `{"Email":"user@domain.com","User":"just-user","AccessToken":"X"}`,
-			Error:   true,
+			Input: `{"Email":"user@domain.com","User":"just-user","AccessToken":"X"}`,
+			Error: true,
 		},
 		"Unencrypted User, Email and IDToken": {
-			Encoded: `{"Email":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
-			Error:   true,
+			Input: `{"Email":"user@domain.com","User":"just-user","IDToken":"XXXX"}`,
+			Error: true,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var err error
 			// Legacy sessions fail in DecodeSessionState which results in
 			// the fallback to LegacyV5DecodeSessionState
-			_, err = DecodeSessionState([]byte(tc.Encoded), cipher, false)
+			_, err = DecodeSessionState([]byte(tc.Input), cipher, false)
 			assert.Error(t, err)
-			_, err = DecodeSessionState([]byte(tc.Encoded), cipher, true)
-			assert.Error(t, err)
-
-			// Cipher is always required post V6
-			_, err = LegacyV5DecodeSessionState(tc.Encoded, nil)
+			_, err = DecodeSessionState([]byte(tc.Input), cipher, true)
 			assert.Error(t, err)
 
-			ss, err := LegacyV5DecodeSessionState(tc.Encoded, legacyCipher)
+			ss, err := LegacyV5DecodeSessionState(tc.Input, legacyCipher)
 			if tc.Error {
 				assert.Error(t, err)
 				assert.Nil(t, ss)
 				return
 			}
 			assert.NoError(t, err)
-			if assert.NotNil(t, ss) {
-				assert.Equal(t, tc.User, ss.User)
-				assert.Equal(t, tc.Email, ss.Email)
-				assert.Equal(t, tc.AccessToken, ss.AccessToken)
-				assert.Equal(t, tc.RefreshToken, ss.RefreshToken)
-				assert.Equal(t, tc.IDToken, ss.IDToken)
-				if tc.ExpiresOn != nil {
-					assert.NotEqual(t, nil, ss.ExpiresOn)
-					assert.Equal(t, tc.ExpiresOn.Unix(), ss.ExpiresOn.Unix())
-				}
-			}
+			compareSessionStates(t, tc.Output, ss)
 		})
 	}
 }
