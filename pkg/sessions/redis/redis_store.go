@@ -40,6 +40,11 @@ type SessionStore struct {
 // NewRedisSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
+	cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
+	if err != nil {
+		return nil, fmt.Errorf("error initialising cipher: %v", err)
+	}
+
 	client, err := newRedisCmdable(opts.Redis)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
@@ -47,7 +52,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 
 	rs := &SessionStore{
 		Client:        client,
-		CookieCipher:  opts.Cipher,
+		CookieCipher:  cipher,
 		CookieOptions: cookieOpts,
 	}
 	return rs, nil

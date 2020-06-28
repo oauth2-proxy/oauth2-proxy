@@ -8,6 +8,8 @@
 
 ## Changes since v6.0.0
 
+- [#577](https://github.com/oauth2-proxy/oauth2-proxy/pull/577) Move Cipher and Session Store initialisation out of Validation (@JoelSpeed)
+
 # v6.0.0
 
 ## Release Highlights

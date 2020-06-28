@@ -21,7 +21,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 )
 
@@ -37,8 +36,6 @@ func Validate(o *options.Options) error {
 	}
 
 	msgs := make([]string, 0)
-
-	var cipher encryption.Cipher
 	if o.Cookie.Secret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
 	} else {
@@ -60,12 +57,6 @@ func Validate(o *options.Options) error {
 			msgs = append(msgs,
 				fmt.Sprintf("Cookie secret must be 16, 24, or 32 bytes to create an AES cipher. Got %d bytes.%s",
 					len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
-		} else {
-			var err error
-			cipher, err = encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(o.Cookie.Secret))
-			if err != nil {
-				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
-			}
 		}
 	}
 
@@ -217,14 +208,6 @@ func Validate(o *options.Options) error {
 		o.SetCompiledRegex(append(o.GetCompiledRegex(), compiledRegex))
 	}
 	msgs = parseProviderInfo(o, msgs)
-
-	o.Session.Cipher = cipher
-	sessionStore, err := sessions.NewSessionStore(&o.Session, &o.Cookie)
-	if err != nil {
-		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
-	} else {
-		o.SetSessionStore(sessionStore)
-	}
 
 	if o.Cookie.Refresh >= o.Cookie.Expire {
 		msgs = append(msgs, fmt.Sprintf(

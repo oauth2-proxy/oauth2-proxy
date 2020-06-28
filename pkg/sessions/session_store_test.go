@@ -353,24 +353,11 @@ var _ = Describe("NewSessionStore", func() {
 					SameSite: "strict",
 				}
 
-				var err error
-				ss, err = sessions.NewSessionStore(opts, cookieOpts)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			SessionStoreInterfaceTests(persistent)
-		})
-
-		Context("with a cipher", func() {
-			BeforeEach(func() {
+				// A secret is required but not defaulted
 				secret := make([]byte, 32)
 				_, err := rand.Read(secret)
 				Expect(err).ToNot(HaveOccurred())
 				cookieOpts.Secret = base64.URLEncoding.EncodeToString(secret)
-				cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(cipher).ToNot(BeNil())
-				opts.Cipher = cipher
 
 				ss, err = sessions.NewSessionStore(opts, cookieOpts)
 				Expect(err).ToNot(HaveOccurred())
@@ -384,9 +371,16 @@ var _ = Describe("NewSessionStore", func() {
 		ss = nil
 		opts = &options.SessionOptions{}
 
+		// A secret is required to create a Cipher, validation ensures it is the correct
+		// length before a session store is initialised.
+		secret := make([]byte, 32)
+		_, err := rand.Read(secret)
+		Expect(err).ToNot(HaveOccurred())
+
 		// Set default options in CookieOptions
 		cookieOpts = &options.CookieOptions{
 			Name:     "_oauth2_proxy",
+			Secret:   base64.URLEncoding.EncodeToString(secret),
 			Path:     "/",
 			Expire:   time.Duration(168) * time.Hour,
 			Refresh:  time.Duration(1) * time.Hour,
@@ -423,6 +417,19 @@ var _ = Describe("NewSessionStore", func() {
 		Context("the cookie.SessionStore", func() {
 			RunSessionTests(false)
 		})
+
+		Context("with an invalid cookie secret", func() {
+			BeforeEach(func() {
+				cookieOpts.Secret = "invalid"
+			})
+
+			It("returns an error", func() {
+				ss, err := sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("error initialising cipher: crypto/aes: invalid key size 7"))
+				Expect(ss).To(BeNil())
+			})
+		})
 	})
 
 	Context("with type 'redis'", func() {
@@ -446,6 +453,19 @@ var _ = Describe("NewSessionStore", func() {
 
 		Context("the redis.SessionStore", func() {
 			RunSessionTests(true)
+		})
+
+		Context("with an invalid cookie secret", func() {
+			BeforeEach(func() {
+				cookieOpts.Secret = "invalid"
+			})
+
+			It("returns an error", func() {
+				ss, err := sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("error initialising cipher: crypto/aes: invalid key size 7"))
+				Expect(ss).To(BeNil())
+			})
 		})
 	})
 

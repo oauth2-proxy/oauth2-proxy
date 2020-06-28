@@ -127,8 +127,13 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
+	cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
+	if err != nil {
+		return nil, fmt.Errorf("error initialising cipher: %v", err)
+	}
+
 	return &SessionStore{
-		CookieCipher:  opts.Cipher,
+		CookieCipher:  cipher,
 		CookieOptions: cookieOpts,
 	}, nil
 }

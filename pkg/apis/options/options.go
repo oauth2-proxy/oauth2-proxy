@@ -8,7 +8,6 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"github.com/spf13/pflag"
 )
@@ -115,7 +114,6 @@ type Options struct {
 	proxyURLs          []*url.URL
 	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
-	sessionStore       sessionsapi.SessionStore
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
@@ -127,7 +125,6 @@ func (o *Options) GetRedirectURL() *url.URL                        { return o.re
 func (o *Options) GetProxyURLs() []*url.URL                        { return o.proxyURLs }
 func (o *Options) GetCompiledRegex() []*regexp.Regexp              { return o.compiledRegex }
 func (o *Options) GetProvider() providers.Provider                 { return o.provider }
-func (o *Options) GetSessionStore() sessionsapi.SessionStore       { return o.sessionStore }
 func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
 func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
 func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jwtBearerVerifiers }
@@ -138,7 +135,6 @@ func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirect
 func (o *Options) SetProxyURLs(s []*url.URL)                        { o.proxyURLs = s }
 func (o *Options) SetCompiledRegex(s []*regexp.Regexp)              { o.compiledRegex = s }
 func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
-func (o *Options) SetSessionStore(s sessionsapi.SessionStore)       { o.sessionStore = s }
 func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
 func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
 func (o *Options) SetJWTBearerVerifiers(s []*oidc.IDTokenVerifier)  { o.jwtBearerVerifiers = s }

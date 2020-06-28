@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"crypto/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,6 +16,10 @@ import (
 )
 
 func TestRedisStore(t *testing.T) {
+	secret := make([]byte, 32)
+	_, err := rand.Read(secret)
+	assert.NoError(t, err)
+
 	t.Run("save session on redis standalone", func(t *testing.T) {
 		redisServer, err := miniredis.Run()
 		require.NoError(t, err)
@@ -25,6 +30,8 @@ func TestRedisStore(t *testing.T) {
 			Host:   redisServer.Addr(),
 		}
 		opts.Session.Redis.ConnectionURL = redisURL.String()
+
+		opts.Cookie.Secret = string(secret)
 		redisStore, err := NewRedisSessionStore(&opts.Session, &opts.Cookie)
 		require.NoError(t, err)
 		err = redisStore.Save(
@@ -49,6 +56,8 @@ func TestRedisStore(t *testing.T) {
 		opts.Session.Redis.SentinelConnectionURLs = []string{sentinelURL.String()}
 		opts.Session.Redis.UseSentinel = true
 		opts.Session.Redis.SentinelMasterName = sentinel.MasterInfo().Name
+
+		opts.Cookie.Secret = string(secret)
 		redisStore, err := NewRedisSessionStore(&opts.Session, &opts.Cookie)
 		require.NoError(t, err)
 		err = redisStore.Save(
