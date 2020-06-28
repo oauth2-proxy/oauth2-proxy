@@ -417,6 +417,19 @@ var _ = Describe("NewSessionStore", func() {
 		Context("the cookie.SessionStore", func() {
 			RunSessionTests(false)
 		})
+
+		Context("with an invalid cookie secret", func() {
+			BeforeEach(func() {
+				cookieOpts.Secret = "invalid"
+			})
+
+			It("returns an error", func() {
+				ss, err := sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("error initialising cipher: crypto/aes: invalid key size 7"))
+				Expect(ss).To(BeNil())
+			})
+		})
 	})
 
 	Context("with type 'redis'", func() {
@@ -441,6 +454,19 @@ var _ = Describe("NewSessionStore", func() {
 		Context("the redis.SessionStore", func() {
 			RunSessionTests(true)
 		})
+
+		Context("with an invalid cookie secret", func() {
+			BeforeEach(func() {
+				cookieOpts.Secret = "invalid"
+			})
+
+			It("returns an error", func() {
+				ss, err := sessions.NewSessionStore(opts, cookieOpts)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("error initialising cipher: crypto/aes: invalid key size 7"))
+				Expect(ss).To(BeNil())
+			})
+		})
 	})
 
 	Context("with an invalid type", func() {
@@ -452,19 +478,6 @@ var _ = Describe("NewSessionStore", func() {
 			ss, err := sessions.NewSessionStore(opts, cookieOpts)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("unknown session store type 'invalid-type'"))
-			Expect(ss).To(BeNil())
-		})
-	})
-
-	Context("with an invalid cookie secret", func() {
-		BeforeEach(func() {
-			cookieOpts.Secret = "invalid"
-		})
-
-		It("returns an error", func() {
-			ss, err := sessions.NewSessionStore(opts, cookieOpts)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("error initialising cipher: crypto/aes: invalid key size 7"))
 			Expect(ss).To(BeNil())
 		})
 	})

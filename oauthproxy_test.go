@@ -22,7 +22,6 @@ import (
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/validation"
@@ -1605,9 +1604,7 @@ func TestClearSplitCookie(t *testing.T) {
 	opts.Cookie.Secret = base64CookieSecret
 	opts.Cookie.Name = "oauth2"
 	opts.Cookie.Domains = []string{"abc"}
-	cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(opts.Cookie.Secret))
-	assert.Equal(t, nil, err)
-	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie, cipher)
+	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
 	assert.Equal(t, nil, err)
 	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
 	var rw = httptest.NewRecorder()
@@ -1636,9 +1633,7 @@ func TestClearSingleCookie(t *testing.T) {
 	opts := baseTestOptions()
 	opts.Cookie.Name = "oauth2"
 	opts.Cookie.Domains = []string{"abc"}
-	cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(opts.Cookie.Secret))
-	assert.Equal(t, nil, err)
-	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie, cipher)
+	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
 	assert.Equal(t, nil, err)
 	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
 	var rw = httptest.NewRecorder()
