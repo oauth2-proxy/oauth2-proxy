@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
+
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
@@ -28,11 +30,22 @@ import (
 // are of the correct format
 func Validate(o *options.Options) error {
 	if o.SSLInsecureSkipVerify {
-		// TODO: Accept a certificate bundle.
 		insecureTransport := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
+	} else if o.ProviderCAFiles != nil && len(o.ProviderCAFiles) > 0 {
+		pool, err := util.GetCertPool(o.ProviderCAFiles)
+		if err != nil {
+			return err
+		}
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: pool,
+			},
+		}
+
+		http.DefaultClient = &http.Client{Transport: transport}
 	}
 
 	msgs := make([]string, 0)
