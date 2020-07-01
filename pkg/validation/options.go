@@ -37,7 +37,7 @@ func Validate(o *options.Options) error {
 	} else if o.ProviderCAFiles != nil && len(o.ProviderCAFiles) > 0 {
 		pool, err := util.GetCertPool(o.ProviderCAFiles)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to load provider CA file(s): %v", err)
 		}
 		transport := &http.Transport{
 			TLSClientConfig: &tls.Config{
