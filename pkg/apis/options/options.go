@@ -87,7 +87,7 @@ type Options struct {
 	// potential overrides.
 	ProviderType                       string   `flag:"provider" cfg:"provider"`
 	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
-	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_file"`
+	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
