@@ -1,5 +1,5 @@
-# Default owner should be a core maintainer unless overridden by later rules in this file
-* @steakunderscore @JoelSpeed
+# Default owner should be a core org reviewers unless overridden by later rules in this file
+* @oauth2-proxy/reviewers
 
 # login.gov provider
 # Note:  If @timothy-spencer terms out of his appointment, your best bet
