@@ -1,6 +1,9 @@
-package redis
+package redis_test
 
 import (
+	"crypto/aes"
+	"crypto/rand"
+	"io"
 	"log"
 	"os"
 	"testing"
@@ -12,10 +15,48 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	redissession "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/tests"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestLegacyV5DecodeSession(t *testing.T) {
+	testCases, _, legacyCipher := tests.CreateLegacyV5TestCases(t)
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			secret := make([]byte, aes.BlockSize)
+			_, err := io.ReadFull(rand.Reader, secret)
+			assert.NoError(t, err)
+			ticket := &redissession.TicketData{
+				TicketID: "",
+				Secret:   secret,
+			}
+
+			encrypted, err := tests.LegacyStoreValue(tc.Input, ticket)
+			assert.NoError(t, err)
+
+			ss, err := redissession.LegacyV5DecodeSession(encrypted, ticket, legacyCipher)
+			if tc.Error {
+				assert.Error(t, err)
+				assert.Nil(t, ss)
+				return
+			}
+			assert.NoError(t, err)
+
+			// Compare sessions without *time.Time fields
+			exp := *tc.Output
+			exp.CreatedAt = nil
+			exp.ExpiresOn = nil
+			act := *ss
+			act.CreatedAt = nil
+			act.ExpiresOn = nil
+			assert.Equal(t, exp, act)
+		})
+	}
+}
 
 func TestSessionStore(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
@@ -50,7 +91,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 	JustAfterEach(func() {
 		// Release any connections immediately after the test ends
-		if redisStore, ok := ss.(*SessionStore); ok {
+		if redisStore, ok := ss.(*redissession.SessionStore); ok {
 			if redisStore.Client != nil {
 				Expect(redisStore.Client.(closer).Close()).To(Succeed())
 			}
@@ -65,7 +106,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 			// Capture the session store so that we can close the client
 			var err error
-			ss, err = NewRedisSessionStore(opts, cookieOpts)
+			ss, err = redissession.NewRedisSessionStore(opts, cookieOpts)
 			return ss, err
 		},
 		func(d time.Duration) error {
@@ -97,7 +138,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 				// Capture the session store so that we can close the client
 				var err error
-				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				ss, err = redissession.NewRedisSessionStore(opts, cookieOpts)
 				return ss, err
 			},
 			func(d time.Duration) error {
@@ -117,7 +158,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 				// Capture the session store so that we can close the client
 				var err error
-				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				ss, err = redissession.NewRedisSessionStore(opts, cookieOpts)
 				return ss, err
 			},
 			func(d time.Duration) error {

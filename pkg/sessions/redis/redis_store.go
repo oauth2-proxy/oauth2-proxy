@@ -40,7 +40,7 @@ type SessionStore struct {
 // NewRedisSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
-	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(cookieOpts.Secret))
+	cfbCipher, err := encryption.NewCFBCipher(encryption.SecretBytes(cookieOpts.Secret))
 	if err != nil {
 		return nil, fmt.Errorf("error initialising cipher: %v", err)
 	}
@@ -52,7 +52,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 
 	rs := &SessionStore{
 		Client:       client,
-		CookieCipher: cipher,
+		CookieCipher: cfbCipher,
 		Cookie:       cookieOpts,
 	}
 	return rs, nil
@@ -272,24 +272,15 @@ func (store *SessionStore) loadSessionFromTicket(ctx context.Context, value stri
 		// The GCM cipher will error due to a legacy JSON payload not passing
 		// the authentication check part of AES GCM encryption.
 		// In that case, we can attempt to fallback to try a legacy load
-		return store.legacyV5LoadSessionFromTicket(ctx, value)
+		legacyCipher := encryption.NewBase64Cipher(store.CookieCipher)
+		return LegacyV5DecodeSession(resultBytes, ticket, legacyCipher)
 	}
 	return session, nil
 }
 
-// legacyV5LoadSessionFromTicket loads the session based on the ticket value
-// This falls uses V5 style encryption of Base64 + AES CFB
-func (store *SessionStore) legacyV5LoadSessionFromTicket(ctx context.Context, value string) (*sessions.SessionState, error) {
-	ticket, err := decodeTicket(store.Cookie.Name, value)
-	if err != nil {
-		return nil, err
-	}
-
-	resultBytes, err := store.Client.Get(ctx, ticket.asHandle(store.Cookie.Name))
-	if err != nil {
-		return nil, err
-	}
-
+// LegacyV5DecodeSession loads the session based on the ticket value
+// This fallback uses V5 style encryption of Base64 + AES CFB
+func LegacyV5DecodeSession(resultBytes []byte, ticket *TicketData, c encryption.Cipher) (*sessions.SessionState, error) {
 	block, err := aes.NewCipher(ticket.Secret)
 	if err != nil {
 		return nil, err
@@ -298,8 +289,7 @@ func (store *SessionStore) legacyV5LoadSessionFromTicket(ctx context.Context, va
 	stream := cipher.NewCFBDecrypter(block, ticket.Secret)
 	stream.XORKeyStream(resultBytes, resultBytes)
 
-	legacyCipher := encryption.NewBase64Cipher(store.CookieCipher)
-	session, err := sessions.LegacyV5DecodeSessionState(string(resultBytes), legacyCipher)
+	session, err := sessions.LegacyV5DecodeSessionState(string(resultBytes), c)
 	if err != nil {
 		return nil, err
 	}
