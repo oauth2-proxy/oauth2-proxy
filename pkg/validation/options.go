@@ -21,21 +21,34 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 )
 
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
+	msgs := make([]string, 0)
 	if o.SSLInsecureSkipVerify {
-		// TODO: Accept a certificate bundle.
 		insecureTransport := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
+	} else if len(o.ProviderCAFiles) > 0 {
+		pool, err := util.GetCertPool(o.ProviderCAFiles)
+		if err == nil {
+			transport := &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: pool,
+				},
+			}
+
+			http.DefaultClient = &http.Client{Transport: transport}
+		} else {
+			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
+		}
 	}
 
-	msgs := make([]string, 0)
 	if o.Cookie.Secret == "" {
 		msgs = append(msgs, "missing setting: cookie-secret")
 	} else {

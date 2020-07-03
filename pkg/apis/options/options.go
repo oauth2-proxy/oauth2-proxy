@@ -85,22 +85,23 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	ProviderType                       string `flag:"provider" cfg:"provider"`
-	ProviderName                       string `flag:"provider-display-name" cfg:"provider_display_name"`
-	OIDCIssuerURL                      string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
-	InsecureOIDCAllowUnverifiedEmail   bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
-	InsecureOIDCSkipIssuerVerification bool   `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
-	SkipOIDCDiscovery                  bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
-	OIDCJwksURL                        string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
-	LoginURL                           string `flag:"login-url" cfg:"login_url"`
-	RedeemURL                          string `flag:"redeem-url" cfg:"redeem_url"`
-	ProfileURL                         string `flag:"profile-url" cfg:"profile_url"`
-	ProtectedResource                  string `flag:"resource" cfg:"resource"`
-	ValidateURL                        string `flag:"validate-url" cfg:"validate_url"`
-	Scope                              string `flag:"scope" cfg:"scope"`
-	Prompt                             string `flag:"prompt" cfg:"prompt"`
-	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
-	UserIDClaim                        string `flag:"user-id-claim" cfg:"user_id_claim"`
+	ProviderType                       string   `flag:"provider" cfg:"provider"`
+	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
+	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
+	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
+	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
+	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
+	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
+	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
+	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
+	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
+	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
+	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
+	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
+	Scope                              string   `flag:"scope" cfg:"scope"`
+	Prompt                             string   `flag:"prompt" cfg:"prompt"`
+	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
+	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	AcrValues       string `flag:"acr-values" cfg:"acr_values"`
@@ -267,6 +268,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
+	flagSet.StringSlice("provider-ca-file", []string{}, "One or more paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead.")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
