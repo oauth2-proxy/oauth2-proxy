@@ -1,7 +1,8 @@
 package util
 
 import (
-	"encoding/hex"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -9,8 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Test certificate created with an OpenSSL command in the following form:
+// openssl req -x509 -newkey rsa:4096 -keyout key-unused.pem -out cert.pem -nodes -subj "/CN=oauth-proxy test ca"
+
 var (
-	testCA1Subj = "301e311c301a060355040313136f617574682d70726f78792074657374206361"
+	testCA1Subj = "CN=oauth-proxy test ca"
 	testCA1     = `-----BEGIN CERTIFICATE-----
 MIICuTCCAaGgAwIBAgIFAKuKEWowDQYJKoZIhvcNAQELBQAwHjEcMBoGA1UEAxMT
 b2F1dGgtcHJveHkgdGVzdCBjYTAeFw0xNzEwMjQyMDExMzJaFw0xOTEwMjQyMDEx
@@ -29,7 +33,7 @@ pP5YlVqdRCVrxgT80PIMsvQhfcuIrbbeiRDEUdEX7FqebuGCEa2757MTdW7UYQiB
 7kgECMnwAOlJME8aDKnmTBajaMy6xCSC87V7wps=
 -----END CERTIFICATE-----
 `
-	testCA2Subj = "3025312330210603550403131a6f617574682d70726f7879207365636f6e642074657374206361"
+	testCA2Subj = "CN=oauth-proxy second test ca"
 	testCA2     = `-----BEGIN CERTIFICATE-----
 MIICxzCCAa+gAwIBAgIFAKuMKewwDQYJKoZIhvcNAQELBQAwJTEjMCEGA1UEAxMa
 b2F1dGgtcHJveHkgc2Vjb25kIHRlc3QgY2EwHhcNMTcxMDI1MTYxMTQxWhcNMTkx
@@ -76,7 +80,10 @@ func TestGetCertPool(t *testing.T) {
 	subj := certPool.Subjects()
 	got := make([]string, 0)
 	for i := range subj {
-		got = append(got, hex.EncodeToString(subj[i]))
+		var subject pkix.RDNSequence
+		_, err := asn1.Unmarshal(subj[i], &subject)
+		assert.NoError(t, err)
+		got = append(got, subject.String())
 	}
 
 	expectedSubjects := []string{testCA1Subj, testCA2Subj}
