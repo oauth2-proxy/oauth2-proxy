@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"net/http"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
@@ -51,14 +50,10 @@ func (p *KeycloakProvider) SetGroup(group string) {
 }
 
 func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
-
-	req, err := http.NewRequestWithContext(ctx, "GET", p.ValidateURL.String(), nil)
-	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
-	if err != nil {
-		logger.Printf("failed building request %s", err)
-		return "", err
-	}
-	json, err := requests.Request(req)
+	json, err := requests.New(p.ValidateURL.String()).
+		WithContext(ctx).
+		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		UnmarshalJSON()
 	if err != nil {
 		logger.Printf("failed making request %s", err)
 		return "", err

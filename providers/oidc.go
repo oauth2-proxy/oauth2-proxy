@@ -256,13 +256,10 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
 		// contents at the profileURL contains the email.
 		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
-		req, err := http.NewRequestWithContext(ctx, "GET", profileURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header = getOIDCHeader(accessToken)
-
-		respJSON, err := requests.Request(req)
+		respJSON, err := requests.New(profileURL).
+			WithContext(ctx).
+			WithHeaders(getOIDCHeader(accessToken)).
+			UnmarshalJSON()
 		if err != nil {
 			return nil, err
 		}

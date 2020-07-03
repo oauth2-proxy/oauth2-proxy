@@ -62,20 +62,21 @@ func (p *FacebookProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String()+"?fields=name,email", nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header = getFacebookHeader(s.AccessToken)
 
 	type result struct {
 		Email string
 	}
 	var r result
-	err = requests.RequestJSON(req, &r)
+
+	requestURL := p.ProfileURL.String() + "?fields=name,email"
+	err := requests.New(requestURL).
+		WithContext(ctx).
+		WithHeaders(getFacebookHeader(s.AccessToken)).
+		UnmarshalInto(&r)
 	if err != nil {
 		return "", err
 	}
+
 	if r.Email == "" {
 		return "", errors.New("no email")
 	}

@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
 // GitHubProvider represents an GitHub based Identity Provider
@@ -111,27 +111,16 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 			Path:     path.Join(p.ValidateURL.Path, "/user/orgs"),
 			RawQuery: params.Encode(),
 		}
-		req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
-		req.Header = getGitHubHeader(accessToken)
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return false, err
-		}
-
-		body, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			return false, err
-		}
-		if resp.StatusCode != 200 {
-			return false, fmt.Errorf(
-				"got %d from %q %s", resp.StatusCode, endpoint.String(), body)
-		}
 
 		var op orgsPage
-		if err := json.Unmarshal(body, &op); err != nil {
+		err := requests.New(endpoint.String()).
+			WithContext(ctx).
+			WithHeaders(getGitHubHeader(accessToken)).
+			UnmarshalInto(&op)
+		if err != nil {
 			return false, err
 		}
+
 		if len(op) == 0 {
 			break
 		}
@@ -187,9 +176,13 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			RawQuery: params.Encode(),
 		}
 
-		req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
-		req.Header = getGitHubHeader(accessToken)
-		resp, err := http.DefaultClient.Do(req)
+		// bodyclose cannot detect that the body is being closed later in requests.Into,
+		// so have to skip the linting for the next line.
+		// nolint:bodyclose
+		resp, err := requests.New(endpoint.String()).
+			WithContext(ctx).
+			WithHeaders(getGitHubHeader(accessToken)).
+			Do()
 		if err != nil {
 			return false, err
 		}
@@ -217,21 +210,9 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			}
 		}
 
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			resp.Body.Close()
-			return false, err
-		}
-		resp.Body.Close()
-
-		if resp.StatusCode != 200 {
-			return false, fmt.Errorf(
-				"got %d from %q %s", resp.StatusCode, endpoint.String(), body)
-		}
-
 		var tp teamsPage
-		if err := json.Unmarshal(body, &tp); err != nil {
-			return false, fmt.Errorf("%s unmarshaling %s", err, body)
+		if err := requests.UnmarshalInto(resp, &tp); err != nil {
+			return false, err
 		}
 		if len(tp) == 0 {
 			break
@@ -297,25 +278,12 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 		Path:   path.Join(p.ValidateURL.Path, "/repo/", p.Repo),
 	}
 
-	req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
-	req.Header = getGitHubHeader(accessToken)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return false, err
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return false, err
-	}
-	if resp.StatusCode != 200 {
-		return false, fmt.Errorf(
-			"got %d from %q %s", resp.StatusCode, endpoint.String(), body)
-	}
-
 	var repo repository
-	if err := json.Unmarshal(body, &repo); err != nil {
+	err := requests.New(endpoint.String()).
+		WithContext(ctx).
+		WithHeaders(getGitHubHeader(accessToken)).
+		UnmarshalInto(&repo)
+	if err != nil {
 		return false, err
 	}
 
@@ -337,24 +305,12 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 		Host:   p.ValidateURL.Host,
 		Path:   path.Join(p.ValidateURL.Path, "/user"),
 	}
-	req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
-	req.Header = getGitHubHeader(accessToken)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return false, err
-	}
-	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	err := requests.New(endpoint.String()).
+		WithContext(ctx).
+		WithHeaders(getGitHubHeader(accessToken)).
+		UnmarshalInto(&user)
 	if err != nil {
-		return false, err
-	}
-	if resp.StatusCode != 200 {
-		return false, fmt.Errorf("got %d from %q %s",
-			resp.StatusCode, stripToken(endpoint.String()), body)
-	}
-
-	if err := json.Unmarshal(body, &user); err != nil {
 		return false, err
 	}
 
@@ -372,12 +328,14 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 		Host:   p.ValidateURL.Host,
 		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo, "/collaborators/", username),
 	}
-	req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
-	req.Header = getGitHubHeader(accessToken)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := requests.New(endpoint.String()).
+		WithContext(ctx).
+		WithHeaders(getGitHubHeader(accessToken)).
+		Do()
 	if err != nil {
 		return false, err
 	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
@@ -440,27 +398,12 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 		Host:   p.ValidateURL.Host,
 		Path:   path.Join(p.ValidateURL.Path, "/user/emails"),
 	}
-	req, _ := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
-	req.Header = getGitHubHeader(s.AccessToken)
-	resp, err := http.DefaultClient.Do(req)
+	err := requests.New(endpoint.String()).
+		WithContext(ctx).
+		WithHeaders(getGitHubHeader(s.AccessToken)).
+		UnmarshalInto(&emails)
 	if err != nil {
 		return "", err
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("got %d from %q %s",
-			resp.StatusCode, endpoint.String(), body)
-	}
-
-	logger.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
-
-	if err := json.Unmarshal(body, &emails); err != nil {
-		return "", fmt.Errorf("%s unmarshaling %s", err, body)
 	}
 
 	returnEmail := ""
@@ -489,32 +432,12 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 		Path:   path.Join(p.ValidateURL.Path, "/user"),
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", endpoint.String(), nil)
-	if err != nil {
-		return "", fmt.Errorf("could not create new GET request: %v", err)
-	}
-
-	req.Header = getGitHubHeader(s.AccessToken)
-	resp, err := http.DefaultClient.Do(req)
+	err := requests.New(endpoint.String()).
+		WithContext(ctx).
+		WithHeaders(getGitHubHeader(s.AccessToken)).
+		UnmarshalInto(&user)
 	if err != nil {
 		return "", err
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("got %d from %q %s",
-			resp.StatusCode, endpoint.String(), body)
-	}
-
-	logger.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
-
-	if err := json.Unmarshal(body, &user); err != nil {
-		return "", fmt.Errorf("%s unmarshaling %s", err, body)
 	}
 
 	// Now that we have the username we can check collaborator status

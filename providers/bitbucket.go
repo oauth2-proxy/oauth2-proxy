@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -85,15 +84,13 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 			FullName string `json:"full_name"`
 		}
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET",
-		p.ValidateURL.String()+"?access_token="+s.AccessToken, nil)
+
+	requestURL := p.ValidateURL.String() + "?access_token=" + s.AccessToken
+	err := requests.New(requestURL).
+		WithContext(ctx).
+		UnmarshalInto(&emails)
 	if err != nil {
-		logger.Printf("failed building request %s", err)
-		return "", err
-	}
-	err = requests.RequestJSON(req, &emails)
-	if err != nil {
-		logger.Printf("failed making request %s", err)
+		logger.Printf("failed making request: %v", err)
 		return "", err
 	}
 
@@ -101,15 +98,14 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		teamURL := &url.URL{}
 		*teamURL = *p.ValidateURL
 		teamURL.Path = "/2.0/teams"
-		req, err = http.NewRequestWithContext(ctx, "GET",
-			teamURL.String()+"?role=member&access_token="+s.AccessToken, nil)
+
+		requestURL := teamURL.String() + "?role=member&access_token=" + s.AccessToken
+
+		err := requests.New(requestURL).
+			WithContext(ctx).
+			UnmarshalInto(&teams)
 		if err != nil {
-			logger.Printf("failed building request %s", err)
-			return "", err
-		}
-		err = requests.RequestJSON(req, &teams)
-		if err != nil {
-			logger.Printf("failed requesting teams membership %s", err)
+			logger.Printf("failed requesting teams membership: %v", err)
 			return "", err
 		}
 		var found = false
@@ -129,20 +125,19 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		repositoriesURL := &url.URL{}
 		*repositoriesURL = *p.ValidateURL
 		repositoriesURL.Path = "/2.0/repositories/" + strings.Split(p.Repository, "/")[0]
-		req, err = http.NewRequestWithContext(ctx, "GET",
-			repositoriesURL.String()+"?role=contributor"+
-				"&q=full_name="+url.QueryEscape("\""+p.Repository+"\"")+
-				"&access_token="+s.AccessToken,
-			nil)
+
+		requestURL := repositoriesURL.String() + "?role=contributor" +
+			"&q=full_name=" + url.QueryEscape("\""+p.Repository+"\"") +
+			"&access_token=" + s.AccessToken
+
+		err := requests.New(requestURL).
+			WithContext(ctx).
+			UnmarshalInto(&repositories)
 		if err != nil {
-			logger.Printf("failed building request %s", err)
+			logger.Printf("failed checking repository access: %v", err)
 			return "", err
 		}
-		err = requests.RequestJSON(req, &repositories)
-		if err != nil {
-			logger.Printf("failed checking repository access %s", err)
-			return "", err
-		}
+
 		var found = false
 		for _, repository := range repositories.Values {
 			if p.Repository == repository.FullName {

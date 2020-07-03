@@ -83,34 +83,33 @@ func Validate(o *options.Options) error {
 
 			logger.Printf("Performing OIDC Discovery...")
 
-			if req, err := http.NewRequest("GET", strings.TrimSuffix(o.OIDCIssuerURL, "/")+"/.well-known/openid-configuration", nil); err == nil {
-				if body, err := requests.Request(req); err == nil {
-
-					// Prefer manually configured URLs. It's a bit unclear
-					// why you'd be doing discovery and also providing the URLs
-					// explicitly though...
-					if o.LoginURL == "" {
-						o.LoginURL = body.Get("authorization_endpoint").MustString()
-					}
-
-					if o.RedeemURL == "" {
-						o.RedeemURL = body.Get("token_endpoint").MustString()
-					}
-
-					if o.OIDCJwksURL == "" {
-						o.OIDCJwksURL = body.Get("jwks_uri").MustString()
-					}
-
-					if o.ProfileURL == "" {
-						o.ProfileURL = body.Get("userinfo_endpoint").MustString()
-					}
-
-					o.SkipOIDCDiscovery = true
-				} else {
-					logger.Printf("error: failed to discover OIDC configuration: %v", err)
-				}
+			requestURL := strings.TrimSuffix(o.OIDCIssuerURL, "/") + "/.well-known/openid-configuration"
+			body, err := requests.New(requestURL).
+				WithContext(ctx).
+				UnmarshalJSON()
+			if err != nil {
+				logger.Printf("error: failed to discover OIDC configuration: %v", err)
 			} else {
-				logger.Printf("error: failed parsing OIDC discovery URL: %v", err)
+				// Prefer manually configured URLs. It's a bit unclear
+				// why you'd be doing discovery and also providing the URLs
+				// explicitly though...
+				if o.LoginURL == "" {
+					o.LoginURL = body.Get("authorization_endpoint").MustString()
+				}
+
+				if o.RedeemURL == "" {
+					o.RedeemURL = body.Get("token_endpoint").MustString()
+				}
+
+				if o.OIDCJwksURL == "" {
+					o.OIDCJwksURL = body.Get("jwks_uri").MustString()
+				}
+
+				if o.ProfileURL == "" {
+					o.ProfileURL = body.Get("userinfo_endpoint").MustString()
+				}
+
+				o.SkipOIDCDiscovery = true
 			}
 		}
 
@@ -385,10 +384,12 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 	if err != nil {
 		// Try as JWKS URI
 		jwksURI := strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
-		_, err := http.NewRequest("GET", jwksURI, nil)
+		resp, err := requests.New(jwksURI).Do()
 		if err != nil {
 			return nil, err
 		}
+		resp.Body.Close()
+
 		verifier = oidc.NewVerifier(jwtIssuer.issuerURI, oidc.NewRemoteKeySet(context.Background(), jwksURI), config)
 	} else {
 		verifier = provider.Verifier(config)

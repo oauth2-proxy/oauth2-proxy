@@ -2,15 +2,13 @@ package providers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"golang.org/x/oauth2"
 )
 
@@ -131,31 +129,13 @@ func (p *GitLabProvider) getUserInfo(ctx context.Context, s *sessions.SessionSta
 	userInfoURL := *p.LoginURL
 	userInfoURL.Path = "/oauth/userinfo"
 
-	req, err := http.NewRequestWithContext(ctx, "GET", userInfoURL.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create user info request: %v", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to perform user info request: %v", err)
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read user info response: %v", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("got %d during user info request: %s", resp.StatusCode, body)
-	}
-
 	var userInfo gitlabUserInfo
-	err = json.Unmarshal(body, &userInfo)
+	err := requests.New(userInfoURL.String()).
+		WithContext(ctx).
+		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		UnmarshalInto(&userInfo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse user info: %v", err)
+		return nil, fmt.Errorf("error getting user info: %v", err)
 	}
 
 	return &userInfo, nil

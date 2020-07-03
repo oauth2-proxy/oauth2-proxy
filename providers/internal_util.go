@@ -56,7 +56,11 @@ func validateToken(ctx context.Context, p Provider, accessToken string, header h
 		params := url.Values{"access_token": {accessToken}}
 		endpoint = endpoint + "?" + params.Encode()
 	}
-	resp, err := requests.RequestUnparsedResponse(ctx, endpoint, header)
+
+	resp, err := requests.New(endpoint).
+		WithContext(ctx).
+		WithHeaders(header).
+		Do()
 	if err != nil {
 		logger.Printf("GET %s", stripToken(endpoint))
 		logger.Printf("token validation request failed: %s", err)

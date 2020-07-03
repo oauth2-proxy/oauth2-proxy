@@ -7,13 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/coreos/go-oidc"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
 var _ Provider = (*ProviderData)(nil)
@@ -39,18 +39,16 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 		params.Add("resource", p.ProtectedResource.String())
 	}
 
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req)
+	resp, err := requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do()
 	if err != nil {
 		return nil, err
 	}
+
 	var body []byte
 	body, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()

@@ -60,13 +60,11 @@ func (p *DigitalOceanProvider) GetEmailAddress(ctx context.Context, s *sessions.
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String(), nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header = getDigitalOceanHeader(s.AccessToken)
 
-	json, err := requests.Request(req)
+	json, err := requests.New(p.ProfileURL.String()).
+		WithContext(ctx).
+		WithHeaders(getDigitalOceanHeader(s.AccessToken)).
+		UnmarshalJSON()
 	if err != nil {
 		return "", err
 	}

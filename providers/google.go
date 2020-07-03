@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
@@ -116,28 +116,6 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
-	}
 
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
@@ -145,10 +123,17 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		ExpiresIn    int64  `json:"expires_in"`
 		IDToken      string `json:"id_token"`
 	}
-	err = json.Unmarshal(body, &jsonResponse)
+
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return
+		return nil, err
 	}
+
 	c, err := claimsFromIDToken(jsonResponse.IDToken)
 	if err != nil {
 		return
@@ -283,38 +268,23 @@ func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken st
 	params.Add("client_secret", clientSecret)
 	params.Add("refresh_token", refreshToken)
 	params.Add("grant_type", "refresh_token")
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
-	}
 
 	var data struct {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int64  `json:"expires_in"`
 		IDToken     string `json:"id_token"`
 	}
-	err = json.Unmarshal(body, &data)
+
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		UnmarshalInto(&data)
 	if err != nil {
-		return
+		return "", "", 0, err
 	}
+
 	token = data.AccessToken
 	idToken = data.IDToken
 	expires = time.Duration(data.ExpiresIn) * time.Second
