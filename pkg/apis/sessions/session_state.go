@@ -99,13 +99,18 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 		}
 	}
 
-	var ss *SessionState
+	var ss SessionState
 	err = msgpack.Unmarshal(packed, &ss)
 	if err != nil {
 		return nil, errors.Wrap(err, "error unmarshalling data to session state")
 	}
 
-	return ss, nil
+	err = validateSession(&ss)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ss, nil
 }
 
 // LegacyV5DecodeSessionState decodes a legacy JSON session cookie string into a SessionState
@@ -128,9 +133,10 @@ func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, e
 		if err != nil {
 			return nil, err
 		}
-		if !utf8.ValidString(*s) {
-			return nil, errors.New("invalid non-UTF8 field in session")
-		}
+	}
+	err = validateSession(&ss)
+	if err != nil {
+		return nil, err
 	}
 
 	return &ss, nil
@@ -198,4 +204,26 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 	}
 
 	return payload, nil
+}
+
+func validateSession(ss *SessionState) error {
+	for _, field := range []string{
+		ss.User,
+		ss.Email,
+		ss.PreferredUsername,
+		ss.AccessToken,
+		ss.IDToken,
+		ss.RefreshToken,
+	} {
+		if !utf8.ValidString(field) {
+			return errors.New("invalid non-UTF8 field in session")
+		}
+	}
+
+	empty := new(SessionState)
+	if *ss == *empty {
+		return errors.New("invalid empty session unmarshalled")
+	}
+
+	return nil
 }
