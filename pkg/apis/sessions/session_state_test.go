@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const secret = "0123456789abcdefghijklmnopqrstuv"
-
 func timePtr(t time.Time) *time.Time {
 	return &t
 }
@@ -46,13 +44,10 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 	created := time.Now()
 	expires := time.Now().Add(time.Duration(1) * time.Hour)
 
-	c, err := encryption.NewCFBCipher([]byte(secret))
-	assert.NoError(t, err)
-
 	// Tokens in the test table are purposefully redundant
 	// Otherwise compressing small payloads could result in a compressed value
-	// that is larger (compression dictionary + limited like string to compress)
-	// which breaks the len(compressed) <= len(uncompressed) assertion.
+	// that is larger (compression dictionary + limited like strings to compress)
+	// which breaks the len(compressed) < len(uncompressed) assertion.
 	testCases := map[string]SessionState{
 		"Full session": {
 			Email:             "username@example.com",
@@ -97,27 +92,68 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 		},
 	}
 
-	for name, ss := range testCases {
-		t.Run(name, func(t *testing.T) {
-			encoded, err := ss.EncodeSessionState(c, false)
-			assert.NoError(t, err)
-			encodedCompressed, err := ss.EncodeSessionState(c, true)
-			assert.NoError(t, err)
-			assert.GreaterOrEqual(t, len(encoded), len(encodedCompressed))
-
-			decoded, err := DecodeSessionState(encoded, c, false)
-			assert.NoError(t, err)
-			decodedCompressed, err := DecodeSessionState(encodedCompressed, c, true)
+	for _, secretSize := range []int{16, 24, 32} {
+		t.Run(fmt.Sprintf("%d byte secret", secretSize), func(t *testing.T) {
+			secret := make([]byte, secretSize)
+			_, err := io.ReadFull(rand.Reader, secret)
 			assert.NoError(t, err)
 
-			compareSessionStates(t, decoded, decodedCompressed)
-			compareSessionStates(t, decoded, &ss)
+			cfb, err := encryption.NewCFBCipher([]byte(secret))
+			assert.NoError(t, err)
+			gcm, err := encryption.NewGCMCipher([]byte(secret))
+			assert.NoError(t, err)
+
+			ciphers := map[string]encryption.Cipher{
+				"CFB cipher": cfb,
+				"GCM cipher": gcm,
+			}
+
+			for cipherName, c := range ciphers {
+				t.Run(cipherName, func(t *testing.T) {
+					for testName, ss := range testCases {
+						t.Run(testName, func(t *testing.T) {
+							encoded, err := ss.EncodeSessionState(c, false)
+							assert.NoError(t, err)
+							encodedCompressed, err := ss.EncodeSessionState(c, true)
+							assert.NoError(t, err)
+							// Make sure compressed version is smaller than if not compressed
+							assert.Greater(t, len(encoded), len(encodedCompressed))
+
+							decoded, err := DecodeSessionState(encoded, c, false)
+							assert.NoError(t, err)
+							decodedCompressed, err := DecodeSessionState(encodedCompressed, c, true)
+							assert.NoError(t, err)
+
+							compareSessionStates(t, decoded, decodedCompressed)
+							compareSessionStates(t, decoded, &ss)
+						})
+					}
+				})
+			}
+
+			t.Run("Mixed cipher types cause errors", func(t *testing.T) {
+				for testName, ss := range testCases {
+					t.Run(testName, func(t *testing.T) {
+						cfbEncoded, err := ss.EncodeSessionState(cfb, false)
+						assert.NoError(t, err)
+						_, err = DecodeSessionState(cfbEncoded, gcm, false)
+						assert.Error(t, err)
+
+						gcmEncoded, err := ss.EncodeSessionState(gcm, false)
+						assert.NoError(t, err)
+						_, err = DecodeSessionState(gcmEncoded, cfb, false)
+						assert.Error(t, err)
+					})
+				}
+			})
 		})
 	}
 }
 
 // TestLegacyV5DecodeSessionState confirms V5 JSON sessions decode
 func TestLegacyV5DecodeSessionState(t *testing.T) {
+	const secret = "0123456789abcdefghijklmnopqrstuv"
+
 	created := time.Now()
 	createdJSON, err := created.MarshalJSON()
 	assert.NoError(t, err)
@@ -207,7 +243,7 @@ func TestIntoEncryptAndIntoDecrypt(t *testing.T) {
 
 	// Test all 3 valid AES sizes
 	for _, secretSize := range []int{16, 24, 32} {
-		t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d byte secret", secretSize), func(t *testing.T) {
 			secret := make([]byte, secretSize)
 			_, err := io.ReadFull(rand.Reader, secret)
 			assert.Equal(t, nil, err)
@@ -218,10 +254,10 @@ func TestIntoEncryptAndIntoDecrypt(t *testing.T) {
 
 			// Check no errors with empty or nil strings
 			empty := ""
-			assert.Equal(t, nil, into(&empty, c.Encrypt))
-			assert.Equal(t, nil, into(&empty, c.Decrypt))
-			assert.Equal(t, nil, into(nil, c.Encrypt))
-			assert.Equal(t, nil, into(nil, c.Decrypt))
+			assert.NoError(t, into(&empty, c.Encrypt))
+			assert.NoError(t, into(&empty, c.Decrypt))
+			assert.NoError(t, into(nil, c.Encrypt))
+			assert.NoError(t, into(nil, c.Decrypt))
 
 			// Test various sizes tokens might be
 			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
@@ -244,26 +280,26 @@ func TestIntoEncryptAndIntoDecrypt(t *testing.T) {
 	}
 }
 
-func compareSessionStates(t *testing.T, left *SessionState, right *SessionState) {
-	if left.CreatedAt != nil {
-		assert.NotNil(t, right.CreatedAt)
-		assert.Equal(t, true, left.CreatedAt.Equal(*right.CreatedAt))
+func compareSessionStates(t *testing.T, expected *SessionState, actual *SessionState) {
+	if expected.CreatedAt != nil {
+		assert.NotNil(t, actual.CreatedAt)
+		assert.Equal(t, true, expected.CreatedAt.Equal(*actual.CreatedAt))
 	} else {
-		assert.Nil(t, right.CreatedAt)
+		assert.Nil(t, actual.CreatedAt)
 	}
-	if left.ExpiresOn != nil {
-		assert.NotNil(t, right.ExpiresOn)
-		assert.Equal(t, true, left.ExpiresOn.Equal(*right.ExpiresOn))
+	if expected.ExpiresOn != nil {
+		assert.NotNil(t, actual.ExpiresOn)
+		assert.Equal(t, true, expected.ExpiresOn.Equal(*actual.ExpiresOn))
 	} else {
-		assert.Nil(t, right.ExpiresOn)
+		assert.Nil(t, actual.ExpiresOn)
 	}
 
 	// Compare sessions without *time.Time fields
-	l := *left
-	l.CreatedAt = nil
-	l.ExpiresOn = nil
-	r := *right
-	r.CreatedAt = nil
-	r.ExpiresOn = nil
-	assert.Equal(t, l, r)
+	exp := *expected
+	exp.CreatedAt = nil
+	exp.ExpiresOn = nil
+	act := *actual
+	act.CreatedAt = nil
+	act.ExpiresOn = nil
+	assert.Equal(t, exp, act)
 }

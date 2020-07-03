@@ -9,6 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/pkg/errors"
+
 	"github.com/pierrec/lz4"
 	"github.com/vmihailenco/msgpack/v4"
 
@@ -68,7 +70,7 @@ func (s *SessionState) String() string {
 func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([]byte, error) {
 	packed, err := msgpack.Marshal(s)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error marshalling session state to msgpack")
 	}
 
 	if !compress {
@@ -86,7 +88,7 @@ func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([
 func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*SessionState, error) {
 	decrypted, err := c.Decrypt(data)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error decrypting the session state")
 	}
 
 	packed := decrypted
@@ -100,7 +102,7 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 	var ss *SessionState
 	err = msgpack.Unmarshal(packed, &ss)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error unmarshalling data to session state")
 	}
 
 	return ss, nil
@@ -123,8 +125,11 @@ func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, e
 		&ss.RefreshToken,
 	} {
 		err := into(s, c.Decrypt)
-		if err != nil || !utf8.ValidString(*s) {
+		if err != nil {
 			return nil, err
+		}
+		if !utf8.ValidString(*s) {
+			return nil, errors.New("invalid non-UTF8 field in session")
 		}
 	}
 
@@ -162,16 +167,16 @@ func lz4Compress(payload []byte) ([]byte, error) {
 	reader := bytes.NewReader(payload)
 	_, err := io.Copy(zw, reader)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error copying lz4 stream to buffer")
 	}
 	err = zw.Close()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error closing lz4 writer")
 	}
 
 	compressed, err := ioutil.ReadAll(buf)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error reading lz4 buffer")
 	}
 
 	return compressed, nil
@@ -184,12 +189,12 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 	zr.Reset(reader)
 	_, err := io.Copy(buf, zr)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error copying lz4 stream to buffer")
 	}
 
 	payload, err := ioutil.ReadAll(buf)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error reading lz4 buffer")
 	}
 
 	return payload, nil

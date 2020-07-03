@@ -1967,7 +1967,7 @@ func Test_noCacheHeaders(t *testing.T) {
 		}
 	}))
 	t.Cleanup(upstream.Close)
-	
+
 	opts := baseTestOptions()
 	opts.Upstreams = []string{upstream.URL}
 	opts.SkipAuthRegex = []string{".*"}
