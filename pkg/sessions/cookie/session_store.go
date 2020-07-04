@@ -15,6 +15,13 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
+const (
+	// Cookies are limited to 4kb for all parts
+	// including the cookie name, value, attributes; IE (http.cookie).String()
+	// Most browsers' max is 4096 -- but we give ourselves some leeway
+	maxCookieLength = 4000
+)
+
 // Ensure CookieSessionStore implements the interface
 var _ sessions.SessionStore = &SessionStore{}
 
@@ -102,9 +109,7 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now ti
 	}
 	c := s.makeCookie(req, s.CookieOptions.Name, value, s.CookieOptions.Expire, now)
 
-	// Cookies are limited to 4kb including the length of the cookie name,
-	// the cookie name can be up to 256 bytes
-	if len(c.Value) > 4096-len(s.CookieOptions.Name) {
+	if len(c.String()) > maxCookieLength {
 		return splitCookie(c)
 	}
 	return []*http.Cookie{c}
@@ -139,7 +144,7 @@ func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Coo
 // it into a slice of cookies which fit within the 4kb cookie limit indexing
 // the cookies from 0
 func splitCookie(c *http.Cookie) []*http.Cookie {
-	if len(c.Value) < 4096-len(c.Name) {
+	if len(c.String()) < maxCookieLength {
 		return []*http.Cookie{c}
 	}
 
@@ -153,13 +158,16 @@ func splitCookie(c *http.Cookie) []*http.Cookie {
 		newCookie.Name = splitCookieName(c.Name, count)
 		count++
 
-		maxCookieLength := 4096 - len(newCookie.Name)
-		if len(valueBytes) < maxCookieLength {
-			newCookie.Value = string(valueBytes)
+		newCookie.Value = string(valueBytes)
+		cookieLength := len(newCookie.String())
+		if cookieLength <= maxCookieLength {
 			valueBytes = []byte{}
 		} else {
-			newValue := valueBytes[:maxCookieLength]
-			valueBytes = valueBytes[maxCookieLength:]
+			overflow := cookieLength - maxCookieLength
+			valueSize := len(valueBytes) - overflow
+
+			newValue := valueBytes[:valueSize]
+			valueBytes = valueBytes[valueSize:]
 			newCookie.Value = string(newValue)
 		}
 		cookies = append(cookies, newCookie)

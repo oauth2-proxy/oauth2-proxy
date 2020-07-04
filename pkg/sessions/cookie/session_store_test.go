@@ -54,59 +54,55 @@ func Test_copyCookie(t *testing.T) {
 }
 
 func Test_splitCookie(t *testing.T) {
-	testCases := map[string]struct {
-		Cookie        *http.Cookie
-		ExpectedSizes []int
-	}{
+	testCases := map[string]*http.Cookie{
 		"Short cookie name": {
-			Cookie: &http.Cookie{
-				Name:  "short",
-				Value: strings.Repeat("v", 10000),
-			},
-			ExpectedSizes: []int{4089, 4089, 1822},
+			Name:  "short",
+			Value: strings.Repeat("v", 10000),
 		},
 		"Long cookie name": {
-			Cookie: &http.Cookie{
-				Name:  strings.Repeat("n", 251),
-				Value: strings.Repeat("a", 10000),
-			},
-			ExpectedSizes: []int{3843, 3843, 2314},
+			Name:  strings.Repeat("n", 251),
+			Value: strings.Repeat("a", 10000),
 		},
 		"Max cookie name": {
-			Cookie: &http.Cookie{
-				Name:  strings.Repeat("n", 256),
-				Value: strings.Repeat("a", 10000),
-			},
-			ExpectedSizes: []int{3840, 3840, 2320},
+			Name:  strings.Repeat("n", 256),
+			Value: strings.Repeat("a", 10000),
 		},
 		"Suffix overflow cookie name": {
-			Cookie: &http.Cookie{
-				Name:  strings.Repeat("n", 255),
-				Value: strings.Repeat("a", 10000),
-			},
-			ExpectedSizes: []int{3840, 3840, 2320},
+			Name:  strings.Repeat("n", 255),
+			Value: strings.Repeat("a", 10000),
 		},
-		"Double digit suffix cookie name results in different sizes": {
-			Cookie: &http.Cookie{
-				Name:  strings.Repeat("n", 253),
-				Value: strings.Repeat("a", 50000),
-			},
-			ExpectedSizes: []int{3841, 3841, 3841, 3841, 3841, 3841, 3841, 3841, 3841, 3841,
-				3840, 3840, 3840, 70},
+		"Double digit suffix cookie name overflow": {
+			Name:  strings.Repeat("n", 253),
+			Value: strings.Repeat("a", 50000),
 		},
-		"Double digit suffix overflow cookie name results in same sizes": {
-			Cookie: &http.Cookie{
-				Name:  strings.Repeat("n", 254),
-				Value: strings.Repeat("a", 50000),
-			},
-			ExpectedSizes: []int{3840, 3840, 3840, 3840, 3840, 3840, 3840, 3840, 3840, 3840,
-				3840, 3840, 3840, 80},
+		"With short name and attributes": {
+			Name:     "short",
+			Value:    strings.Repeat("v", 10000),
+			Path:     "/path",
+			Domain:   "x.y.z",
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+		},
+		"With max length name and attributes": {
+			Name:     strings.Repeat("n", 256),
+			Value:    strings.Repeat("v", 10000),
+			Path:     "/path",
+			Domain:   "x.y.z",
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
 		},
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			for i, cookie := range splitCookie(tc.Cookie) {
-				assert.Equal(t, tc.ExpectedSizes[i], len(cookie.Value))
+			splitCookies := splitCookie(tc)
+			for i, cookie := range splitCookies {
+				if i < len(splitCookies)-1 {
+					assert.Equal(t, 4000, len(cookie.String()))
+				} else {
+					assert.GreaterOrEqual(t, 4000, len(cookie.String()))
+				}
 			}
 		})
 	}
