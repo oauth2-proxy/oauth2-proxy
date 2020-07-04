@@ -10,15 +10,9 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
+	pkgcookies "github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-)
-
-const (
-	// Cookies are limited to 4kb including the length of the cookie name,
-	// the cookie name can be up to 256 bytes
-	maxCookieLength = 3840
 )
 
 // Ensure CookieSessionStore implements the interface
@@ -107,6 +101,9 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now ti
 		value = encryption.SignedValue(s.CookieOptions.Secret, s.CookieOptions.Name, []byte(value), now)
 	}
 	c := s.makeCookie(req, s.CookieOptions.Name, value, s.CookieOptions.Expire, now)
+
+	// Cookies are limited to 4kb including the length of the cookie name,
+	// the cookie name can be up to 256 bytes
 	if len(c.Value) > 4096-len(s.CookieOptions.Name) {
 		return splitCookie(c)
 	}
@@ -114,7 +111,7 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now ti
 }
 
 func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
-	return cookies.MakeCookieFromOptions(
+	return pkgcookies.MakeCookieFromOptions(
 		req,
 		name,
 		value,
@@ -142,17 +139,21 @@ func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Coo
 // it into a slice of cookies which fit within the 4kb cookie limit indexing
 // the cookies from 0
 func splitCookie(c *http.Cookie) []*http.Cookie {
-	logger.Printf("WARNING: Multiple cookies are required for this session as it exceeds the 4kb cookie limit. Please use server side session storage (eg. Redis) instead.")
-	if len(c.Value) < maxCookieLength {
+	if len(c.Value) < 4096-len(c.Name) {
 		return []*http.Cookie{c}
 	}
+
+	logger.Printf("WARNING: Multiple cookies are required for this session as it exceeds the 4kb cookie limit. Please use server side session storage (eg. Redis) instead.")
+
 	cookies := []*http.Cookie{}
 	valueBytes := []byte(c.Value)
 	count := 0
 	for len(valueBytes) > 0 {
 		newCookie := copyCookie(c)
-		newCookie.Name = fmt.Sprintf("%s_%d", c.Name, count)
+		newCookie.Name = splitCookieName(c.Name, count)
 		count++
+
+		maxCookieLength := 4096 - len(newCookie.Name)
 		if len(valueBytes) < maxCookieLength {
 			newCookie.Value = string(valueBytes)
 			valueBytes = []byte{}
@@ -164,6 +165,15 @@ func splitCookie(c *http.Cookie) []*http.Cookie {
 		cookies = append(cookies, newCookie)
 	}
 	return cookies
+}
+
+func splitCookieName(name string, count int) string {
+	splitName := fmt.Sprintf("%s_%d", name, count)
+	overflow := len(splitName) - 256
+	if overflow > 0 {
+		splitName = fmt.Sprintf("%s_%d", name[:len(name)-overflow], count)
+	}
+	return splitName
 }
 
 // loadCookie retreieves the sessions state cookie from the http request.
@@ -179,7 +189,7 @@ func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {
 	count := 0
 	for err == nil {
 		var c *http.Cookie
-		c, err = req.Cookie(fmt.Sprintf("%s_%d", cookieName, count))
+		c, err = req.Cookie(splitCookieName(cookieName, count))
 		if err == nil {
 			cookies = append(cookies, c)
 			count++
