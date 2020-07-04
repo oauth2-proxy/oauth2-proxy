@@ -9,12 +9,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/pkg/errors"
-
-	"github.com/pierrec/lz4"
-	"github.com/vmihailenco/msgpack/v4"
-
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/pierrec/lz4"
+	"github.com/pkg/errors"
+	"github.com/vmihailenco/msgpack/v4"
 )
 
 // SessionState is used to store information about the currently authenticated user session
@@ -105,7 +103,7 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 		return nil, errors.Wrap(err, "error unmarshalling data to session state")
 	}
 
-	err = validateSession(&ss)
+	err = ss.validate()
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +132,7 @@ func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, e
 			return nil, err
 		}
 	}
-	err = validateSession(&ss)
+	err = ss.validate()
 	if err != nil {
 		return nil, err
 	}
@@ -206,14 +204,14 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 	return payload, nil
 }
 
-func validateSession(ss *SessionState) error {
+func (s *SessionState) validate() error {
 	for _, field := range []string{
-		ss.User,
-		ss.Email,
-		ss.PreferredUsername,
-		ss.AccessToken,
-		ss.IDToken,
-		ss.RefreshToken,
+		s.User,
+		s.Email,
+		s.PreferredUsername,
+		s.AccessToken,
+		s.IDToken,
+		s.RefreshToken,
 	} {
 		if !utf8.ValidString(field) {
 			return errors.New("invalid non-UTF8 field in session")
@@ -221,7 +219,7 @@ func validateSession(ss *SessionState) error {
 	}
 
 	empty := new(SessionState)
-	if *ss == *empty {
+	if *s == *empty {
 		return errors.New("invalid empty session unmarshalled")
 	}
 
