@@ -35,11 +35,17 @@ func validateCookie(o options.Cookie) []string {
 }
 
 func validateCookieName(name string) []string {
+	msgs := []string{}
+
 	cookie := &http.Cookie{Name: name}
 	if cookie.String() == "" {
-		return []string{fmt.Sprintf("invalid cookie name: %q", name)}
+		msgs = append(msgs, fmt.Sprintf("invalid cookie name: %q", name))
 	}
-	return []string{}
+
+	if len(name) > 256 {
+		msgs = append(msgs, fmt.Sprintf("cookie name should be under 256 characters: cookie name is %d characters", len(name)))
+	}
+	return msgs
 }
 
 func validateCookieSecret(secret string) []string {

@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -9,8 +10,12 @@ import (
 )
 
 func TestValidateCookie(t *testing.T) {
+	alphabet := "abcdefghijklmnopqrstuvwxyz"
+
 	validName := "_oauth2_proxy"
 	invalidName := "_oauth2;proxy" // Separater character not allowed
+	// 10 times the alphabet should be longer than 256 characters
+	longName := strings.Repeat(alphabet, 10)
 	validSecret := "secretthirtytwobytes+abcdefghijk"
 	invalidSecret := "abcdef"                                          // 6 bytes is not a valid size
 	validBase64Secret := "c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams" // Base64 encoding of "secretthirtytwobytes+abcdefghijk"
@@ -25,6 +30,7 @@ func TestValidateCookie(t *testing.T) {
 	}
 
 	invalidNameMsg := "invalid cookie name: \"_oauth2;proxy\""
+	longNameMsg := "cookie name should be under 256 characters: cookie name is 260 characters"
 	missingSecretMsg := "missing setting: cookie-secret"
 	invalidSecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 6 bytes"
 	invalidBase64SecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 10 bytes"
@@ -132,6 +138,23 @@ func TestValidateCookie(t *testing.T) {
 			},
 			errStrings: []string{
 				invalidNameMsg,
+			},
+		},
+		{
+			name: "with a name that is too long",
+			cookie: options.Cookie{
+				Name:     longName,
+				Secret:   validSecret,
+				Domains:  emptyDomains,
+				Path:     "",
+				Expire:   time.Hour,
+				Refresh:  15 * time.Minute,
+				Secure:   true,
+				HTTPOnly: false,
+				SameSite: "",
+			},
+			errStrings: []string{
+				longNameMsg,
 			},
 		},
 		{
