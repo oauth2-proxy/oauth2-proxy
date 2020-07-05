@@ -2,11 +2,9 @@ package middleware
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"regexp"
-	"strings"
 
 	"github.com/coreos/go-oidc"
 	"github.com/justinas/alice"
@@ -115,16 +113,10 @@ func (j *jwtSessionLoader) findBearerTokenFromHeader(header string) (string, err
 
 // getBasicToken tries to extract a token from the basic value provided.
 func (j *jwtSessionLoader) getBasicToken(token string) (string, error) {
-	b, err := base64.StdEncoding.DecodeString(token)
+	user, password, err := getBasicAuthCredentials(token)
 	if err != nil {
-		return "", fmt.Errorf("invalid basic auth token: %v", err)
+		return "", err
 	}
-
-	pair := strings.SplitN(string(b), ":", 2)
-	if len(pair) != 2 {
-		return "", fmt.Errorf("invalid format: %q", b)
-	}
-	user, password := pair[0], pair[1]
 
 	// check user, user+password, or just password for a token
 	if j.jwtRegex.MatchString(user) {
@@ -138,16 +130,6 @@ func (j *jwtSessionLoader) getBasicToken(token string) (string, error) {
 	}
 
 	return "", fmt.Errorf("invalid basic auth token found in authorization header")
-}
-
-// splitAuthHeader takes the auth header value and splits it into the token type
-// and the token value.
-func splitAuthHeader(header string) (string, string, error) {
-	s := strings.Split(header, " ")
-	if len(s) != 2 {
-		return "", "", fmt.Errorf("invalid authorization header: %q", header)
-	}
-	return s[0], s[1], nil
 }
 
 // createSessionStateFromBearerToken is a default implementation for converting
