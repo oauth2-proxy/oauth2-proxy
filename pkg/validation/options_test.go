@@ -2,7 +2,6 @@ package validation
 
 import (
 	"crypto"
-	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -289,20 +288,6 @@ func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 	err := Validate(o)
 	assert.Equal(t, err.Error(), "invalid configuration:\n"+
 		"  unsupported signature hash algorithm: "+o.SignatureKey)
-}
-
-func TestValidateCookie(t *testing.T) {
-	o := testOptions()
-	o.Cookie.Name = "_valid_cookie_name"
-	assert.Equal(t, nil, Validate(o))
-}
-
-func TestValidateCookieBadName(t *testing.T) {
-	o := testOptions()
-	o.Cookie.Name = "_bad_cookie_name{}"
-	err := Validate(o)
-	assert.Equal(t, err.Error(), "invalid configuration:\n"+
-		fmt.Sprintf("  invalid cookie name: %q", o.Cookie.Name))
 }
 
 func TestSkipOIDCDiscovery(t *testing.T) {

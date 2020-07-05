@@ -28,8 +28,8 @@ var _ sessions.SessionStore = &SessionStore{}
 // SessionStore is an implementation of the sessions.SessionStore
 // interface that stores sessions in client side cookies
 type SessionStore struct {
-	CookieOptions *options.CookieOptions
-	CookieCipher  encryption.Cipher
+	Cookie       *options.Cookie
+	CookieCipher encryption.Cipher
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -50,12 +50,12 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 // Load reads sessions.SessionState information from Cookies within the
 // HTTP request object
 func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
-	c, err := loadCookie(req, s.CookieOptions.Name)
+	c, err := loadCookie(req, s.Cookie.Name)
 	if err != nil {
 		// always http.ErrNoCookie
-		return nil, fmt.Errorf("cookie %q not present", s.CookieOptions.Name)
+		return nil, fmt.Errorf("cookie %q not present", s.Cookie.Name)
 	}
-	val, _, ok := encryption.Validate(c, s.CookieOptions.Secret, s.CookieOptions.Expire)
+	val, _, ok := encryption.Validate(c, s.Cookie.Secret, s.Cookie.Expire)
 	if !ok {
 		return nil, errors.New("cookie signature not valid")
 	}
@@ -71,7 +71,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 // clear the session
 func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	// matches CookieName, CookieName_<number>
-	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.CookieOptions.Name))
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.Cookie.Name))
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
@@ -105,9 +105,9 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
 	if value != "" {
-		value = encryption.SignedValue(s.CookieOptions.Secret, s.CookieOptions.Name, []byte(value), now)
+		value = encryption.SignedValue(s.Cookie.Secret, s.Cookie.Name, []byte(value), now)
 	}
-	c := s.makeCookie(req, s.CookieOptions.Name, value, s.CookieOptions.Expire, now)
+	c := s.makeCookie(req, s.Cookie.Name, value, s.Cookie.Expire, now)
 
 	if len(c.String()) > maxCookieLength {
 		return splitCookie(c)
@@ -120,7 +120,7 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 		req,
 		name,
 		value,
-		s.CookieOptions,
+		s.Cookie,
 		expiration,
 		now,
 	)
@@ -128,15 +128,15 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
 // the configuration given
-func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.CookieOptions) (sessions.SessionStore, error) {
+func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
 	cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
 	if err != nil {
 		return nil, fmt.Errorf("error initialising cipher: %v", err)
 	}
 
 	return &SessionStore{
-		CookieCipher:  cipher,
-		CookieOptions: cookieOpts,
+		CookieCipher: cipher,
+		Cookie:       cookieOpts,
 	}, nil
 }
 
