@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/bitly/go-simplejson"
@@ -215,8 +214,8 @@ var _ = Describe("Builder suite", func() {
 
 	Context("if the request has been completed and then modified", func() {
 		BeforeEach(func() {
-			_, err := b.Do()
-			Expect(err).ToNot(HaveOccurred())
+			result := b.Do()
+			Expect(result.Error()).ToNot(HaveOccurred())
 
 			b.WithMethod("POST")
 		})
@@ -250,25 +249,20 @@ var _ = Describe("Builder suite", func() {
 
 func assertSuccessfulRequest(builder func() Builder, expectedRequest testHTTPRequest) {
 	Context("Do", func() {
-		var resp *http.Response
+		var result Result
 
 		BeforeEach(func() {
-			var err error
-			resp, err = builder().Do()
-			Expect(err).ToNot(HaveOccurred())
+			result = builder().Do()
+			Expect(result.Error()).ToNot(HaveOccurred())
 		})
 
 		It("returns a successful status", func() {
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(result.StatusCode()).To(Equal(http.StatusOK))
 		})
 
 		It("made the expected request", func() {
-			body, err := ioutil.ReadAll(resp.Body)
-			Expect(err).ToNot(HaveOccurred())
-			resp.Body.Close()
-
 			actualRequest := testHTTPRequest{}
-			Expect(json.Unmarshal(body, &actualRequest)).To(Succeed())
+			Expect(json.Unmarshal(result.Body(), &actualRequest)).To(Succeed())
 
 			Expect(actualRequest).To(Equal(expectedRequest))
 		})
@@ -278,7 +272,7 @@ func assertSuccessfulRequest(builder func() Builder, expectedRequest testHTTPReq
 		var actualRequest testHTTPRequest
 
 		BeforeEach(func() {
-			Expect(builder().UnmarshalInto(&actualRequest)).To(Succeed())
+			Expect(builder().Do().UnmarshalInto(&actualRequest)).To(Succeed())
 		})
 
 		It("made the expected request", func() {
@@ -291,7 +285,7 @@ func assertSuccessfulRequest(builder func() Builder, expectedRequest testHTTPReq
 
 		BeforeEach(func() {
 			var err error
-			response, err = builder().UnmarshalJSON()
+			response, err = builder().Do().UnmarshalJSON()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -328,16 +322,15 @@ func assertSuccessfulRequest(builder func() Builder, expectedRequest testHTTPReq
 func assertRequestError(builder func() Builder, errorMessage string) {
 	Context("Do", func() {
 		It("returns an error", func() {
-			resp, err := builder().Do()
-			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
-			Expect(resp).To(BeNil())
+			result := builder().Do()
+			Expect(result.Error()).To(MatchError(ContainSubstring(errorMessage)))
 		})
 	})
 
 	Context("UnmarshalInto", func() {
 		It("returns an error", func() {
 			var actualRequest testHTTPRequest
-			err := builder().UnmarshalInto(&actualRequest)
+			err := builder().Do().UnmarshalInto(&actualRequest)
 			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
 
 			// Should be empty
@@ -347,7 +340,7 @@ func assertRequestError(builder func() Builder, errorMessage string) {
 
 	Context("UnmarshalJSON", func() {
 		It("returns an error", func() {
-			resp, err := builder().UnmarshalJSON()
+			resp, err := builder().Do().UnmarshalJSON()
 			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
 			Expect(resp).To(BeNil())
 		})
@@ -357,16 +350,15 @@ func assertRequestError(builder func() Builder, errorMessage string) {
 func assertJSONError(builder func() Builder, errorMessage string) {
 	Context("Do", func() {
 		It("does not return an error", func() {
-			resp, err := builder().Do()
-			Expect(err).To(BeNil())
-			Expect(resp).ToNot(BeNil())
+			result := builder().Do()
+			Expect(result.Error()).To(BeNil())
 		})
 	})
 
 	Context("UnmarshalInto", func() {
 		It("returns an error", func() {
 			var actualRequest testHTTPRequest
-			err := builder().UnmarshalInto(&actualRequest)
+			err := builder().Do().UnmarshalInto(&actualRequest)
 			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
 
 			// Should be empty
@@ -376,7 +368,7 @@ func assertJSONError(builder func() Builder, errorMessage string) {
 
 	Context("UnmarshalJSON", func() {
 		It("returns an error", func() {
-			resp, err := builder().UnmarshalJSON()
+			resp, err := builder().Do().UnmarshalJSON()
 			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
 			Expect(resp).To(BeNil())
 		})
