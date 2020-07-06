@@ -10,62 +10,41 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 )
 
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
+	msgs := validateCookie(o.Cookie)
+
 	if o.SSLInsecureSkipVerify {
-		// TODO: Accept a certificate bundle.
 		insecureTransport := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
-	}
-
-	msgs := make([]string, 0)
-
-	var cipher encryption.Cipher
-	if o.Cookie.Secret == "" {
-		msgs = append(msgs, "missing setting: cookie-secret")
-	} else {
-		validCookieSecretSize := false
-		for _, i := range []int{16, 24, 32} {
-			if len(encryption.SecretBytes(o.Cookie.Secret)) == i {
-				validCookieSecretSize = true
+	} else if len(o.ProviderCAFiles) > 0 {
+		pool, err := util.GetCertPool(o.ProviderCAFiles)
+		if err == nil {
+			transport := &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: pool,
+				},
 			}
-		}
-		var decoded bool
-		if string(encryption.SecretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
-			decoded = true
-		}
-		if !validCookieSecretSize {
-			var suffix string
-			if decoded {
-				suffix = " note: cookie secret was base64 decoded"
-			}
-			msgs = append(msgs,
-				fmt.Sprintf("Cookie secret must be 16, 24, or 32 bytes to create an AES cipher. Got %d bytes.%s",
-					len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
+
+			http.DefaultClient = &http.Client{Transport: transport}
 		} else {
-			var err error
-			cipher, err = encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(o.Cookie.Secret))
-			if err != nil {
-				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
-			}
+			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
 		}
 	}
 
@@ -226,22 +205,6 @@ func Validate(o *options.Options) error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
-	o.Session.Cipher = cipher
-	sessionStore, err := sessions.NewSessionStore(&o.Session, &o.Cookie)
-	if err != nil {
-		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
-	} else {
-		o.SetSessionStore(sessionStore)
-	}
-
-	if o.Cookie.Refresh >= o.Cookie.Expire {
-		msgs = append(msgs, fmt.Sprintf(
-			"cookie_refresh (%s) must be less than "+
-				"cookie_expire (%s)",
-			o.Cookie.Refresh.String(),
-			o.Cookie.Expire.String()))
-	}
-
 	if len(o.GoogleGroups) > 0 || o.GoogleAdminEmail != "" || o.GoogleServiceAccountJSON != "" {
 		if len(o.GoogleGroups) < 1 {
 			msgs = append(msgs, "missing setting: google-group")
@@ -254,20 +217,7 @@ func Validate(o *options.Options) error {
 		}
 	}
 
-	switch o.Cookie.SameSite {
-	case "", "none", "lax", "strict":
-	default:
-		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.Cookie.SameSite))
-	}
-
-	// Sort cookie domains by length, so that we try longer (and more specific)
-	// domains first
-	sort.Slice(o.Cookie.Domains, func(i, j int) bool {
-		return len(o.Cookie.Domains[i]) > len(o.Cookie.Domains[j])
-	})
-
 	msgs = parseSignatureKey(o, msgs)
-	msgs = validateCookieName(o, msgs)
 	msgs = configureLogger(o.Logging, msgs)
 
 	if o.ReverseProxy {
@@ -338,7 +288,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		}
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
-		p.Group = o.GitLabGroup
+		p.Groups = o.GitLabGroup
 		p.EmailDomains = o.EmailDomains
 
 		if o.GetOIDCVerifier() != nil {
@@ -452,14 +402,6 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 		verifier = provider.Verifier(config)
 	}
 	return verifier, nil
-}
-
-func validateCookieName(o *options.Options, msgs []string) []string {
-	cookie := &http.Cookie{Name: o.Cookie.Name}
-	if cookie.String() == "" {
-		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.Cookie.Name))
-	}
-	return msgs
 }
 
 // jwtIssuer hold parsed JWT issuer info that's used to construct a verifier.

@@ -26,6 +26,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"github.com/yhat/wsutil"
 )
@@ -66,7 +67,7 @@ var (
 
 	// Used to check final redirects are not susceptible to open redirects.
 	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
-	invalidRedirectRegex = regexp.MustCompile(`^/(\s|\v)?(/|\\)`)
+	invalidRedirectRegex = regexp.MustCompile(`[/\\](?:[\s\v]*|\.{1,2})[/\\]`)
 )
 
 // OAuthProxy is the main authentication proxy
@@ -235,7 +236,12 @@ func NewWebSocketOrRestReverseProxy(u *url.URL, opts *options.Options, auth hmac
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
-func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthProxy {
+func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
+	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
+	if err != nil {
+		return nil, fmt.Errorf("error initialising session store: %v", err)
+	}
+
 	serveMux := http.NewServeMux()
 	var auth hmacauth.HmacAuth
 	if sigData := opts.GetSignatureData(); sigData != nil {
@@ -333,7 +339,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		ProxyPrefix:             opts.ProxyPrefix,
 		provider:                opts.GetProvider(),
 		providerNameOverride:    opts.ProviderName,
-		sessionStore:            opts.GetSessionStore(),
+		sessionStore:            sessionStore,
 		serveMux:                serveMux,
 		redirectURL:             redirectURL,
 		whitelistDomains:        opts.WhitelistDomains,
@@ -358,7 +364,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) *OAuthPro
 		templates:               loadTemplates(opts.CustomTemplatesDir),
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
-	}
+	}, nil
 }
 
 // GetRedirectURI returns the redirectURL that the upstream OAuth Provider will
@@ -686,7 +692,7 @@ func prepareNoCache(w http.ResponseWriter) {
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
+	if req.URL.Path != p.AuthOnlyPath && strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
 		prepareNoCache(rw)
 	}
 
