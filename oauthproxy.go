@@ -311,7 +311,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	for _, extraHeader := range opts.ExtraHeaders {
 		match := headerSplitRegex.FindStringSubmatch(extraHeader)
 		if match == nil {
-                  return nil
+                  return nil, fmt.Errorf("error parsing extra header. Expected key=value, got: %s", extraHeader)
 		}
 		extraHeaders.Add(match[1], match[2])
 	}
