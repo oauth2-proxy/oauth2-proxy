@@ -1805,7 +1805,7 @@ func Test_prepareNoCache(t *testing.T) {
 	}
 }
 
-func Test_noCacheHeadersDoesNotExistsInResponseHeadersFromUpstream(t *testing.T) {
+func Test_noCacheHeaders(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("upstream"))
 	}))
@@ -1820,17 +1820,68 @@ func Test_noCacheHeadersDoesNotExistsInResponseHeadersFromUpstream(t *testing.T)
 	})
 	assert.NoError(t, err)
 
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/upstream", nil)
-	proxy.ServeHTTP(rec, req)
+	t.Run("not exist in response from upstream", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/upstream", nil)
+		proxy.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, "upstream", rec.Body.String())
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "upstream", rec.Body.String())
 
-	// checking noCacheHeaders does not exists in response headers from upstream
-	for k := range noCacheHeaders {
-		assert.Equal(t, "", rec.Header().Get(k))
-	}
+		// checking noCacheHeaders does not exists in response headers from upstream
+		for k := range noCacheHeaders {
+			assert.Equal(t, "", rec.Header().Get(k))
+		}
+	})
+
+	t.Run("has no-cache", func(t *testing.T) {
+		tests := []struct {
+			path       string
+			hasNoCache bool
+		}{
+			{
+				path:       "/oauth2/sign_in",
+				hasNoCache: true,
+			},
+			{
+				path:       "/oauth2/sign_out",
+				hasNoCache: true,
+			},
+			{
+				path:       "/oauth2/start",
+				hasNoCache: true,
+			},
+			{
+				path:       "/oauth2/callback",
+				hasNoCache: true,
+			},
+			{
+				path:       "/oauth2/auth",
+				hasNoCache: false,
+			},
+			{
+				path:       "/oauth2/userinfo",
+				hasNoCache: true,
+			},
+			{
+				path:       "/upstream",
+				hasNoCache: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.path, func(t *testing.T) {
+				rec := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+				proxy.ServeHTTP(rec, req)
+				cacheControl := rec.Result().Header.Get("Cache-Control")
+				if tt.hasNoCache != (strings.Contains(cacheControl, "no-cache")) {
+					t.Errorf(`unexpected "Cache-Control" header: %s`, cacheControl)
+				}
+			})
+		}
+
+	})
 }
 
 func baseTestOptions() *options.Options {
