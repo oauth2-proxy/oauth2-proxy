@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/justinas/alice"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
@@ -128,21 +127,4 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	tc.SetKeepAlive(true)
 	tc.SetKeepAlivePeriod(3 * time.Minute)
 	return tc, nil
-}
-
-func newRedirectToHTTPS(opts *options.Options) alice.Constructor {
-	return func(next http.Handler) http.Handler {
-		return redirectToHTTPS(opts, next)
-	}
-}
-
-func redirectToHTTPS(opts *options.Options, h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		proto := r.Header.Get("X-Forwarded-Proto")
-		if opts.ForceHTTPS && (r.TLS == nil || (proto != "" && strings.ToLower(proto) != "https")) {
-			http.Redirect(w, r, opts.HTTPSAddress, http.StatusPermanentRedirect)
-		}
-
-		h.ServeHTTP(w, r)
-	})
 }

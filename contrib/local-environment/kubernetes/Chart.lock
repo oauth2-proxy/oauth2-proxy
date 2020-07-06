@@ -1,0 +1,15 @@
+dependencies:
+- name: dex
+  repository: https://kubernetes-charts.storage.googleapis.com
+  version: 2.11.0
+- name: oauth2-proxy
+  repository: https://kubernetes-charts.storage.googleapis.com
+  version: 3.1.0
+- name: httpbin
+  repository: https://conservis.github.io/helm-charts
+  version: 1.0.1
+- name: hello-world
+  repository: https://conservis.github.io/helm-charts
+  version: 1.0.1
+digest: sha256:ce64f06102abb551ee23b6de7b4cec3537f4900de89412458e53760781005aac
+generated: "2020-06-16T16:59:19.126187-05:00"

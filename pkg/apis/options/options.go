@@ -8,7 +8,6 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"github.com/spf13/pflag"
 )
@@ -51,7 +50,7 @@ type Options struct {
 	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
 	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
 	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
-	GitLabGroup              string   `flag:"gitlab-group" cfg:"gitlab_group"`
+	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
@@ -61,7 +60,7 @@ type Options struct {
 	Banner                   string   `flag:"banner" cfg:"banner"`
 	Footer                   string   `flag:"footer" cfg:"footer"`
 
-	Cookie  CookieOptions  `cfg:",squash"`
+	Cookie  Cookie         `cfg:",squash"`
 	Session SessionOptions `cfg:",squash"`
 	Logging Logging        `cfg:",squash"`
 
@@ -87,22 +86,23 @@ type Options struct {
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
-	ProviderType                       string `flag:"provider" cfg:"provider"`
-	ProviderName                       string `flag:"provider-display-name" cfg:"provider_display_name"`
-	OIDCIssuerURL                      string `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
-	InsecureOIDCAllowUnverifiedEmail   bool   `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
-	InsecureOIDCSkipIssuerVerification bool   `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
-	SkipOIDCDiscovery                  bool   `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
-	OIDCJwksURL                        string `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
-	LoginURL                           string `flag:"login-url" cfg:"login_url"`
-	RedeemURL                          string `flag:"redeem-url" cfg:"redeem_url"`
-	ProfileURL                         string `flag:"profile-url" cfg:"profile_url"`
-	ProtectedResource                  string `flag:"resource" cfg:"resource"`
-	ValidateURL                        string `flag:"validate-url" cfg:"validate_url"`
-	Scope                              string `flag:"scope" cfg:"scope"`
-	Prompt                             string `flag:"prompt" cfg:"prompt"`
-	ApprovalPrompt                     string `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
-	UserIDClaim                        string `flag:"user-id-claim" cfg:"user_id_claim"`
+	ProviderType                       string   `flag:"provider" cfg:"provider"`
+	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
+	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
+	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
+	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
+	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
+	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
+	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
+	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
+	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
+	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
+	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
+	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
+	Scope                              string   `flag:"scope" cfg:"scope"`
+	Prompt                             string   `flag:"prompt" cfg:"prompt"`
+	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
+	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	AcrValues       string `flag:"acr-values" cfg:"acr_values"`
@@ -116,7 +116,6 @@ type Options struct {
 	proxyURLs          []*url.URL
 	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
-	sessionStore       sessionsapi.SessionStore
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
@@ -128,7 +127,6 @@ func (o *Options) GetRedirectURL() *url.URL                        { return o.re
 func (o *Options) GetProxyURLs() []*url.URL                        { return o.proxyURLs }
 func (o *Options) GetCompiledRegex() []*regexp.Regexp              { return o.compiledRegex }
 func (o *Options) GetProvider() providers.Provider                 { return o.provider }
-func (o *Options) GetSessionStore() sessionsapi.SessionStore       { return o.sessionStore }
 func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
 func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
 func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jwtBearerVerifiers }
@@ -139,7 +137,6 @@ func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirect
 func (o *Options) SetProxyURLs(s []*url.URL)                        { o.proxyURLs = s }
 func (o *Options) SetCompiledRegex(s []*regexp.Regexp)              { o.compiledRegex = s }
 func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
-func (o *Options) SetSessionStore(s sessionsapi.SessionStore)       { o.sessionStore = s }
 func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
 func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
 func (o *Options) SetJWTBearerVerifiers(s []*oidc.IDTokenVerifier)  { o.jwtBearerVerifiers = s }
@@ -157,14 +154,7 @@ func NewOptions() *Options {
 		RealClientIPHeader:  "X-Real-IP",
 		ForceHTTPS:          false,
 		DisplayHtpasswdForm: true,
-		Cookie: CookieOptions{
-			Name:     "_oauth2_proxy",
-			Secure:   true,
-			HTTPOnly: true,
-			Expire:   time.Duration(168) * time.Hour,
-			Refresh:  time.Duration(0),
-			Path:     "/",
-		},
+		Cookie:              cookieDefaults(),
 		Session: SessionOptions{
 			Type: "cookie",
 		},
@@ -233,7 +223,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("github-repo", "", "restrict logins to collaborators of this repository")
 	flagSet.String("github-token", "", "the token to use when verifying repository collaborators (must have push access to the repository)")
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
-	flagSet.String("gitlab-group", "", "restrict logins to members of this group")
+	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
@@ -250,17 +240,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
-
-	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
-	flagSet.String("cookie-secret", "", "the seed string for secure cookies (optionally base64 encoded)")
-	flagSet.StringSlice("cookie-domain", []string{}, "Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).")
-	flagSet.String("cookie-path", "/", "an optional cookie path to force cookies to (ie: /poc/)*")
-	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
-	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
-	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
-	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
-	flagSet.String("cookie-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
-
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
 	flagSet.Bool("redis-use-sentinel", false, "Connect to redis via sentinels. Must set --redis-sentinel-master-name and --redis-sentinel-connection-urls to use this feature")
@@ -273,6 +252,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
+	flagSet.StringSlice("provider-ca-file", []string{}, "One or more paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead.")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
@@ -296,6 +276,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
 
+	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
 
 	return flagSet

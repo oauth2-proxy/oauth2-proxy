@@ -34,6 +34,14 @@ var _ = Describe("HealthCheck suite", func() {
 			Expect(rw.Code).To(Equal(in.expectedStatus))
 			Expect(rw.Body.String()).To(Equal(in.expectedBody))
 		},
+		Entry("when no health check paths are configured", &requestTableInput{
+			healthCheckPaths:      []string{},
+			healthCheckUserAgents: []string{"hc/1.0"},
+			requestString:         "http://example.com/ping",
+			headers:               map[string]string{},
+			expectedStatus:        404,
+			expectedBody:          "404 page not found\n",
+		}),
 		Entry("when requesting the healthcheck path", &requestTableInput{
 			healthCheckPaths:      []string{"/ping"},
 			healthCheckUserAgents: []string{"hc/1.0"},
@@ -50,15 +58,23 @@ var _ = Describe("HealthCheck suite", func() {
 			expectedStatus:        404,
 			expectedBody:          "404 page not found\n",
 		}),
-		Entry("with a request from the health check user agent", &requestTableInput{
-			healthCheckPaths:      []string{"/ping"},
+		Entry("when a blank string is configured as a health check path and the request has no specific path", &requestTableInput{
+			healthCheckPaths:      []string{""},
 			healthCheckUserAgents: []string{"hc/1.0"},
+			requestString:         "http://example.com",
+			headers:               map[string]string{},
+			expectedStatus:        404,
+			expectedBody:          "404 page not found\n",
+		}),
+		Entry("with no health check user agents configured", &requestTableInput{
+			healthCheckPaths:      []string{"/ping"},
+			healthCheckUserAgents: []string{},
 			requestString:         "http://example.com/abc",
 			headers: map[string]string{
-				"User-Agent": "hc/1.0",
+				"User-Agent": "user",
 			},
-			expectedStatus: 200,
-			expectedBody:   "OK",
+			expectedStatus: 404,
+			expectedBody:   "404 page not found\n",
 		}),
 		Entry("with a request from a different user agent", &requestTableInput{
 			healthCheckPaths:      []string{"/ping"},
@@ -69,6 +85,24 @@ var _ = Describe("HealthCheck suite", func() {
 			},
 			expectedStatus: 404,
 			expectedBody:   "404 page not found\n",
+		}),
+		Entry("with a request from the health check user agent", &requestTableInput{
+			healthCheckPaths:      []string{"/ping"},
+			healthCheckUserAgents: []string{"hc/1.0"},
+			requestString:         "http://example.com/abc",
+			headers: map[string]string{
+				"User-Agent": "hc/1.0",
+			},
+			expectedStatus: 200,
+			expectedBody:   "OK",
+		}),
+		Entry("when a blank string is configured as a health check agent and a request has no user agent", &requestTableInput{
+			healthCheckPaths:      []string{"/ping"},
+			healthCheckUserAgents: []string{""},
+			requestString:         "http://example.com/abc",
+			headers:               map[string]string{},
+			expectedStatus:        404,
+			expectedBody:          "404 page not found\n",
 		}),
 		Entry("with multiple paths, request one of the healthcheck paths", &requestTableInput{
 			healthCheckPaths:      []string{"/ping", "/liveness_check", "/readiness_check"},
