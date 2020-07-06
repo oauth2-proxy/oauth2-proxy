@@ -15,7 +15,7 @@ import (
 
 // SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
 func SecretBytes(secret string) []byte {
-	b, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(secret, "="))
+	b, err := base64.RawURLEncoding.DecodeString(secret)
 	if err == nil {
 		// Only return decoded form if a valid AES length
 		// Don't want unintentional decoding resulting in invalid lengths confusing a user
