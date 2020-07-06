@@ -23,6 +23,10 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 )
 
+const (
+	HeaderSplitRegex = `^([^=]*)=(.*)$`
+)
+
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
@@ -187,7 +191,7 @@ func Validate(o *options.Options) error {
 		}
 	}
 
-	headerSplitRegex := regexp.MustCompile(`^([^:]*)=[ \t]*(.*)$`)
+	headerSplitRegex := regexp.MustCompile(HeaderSplitRegex)
 	for _, extraHeader := range o.ExtraHeaders {
 		match := headerSplitRegex.FindStringSubmatch(extraHeader)
 		if match == nil {

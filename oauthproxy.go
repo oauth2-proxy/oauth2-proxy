@@ -27,6 +27,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"github.com/yhat/wsutil"
 )
@@ -63,7 +64,7 @@ var (
 	ErrNeedsLogin = errors.New("redirect to login page")
 
 	// Used to parse extra Headers
-	headerSplitRegex = regexp.MustCompile(`^([^:]*)=[ \t]*(.*)$`)
+	headerSplitRegex = regexp.MustCompile(validation.HeaderSplitRegex)
 
 	// Used to check final redirects are not susceptible to open redirects.
 	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
