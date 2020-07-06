@@ -141,6 +141,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 	err := requests.New(userInfoEndpoint).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+accessToken).
+		Do().
 		UnmarshalInto(&emailData)
 	if err != nil {
 		return "", err
@@ -196,6 +197,7 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
 		return nil, err

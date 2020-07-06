@@ -88,6 +88,7 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 	requestURL := p.ValidateURL.String() + "?access_token=" + s.AccessToken
 	err := requests.New(requestURL).
 		WithContext(ctx).
+		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
 		logger.Printf("failed making request: %v", err)
@@ -103,6 +104,7 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 
 		err := requests.New(requestURL).
 			WithContext(ctx).
+			Do().
 			UnmarshalInto(&teams)
 		if err != nil {
 			logger.Printf("failed requesting teams membership: %v", err)
@@ -132,6 +134,7 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 
 		err := requests.New(requestURL).
 			WithContext(ctx).
+			Do().
 			UnmarshalInto(&repositories)
 		if err != nil {
 			logger.Printf("failed checking repository access: %v", err)

@@ -64,6 +64,7 @@ func (p *DigitalOceanProvider) GetEmailAddress(ctx context.Context, s *sessions.
 	json, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
 		WithHeaders(getDigitalOceanHeader(s.AccessToken)).
+		Do().
 		UnmarshalJSON()
 	if err != nil {
 		return "", err

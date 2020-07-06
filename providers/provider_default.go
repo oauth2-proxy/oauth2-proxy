@@ -3,10 +3,8 @@ package providers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"time"
 
@@ -39,33 +37,21 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 		params.Add("resource", p.ProtectedResource.String())
 	}
 
-	resp, err := requests.New(p.RedeemURL.String()).
+	result := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do()
-	if err != nil {
-		return nil, err
-	}
-
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
+	if result.Error() != nil {
+		return nil, result.Error()
 	}
 
 	// blindly try json and x-www-form-urlencoded
 	var jsonResponse struct {
 		AccessToken string `json:"access_token"`
 	}
-	err = json.Unmarshal(body, &jsonResponse)
+	err = result.UnmarshalInto(&jsonResponse)
 	if err == nil {
 		s = &sessions.SessionState{
 			AccessToken: jsonResponse.AccessToken,
@@ -74,7 +60,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 	}
 
 	var v url.Values
-	v, err = url.ParseQuery(string(body))
+	v, err = url.ParseQuery(string(result.Body()))
 	if err != nil {
 		return
 	}
@@ -82,7 +68,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 		created := time.Now()
 		s = &sessions.SessionState{AccessToken: a, CreatedAt: &created}
 	} else {
-		err = fmt.Errorf("no access token found %s", body)
+		err = fmt.Errorf("no access token found %s", result.Body())
 	}
 	return
 }

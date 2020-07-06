@@ -72,6 +72,7 @@ func (p *FacebookProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	err := requests.New(requestURL).
 		WithContext(ctx).
 		WithHeaders(getFacebookHeader(s.AccessToken)).
+		Do().
 		UnmarshalInto(&r)
 	if err != nil {
 		return "", err

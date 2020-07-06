@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -116,6 +115,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 		err := requests.New(endpoint.String()).
 			WithContext(ctx).
 			WithHeaders(getGitHubHeader(accessToken)).
+			Do().
 			UnmarshalInto(&op)
 		if err != nil {
 			return false, err
@@ -179,12 +179,12 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 		// bodyclose cannot detect that the body is being closed later in requests.Into,
 		// so have to skip the linting for the next line.
 		// nolint:bodyclose
-		resp, err := requests.New(endpoint.String()).
+		result := requests.New(endpoint.String()).
 			WithContext(ctx).
 			WithHeaders(getGitHubHeader(accessToken)).
 			Do()
-		if err != nil {
-			return false, err
+		if result.Error() != nil {
+			return false, result.Error()
 		}
 
 		if last == 0 {
@@ -200,7 +200,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			// link header at last page (doesn't exist last info)
 			// <https://api.github.com/user/teams?page=3&per_page=10>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=10>; rel="first"
 
-			link := resp.Header.Get("Link")
+			link := result.Headers().Get("Link")
 			rep1 := regexp.MustCompile(`(?s).*\<https://api.github.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
 			i, converr := strconv.Atoi(rep1.ReplaceAllString(link, "$1"))
 
@@ -211,7 +211,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 		}
 
 		var tp teamsPage
-		if err := requests.UnmarshalInto(resp, &tp); err != nil {
+		if err := result.UnmarshalInto(&tp); err != nil {
 			return false, err
 		}
 		if len(tp) == 0 {
@@ -282,6 +282,7 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(getGitHubHeader(accessToken)).
+		Do().
 		UnmarshalInto(&repo)
 	if err != nil {
 		return false, err
@@ -309,6 +310,7 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(getGitHubHeader(accessToken)).
+		Do().
 		UnmarshalInto(&user)
 	if err != nil {
 		return false, err
@@ -328,26 +330,20 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 		Host:   p.ValidateURL.Host,
 		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo, "/collaborators/", username),
 	}
-	resp, err := requests.New(endpoint.String()).
+	result := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(getGitHubHeader(accessToken)).
 		Do()
-	if err != nil {
-		return false, err
+	if result.Error() != nil {
+		return false, result.Error()
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return false, err
-	}
-
-	if resp.StatusCode != 204 {
+	if result.StatusCode() != 204 {
 		return false, fmt.Errorf("got %d from %q %s",
-			resp.StatusCode, endpoint.String(), body)
+			result.StatusCode(), endpoint.String(), result.Body())
 	}
 
-	logger.Printf("got %d from %q %s", resp.StatusCode, endpoint.String(), body)
+	logger.Printf("got %d from %q %s", result.StatusCode(), endpoint.String(), result.Body())
 
 	return true, nil
 }
@@ -401,6 +397,7 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(getGitHubHeader(s.AccessToken)).
+		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
 		return "", err
@@ -435,6 +432,7 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(getGitHubHeader(s.AccessToken)).
+		Do().
 		UnmarshalInto(&user)
 	if err != nil {
 		return "", err

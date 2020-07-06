@@ -63,6 +63,7 @@ func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	json, err := requests.New(requestURL).
 		WithContext(ctx).
 		WithHeaders(getLinkedInHeader(s.AccessToken)).
+		Do().
 		UnmarshalJSON()
 	if err != nil {
 		return "", err

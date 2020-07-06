@@ -101,6 +101,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
 		return nil, err
@@ -153,6 +154,7 @@ func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.Session
 	json, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
 		WithHeaders(getAzureHeader(s.AccessToken)).
+		Do().
 		UnmarshalJSON()
 	if err != nil {
 		return "", err

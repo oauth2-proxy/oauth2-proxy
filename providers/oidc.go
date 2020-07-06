@@ -259,6 +259,7 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 		respJSON, err := requests.New(profileURL).
 			WithContext(ctx).
 			WithHeaders(getOIDCHeader(accessToken)).
+			Do().
 			UnmarshalJSON()
 		if err != nil {
 			return nil, err

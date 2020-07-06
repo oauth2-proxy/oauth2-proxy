@@ -133,6 +133,7 @@ func (p *GitLabProvider) getUserInfo(ctx context.Context, s *sessions.SessionSta
 	err := requests.New(userInfoURL.String()).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		Do().
 		UnmarshalInto(&userInfo)
 	if err != nil {
 		return nil, fmt.Errorf("error getting user info: %v", err)

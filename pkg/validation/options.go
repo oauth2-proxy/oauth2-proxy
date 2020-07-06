@@ -86,6 +86,7 @@ func Validate(o *options.Options) error {
 			requestURL := strings.TrimSuffix(o.OIDCIssuerURL, "/") + "/.well-known/openid-configuration"
 			body, err := requests.New(requestURL).
 				WithContext(ctx).
+				Do().
 				UnmarshalJSON()
 			if err != nil {
 				logger.Printf("error: failed to discover OIDC configuration: %v", err)
@@ -384,11 +385,9 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 	if err != nil {
 		// Try as JWKS URI
 		jwksURI := strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
-		resp, err := requests.New(jwksURI).Do()
-		if err != nil {
+		if err := requests.New(jwksURI).Do().Error(); err != nil {
 			return nil, err
 		}
-		resp.Body.Close()
 
 		verifier = oidc.NewVerifier(jwtIssuer.issuerURI, oidc.NewRemoteKeySet(context.Background(), jwksURI), config)
 	} else {

@@ -33,6 +33,7 @@ func (p *NextcloudProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
 		WithHeaders(getNextcloudHeader(s.AccessToken)).
+		Do().
 		UnmarshalJSON()
 	if err != nil {
 		return "", fmt.Errorf("error making request: %v", err)
