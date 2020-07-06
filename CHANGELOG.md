@@ -16,6 +16,7 @@
 - [#542](https://github.com/oauth2-proxy/oauth2-proxy/pull/542) Move SessionStore tests to independent package (@JoelSpeed)
 - [#577](https://github.com/oauth2-proxy/oauth2-proxy/pull/577) Move Cipher and Session Store initialisation out of Validation (@JoelSpeed)
 - [#635](https://github.com/oauth2-proxy/oauth2-proxy/pull/635) Support specifying alternative provider TLS trust source(s) (@k-wall)
+- [#649](https://github.com/oauth2-proxy/oauth2-proxy/pull/650) Resolve an issue where an empty healthcheck URL and ping-user-agent returns the healthcheck response (@jordancrawfordnz)
 
 # v6.0.0
 
