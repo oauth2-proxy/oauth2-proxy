@@ -37,6 +37,7 @@ func redirectToHTTPS(httpsPort string, next http.Handler) http.Handler {
 		targetURL, _ := url.Parse(req.URL.String())
 		// Set the scheme to HTTPS
 		targetURL.Scheme = httpsScheme
+		targetURL.Host = req.Host
 
 		// Overwrite the port if the original request was to a non-standard port
 		if targetURL.Port() != "" {
@@ -44,7 +45,6 @@ func redirectToHTTPS(httpsPort string, next http.Handler) http.Handler {
 			host, _, _ := net.SplitHostPort(targetURL.Host)
 			targetURL.Host = net.JoinHostPort(host, httpsPort)
 		}
-
 		http.Redirect(rw, req, targetURL.String(), http.StatusPermanentRedirect)
 	})
 }

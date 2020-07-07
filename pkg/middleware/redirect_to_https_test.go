@@ -154,5 +154,12 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			expectedStatus: 200,
 			expectedBody:   "test",
 		}),
+		Entry("without TLS with a path as request", &requestTableInput{
+			requestString:    "/",
+			useTLS:           false,
+			expectedStatus:   308,
+			expectedBody:     permanentRedirectBody("https://example.com/"),
+			expectedLocation: "https://example.com/",
+		}),
 	)
 })
