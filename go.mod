@@ -10,7 +10,7 @@ require (
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/go-redis/redis/v7 v7.2.0
+	github.com/go-redis/redis/v7 v7.4.0
 	github.com/justinas/alice v1.2.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
