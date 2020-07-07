@@ -20,6 +20,7 @@
 - [#635](https://github.com/oauth2-proxy/oauth2-proxy/pull/635) Support specifying alternative provider TLS trust source(s) (@k-wall)
 - [#649](https://github.com/oauth2-proxy/oauth2-proxy/pull/650) Resolve an issue where an empty healthcheck URL and ping-user-agent returns the healthcheck response (@jordancrawfordnz)
 - [#662](https://github.com/oauth2-proxy/oauth2-proxy/pull/662) Do not add Cache-Control header to response from auth only endpoint (@johejo)
+- [#671](https://github.com/oauth2-proxy/oauth2-proxy/pull/671) Use singleflight to prevent calling duplicate Redis command (@johejo)
 
 # v6.0.0
 
