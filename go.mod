@@ -25,7 +25,7 @@ require (
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
 	google.golang.org/api v0.20.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
