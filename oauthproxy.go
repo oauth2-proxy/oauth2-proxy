@@ -679,7 +679,7 @@ func prepareNoCache(w http.ResponseWriter) {
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
+	if req.URL.Path != p.AuthOnlyPath && strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
 		prepareNoCache(rw)
 	}
 

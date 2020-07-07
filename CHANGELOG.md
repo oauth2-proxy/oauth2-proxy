@@ -8,6 +8,7 @@
 
 ## Changes since v6.0.0
 
+- [#660](https://github.com/oauth2-proxy/oauth2-proxy/pull/660) Use builder pattern to simplify requests to external endpoints (@JoelSpeed)
 - [#591](https://github.com/oauth2-proxy/oauth2-proxy/pull/591) Introduce upstream package with new reverse proxy implementation (@JoelSpeed)
 - [#576](https://github.com/oauth2-proxy/oauth2-proxy/pull/576) Separate Cookie validation out of main options validation (@JoelSpeed)
 - [#656](https://github.com/oauth2-proxy/oauth2-proxy/pull/656) Split long session cookies more precisely (@NickMeves)
@@ -17,6 +18,7 @@
 - [#577](https://github.com/oauth2-proxy/oauth2-proxy/pull/577) Move Cipher and Session Store initialisation out of Validation (@JoelSpeed)
 - [#635](https://github.com/oauth2-proxy/oauth2-proxy/pull/635) Support specifying alternative provider TLS trust source(s) (@k-wall)
 - [#649](https://github.com/oauth2-proxy/oauth2-proxy/pull/650) Resolve an issue where an empty healthcheck URL and ping-user-agent returns the healthcheck response (@jordancrawfordnz)
+- [#662](https://github.com/oauth2-proxy/oauth2-proxy/pull/662) Do not add Cache-Control header to response from auth only endpoint (@johejo)
 
 # v6.0.0
 
