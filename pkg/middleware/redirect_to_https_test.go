@@ -154,6 +154,9 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			expectedStatus: 200,
 			expectedBody:   "test",
 		}),
+		// By using newRequest from httptest we get example.com as a Host
+		// when the target is just a path.
+		// For details: https://golang.org/pkg/net/http/httptest/#NewRequest
 		Entry("without TLS with a path as request", &requestTableInput{
 			requestString:    "/",
 			useTLS:           false,
