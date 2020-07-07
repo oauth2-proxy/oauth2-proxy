@@ -3,17 +3,15 @@ package providers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/coreos/go-oidc"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
 var _ Provider = (*ProviderData)(nil)
@@ -39,35 +37,21 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 		params.Add("resource", p.ProtectedResource.String())
 	}
 
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
+	result := requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do()
+	if result.Error() != nil {
+		return nil, result.Error()
 	}
 
 	// blindly try json and x-www-form-urlencoded
 	var jsonResponse struct {
 		AccessToken string `json:"access_token"`
 	}
-	err = json.Unmarshal(body, &jsonResponse)
+	err = result.UnmarshalInto(&jsonResponse)
 	if err == nil {
 		s = &sessions.SessionState{
 			AccessToken: jsonResponse.AccessToken,
@@ -76,7 +60,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 	}
 
 	var v url.Values
-	v, err = url.ParseQuery(string(body))
+	v, err = url.ParseQuery(string(result.Body()))
 	if err != nil {
 		return
 	}
@@ -84,7 +68,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 		created := time.Now()
 		s = &sessions.SessionState{AccessToken: a, CreatedAt: &created}
 	} else {
-		err = fmt.Errorf("no access token found %s", body)
+		err = fmt.Errorf("no access token found %s", result.Body())
 	}
 	return
 }
