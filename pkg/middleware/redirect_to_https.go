@@ -45,6 +45,7 @@ func redirectToHTTPS(httpsPort string, next http.Handler) http.Handler {
 			host, _, _ := net.SplitHostPort(targetURL.Host)
 			targetURL.Host = net.JoinHostPort(host, httpsPort)
 		}
+
 		http.Redirect(rw, req, targetURL.String(), http.StatusPermanentRedirect)
 	})
 }
