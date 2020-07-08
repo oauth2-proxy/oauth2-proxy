@@ -396,5 +396,4 @@ func TestProviderCAFilesError(t *testing.T) {
 	err = Validate(o)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unable to load provider CA file(s)")
-
 }
