@@ -10,62 +10,41 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 )
 
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
+	msgs := validateCookie(o.Cookie)
+
 	if o.SSLInsecureSkipVerify {
-		// TODO: Accept a certificate bundle.
 		insecureTransport := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
-	}
-
-	msgs := make([]string, 0)
-
-	var cipher encryption.Cipher
-	if o.Cookie.Secret == "" {
-		msgs = append(msgs, "missing setting: cookie-secret")
-	} else {
-		validCookieSecretSize := false
-		for _, i := range []int{16, 24, 32} {
-			if len(encryption.SecretBytes(o.Cookie.Secret)) == i {
-				validCookieSecretSize = true
+	} else if len(o.ProviderCAFiles) > 0 {
+		pool, err := util.GetCertPool(o.ProviderCAFiles)
+		if err == nil {
+			transport := &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: pool,
+				},
 			}
-		}
-		var decoded bool
-		if string(encryption.SecretBytes(o.Cookie.Secret)) != o.Cookie.Secret {
-			decoded = true
-		}
-		if !validCookieSecretSize {
-			var suffix string
-			if decoded {
-				suffix = " note: cookie secret was base64 decoded"
-			}
-			msgs = append(msgs,
-				fmt.Sprintf("Cookie secret must be 16, 24, or 32 bytes to create an AES cipher. Got %d bytes.%s",
-					len(encryption.SecretBytes(o.Cookie.Secret)), suffix))
+
+			http.DefaultClient = &http.Client{Transport: transport}
 		} else {
-			var err error
-			cipher, err = encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(o.Cookie.Secret))
-			if err != nil {
-				msgs = append(msgs, fmt.Sprintf("cookie-secret error: %v", err))
-			}
+			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
 		}
 	}
 
@@ -104,34 +83,34 @@ func Validate(o *options.Options) error {
 
 			logger.Printf("Performing OIDC Discovery...")
 
-			if req, err := http.NewRequest("GET", strings.TrimSuffix(o.OIDCIssuerURL, "/")+"/.well-known/openid-configuration", nil); err == nil {
-				if body, err := requests.Request(req); err == nil {
-
-					// Prefer manually configured URLs. It's a bit unclear
-					// why you'd be doing discovery and also providing the URLs
-					// explicitly though...
-					if o.LoginURL == "" {
-						o.LoginURL = body.Get("authorization_endpoint").MustString()
-					}
-
-					if o.RedeemURL == "" {
-						o.RedeemURL = body.Get("token_endpoint").MustString()
-					}
-
-					if o.OIDCJwksURL == "" {
-						o.OIDCJwksURL = body.Get("jwks_uri").MustString()
-					}
-
-					if o.ProfileURL == "" {
-						o.ProfileURL = body.Get("userinfo_endpoint").MustString()
-					}
-
-					o.SkipOIDCDiscovery = true
-				} else {
-					logger.Printf("error: failed to discover OIDC configuration: %v", err)
-				}
+			requestURL := strings.TrimSuffix(o.OIDCIssuerURL, "/") + "/.well-known/openid-configuration"
+			body, err := requests.New(requestURL).
+				WithContext(ctx).
+				Do().
+				UnmarshalJSON()
+			if err != nil {
+				logger.Printf("error: failed to discover OIDC configuration: %v", err)
 			} else {
-				logger.Printf("error: failed parsing OIDC discovery URL: %v", err)
+				// Prefer manually configured URLs. It's a bit unclear
+				// why you'd be doing discovery and also providing the URLs
+				// explicitly though...
+				if o.LoginURL == "" {
+					o.LoginURL = body.Get("authorization_endpoint").MustString()
+				}
+
+				if o.RedeemURL == "" {
+					o.RedeemURL = body.Get("token_endpoint").MustString()
+				}
+
+				if o.OIDCJwksURL == "" {
+					o.OIDCJwksURL = body.Get("jwks_uri").MustString()
+				}
+
+				if o.ProfileURL == "" {
+					o.ProfileURL = body.Get("userinfo_endpoint").MustString()
+				}
+
+				o.SkipOIDCDiscovery = true
 			}
 		}
 
@@ -178,10 +157,6 @@ func Validate(o *options.Options) error {
 	}
 
 	if o.SkipJwtBearerTokens {
-		// If we are using an oidc provider, go ahead and add that provider to the list
-		if o.GetOIDCVerifier() != nil {
-			o.SetJWTBearerVerifiers(append(o.GetJWTBearerVerifiers(), o.GetOIDCVerifier()))
-		}
 		// Configure extra issuers
 		if len(o.ExtraJwtIssuers) > 0 {
 			var jwtIssuers []jwtIssuer
@@ -222,22 +197,6 @@ func Validate(o *options.Options) error {
 	}
 	msgs = parseProviderInfo(o, msgs)
 
-	o.Session.Cipher = cipher
-	sessionStore, err := sessions.NewSessionStore(&o.Session, &o.Cookie)
-	if err != nil {
-		msgs = append(msgs, fmt.Sprintf("error initialising session storage: %v", err))
-	} else {
-		o.SetSessionStore(sessionStore)
-	}
-
-	if o.Cookie.Refresh >= o.Cookie.Expire {
-		msgs = append(msgs, fmt.Sprintf(
-			"cookie_refresh (%s) must be less than "+
-				"cookie_expire (%s)",
-			o.Cookie.Refresh.String(),
-			o.Cookie.Expire.String()))
-	}
-
 	if len(o.GoogleGroups) > 0 || o.GoogleAdminEmail != "" || o.GoogleServiceAccountJSON != "" {
 		if len(o.GoogleGroups) < 1 {
 			msgs = append(msgs, "missing setting: google-group")
@@ -250,20 +209,7 @@ func Validate(o *options.Options) error {
 		}
 	}
 
-	switch o.Cookie.SameSite {
-	case "", "none", "lax", "strict":
-	default:
-		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%s) must be one of ['', 'lax', 'strict', 'none']", o.Cookie.SameSite))
-	}
-
-	// Sort cookie domains by length, so that we try longer (and more specific)
-	// domains first
-	sort.Slice(o.Cookie.Domains, func(i, j int) bool {
-		return len(o.Cookie.Domains[i]) > len(o.Cookie.Domains[j])
-	})
-
 	msgs = parseSignatureKey(o, msgs)
-	msgs = validateCookieName(o, msgs)
 	msgs = configureLogger(o.Logging, msgs)
 
 	if o.ReverseProxy {
@@ -344,7 +290,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		}
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
-		p.Group = o.GitLabGroup
+		p.Groups = o.GitLabGroup
 		p.EmailDomains = o.EmailDomains
 
 		if o.GetOIDCVerifier() != nil {
@@ -449,23 +395,15 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 	if err != nil {
 		// Try as JWKS URI
 		jwksURI := strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
-		_, err := http.NewRequest("GET", jwksURI, nil)
-		if err != nil {
+		if err := requests.New(jwksURI).Do().Error(); err != nil {
 			return nil, err
 		}
+
 		verifier = oidc.NewVerifier(jwtIssuer.issuerURI, oidc.NewRemoteKeySet(context.Background(), jwksURI), config)
 	} else {
 		verifier = provider.Verifier(config)
 	}
 	return verifier, nil
-}
-
-func validateCookieName(o *options.Options, msgs []string) []string {
-	cookie := &http.Cookie{Name: o.Cookie.Name}
-	if cookie.String() == "" {
-		return append(msgs, fmt.Sprintf("invalid cookie name: %q", o.Cookie.Name))
-	}
-	return msgs
 }
 
 // jwtIssuer hold parsed JWT issuer info that's used to construct a verifier.

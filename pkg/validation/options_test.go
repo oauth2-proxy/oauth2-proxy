@@ -2,7 +2,6 @@ package validation
 
 import (
 	"crypto"
-	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -291,20 +290,6 @@ func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 		"  unsupported signature hash algorithm: "+o.SignatureKey)
 }
 
-func TestValidateCookie(t *testing.T) {
-	o := testOptions()
-	o.Cookie.Name = "_valid_cookie_name"
-	assert.Equal(t, nil, Validate(o))
-}
-
-func TestValidateCookieBadName(t *testing.T) {
-	o := testOptions()
-	o.Cookie.Name = "_bad_cookie_name{}"
-	err := Validate(o)
-	assert.Equal(t, err.Error(), "invalid configuration:\n"+
-		fmt.Sprintf("  invalid cookie name: %q", o.Cookie.Name))
-}
-
 func TestSkipOIDCDiscovery(t *testing.T) {
 	o := testOptions()
 	o.ProviderType = "oidc"
@@ -398,4 +383,18 @@ func TestIPCIDRSetOption(t *testing.T) {
 			"  whitelist_ip[1] (alkwlkbn/32) could not be recognized",
 		err.Error(),
 	)
+}
+
+func TestProviderCAFilesError(t *testing.T) {
+	file, err := ioutil.TempFile("", "absent.*.crt")
+	assert.NoError(t, err)
+	assert.NoError(t, file.Close())
+	assert.NoError(t, os.Remove(file.Name()))
+
+	o := testOptions()
+	o.ProviderCAFiles = append(o.ProviderCAFiles, file.Name())
+	err = Validate(o)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unable to load provider CA file(s)")
+
 }

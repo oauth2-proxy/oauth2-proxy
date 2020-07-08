@@ -33,3 +33,9 @@ issues:
         - bodyclose
         - unconvert
         - gocritic
+    # If we have tests in shared test folders, these can be less strictly linted
+    - path: tests/.*_tests\.go
+      linters:
+        - golint
+        - bodyclose
+        - stylecheck
