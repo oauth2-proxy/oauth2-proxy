@@ -93,7 +93,7 @@
 
 ## Changes since v5.1.1
 
-- [#552](https://github.com/oauth2-proxy/oauth2-proxy/pull/522) Implements --whitelist-ip option to whitelist IPs or CIDR ranges (@Izzette)
+- [#552](https://github.com/oauth2-proxy/oauth2-proxy/pull/522) Implements --trusted-ip option to allow clients behind specified IPs or CIDR ranges to bypass authentication (@Izzette)
 - [GHSA-5m6c-jp6f-2vcv](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) New OpenRedirect cases have been found (@JoelSpeed)
 - [#639](https://github.com/oauth2-proxy/oauth2-proxy/pull/639) Change how gitlab-group is parsed on options (@linuxgemini)
 - [#615](https://github.com/oauth2-proxy/oauth2-proxy/pull/615) Kubernetes example based on Kind cluster and Nginx ingress (@EvgeniGordeev)

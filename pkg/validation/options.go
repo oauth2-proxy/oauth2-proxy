@@ -225,13 +225,13 @@ func Validate(o *options.Options) error {
 		})
 	}
 
-	if len(o.WhitelistIPs) > 0 && o.ReverseProxy {
-		fmt.Fprintln(os.Stderr, "WARNING: whitelisting IPs with --reverse-proxy poses risks if a header spoofing attack is possible.")
+	if len(o.TrustedIPs) > 0 && o.ReverseProxy {
+		fmt.Fprintln(os.Stderr, "WARNING: trusting of IPs with --reverse-proxy poses risks if a header spoofing attack is possible.")
 	}
 
-	for i, ipStr := range o.WhitelistIPs {
+	for i, ipStr := range o.TrustedIPs {
 		if nil == ip.ParseIPNet(ipStr) {
-			msgs = append(msgs, fmt.Sprintf("whitelist_ip[%d] (%s) could not be recognized", i, ipStr))
+			msgs = append(msgs, fmt.Sprintf("trusted_ips[%d] (%s) could not be recognized", i, ipStr))
 		}
 	}
 

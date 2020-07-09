@@ -1893,31 +1893,31 @@ func baseTestOptions() *options.Options {
 	return opts
 }
 
-func TestIPWhitelist(t *testing.T) {
+func TestTrustedIPs(t *testing.T) {
 	tests := []struct {
 		name               string
-		whitelistedIPs     []string
+		trustedIPs         []string
 		reverseProxy       bool
 		realClientIPHeader string
 		req                *http.Request
-		expectWhitelisted  bool
+		expectTrusted      bool
 	}{
 		// Check unconfigured behavior.
 		{
 			name:               "Default",
-			whitelistedIPs:     nil,
+			trustedIPs:         nil,
 			reverseProxy:       false,
 			realClientIPHeader: "X-Real-IP", // Default value
 			req: func() *http.Request {
 				req, _ := http.NewRequest("GET", "/", nil)
 				return req
 			}(),
-			expectWhitelisted: false,
+			expectTrusted: false,
 		},
 		// Check using req.RemoteAddr (Options.ReverseProxy == false).
 		{
 			name:               "WithRemoteAddr",
-			whitelistedIPs:     []string{"127.0.0.1"},
+			trustedIPs:         []string{"127.0.0.1"},
 			reverseProxy:       false,
 			realClientIPHeader: "X-Real-IP", // Default value
 			req: func() *http.Request {
@@ -1925,12 +1925,12 @@ func TestIPWhitelist(t *testing.T) {
 				req.RemoteAddr = "127.0.0.1:43670"
 				return req
 			}(),
-			expectWhitelisted: true,
+			expectTrusted: true,
 		},
 		// Check ignores req.RemoteAddr match when behind a reverse proxy / missing header.
 		{
 			name:               "IgnoresRemoteAddrInReverseProxyMode",
-			whitelistedIPs:     []string{"127.0.0.1"},
+			trustedIPs:         []string{"127.0.0.1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Real-IP", // Default value
 			req: func() *http.Request {
@@ -1938,12 +1938,12 @@ func TestIPWhitelist(t *testing.T) {
 				req.RemoteAddr = "127.0.0.1:44324"
 				return req
 			}(),
-			expectWhitelisted: false,
+			expectTrusted: false,
 		},
-		// Check successful whitelisting of localhost in IPv4.
+		// Check successful trusting of localhost in IPv4.
 		{
-			name:               "WhitelistsLocalhostInReverseProxyMode",
-			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			name:               "TrustsLocalhostInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
@@ -1951,12 +1951,12 @@ func TestIPWhitelist(t *testing.T) {
 				req.Header.Add("X-Forwarded-For", "127.0.0.1")
 				return req
 			}(),
-			expectWhitelisted: true,
+			expectTrusted: true,
 		},
-		// Check successful whitelisting of localhost in IPv6.
+		// Check successful trusting of localhost in IPv6.
 		{
-			name:               "WhitelistsIP6LocalostInReverseProxyMode",
-			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			name:               "TrustsIP6LocalostInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
@@ -1964,12 +1964,12 @@ func TestIPWhitelist(t *testing.T) {
 				req.Header.Add("X-Forwarded-For", "::1")
 				return req
 			}(),
-			expectWhitelisted: true,
+			expectTrusted: true,
 		},
-		// Check does not whitelist random IPv4 address.
+		// Check does not trust random IPv4 address.
 		{
-			name:               "DoesNotWhitelistRandomIP4Address",
-			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			name:               "DoesNotTrustRandomIP4Address",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
@@ -1977,12 +1977,12 @@ func TestIPWhitelist(t *testing.T) {
 				req.Header.Add("X-Forwarded-For", "12.34.56.78")
 				return req
 			}(),
-			expectWhitelisted: false,
+			expectTrusted: false,
 		},
-		// Check does not whitelist random IPv6 address.
+		// Check does not trust random IPv6 address.
 		{
-			name:               "DoesNotWhitelistRandomIP6Address",
-			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			name:               "DoesNotTrustRandomIP6Address",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
@@ -1990,12 +1990,12 @@ func TestIPWhitelist(t *testing.T) {
 				req.Header.Add("X-Forwarded-For", "::2")
 				return req
 			}(),
-			expectWhitelisted: false,
+			expectTrusted: false,
 		},
 		// Check respects correct header.
 		{
 			name:               "RespectsCorrectHeaderInReverseProxyMode",
-			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
@@ -2003,12 +2003,12 @@ func TestIPWhitelist(t *testing.T) {
 				req.Header.Add("X-Real-IP", "::1")
 				return req
 			}(),
-			expectWhitelisted: false,
+			expectTrusted: false,
 		},
-		// Check doesn't whitelist if garbage is provided.
+		// Check doesn't trust if garbage is provided.
 		{
-			name:               "DoesNotWhitelistGarbageInReverseProxyMode",
-			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			name:               "DoesNotTrustGarbageInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req: func() *http.Request {
@@ -2016,12 +2016,12 @@ func TestIPWhitelist(t *testing.T) {
 				req.Header.Add("X-Forwarded-For", "adsfljk29242as!!")
 				return req
 			}(),
-			expectWhitelisted: false,
+			expectTrusted: false,
 		},
-		// Check doesn't whitelist if garbage is provided (no reverse-proxy).
+		// Check doesn't trust if garbage is provided (no reverse-proxy).
 		{
-			name:               "DoesNotWhitelistGarbage",
-			whitelistedIPs:     []string{"127.0.0.0/8", "::1"},
+			name:               "DoesNotTrustGarbage",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
 			reverseProxy:       false,
 			realClientIPHeader: "X-Real-IP",
 			req: func() *http.Request {
@@ -2029,7 +2029,7 @@ func TestIPWhitelist(t *testing.T) {
 				req.RemoteAddr = "adsfljk29242as!!"
 				return req
 			}(),
-			expectWhitelisted: false,
+			expectTrusted: false,
 		},
 	}
 
@@ -2037,7 +2037,7 @@ func TestIPWhitelist(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := baseTestOptions()
 			opts.Upstreams = []string{"static://200"}
-			opts.WhitelistIPs = tt.whitelistedIPs
+			opts.TrustedIPs = tt.trustedIPs
 			opts.ReverseProxy = tt.reverseProxy
 			opts.RealClientIPHeader = tt.realClientIPHeader
 			validation.Validate(opts)
@@ -2047,7 +2047,7 @@ func TestIPWhitelist(t *testing.T) {
 			rw := httptest.NewRecorder()
 
 			proxy.ServeHTTP(rw, tt.req)
-			if tt.expectWhitelisted {
+			if tt.expectTrusted {
 				assert.Equal(t, 200, rw.Code)
 			} else {
 				assert.Equal(t, 403, rw.Code)

@@ -117,7 +117,7 @@ type OAuthProxy struct {
 	compiledRegex           []*regexp.Regexp
 	templates               *template.Template
 	realClientIPParser      ipapi.RealClientIPParser
-	whitelistIPs            *ip.NetSet
+	trustedIPs              *ip.NetSet
 	Banner                  string
 	Footer                  string
 }
@@ -304,10 +304,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
-	whitelistIPs := ip.NewNetSet()
-	for _, ipStr := range opts.WhitelistIPs {
+	trustedIPs := ip.NewNetSet()
+	for _, ipStr := range opts.TrustedIPs {
 		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
-			whitelistIPs.AddIPNet(*ipNet)
+			trustedIPs.AddIPNet(*ipNet)
 		} else {
 			panic(fmt.Sprintf("Could not parse IP network (%s)", ipStr))
 		}
@@ -359,7 +359,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PreferEmailToUser:       opts.PreferEmailToUser,
 		SkipProviderButton:      opts.SkipProviderButton,
 		templates:               loadTemplates(opts.CustomTemplatesDir),
-		whitelistIPs:            whitelistIPs,
+		trustedIPs:              trustedIPs,
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
 	}, nil
@@ -661,7 +661,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 // IsWhitelistedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsWhitelistedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path) || p.IsWhitelistedIP(req)
+	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path) || p.IsTrustedIP(req)
 }
 
 // IsWhitelistedPath is used to check if the request path is allowed without auth
@@ -689,15 +689,15 @@ func prepareNoCache(w http.ResponseWriter) {
 	}
 }
 
-// IsWhitelistedIP is used to check if a request comes from a whitelisted IP address.
-func (p *OAuthProxy) IsWhitelistedIP(req *http.Request) bool {
-	if p.whitelistIPs == nil {
+// IsTrustedIP is used to check if a request comes from a trusted client IP address.
+func (p *OAuthProxy) IsTrustedIP(req *http.Request) bool {
+	if p.trustedIPs == nil {
 		return false
 	}
 
 	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
 	if err != nil {
-		logger.Printf("Error obtaining real IP for whitelist: %v", err)
+		logger.Printf("Error obtaining real IP for trusted IP list: %v", err)
 		// Possibly spoofed X-Real-IP header
 		return false
 	}
@@ -706,7 +706,7 @@ func (p *OAuthProxy) IsWhitelistedIP(req *http.Request) bool {
 		return false
 	}
 
-	return p.whitelistIPs.Has(remoteAddr)
+	return p.trustedIPs.Has(remoteAddr)
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

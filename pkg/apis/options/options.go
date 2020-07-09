@@ -29,7 +29,7 @@ type Options struct {
 	HTTPSAddress       string   `flag:"https-address" cfg:"https_address"`
 	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
 	RealClientIPHeader string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
-	WhitelistIPs       []string `flag:"whitelist-ip" cfg:"whitelist_ips"`
+	TrustedIPs         []string `flag:"trusted-ip" cfg:"trusted_ips"`
 	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https"`
 	RawRedirectURL     string   `flag:"redirect-url" cfg:"redirect_url"`
 	ClientID           string   `flag:"client-id" cfg:"client_id"`
@@ -187,7 +187,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
 	flagSet.Bool("reverse-proxy", false, "are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted")
 	flagSet.String("real-client-ip-header", "X-Real-IP", "Header used to determine the real IP of the client (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP)")
-	flagSet.StringSlice("whitelist-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: IP whitelisting has inherent security flaws, read the configuration documentation for more information.")
+	flagSet.StringSlice("trusted-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: trusting by IP has inherent security flaws, read the configuration documentation for more information.")
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
