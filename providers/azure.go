@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -74,6 +75,9 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 	if p.ProtectedResource == nil || p.ProtectedResource.String() == "" {
 		p.ProtectedResource = azureDefaultProtectResourceURL
 	}
+	if p.ValidateURL == nil || p.ValidateURL.String() == "" {
+		p.ValidateURL = p.ProfileURL
+	}
 
 	return &AzureProvider{
 		ProviderData: p,
@@ -103,6 +107,7 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
+// Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
@@ -123,6 +128,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s
 		params.Add("resource", p.ProtectedResource.String())
 	}
 
+	// blindly try json and x-www-form-urlencoded
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
@@ -150,6 +156,60 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s
 		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
 	}
+	return
+
+}
+
+// RefreshSessionIfNeeded checks if the session has expired and uses the
+// RefreshToken to fetch a new ID token if required
+func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+		return false, nil
+	}
+
+	origExpiration := s.ExpiresOn
+
+	err := p.redeemRefreshToken(ctx, s)
+
+	if err != nil {
+		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
+	}
+
+	fmt.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
+	return true, nil
+}
+
+func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
+	params := url.Values{}
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", p.ClientSecret)
+	params.Add("refresh_token", s.RefreshToken)
+	params.Add("grant_type", "refresh_token")
+
+	var jsonResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresOn    int64  `json:"expires_on,string"`
+		IDToken      string `json:"id_token"`
+	}
+
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalInto(&jsonResponse)
+
+	if err != nil {
+		return
+	}
+
+	expires := time.Unix(jsonResponse.ExpiresOn, 0)
+	s.AccessToken = jsonResponse.AccessToken
+	s.IDToken = jsonResponse.IDToken
+	s.RefreshToken = jsonResponse.RefreshToken
+	s.ExpiresOn = &expires
 	return
 }
 
@@ -218,4 +278,9 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 	}
 	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
 	return a.String()
+}
+
+// ValidateSessionState validates the AccessToken
+func (p *AzureProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeAzureHeader(s.AccessToken))
 }
