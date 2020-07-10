@@ -309,7 +309,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
 			trustedIPs.AddIPNet(*ipNet)
 		} else {
-			return nil, fmt.Errorf("Could not parse IP network (%s)", ipStr)
+			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
 		}
 	}
 
