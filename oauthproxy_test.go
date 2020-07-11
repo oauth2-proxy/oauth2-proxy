@@ -1461,19 +1461,24 @@ type SignatureAuthenticator struct {
 }
 
 func (v *SignatureAuthenticator) Authenticate(w http.ResponseWriter, r *http.Request) {
-	var err error
 	result, headerSig, computedSig := v.auth.AuthenticateRequest(r)
-	if result == hmacauth.ResultNoSignature {
-		_, err = w.Write([]byte("no signature received"))
-	} else if result == hmacauth.ResultMatch {
-		_, err = w.Write([]byte("signatures match"))
-	} else if result == hmacauth.ResultMismatch {
-		_, err = w.Write([]byte("signatures do not match:" +
-			"\n  received: " + headerSig +
-			"\n  computed: " + computedSig))
-	} else {
+
+	var msg string
+	switch result {
+	case hmacauth.ResultNoSignature:
+		msg = "no signature received"
+	case hmacauth.ResultMatch:
+		msg = "signatures match"
+	case hmacauth.ResultMismatch:
+		msg = fmt.Sprintf(
+			"signatures do not match:\n  received: %s\n  computed: %s",
+			headerSig,
+			computedSig)
+	default:
 		panic("unknown result value: " + result.String())
 	}
+
+	_, err := w.Write([]byte(msg))
 	if err != nil {
 		panic(err)
 	}

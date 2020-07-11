@@ -71,7 +71,7 @@ func legacyStoreValue(value string, ticketSecret []byte) ([]byte, error) {
 	ciphertext := make([]byte, len(value))
 	block, err := aes.NewCipher(ticketSecret)
 	if err != nil {
-		return nil, fmt.Errorf("error initiating cipher block %s", err)
+		return nil, fmt.Errorf("error initiating cipher block: %v", err)
 	}
 
 	// Use secret as the Initialization Vector too, because each entry has it's own key
