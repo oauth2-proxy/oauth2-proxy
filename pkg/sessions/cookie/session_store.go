@@ -39,7 +39,7 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 		now := time.Now()
 		ss.CreatedAt = &now
 	}
-	value, err := cookieForSession(ss, s.CookieCipher)
+	value, err := s.cookieForSession(ss)
 	if err != nil {
 		return err
 	}
@@ -85,8 +85,17 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 }
 
 // cookieForSession serializes a session state for storage in a cookie
-func cookieForSession(s *sessions.SessionState, c encryption.Cipher) ([]byte, error) {
-	return s.EncodeSessionState(c, true)
+func (s *SessionStore) cookieForSession(ss *sessions.SessionState) ([]byte, error) {
+	if s.Cookie.Minimal && (ss.AccessToken != "" || ss.IDToken != "" || ss.RefreshToken != "") {
+		minimal := *ss
+		minimal.AccessToken = ""
+		minimal.IDToken = ""
+		minimal.RefreshToken = ""
+
+		return minimal.EncodeSessionState(s.CookieCipher, true)
+	}
+
+	return ss.EncodeSessionState(s.CookieCipher, true)
 }
 
 // sessionFromCookie deserializes a session from a cookie value

@@ -27,6 +27,7 @@ import (
 // are of the correct format
 func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
+	msgs = append(msgs, validateCookieMinimal(o)...)
 
 	if o.SSLInsecureSkipVerify {
 		insecureTransport := &http.Transport{

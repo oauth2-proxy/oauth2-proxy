@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
@@ -65,4 +66,29 @@ func validateCookieSecret(secret string) []string {
 		"cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is %d bytes",
 		len(secretBytes)),
 	}
+}
+
+func validateCookieMinimal(o *options.Options) []string {
+	if !o.Cookie.Minimal {
+		return []string{}
+	}
+
+	msgs := []string{}
+	if o.PassAuthorization {
+		msgs = append(msgs,
+			"pass_authorization_header requires oauth tokens in sessions. cookie_minimal cannot be set")
+	}
+	if o.SetAuthorization {
+		msgs = append(msgs,
+			"set_authorization_header requires oauth tokens in sessions. cookie_minimal cannot be set")
+	}
+	if o.PassAccessToken {
+		msgs = append(msgs,
+			"pass_access_token requires oauth tokens in sessions. cookie_minimal cannot be set")
+	}
+	if o.Cookie.Refresh != time.Duration(0) {
+		msgs = append(msgs,
+			"cookie_refresh > 0 requires oauth tokens in sessions. cookie_minimal cannot be set")
+	}
+	return msgs
 }

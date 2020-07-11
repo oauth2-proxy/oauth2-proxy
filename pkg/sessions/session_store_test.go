@@ -45,6 +45,7 @@ var _ = Describe("NewSessionStore", func() {
 			Secure:   true,
 			HTTPOnly: true,
 			SameSite: "",
+			Minimal:  false,
 		}
 	})
 
