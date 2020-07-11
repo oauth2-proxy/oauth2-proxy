@@ -26,7 +26,7 @@ import (
 // when a V5 encoded session is in Redis
 //
 // TODO: Remove when this is deprecated (likely V7)
-func TestLegacyV5DecodeSession(t *testing.T) {
+func Test_legacyV5DecodeSession(t *testing.T) {
 	testCases, _, legacyCipher := sessionsapi.CreateLegacyV5TestCases(t)
 
 	for testName, tc := range testCases {
@@ -44,7 +44,7 @@ func TestLegacyV5DecodeSession(t *testing.T) {
 			encrypted, err := legacyStoreValue(tc.Input, ticket.Secret)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			ss, err := LegacyV5DecodeSession(encrypted, ticket, legacyCipher)
+			ss, err := legacyV5DecodeSession(encrypted, ticket, legacyCipher)
 			if tc.Error {
 				g.Expect(err).To(HaveOccurred())
 				g.Expect(ss).To(BeNil())

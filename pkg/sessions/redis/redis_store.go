@@ -273,14 +273,14 @@ func (store *SessionStore) loadSessionFromTicket(ctx context.Context, value stri
 		// the authentication check part of AES GCM encryption.
 		// In that case, we can attempt to fallback to try a legacy load
 		legacyCipher := encryption.NewBase64Cipher(store.CookieCipher)
-		return LegacyV5DecodeSession(resultBytes, ticket, legacyCipher)
+		return legacyV5DecodeSession(resultBytes, ticket, legacyCipher)
 	}
 	return session, nil
 }
 
-// LegacyV5DecodeSession loads the session based on the ticket value
+// legacyV5DecodeSession loads the session based on the ticket value
 // This fallback uses V5 style encryption of Base64 + AES CFB
-func LegacyV5DecodeSession(resultBytes []byte, ticket *TicketData, c encryption.Cipher) (*sessions.SessionState, error) {
+func legacyV5DecodeSession(resultBytes []byte, ticket *TicketData, c encryption.Cipher) (*sessions.SessionState, error) {
 	block, err := aes.NewCipher(ticket.Secret)
 	if err != nil {
 		return nil, err
