@@ -2,10 +2,11 @@ package validation
 
 import (
 	"fmt"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"net/http"
 	"sort"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
 func validateCookie(o options.Cookie) []string {

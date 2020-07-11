@@ -31,3 +31,12 @@ type RedisStoreOptions struct {
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
 }
+
+func sessionOptionsDefaults() SessionOptions {
+	return SessionOptions{
+		Type: CookieSessionStoreType,
+		Cookie: CookieStoreOptions{
+			Minimal: false,
+		},
+	}
+}

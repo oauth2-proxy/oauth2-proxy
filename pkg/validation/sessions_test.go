@@ -8,12 +8,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func Test_validateCookieSessionMinimal(t *testing.T) {
+func Test_validateSessionCookieMinimal(t *testing.T) {
 	const (
-		passAuthorizationMsg = "pass_authorization_header requires oauth tokens in sessions. cookie_minimal cannot be set"
-		setAuthorizationMsg  = "set_authorization_header requires oauth tokens in sessions. cookie_minimal cannot be set"
-		passAccessTokenMsg   = "pass_access_token requires oauth tokens in sessions. cookie_minimal cannot be set"
-		cookieRefreshMsg     = "cookie_refresh > 0 requires oauth tokens in sessions. cookie_minimal cannot be set"
+		passAuthorizationMsg = "pass_authorization_header requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		setAuthorizationMsg  = "set_authorization_header requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		passAccessTokenMsg   = "pass_access_token requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		cookieRefreshMsg     = "cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set"
 	)
 
 	testCases := map[string]struct {
@@ -113,7 +113,7 @@ func Test_validateCookieSessionMinimal(t *testing.T) {
 
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			errStrings := validateCookieSessionMinimal(tc.opts)
+			errStrings := validateSessionCookieMinimal(tc.opts)
 			g := NewWithT(t)
 			g.Expect(errStrings).To(ConsistOf(tc.errStrings))
 		})

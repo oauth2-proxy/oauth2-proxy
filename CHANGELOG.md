@@ -11,7 +11,7 @@
 
 ## Changes since v6.0.0
 
-- [#673](https://github.com/oauth2-proxy/oauth2-proxy/pull/673) Add --cookie-minimal option to create session cookies with no tokens (@NickMeves)
+- [#673](https://github.com/oauth2-proxy/oauth2-proxy/pull/673) Add --session-cookie-minimal option to create session cookies with no tokens (@NickMeves)
 - [#632](https://github.com/oauth2-proxy/oauth2-proxy/pull/632) Reduce session size by encoding with MessagePack and using LZ4 compression (@NickMeves)
 - [#675](https://github.com/oauth2-proxy/oauth2-proxy/pull/675) Fix required ruby version and deprecated option for building docs (@mkontani)
 - [#669](https://github.com/oauth2-proxy/oauth2-proxy/pull/669) Reduce docker context to improve build times (@JoelSpeed)
