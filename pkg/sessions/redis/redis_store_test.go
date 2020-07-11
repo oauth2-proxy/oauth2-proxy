@@ -1,8 +1,10 @@
-package redis_test
+package redis
 
 import (
 	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -15,36 +17,40 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	redissession "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/tests"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/assert"
 )
 
+// TestLegacyV5DecodeSession tests the fallback to LegacyV5DecodeSession
+// when a V5 encoded session is in Redis
+//
+// TODO: Remove when this is deprecated (likely V7)
 func TestLegacyV5DecodeSession(t *testing.T) {
-	testCases, _, legacyCipher := tests.CreateLegacyV5TestCases(t)
+	testCases, _, legacyCipher := sessionsapi.CreateLegacyV5TestCases(t)
 
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
+			g := NewWithT(t)
+
 			secret := make([]byte, aes.BlockSize)
 			_, err := io.ReadFull(rand.Reader, secret)
-			assert.NoError(t, err)
-			ticket := &redissession.TicketData{
+			g.Expect(err).ToNot(HaveOccurred())
+			ticket := &TicketData{
 				TicketID: "",
 				Secret:   secret,
 			}
 
-			encrypted, err := tests.LegacyStoreValue(tc.Input, ticket)
-			assert.NoError(t, err)
+			encrypted, err := legacyStoreValue(tc.Input, ticket.Secret)
+			g.Expect(err).ToNot(HaveOccurred())
 
-			ss, err := redissession.LegacyV5DecodeSession(encrypted, ticket, legacyCipher)
+			ss, err := LegacyV5DecodeSession(encrypted, ticket, legacyCipher)
 			if tc.Error {
-				assert.Error(t, err)
-				assert.Nil(t, ss)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(ss).To(BeNil())
 				return
 			}
-			assert.NoError(t, err)
+			g.Expect(err).ToNot(HaveOccurred())
 
 			// Compare sessions without *time.Time fields
 			exp := *tc.Output
@@ -53,9 +59,26 @@ func TestLegacyV5DecodeSession(t *testing.T) {
 			act := *ss
 			act.CreatedAt = nil
 			act.ExpiresOn = nil
-			assert.Equal(t, exp, act)
+			g.Expect(exp).To(Equal(act))
 		})
 	}
+}
+
+// legacyStoreValue implements the legacy V5 Redis store AES-CFB value encryption
+//
+// TODO: Remove when this is deprecated (likely V7)
+func legacyStoreValue(value string, ticketSecret []byte) ([]byte, error) {
+	ciphertext := make([]byte, len(value))
+	block, err := aes.NewCipher(ticketSecret)
+	if err != nil {
+		return nil, fmt.Errorf("error initiating cipher block %s", err)
+	}
+
+	// Use secret as the Initialization Vector too, because each entry has it's own key
+	stream := cipher.NewCFBEncrypter(block, ticketSecret)
+	stream.XORKeyStream(ciphertext, []byte(value))
+
+	return ciphertext, nil
 }
 
 func TestSessionStore(t *testing.T) {
@@ -91,7 +114,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 	JustAfterEach(func() {
 		// Release any connections immediately after the test ends
-		if redisStore, ok := ss.(*redissession.SessionStore); ok {
+		if redisStore, ok := ss.(*SessionStore); ok {
 			if redisStore.Client != nil {
 				Expect(redisStore.Client.(closer).Close()).To(Succeed())
 			}
@@ -106,7 +129,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 			// Capture the session store so that we can close the client
 			var err error
-			ss, err = redissession.NewRedisSessionStore(opts, cookieOpts)
+			ss, err = NewRedisSessionStore(opts, cookieOpts)
 			return ss, err
 		},
 		func(d time.Duration) error {
@@ -138,7 +161,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 				// Capture the session store so that we can close the client
 				var err error
-				ss, err = redissession.NewRedisSessionStore(opts, cookieOpts)
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
 				return ss, err
 			},
 			func(d time.Duration) error {
@@ -158,7 +181,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 				// Capture the session store so that we can close the client
 				var err error
-				ss, err = redissession.NewRedisSessionStore(opts, cookieOpts)
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
 				return ss, err
 			},
 			func(d time.Duration) error {

@@ -1,15 +1,14 @@
-package sessions_test
+package sessions
 
 import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	mathrand "math/rand"
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/tests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,18 +17,18 @@ func timePtr(t time.Time) *time.Time {
 }
 
 func TestIsExpired(t *testing.T) {
-	s := &sessions.SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(-1) * time.Minute))}
+	s := &SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(-1) * time.Minute))}
 	assert.Equal(t, true, s.IsExpired())
 
-	s = &sessions.SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(1) * time.Minute))}
+	s = &SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(1) * time.Minute))}
 	assert.Equal(t, false, s.IsExpired())
 
-	s = &sessions.SessionState{}
+	s = &SessionState{}
 	assert.Equal(t, false, s.IsExpired())
 }
 
 func TestAge(t *testing.T) {
-	ss := &sessions.SessionState{}
+	ss := &SessionState{}
 
 	// Created at unset so should be 0
 	assert.Equal(t, time.Duration(0), ss.Age())
@@ -49,7 +48,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 	// Otherwise compressing small payloads could result in a compressed value
 	// that is larger (compression dictionary + limited like strings to compress)
 	// which breaks the len(compressed) < len(uncompressed) assertion.
-	testCases := map[string]sessions.SessionState{
+	testCases := map[string]SessionState{
 		"Full session": {
 			Email:             "username@example.com",
 			User:              "username",
@@ -120,9 +119,9 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 							// Make sure compressed version is smaller than if not compressed
 							assert.Greater(t, len(encoded), len(encodedCompressed))
 
-							decoded, err := sessions.DecodeSessionState(encoded, c, false)
+							decoded, err := DecodeSessionState(encoded, c, false)
 							assert.NoError(t, err)
-							decodedCompressed, err := sessions.DecodeSessionState(encodedCompressed, c, true)
+							decodedCompressed, err := DecodeSessionState(encodedCompressed, c, true)
 							assert.NoError(t, err)
 
 							compareSessionStates(t, decoded, decodedCompressed)
@@ -137,12 +136,12 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 					t.Run(testName, func(t *testing.T) {
 						cfbEncoded, err := ss.EncodeSessionState(cfb, false)
 						assert.NoError(t, err)
-						_, err = sessions.DecodeSessionState(cfbEncoded, gcm, false)
+						_, err = DecodeSessionState(cfbEncoded, gcm, false)
 						assert.Error(t, err)
 
 						gcmEncoded, err := ss.EncodeSessionState(gcm, false)
 						assert.NoError(t, err)
-						_, err = sessions.DecodeSessionState(gcmEncoded, cfb, false)
+						_, err = DecodeSessionState(gcmEncoded, cfb, false)
 						assert.Error(t, err)
 					})
 				}
@@ -152,19 +151,21 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 }
 
 // TestLegacyV5DecodeSessionState confirms V5 JSON sessions decode
+//
+// TODO: Remove when this is deprecated (likely V7)
 func TestLegacyV5DecodeSessionState(t *testing.T) {
-	testCases, cipher, legacyCipher := tests.CreateLegacyV5TestCases(t)
+	testCases, cipher, legacyCipher := CreateLegacyV5TestCases(t)
 
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			// Legacy sessions fail in DecodeSessionState which results in
 			// the fallback to LegacyV5DecodeSessionState
-			_, err := sessions.DecodeSessionState([]byte(tc.Input), cipher, false)
+			_, err := DecodeSessionState([]byte(tc.Input), cipher, false)
 			assert.Error(t, err)
-			_, err = sessions.DecodeSessionState([]byte(tc.Input), cipher, true)
+			_, err = DecodeSessionState([]byte(tc.Input), cipher, true)
 			assert.Error(t, err)
 
-			ss, err := sessions.LegacyV5DecodeSessionState(tc.Input, legacyCipher)
+			ss, err := LegacyV5DecodeSessionState(tc.Input, legacyCipher)
 			if tc.Error {
 				assert.Error(t, err)
 				assert.Nil(t, ss)
@@ -176,7 +177,52 @@ func TestLegacyV5DecodeSessionState(t *testing.T) {
 	}
 }
 
-func compareSessionStates(t *testing.T, expected *sessions.SessionState, actual *sessions.SessionState) {
+// Test_into tests the into helper function used in LegacyV5DecodeSessionState
+//
+// TODO: Remove when this is deprecated (likely V7)
+func Test_into(t *testing.T) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	// Test all 3 valid AES sizes
+	for _, secretSize := range []int{16, 24, 32} {
+		t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
+			secret := make([]byte, secretSize)
+			_, err := io.ReadFull(rand.Reader, secret)
+			assert.Equal(t, nil, err)
+
+			cfb, err := encryption.NewCFBCipher(secret)
+			assert.NoError(t, err)
+			c := encryption.NewBase64Cipher(cfb)
+
+			// Check no errors with empty or nil strings
+			empty := ""
+			assert.Equal(t, nil, into(&empty, c.Encrypt))
+			assert.Equal(t, nil, into(&empty, c.Decrypt))
+			assert.Equal(t, nil, into(nil, c.Encrypt))
+			assert.Equal(t, nil, into(nil, c.Decrypt))
+
+			// Test various sizes tokens might be
+			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
+				t.Run(fmt.Sprintf("%d", dataSize), func(t *testing.T) {
+					b := make([]byte, dataSize)
+					for i := range b {
+						b[i] = charset[mathrand.Intn(len(charset))]
+					}
+					data := string(b)
+					originalData := data
+
+					assert.Equal(t, nil, into(&data, c.Encrypt))
+					assert.NotEqual(t, originalData, data)
+
+					assert.Equal(t, nil, into(&data, c.Decrypt))
+					assert.Equal(t, originalData, data)
+				})
+			}
+		})
+	}
+}
+
+func compareSessionStates(t *testing.T, expected *SessionState, actual *SessionState) {
 	if expected.CreatedAt != nil {
 		assert.NotNil(t, actual.CreatedAt)
 		assert.Equal(t, true, expected.CreatedAt.Equal(*actual.CreatedAt))
