@@ -241,6 +241,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
+	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
 	flagSet.Bool("redis-use-sentinel", false, "Connect to redis via sentinels. Must set --redis-sentinel-master-name and --redis-sentinel-connection-urls to use this feature")
 	flagSet.String("redis-sentinel-master-name", "", "Redis sentinel master name. Used in conjunction with --redis-use-sentinel")

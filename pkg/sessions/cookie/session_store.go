@@ -30,6 +30,7 @@ var _ sessions.SessionStore = &SessionStore{}
 type SessionStore struct {
 	Cookie       *options.Cookie
 	CookieCipher encryption.Cipher
+	Minimal      bool
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -86,7 +87,7 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 
 // cookieForSession serializes a session state for storage in a cookie
 func (s *SessionStore) cookieForSession(ss *sessions.SessionState) ([]byte, error) {
-	if s.Cookie.Minimal && (ss.AccessToken != "" || ss.IDToken != "" || ss.RefreshToken != "") {
+	if s.Minimal && (ss.AccessToken != "" || ss.IDToken != "" || ss.RefreshToken != "") {
 		minimal := *ss
 		minimal.AccessToken = ""
 		minimal.IDToken = ""
@@ -155,6 +156,7 @@ func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Coo
 	return &SessionStore{
 		CookieCipher: cipher,
 		Cookie:       cookieOpts,
+		Minimal:      opts.Cookie.Minimal,
 	}, nil
 }
 

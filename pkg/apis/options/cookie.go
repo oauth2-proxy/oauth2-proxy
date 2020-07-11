@@ -17,7 +17,6 @@ type Cookie struct {
 	Secure   bool          `flag:"cookie-secure" cfg:"cookie_secure"`
 	HTTPOnly bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
 	SameSite string        `flag:"cookie-samesite" cfg:"cookie_samesite"`
-	Minimal  bool          `flag:"cookie-minimal" cfg:"cookie_minimal"`
 }
 
 func cookieFlagSet() *pflag.FlagSet {
@@ -32,7 +31,6 @@ func cookieFlagSet() *pflag.FlagSet {
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 	flagSet.String("cookie-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
-	flagSet.Bool("cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed")
 
 	return flagSet
 }
@@ -49,6 +47,5 @@ func cookieDefaults() Cookie {
 		Secure:   true,
 		HTTPOnly: true,
 		SameSite: "",
-		Minimal:  false,
 	}
 }
