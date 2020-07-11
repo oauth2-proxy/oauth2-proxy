@@ -225,6 +225,16 @@ func Validate(o *options.Options) error {
 		})
 	}
 
+	if len(o.TrustedIPs) > 0 && o.ReverseProxy {
+		fmt.Fprintln(os.Stderr, "WARNING: trusting of IPs with --reverse-proxy poses risks if a header spoofing attack is possible.")
+	}
+
+	for i, ipStr := range o.TrustedIPs {
+		if nil == ip.ParseIPNet(ipStr) {
+			msgs = append(msgs, fmt.Sprintf("trusted_ips[%d] (%s) could not be recognized", i, ipStr))
+		}
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))

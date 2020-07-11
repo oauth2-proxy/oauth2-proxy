@@ -1892,3 +1892,166 @@ func baseTestOptions() *options.Options {
 	opts.EmailDomains = []string{"*"}
 	return opts
 }
+
+func TestTrustedIPs(t *testing.T) {
+	tests := []struct {
+		name               string
+		trustedIPs         []string
+		reverseProxy       bool
+		realClientIPHeader string
+		req                *http.Request
+		expectTrusted      bool
+	}{
+		// Check unconfigured behavior.
+		{
+			name:               "Default",
+			trustedIPs:         nil,
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check using req.RemoteAddr (Options.ReverseProxy == false).
+		{
+			name:               "WithRemoteAddr",
+			trustedIPs:         []string{"127.0.0.1"},
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "127.0.0.1:43670"
+				return req
+			}(),
+			expectTrusted: true,
+		},
+		// Check ignores req.RemoteAddr match when behind a reverse proxy / missing header.
+		{
+			name:               "IgnoresRemoteAddrInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "127.0.0.1:44324"
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check successful trusting of localhost in IPv4.
+		{
+			name:               "TrustsLocalhostInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "127.0.0.1")
+				return req
+			}(),
+			expectTrusted: true,
+		},
+		// Check successful trusting of localhost in IPv6.
+		{
+			name:               "TrustsIP6LocalostInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "::1")
+				return req
+			}(),
+			expectTrusted: true,
+		},
+		// Check does not trust random IPv4 address.
+		{
+			name:               "DoesNotTrustRandomIP4Address",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "12.34.56.78")
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check does not trust random IPv6 address.
+		{
+			name:               "DoesNotTrustRandomIP6Address",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "::2")
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check respects correct header.
+		{
+			name:               "RespectsCorrectHeaderInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Real-IP", "::1")
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check doesn't trust if garbage is provided.
+		{
+			name:               "DoesNotTrustGarbageInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "adsfljk29242as!!")
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check doesn't trust if garbage is provided (no reverse-proxy).
+		{
+			name:               "DoesNotTrustGarbage",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "adsfljk29242as!!"
+				return req
+			}(),
+			expectTrusted: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := baseTestOptions()
+			opts.Upstreams = []string{"static://200"}
+			opts.TrustedIPs = tt.trustedIPs
+			opts.ReverseProxy = tt.reverseProxy
+			opts.RealClientIPHeader = tt.realClientIPHeader
+			validation.Validate(opts)
+
+			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			assert.NoError(t, err)
+			rw := httptest.NewRecorder()
+
+			proxy.ServeHTTP(rw, tt.req)
+			if tt.expectTrusted {
+				assert.Equal(t, 200, rw.Code)
+			} else {
+				assert.Equal(t, 403, rw.Code)
+			}
+		})
+	}
+}

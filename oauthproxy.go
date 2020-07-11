@@ -117,6 +117,7 @@ type OAuthProxy struct {
 	compiledRegex           []*regexp.Regexp
 	templates               *template.Template
 	realClientIPParser      ipapi.RealClientIPParser
+	trustedIPs              *ip.NetSet
 	Banner                  string
 	Footer                  string
 }
@@ -303,6 +304,15 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
+	trustedIPs := ip.NewNetSet()
+	for _, ipStr := range opts.TrustedIPs {
+		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
+			trustedIPs.AddIPNet(*ipNet)
+		} else {
+			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
+		}
+	}
+
 	return &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
@@ -349,6 +359,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PreferEmailToUser:       opts.PreferEmailToUser,
 		SkipProviderButton:      opts.SkipProviderButton,
 		templates:               loadTemplates(opts.CustomTemplatesDir),
+		trustedIPs:              trustedIPs,
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
 	}, nil
@@ -650,7 +661,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 // IsWhitelistedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsWhitelistedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path)
+	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path) || p.IsTrustedIP(req)
 }
 
 // IsWhitelistedPath is used to check if the request path is allowed without auth
@@ -676,6 +687,26 @@ func prepareNoCache(w http.ResponseWriter) {
 	for k, v := range noCacheHeaders {
 		w.Header().Set(k, v)
 	}
+}
+
+// IsTrustedIP is used to check if a request comes from a trusted client IP address.
+func (p *OAuthProxy) IsTrustedIP(req *http.Request) bool {
+	if p.trustedIPs == nil {
+		return false
+	}
+
+	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
+	if err != nil {
+		logger.Printf("Error obtaining real IP for trusted IP list: %v", err)
+		// Possibly spoofed X-Real-IP header
+		return false
+	}
+
+	if remoteAddr == nil {
+		return false
+	}
+
+	return p.trustedIPs.Has(remoteAddr)
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {

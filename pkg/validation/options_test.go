@@ -2,6 +2,7 @@ package validation
 
 import (
 	"crypto"
+	"errors"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -350,6 +351,45 @@ func TestRealClientIPHeader(t *testing.T) {
 	})
 	assert.Equal(t, expected, err.Error())
 	assert.Nil(t, o.GetRealClientIPParser())
+}
+
+func TestIPCIDRSetOption(t *testing.T) {
+	tests := []struct {
+		name       string
+		trustedIPs []string
+		err        error
+	}{
+		{
+			"TestSomeIPs",
+			[]string{"127.0.0.1", "10.32.0.1/32", "43.36.201.0/24", "::1", "2a12:105:ee7:9234:0:0:0:0/64"},
+			nil,
+		}, {
+			"TestOverlappingIPs",
+			[]string{"135.180.78.199", "135.180.78.199/32", "d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4", "d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4/128"},
+			nil,
+		}, {
+			"TestInvalidIPs",
+			[]string{"[::1]", "alkwlkbn/32"},
+			errors.New(
+				"invalid configuration:\n" +
+					"  trusted_ips[0] ([::1]) could not be recognized\n" +
+					"  trusted_ips[1] (alkwlkbn/32) could not be recognized",
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := testOptions()
+			o.TrustedIPs = tt.trustedIPs
+			err := Validate(o)
+			if tt.err == nil {
+				assert.Nil(t, err)
+			} else {
+				assert.Equal(t, tt.err.Error(), err.Error())
+			}
+		})
+	}
 }
 
 func TestProviderCAFilesError(t *testing.T) {

@@ -21,21 +21,22 @@ type SignatureData struct {
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix        string `flag:"proxy-prefix" cfg:"proxy_prefix"`
-	PingPath           string `flag:"ping-path" cfg:"ping_path"`
-	PingUserAgent      string `flag:"ping-user-agent" cfg:"ping_user_agent"`
-	ProxyWebSockets    bool   `flag:"proxy-websockets" cfg:"proxy_websockets"`
-	HTTPAddress        string `flag:"http-address" cfg:"http_address"`
-	HTTPSAddress       string `flag:"https-address" cfg:"https_address"`
-	ReverseProxy       bool   `flag:"reverse-proxy" cfg:"reverse_proxy"`
-	RealClientIPHeader string `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
-	ForceHTTPS         bool   `flag:"force-https" cfg:"force_https"`
-	RawRedirectURL     string `flag:"redirect-url" cfg:"redirect_url"`
-	ClientID           string `flag:"client-id" cfg:"client_id"`
-	ClientSecret       string `flag:"client-secret" cfg:"client_secret"`
-	ClientSecretFile   string `flag:"client-secret-file" cfg:"client_secret_file"`
-	TLSCertFile        string `flag:"tls-cert-file" cfg:"tls_cert_file"`
-	TLSKeyFile         string `flag:"tls-key-file" cfg:"tls_key_file"`
+	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
+	PingPath           string   `flag:"ping-path" cfg:"ping_path"`
+	PingUserAgent      string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
+	ProxyWebSockets    bool     `flag:"proxy-websockets" cfg:"proxy_websockets"`
+	HTTPAddress        string   `flag:"http-address" cfg:"http_address"`
+	HTTPSAddress       string   `flag:"https-address" cfg:"https_address"`
+	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
+	RealClientIPHeader string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
+	TrustedIPs         []string `flag:"trusted-ip" cfg:"trusted_ips"`
+	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https"`
+	RawRedirectURL     string   `flag:"redirect-url" cfg:"redirect_url"`
+	ClientID           string   `flag:"client-id" cfg:"client_id"`
+	ClientSecret       string   `flag:"client-secret" cfg:"client_secret"`
+	ClientSecretFile   string   `flag:"client-secret-file" cfg:"client_secret_file"`
+	TLSCertFile        string   `flag:"tls-cert-file" cfg:"tls_cert_file"`
+	TLSKeyFile         string   `flag:"tls-key-file" cfg:"tls_key_file"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group"`
@@ -186,6 +187,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
 	flagSet.Bool("reverse-proxy", false, "are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted")
 	flagSet.String("real-client-ip-header", "X-Real-IP", "Header used to determine the real IP of the client (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP)")
+	flagSet.StringSlice("trusted-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: trusting by IP has inherent security flaws, read the configuration documentation for more information.")
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")

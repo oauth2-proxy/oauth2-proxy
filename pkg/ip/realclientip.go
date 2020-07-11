@@ -58,6 +58,14 @@ func (p xForwardedForClientIPParser) GetRealClientIP(h http.Header) (net.IP, err
 	return ip, nil
 }
 
+// GetClientIP obtains the perceived end-user IP address from headers if p != nil else from req.RemoteAddr.
+func GetClientIP(p ipapi.RealClientIPParser, req *http.Request) (net.IP, error) {
+	if p != nil {
+		return p.GetRealClientIP(req.Header)
+	}
+	return getRemoteIP(req)
+}
+
 // getRemoteIP obtains the IP of the low-level connected network host
 func getRemoteIP(req *http.Request) (net.IP, error) {
 	if ipStr, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
