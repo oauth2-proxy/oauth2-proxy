@@ -3,6 +3,7 @@ package sessions
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/pierrec/lz4"
-	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack/v4"
 )
 
@@ -68,7 +68,7 @@ func (s *SessionState) String() string {
 func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([]byte, error) {
 	packed, err := msgpack.Marshal(s)
 	if err != nil {
-		return nil, errors.Wrap(err, "error marshalling session state to msgpack")
+		return nil, fmt.Errorf("error marshalling session state to msgpack: %w", err)
 	}
 
 	if !compress {
@@ -86,7 +86,7 @@ func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([
 func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*SessionState, error) {
 	decrypted, err := c.Decrypt(data)
 	if err != nil {
-		return nil, errors.Wrap(err, "error decrypting the session state")
+		return nil, fmt.Errorf("error decrypting the session state: %w", err)
 	}
 
 	packed := decrypted
@@ -100,7 +100,7 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 	var ss SessionState
 	err = msgpack.Unmarshal(packed, &ss)
 	if err != nil {
-		return nil, errors.Wrap(err, "error unmarshalling data to session state")
+		return nil, fmt.Errorf("error unmarshalling data to session state: %w", err)
 	}
 
 	err = ss.validate()
@@ -157,8 +157,11 @@ func into(s *string, f codecFunc) error {
 	return nil
 }
 
-// Compress & Decompress with LZ4
+// lz4Compress compresses with LZ4
+//
 // The Compress:Decompress ratio is 1:Many. LZ4 gives fastest decompress speeds
+// at the expense of greater compression compared to other compression
+// algorithms.
 func lz4Compress(payload []byte) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	zw := lz4.NewWriter(nil)
@@ -171,21 +174,22 @@ func lz4Compress(payload []byte) ([]byte, error) {
 	reader := bytes.NewReader(payload)
 	_, err := io.Copy(zw, reader)
 	if err != nil {
-		return nil, errors.Wrap(err, "error copying lz4 stream to buffer")
+		return nil, fmt.Errorf("error copying lz4 stream to buffer: %w", err)
 	}
 	err = zw.Close()
 	if err != nil {
-		return nil, errors.Wrap(err, "error closing lz4 writer")
+		return nil, fmt.Errorf("error closing lz4 writer: %w", err)
 	}
 
 	compressed, err := ioutil.ReadAll(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "error reading lz4 buffer")
+		return nil, fmt.Errorf("error reading lz4 buffer: %w", err)
 	}
 
 	return compressed, nil
 }
 
+// lz4Decompress decompresses with LZ4
 func lz4Decompress(compressed []byte) ([]byte, error) {
 	reader := bytes.NewReader(compressed)
 	buf := new(bytes.Buffer)
@@ -193,17 +197,27 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 	zr.Reset(reader)
 	_, err := io.Copy(buf, zr)
 	if err != nil {
-		return nil, errors.Wrap(err, "error copying lz4 stream to buffer")
+		return nil, fmt.Errorf("error copying lz4 stream to buffer: %w", err)
 	}
 
 	payload, err := ioutil.ReadAll(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "error reading lz4 buffer")
+		return nil, fmt.Errorf("error reading lz4 buffer: %w", err)
 	}
 
 	return payload, nil
 }
 
+// validate ensures the decoded session is non-empty and contains valid data
+//
+// Non-empty check is needed due to ensure the non-authenticated AES-CFB
+// decryption doesn't result in garbage data that collides with a valid
+// MessagePack header bytes (which MessagePack will unmarshal to an empty
+// default SessionState). <1% chance, but observed with random test data.
+//
+// UTF-8 check ensures the strings are valid and not raw bytes overloaded
+// into Latin-1 encoding. The occurs when legacy unencrypted fields are
+// decrypted with AES-CFB which results in random bytes.
 func (s *SessionState) validate() error {
 	for _, field := range []string{
 		s.User,

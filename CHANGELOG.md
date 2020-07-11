@@ -4,10 +4,10 @@
 
 ## Important Notes
 
-## Breaking Changes
-
 - [#632](https://github.com/oauth2-proxy/oauth2-proxy/pull/632) There is backwards compatibility to sessions from v5
   - Any unencrypted sessions from before v5 that only contained a Username & Email will trigger a reauthentication
+
+## Breaking Changes
 
 ## Changes since v6.0.0
 
