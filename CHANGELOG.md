@@ -22,6 +22,7 @@
 - [#635](https://github.com/oauth2-proxy/oauth2-proxy/pull/635) Support specifying alternative provider TLS trust source(s) (@k-wall)
 - [#649](https://github.com/oauth2-proxy/oauth2-proxy/pull/650) Resolve an issue where an empty healthcheck URL and ping-user-agent returns the healthcheck response (@jordancrawfordnz)
 - [#662](https://github.com/oauth2-proxy/oauth2-proxy/pull/662) Do not add Cache-Control header to response from auth only endpoint (@johejo)
+- [#552](https://github.com/oauth2-proxy/oauth2-proxy/pull/522) Implements --trusted-ip option to allow clients behind specified IPs or CIDR ranges to bypass authentication (@Izzette)
 
 # v6.0.0
 
@@ -94,7 +95,6 @@
 
 ## Changes since v5.1.1
 
-- [#552](https://github.com/oauth2-proxy/oauth2-proxy/pull/522) Implements --trusted-ip option to allow clients behind specified IPs or CIDR ranges to bypass authentication (@Izzette)
 - [GHSA-5m6c-jp6f-2vcv](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) New OpenRedirect cases have been found (@JoelSpeed)
 - [#639](https://github.com/oauth2-proxy/oauth2-proxy/pull/639) Change how gitlab-group is parsed on options (@linuxgemini)
 - [#615](https://github.com/oauth2-proxy/oauth2-proxy/pull/615) Kubernetes example based on Kind cluster and Nginx ingress (@EvgeniGordeev)
