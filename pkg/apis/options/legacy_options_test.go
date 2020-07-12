@@ -17,11 +17,11 @@ var _ = Describe("Legacy Options", func() {
 
 			// Set upstreams and related options to test their conversion
 			flushInterval := 5 * time.Second
-			legacyOpts.LegacyFlushInterval = flushInterval
-			legacyOpts.LegacyPassHostHeader = true
-			legacyOpts.LegacyProxyWebSockets = true
-			legacyOpts.LegacySSLUpstreamInsecureSkipVerify = true
-			legacyOpts.LegacyUpstreams = []string{"http://foo.bar/baz", "file://var/lib/website#/bar"}
+			legacyOpts.LegacyUpstreams.FlushInterval = flushInterval
+			legacyOpts.LegacyUpstreams.PassHostHeader = true
+			legacyOpts.LegacyUpstreams.ProxyWebSockets = true
+			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
+			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file://var/lib/website#/bar"}
 
 			opts.UpstreamServers = Upstreams{
 				{
@@ -133,7 +133,15 @@ var _ = Describe("Legacy Options", func() {
 
 		DescribeTable("convertLegacyUpstreams",
 			func(o *convertUpstreamsTableInput) {
-				upstreams, err := convertLegacyUpstreams(o.upstreamStrings, skipVerify, passHostHeader, proxyWebSockets, flushInterval)
+				legacyUpstreams := LegacyUpstreams{
+					Upstreams:                     o.upstreamStrings,
+					SSLUpstreamInsecureSkipVerify: skipVerify,
+					PassHostHeader:                passHostHeader,
+					ProxyWebSockets:               proxyWebSockets,
+					FlushInterval:                 flushInterval,
+				}
+
+				upstreams, err := legacyUpstreams.convert()
 
 				if o.errMsg != "" {
 					Expect(err).To(HaveOccurred())
