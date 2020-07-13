@@ -13,8 +13,9 @@ import (
 func TestEncodeAndDecodeAccessToken(t *testing.T) {
 	const secret = "0123456789abcdefghijklmnopqrstuv"
 	const token = "my access token"
-	c, err := NewBase64Cipher(NewCFBCipher, []byte(secret))
-	assert.Equal(t, nil, err)
+	cfb, err := NewCFBCipher([]byte(secret))
+	assert.NoError(t, err)
+	c := NewBase64Cipher(cfb)
 
 	encoded, err := c.Encrypt([]byte(token))
 	assert.Equal(t, nil, err)
@@ -32,8 +33,9 @@ func TestEncodeAndDecodeAccessTokenB64(t *testing.T) {
 
 	secret, err := base64.URLEncoding.DecodeString(secretBase64)
 	assert.Equal(t, nil, err)
-	c, err := NewBase64Cipher(NewCFBCipher, []byte(secret))
-	assert.Equal(t, nil, err)
+	cfb, err := NewCFBCipher([]byte(secret))
+	assert.NoError(t, err)
+	c := NewBase64Cipher(cfb)
 
 	encoded, err := c.Encrypt([]byte(token))
 	assert.Equal(t, nil, err)
@@ -64,8 +66,7 @@ func TestEncryptAndDecrypt(t *testing.T) {
 					cstd, err := initCipher(secret)
 					assert.Equal(t, nil, err)
 
-					cb64, err := NewBase64Cipher(initCipher, secret)
-					assert.Equal(t, nil, err)
+					cb64 := NewBase64Cipher(cstd)
 
 					ciphers := map[string]Cipher{
 						"Standard": cstd,

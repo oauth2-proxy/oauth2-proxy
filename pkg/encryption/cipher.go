@@ -21,12 +21,8 @@ type base64Cipher struct {
 
 // NewBase64Cipher returns a new AES Cipher for encrypting cookie values
 // and wrapping them in Base64 -- Supports Legacy encryption scheme
-func NewBase64Cipher(initCipher func([]byte) (Cipher, error), secret []byte) (Cipher, error) {
-	c, err := initCipher(secret)
-	if err != nil {
-		return nil, err
-	}
-	return &base64Cipher{Cipher: c}, nil
+func NewBase64Cipher(c Cipher) Cipher {
+	return &base64Cipher{Cipher: c}
 }
 
 // Encrypt encrypts a value with the embedded Cipher & Base64 encodes it

@@ -60,7 +60,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := sessionFromCookie(string(val), s.CookieCipher)
+	session, err := sessionFromCookie(val, s.CookieCipher)
 	if err != nil {
 		return nil, err
 	}
@@ -85,17 +85,26 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 }
 
 // cookieForSession serializes a session state for storage in a cookie
-func cookieForSession(s *sessions.SessionState, c encryption.Cipher) (string, error) {
-	return s.EncodeSessionState(c)
+func cookieForSession(s *sessions.SessionState, c encryption.Cipher) ([]byte, error) {
+	return s.EncodeSessionState(c, true)
 }
 
 // sessionFromCookie deserializes a session from a cookie value
-func sessionFromCookie(v string, c encryption.Cipher) (s *sessions.SessionState, err error) {
-	return sessions.DecodeSessionState(v, c)
+func sessionFromCookie(v []byte, c encryption.Cipher) (s *sessions.SessionState, err error) {
+	ss, err := sessions.DecodeSessionState(v, c, true)
+	// If anything fails (Decrypt, LZ4, MessagePack), try legacy JSON decode
+	// LZ4 will likely fail for wrong header after AES-CFB spits out garbage
+	// data from trying to decrypt JSON it things is ciphertext
+	if err != nil {
+		// Legacy used Base64 + AES CFB
+		legacyCipher := encryption.NewBase64Cipher(c)
+		return sessions.LegacyV5DecodeSessionState(string(v), legacyCipher)
+	}
+	return ss, nil
 }
 
 // setSessionCookie adds the user's session cookie to the response
-func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val string, created time.Time) {
+func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val []byte, created time.Time) {
 	for _, c := range s.makeSessionCookie(req, val, created) {
 		http.SetCookie(rw, c)
 	}
@@ -103,12 +112,12 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 
 // makeSessionCookie creates an http.Cookie containing the authenticated user's
 // authentication details
-func (s *SessionStore) makeSessionCookie(req *http.Request, value string, now time.Time) []*http.Cookie {
-	if value != "" {
-		value = encryption.SignedValue(s.Cookie.Secret, s.Cookie.Name, []byte(value), now)
+func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now time.Time) []*http.Cookie {
+	strValue := string(value)
+	if strValue != "" {
+		strValue = encryption.SignedValue(s.Cookie.Secret, s.Cookie.Name, value, now)
 	}
-	c := s.makeCookie(req, s.Cookie.Name, value, s.Cookie.Expire, now)
-
+	c := s.makeCookie(req, s.Cookie.Name, strValue, s.Cookie.Expire, now)
 	if len(c.String()) > maxCookieLength {
 		return splitCookie(c)
 	}
@@ -129,7 +138,7 @@ func (s *SessionStore) makeCookie(req *http.Request, name string, value string, 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
 // the configuration given
 func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
-	cipher, err := encryption.NewBase64Cipher(encryption.NewCFBCipher, encryption.SecretBytes(cookieOpts.Secret))
+	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(cookieOpts.Secret))
 	if err != nil {
 		return nil, fmt.Errorf("error initialising cipher: %v", err)
 	}
