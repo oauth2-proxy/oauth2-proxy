@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// legacyV5TestCase provides V5 JSON based test cases for legacy fallback code
-type legacyV5TestCase struct {
+// LegacyV5TestCase provides V5 JSON based test cases for legacy fallback code
+type LegacyV5TestCase struct {
 	Input  string
 	Error  bool
 	Output *SessionState
@@ -21,7 +21,7 @@ type legacyV5TestCase struct {
 // Used for `apis/sessions/session_state_test.go` & `sessions/redis/redis_store_test.go`
 //
 // TODO: Remove when this is deprecated (likely V7)
-func CreateLegacyV5TestCases(t *testing.T) (map[string]legacyV5TestCase, encryption.Cipher, encryption.Cipher) {
+func CreateLegacyV5TestCases(t *testing.T) (map[string]LegacyV5TestCase, encryption.Cipher, encryption.Cipher) {
 	const secret = "0123456789abcdefghijklmnopqrstuv"
 
 	created := time.Now()
@@ -37,7 +37,7 @@ func CreateLegacyV5TestCases(t *testing.T) (map[string]legacyV5TestCase, encrypt
 	assert.NoError(t, err)
 	legacyCipher := encryption.NewBase64Cipher(cfbCipher)
 
-	testCases := map[string]legacyV5TestCase{
+	testCases := map[string]LegacyV5TestCase{
 		"User & email unencrypted": {
 			Input: `{"Email":"user@domain.com","User":"just-user"}`,
 			Error: true,
