@@ -145,19 +145,17 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClie
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:         "/oauth2",
-		ProviderType:        "google",
-		PingPath:            "/ping",
-		ProxyWebSockets:     true,
-		HTTPAddress:         "127.0.0.1:4180",
-		HTTPSAddress:        ":443",
-		RealClientIPHeader:  "X-Real-IP",
-		ForceHTTPS:          false,
-		DisplayHtpasswdForm: true,
-		Cookie:              cookieDefaults(),
-		Session: SessionOptions{
-			Type: "cookie",
-		},
+		ProxyPrefix:                      "/oauth2",
+		ProviderType:                     "google",
+		PingPath:                         "/ping",
+		ProxyWebSockets:                  true,
+		HTTPAddress:                      "127.0.0.1:4180",
+		HTTPSAddress:                     ":443",
+		RealClientIPHeader:               "X-Real-IP",
+		ForceHTTPS:                       false,
+		DisplayHtpasswdForm:              true,
+		Cookie:                           cookieDefaults(),
+		Session:                          sessionOptionsDefaults(),
 		AzureTenant:                      "common",
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
@@ -241,6 +239,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
+	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
 	flagSet.Bool("redis-use-sentinel", false, "Connect to redis via sentinels. Must set --redis-sentinel-master-name and --redis-sentinel-connection-urls to use this feature")
 	flagSet.String("redis-sentinel-master-name", "", "Redis sentinel master name. Used in conjunction with --redis-use-sentinel")
