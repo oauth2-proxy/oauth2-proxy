@@ -2,8 +2,9 @@ package options
 
 // SessionOptions contains configuration options for the SessionStore providers.
 type SessionOptions struct {
-	Type  string            `flag:"session-store-type" cfg:"session_store_type"`
-	Redis RedisStoreOptions `cfg:",squash"`
+	Type   string             `flag:"session-store-type" cfg:"session_store_type"`
+	Cookie CookieStoreOptions `cfg:",squash"`
+	Redis  RedisStoreOptions  `cfg:",squash"`
 }
 
 // CookieSessionStoreType is used to indicate the CookieSessionStore should be
@@ -13,6 +14,11 @@ var CookieSessionStoreType = "cookie"
 // RedisSessionStoreType is used to indicate the RedisSessionStore should be
 // used for storing sessions.
 var RedisSessionStoreType = "redis"
+
+// CookieStoreOptions contains configuration options for the CookieSessionStore.
+type CookieStoreOptions struct {
+	Minimal bool `flag:"session-cookie-minimal" cfg:"session_cookie_minimal"`
+}
 
 // RedisStoreOptions contains configuration options for the RedisSessionStore.
 type RedisStoreOptions struct {
@@ -24,4 +30,13 @@ type RedisStoreOptions struct {
 	ClusterConnectionURLs  []string `flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
+}
+
+func sessionOptionsDefaults() SessionOptions {
+	return SessionOptions{
+		Type: CookieSessionStoreType,
+		Cookie: CookieStoreOptions{
+			Minimal: false,
+		},
+	}
 }
