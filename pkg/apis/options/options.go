@@ -66,6 +66,7 @@ type Options struct {
 
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
 	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
+	SkipAuthStripHeaders          bool          `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
 	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
 	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
 	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
@@ -159,6 +160,7 @@ func NewOptions() *Options {
 		AzureTenant:                      "common",
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
+		SkipAuthStripHeaders:             false,
 		FlushInterval:                    time.Duration(1) * time.Second,
 		PassBasicAuth:                    true,
 		SetBasicAuth:                     false,
@@ -202,6 +204,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("pass-authorization-header", false, "pass the Authorization Header to upstream")
 	flagSet.Bool("set-authorization-header", false, "set Authorization response headers (useful in Nginx auth_request mode)")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "bypass authentication for requests path's that match (may be given multiple times)")
+	flagSet.Bool("skip-auth-strip-headers", false, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy for request paths in --skip-auth-regex")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")

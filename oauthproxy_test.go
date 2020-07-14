@@ -723,6 +723,142 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 	}
 }
 
+func TestStripAuthHeaders(t *testing.T) {
+	testCases := map[string]struct {
+		SkipAuthStripHeaders bool
+		PassBasicAuth        bool
+		PassUserHeaders      bool
+		PassAccessToken      bool
+		PassAuthorization    bool
+		StrippedHeaders      map[string]bool
+	}{
+		"Default options": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      false,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               true,
+				"X-Forwarded-Email":              true,
+				"X-Forwarded-Preferred-Username": true,
+				"X-Forwarded-Access-Token":       false,
+				"Authorization":                  true,
+			},
+		},
+		"Pass access token": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      true,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               true,
+				"X-Forwarded-Email":              true,
+				"X-Forwarded-Preferred-Username": true,
+				"X-Forwarded-Access-Token":       true,
+				"Authorization":                  true,
+			},
+		},
+		"Nothing setting Authorization": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        false,
+			PassUserHeaders:      true,
+			PassAccessToken:      true,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               true,
+				"X-Forwarded-Email":              true,
+				"X-Forwarded-Preferred-Username": true,
+				"X-Forwarded-Access-Token":       true,
+				"Authorization":                  false,
+			},
+		},
+		"Only Authorization header modified": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        false,
+			PassUserHeaders:      false,
+			PassAccessToken:      false,
+			PassAuthorization:    true,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               false,
+				"X-Forwarded-Email":              false,
+				"X-Forwarded-Preferred-Username": false,
+				"X-Forwarded-Access-Token":       false,
+				"Authorization":                  true,
+			},
+		},
+		"Don't strip any headers (default options)": {
+			SkipAuthStripHeaders: false,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      false,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               false,
+				"X-Forwarded-Email":              false,
+				"X-Forwarded-Preferred-Username": false,
+				"X-Forwarded-Access-Token":       false,
+				"Authorization":                  false,
+			},
+		},
+		"Don't strip any headers (custom options)": {
+			SkipAuthStripHeaders: false,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      true,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               false,
+				"X-Forwarded-Email":              false,
+				"X-Forwarded-Preferred-Username": false,
+				"X-Forwarded-Access-Token":       false,
+				"Authorization":                  false,
+			},
+		},
+	}
+
+	initialHeaders := map[string]string{
+		"X-Forwarded-User":               "9fcab5c9b889a557",
+		"X-Forwarded-Email":              "john.doe@example.com",
+		"X-Forwarded-Preferred-Username": "john.doe",
+		"X-Forwarded-Access-Token":       "AccessToken",
+		"Authorization":                  "bearer IDToken",
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			opts := baseTestOptions()
+			opts.SkipAuthStripHeaders = tc.SkipAuthStripHeaders
+			opts.PassBasicAuth = tc.PassBasicAuth
+			opts.PassUserHeaders = tc.PassUserHeaders
+			opts.PassAccessToken = tc.PassAccessToken
+			opts.PassAuthorization = tc.PassAuthorization
+			err := validation.Validate(opts)
+			assert.NoError(t, err)
+
+			req, _ := http.NewRequest("GET", fmt.Sprintf("%s/testCase", opts.ProxyPrefix), nil)
+			for header, val := range initialHeaders {
+				req.Header.Set(header, val)
+			}
+
+			proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+			assert.NoError(t, err)
+			if proxy.skipAuthStripHeaders {
+				proxy.stripAuthHeaders(req)
+			}
+
+			for header, stripped := range tc.StrippedHeaders {
+				if stripped {
+					assert.Equal(t, req.Header.Get(header), "")
+				} else {
+					assert.Equal(t, req.Header.Get(header), initialHeaders[header])
+				}
+			}
+		})
+	}
+}
+
 type PassAccessTokenTest struct {
 	providerServer *httptest.Server
 	proxy          *OAuthProxy

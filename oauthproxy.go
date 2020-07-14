@@ -111,6 +111,7 @@ type OAuthProxy struct {
 	PreferEmailToUser       bool
 	skipAuthRegex           []string
 	skipAuthPreflight       bool
+	skipAuthStripHeaders    bool
 	skipJwtBearerTokens     bool
 	mainJwtBearerVerifier   *oidc.IDTokenVerifier
 	extraJwtBearerVerifiers []*oidc.IDTokenVerifier
@@ -343,6 +344,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		whitelistDomains:        opts.WhitelistDomains,
 		skipAuthRegex:           opts.SkipAuthRegex,
 		skipAuthPreflight:       opts.SkipAuthPreflight,
+		skipAuthStripHeaders:    opts.SkipAuthStripHeaders,
 		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
 		mainJwtBearerVerifier:   opts.GetOIDCVerifier(),
 		extraJwtBearerVerifiers: opts.GetJWTBearerVerifiers(),
@@ -718,7 +720,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
 	case p.IsWhitelistedRequest(req):
-		p.serveMux.ServeHTTP(rw, req)
+		p.SkipAuthProxy(rw, req)
 	case path == p.SignInPath:
 		p.SignIn(rw, req)
 	case path == p.SignOutPath:
@@ -889,6 +891,14 @@ func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request)
 	// we are authenticated
 	p.addHeadersForProxying(rw, req, session)
 	rw.WriteHeader(http.StatusAccepted)
+}
+
+// SkipAuthProxy proxies whitelisted requests and skips authentication
+func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
+	if p.skipAuthStripHeaders {
+		p.stripAuthHeaders(req)
+	}
+	p.serveMux.ServeHTTP(rw, req)
 }
 
 // Proxy proxies the user request if the user is authenticated else it prompts
@@ -1119,6 +1129,30 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		rw.Header().Set("GAP-Auth", session.User)
 	} else {
 		rw.Header().Set("GAP-Auth", session.Email)
+	}
+}
+
+// stripAuthHeaders removes Auth headers for whitelisted routes from skipAuthRegex
+func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
+	if p.PassBasicAuth {
+		req.Header.Del("X-Forwarded-User")
+		req.Header.Del("X-Forwarded-Email")
+		req.Header.Del("X-Forwarded-Preferred-Username")
+		req.Header.Del("Authorization")
+	}
+
+	if p.PassUserHeaders {
+		req.Header.Del("X-Forwarded-User")
+		req.Header.Del("X-Forwarded-Email")
+		req.Header.Del("X-Forwarded-Preferred-Username")
+	}
+
+	if p.PassAccessToken {
+		req.Header.Del("X-Forwarded-Access-Token")
+	}
+
+	if p.PassAuthorization {
+		req.Header.Del("Authorization")
 	}
 }
 
