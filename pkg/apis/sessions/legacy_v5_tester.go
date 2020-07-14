@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const LegacyV5TestSecret = "0123456789abcdefghijklmnopqrstuv"
+
 // LegacyV5TestCase provides V5 JSON based test cases for legacy fallback code
 type LegacyV5TestCase struct {
 	Input  string
@@ -22,8 +24,6 @@ type LegacyV5TestCase struct {
 //
 // TODO: Remove when this is deprecated (likely V7)
 func CreateLegacyV5TestCases(t *testing.T) (map[string]LegacyV5TestCase, encryption.Cipher, encryption.Cipher) {
-	const secret = "0123456789abcdefghijklmnopqrstuv"
-
 	created := time.Now()
 	createdJSON, err := created.MarshalJSON()
 	assert.NoError(t, err)
@@ -33,7 +33,7 @@ func CreateLegacyV5TestCases(t *testing.T) (map[string]LegacyV5TestCase, encrypt
 	assert.NoError(t, err)
 	eString := string(eJSON)
 
-	cfbCipher, err := encryption.NewCFBCipher([]byte(secret))
+	cfbCipher, err := encryption.NewCFBCipher([]byte(LegacyV5TestSecret))
 	assert.NoError(t, err)
 	legacyCipher := encryption.NewBase64Cipher(cfbCipher)
 
