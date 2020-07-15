@@ -78,6 +78,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--oidc-issuer-url` | string | the OpenID Connect issuer URL. ie: `"https://accounts.google.com"` | |
 | `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
+| `--pass-oidc-info-token` | bool | Pass full User info with all requested scopes via X-Auth-Oidc-Info-Token; required for some Oidc providers like Okta that don't pass all scopes in the authorization-header by default (For example, Okta considers scopes like groups reserved which can be accessed by requesting a subsequent POST to profileUrl with the access token)  | false |
 | `--pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `--pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `--prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with `--pass-basic-auth` and `--pass-user-headers` | false |

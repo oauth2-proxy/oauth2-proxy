@@ -167,6 +167,14 @@ func TestOIDCProviderRedeem(t *testing.T) {
 	assert.Equal(t, "123456789", session.User)
 }
 
+func TestOIDCProviderGetOidcInfoToken(t *testing.T) {
+	body, _ := json.Marshal(defaultIDToken)
+	server, provider := newTestSetup(body)
+	defer server.Close()
+	_, err := provider.GetOidcInfoToken(context.Background(), accessToken)
+	assert.Equal(t, nil, err, "Error while Accessing oidc token")
+}
+
 func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)

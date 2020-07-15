@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
+	"crypto/rand"
+	"crypto/rsa"
+	"io/ioutil"
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
-
+	"github.com/dgrijalva/jwt-go"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/bitly/go-simplejson"
 )
 
 const emailClaim = "email"
@@ -274,6 +277,50 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	}
 
 	return claims, nil
+}
+
+func (p *OIDCProvider) GetOidcInfoToken(ctx context.Context, accessToken string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", p.ProfileURL.String(), nil)
+	if err != nil {
+		return "", fmt.Errorf("id_token did not contain user ID claim (%q)", p.UserIDClaim)
+	}
+	req.Header = getOIDCHeader(accessToken)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if body != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != 200 {
+		return "", err
+	}
+	data, err := simplejson.NewJson(body)
+	if err != nil {
+		return "", err
+	}
+
+	var claimsMap jwt.MapClaims
+	claimsMap, err = data.Map()
+	if err != nil {
+		return "", err
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claimsMap)
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", err
+	}
+	tokenString, err := token.SignedString(key)
+	if err != nil {
+		return "", err
+	}
+	return tokenString, nil
 }
 
 type OIDCClaims struct {

@@ -106,6 +106,7 @@ type OAuthProxy struct {
 	PassUserHeaders         bool
 	BasicAuthPassword       string
 	PassAccessToken         bool
+	PassOidcInfoToken       bool
 	SetAuthorization        bool
 	PassAuthorization       bool
 	PreferEmailToUser       bool
@@ -356,6 +357,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PassUserHeaders:         opts.PassUserHeaders,
 		BasicAuthPassword:       opts.BasicAuthPassword,
 		PassAccessToken:         opts.PassAccessToken,
+		PassOidcInfoToken:       opts.PassOidcInfoToken,
 		SetAuthorization:        opts.SetAuthorization,
 		PassAuthorization:       opts.PassAuthorization,
 		PreferEmailToUser:       opts.PreferEmailToUser,
@@ -1129,6 +1131,13 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		rw.Header().Set("GAP-Auth", session.User)
 	} else {
 		rw.Header().Set("GAP-Auth", session.Email)
+	}
+
+	if p.PassOidcInfoToken && session.AccessToken != "" {
+		token, err := p.provider.GetOidcInfoToken(req.Context(), session.AccessToken)
+		if err == nil {
+			rw.Header().Set("X-Auth-Oidc-Info-Token", token)
+		}
 	}
 }
 
