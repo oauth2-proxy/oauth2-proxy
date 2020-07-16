@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/coreos/go-oidc"
@@ -178,14 +177,6 @@ func Validate(o *options.Options) error {
 
 	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
 
-	for _, u := range o.SkipAuthRegex {
-		compiledRegex, err := regexp.Compile(u)
-		if err != nil {
-			msgs = append(msgs, fmt.Sprintf("error compiling regex=%q %s", u, err))
-			continue
-		}
-		o.SetCompiledRegex(append(o.GetCompiledRegex(), compiledRegex))
-	}
 	msgs = parseProviderInfo(o, msgs)
 
 	if len(o.GoogleGroups) > 0 || o.GoogleAdminEmail != "" || o.GoogleServiceAccountJSON != "" {
@@ -216,15 +207,8 @@ func Validate(o *options.Options) error {
 		})
 	}
 
-	if len(o.TrustedIPs) > 0 && o.ReverseProxy {
-		fmt.Fprintln(os.Stderr, "WARNING: trusting of IPs with --reverse-proxy poses risks if a header spoofing attack is possible.")
-	}
-
-	for i, ipStr := range o.TrustedIPs {
-		if nil == ip.ParseIPNet(ipStr) {
-			msgs = append(msgs, fmt.Sprintf("trusted_ips[%d] (%s) could not be recognized", i, ipStr))
-		}
-	}
+	// Do this after ReverseProxy validation so RealClientIPParser is set
+	msgs = append(msgs, validateAuthorization(o)...)
 
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",

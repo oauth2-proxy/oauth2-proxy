@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/authorization"
 	"html/template"
 	"net"
 	"net/http"
@@ -88,17 +89,14 @@ type OAuthProxy struct {
 	PassAccessToken         bool
 	SetAuthorization        bool
 	PassAuthorization       bool
+	SkipAuthStripHeaders    bool
 	PreferEmailToUser       bool
-	skipAuthRegex           []string
-	skipAuthPreflight       bool
-	skipAuthStripHeaders    bool
 	skipJwtBearerTokens     bool
 	mainJwtBearerVerifier   *oidc.IDTokenVerifier
 	extraJwtBearerVerifiers []*oidc.IDTokenVerifier
-	compiledRegex           []*regexp.Regexp
 	templates               *template.Template
 	realClientIPParser      ipapi.RealClientIPParser
-	trustedIPs              *ip.NetSet
+	rulesEngine             authorization.RulesEngine
 	Banner                  string
 	Footer                  string
 
@@ -119,10 +117,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
 	}
 
-	for _, u := range opts.GetCompiledRegex() {
-		logger.Printf("compiled skip-auth-regex => %q", u)
-	}
-
 	if opts.SkipJwtBearerTokens {
 		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.OIDCIssuerURL)
 		for _, issuer := range opts.ExtraJwtIssuers {
@@ -141,15 +135,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
-
-	trustedIPs := ip.NewNetSet()
-	for _, ipStr := range opts.TrustedIPs {
-		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
-			trustedIPs.AddIPNet(*ipNet)
-		} else {
-			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
-		}
-	}
 
 	var basicAuthValidator basic.Validator
 	if opts.HtpasswdFile != "" {
@@ -191,13 +176,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		serveMux:                upstreamProxy,
 		redirectURL:             redirectURL,
 		whitelistDomains:        opts.WhitelistDomains,
-		skipAuthRegex:           opts.SkipAuthRegex,
-		skipAuthPreflight:       opts.SkipAuthPreflight,
-		skipAuthStripHeaders:    opts.SkipAuthStripHeaders,
+		rulesEngine:             opts.Authorization.GetRulesEngine(),
 		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
 		mainJwtBearerVerifier:   opts.GetOIDCVerifier(),
 		extraJwtBearerVerifiers: opts.GetJWTBearerVerifiers(),
-		compiledRegex:           opts.GetCompiledRegex(),
 		realClientIPParser:      opts.GetRealClientIPParser(),
 		SetXAuthRequest:         opts.SetXAuthRequest,
 		PassBasicAuth:           opts.PassBasicAuth,
@@ -207,10 +189,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PassAccessToken:         opts.PassAccessToken,
 		SetAuthorization:        opts.SetAuthorization,
 		PassAuthorization:       opts.PassAuthorization,
+		SkipAuthStripHeaders:    opts.Authorization.SkipAuthStripHeaders,
 		PreferEmailToUser:       opts.PreferEmailToUser,
 		SkipProviderButton:      opts.SkipProviderButton,
 		templates:               templates,
-		trustedIPs:              trustedIPs,
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
 
@@ -545,22 +527,6 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	}
 }
 
-// IsWhitelistedRequest is used to check if auth should be skipped for this request
-func (p *OAuthProxy) IsWhitelistedRequest(req *http.Request) bool {
-	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path) || p.IsTrustedIP(req)
-}
-
-// IsWhitelistedPath is used to check if the request path is allowed without auth
-func (p *OAuthProxy) IsWhitelistedPath(path string) bool {
-	for _, u := range p.compiledRegex {
-		if u.MatchString(path) {
-			return true
-		}
-	}
-	return false
-}
-
 // See https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=en
 var noCacheHeaders = map[string]string{
 	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
@@ -576,26 +542,6 @@ func prepareNoCache(w http.ResponseWriter) {
 	}
 }
 
-// IsTrustedIP is used to check if a request comes from a trusted client IP address.
-func (p *OAuthProxy) IsTrustedIP(req *http.Request) bool {
-	if p.trustedIPs == nil {
-		return false
-	}
-
-	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
-	if err != nil {
-		logger.Printf("Error obtaining real IP for trusted IP list: %v", err)
-		// Possibly spoofed X-Real-IP header
-		return false
-	}
-
-	if remoteAddr == nil {
-		return false
-	}
-
-	return p.trustedIPs.Has(remoteAddr)
-}
-
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if req.URL.Path != p.AuthOnlyPath && strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
 		prepareNoCache(rw)
@@ -604,7 +550,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	switch path := req.URL.Path; {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
-	case p.IsWhitelistedRequest(req):
+	case p.rulesEngine.Match(req, nil) == authorization.AllowPolicy:
 		p.SkipAuthProxy(rw, req)
 	case path == p.SignInPath:
 		p.SignIn(rw, req)
@@ -778,9 +724,9 @@ func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request)
 	rw.WriteHeader(http.StatusAccepted)
 }
 
-// SkipAuthProxy proxies whitelisted requests and skips authentication
+// SkipAuthProxy proxies trusted requests and skips authentication
 func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
-	if p.skipAuthStripHeaders {
+	if p.SkipAuthStripHeaders {
 		p.stripAuthHeaders(req)
 	}
 	p.serveMux.ServeHTTP(rw, req)

@@ -115,8 +115,9 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
 | `--silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
 | `--skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
-| `--skip-auth-regex` | string | bypass authentication for requests paths that match (may be given multiple times) | |
-| `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy for request paths in `--skip-auth-regex` | false |
+| `--skip-auth-regex` | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times) | |
+| `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods | |
+| `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy for allowlisted requests (`--skip-auth-route`, `--skip-auth-regex`, `--skip-auth-preflight`, `--trusted-ip`) | false |
 | `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
 | `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
 | `--skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
