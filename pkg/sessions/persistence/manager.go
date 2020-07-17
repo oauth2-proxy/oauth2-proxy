@@ -9,33 +9,19 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 )
 
-// SaveFunc performs a persistent store's save functionality using
-// a key string, value []byte & (optional) expiration time.Duration
-type SaveFunc func(string, []byte, time.Duration) error
-
-// LoadFunc performs a load from a persistent store using a
-// string key and returning the stored value as []byte
-type LoadFunc func(string) ([]byte, error)
-
-// ClearFunc performs a persistent store's clear functionality using
-// a string key for the target of the deletion.
-type ClearFunc func(string) error
-
 // Manager holds the ResponseWriter, Request & Cookie Options used by the
 // Save, Load & Clear helper methods
 type Manager struct {
-	ResponseWriter http.ResponseWriter
-	Request        *http.Request
-	Options        *options.Cookie
+	Store   Store
+	Options *options.Cookie
 }
 
 // NewManager creates a light wrapper around HTTP request & response and cookie
 // options for use by the Save, Load & Clear helper methods
-func NewManager(rw http.ResponseWriter, req *http.Request, cookieOpts *options.Cookie) *Manager {
+func NewManager(store Store, cookieOpts *options.Cookie) *Manager {
 	return &Manager{
-		ResponseWriter: rw,
-		Request:        req,
-		Options:        cookieOpts,
+		Store:   store,
+		Options: cookieOpts,
 	}
 }
 
@@ -43,51 +29,55 @@ func NewManager(rw http.ResponseWriter, req *http.Request, cookieOpts *options.C
 // using the passed in SaveFunc. Save will generate (or reuse an existing)
 // Ticker which manages unique per session encryption & retrieval from the
 // persistent data store.
-func (m *Manager) Save(s *sessions.SessionState, saver SaveFunc) error {
+func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
 	if s.CreatedAt == nil || s.CreatedAt.IsZero() {
 		now := time.Now()
 		s.CreatedAt = &now
 	}
 
-	ticket, err := DecodeTicketFromRequest(m.Request, m.Options)
+	ticket, err := DecodeTicketFromRequest(req, m.Options)
 	if err != nil {
 		ticket, err = NewTicket(m.Options)
 		if err != nil {
 			return fmt.Errorf("error creating a session ticket: %v", err)
 		}
 	}
-	err = ticket.SaveSession(s, saver)
+	err = ticket.SaveSession(s, func(key string, val []byte, exp time.Duration) error {
+		return m.Store.Save(req.Context(), key, val, exp)
+	})
 	if err != nil {
 		return fmt.Errorf("error saving redis session: %v", err)
 	}
-	ticket.SetCookie(m.ResponseWriter, m.Request, s)
+	ticket.SetCookie(rw, req, s)
 
 	return nil
 }
 
 // Load reads sessions.SessionState information from a session store
 // using the LoadFunc & Ticket details in the session cookie.
-func (m *Manager) Load(loader LoadFunc) (*sessions.SessionState, error) {
-	ticket, err := DecodeTicketFromRequest(m.Request, m.Options)
+func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
+	ticket, err := DecodeTicketFromRequest(req, m.Options)
 	if err != nil {
 		return nil, fmt.Errorf("error loading session: %v", err)
 	}
 
-	return ticket.LoadSession(loader)
+	return ticket.LoadSession(func(key string) ([]byte, error) {
+		return m.Store.Load(req.Context(), key)
+	})
 }
 
 // Clear clears any saved session information for a given ticket cookie.
 // Then it clears all session data for that ticket in the store using
 // the passed ClearFunc
-func (m *Manager) Clear(clearer ClearFunc) error {
-	ticket, err := DecodeTicketFromRequest(m.Request, m.Options)
+func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {
+	ticket, err := DecodeTicketFromRequest(req, m.Options)
 	if err != nil {
 		// Always clear the cookie, even when we can't load a cookie from
 		// the request
 		ticket = &Ticket{
 			Options: m.Options,
 		}
-		ticket.ClearCookie(m.ResponseWriter, m.Request)
+		ticket.ClearCookie(rw, req)
 		// Don't raise an error if we didn't have a Cookie
 		if err == http.ErrNoCookie {
 			return nil
@@ -95,8 +85,10 @@ func (m *Manager) Clear(clearer ClearFunc) error {
 		return fmt.Errorf("error decoding ticket to clear redis session: %v", err)
 	}
 
-	ticket.ClearCookie(m.ResponseWriter, m.Request)
-	err = ticket.ClearSession(clearer)
+	ticket.ClearCookie(rw, req)
+	err = ticket.ClearSession(func(key string) error {
+		return m.Store.Clear(req.Context(), key)
+	})
 	if err != nil {
 		return fmt.Errorf("error clearing the session from redis: %v", err)
 	}

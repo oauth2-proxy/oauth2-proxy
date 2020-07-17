@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
 	"log"
 	"os"
 	"testing"
@@ -50,9 +51,9 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 	JustAfterEach(func() {
 		// Release any connections immediately after the test ends
-		if redisStore, ok := ss.(*SessionStore); ok {
-			if redisStore.Client != nil {
-				Expect(redisStore.Client.(closer).Close()).To(Succeed())
+		if redisManager, ok := ss.(*persistence.Manager); ok {
+			if redisManager.Store.(*RedisStore).Client != nil {
+				Expect(redisManager.Store.(*RedisStore).Client.(closer).Close()).To(Succeed())
 			}
 		}
 	})

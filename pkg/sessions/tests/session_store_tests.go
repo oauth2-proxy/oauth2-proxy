@@ -133,18 +133,6 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 				PersistentSessionStoreInterfaceTests(&input)
 			}
 		})
-
-		Context("with an invalid cookie secret", func() {
-			BeforeEach(func() {
-				input.cookieOpts.Secret = "invalid"
-			})
-
-			It("returns an error when initialising the session store", func() {
-				ss, err := newSS(opts, input.cookieOpts)
-				Expect(err).To(MatchError("error initialising cipher: crypto/aes: invalid key size 7"))
-				Expect(ss).To(BeNil())
-			})
-		})
 	})
 }
 

@@ -1,74 +1,55 @@
 package redis
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"time"
 
 	"github.com/go-redis/redis/v7"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
 )
 
-// SessionStore is an implementation of the sessions.SessionStore
+// RedisStore is an implementation of the persistence.Store
 // interface that stores sessions in redis
-type SessionStore struct {
-	CookieCipher encryption.Cipher
-	Cookie       *options.Cookie
-	Client       Client
+type RedisStore struct {
+	Client Client
 }
 
-// NewRedisSessionStore initialises a new instance of the SessionStore from
-// the configuration given
+// NewRedisSessionStore initialises a new instance of the RedisStore and wraps
+// it in a persistence.Manager
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
-	cfbCipher, err := encryption.NewCFBCipher(encryption.SecretBytes(cookieOpts.Secret))
-	if err != nil {
-		return nil, fmt.Errorf("error initialising cipher: %v", err)
-	}
-
 	client, err := newRedisCmdable(opts.Redis)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
 
-	rs := &SessionStore{
-		Client:       client,
-		CookieCipher: cfbCipher,
-		Cookie:       cookieOpts,
+	rs := &RedisStore{
+		Client: client,
 	}
-	return rs, nil
+	return persistence.NewManager(rs, cookieOpts), nil
 }
 
 // Save takes a sessions.SessionState and stores the information from it
 // to redies, and adds a new persistence cookie on the HTTP response writer
-func (store *SessionStore) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
-	m := persistence.NewManager(rw, req, store.Cookie)
-	return m.Save(s, func(key string, value []byte, exp time.Duration) error {
-		return store.Client.Set(req.Context(), key, value, exp)
-	})
+func (store *RedisStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
+	return store.Client.Set(ctx, key, value, exp)
 }
 
 // Load reads sessions.SessionState information from a persistence
 // cookie within the HTTP request object
-func (store *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
-	m := persistence.NewManager(nil, req, store.Cookie)
-	return m.Load(func(key string) ([]byte, error) {
-		return store.Client.Get(req.Context(), key)
-	})
+func (store *RedisStore) Load(ctx context.Context, key string) ([]byte, error) {
+	return store.Client.Get(ctx, key)
 }
 
 // Clear clears any saved session information for a given persistence cookie
 // from redis, and then clears the session
-func (store *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
-	m := persistence.NewManager(rw, req, store.Cookie)
-	return m.Clear(func(key string) error {
-		return store.Client.Del(req.Context(), key)
-	})
+func (store *RedisStore) Clear(ctx context.Context, key string) error {
+	return store.Client.Del(ctx, key)
 }
 
 func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {

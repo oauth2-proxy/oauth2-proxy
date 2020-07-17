@@ -18,6 +18,18 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
+// SaveFunc performs a persistent store's save functionality using
+// a key string, value []byte & (optional) expiration time.Duration
+type SaveFunc func(string, []byte, time.Duration) error
+
+// LoadFunc performs a load from a persistent store using a
+// string key and returning the stored value as []byte
+type LoadFunc func(string) ([]byte, error)
+
+// ClearFunc performs a persistent store's clear functionality using
+// a string key for the target of the deletion.
+type ClearFunc func(string) error
+
 // Ticket is a structure representing the ticket used in server based
 // session storage. It provides a unique per session decryption secret giving
 // more security than the shared CookieSecret.
@@ -117,7 +129,7 @@ func (t *Ticket) SaveSession(s *sessions.SessionState, saver SaveFunc) error {
 // using the TicketID as the key. It then decodeds the SessionState using
 // Ticket.Secret to make the AES-GCM cipher.
 //
-// TODO: Remove legacyV5LoadSession support in V7
+// TODO (@NickMeves): Remove legacyV5LoadSession support in V7
 func (t *Ticket) LoadSession(loader LoadFunc) (*sessions.SessionState, error) {
 	ciphertext, err := loader(t.TicketID)
 	if err != nil {
@@ -190,7 +202,7 @@ func (t *Ticket) makeCipher() (encryption.Cipher, error) {
 
 // legacyV5LoadSession loads a Redis session created in V5 with historical logic
 //
-// TODO: Remove in V7
+// TODO (@NickMeves): Remove in V7
 func (t *Ticket) legacyV5LoadSession(resultBytes []byte) (*sessions.SessionState, error) {
 	block, err := aes.NewCipher(t.Secret)
 	if err != nil {
