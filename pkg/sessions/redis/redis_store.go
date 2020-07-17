@@ -23,7 +23,7 @@ type RedisStore struct {
 // NewRedisSessionStore initialises a new instance of the RedisStore and wraps
 // it in a persistence.Manager
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
-	client, err := newRedisCmdable(opts.Redis)
+	client, err := newRedisClient(opts.Redis)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
@@ -52,34 +52,51 @@ func (store *RedisStore) Clear(ctx context.Context, key string) error {
 	return store.Client.Del(ctx, key)
 }
 
-func newRedisCmdable(opts options.RedisStoreOptions) (Client, error) {
+// newRedisClient makes a redis.Client (either standalone, sentinel aware, or
+// redis cluster)
+func newRedisClient(opts options.RedisStoreOptions) (Client, error) {
 	if opts.UseSentinel && opts.UseCluster {
 		return nil, fmt.Errorf("options redis-use-sentinel and redis-use-cluster are mutually exclusive")
 	}
-
 	if opts.UseSentinel {
-		addrs, err := parseRedisURLs(opts.SentinelConnectionURLs)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse redis urls: %v", err)
-		}
-		client := redis.NewFailoverClient(&redis.FailoverOptions{
-			MasterName:    opts.SentinelMasterName,
-			SentinelAddrs: addrs,
-		})
-		return newClient(client), nil
+		return buildSentinelClient(opts)
 	}
-
 	if opts.UseCluster {
-		addrs, err := parseRedisURLs(opts.ClusterConnectionURLs)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse redis urls: %v", err)
-		}
-		client := redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs: addrs,
-		})
-		return newClusterClient(client), nil
+		return buildClusterClient(opts)
 	}
 
+	return buildStandaloneClient(opts)
+}
+
+// buildSentinelClient makes a redis.Client that connects to Redis Sentinel
+// for Primary/Replica Redis node coordination
+func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
+	addrs, err := parseRedisURLs(opts.SentinelConnectionURLs)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse redis urls: %v", err)
+	}
+	client := redis.NewFailoverClient(&redis.FailoverOptions{
+		MasterName:    opts.SentinelMasterName,
+		SentinelAddrs: addrs,
+	})
+	return newClient(client), nil
+}
+
+// buildClusterClient makes a redis.Client that is Redis Cluster aware
+func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
+	addrs, err := parseRedisURLs(opts.ClusterConnectionURLs)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse redis urls: %v", err)
+	}
+	client := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs: addrs,
+	})
+	return newClusterClient(client), nil
+}
+
+// buildStandaloneClient makes a redis.Client that connects to a simple
+// Redis node
+func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 	opt, err := redis.ParseURL(opts.ConnectionURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse redis url: %s", err)
