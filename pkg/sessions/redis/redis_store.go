@@ -14,13 +14,13 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
 )
 
-// RedisStore is an implementation of the persistence.Store
+// SessionStore is an implementation of the persistence.Store
 // interface that stores sessions in redis
-type RedisStore struct {
+type SessionStore struct {
 	Client Client
 }
 
-// NewRedisSessionStore initialises a new instance of the RedisStore and wraps
+// NewRedisSessionStore initialises a new instance of the SessionStore and wraps
 // it in a persistence.Manager
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
 	client, err := newRedisClient(opts.Redis)
@@ -28,7 +28,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
 
-	rs := &RedisStore{
+	rs := &SessionStore{
 		Client: client,
 	}
 	return persistence.NewManager(rs, cookieOpts), nil
@@ -36,20 +36,32 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 
 // Save takes a sessions.SessionState and stores the information from it
 // to redies, and adds a new persistence cookie on the HTTP response writer
-func (store *RedisStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
-	return store.Client.Set(ctx, key, value, exp)
+func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
+	err := store.Client.Set(ctx, key, value, exp)
+	if err != nil {
+		return fmt.Errorf("error saving redis session: %v", err)
+	}
+	return nil
 }
 
 // Load reads sessions.SessionState information from a persistence
 // cookie within the HTTP request object
-func (store *RedisStore) Load(ctx context.Context, key string) ([]byte, error) {
-	return store.Client.Get(ctx, key)
+func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error) {
+	value, err := store.Client.Get(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("error loading redis session: %v", err)
+	}
+	return value, nil
 }
 
 // Clear clears any saved session information for a given persistence cookie
 // from redis, and then clears the session
-func (store *RedisStore) Clear(ctx context.Context, key string) error {
-	return store.Client.Del(ctx, key)
+func (store *SessionStore) Clear(ctx context.Context, key string) error {
+	err := store.Client.Del(ctx, key)
+	if err != nil {
+		return fmt.Errorf("error clearing the session from redis: %v", err)
+	}
+	return nil
 }
 
 // newRedisClient makes a redis.Client (either standalone, sentinel aware, or

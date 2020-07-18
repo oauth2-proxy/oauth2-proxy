@@ -46,7 +46,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 		return m.Store.Save(req.Context(), key, val, exp)
 	})
 	if err != nil {
-		return fmt.Errorf("error saving redis session: %v", err)
+		return err
 	}
 	ticket.SetCookie(rw, req, s)
 
@@ -58,7 +58,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 	ticket, err := DecodeTicketFromRequest(req, m.Options)
 	if err != nil {
-		return nil, fmt.Errorf("error loading session: %v", err)
+		return nil, err
 	}
 
 	return ticket.LoadSession(func(key string) ([]byte, error) {
@@ -82,15 +82,11 @@ func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {
 		if err == http.ErrNoCookie {
 			return nil
 		}
-		return fmt.Errorf("error decoding ticket to clear redis session: %v", err)
+		return fmt.Errorf("error decoding ticket to clear session: %v", err)
 	}
 
 	ticket.ClearCookie(rw, req)
-	err = ticket.ClearSession(func(key string) error {
+	return ticket.ClearSession(func(key string) error {
 		return m.Store.Clear(req.Context(), key)
 	})
-	if err != nil {
-		return fmt.Errorf("error clearing the session from redis: %v", err)
-	}
-	return nil
 }
