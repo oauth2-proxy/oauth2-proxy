@@ -22,6 +22,7 @@ import (
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
@@ -96,8 +97,8 @@ type OAuthProxy struct {
 	sessionStore            sessionsapi.SessionStore
 	ProxyPrefix             string
 	SignInMessage           string
-	HtpasswdFile            *HtpasswdFile
-	DisplayHtpasswdForm     bool
+	basicAuthValidator      basic.Validator
+	displayHtpasswdForm     bool
 	serveMux                http.Handler
 	SetXAuthRequest         bool
 	PassBasicAuth           bool
@@ -314,6 +315,16 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
+	var basicAuthValidator basic.Validator
+	if opts.HtpasswdFile != "" {
+		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
+		var err error
+		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
+		}
+	}
+
 	return &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
@@ -364,6 +375,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		trustedIPs:              trustedIPs,
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
+
+		basicAuthValidator:  basicAuthValidator,
+		displayHtpasswdForm: basicAuthValidator != nil,
 	}, nil
 }
 
@@ -384,10 +398,6 @@ func (p *OAuthProxy) GetRedirectURI(host string) string {
 	}
 	u.Host = host
 	return u.String()
-}
-
-func (p *OAuthProxy) displayCustomLoginForm() bool {
-	return p.HtpasswdFile != nil && p.DisplayHtpasswdForm
 }
 
 func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (s *sessionsapi.SessionState, err error) {
@@ -526,7 +536,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	}{
 		ProviderName:  p.provider.Data().ProviderName,
 		SignInMessage: template.HTML(p.SignInMessage),
-		CustomLogin:   p.displayCustomLoginForm(),
+		CustomLogin:   p.displayHtpasswdForm,
 		Redirect:      redirectURL,
 		Version:       VERSION,
 		ProxyPrefix:   p.ProxyPrefix,
@@ -540,7 +550,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 // ManualSignIn handles basic auth logins to the proxy
 func (p *OAuthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {
-	if req.Method != "POST" || p.HtpasswdFile == nil {
+	if req.Method != "POST" || p.basicAuthValidator == nil {
 		return "", false
 	}
 	user := req.FormValue("username")
@@ -549,7 +559,7 @@ func (p *OAuthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (st
 		return "", false
 	}
 	// check auth
-	if p.HtpasswdFile.Validate(user, passwd) {
+	if p.basicAuthValidator.Validate(user, passwd) {
 		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via HtpasswdFile")
 		return user, true
 	}
@@ -1159,7 +1169,7 @@ func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
 // CheckBasicAuth checks the requests Authorization header for basic auth
 // credentials and authenticates these against the proxies HtpasswdFile
 func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*sessionsapi.SessionState, error) {
-	if p.HtpasswdFile == nil {
+	if p.basicAuthValidator == nil {
 		return nil, nil
 	}
 	auth := req.Header.Get("Authorization")
@@ -1178,7 +1188,7 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*sessionsapi.SessionStat
 	if len(pair) != 2 {
 		return nil, fmt.Errorf("invalid format %s", b)
 	}
-	if p.HtpasswdFile.Validate(pair[0], pair[1]) {
+	if p.basicAuthValidator.Validate(pair[0], pair[1]) {
 		logger.PrintAuthf(pair[0], req, logger.AuthSuccess, "Authenticated via basic auth and HTpasswd File")
 		return &sessionsapi.SessionState{User: pair[0]}, nil
 	}

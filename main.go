@@ -66,15 +66,6 @@ func main() {
 		}
 	}
 
-	if opts.HtpasswdFile != "" {
-		logger.Printf("using htpasswd file %s", opts.HtpasswdFile)
-		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(opts.HtpasswdFile)
-		oauthproxy.DisplayHtpasswdForm = opts.DisplayHtpasswdForm
-		if err != nil {
-			logger.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
-		}
-	}
-
 	rand.Seed(time.Now().UnixNano())
 
 	chain := alice.New()
