@@ -4,40 +4,55 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"github.com/patrickmn/go-cache"
 )
 
-// Store is a generic in-memory implementation of persistence.Store
-// for mocking in tests
-type Store struct {
-	cache *cache.Cache
+// entry is a MockStore cache entry with an expiration
+type entry struct {
+	data       []byte
+	expiration time.Duration
 }
 
-// NewStore creates a Store
-func NewStore() *Store {
-	return &Store{
-		cache: cache.New(168*time.Hour, 168*time.Hour),
+// MockStore is a generic in-memory implementation of persistence.Store
+// for mocking in tests
+type MockStore struct {
+	cache   map[string]entry
+	elapsed time.Duration
+}
+
+// NewMockStore creates a MockStore
+func NewMockStore() *MockStore {
+	return &MockStore{
+		cache:   map[string]entry{},
+		elapsed: 0 * time.Second,
 	}
 }
 
 // Save sets a key to the data to the memory cache
-func (s *Store) Save(_ context.Context, key string, value []byte, exp time.Duration) error {
-	s.cache.Set(key, value, exp)
+func (s *MockStore) Save(_ context.Context, key string, value []byte, exp time.Duration) error {
+	s.cache[key] = entry{
+		data:       value,
+		expiration: exp,
+	}
 	return nil
 }
 
 // Load gets data from the memory cache via a key
-func (s *Store) Load(_ context.Context, key string) ([]byte, error) {
-	data, found := s.cache.Get(key)
-	if !found {
+func (s *MockStore) Load(_ context.Context, key string) ([]byte, error) {
+	entry, ok := s.cache[key]
+	if !ok || entry.expiration <= s.elapsed {
+		delete(s.cache, key)
 		return nil, fmt.Errorf("key not found: %s", key)
 	}
-	return data.([]byte), nil
+	return entry.data, nil
 }
 
 // Clear deletes an entry from the memory cache
-func (s *Store) Clear(_ context.Context, key string) error {
-	s.cache.Delete(key)
+func (s *MockStore) Clear(_ context.Context, key string) error {
+	delete(s.cache, key)
 	return nil
+}
+
+// FastForward simulates the flow of time to test expirations
+func (s *MockStore) FastForward(duration time.Duration) {
+	s.elapsed += duration
 }

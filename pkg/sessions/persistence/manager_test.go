@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"testing"
+	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
@@ -18,8 +19,16 @@ func TestManager(t *testing.T) {
 }
 
 var _ = Describe("Persistence Manager SessionStore Tests", func() {
+	var ms *tests.MockStore
+	BeforeEach(func() {
+		ms = tests.NewMockStore()
+	})
 	tests.RunSessionStoreTests(
 		func(_ *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
-			return NewManager(tests.NewStore(), cookieOpts), nil
-		}, nil)
+			return NewManager(ms, cookieOpts), nil
+		},
+		func(d time.Duration) error {
+			ms.FastForward(d)
+			return nil
+		})
 })
