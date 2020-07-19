@@ -24,6 +24,8 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 	const flushInterval5s = 5 * time.Second
 	const flushInterval1s = 1 * time.Second
+	truth := true
+	falsum := false
 
 	type httpUpstreamTableInput struct {
 		id               string
@@ -51,10 +53,11 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			rw := httptest.NewRecorder()
 
 			flush := 1 * time.Second
+
 			upstream := options.Upstream{
 				ID:                    in.id,
-				PassHostHeader:        true,
-				ProxyWebSockets:       false,
+				PassHostHeader:        &truth,
+				ProxyWebSockets:       &falsum,
 				InsecureSkipTLSVerify: false,
 				FlushInterval:         &flush,
 			}
@@ -258,8 +261,8 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		flush := 1 * time.Second
 		upstream := options.Upstream{
 			ID:                    "noPassHost",
-			PassHostHeader:        false,
-			ProxyWebSockets:       false,
+			PassHostHeader:        &falsum,
+			ProxyWebSockets:       &falsum,
 			InsecureSkipTLSVerify: false,
 			FlushInterval:         &flush,
 		}
@@ -302,7 +305,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				ID:                    "foo123",
 				FlushInterval:         &in.flushInterval,
 				InsecureSkipTLSVerify: in.skipVerify,
-				ProxyWebSockets:       in.proxyWebSockets,
+				ProxyWebSockets:       &in.proxyWebSockets,
 			}
 
 			handler := newHTTPUpstreamProxy(upstream, u, in.sigData, in.errorHandler)
@@ -370,8 +373,8 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			flush := 1 * time.Second
 			upstream := options.Upstream{
 				ID:                    "websocketProxy",
-				PassHostHeader:        true,
-				ProxyWebSockets:       true,
+				PassHostHeader:        &truth,
+				ProxyWebSockets:       &truth,
 				InsecureSkipTLSVerify: false,
 				FlushInterval:         &flush,
 			}

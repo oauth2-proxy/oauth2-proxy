@@ -77,8 +77,8 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			Path:                  u.Path,
 			URI:                   upstreamString,
 			InsecureSkipTLSVerify: l.SSLUpstreamInsecureSkipVerify,
-			PassHostHeader:        l.PassHostHeader,
-			ProxyWebSockets:       l.ProxyWebSockets,
+			PassHostHeader:        &l.PassHostHeader,
+			ProxyWebSockets:       &l.ProxyWebSockets,
 			FlushInterval:         &l.FlushInterval,
 		}
 
@@ -104,8 +104,8 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			// Force defaults compatible with static responses
 			upstream.URI = ""
 			upstream.InsecureSkipTLSVerify = false
-			upstream.PassHostHeader = true
-			upstream.ProxyWebSockets = false
+			upstream.PassHostHeader = nil
+			upstream.ProxyWebSockets = nil
 			flush := 1 * time.Second
 			upstream.FlushInterval = &flush
 		}

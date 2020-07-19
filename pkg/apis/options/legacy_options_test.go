@@ -23,6 +23,7 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
 			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file://var/lib/website#/bar"}
 
+			truth := true
 			opts.UpstreamServers = Upstreams{
 				{
 					ID:                    "/baz",
@@ -30,8 +31,8 @@ var _ = Describe("Legacy Options", func() {
 					URI:                   "http://foo.bar/baz",
 					FlushInterval:         &flushInterval,
 					InsecureSkipTLSVerify: true,
-					PassHostHeader:        true,
-					ProxyWebSockets:       true,
+					PassHostHeader:        &truth,
+					ProxyWebSockets:       &truth,
 				},
 				{
 					ID:                    "/bar",
@@ -39,8 +40,8 @@ var _ = Describe("Legacy Options", func() {
 					URI:                   "file://var/lib/website#/bar",
 					FlushInterval:         &flushInterval,
 					InsecureSkipTLSVerify: true,
-					PassHostHeader:        true,
-					ProxyWebSockets:       true,
+					PassHostHeader:        &truth,
+					ProxyWebSockets:       &truth,
 				},
 			}
 
@@ -72,8 +73,8 @@ var _ = Describe("Legacy Options", func() {
 			Path:                  "/baz",
 			URI:                   validHTTP,
 			InsecureSkipTLSVerify: skipVerify,
-			PassHostHeader:        passHostHeader,
-			ProxyWebSockets:       proxyWebSockets,
+			PassHostHeader:        &passHostHeader,
+			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
 		}
 
@@ -84,8 +85,8 @@ var _ = Describe("Legacy Options", func() {
 			Path:                  "/",
 			URI:                   emptyPathHTTP,
 			InsecureSkipTLSVerify: skipVerify,
-			PassHostHeader:        passHostHeader,
-			ProxyWebSockets:       proxyWebSockets,
+			PassHostHeader:        &passHostHeader,
+			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
 		}
 
@@ -95,8 +96,8 @@ var _ = Describe("Legacy Options", func() {
 			Path:                  "/bar",
 			URI:                   validFileWithFragment,
 			InsecureSkipTLSVerify: skipVerify,
-			PassHostHeader:        passHostHeader,
-			ProxyWebSockets:       proxyWebSockets,
+			PassHostHeader:        &passHostHeader,
+			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
 		}
 
@@ -109,8 +110,8 @@ var _ = Describe("Legacy Options", func() {
 			Static:                true,
 			StaticCode:            &validStaticCode,
 			InsecureSkipTLSVerify: false,
-			PassHostHeader:        true,
-			ProxyWebSockets:       false,
+			PassHostHeader:        nil,
+			ProxyWebSockets:       nil,
 			FlushInterval:         &defaultFlushInterval,
 		}
 
@@ -123,8 +124,8 @@ var _ = Describe("Legacy Options", func() {
 			Static:                true,
 			StaticCode:            &invalidStaticCode,
 			InsecureSkipTLSVerify: false,
-			PassHostHeader:        true,
-			ProxyWebSockets:       false,
+			PassHostHeader:        nil,
+			ProxyWebSockets:       nil,
 			FlushInterval:         &defaultFlushInterval,
 		}
 

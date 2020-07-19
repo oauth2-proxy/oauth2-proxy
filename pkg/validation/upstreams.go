@@ -73,10 +73,10 @@ func validateStaticUpstream(upstream options.Upstream) []string {
 	if upstream.FlushInterval != nil && *upstream.FlushInterval != time.Second {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has flushInterval, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if !upstream.PassHostHeader {
+	if upstream.PassHostHeader != nil {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has passHostHeader, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if !upstream.ProxyWebSockets {
+	if upstream.ProxyWebSockets != nil {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has proxyWebSockets, but is a static upstream, this will have no effect.", upstream.ID))
 	}
 
