@@ -11,6 +11,7 @@
 
 ## Changes since v6.0.0
 
+- [#682](https://github.com/oauth2-proxy/oauth2-proxy/pull/682) Refactor persistent session store session ticket management (@NickMeves)
 - [#688](https://github.com/oauth2-proxy/oauth2-proxy/pull/688) Refactor session loading to make use of middleware pattern (@JoelSpeed)
 - [#593](https://github.com/oauth2-proxy/oauth2-proxy/pull/593) Integrate upstream package with OAuth2 Proxy (@JoelSpeed)
 - [#687](https://github.com/oauth2-proxy/oauth2-proxy/pull/687) Refactor HTPasswd Validator (@JoelSpeed)

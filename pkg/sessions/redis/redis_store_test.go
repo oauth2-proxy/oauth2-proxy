@@ -1,11 +1,6 @@
 package redis
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"fmt"
-	"io"
 	"log"
 	"os"
 	"testing"
@@ -17,69 +12,11 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/tests"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-
-// TestLegacyV5DecodeSession tests the fallback to LegacyV5DecodeSession
-// when a V5 encoded session is in Redis
-//
-// TODO: Remove when this is deprecated (likely V7)
-func Test_legacyV5DecodeSession(t *testing.T) {
-	testCases, _, legacyCipher := sessionsapi.CreateLegacyV5TestCases(t)
-
-	for testName, tc := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			g := NewWithT(t)
-
-			secret := make([]byte, aes.BlockSize)
-			_, err := io.ReadFull(rand.Reader, secret)
-			g.Expect(err).ToNot(HaveOccurred())
-			ticket := &TicketData{
-				TicketID: "",
-				Secret:   secret,
-			}
-
-			encrypted, err := legacyStoreValue(tc.Input, ticket.Secret)
-			g.Expect(err).ToNot(HaveOccurred())
-
-			ss, err := legacyV5DecodeSession(encrypted, ticket, legacyCipher)
-			if tc.Error {
-				g.Expect(err).To(HaveOccurred())
-				g.Expect(ss).To(BeNil())
-				return
-			}
-			g.Expect(err).ToNot(HaveOccurred())
-
-			// Compare sessions without *time.Time fields
-			exp := *tc.Output
-			exp.CreatedAt = nil
-			exp.ExpiresOn = nil
-			act := *ss
-			act.CreatedAt = nil
-			act.ExpiresOn = nil
-			g.Expect(exp).To(Equal(act))
-		})
-	}
-}
-
-// legacyStoreValue implements the legacy V5 Redis store AES-CFB value encryption
-//
-// TODO: Remove when this is deprecated (likely V7)
-func legacyStoreValue(value string, ticketSecret []byte) ([]byte, error) {
-	ciphertext := make([]byte, len(value))
-	block, err := aes.NewCipher(ticketSecret)
-	if err != nil {
-		return nil, fmt.Errorf("error initiating cipher block: %v", err)
-	}
-
-	// Use secret as the Initialization Vector too, because each entry has it's own key
-	stream := cipher.NewCFBEncrypter(block, ticketSecret)
-	stream.XORKeyStream(ciphertext, []byte(value))
-
-	return ciphertext, nil
-}
 
 func TestSessionStore(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
@@ -114,9 +51,9 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 	JustAfterEach(func() {
 		// Release any connections immediately after the test ends
-		if redisStore, ok := ss.(*SessionStore); ok {
-			if redisStore.Client != nil {
-				Expect(redisStore.Client.(closer).Close()).To(Succeed())
+		if redisManager, ok := ss.(*persistence.Manager); ok {
+			if redisManager.Store.(*SessionStore).Client != nil {
+				Expect(redisManager.Store.(*SessionStore).Client.(closer).Close()).To(Succeed())
 			}
 		}
 	})
