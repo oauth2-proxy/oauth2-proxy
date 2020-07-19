@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
@@ -10,15 +9,12 @@ import (
 	"html/template"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc"
-	"github.com/mbland/hmacauth"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
@@ -28,36 +24,16 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
-	"github.com/yhat/wsutil"
 )
 
 const (
-	// SignatureHeader is the name of the request header containing the GAP Signature
-	// Part of hmacauth
-	SignatureHeader = "GAP-Signature"
-
 	httpScheme  = "http"
 	httpsScheme = "https"
 
 	applicationJSON = "application/json"
 )
-
-// SignatureHeaders contains the headers to be signed by the hmac algorithm
-// Part of hmacauth
-var SignatureHeaders = []string{
-	"Content-Length",
-	"Content-Md5",
-	"Content-Type",
-	"Date",
-	"Authorization",
-	"X-Forwarded-User",
-	"X-Forwarded-Email",
-	"X-Forwarded-Preferred-User",
-	"X-Forwarded-Access-Token",
-	"Cookie",
-	"Gap-Auth",
-}
 
 var (
 	// ErrNeedsLogin means the user should be redirected to the login page
@@ -124,116 +100,6 @@ type OAuthProxy struct {
 	Footer                  string
 }
 
-// UpstreamProxy represents an upstream server to proxy to
-type UpstreamProxy struct {
-	upstream  string
-	handler   http.Handler
-	wsHandler http.Handler
-	auth      hmacauth.HmacAuth
-}
-
-// ServeHTTP proxies requests to the upstream provider while signing the
-// request headers
-func (u *UpstreamProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("GAP-Upstream-Address", u.upstream)
-	if u.auth != nil {
-		r.Header.Set("GAP-Auth", w.Header().Get("GAP-Auth"))
-		u.auth.SignRequest(r)
-	}
-	if u.wsHandler != nil && strings.EqualFold(r.Header.Get("Connection"), "upgrade") && r.Header.Get("Upgrade") == "websocket" {
-		u.wsHandler.ServeHTTP(w, r)
-	} else {
-		u.handler.ServeHTTP(w, r)
-	}
-
-}
-
-// NewReverseProxy creates a new reverse proxy for proxying requests to upstream
-// servers
-func NewReverseProxy(target *url.URL, opts *options.Options) (proxy *httputil.ReverseProxy) {
-	proxy = httputil.NewSingleHostReverseProxy(target)
-	proxy.FlushInterval = opts.FlushInterval
-	if opts.SSLUpstreamInsecureSkipVerify {
-		proxy.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-	}
-	setProxyErrorHandler(proxy, opts)
-	return proxy
-}
-
-func setProxyErrorHandler(proxy *httputil.ReverseProxy, opts *options.Options) {
-	templates := loadTemplates(opts.CustomTemplatesDir)
-	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, proxyErr error) {
-		logger.Printf("Error proxying to upstream server: %v", proxyErr)
-		w.WriteHeader(http.StatusBadGateway)
-		data := struct {
-			Title       string
-			Message     string
-			ProxyPrefix string
-		}{
-			Title:       "Bad Gateway",
-			Message:     "Error proxying to upstream server",
-			ProxyPrefix: opts.ProxyPrefix,
-		}
-		templates.ExecuteTemplate(w, "error.html", data)
-	}
-}
-
-func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
-	director := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		director(req)
-		// use RequestURI so that we aren't unescaping encoded slashes in the request path
-		req.Host = target.Host
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
-	}
-}
-
-func setProxyDirector(proxy *httputil.ReverseProxy) {
-	director := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		director(req)
-		// use RequestURI so that we aren't unescaping encoded slashes in the request path
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
-	}
-}
-
-// NewFileServer creates a http.Handler to serve files from the filesystem
-func NewFileServer(path string, filesystemPath string) (proxy http.Handler) {
-	return http.StripPrefix(path, http.FileServer(http.Dir(filesystemPath)))
-}
-
-// NewWebSocketOrRestReverseProxy creates a reverse proxy for REST or websocket based on url
-func NewWebSocketOrRestReverseProxy(u *url.URL, opts *options.Options, auth hmacauth.HmacAuth) http.Handler {
-	u.Path = ""
-	proxy := NewReverseProxy(u, opts)
-	if !opts.PassHostHeader {
-		setProxyUpstreamHostHeader(proxy, u)
-	} else {
-		setProxyDirector(proxy)
-	}
-
-	// this should give us a wss:// scheme if the url is https:// based.
-	var wsProxy *wsutil.ReverseProxy
-	if opts.ProxyWebSockets {
-		wsScheme := "ws" + strings.TrimPrefix(u.Scheme, "http")
-		wsURL := &url.URL{Scheme: wsScheme, Host: u.Host}
-		wsProxy = wsutil.NewSingleHostReverseProxy(wsURL)
-		if opts.SSLUpstreamInsecureSkipVerify {
-			wsProxy.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		}
-	}
-	return &UpstreamProxy{
-		upstream:  u.Host,
-		handler:   proxy,
-		wsHandler: wsProxy,
-		auth:      auth,
-	}
-}
-
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
 func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
 	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
@@ -241,48 +107,13 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
-	serveMux := http.NewServeMux()
-	var auth hmacauth.HmacAuth
-	if sigData := opts.GetSignatureData(); sigData != nil {
-		auth = hmacauth.NewHmacAuth(sigData.Hash, []byte(sigData.Key),
-			SignatureHeader, SignatureHeaders)
+	templates := loadTemplates(opts.CustomTemplatesDir)
+	proxyErrorHandler := upstream.NewProxyErrorHandler(templates.Lookup("error.html"), opts.ProxyPrefix)
+	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), proxyErrorHandler)
+	if err != nil {
+		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
 	}
-	for _, u := range opts.GetProxyURLs() {
-		path := u.Path
-		host := u.Host
-		switch u.Scheme {
-		case httpScheme, httpsScheme:
-			logger.Printf("mapping path %q => upstream %q", path, u)
-			proxy := NewWebSocketOrRestReverseProxy(u, opts, auth)
-			serveMux.Handle(path, proxy)
-		case "static":
-			responseCode, err := strconv.Atoi(host)
-			if err != nil {
-				logger.Printf("unable to convert %q to int, use default \"200\"", host)
-				responseCode = 200
-			}
 
-			serveMux.HandleFunc(path, func(rw http.ResponseWriter, req *http.Request) {
-				rw.WriteHeader(responseCode)
-				fmt.Fprintf(rw, "Authenticated")
-			})
-		case "file":
-			if u.Fragment != "" {
-				path = u.Fragment
-			}
-			logger.Printf("mapping path %q => file system %q", path, u.Path)
-			proxy := NewFileServer(path, u.Path)
-			uProxy := UpstreamProxy{
-				upstream:  path,
-				handler:   proxy,
-				wsHandler: nil,
-				auth:      nil,
-			}
-			serveMux.Handle(path, &uProxy)
-		default:
-			panic(fmt.Sprintf("unknown upstream protocol %s", u.Scheme))
-		}
-	}
 	for _, u := range opts.GetCompiledRegex() {
 		logger.Printf("compiled skip-auth-regex => %q", u)
 	}
@@ -350,7 +181,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		provider:                opts.GetProvider(),
 		providerNameOverride:    opts.ProviderName,
 		sessionStore:            sessionStore,
-		serveMux:                serveMux,
+		serveMux:                upstreamProxy,
 		redirectURL:             redirectURL,
 		whitelistDomains:        opts.WhitelistDomains,
 		skipAuthRegex:           opts.SkipAuthRegex,
@@ -371,7 +202,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PassAuthorization:       opts.PassAuthorization,
 		PreferEmailToUser:       opts.PreferEmailToUser,
 		SkipProviderButton:      opts.SkipProviderButton,
-		templates:               loadTemplates(opts.CustomTemplatesDir),
+		templates:               templates,
 		trustedIPs:              trustedIPs,
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,

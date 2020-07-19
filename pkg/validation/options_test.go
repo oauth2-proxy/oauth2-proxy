@@ -22,7 +22,11 @@ const (
 
 func testOptions() *options.Options {
 	o := options.NewOptions()
-	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
+	o.UpstreamServers = append(o.UpstreamServers, options.Upstream{
+		ID:   "upstream",
+		Path: "/",
+		URI:  "http://127.0.0.1:8080/",
+	})
 	o.Cookie.Secret = cookieSecret
 	o.ClientID = clientID
 	o.ClientSecret = clientSecret
@@ -138,26 +142,6 @@ func TestRedirectURL(t *testing.T) {
 	expected := &url.URL{
 		Scheme: "https", Host: "myhost.com", Path: "/oauth2/callback"}
 	assert.Equal(t, expected, o.GetRedirectURL())
-}
-
-func TestProxyURLs(t *testing.T) {
-	o := testOptions()
-	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8081")
-	assert.Equal(t, nil, Validate(o))
-	expected := []*url.URL{
-		{Scheme: "http", Host: "127.0.0.1:8080", Path: "/"},
-		// note the '/' was added
-		{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"},
-	}
-	assert.Equal(t, expected, o.GetProxyURLs())
-}
-
-func TestProxyURLsError(t *testing.T) {
-	o := testOptions()
-	o.Upstreams = append(o.Upstreams, "127.0.0.1:8081")
-	err := Validate(o)
-	assert.NotEqual(t, nil, err)
-	assert.Contains(t, err.Error(), "error parsing upstream")
 }
 
 func TestCompiledRegex(t *testing.T) {

@@ -4,18 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/pflag"
 )
-
-func TestOptionsSuite(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Options Suite")
-}
 
 var _ = Describe("Load", func() {
 	Context("with a testOptions structure", func() {
@@ -299,6 +293,11 @@ var _ = Describe("Load", func() {
 				flagSet:        NewFlagSet,
 				input:          &Options{},
 				expectedOutput: NewOptions(),
+			}),
+			Entry("with an empty LegacyOptions struct, should return default values", &testOptionsTableInput{
+				flagSet:        NewFlagSet,
+				input:          &LegacyOptions{},
+				expectedOutput: NewLegacyOptions(),
 			}),
 		)
 	})

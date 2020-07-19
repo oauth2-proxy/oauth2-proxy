@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"net/url"
 	"regexp"
-	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
@@ -24,7 +23,6 @@ type Options struct {
 	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
 	PingPath           string   `flag:"ping-path" cfg:"ping_path"`
 	PingUserAgent      string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
-	ProxyWebSockets    bool     `flag:"proxy-websockets" cfg:"proxy_websockets"`
 	HTTPAddress        string   `flag:"http-address" cfg:"http_address"`
 	HTTPSAddress       string   `flag:"https-address" cfg:"https_address"`
 	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
@@ -64,26 +62,26 @@ type Options struct {
 	Session SessionOptions `cfg:",squash"`
 	Logging Logging        `cfg:",squash"`
 
-	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
-	SkipAuthRegex                 []string      `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
-	SkipAuthStripHeaders          bool          `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
-	SkipJwtBearerTokens           bool          `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
-	ExtraJwtIssuers               []string      `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
-	PassBasicAuth                 bool          `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
-	SetBasicAuth                  bool          `flag:"set-basic-auth" cfg:"set_basic_auth"`
-	PreferEmailToUser             bool          `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
-	BasicAuthPassword             string        `flag:"basic-auth-password" cfg:"basic_auth_password"`
-	PassAccessToken               bool          `flag:"pass-access-token" cfg:"pass_access_token"`
-	PassHostHeader                bool          `flag:"pass-host-header" cfg:"pass_host_header"`
-	SkipProviderButton            bool          `flag:"skip-provider-button" cfg:"skip_provider_button"`
-	PassUserHeaders               bool          `flag:"pass-user-headers" cfg:"pass_user_headers"`
-	SSLInsecureSkipVerify         bool          `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
-	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify"`
-	SetXAuthRequest               bool          `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
-	SetAuthorization              bool          `flag:"set-authorization-header" cfg:"set_authorization_header"`
-	PassAuthorization             bool          `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
-	SkipAuthPreflight             bool          `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
-	FlushInterval                 time.Duration `flag:"flush-interval" cfg:"flush_interval"`
+	// Not used in the legacy config, name not allowed to match an external key (upstreams)
+	// TODO(JoelSpeed): Rename when legacy config is removed
+	UpstreamServers Upstreams `cfg:",internal"`
+
+	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
+	SkipAuthStripHeaders  bool     `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
+	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
+	ExtraJwtIssuers       []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
+	PassBasicAuth         bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
+	SetBasicAuth          bool     `flag:"set-basic-auth" cfg:"set_basic_auth"`
+	PreferEmailToUser     bool     `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
+	BasicAuthPassword     string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
+	PassAccessToken       bool     `flag:"pass-access-token" cfg:"pass_access_token"`
+	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
+	PassUserHeaders       bool     `flag:"pass-user-headers" cfg:"pass_user_headers"`
+	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
+	SetXAuthRequest       bool     `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
+	SetAuthorization      bool     `flag:"set-authorization-header" cfg:"set_authorization_header"`
+	PassAuthorization     bool     `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
+	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -114,7 +112,6 @@ type Options struct {
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
-	proxyURLs          []*url.URL
 	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
 	signatureData      *SignatureData
@@ -125,7 +122,6 @@ type Options struct {
 
 // Options for Getting internal values
 func (o *Options) GetRedirectURL() *url.URL                        { return o.redirectURL }
-func (o *Options) GetProxyURLs() []*url.URL                        { return o.proxyURLs }
 func (o *Options) GetCompiledRegex() []*regexp.Regexp              { return o.compiledRegex }
 func (o *Options) GetProvider() providers.Provider                 { return o.provider }
 func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
@@ -135,7 +131,6 @@ func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.re
 
 // Options for Setting internal values
 func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
-func (o *Options) SetProxyURLs(s []*url.URL)                        { o.proxyURLs = s }
 func (o *Options) SetCompiledRegex(s []*regexp.Regexp)              { o.compiledRegex = s }
 func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
 func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
@@ -149,7 +144,6 @@ func NewOptions() *Options {
 		ProxyPrefix:                      "/oauth2",
 		ProviderType:                     "google",
 		PingPath:                         "/ping",
-		ProxyWebSockets:                  true,
 		HTTPAddress:                      "127.0.0.1:4180",
 		HTTPSAddress:                     ":443",
 		RealClientIPHeader:               "X-Real-IP",
@@ -160,13 +154,10 @@ func NewOptions() *Options {
 		AzureTenant:                      "common",
 		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
-		SkipAuthStripHeaders:             false,
-		FlushInterval:                    time.Duration(1) * time.Second,
 		PassBasicAuth:                    true,
 		SetBasicAuth:                     false,
 		PassUserHeaders:                  true,
 		PassAccessToken:                  false,
-		PassHostHeader:                   true,
 		SetAuthorization:                 false,
 		PassAuthorization:                false,
 		PreferEmailToUser:                false,
@@ -193,14 +184,12 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
 	flagSet.Bool("set-xauthrequest", false, "set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)")
-	flagSet.StringSlice("upstream", []string{}, "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
 	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.Bool("set-basic-auth", false, "set HTTP Basic Auth information in response (useful in Nginx auth_request mode)")
 	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
 	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
 	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
-	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
 	flagSet.Bool("pass-authorization-header", false, "pass the Authorization Header to upstream")
 	flagSet.Bool("set-authorization-header", false, "set Authorization response headers (useful in Nginx auth_request mode)")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "bypass authentication for requests path's that match (may be given multiple times)")
@@ -208,8 +197,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
-	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
-	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 
@@ -240,7 +227,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
-	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
 	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
@@ -280,6 +266,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
+	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
 
 	return flagSet
 }
