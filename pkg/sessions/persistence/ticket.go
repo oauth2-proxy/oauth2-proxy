@@ -18,30 +18,30 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
 )
 
-// SaveFunc performs a persistent store's save functionality using
+// saveFunc performs a persistent store's save functionality using
 // a key string, value []byte & (optional) expiration time.Duration
-type SaveFunc func(string, []byte, time.Duration) error
+type saveFunc func(string, []byte, time.Duration) error
 
-// LoadFunc performs a load from a persistent store using a
+// loadFunc performs a load from a persistent store using a
 // string key and returning the stored value as []byte
-type LoadFunc func(string) ([]byte, error)
+type loadFunc func(string) ([]byte, error)
 
-// ClearFunc performs a persistent store's clear functionality using
+// clearFunc performs a persistent store's clear functionality using
 // a string key for the target of the deletion.
-type ClearFunc func(string) error
+type clearFunc func(string) error
 
-// Ticket is a structure representing the ticket used in server based
+// ticket is a structure representing the ticket used in server based
 // session storage. It provides a unique per session decryption secret giving
 // more security than the shared CookieSecret.
-type Ticket struct {
-	TicketID string
-	Secret   []byte
-	Options  *options.Cookie
+type ticket struct {
+	id      string
+	secret  []byte
+	options *options.Cookie
 }
 
-// NewTicket creates a new ticket. TicketID & Secret will be randomly created
-// with 16 byte sizes. The TicketID will be prefixed & hex encoded.
-func NewTicket(cookieOpts *options.Cookie) (*Ticket, error) {
+// newTicket creates a new ticket. The ID & secret will be randomly created
+// with 16 byte sizes. The ID will be prefixed & hex encoded.
+func newTicket(cookieOpts *options.Cookie) (*ticket, error) {
 	rawID := make([]byte, 16)
 	if _, err := io.ReadFull(rand.Reader, rawID); err != nil {
 		return nil, fmt.Errorf("failed to create new ticket ID: %v", err)
@@ -54,22 +54,21 @@ func NewTicket(cookieOpts *options.Cookie) (*Ticket, error) {
 		return nil, fmt.Errorf("failed to create encryption secret: %v", err)
 	}
 
-	ticket := &Ticket{
-		TicketID: ticketID,
-		Secret:   secret,
-		Options:  cookieOpts,
-	}
-	return ticket, nil
+	return &ticket{
+		id:      ticketID,
+		secret:  secret,
+		options: cookieOpts,
+	}, nil
 }
 
-// EncodeTicket encodes the Ticket to a string for usage in cookies.
-func (t *Ticket) EncodeTicket() string {
-	return fmt.Sprintf("%s.%s", t.TicketID, base64.RawURLEncoding.EncodeToString(t.Secret))
+// encodeTicket encodes the Ticket to a string for usage in cookies
+func (t *ticket) encodeTicket() string {
+	return fmt.Sprintf("%s.%s", t.id, base64.RawURLEncoding.EncodeToString(t.secret))
 }
 
-// DecodeTicket decodes a Ticket
-func DecodeTicket(ticket string, cookieOpts *options.Cookie) (*Ticket, error) {
-	ticketParts := strings.Split(ticket, ".")
+// decodeTicket decodes an encoded ticket string
+func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error) {
+	ticketParts := strings.Split(encTicket, ".")
 	if len(ticketParts) != 2 {
 		return nil, fmt.Errorf("failed to decode ticket")
 	}
@@ -80,17 +79,17 @@ func DecodeTicket(ticket string, cookieOpts *options.Cookie) (*Ticket, error) {
 		return nil, fmt.Errorf("failed to decode encryption secret: %v", err)
 	}
 
-	Ticket := &Ticket{
-		TicketID: ticketID,
-		Secret:   secret,
-		Options:  cookieOpts,
+	Ticket := &ticket{
+		id:      ticketID,
+		secret:  secret,
+		options: cookieOpts,
 	}
 	return Ticket, nil
 }
 
-// DecodeTicketFromCookie retrieves a potential Ticket cookie from a request
-// and decodes it to a Ticket.
-func DecodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*Ticket, error) {
+// decodeTicketFromRequest retrieves a potential ticket cookie from a request
+// and decodes it to a ticket.
+func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ticket, error) {
 	requestCookie, err := req.Cookie(cookieOpts.Name)
 	if err != nil {
 		// Don't wrap this error to allow `err == http.ErrNoCookie` checks
@@ -104,16 +103,16 @@ func DecodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*Ti
 	}
 
 	// Valid cookie, decode the ticket
-	ticket, err := DecodeTicket(string(val), cookieOpts)
+	ticket, err := decodeTicket(string(val), cookieOpts)
 	if err != nil {
 		return nil, err
 	}
 	return ticket, nil
 }
 
-// SaveSession encodes the SessionState with the Ticket's secret and persists
-// it to disk via the passed SaveFunc.
-func (t *Ticket) SaveSession(s *sessions.SessionState, saver SaveFunc) error {
+// saveSession encodes the SessionState with the ticket's secret and persists
+// it to disk via the passed saveFunc.
+func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
 	c, err := t.makeCipher()
 	if err != nil {
 		return err
@@ -122,16 +121,16 @@ func (t *Ticket) SaveSession(s *sessions.SessionState, saver SaveFunc) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode the session state with the ticket: %v", err)
 	}
-	return saver(t.TicketID, ciphertext, t.Options.Expire)
+	return saver(t.id, ciphertext, t.options.Expire)
 }
 
-// LoadSession loads a session from the disk store via the passed LoadFunc
-// using the TicketID as the key. It then decodeds the SessionState using
-// Ticket.Secret to make the AES-GCM cipher.
+// loadSession loads a session from the disk store via the passed loadFunc
+// using the ticket.id as the key. It then decodes the SessionState using
+// ticket.secret to make the AES-GCM cipher.
 //
 // TODO (@NickMeves): Remove legacyV5LoadSession support in V7
-func (t *Ticket) LoadSession(loader LoadFunc) (*sessions.SessionState, error) {
-	ciphertext, err := loader(t.TicketID)
+func (t *ticket) loadSession(loader loadFunc) (*sessions.SessionState, error) {
+	ciphertext, err := loader(t.id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load the session state with the ticket: %v", err)
 	}
@@ -146,27 +145,27 @@ func (t *Ticket) LoadSession(loader LoadFunc) (*sessions.SessionState, error) {
 	return ss, nil
 }
 
-// ClearSession uses the passed ClearFunc to delete a session stored with a
-// key of TicketID
-func (t *Ticket) ClearSession(clearer ClearFunc) error {
-	return clearer(t.TicketID)
+// clearSession uses the passed clearFunc to delete a session stored with a
+// key of ticket.id
+func (t *ticket) clearSession(clearer clearFunc) error {
+	return clearer(t.id)
 }
 
-// SetCookie sets the encoded Ticket as a cookie
-func (t *Ticket) SetCookie(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) {
+// setCookie sets the encoded ticket as a cookie
+func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) {
 	ticketCookie := t.makeCookie(
 		req,
-		t.EncodeTicket(),
-		t.Options.Expire,
+		t.encodeTicket(),
+		t.options.Expire,
 		*s.CreatedAt,
 	)
 
 	http.SetCookie(rw, ticketCookie)
 }
 
-// ClearCookie removes any cookies that would be where this Ticket would set
-// them
-func (t *Ticket) ClearCookie(rw http.ResponseWriter, req *http.Request) {
+// clearCookie removes any cookies that would be where this ticket
+// would set them
+func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
 	clearCookie := t.makeCookie(
 		req,
 		"",
@@ -177,23 +176,23 @@ func (t *Ticket) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 }
 
 // makeCookie makes a cookie, signing the value if present
-func (t *Ticket) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
+func (t *ticket) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
 	if value != "" {
-		value = encryption.SignedValue(t.Options.Secret, t.Options.Name, []byte(value), now)
+		value = encryption.SignedValue(t.options.Secret, t.options.Name, []byte(value), now)
 	}
 	return cookies.MakeCookieFromOptions(
 		req,
-		t.Options.Name,
+		t.options.Name,
 		value,
-		t.Options,
+		t.options,
 		expires,
 		now,
 	)
 }
 
-// makeCipher makes a AES-GCM cipher out of the Ticket.Secret
-func (t *Ticket) makeCipher() (encryption.Cipher, error) {
-	c, err := encryption.NewGCMCipher(t.Secret)
+// makeCipher makes a AES-GCM cipher out of the ticket's secret
+func (t *ticket) makeCipher() (encryption.Cipher, error) {
+	c, err := encryption.NewGCMCipher(t.secret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make an AES-GCM cipher from the ticket secret: %v", err)
 	}
@@ -203,16 +202,16 @@ func (t *Ticket) makeCipher() (encryption.Cipher, error) {
 // legacyV5LoadSession loads a Redis session created in V5 with historical logic
 //
 // TODO (@NickMeves): Remove in V7
-func (t *Ticket) legacyV5LoadSession(resultBytes []byte) (*sessions.SessionState, error) {
-	block, err := aes.NewCipher(t.Secret)
+func (t *ticket) legacyV5LoadSession(resultBytes []byte) (*sessions.SessionState, error) {
+	block, err := aes.NewCipher(t.secret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a legacy AES-CFB cipher from the ticket secret: %v", err)
 	}
 
-	stream := cipher.NewCFBDecrypter(block, t.Secret)
+	stream := cipher.NewCFBDecrypter(block, t.secret)
 	stream.XORKeyStream(resultBytes, resultBytes)
 
-	cfbCipher, err := encryption.NewCFBCipher(encryption.SecretBytes(t.Options.Secret))
+	cfbCipher, err := encryption.NewCFBCipher(encryption.SecretBytes(t.options.Secret))
 	if err != nil {
 		return nil, err
 	}

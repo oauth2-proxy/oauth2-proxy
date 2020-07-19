@@ -28,14 +28,14 @@ func Test_legacyV5LoadSession(t *testing.T) {
 			secret := make([]byte, aes.BlockSize)
 			_, err := io.ReadFull(rand.Reader, secret)
 			g.Expect(err).ToNot(HaveOccurred())
-			ticket := &Ticket{
-				Secret: secret,
-				Options: &options.Cookie{
+			ticket := &ticket{
+				secret: secret,
+				options: &options.Cookie{
 					Secret: base64.RawURLEncoding.EncodeToString([]byte(sessions.LegacyV5TestSecret)),
 				},
 			}
 
-			encrypted, err := legacyStoreValue(tc.Input, ticket.Secret)
+			encrypted, err := legacyStoreValue(tc.Input, ticket.secret)
 			g.Expect(err).ToNot(HaveOccurred())
 
 			ss, err := ticket.legacyV5LoadSession(encrypted)
