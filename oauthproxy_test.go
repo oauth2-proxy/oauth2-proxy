@@ -1889,7 +1889,7 @@ func TestGetJwtSession(t *testing.T) {
 
 	// Bearer
 	expires := time.Unix(1912151821, 0)
-	session, err := test.proxy.GetJwtSession(test.req)
+	session, err := test.proxy.getAuthenticatedSession(test.rw, test.req)
 	assert.NoError(t, err)
 	assert.Equal(t, session.User, "1234567890")
 	assert.Equal(t, session.Email, "john@example.com")
@@ -1910,70 +1910,6 @@ func TestGetJwtSession(t *testing.T) {
 	assert.Equal(t, test.rw.Header().Get("Authorization"), authHeader)
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-User"), "1234567890")
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
-}
-
-func TestFindJwtBearerToken(t *testing.T) {
-	p := OAuthProxy{CookieName: "oauth2", CookieDomains: []string{"abc"}}
-	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: "example.com"}}
-
-	validToken := "eyJfoobar.eyJfoobar.12345asdf"
-	var token string
-
-	// Bearer
-	getReq.Header = map[string][]string{
-		"Authorization": {fmt.Sprintf("Bearer %s", validToken)},
-	}
-
-	token, err := p.findBearerToken(getReq)
-	assert.NoError(t, err)
-	assert.Equal(t, validToken, token)
-
-	// Basic - no password
-	getReq.SetBasicAuth(token, "")
-	token, err = p.findBearerToken(getReq)
-	assert.NoError(t, err)
-	assert.Equal(t, validToken, token)
-
-	// Basic - sentinel password
-	getReq.SetBasicAuth(token, "x-oauth-basic")
-	token, err = p.findBearerToken(getReq)
-	assert.NoError(t, err)
-	assert.Equal(t, validToken, token)
-
-	// Basic - any username, password matching jwt pattern
-	getReq.SetBasicAuth("any-username-you-could-wish-for", token)
-	token, err = p.findBearerToken(getReq)
-	assert.NoError(t, err)
-	assert.Equal(t, validToken, token)
-
-	failures := []string{
-		// Too many parts
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
-		// Not enough parts
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA",
-		// Invalid encrypted key
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.//////.dGVzdA.dGVzdA.dGVzdA",
-		// Invalid IV
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.//////.dGVzdA.dGVzdA",
-		// Invalid ciphertext
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.//////.dGVzdA",
-		// Invalid tag
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA.//////",
-		// Invalid header
-		"W10.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
-		// Invalid header
-		"######.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
-		// Missing alc/enc params
-		"e30.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
-	}
-
-	for _, failure := range failures {
-		getReq.Header = map[string][]string{
-			"Authorization": {fmt.Sprintf("Bearer %s", failure)},
-		}
-		_, err := p.findBearerToken(getReq)
-		assert.Error(t, err)
-	}
 }
 
 func Test_prepareNoCache(t *testing.T) {

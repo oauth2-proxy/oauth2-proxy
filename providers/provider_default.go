@@ -126,35 +126,8 @@ func (p *ProviderData) RefreshSessionIfNeeded(ctx context.Context, s *sessions.S
 	return false, nil
 }
 
+// CreateSessionStateFromBearerToken should be implemented to allow providers
+// to convert ID tokens into sessions
 func (p *ProviderData) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
-	var claims struct {
-		Subject           string `json:"sub"`
-		Email             string `json:"email"`
-		Verified          *bool  `json:"email_verified"`
-		PreferredUsername string `json:"preferred_username"`
-	}
-
-	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
-	}
-
-	if claims.Email == "" {
-		claims.Email = claims.Subject
-	}
-
-	if claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-	}
-
-	newSession := &sessions.SessionState{
-		Email:             claims.Email,
-		User:              claims.Subject,
-		PreferredUsername: claims.PreferredUsername,
-		AccessToken:       rawIDToken,
-		IDToken:           rawIDToken,
-		RefreshToken:      "",
-		ExpiresOn:         &idToken.Expiry,
-	}
-
-	return newSession, nil
+	return nil, errors.New("not implemented")
 }
