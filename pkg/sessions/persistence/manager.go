@@ -26,7 +26,7 @@ func NewManager(store Store, cookieOpts *options.Cookie) *Manager {
 }
 
 // Save saves a session in a persistent Store. Save will generate (or reuse an
-// existing) ticker which manages unique per session encryption & retrieval
+// existing) ticket which manages unique per session encryption & retrieval
 // from the persistent data store.
 func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
 	if s.CreatedAt == nil || s.CreatedAt.IsZero() {

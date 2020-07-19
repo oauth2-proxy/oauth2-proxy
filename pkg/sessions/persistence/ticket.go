@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -70,7 +71,7 @@ func (t *ticket) encodeTicket() string {
 func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error) {
 	ticketParts := strings.Split(encTicket, ".")
 	if len(ticketParts) != 2 {
-		return nil, fmt.Errorf("failed to decode ticket")
+		return nil, errors.New("failed to decode ticket")
 	}
 	ticketID, secretBase64 := ticketParts[0], ticketParts[1]
 
@@ -79,12 +80,11 @@ func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error)
 		return nil, fmt.Errorf("failed to decode encryption secret: %v", err)
 	}
 
-	Ticket := &ticket{
+	return &ticket{
 		id:      ticketID,
 		secret:  secret,
 		options: cookieOpts,
-	}
-	return Ticket, nil
+	}, nil
 }
 
 // decodeTicketFromRequest retrieves a potential ticket cookie from a request
@@ -103,11 +103,7 @@ func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ti
 	}
 
 	// Valid cookie, decode the ticket
-	ticket, err := decodeTicket(string(val), cookieOpts)
-	if err != nil {
-		return nil, err
-	}
-	return ticket, nil
+	return decodeTicket(string(val), cookieOpts)
 }
 
 // saveSession encodes the SessionState with the ticket's secret and persists
