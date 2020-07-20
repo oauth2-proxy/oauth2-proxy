@@ -11,6 +11,7 @@
 
 ## Changes since v6.0.0
 
+- [#561](https://github.com/oauth2-proxy/oauth2-proxy/pull/561) Refactor provider URLs to package level vars (@JoelSpeed)
 - [#682](https://github.com/oauth2-proxy/oauth2-proxy/pull/682) Refactor persistent session store session ticket management (@NickMeves)
 - [#688](https://github.com/oauth2-proxy/oauth2-proxy/pull/688) Refactor session loading to make use of middleware pattern (@JoelSpeed)
 - [#593](https://github.com/oauth2-proxy/oauth2-proxy/pull/593) Integrate upstream package with OAuth2 Proxy (@JoelSpeed)
