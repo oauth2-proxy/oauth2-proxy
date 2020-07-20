@@ -25,7 +25,11 @@ func main() {
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
 
-	flagSet.Parse(os.Args[1:])
+	err := flagSet.Parse(os.Args[1:])
+	if err != nil {
+		logger.Printf("ERROR: Failed to parse flags: %v", err)
+		os.Exit(1)
+	}
 
 	if *showVersion {
 		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
@@ -33,7 +37,7 @@ func main() {
 	}
 
 	legacyOpts := options.NewLegacyOptions()
-	err := options.Load(*config, flagSet, legacyOpts)
+	err = options.Load(*config, flagSet, legacyOpts)
 	if err != nil {
 		logger.Printf("ERROR: Failed to load config: %v", err)
 		os.Exit(1)

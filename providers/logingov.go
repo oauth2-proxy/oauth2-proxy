@@ -115,8 +115,10 @@ func checkNonce(idToken string, p *LoginGovProvider) (err error) {
 			return nil, myerr
 		}
 		body, myerr := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
 		if myerr != nil {
+			return nil, myerr
+		}
+		if myerr = resp.Body.Close(); myerr != nil {
 			return nil, myerr
 		}
 

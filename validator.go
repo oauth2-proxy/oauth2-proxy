@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -47,7 +48,12 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	if err != nil {
 		logger.Fatalf("failed opening authenticated-emails-file=%q, %s", um.usersFile, err)
 	}
-	defer r.Close()
+	defer func(c io.Closer) {
+		cerr := c.Close()
+		if cerr != nil {
+			logger.Fatalf("Error closing authenticated emails file: %s", cerr)
+		}
+	}(r)
 	csvReader := csv.NewReader(r)
 	csvReader.Comma = ','
 	csvReader.Comment = '#'

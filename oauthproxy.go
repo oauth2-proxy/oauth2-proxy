@@ -364,7 +364,11 @@ func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *s
 // RobotsTxt disallows scraping pages from the OAuthProxy
 func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 	rw.WriteHeader(http.StatusOK)
-	fmt.Fprintf(rw, "User-agent: *\nDisallow: /")
+	_, err := fmt.Fprintf(rw, "User-agent: *\nDisallow: /")
+	if err != nil {
+		logger.Printf("Error writing robots.txt: %s", err.Error())
+		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+	}
 }
 
 // ErrorPage writes an error response
@@ -379,13 +383,22 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 		Message:     message,
 		ProxyPrefix: p.ProxyPrefix,
 	}
-	p.templates.ExecuteTemplate(rw, "error.html", t)
+	err := p.templates.ExecuteTemplate(rw, "error.html", t)
+	if err != nil {
+		logger.Printf("Error rendering error.html template: %s", err.Error())
+		http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+	}
 }
 
 // SignInPage writes the sing in template to the response
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	prepareNoCache(rw)
-	p.ClearSessionCookie(rw, req)
+	err := p.ClearSessionCookie(rw, req)
+	if err != nil {
+		logger.Printf("Error clearing session cookie: %s", err.Error())
+		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		return
+	}
 	rw.WriteHeader(code)
 
 	redirectURL, err := p.GetRedirect(req)
@@ -419,11 +432,15 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	if p.providerNameOverride != "" {
 		t.ProviderName = p.providerNameOverride
 	}
-	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
+	err = p.templates.ExecuteTemplate(rw, "sign_in.html", t)
+	if err != nil {
+		logger.Printf("Error rendering sign_in.html template: %s", err.Error())
+		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+	}
 }
 
 // ManualSignIn handles basic auth logins to the proxy
-func (p *OAuthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {
+func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool) {
 	if req.Method != "POST" || p.basicAuthValidator == nil {
 		return "", false
 	}
@@ -632,10 +649,15 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, ok := p.ManualSignIn(rw, req)
+	user, ok := p.ManualSignIn(req)
 	if ok {
 		session := &sessionsapi.SessionState{User: user}
-		p.SaveSession(rw, req, session)
+		err = p.SaveSession(rw, req, session)
+		if err != nil {
+			logger.Printf("Error saving session: %s", err.Error())
+			p.ErrorPage(rw, 500, "Internal Error", err.Error())
+			return
+		}
 		http.Redirect(rw, req, redirect, http.StatusFound)
 	} else {
 		if p.SkipProviderButton {
@@ -663,7 +685,11 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	}
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(userInfo)
+	err = json.NewEncoder(rw).Encode(userInfo)
+	if err != nil {
+		logger.Printf("Error encoding user info: %s", err.Error())
+		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+	}
 }
 
 // SignOut sends a response to clear the authentication cookie
@@ -674,7 +700,12 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, 500, "Internal Error", err.Error())
 		return
 	}
-	p.ClearSessionCookie(rw, req)
+	err = p.ClearSessionCookie(rw, req)
+	if err != nil {
+		logger.Printf("Error clearing session cookie: %s", err.Error())
+		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		return
+	}
 	http.Redirect(rw, req, redirect, http.StatusFound)
 }
 
@@ -837,7 +868,10 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	if session != nil && session.Email != "" && !p.Validator(session.Email) {
 		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
 		// Invalid session, clear it
-		p.ClearSessionCookie(rw, req)
+		err := p.ClearSessionCookie(rw, req)
+		if err != nil {
+			logger.Printf("Error clearing session cookie: %s", err.Error())
+		}
 		return nil, ErrNeedsLogin
 	}
 

@@ -41,7 +41,12 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 		logger.Fatal("failed to create watcher for ", filename, ": ", err)
 	}
 	go func() {
-		defer watcher.Close()
+		defer func(w *fsnotify.Watcher) {
+			cerr := w.Close()
+			if cerr != nil {
+				logger.Fatalf("error closing watcher: %s", err)
+			}
+		}(watcher)
 		for {
 			select {
 			case <-done:
@@ -55,7 +60,10 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 				// can't be opened.
 				if event.Op&(fsnotify.Remove|fsnotify.Rename|fsnotify.Chmod) != 0 {
 					logger.Printf("watching interrupted on event: %s", event)
-					watcher.Remove(filename)
+					err = watcher.Remove(filename)
+					if err != nil {
+						logger.Printf("error removing watcher on %s: %s", filename, err)
+					}
 					WaitForReplacement(filename, event.Op, watcher)
 				}
 				logger.Printf("reloading after event: %s", event)

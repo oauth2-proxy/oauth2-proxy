@@ -2,15 +2,19 @@ package encryption
 
 import (
 	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/rand"
+	"crypto/sha1" // #nosec G505
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"hash"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 )
 
 // SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
@@ -76,7 +80,15 @@ func SignedValue(seed string, key string, value []byte, now time.Time) string {
 func cookieSignature(signer func() hash.Hash, args ...string) string {
 	h := hmac.New(signer, []byte(args[0]))
 	for _, arg := range args[1:] {
-		h.Write([]byte(arg))
+		_, err := h.Write([]byte(arg))
+		// If signing fails, fail closed and return something that won't validate
+		if err != nil {
+			garbage := make([]byte, 16)
+			if _, err := io.ReadFull(rand.Reader, garbage); err != nil {
+				logger.Fatal("HMAC & RNG functions both failing. Shutting down for security")
+			}
+			return base64.URLEncoding.EncodeToString(garbage)
+		}
 	}
 	var b []byte
 	b = h.Sum(b)
