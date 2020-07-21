@@ -48,7 +48,11 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 	if err != nil {
 		return err
 	}
-	tckt.setCookie(rw, req, s)
+
+	err = tckt.setCookie(rw, req, s)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

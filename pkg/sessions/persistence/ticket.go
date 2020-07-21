@@ -148,33 +148,42 @@ func (t *ticket) clearSession(clearer clearFunc) error {
 }
 
 // setCookie sets the encoded ticket as a cookie
-func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) {
-	ticketCookie := t.makeCookie(
+func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
+	ticketCookie, err := t.makeCookie(
 		req,
 		t.encodeTicket(),
 		t.options.Expire,
 		*s.CreatedAt,
 	)
+	if err != nil {
+		return err
+	}
 
 	http.SetCookie(rw, ticketCookie)
+	return nil
 }
 
 // clearCookie removes any cookies that would be where this ticket
 // would set them
 func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
-	clearCookie := t.makeCookie(
+	http.SetCookie(rw, cookies.MakeCookieFromOptions(
 		req,
+		t.options.Name,
 		"",
+		t.options,
 		time.Hour*-1,
 		time.Now(),
-	)
-	http.SetCookie(rw, clearCookie)
+	))
 }
 
 // makeCookie makes a cookie, signing the value if present
-func (t *ticket) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) *http.Cookie {
+func (t *ticket) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) (*http.Cookie, error) {
 	if value != "" {
-		value = encryption.SignedValue(t.options.Secret, t.options.Name, []byte(value), now)
+		var err error
+		value, err = encryption.SignedValue(t.options.Secret, t.options.Name, []byte(value), now)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return cookies.MakeCookieFromOptions(
 		req,
@@ -183,7 +192,7 @@ func (t *ticket) makeCookie(req *http.Request, value string, expires time.Durati
 		t.options,
 		expires,
 		now,
-	)
+	), nil
 }
 
 // makeCipher makes a AES-GCM cipher out of the ticket's secret
