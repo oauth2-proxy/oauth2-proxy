@@ -363,12 +363,13 @@ func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *s
 
 // RobotsTxt disallows scraping pages from the OAuthProxy
 func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
-	rw.WriteHeader(http.StatusOK)
 	_, err := fmt.Fprintf(rw, "User-agent: *\nDisallow: /")
 	if err != nil {
-		logger.Printf("Error writing robots.txt: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error writing robots.txt: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		return
 	}
+	rw.WriteHeader(http.StatusOK)
 }
 
 // ErrorPage writes an error response
@@ -385,7 +386,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, m
 	}
 	err := p.templates.ExecuteTemplate(rw, "error.html", t)
 	if err != nil {
-		logger.Printf("Error rendering error.html template: %s", err.Error())
+		logger.Printf("Error rendering error.html template: %v", err)
 		http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
@@ -395,16 +396,16 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	prepareNoCache(rw)
 	err := p.ClearSessionCookie(rw, req)
 	if err != nil {
-		logger.Printf("Error clearing session cookie: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error clearing session cookie: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	rw.WriteHeader(code)
 
 	redirectURL, err := p.GetRedirect(req)
 	if err != nil {
-		logger.Printf("Error obtaining redirect: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error obtaining redirect: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 
@@ -434,8 +435,8 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	}
 	err = p.templates.ExecuteTemplate(rw, "sign_in.html", t)
 	if err != nil {
-		logger.Printf("Error rendering sign_in.html template: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error rendering sign_in.html template: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 	}
 }
 
@@ -645,7 +646,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
 		logger.Printf("Error obtaining redirect: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 
@@ -655,7 +656,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		err = p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Printf("Error saving session: %s", err.Error())
-			p.ErrorPage(rw, 500, "Internal Error", err.Error())
+			p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 			return
 		}
 		http.Redirect(rw, req, redirect, http.StatusFound)
@@ -687,8 +688,8 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(rw).Encode(userInfo)
 	if err != nil {
-		logger.Printf("Error encoding user info: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error encoding user info: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 	}
 }
 
@@ -696,14 +697,14 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
-		logger.Printf("Error obtaining redirect: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error obtaining redirect: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
-		logger.Printf("Error clearing session cookie: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error clearing session cookie: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	http.Redirect(rw, req, redirect, http.StatusFound)
@@ -714,15 +715,15 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	prepareNoCache(rw)
 	nonce, err := encryption.Nonce()
 	if err != nil {
-		logger.Printf("Error obtaining nonce: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error obtaining nonce: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	p.SetCSRFCookie(rw, req, nonce)
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
-		logger.Printf("Error obtaining redirect: %s", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error obtaining redirect: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	redirectURI := p.GetRedirectURI(req.Host)
@@ -737,42 +738,42 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	// finish the oauth cycle
 	err := req.ParseForm()
 	if err != nil {
-		logger.Printf("Error while parsing OAuth2 callback: %s" + err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
+		logger.Printf("Error while parsing OAuth2 callback: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	errorString := req.Form.Get("error")
 	if errorString != "" {
-		logger.Printf("Error while parsing OAuth2 callback: %s ", errorString)
-		p.ErrorPage(rw, 403, "Permission Denied", errorString)
+		logger.Printf("Error while parsing OAuth2 callback: %s", errorString)
+		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", errorString)
 		return
 	}
 
 	session, err := p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
 	if err != nil {
-		logger.Printf("Error redeeming code during OAuth2 callback: %s ", err.Error())
-		p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+		logger.Printf("Error redeeming code during OAuth2 callback: %v", err)
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Internal Error")
 		return
 	}
 
 	s := strings.SplitN(req.Form.Get("state"), ":", 2)
 	if len(s) != 2 {
 		logger.Printf("Error while parsing OAuth2 state: invalid length")
-		p.ErrorPage(rw, 500, "Internal Error", "Invalid State")
+		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Invalid State")
 		return
 	}
 	nonce := s[0]
 	redirect := s[1]
 	c, err := req.Cookie(p.CSRFCookieName)
 	if err != nil {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable too obtain CSRF cookie")
-		p.ErrorPage(rw, 403, "Permission Denied", err.Error())
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
+		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", err.Error())
 		return
 	}
 	p.ClearCSRFCookie(rw, req)
 	if c.Value != nonce {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: csrf token mismatch, potential attack")
-		p.ErrorPage(rw, 403, "Permission Denied", "csrf failed")
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
+		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", "CSRF Failed")
 		return
 	}
 
@@ -785,14 +786,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
-			logger.Printf("%s %s", remoteAddr, err)
-			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+			logger.Printf("Error saving session state for %s: %v", remoteAddr, err)
+			p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 			return
 		}
 		http.Redirect(rw, req, redirect, http.StatusFound)
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
-		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
+		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", "Invalid Account")
 	}
 }
 
@@ -870,7 +871,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
 		if err != nil {
-			logger.Printf("Error clearing session cookie: %s", err.Error())
+			logger.Printf("Error clearing session cookie: %v", err)
 		}
 		return nil, ErrNeedsLogin
 	}
