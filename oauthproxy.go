@@ -213,6 +213,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		trustedIPs:              trustedIPs,
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
+		SignInMessage:           buildSignInMessage(opts),
 
 		basicAuthValidator:  basicAuthValidator,
 		displayHtpasswdForm: basicAuthValidator != nil,
@@ -253,6 +254,24 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	}))
 
 	return chain
+}
+
+func buildSignInMessage(opts *options.Options) string {
+	var msg string
+	if len(opts.Banner) >= 1 {
+		if opts.Banner == "-" {
+			msg = ""
+		} else {
+			msg = opts.Banner
+		}
+	} else if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
+		if len(opts.EmailDomains) > 1 {
+			msg = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.EmailDomains, ", "))
+		} else if opts.EmailDomains[0] != "*" {
+			msg = fmt.Sprintf("Authenticate using %v", opts.EmailDomains[0])
+		}
+	}
+	return msg
 }
 
 // GetRedirectURI returns the redirectURL that the upstream OAuth Provider will

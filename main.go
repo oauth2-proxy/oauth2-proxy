@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
@@ -60,20 +59,6 @@ func main() {
 	if err != nil {
 		logger.Printf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 		os.Exit(1)
-	}
-
-	if len(opts.Banner) >= 1 {
-		if opts.Banner == "-" {
-			oauthproxy.SignInMessage = ""
-		} else {
-			oauthproxy.SignInMessage = opts.Banner
-		}
-	} else if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
-		if len(opts.EmailDomains) > 1 {
-			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.EmailDomains, ", "))
-		} else if opts.EmailDomains[0] != "*" {
-			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using %v", opts.EmailDomains[0])
-		}
 	}
 
 	rand.Seed(time.Now().UnixNano())

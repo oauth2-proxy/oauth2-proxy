@@ -44,7 +44,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 		defer func(w *fsnotify.Watcher) {
 			cerr := w.Close()
 			if cerr != nil {
-				logger.Fatalf("error closing watcher: %s", err)
+				logger.Fatalf("error closing watcher: %v", err)
 			}
 		}(watcher)
 		for {
@@ -62,7 +62,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 					logger.Printf("watching interrupted on event: %s", event)
 					err = watcher.Remove(filename)
 					if err != nil {
-						logger.Printf("error removing watcher on %s: %s", filename, err)
+						logger.Printf("error removing watcher on %s: %v", filename, err)
 					}
 					WaitForReplacement(filename, event.Op, watcher)
 				}
