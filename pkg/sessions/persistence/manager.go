@@ -49,12 +49,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 		return err
 	}
 
-	err = tckt.setCookie(rw, req, s)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return tckt.setCookie(rw, req, s)
 }
 
 // Load reads sessions.SessionState information from a session store. It will

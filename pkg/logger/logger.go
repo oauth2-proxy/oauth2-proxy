@@ -137,8 +137,15 @@ func (l *Logger) Output(calldepth int, message string) {
 		File:      file,
 		Message:   message,
 	})
+	// Fallback for template errors
 	if err != nil {
-		panic(err)
+		_, ferr := fmt.Fprintf(l.writer, "[%s] [%s] %s",
+			FormatTimestamp(now),
+			file,
+			message)
+		if ferr != nil {
+			panic(ferr)
+		}
 	}
 
 	_, err = l.writer.Write([]byte("\n"))
@@ -177,8 +184,17 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 		Status:        string(status),
 		Message:       fmt.Sprintf(format, a...),
 	})
+	// Fallback for template errors
 	if err != nil {
-		panic(err)
+		_, ferr := fmt.Fprintf(l.writer, "%s - %s [%s] [%s] %s",
+			client,
+			username,
+			FormatTimestamp(now),
+			string(status),
+			fmt.Sprintf(format, a...))
+		if ferr != nil {
+			panic(ferr)
+		}
 	}
 
 	_, err = l.writer.Write([]byte("\n"))
@@ -234,8 +250,14 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		UserAgent:       fmt.Sprintf("%q", req.UserAgent()),
 		Username:        username,
 	})
+	// Fallback for template errors
 	if err != nil {
-		panic(err)
+		_, ferr := fmt.Fprintf(l.writer, "%s - %s [%s] %s %s %s %q %s %q %d %d %0.3f",
+			client, username, FormatTimestamp(ts), req.Host, req.Method, upstream,
+			url.RequestURI(), req.Proto, req.UserAgent(), status, size, duration)
+		if ferr != nil {
+			panic(ferr)
+		}
 	}
 
 	_, err = l.writer.Write([]byte("\n"))

@@ -647,7 +647,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
-		logger.Printf("Error obtaining redirect: %s", err.Error())
+		logger.Printf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
@@ -657,7 +657,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		session := &sessionsapi.SessionState{User: user}
 		err = p.SaveSession(rw, req, session)
 		if err != nil {
-			logger.Printf("Error saving session: %s", err.Error())
+			logger.Printf("Error saving session: %v", err)
 			p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 			return
 		}
