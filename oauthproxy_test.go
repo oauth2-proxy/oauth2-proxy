@@ -1679,6 +1679,11 @@ func TestGetRedirect(t *testing.T) {
 			expectedRedirect: "/foo/bar",
 		},
 		{
+			name:             "request with query preserves query",
+			url:              "/foo?bar",
+			expectedRedirect: "/foo?bar",
+		},
+		{
 			name:             "request under ProxyPrefix redirects to root",
 			url:              proxy.ProxyPrefix + "/foo/bar",
 			expectedRedirect: "/",

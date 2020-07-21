@@ -454,7 +454,8 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 		redirect = req.Form.Get("rd")
 	}
 	if !p.IsValidRedirect(redirect) {
-		redirect = req.URL.Path
+		// Use RequestURI to preserve ?query
+		redirect = req.URL.RequestURI()
 		if strings.HasPrefix(redirect, p.ProxyPrefix) {
 			redirect = "/"
 		}
