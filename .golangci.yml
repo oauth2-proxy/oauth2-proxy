@@ -9,6 +9,7 @@ linters:
     - deadcode
     - gofmt
     - goimports
+    - gosec
     - gosimple
     - staticcheck
     - structcheck
