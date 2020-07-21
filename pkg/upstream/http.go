@@ -103,6 +103,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 		proxy.FlushInterval = 1 * time.Second
 	}
 
+	// InsecureSkipVerify is a configurable option we allow
 	/* #nosec G402 */
 	if upstream.InsecureSkipTLSVerify {
 		proxy.Transport = &http.Transport{

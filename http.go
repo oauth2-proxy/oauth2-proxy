@@ -119,18 +119,18 @@ type tcpKeepAliveListener struct {
 	*net.TCPListener
 }
 
-func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	tc, err := ln.AcceptTCP()
 	if err != nil {
-		return
+		return nil, err
 	}
 	err = tc.SetKeepAlive(true)
 	if err != nil {
-		return nil, err
+		logger.Printf("Error setting Keep-Alive: %v", err)
 	}
 	err = tc.SetKeepAlivePeriod(3 * time.Minute)
 	if err != nil {
-		return nil, err
+		logger.Printf("Error setting Keep-Alive period: %v", err)
 	}
 	return tc, nil
 }

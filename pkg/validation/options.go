@@ -30,6 +30,7 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 
 	if o.SSLInsecureSkipVerify {
+		// InsecureSkipVerify is a configurable option we allow
 		/* #nosec G402 */
 		insecureTransport := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},

@@ -1,6 +1,7 @@
 package basic
 
 import (
+	// We support SHA1 & bcrypt in HTPasswd
 	"crypto/sha1" // #nosec G505
 	"encoding/base64"
 	"encoding/csv"
@@ -29,6 +30,7 @@ type sha1Pass string
 // NewHTPasswdValidator constructs an httpasswd based validator from the file
 // at the path given.
 func NewHTPasswdValidator(path string) (Validator, error) {
+	// We allow HTPasswd location via config options
 	r, err := os.Open(path) // #nosec G304
 	if err != nil {
 		return nil, fmt.Errorf("could not open htpasswd file: %v", err)
@@ -90,6 +92,7 @@ func (h *htpasswdMap) Validate(user string, password string) bool {
 
 	switch rp := realPassword.(type) {
 	case sha1Pass:
+		// We support SHA1 HTPasswd entries
 		d := sha1.New() // #nosec G401
 		_, err := d.Write([]byte(password))
 		if err != nil {

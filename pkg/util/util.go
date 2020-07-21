@@ -12,6 +12,7 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 	}
 	pool := x509.NewCertPool()
 	for _, path := range paths {
+		// Cert paths are a configurable option
 		data, err := ioutil.ReadFile(path) // #nosec G304
 		if err != nil {
 			return nil, fmt.Errorf("certificate authority file (%s) could not be read - %s", path, err)

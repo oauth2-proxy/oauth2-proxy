@@ -413,6 +413,8 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
+	// We allow unescaped template.HTML since it is user configured options
+	/* #nosec G203 */
 	t := struct {
 		ProviderName  string
 		SignInMessage template.HTML
