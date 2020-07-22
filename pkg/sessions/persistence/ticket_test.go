@@ -13,17 +13,10 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
-
-func Test_ticket(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Session Ticket")
-}
 
 var _ = Describe("Session Ticket Tests", func() {
 	Context("encodeTicket & decodeTicket", func() {
