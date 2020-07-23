@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,17 +67,17 @@ func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 		}))
 }
 
-func TestGitHubProviderDefaults(t *testing.T) {
-	p := testGitHubProvider("")
-	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "GitHub", p.Data().ProviderName)
-	assert.Equal(t, "https://github.com/login/oauth/authorize",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://github.com/login/oauth/access_token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://api.github.com/",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "user:email", p.Data().Scope)
+func TestNewGitHubProvider(t *testing.T) {
+	g := NewWithT(t)
+
+	// Test that defaults are set when calling for a new provider with nothing set
+	providerData := NewGitHubProvider(&ProviderData{}).Data()
+	g.Expect(providerData.ProviderName).To(Equal("GitHub"))
+	g.Expect(providerData.LoginURL.String()).To(Equal("https://github.com/login/oauth/authorize"))
+	g.Expect(providerData.RedeemURL.String()).To(Equal("https://github.com/login/oauth/access_token"))
+	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://api.github.com/"))
+	g.Expect(providerData.Scope).To(Equal("user:email"))
 }
 
 func TestGitHubProviderOverrides(t *testing.T) {

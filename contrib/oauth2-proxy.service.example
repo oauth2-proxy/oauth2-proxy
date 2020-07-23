@@ -12,7 +12,7 @@ After=syslog.target network.target
 User=www-data
 Group=www-data
 
-ExecStart=/usr/local/bin/oauth2-proxy -config=/etc/oauth2-proxy.cfg
+ExecStart=/usr/local/bin/oauth2-proxy --config=/etc/oauth2-proxy.cfg
 ExecReload=/bin/kill -HUP $MAINPID
 
 KillMode=process

@@ -124,7 +124,6 @@ func newOIDCServer(body []byte) (*url.URL, *httptest.Server) {
 }
 
 func newSignedTestIDToken(tokenClaims idTokenClaims) (string, error) {
-
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	standardClaims := jwt.NewWithClaims(jwt.SigningMethodRS256, tokenClaims)
 	return standardClaims.SignedString(key)

@@ -1,60 +1,130 @@
 package redis
 
 import (
-	"net/http"
-	"net/http/httptest"
-	"net/url"
+	"log"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/Bose/minisentinel"
 	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redis/redis/v7"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/tests"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func TestRedisStore(t *testing.T) {
-	t.Run("save session on redis standalone", func(t *testing.T) {
-		redisServer, err := miniredis.Run()
-		require.NoError(t, err)
-		defer redisServer.Close()
-		opts := options.NewOptions()
-		redisURL := url.URL{
-			Scheme: "redis",
-			Host:   redisServer.Addr(),
-		}
-		opts.Session.Redis.ConnectionURL = redisURL.String()
-		redisStore, err := NewRedisSessionStore(&opts.Session, &opts.Cookie)
-		require.NoError(t, err)
-		err = redisStore.Save(
-			httptest.NewRecorder(),
-			httptest.NewRequest(http.MethodGet, "/", nil),
-			&sessions.SessionState{})
-		assert.NoError(t, err)
-	})
-	t.Run("save session on redis sentinel", func(t *testing.T) {
-		redisServer, err := miniredis.Run()
-		require.NoError(t, err)
-		defer redisServer.Close()
-		sentinel := minisentinel.NewSentinel(redisServer)
-		err = sentinel.Start()
-		require.NoError(t, err)
-		defer sentinel.Close()
-		opts := options.NewOptions()
-		sentinelURL := url.URL{
-			Scheme: "redis",
-			Host:   sentinel.Addr(),
-		}
-		opts.Session.Redis.SentinelConnectionURLs = []string{sentinelURL.String()}
-		opts.Session.Redis.UseSentinel = true
-		opts.Session.Redis.SentinelMasterName = sentinel.MasterInfo().Name
-		redisStore, err := NewRedisSessionStore(&opts.Session, &opts.Cookie)
-		require.NoError(t, err)
-		err = redisStore.Save(
-			httptest.NewRecorder(),
-			httptest.NewRequest(http.MethodGet, "/", nil),
-			&sessions.SessionState{})
-		assert.NoError(t, err)
-	})
+func TestSessionStore(t *testing.T) {
+	logger.SetOutput(GinkgoWriter)
+
+	redisLogger := log.New(os.Stderr, "redis: ", log.LstdFlags|log.Lshortfile)
+	redisLogger.SetOutput(GinkgoWriter)
+	redis.SetLogger(redisLogger)
+
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Redis SessionStore")
 }
+
+var _ = Describe("Redis SessionStore Tests", func() {
+	// helper interface to allow us to close client connections
+	// All non-nil redis clients should implement this
+	type closer interface {
+		Close() error
+	}
+
+	var mr *miniredis.Miniredis
+	var ss sessionsapi.SessionStore
+
+	BeforeEach(func() {
+		var err error
+		mr, err = miniredis.Run()
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		mr.Close()
+	})
+
+	JustAfterEach(func() {
+		// Release any connections immediately after the test ends
+		if redisManager, ok := ss.(*persistence.Manager); ok {
+			if redisManager.Store.(*SessionStore).Client != nil {
+				Expect(redisManager.Store.(*SessionStore).Client.(closer).Close()).To(Succeed())
+			}
+		}
+	})
+
+	tests.RunSessionStoreTests(
+		func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+			// Set the connection URL
+			opts.Type = options.RedisSessionStoreType
+			opts.Redis.ConnectionURL = "redis://" + mr.Addr()
+
+			// Capture the session store so that we can close the client
+			var err error
+			ss, err = NewRedisSessionStore(opts, cookieOpts)
+			return ss, err
+		},
+		func(d time.Duration) error {
+			mr.FastForward(d)
+			return nil
+		},
+	)
+
+	Context("with sentinel", func() {
+		var ms *minisentinel.Sentinel
+
+		BeforeEach(func() {
+			ms = minisentinel.NewSentinel(mr)
+			Expect(ms.Start()).To(Succeed())
+		})
+
+		AfterEach(func() {
+			ms.Close()
+		})
+
+		tests.RunSessionStoreTests(
+			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+				// Set the sentinel connection URL
+				sentinelAddr := "redis://" + ms.Addr()
+				opts.Type = options.RedisSessionStoreType
+				opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
+				opts.Redis.UseSentinel = true
+				opts.Redis.SentinelMasterName = ms.MasterInfo().Name
+
+				// Capture the session store so that we can close the client
+				var err error
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				return ss, err
+			},
+			func(d time.Duration) error {
+				mr.FastForward(d)
+				return nil
+			},
+		)
+	})
+
+	Context("with cluster", func() {
+		tests.RunSessionStoreTests(
+			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+				clusterAddr := "redis://" + mr.Addr()
+				opts.Type = options.RedisSessionStoreType
+				opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
+				opts.Redis.UseCluster = true
+
+				// Capture the session store so that we can close the client
+				var err error
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				return ss, err
+			},
+			func(d time.Duration) error {
+				mr.FastForward(d)
+				return nil
+			},
+		)
+	})
+})

@@ -2,7 +2,7 @@ GO ?= go
 GOLANGCILINT ?= golangci-lint
 
 BINARY := oauth2-proxy
-VERSION := $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
+VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
 REGISTRY ?= quay.io/oauth2-proxy
 .NOTPARALLEL:
@@ -12,6 +12,8 @@ GO_MINOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.
 MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
 MINIMUM_SUPPORTED_GO_MINOR_VERSION = 14
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
+
+DOCKER_BUILD := docker build --build-arg VERSION=${VERSION}
 
 ifeq ($(COVER),true)
 TESTCOVER ?= -coverprofile c.out
@@ -41,17 +43,17 @@ $(BINARY):
 
 .PHONY: docker
 docker:
-	docker build -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest .
+	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest .
 
 .PHONY: docker-all
 docker-all: docker
-	docker build -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest-amd64 .
-	docker build -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION} .
-	docker build -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
-	docker build -f Dockerfile.arm64 -t $(REGISTRY)/oauth2-proxy:latest-arm64 .
-	docker build -f Dockerfile.arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
-	docker build -f Dockerfile.armv6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 .
-	docker build -f Dockerfile.armv6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
+	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest-amd64 .
+	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION} .
+	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
+	$(DOCKER_BUILD) -f Dockerfile.arm64 -t $(REGISTRY)/oauth2-proxy:latest-arm64 .
+	$(DOCKER_BUILD) -f Dockerfile.arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
+	$(DOCKER_BUILD) -f Dockerfile.armv6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 .
+	$(DOCKER_BUILD) -f Dockerfile.armv6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
 
 .PHONY: docker-push
 docker-push:

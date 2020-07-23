@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 )
 
 func testKeycloakProvider(hostname, group string) *KeycloakProvider {
@@ -63,6 +63,19 @@ func TestKeycloakProviderDefaults(t *testing.T) {
 	assert.Equal(t, "https://keycloak.org/api/v3/user",
 		p.Data().ValidateURL.String())
 	assert.Equal(t, "api", p.Data().Scope)
+}
+
+func TestNewKeycloakProvider(t *testing.T) {
+	g := NewWithT(t)
+
+	// Test that defaults are set when calling for a new provider with nothing set
+	providerData := NewKeycloakProvider(&ProviderData{}).Data()
+	g.Expect(providerData.ProviderName).To(Equal("Keycloak"))
+	g.Expect(providerData.LoginURL.String()).To(Equal("https://keycloak.org/oauth/authorize"))
+	g.Expect(providerData.RedeemURL.String()).To(Equal("https://keycloak.org/oauth/token"))
+	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://keycloak.org/api/v3/user"))
+	g.Expect(providerData.Scope).To(Equal("api"))
 }
 
 func TestKeycloakProviderOverrides(t *testing.T) {

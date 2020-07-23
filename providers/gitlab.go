@@ -2,15 +2,13 @@ package providers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"golang.org/x/oauth2"
 )
 
@@ -18,7 +16,7 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Group        string
+	Groups       []string
 	EmailDomains []string
 
 	Verifier             *oidc.IDTokenVerifier
@@ -27,12 +25,17 @@ type GitLabProvider struct {
 
 var _ Provider = (*GitLabProvider)(nil)
 
+const (
+	gitlabProviderName = "GitLab"
+	gitlabDefaultScope = "openid email"
+)
+
 // NewGitLabProvider initiates a new GitLabProvider
 func NewGitLabProvider(p *ProviderData) *GitLabProvider {
-	p.ProviderName = "GitLab"
+	p.ProviderName = gitlabProviderName
 
 	if p.Scope == "" {
-		p.Scope = "openid email"
+		p.Scope = gitlabDefaultScope
 	}
 
 	return &GitLabProvider{ProviderData: p}
@@ -131,38 +134,21 @@ func (p *GitLabProvider) getUserInfo(ctx context.Context, s *sessions.SessionSta
 	userInfoURL := *p.LoginURL
 	userInfoURL.Path = "/oauth/userinfo"
 
-	req, err := http.NewRequestWithContext(ctx, "GET", userInfoURL.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create user info request: %v", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to perform user info request: %v", err)
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read user info response: %v", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("got %d during user info request: %s", resp.StatusCode, body)
-	}
-
 	var userInfo gitlabUserInfo
-	err = json.Unmarshal(body, &userInfo)
+	err := requests.New(userInfoURL.String()).
+		WithContext(ctx).
+		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		Do().
+		UnmarshalInto(&userInfo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse user info: %v", err)
+		return nil, fmt.Errorf("error getting user info: %v", err)
 	}
 
 	return &userInfo, nil
 }
 
 func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
-	if p.Group == "" {
+	if len(p.Groups) == 0 {
 		return nil
 	}
 
@@ -173,14 +159,13 @@ func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
 	}
 
 	// Find a valid group that they are a member of
-	validGroups := strings.Split(p.Group, " ")
-	for _, validGroup := range validGroups {
+	for _, validGroup := range p.Groups {
 		if _, ok := membershipSet[validGroup]; ok {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("user is not a member of '%s'", p.Group)
+	return fmt.Errorf("user is not a member of '%s'", p.Groups)
 }
 
 func (p *GitLabProvider) verifyEmailDomain(userInfo *gitlabUserInfo) error {
