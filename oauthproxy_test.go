@@ -414,7 +414,7 @@ func TestNewCERSetting(t *testing.T) {
 		assert.Fail(t, "An error was returned from NewOAuthProxy: %v", error)
 	} else {
 		//check the setting mapping
-		var cer = proxy.CallbackErrorRedirects[0]
+		var cer = proxy.callbackErrorRedirects[0]
 
 		assert.Equal(t, cer.ErrorString, "error", "CallbackErrorRedirect mismatch in error_string/ErrorString")
 		assert.Equal(t, cer.Pattern, "^descr", "CallbackErrorRedirect mismatch in error_description/Pattern")
