@@ -18,33 +18,47 @@ type DigitalOceanProvider struct {
 
 var _ Provider = (*DigitalOceanProvider)(nil)
 
+const (
+	digitalOceanProviderName = "DigitalOcean"
+	digitalOceanDefaultScope = "read"
+)
+
+var (
+	// Default Login URL for DigitalOcean.
+	// Pre-parsed URL of https://cloud.digitalocean.com/v1/oauth/authorize.
+	digitalOceanDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "cloud.digitalocean.com",
+		Path:   "/v1/oauth/authorize",
+	}
+
+	// Default Redeem URL for DigitalOcean.
+	// Pre-parsed URL of  https://cloud.digitalocean.com/v1/oauth/token.
+	digitalOceanDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "cloud.digitalocean.com",
+		Path:   "/v1/oauth/token",
+	}
+
+	// Default Profile URL for DigitalOcean.
+	// Pre-parsed URL of https://cloud.digitalocean.com/v2/account.
+	digitalOceanDefaultProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "api.digitalocean.com",
+		Path:   "/v2/account",
+	}
+)
+
 // NewDigitalOceanProvider initiates a new DigitalOceanProvider
 func NewDigitalOceanProvider(p *ProviderData) *DigitalOceanProvider {
-	p.ProviderName = "DigitalOcean"
-	if p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{Scheme: "https",
-			Host: "cloud.digitalocean.com",
-			Path: "/v1/oauth/authorize",
-		}
-	}
-	if p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{Scheme: "https",
-			Host: "cloud.digitalocean.com",
-			Path: "/v1/oauth/token",
-		}
-	}
-	if p.ProfileURL.String() == "" {
-		p.ProfileURL = &url.URL{Scheme: "https",
-			Host: "api.digitalocean.com",
-			Path: "/v2/account",
-		}
-	}
-	if p.ValidateURL.String() == "" {
-		p.ValidateURL = p.ProfileURL
-	}
-	if p.Scope == "" {
-		p.Scope = "read"
-	}
+	p.setProviderDefaults(providerDefaults{
+		name:        digitalOceanProviderName,
+		loginURL:    digitalOceanDefaultLoginURL,
+		redeemURL:   digitalOceanDefaultRedeemURL,
+		profileURL:  digitalOceanDefaultProfileURL,
+		validateURL: digitalOceanDefaultProfileURL,
+		scope:       digitalOceanDefaultScope,
+	})
 	return &DigitalOceanProvider{ProviderData: p}
 }
 
@@ -60,13 +74,12 @@ func (p *DigitalOceanProvider) GetEmailAddress(ctx context.Context, s *sessions.
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String(), nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header = getDigitalOceanHeader(s.AccessToken)
 
-	json, err := requests.Request(req)
+	json, err := requests.New(p.ProfileURL.String()).
+		WithContext(ctx).
+		WithHeaders(getDigitalOceanHeader(s.AccessToken)).
+		Do().
+		UnmarshalJSON()
 	if err != nil {
 		return "", err
 	}

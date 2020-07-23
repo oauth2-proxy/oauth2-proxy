@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -56,20 +55,22 @@ func validateToken(ctx context.Context, p Provider, accessToken string, header h
 		params := url.Values{"access_token": {accessToken}}
 		endpoint = endpoint + "?" + params.Encode()
 	}
-	resp, err := requests.RequestUnparsedResponse(ctx, endpoint, header)
-	if err != nil {
+
+	result := requests.New(endpoint).
+		WithContext(ctx).
+		WithHeaders(header).
+		Do()
+	if result.Error() != nil {
 		logger.Printf("GET %s", stripToken(endpoint))
-		logger.Printf("token validation request failed: %s", err)
+		logger.Printf("token validation request failed: %s", result.Error())
 		return false
 	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	logger.Printf("%d GET %s %s", resp.StatusCode, stripToken(endpoint), body)
+	logger.Printf("%d GET %s %s", result.StatusCode(), stripToken(endpoint), result.Body())
 
-	if resp.StatusCode == 200 {
+	if result.StatusCode() == 200 {
 		return true
 	}
-	logger.Printf("token validation request failed: status %d - %s", resp.StatusCode, body)
+	logger.Printf("token validation request failed: status %d - %s", result.StatusCode(), result.Body())
 	return false
 }

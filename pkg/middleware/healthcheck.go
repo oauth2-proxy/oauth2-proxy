@@ -17,13 +17,17 @@ func healthCheck(paths, userAgents []string, next http.Handler) http.Handler {
 	// Use a map as a set to check health check paths
 	pathSet := make(map[string]struct{})
 	for _, path := range paths {
-		pathSet[path] = struct{}{}
+		if len(path) > 0 {
+			pathSet[path] = struct{}{}
+		}
 	}
 
 	// Use a map as a set to check health check paths
 	userAgentSet := make(map[string]struct{})
 	for _, userAgent := range userAgents {
-		userAgentSet[userAgent] = struct{}{}
+		if len(userAgent) > 0 {
+			userAgentSet[userAgent] = struct{}{}
+		}
 	}
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
@@ -39,31 +39,49 @@ type claims struct {
 	EmailVerified bool   `json:"email_verified"`
 }
 
-// NewGoogleProvider initiates a new GoogleProvider
-func NewGoogleProvider(p *ProviderData) *GoogleProvider {
-	p.ProviderName = "Google"
-	if p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{Scheme: "https",
-			Host: "accounts.google.com",
-			Path: "/o/oauth2/auth",
-			// to get a refresh token. see https://developers.google.com/identity/protocols/OAuth2WebServer#offline
-			RawQuery: "access_type=offline",
-		}
-	}
-	if p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{Scheme: "https",
-			Host: "www.googleapis.com",
-			Path: "/oauth2/v3/token"}
-	}
-	if p.ValidateURL.String() == "" {
-		p.ValidateURL = &url.URL{Scheme: "https",
-			Host: "www.googleapis.com",
-			Path: "/oauth2/v1/tokeninfo"}
-	}
-	if p.Scope == "" {
-		p.Scope = "profile email"
+const (
+	googleProviderName = "Google"
+	googleDefaultScope = "profile email"
+)
+
+var (
+	// Default Login URL for Google.
+	// Pre-parsed URL of https://accounts.google.com/o/oauth2/auth?access_type=offline.
+	googleDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "accounts.google.com",
+		Path:   "/o/oauth2/auth",
+		// to get a refresh token. see https://developers.google.com/identity/protocols/OAuth2WebServer#offline
+		RawQuery: "access_type=offline",
 	}
 
+	// Default Redeem URL for Google.
+	// Pre-parsed URL of https://www.googleapis.com/oauth2/v3/token.
+	googleDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/oauth2/v3/token",
+	}
+
+	// Default Validation URL for Google.
+	// Pre-parsed URL of https://www.googleapis.com/oauth2/v1/tokeninfo.
+	googleDefaultValidateURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/oauth2/v1/tokeninfo",
+	}
+)
+
+// NewGoogleProvider initiates a new GoogleProvider
+func NewGoogleProvider(p *ProviderData) *GoogleProvider {
+	p.setProviderDefaults(providerDefaults{
+		name:        googleProviderName,
+		loginURL:    googleDefaultLoginURL,
+		redeemURL:   googleDefaultRedeemURL,
+		profileURL:  nil,
+		validateURL: googleDefaultValidateURL,
+		scope:       googleDefaultScope,
+	})
 	return &GoogleProvider{
 		ProviderData: p,
 		// Set a default GroupValidator to just always return valid (true), it will
@@ -116,28 +134,6 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
-	}
 
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
@@ -145,10 +141,18 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		ExpiresIn    int64  `json:"expires_in"`
 		IDToken      string `json:"id_token"`
 	}
-	err = json.Unmarshal(body, &jsonResponse)
+
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return
+		return nil, err
 	}
+
 	c, err := claimsFromIDToken(jsonResponse.IDToken)
 	if err != nil {
 		return
@@ -283,38 +287,24 @@ func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken st
 	params.Add("client_secret", clientSecret)
 	params.Add("refresh_token", refreshToken)
 	params.Add("grant_type", "refresh_token")
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
-	}
 
 	var data struct {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int64  `json:"expires_in"`
 		IDToken     string `json:"id_token"`
 	}
-	err = json.Unmarshal(body, &data)
+
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalInto(&data)
 	if err != nil {
-		return
+		return "", "", 0, err
 	}
+
 	token = data.AccessToken
 	idToken = data.IDToken
 	expires = time.Duration(data.ExpiresIn) * time.Second

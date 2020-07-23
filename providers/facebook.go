@@ -18,34 +18,48 @@ type FacebookProvider struct {
 
 var _ Provider = (*FacebookProvider)(nil)
 
+const (
+	facebookProviderName = "Facebook"
+	facebookDefaultScope = "public_profile email"
+)
+
+var (
+	// Default Login URL for Facebook.
+	// Pre-parsed URL of https://www.facebook.com/v2.5/dialog/oauth.
+	facebookDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.facebook.com",
+		Path:   "/v2.5/dialog/oauth",
+		// ?granted_scopes=true
+	}
+
+	// Default Redeem URL for Facebook.
+	// Pre-parsed URL of https://graph.facebook.com/v2.5/oauth/access_token.
+	facebookDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "graph.facebook.com",
+		Path:   "/v2.5/oauth/access_token",
+	}
+
+	// Default Profile URL for Facebook.
+	// Pre-parsed URL of https://graph.facebook.com/v2.5/me.
+	facebookDefaultProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "graph.facebook.com",
+		Path:   "/v2.5/me",
+	}
+)
+
 // NewFacebookProvider initiates a new FacebookProvider
 func NewFacebookProvider(p *ProviderData) *FacebookProvider {
-	p.ProviderName = "Facebook"
-	if p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{Scheme: "https",
-			Host: "www.facebook.com",
-			Path: "/v2.5/dialog/oauth",
-			// ?granted_scopes=true
-		}
-	}
-	if p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{Scheme: "https",
-			Host: "graph.facebook.com",
-			Path: "/v2.5/oauth/access_token",
-		}
-	}
-	if p.ProfileURL.String() == "" {
-		p.ProfileURL = &url.URL{Scheme: "https",
-			Host: "graph.facebook.com",
-			Path: "/v2.5/me",
-		}
-	}
-	if p.ValidateURL.String() == "" {
-		p.ValidateURL = p.ProfileURL
-	}
-	if p.Scope == "" {
-		p.Scope = "public_profile email"
-	}
+	p.setProviderDefaults(providerDefaults{
+		name:        facebookProviderName,
+		loginURL:    facebookDefaultLoginURL,
+		redeemURL:   facebookDefaultRedeemURL,
+		profileURL:  facebookDefaultProfileURL,
+		validateURL: facebookDefaultProfileURL,
+		scope:       facebookDefaultScope,
+	})
 	return &FacebookProvider{ProviderData: p}
 }
 
@@ -62,20 +76,22 @@ func (p *FacebookProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String()+"?fields=name,email", nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header = getFacebookHeader(s.AccessToken)
 
 	type result struct {
 		Email string
 	}
 	var r result
-	err = requests.RequestJSON(req, &r)
+
+	requestURL := p.ProfileURL.String() + "?fields=name,email"
+	err := requests.New(requestURL).
+		WithContext(ctx).
+		WithHeaders(getFacebookHeader(s.AccessToken)).
+		Do().
+		UnmarshalInto(&r)
 	if err != nil {
 		return "", err
 	}
+
 	if r.Email == "" {
 		return "", errors.New("no email")
 	}

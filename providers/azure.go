@@ -3,10 +3,8 @@ package providers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -25,49 +23,84 @@ type AzureProvider struct {
 
 var _ Provider = (*AzureProvider)(nil)
 
+const (
+	azureProviderName = "Azure"
+	azureDefaultScope = "openid"
+)
+
+var (
+	// Default Login URL for Azure.
+	// Pre-parsed URL of https://login.microsoftonline.com/common/oauth2/authorize.
+	azureDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "login.microsoftonline.com",
+		Path:   "/common/oauth2/authorize",
+	}
+
+	// Default Redeem URL for Azure.
+	// Pre-parsed URL of https://login.microsoftonline.com/common/oauth2/token.
+	azureDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "login.microsoftonline.com",
+		Path:   "/common/oauth2/token",
+	}
+
+	// Default Profile URL for Azure.
+	// Pre-parsed URL of https://graph.microsoft.com/v1.0/me.
+	azureDefaultProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "graph.microsoft.com",
+		Path:   "/v1.0/me",
+	}
+
+	// Default ProtectedResource URL for Azure.
+	// Pre-parsed URL of https://graph.microsoft.com.
+	azureDefaultProtectResourceURL = &url.URL{
+		Scheme: "https",
+		Host:   "graph.microsoft.com",
+	}
+)
+
 // NewAzureProvider initiates a new AzureProvider
 func NewAzureProvider(p *ProviderData) *AzureProvider {
-	p.ProviderName = "Azure"
+	p.setProviderDefaults(providerDefaults{
+		name:        azureProviderName,
+		loginURL:    azureDefaultLoginURL,
+		redeemURL:   azureDefaultRedeemURL,
+		profileURL:  azureDefaultProfileURL,
+		validateURL: nil,
+		scope:       azureDefaultScope,
+	})
 
-	if p.ProfileURL == nil || p.ProfileURL.String() == "" {
-		p.ProfileURL = &url.URL{
-			Scheme: "https",
-			Host:   "graph.microsoft.com",
-			Path:   "/v1.0/me",
-		}
-	}
 	if p.ProtectedResource == nil || p.ProtectedResource.String() == "" {
-		p.ProtectedResource = &url.URL{
-			Scheme: "https",
-			Host:   "graph.microsoft.com",
-		}
-	}
-	if p.Scope == "" {
-		p.Scope = "openid"
+		p.ProtectedResource = azureDefaultProtectResourceURL
 	}
 
-	return &AzureProvider{ProviderData: p}
+	return &AzureProvider{
+		ProviderData: p,
+		Tenant:       "common",
+	}
 }
 
 // Configure defaults the AzureProvider configuration options
 func (p *AzureProvider) Configure(tenant string) {
-	p.Tenant = tenant
-	if tenant == "" {
-		p.Tenant = "common"
+	if tenant == "" || tenant == "common" {
+		// tenant is empty or default, remain on the default "common" tenant
+		return
 	}
 
-	if p.LoginURL == nil || p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{
+	// Specific tennant specified, override the Login and RedeemURLs
+	p.Tenant = tenant
+	overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
+	overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
+}
+
+func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
+	if current == nil || current.String() == "" || current.String() == defaultURL.String() {
+		*current = url.URL{
 			Scheme: "https",
 			Host:   "login.microsoftonline.com",
-			Path:   "/" + p.Tenant + "/oauth2/authorize"}
-	}
-	if p.RedeemURL == nil || p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{
-			Scheme: "https",
-			Host:   "login.microsoftonline.com",
-			Path:   "/" + p.Tenant + "/oauth2/token",
-		}
+			Path:   "/" + tenant + "/oauth2/" + path}
 	}
 }
 
@@ -91,39 +124,22 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s
 		params.Add("resource", p.ProtectedResource.String())
 	}
 
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
-	}
-
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 		ExpiresOn    int64  `json:"expires_on,string"`
 		IDToken      string `json:"id_token"`
 	}
-	err = json.Unmarshal(body, &jsonResponse)
+
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	created := time.Now()
@@ -169,26 +185,22 @@ func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.Session
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String(), nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header = getAzureHeader(s.AccessToken)
 
-	json, err := requests.Request(req)
-
+	json, err := requests.New(p.ProfileURL.String()).
+		WithContext(ctx).
+		WithHeaders(getAzureHeader(s.AccessToken)).
+		Do().
+		UnmarshalJSON()
 	if err != nil {
 		return "", err
 	}
 
 	email, err = getEmailFromJSON(json)
-
 	if err == nil && email != "" {
 		return email, err
 	}
 
 	email, err = json.Get("userPrincipalName").String()
-
 	if err != nil {
 		logger.Printf("failed making request %s", err)
 		return "", err

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"os/signal"
 	"runtime"
@@ -31,10 +32,16 @@ func main() {
 		return
 	}
 
-	opts := options.NewOptions()
-	err := options.Load(*config, flagSet, opts)
+	legacyOpts := options.NewLegacyOptions()
+	err := options.Load(*config, flagSet, legacyOpts)
 	if err != nil {
 		logger.Printf("ERROR: Failed to load config: %v", err)
+		os.Exit(1)
+	}
+
+	opts, err := legacyOpts.ToOptions()
+	if err != nil {
+		logger.Printf("ERROR: Failed to convert config: %v", err)
 		os.Exit(1)
 	}
 
@@ -45,7 +52,11 @@ func main() {
 	}
 
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
-	oauthproxy := NewOAuthProxy(opts, validator)
+	oauthproxy, err := NewOAuthProxy(opts, validator)
+	if err != nil {
+		logger.Printf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
+		os.Exit(1)
+	}
 
 	if len(opts.Banner) >= 1 {
 		if opts.Banner == "-" {
@@ -61,21 +72,16 @@ func main() {
 		}
 	}
 
-	if opts.HtpasswdFile != "" {
-		logger.Printf("using htpasswd file %s", opts.HtpasswdFile)
-		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(opts.HtpasswdFile)
-		oauthproxy.DisplayHtpasswdForm = opts.DisplayHtpasswdForm
-		if err != nil {
-			logger.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
-		}
-	}
-
 	rand.Seed(time.Now().UnixNano())
 
 	chain := alice.New()
 
 	if opts.ForceHTTPS {
-		chain = chain.Append(newRedirectToHTTPS(opts))
+		_, httpsPort, err := net.SplitHostPort(opts.HTTPSAddress)
+		if err != nil {
+			logger.Fatalf("FATAL: invalid HTTPS address %q: %v", opts.HTTPAddress, err)
+		}
+		chain = chain.Append(middleware.NewRedirectToHTTPS(httpsPort))
 	}
 
 	healthCheckPaths := []string{opts.PingPath}

@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 )
 
@@ -17,9 +16,11 @@ type NextcloudProvider struct {
 
 var _ Provider = (*NextcloudProvider)(nil)
 
+const nextCloudProviderName = "Nextcloud"
+
 // NewNextcloudProvider initiates a new NextcloudProvider
 func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
-	p.ProviderName = "Nextcloud"
+	p.ProviderName = nextCloudProviderName
 	return &NextcloudProvider{ProviderData: p}
 }
 
@@ -31,18 +32,15 @@ func getNextcloudHeader(accessToken string) http.Header {
 
 // GetEmailAddress returns the Account email address
 func (p *NextcloudProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET",
-		p.ValidateURL.String(), nil)
+	json, err := requests.New(p.ValidateURL.String()).
+		WithContext(ctx).
+		WithHeaders(getNextcloudHeader(s.AccessToken)).
+		Do().
+		UnmarshalJSON()
 	if err != nil {
-		logger.Printf("failed building request %s", err)
-		return "", err
+		return "", fmt.Errorf("error making request: %v", err)
 	}
-	req.Header = getNextcloudHeader(s.AccessToken)
-	json, err := requests.Request(req)
-	if err != nil {
-		logger.Printf("failed making request %s", err)
-		return "", err
-	}
+
 	email, err := json.Get("ocs").Get("data").Get("email").String()
 	return email, err
 }

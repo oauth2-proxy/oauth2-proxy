@@ -1,7 +1,7 @@
 .PHONY: ruby
 ruby:
 	@ if [ ! $$(which ruby) ]; then \
-			echo "Please install ruby version 2.1.0 or higher"; \
+			echo "Please install ruby version 2.5.0 or higher"; \
 		fi
 
 .PHONY: bundle
@@ -11,7 +11,8 @@ bundle: ruby
 		fi
 
 vendor/bundle: bundle
-	bundle install --path vendor/bundle
+	bundle config set --local path 'vendor/bundle'
+	bundle install
 
 .PHONY: serve
 serve: vendor/bundle
