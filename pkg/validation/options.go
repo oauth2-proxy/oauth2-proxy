@@ -469,7 +469,7 @@ func LoadCERs(callbackErrorRedirects []string) ([]CallbackErrorRedirect, error) 
 
 		if match == nil {
 			if err == nil {
-				err = errors.New("Callback Error Redirect: invalid settings string check format")
+				err = errors.New("callback error redirect: invalid settings string check format")
 			}
 			continue
 		}
