@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -226,6 +227,11 @@ func Validate(o *options.Options) error {
 		}
 	}
 
+	_, cererr := LoadCERs(o.CallbackErrorRedirects)
+	if cererr != nil {
+		msgs = append(msgs, fmt.Sprintf("callback error redirect configuration error (%v)", cererr))
+	}
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
@@ -410,4 +416,72 @@ func parseURL(toParse string, urltype string, msgs []string) (*url.URL, []string
 			"error parsing %s-url=%q %s", urltype, toParse, err))
 	}
 	return parsed, msgs
+}
+
+// CallbackErrorRedirect - Allow automated redirection to occur within the AuthCallback when an error occurs
+type CallbackErrorRedirect struct {
+	ErrorString string
+	Pattern     string
+	RedirectURL string
+}
+
+func loadCERsExtractFromRegexp(pat *regexp.Regexp, match []string, pcer *CallbackErrorRedirect, perr *error) {
+	for i, name := range pat.SubexpNames() {
+		if i == 0 || name == "" {
+			continue
+		}
+
+		switch name {
+		case "error_string":
+			if pcer.ErrorString == "" {
+				pcer.ErrorString = match[i]
+			} else if *perr == nil {
+				*perr = errors.New("callback error redirect: error_string was specified more than once")
+			}
+		case "error_description":
+			if pcer.Pattern == "" {
+				pcer.Pattern = match[i]
+			} else if *perr == nil {
+				*perr = errors.New("callback error redirect: error_description was specified more than once")
+			}
+		case "redirect":
+			if pcer.RedirectURL == "" {
+				pcer.RedirectURL = match[i]
+			} else if *perr == nil {
+				*perr = errors.New("callback error redirect: redirect was specified more than once")
+			}
+		}
+	}
+}
+
+//LoadCERs - Convert the string versions of callback-error-redirect into structures
+func LoadCERs(callbackErrorRedirects []string) ([]CallbackErrorRedirect, error) {
+
+	//error_string=foo,error_description=bar,redirect=baz
+
+	pat := regexp.MustCompile(`^\s*((error_string\s*=\s*(?P<error_string>[^,$]*)|error_description\s*=\s*(?P<error_description>[^,$]*)|redirect\s*=\s*(?P<redirect>[^,$]*)),?)+\s*`)
+	cers := make([]CallbackErrorRedirect, len(callbackErrorRedirects))
+	count := 0
+	err := error(nil)
+
+	for _, cer := range callbackErrorRedirects {
+		match := pat.FindStringSubmatch(cer)
+
+		if match == nil {
+			if err == nil {
+				err = errors.New("Callback Error Redirect: invalid settings string check format")
+			}
+			continue
+		}
+
+		cers[count] = CallbackErrorRedirect{
+			ErrorString: "",
+			Pattern:     "",
+			RedirectURL: "",
+		}
+		loadCERsExtractFromRegexp(pat, match, &cers[count], &err)
+		count++
+	}
+
+	return cers[0:count], err
 }

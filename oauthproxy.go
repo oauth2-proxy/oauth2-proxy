@@ -28,6 +28,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/upstream"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 )
 
@@ -102,7 +103,7 @@ type OAuthProxy struct {
 	Banner                  string
 	Footer                  string
 
-	callbackErrorRedirects []options.CallbackErrorRedirect
+	callbackErrorRedirects []validation.CallbackErrorRedirect
 	sessionChain           alice.Chain
 }
 
@@ -143,7 +144,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
-	callbackErrorRedirects, err := options.LoadCERs(opts.CallbackErrorRedirects)
+	callbackErrorRedirects, err := validation.LoadCERs(opts.CallbackErrorRedirects)
 	if err != nil {
 		logger.Printf(err.Error())
 	}
@@ -704,7 +705,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonce, redirect)), http.StatusFound)
 }
 
-func (p *OAuthProxy) findCallbackErrorRedirect(errorString string, errorDescription string) *options.CallbackErrorRedirect {
+func (p *OAuthProxy) findCallbackErrorRedirect(errorString string, errorDescription string) *validation.CallbackErrorRedirect {
 	for _, cer := range p.callbackErrorRedirects {
 		if errorString == cer.ErrorString {
 			pat := cer.Pattern

@@ -2,7 +2,6 @@ package options
 
 import (
 	"crypto"
-	"errors"
 	"net/url"
 	"regexp"
 
@@ -16,13 +15,6 @@ import (
 type SignatureData struct {
 	Hash crypto.Hash
 	Key  string
-}
-
-// CallbackErrorRedirect - Allow automated redirection to occur within the AuthCallback when an error occurs
-type CallbackErrorRedirect struct {
-	ErrorString string
-	Pattern     string
-	RedirectURL string
 }
 
 // Options holds Configuration Options that can be set by Command Line Flag,
@@ -180,67 +172,6 @@ func NewOptions() *Options {
 
 		CallbackErrorRedirects: nil,
 	}
-}
-
-func loadCERsExtractFromRegexp(pat *regexp.Regexp, match []string, pcer *CallbackErrorRedirect, perr *error) {
-	for i, name := range pat.SubexpNames() {
-		if i == 0 || name == "" {
-			continue
-		}
-
-		switch name {
-		case "error_string":
-			if pcer.ErrorString == "" {
-				pcer.ErrorString = match[i]
-			} else if *perr == nil {
-				*perr = errors.New("Callback Error Redirect: error_string was specified more than once")
-			}
-		case "error_description":
-			if pcer.Pattern == "" {
-				pcer.Pattern = match[i]
-			} else if *perr == nil {
-				*perr = errors.New("Callback Error Redirect: error_description was specified more than once")
-			}
-		case "redirect":
-			if pcer.RedirectURL == "" {
-				pcer.RedirectURL = match[i]
-			} else if *perr == nil {
-				*perr = errors.New("Callback Error Redirect: redirect was specified more than once")
-			}
-		}
-	}
-}
-
-//LoadCERs - Convert the string versions of callback-error-redirect into structures
-func LoadCERs(callbackErrorRedirects []string) ([]CallbackErrorRedirect, error) {
-
-	//error_string=foo,error_description=bar,redirect=baz
-
-	pat := regexp.MustCompile(`^\s*((error_string\s*=\s*(?P<error_string>[^,$]*)|error_description\s*=\s*(?P<error_description>[^,$]*)|redirect\s*=\s*(?P<redirect>[^,$]*)),?)+\s*`)
-	cers := make([]CallbackErrorRedirect, len(callbackErrorRedirects))
-	count := 0
-	err := error(nil)
-
-	for _, cer := range callbackErrorRedirects {
-		match := pat.FindStringSubmatch(cer)
-
-		if match == nil {
-			if err == nil {
-				err = errors.New("Callback Error Redirect: invalid settings string check format")
-			}
-			continue
-		}
-
-		cers[count] = CallbackErrorRedirect{
-			ErrorString: "",
-			Pattern:     "",
-			RedirectURL: "",
-		}
-		loadCERsExtractFromRegexp(pat, match, &cers[count], &err)
-		count++
-	}
-
-	return cers[0:count], err
 }
 
 // NewFlagSet creates a new FlagSet with all of the flags required by Options
