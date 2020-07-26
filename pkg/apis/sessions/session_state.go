@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"reflect"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -67,6 +68,34 @@ func (s *SessionState) String() string {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
 	}
 	return o + "}"
+}
+
+func (s *SessionState) GetClaim(claim string) string {
+	if s == nil {
+		return ""
+	}
+	switch claim {
+	case "access_token":
+		return s.AccessToken
+	case "id_token":
+		return s.IDToken
+	case "created_at":
+		return s.CreatedAt.String()
+	case "expires_on":
+		return s.ExpiresOn.String()
+	case "refresh_token":
+		return s.RefreshToken
+	case "email":
+		return s.Email
+	case "user":
+		return s.User
+	case "groups":
+		return strings.Join(s.Groups, ",")
+	case "preferred_username":
+		return s.PreferredUsername
+	default:
+		return ""
+	}
 }
 
 // EncodeSessionState returns an encrypted, lz4 compressed, MessagePack encoded session
