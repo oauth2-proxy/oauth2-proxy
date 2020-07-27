@@ -231,7 +231,6 @@ func getOIDCHeader(accessToken string) http.Header {
 }
 
 func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
-
 	claims := &OIDCClaims{}
 	// Extract default claims.
 	if err := idToken.Claims(&claims); err != nil {
@@ -250,7 +249,8 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	// userID claim was not present or was empty in the ID Token
 	if claims.UserID == "" {
 		if profileURL == "" {
-			return nil, fmt.Errorf("id_token did not contain user ID claim (%q)", p.UserIDClaim)
+			claims.UserID = claims.Subject
+			return claims, nil
 		}
 
 		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo

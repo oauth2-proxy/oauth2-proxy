@@ -60,6 +60,22 @@ var defaultIDToken idTokenClaims = idTokenClaims{
 	},
 }
 
+var minimalIDToken idTokenClaims = idTokenClaims{
+	"",
+	"",
+	"",
+	"",
+	jwt.StandardClaims{
+		Audience:  "https://test.myapp.com",
+		ExpiresAt: time.Now().Add(time.Duration(5) * time.Minute).Unix(),
+		Id:        "id-some-id",
+		IssuedAt:  time.Now().Unix(),
+		Issuer:    "https://issuer.example.com",
+		NotBefore: 0,
+		Subject:   "minimal",
+	},
+}
+
 type fakeKeySetStub struct{}
 
 func (fakeKeySetStub) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
@@ -251,6 +267,66 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	assert.Equal(t, accessToken, existingSession.AccessToken)
 	assert.Equal(t, idToken, existingSession.IDToken)
 	assert.Equal(t, refreshToken, existingSession.RefreshToken)
+}
+
+func TestCreateSessionStateFromBearerToken(t *testing.T) {
+	const profileURLEmail = "janed@me.com"
+
+	testCases := map[string]struct {
+		IDToken       idTokenClaims
+		ProfileURL    bool
+		ExpectedEmail string
+	}{
+		"Default IDToken": {
+			IDToken:       defaultIDToken,
+			ProfileURL:    true,
+			ExpectedEmail: profileURLEmail,
+		},
+		"Minimal IDToken with no OIDC Profile URL": {
+			IDToken:       minimalIDToken,
+			ProfileURL:    false,
+			ExpectedEmail: "",
+		},
+		"Minimal IDToken with OIDC Profile URL": {
+			IDToken:       minimalIDToken,
+			ProfileURL:    true,
+			ExpectedEmail: profileURLEmail,
+		},
+	}
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			jsonResp := []byte(fmt.Sprintf(`{"email":"%s"}`, profileURLEmail))
+			server, provider := newTestSetup(jsonResp)
+			defer server.Close()
+			if !tc.ProfileURL {
+				provider.ProfileURL = &url.URL{}
+			}
+
+			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
+			assert.NoError(t, err)
+
+			keyset := fakeKeySetStub{}
+			verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
+				&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+
+			idToken, err := verifier.Verify(context.Background(), rawIDToken)
+			assert.NoError(t, err)
+
+			ss, err := provider.CreateSessionStateFromBearerToken(context.Background(), rawIDToken, idToken)
+			assert.NoError(t, err)
+
+			if tc.ExpectedEmail != "" {
+				assert.Equal(t, tc.ExpectedEmail, ss.Email)
+				assert.NotEqual(t, ss.Email, ss.User)
+			} else {
+				assert.Equal(t, tc.IDToken.Subject, ss.Email)
+				assert.Equal(t, ss.Email, ss.User)
+			}
+			assert.Equal(t, rawIDToken, ss.IDToken)
+			assert.Equal(t, rawIDToken, ss.AccessToken)
+			assert.Equal(t, "", ss.RefreshToken)
+		})
+	}
 }
 
 func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
