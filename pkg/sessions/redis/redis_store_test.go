@@ -12,6 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/tests"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -50,9 +51,9 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 	JustAfterEach(func() {
 		// Release any connections immediately after the test ends
-		if redisStore, ok := ss.(*SessionStore); ok {
-			if redisStore.Client != nil {
-				Expect(redisStore.Client.(closer).Close()).To(Succeed())
+		if redisManager, ok := ss.(*persistence.Manager); ok {
+			if redisManager.Store.(*SessionStore).Client != nil {
+				Expect(redisManager.Store.(*SessionStore).Client.(closer).Close()).To(Succeed())
 			}
 		}
 	})

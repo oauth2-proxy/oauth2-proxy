@@ -15,6 +15,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -42,35 +43,47 @@ func randSeq(n int) string {
 	return string(b)
 }
 
+const (
+	loginGovProviderName = "login.gov"
+	loginGovDefaultScope = "email openid"
+)
+
+var (
+	// Default Login URL for LoginGov.
+	// Pre-parsed URL of https://secure.login.gov/openid_connect/authorize.
+	loginGovDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "secure.login.gov",
+		Path:   "/openid_connect/authorize",
+	}
+
+	// Default Redeem URL for LoginGov.
+	// Pre-parsed URL of https://secure.login.gov/api/openid_connect/token.
+	loginGovDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "secure.login.gov",
+		Path:   "/api/openid_connect/token",
+	}
+
+	// Default Profile URL for LoginGov.
+	// Pre-parsed URL of https://graph.loginGov.com/v2.5/me.
+	loginGovDefaultProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "secure.login.gov",
+		Path:   "/api/openid_connect/userinfo",
+	}
+)
+
 // NewLoginGovProvider initiates a new LoginGovProvider
 func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
-	p.ProviderName = "login.gov"
-
-	if p.LoginURL == nil || p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{
-			Scheme: "https",
-			Host:   "secure.login.gov",
-			Path:   "/openid_connect/authorize",
-		}
-	}
-	if p.RedeemURL == nil || p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{
-			Scheme: "https",
-			Host:   "secure.login.gov",
-			Path:   "/api/openid_connect/token",
-		}
-	}
-	if p.ProfileURL == nil || p.ProfileURL.String() == "" {
-		p.ProfileURL = &url.URL{
-			Scheme: "https",
-			Host:   "secure.login.gov",
-			Path:   "/api/openid_connect/userinfo",
-		}
-	}
-	if p.Scope == "" {
-		p.Scope = "email openid"
-	}
-
+	p.setProviderDefaults(providerDefaults{
+		name:        loginGovProviderName,
+		loginURL:    loginGovDefaultLoginURL,
+		redeemURL:   loginGovDefaultRedeemURL,
+		profileURL:  loginGovDefaultProfileURL,
+		validateURL: nil,
+		scope:       loginGovDefaultScope,
+	})
 	return &LoginGovProvider{
 		ProviderData: p,
 		Nonce:        randSeq(32),
@@ -128,51 +141,34 @@ func checkNonce(idToken string, p *LoginGovProvider) (err error) {
 	return
 }
 
-func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint string) (email string, err error) {
-	// query the user info endpoint for user attributes
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "GET", userInfoEndpoint, nil)
-	if err != nil {
-		return
-	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, userInfoEndpoint, body)
-		return
-	}
-
+func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint string) (string, error) {
 	// parse the user attributes from the data we got and make sure that
 	// the email address has been validated.
 	var emailData struct {
 		Email         string `json:"email"`
 		EmailVerified bool   `json:"email_verified"`
 	}
-	err = json.Unmarshal(body, &emailData)
+
+	// query the user info endpoint for user attributes
+	err := requests.New(userInfoEndpoint).
+		WithContext(ctx).
+		SetHeader("Authorization", "Bearer "+accessToken).
+		Do().
+		UnmarshalInto(&emailData)
 	if err != nil {
-		return
+		return "", err
 	}
-	if emailData.Email == "" {
-		err = fmt.Errorf("missing email")
-		return
+
+	email := emailData.Email
+	if email == "" {
+		return "", fmt.Errorf("missing email")
 	}
-	email = emailData.Email
+
 	if !emailData.EmailVerified {
-		err = fmt.Errorf("email %s not listed as verified", email)
-		return
+		return "", fmt.Errorf("email %s not listed as verified", email)
 	}
-	return
+
+	return email, nil
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
@@ -201,30 +197,6 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 
-	var req *http.Request
-	req, err = http.NewRequestWithContext(ctx, "POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	var resp *http.Response
-	resp, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	var body []byte
-	body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		return
-	}
-
-	if resp.StatusCode != 200 {
-		err = fmt.Errorf("got %d from %q %s", resp.StatusCode, p.RedeemURL.String(), body)
-		return
-	}
-
 	// Get the token from the body that we got from the token endpoint.
 	var jsonResponse struct {
 		AccessToken string `json:"access_token"`
@@ -232,9 +204,15 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 		TokenType   string `json:"token_type"`
 		ExpiresIn   int64  `json:"expires_in"`
 	}
-	err = json.Unmarshal(body, &jsonResponse)
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// check nonce here

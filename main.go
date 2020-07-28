@@ -32,10 +32,16 @@ func main() {
 		return
 	}
 
-	opts := options.NewOptions()
-	err := options.Load(*config, flagSet, opts)
+	legacyOpts := options.NewLegacyOptions()
+	err := options.Load(*config, flagSet, legacyOpts)
 	if err != nil {
 		logger.Printf("ERROR: Failed to load config: %v", err)
+		os.Exit(1)
+	}
+
+	opts, err := legacyOpts.ToOptions()
+	if err != nil {
+		logger.Printf("ERROR: Failed to convert config: %v", err)
 		os.Exit(1)
 	}
 
@@ -63,15 +69,6 @@ func main() {
 			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.EmailDomains, ", "))
 		} else if opts.EmailDomains[0] != "*" {
 			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using %v", opts.EmailDomains[0])
-		}
-	}
-
-	if opts.HtpasswdFile != "" {
-		logger.Printf("using htpasswd file %s", opts.HtpasswdFile)
-		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(opts.HtpasswdFile)
-		oauthproxy.DisplayHtpasswdForm = opts.DisplayHtpasswdForm
-		if err != nil {
-			logger.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
 		}
 	}
 

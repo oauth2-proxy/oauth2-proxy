@@ -10,6 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -66,10 +67,11 @@ var _ = Describe("NewSessionStore", func() {
 			opts.Redis.ConnectionURL = "redis://"
 		})
 
-		It("creates a redis.SessionStore", func() {
+		It("creates a persistence.Manager that wraps a redis.SessionStore", func() {
 			ss, err := sessions.NewSessionStore(opts, cookieOpts)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ss).To(BeAssignableToTypeOf(&redis.SessionStore{}))
+			Expect(ss).To(BeAssignableToTypeOf(&persistence.Manager{}))
+			Expect(ss.(*persistence.Manager).Store).To(BeAssignableToTypeOf(&redis.SessionStore{}))
 		})
 	})
 

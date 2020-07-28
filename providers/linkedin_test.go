@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,19 +45,17 @@ func testLinkedInBackend(payload string) *httptest.Server {
 		}))
 }
 
-func TestLinkedInProviderDefaults(t *testing.T) {
-	p := testLinkedInProvider("")
-	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "LinkedIn", p.Data().ProviderName)
-	assert.Equal(t, "https://www.linkedin.com/uas/oauth2/authorization",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://www.linkedin.com/uas/oauth2/accessToken",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://www.linkedin.com/v1/people/~/email-address",
-		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://www.linkedin.com/v1/people/~/email-address",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "r_emailaddress r_basicprofile", p.Data().Scope)
+func TestNewLinkedInProvider(t *testing.T) {
+	g := NewWithT(t)
+
+	// Test that defaults are set when calling for a new provider with nothing set
+	providerData := NewLinkedInProvider(&ProviderData{}).Data()
+	g.Expect(providerData.ProviderName).To(Equal("LinkedIn"))
+	g.Expect(providerData.LoginURL.String()).To(Equal("https://www.linkedin.com/uas/oauth2/authorization"))
+	g.Expect(providerData.RedeemURL.String()).To(Equal("https://www.linkedin.com/uas/oauth2/accessToken"))
+	g.Expect(providerData.ProfileURL.String()).To(Equal("https://www.linkedin.com/v1/people/~/email-address"))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://www.linkedin.com/v1/people/~/email-address"))
+	g.Expect(providerData.Scope).To(Equal("r_emailaddress r_basicprofile"))
 }
 
 func TestLinkedInProviderOverrides(t *testing.T) {

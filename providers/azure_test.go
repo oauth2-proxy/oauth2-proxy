@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,23 +33,17 @@ func testAzureProvider(hostname string) *AzureProvider {
 	return p
 }
 
-func TestAzureProviderDefaults(t *testing.T) {
-	p := testAzureProvider("")
-	assert.NotEqual(t, nil, p)
-	p.Configure("")
-	assert.Equal(t, "Azure", p.Data().ProviderName)
-	assert.Equal(t, "common", p.Tenant)
-	assert.Equal(t, "https://login.microsoftonline.com/common/oauth2/authorize",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://login.microsoftonline.com/common/oauth2/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://graph.microsoft.com/v1.0/me",
-		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://graph.microsoft.com",
-		p.Data().ProtectedResource.String())
-	assert.Equal(t, "",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "openid", p.Data().Scope)
+func TestNewAzureProvider(t *testing.T) {
+	g := NewWithT(t)
+
+	// Test that defaults are set when calling for a new provider with nothing set
+	providerData := NewAzureProvider(&ProviderData{}).Data()
+	g.Expect(providerData.ProviderName).To(Equal("Azure"))
+	g.Expect(providerData.LoginURL.String()).To(Equal("https://login.microsoftonline.com/common/oauth2/authorize"))
+	g.Expect(providerData.RedeemURL.String()).To(Equal("https://login.microsoftonline.com/common/oauth2/token"))
+	g.Expect(providerData.ProfileURL.String()).To(Equal("https://graph.microsoft.com/v1.0/me"))
+	g.Expect(providerData.ValidateURL.String()).To(Equal(""))
+	g.Expect(providerData.Scope).To(Equal("openid"))
 }
 
 func TestAzureProviderOverrides(t *testing.T) {
@@ -102,8 +97,7 @@ func TestAzureSetTenant(t *testing.T) {
 		p.Data().ProfileURL.String())
 	assert.Equal(t, "https://graph.microsoft.com",
 		p.Data().ProtectedResource.String())
-	assert.Equal(t, "",
-		p.Data().ValidateURL.String())
+	assert.Equal(t, "", p.Data().ValidateURL.String())
 	assert.Equal(t, "openid", p.Data().Scope)
 }
 

@@ -13,6 +13,9 @@ import (
 )
 
 func updateURL(url *url.URL, hostname string) {
+	if url == nil {
+		return
+	}
 	url.Scheme = "http"
 	url.Host = hostname
 }

@@ -52,9 +52,9 @@ type Upstream struct {
 	// PassHostHeader determines whether the request host header should be proxied
 	// to the upstream server.
 	// Defaults to true.
-	PassHostHeader bool `json:"passHostHeader"`
+	PassHostHeader *bool `json:"passHostHeader"`
 
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
-	ProxyWebSockets bool `json:"proxyWebSockets"`
+	ProxyWebSockets *bool `json:"proxyWebSockets"`
 }

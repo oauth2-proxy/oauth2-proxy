@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 )
 
 func testBitbucketProvider(hostname, team string, repository string) *BitbucketProvider {
@@ -61,17 +61,17 @@ func testBitbucketBackend(payload string) *httptest.Server {
 		}))
 }
 
-func TestBitbucketProviderDefaults(t *testing.T) {
-	p := testBitbucketProvider("", "", "")
-	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "Bitbucket", p.Data().ProviderName)
-	assert.Equal(t, "https://bitbucket.org/site/oauth2/authorize",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://bitbucket.org/site/oauth2/access_token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://api.bitbucket.org/2.0/user/emails",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "email", p.Data().Scope)
+func TestNewBitbucketProvider(t *testing.T) {
+	g := NewWithT(t)
+
+	// Test that defaults are set when calling for a new provider with nothing set
+	providerData := NewBitbucketProvider(&ProviderData{}).Data()
+	g.Expect(providerData.ProviderName).To(Equal("Bitbucket"))
+	g.Expect(providerData.LoginURL.String()).To(Equal("https://bitbucket.org/site/oauth2/authorize"))
+	g.Expect(providerData.RedeemURL.String()).To(Equal("https://bitbucket.org/site/oauth2/access_token"))
+	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://api.bitbucket.org/2.0/user/emails"))
+	g.Expect(providerData.Scope).To(Equal("email"))
 }
 
 func TestBitbucketProviderScopeAdjustForTeam(t *testing.T) {

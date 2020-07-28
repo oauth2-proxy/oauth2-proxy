@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2"
 )
@@ -65,18 +66,17 @@ func newLoginGovProvider() (l *LoginGovProvider, serverKey *MyKeyData, err error
 	return
 }
 
-func TestLoginGovProviderDefaults(t *testing.T) {
-	p, _, err := newLoginGovProvider()
-	assert.NotEqual(t, nil, p)
-	assert.NoError(t, err)
-	assert.Equal(t, "login.gov", p.Data().ProviderName)
-	assert.Equal(t, "https://secure.login.gov/openid_connect/authorize",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://secure.login.gov/api/openid_connect/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://secure.login.gov/api/openid_connect/userinfo",
-		p.Data().ProfileURL.String())
-	assert.Equal(t, "email openid", p.Data().Scope)
+func TestNewLoginGovProvider(t *testing.T) {
+	g := NewWithT(t)
+
+	// Test that defaults are set when calling for a new provider with nothing set
+	providerData := NewLoginGovProvider(&ProviderData{}).Data()
+	g.Expect(providerData.ProviderName).To(Equal("login.gov"))
+	g.Expect(providerData.LoginURL.String()).To(Equal("https://secure.login.gov/openid_connect/authorize"))
+	g.Expect(providerData.RedeemURL.String()).To(Equal("https://secure.login.gov/api/openid_connect/token"))
+	g.Expect(providerData.ProfileURL.String()).To(Equal("https://secure.login.gov/api/openid_connect/userinfo"))
+	g.Expect(providerData.ValidateURL.String()).To(Equal(""))
+	g.Expect(providerData.Scope).To(Equal("email openid"))
 }
 
 func TestLoginGovProviderOverrides(t *testing.T) {

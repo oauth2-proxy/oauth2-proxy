@@ -4,10 +4,27 @@
 
 ## Important Notes
 
+- [#632](https://github.com/oauth2-proxy/oauth2-proxy/pull/632) There is backwards compatibility to sessions from v5
+  - Any unencrypted sessions from before v5 that only contained a Username & Email will trigger a reauthentication
+
 ## Breaking Changes
 
 ## Changes since v6.0.0
 
+- [#699](https://github.com/oauth2-proxy/oauth2-proxy/pull/699) Align persistence ginkgo tests with conventions (@NickMeves)
+- [#696](https://github.com/oauth2-proxy/oauth2-proxy/pull/696) Preserve query when building redirect
+- [#561](https://github.com/oauth2-proxy/oauth2-proxy/pull/561) Refactor provider URLs to package level vars (@JoelSpeed)
+- [#682](https://github.com/oauth2-proxy/oauth2-proxy/pull/682) Refactor persistent session store session ticket management (@NickMeves)
+- [#688](https://github.com/oauth2-proxy/oauth2-proxy/pull/688) Refactor session loading to make use of middleware pattern (@JoelSpeed)
+- [#593](https://github.com/oauth2-proxy/oauth2-proxy/pull/593) Integrate upstream package with OAuth2 Proxy (@JoelSpeed)
+- [#687](https://github.com/oauth2-proxy/oauth2-proxy/pull/687) Refactor HTPasswd Validator (@JoelSpeed)
+- [#624](https://github.com/oauth2-proxy/oauth2-proxy/pull/624) Allow stripping authentication headers from whitelisted requests with `--skip-auth-strip-headers` (@NickMeves)
+- [#673](https://github.com/oauth2-proxy/oauth2-proxy/pull/673) Add --session-cookie-minimal option to create session cookies with no tokens (@NickMeves)
+- [#632](https://github.com/oauth2-proxy/oauth2-proxy/pull/632) Reduce session size by encoding with MessagePack and using LZ4 compression (@NickMeves)
+- [#675](https://github.com/oauth2-proxy/oauth2-proxy/pull/675) Fix required ruby version and deprecated option for building docs (@mkontani)
+- [#669](https://github.com/oauth2-proxy/oauth2-proxy/pull/669) Reduce docker context to improve build times (@JoelSpeed)
+- [#668](https://github.com/oauth2-proxy/oauth2-proxy/pull/668) Use req.Host in --force-https when req.URL.Host is empty (@zucaritask)
+- [#660](https://github.com/oauth2-proxy/oauth2-proxy/pull/660) Use builder pattern to simplify requests to external endpoints (@JoelSpeed)
 - [#591](https://github.com/oauth2-proxy/oauth2-proxy/pull/591) Introduce upstream package with new reverse proxy implementation (@JoelSpeed)
 - [#576](https://github.com/oauth2-proxy/oauth2-proxy/pull/576) Separate Cookie validation out of main options validation (@JoelSpeed)
 - [#656](https://github.com/oauth2-proxy/oauth2-proxy/pull/656) Split long session cookies more precisely (@NickMeves)
@@ -18,6 +35,7 @@
 - [#635](https://github.com/oauth2-proxy/oauth2-proxy/pull/635) Support specifying alternative provider TLS trust source(s) (@k-wall)
 - [#649](https://github.com/oauth2-proxy/oauth2-proxy/pull/650) Resolve an issue where an empty healthcheck URL and ping-user-agent returns the healthcheck response (@jordancrawfordnz)
 - [#662](https://github.com/oauth2-proxy/oauth2-proxy/pull/662) Do not add Cache-Control header to response from auth only endpoint (@johejo)
+- [#552](https://github.com/oauth2-proxy/oauth2-proxy/pull/522) Implements --trusted-ip option to allow clients behind specified IPs or CIDR ranges to bypass authentication (@Izzette)
 
 # v6.0.0
 

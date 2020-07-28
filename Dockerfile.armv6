@@ -1,4 +1,5 @@
 FROM golang:1.14-buster AS builder
+ARG VERSION
 
 # Download tools
 RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
@@ -19,7 +20,7 @@ COPY . .
 #  build the key into the container and then tell it where it is
 #  by setting OAUTH2_PROXY_JWT_KEY_FILE=/etc/ssl/private/jwt_signing_key.pem
 #  in app.yaml instead.
-RUN GOARCH=arm GOARM=6 make build && touch jwt_signing_key.pem
+RUN VERSION=${VERSION} GOARCH=arm GOARM=6 make build && touch jwt_signing_key.pem
 
 # Copy binary to alpine
 FROM arm32v6/alpine:3.11

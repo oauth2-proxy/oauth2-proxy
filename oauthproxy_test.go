@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -23,12 +22,12 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
+	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/websocket"
 )
 
 const (
@@ -36,150 +35,23 @@ const (
 	// encoded version of this.
 	rawCookieSecret    = "secretthirtytwobytes+abcdefghijk"
 	base64CookieSecret = "c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams"
+	clientID           = "3984n253984d7348dm8234yf982t"
+	clientSecret       = "gv3498mfc9t23y23974dm2394dm9"
 )
 
 func init() {
 	logger.SetFlags(logger.Lshortfile)
-
-}
-
-type WebSocketOrRestHandler struct {
-	restHandler http.Handler
-	wsHandler   http.Handler
-}
-
-func (h *WebSocketOrRestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Upgrade") == "websocket" {
-		h.wsHandler.ServeHTTP(w, r)
-	} else {
-		h.restHandler.ServeHTTP(w, r)
-	}
-}
-
-func TestWebSocketProxy(t *testing.T) {
-	handler := WebSocketOrRestHandler{
-		restHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(200)
-			hostname, _, _ := net.SplitHostPort(r.Host)
-			w.Write([]byte(hostname))
-		}),
-		wsHandler: websocket.Handler(func(ws *websocket.Conn) {
-			defer ws.Close()
-			var data []byte
-			err := websocket.Message.Receive(ws, &data)
-			if err != nil {
-				t.Fatalf("err %s", err)
-				return
-			}
-			err = websocket.Message.Send(ws, data)
-			if err != nil {
-				t.Fatalf("err %s", err)
-			}
-		}),
-	}
-	backend := httptest.NewServer(&handler)
-	defer backend.Close()
-
-	backendURL, _ := url.Parse(backend.URL)
-
-	opts := baseTestOptions()
-	var auth hmacauth.HmacAuth
-	opts.PassHostHeader = true
-	proxyHandler := NewWebSocketOrRestReverseProxy(backendURL, opts, auth)
-	frontend := httptest.NewServer(proxyHandler)
-	defer frontend.Close()
-
-	frontendURL, _ := url.Parse(frontend.URL)
-	frontendWSURL := "ws://" + frontendURL.Host + "/"
-
-	ws, err := websocket.Dial(frontendWSURL, "", "http://localhost/")
-	if err != nil {
-		t.Fatalf("err %s", err)
-	}
-	request := []byte("hello, world!")
-	err = websocket.Message.Send(ws, request)
-	if err != nil {
-		t.Fatalf("err %s", err)
-	}
-	var response = make([]byte, 1024)
-	websocket.Message.Receive(ws, &response)
-	if err != nil {
-		t.Fatalf("err %s", err)
-	}
-	if g, e := string(request), string(response); g != e {
-		t.Errorf("got body %q; expected %q", g, e)
-	}
-
-	getReq, _ := http.NewRequest("GET", frontend.URL, nil)
-	res, _ := http.DefaultClient.Do(getReq)
-	bodyBytes, _ := ioutil.ReadAll(res.Body)
-	backendHostname, _, _ := net.SplitHostPort(backendURL.Host)
-	if g, e := string(bodyBytes), backendHostname; g != e {
-		t.Errorf("got body %q; expected %q", g, e)
-	}
-}
-
-func TestNewReverseProxy(t *testing.T) {
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		hostname, _, _ := net.SplitHostPort(r.Host)
-		w.Write([]byte(hostname))
-	}))
-	defer backend.Close()
-
-	backendURL, _ := url.Parse(backend.URL)
-	backendHostname, backendPort, _ := net.SplitHostPort(backendURL.Host)
-	backendHost := net.JoinHostPort(backendHostname, backendPort)
-	proxyURL, _ := url.Parse(backendURL.Scheme + "://" + backendHost + "/")
-
-	proxyHandler := NewReverseProxy(proxyURL, &options.Options{FlushInterval: time.Second})
-	setProxyUpstreamHostHeader(proxyHandler, proxyURL)
-	frontend := httptest.NewServer(proxyHandler)
-	defer frontend.Close()
-
-	getReq, _ := http.NewRequest("GET", frontend.URL, nil)
-	res, _ := http.DefaultClient.Do(getReq)
-	bodyBytes, _ := ioutil.ReadAll(res.Body)
-	if g, e := string(bodyBytes), backendHostname; g != e {
-		t.Errorf("got body %q; expected %q", g, e)
-	}
-}
-
-func TestEncodedSlashes(t *testing.T) {
-	var seen string
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		seen = r.RequestURI
-	}))
-	defer backend.Close()
-
-	b, _ := url.Parse(backend.URL)
-	proxyHandler := NewReverseProxy(b, &options.Options{FlushInterval: time.Second})
-	setProxyDirector(proxyHandler)
-	frontend := httptest.NewServer(proxyHandler)
-	defer frontend.Close()
-
-	f, _ := url.Parse(frontend.URL)
-	encodedPath := "/a%2Fb/?c=1"
-	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: f.Host, Opaque: encodedPath}}
-	_, err := http.DefaultClient.Do(getReq)
-	if err != nil {
-		t.Fatalf("err %s", err)
-	}
-	if seen != encodedPath {
-		t.Errorf("got bad request %q expected %q", seen, encodedPath)
-	}
 }
 
 func TestRobotsTxt(t *testing.T) {
 	opts := baseTestOptions()
-	opts.ClientID = "asdlkjx"
-	opts.ClientSecret = "alkgks"
-	opts.Cookie.Secret = rawCookieSecret
-	validation.Validate(opts)
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
 
 	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/robots.txt", nil)
 	proxy.ServeHTTP(rw, req)
@@ -189,9 +61,6 @@ func TestRobotsTxt(t *testing.T) {
 
 func TestIsValidRedirect(t *testing.T) {
 	opts := baseTestOptions()
-	opts.ClientID = "skdlfj"
-	opts.ClientSecret = "fgkdsgj"
-	opts.Cookie.Secret = base64CookieSecret
 	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
 	opts.WhitelistDomains = []string{
 		"foo.bar",
@@ -201,10 +70,13 @@ func TestIsValidRedirect(t *testing.T) {
 		"anyport.bar:*",
 		".sub.anyport.bar:*",
 	}
-	validation.Validate(opts)
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
 
 	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	testCases := []struct {
 		Desc, Redirect string
@@ -439,11 +311,7 @@ func TestIsValidRedirect(t *testing.T) {
 }
 
 func TestOpenRedirects(t *testing.T) {
-	opts := options.NewOptions()
-	opts.ClientID = "skdlfj"
-	opts.ClientSecret = "fgkdsgj"
-	opts.Cookie.Secret = rawCookieSecret
-	opts.EmailDomains = []string{"*"}
+	opts := baseTestOptions()
 	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
 	opts.WhitelistDomains = []string{
 		"foo.bar",
@@ -458,13 +326,19 @@ func TestOpenRedirects(t *testing.T) {
 	assert.NoError(t, err)
 
 	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	file, err := os.Open("./test/openredirects.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+	defer func(t *testing.T) {
+		if err := file.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -544,22 +418,28 @@ func TestBasicAuthPassword(t *testing.T) {
 			}
 		}
 		w.WriteHeader(200)
-		w.Write([]byte(payload))
+		_, err := w.Write([]byte(payload))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}))
 	opts := baseTestOptions()
-	opts.Upstreams = append(opts.Upstreams, providerServer.URL)
-	// The CookieSecret must be 32 bytes in order to create the AES
-	// cipher.
-	opts.Cookie.Secret = "xyzzyplughxyzzyplughxyzzyplughxp"
-	opts.ClientID = "dlgkj"
-	opts.ClientSecret = "alkgret"
+	opts.UpstreamServers = options.Upstreams{
+		{
+			ID:   providerServer.URL,
+			Path: "/",
+			URI:  providerServer.URL,
+		},
+	}
+
 	opts.Cookie.Secure = false
 	opts.PassBasicAuth = true
 	opts.SetBasicAuth = true
 	opts.PassUserHeaders = true
 	opts.PreferEmailToUser = true
 	opts.BasicAuthPassword = "This is a secure password"
-	validation.Validate(opts)
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
 
 	providerURL, _ := url.Parse(providerServer.URL)
 	const emailAddress = "john.doe@example.com"
@@ -568,7 +448,9 @@ func TestBasicAuthPassword(t *testing.T) {
 	proxy, err := NewOAuthProxy(opts, func(email string) bool {
 		return email == emailAddress
 	})
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/oauth2/callback?code=callback_code&state=nonce:", strings.NewReader(""))
@@ -618,8 +500,8 @@ func TestBasicAuthWithEmail(t *testing.T) {
 	opts.PassUserHeaders = false
 	opts.PreferEmailToUser = false
 	opts.BasicAuthPassword = "This is a secure password"
-	opts.Cookie.Secret = rawCookieSecret
-	validation.Validate(opts)
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
 
 	const emailAddress = "john.doe@example.com"
 	const userName = "9fcab5c9b889a557"
@@ -641,7 +523,9 @@ func TestBasicAuthWithEmail(t *testing.T) {
 		proxy, err := NewOAuthProxy(opts, func(email string) bool {
 			return email == emailAddress
 		})
-		assert.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		proxy.addHeadersForProxying(rw, req, session)
 		assert.Equal(t, expectedUserHeader, req.Header["Authorization"][0])
 		assert.Equal(t, userName, req.Header["X-Forwarded-User"][0])
@@ -655,7 +539,9 @@ func TestBasicAuthWithEmail(t *testing.T) {
 		proxy, err := NewOAuthProxy(opts, func(email string) bool {
 			return email == emailAddress
 		})
-		assert.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		proxy.addHeadersForProxying(rw, req, session)
 		assert.Equal(t, expectedEmailHeader, req.Header["Authorization"][0])
 		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
@@ -664,11 +550,8 @@ func TestBasicAuthWithEmail(t *testing.T) {
 
 func TestPassUserHeadersWithEmail(t *testing.T) {
 	opts := baseTestOptions()
-	opts.PassBasicAuth = false
-	opts.PassUserHeaders = true
-	opts.PreferEmailToUser = false
-	opts.Cookie.Secret = base64CookieSecret
-	validation.Validate(opts)
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
 
 	const emailAddress = "john.doe@example.com"
 	const userName = "9fcab5c9b889a557"
@@ -686,7 +569,9 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 		proxy, err := NewOAuthProxy(opts, func(email string) bool {
 			return email == emailAddress
 		})
-		assert.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		proxy.addHeadersForProxying(rw, req, session)
 		assert.Equal(t, userName, req.Header["X-Forwarded-User"][0])
 	}
@@ -699,9 +584,147 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 		proxy, err := NewOAuthProxy(opts, func(email string) bool {
 			return email == emailAddress
 		})
-		assert.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		proxy.addHeadersForProxying(rw, req, session)
 		assert.Equal(t, emailAddress, req.Header["X-Forwarded-User"][0])
+	}
+}
+
+func TestStripAuthHeaders(t *testing.T) {
+	testCases := map[string]struct {
+		SkipAuthStripHeaders bool
+		PassBasicAuth        bool
+		PassUserHeaders      bool
+		PassAccessToken      bool
+		PassAuthorization    bool
+		StrippedHeaders      map[string]bool
+	}{
+		"Default options": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      false,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               true,
+				"X-Forwarded-Email":              true,
+				"X-Forwarded-Preferred-Username": true,
+				"X-Forwarded-Access-Token":       false,
+				"Authorization":                  true,
+			},
+		},
+		"Pass access token": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      true,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               true,
+				"X-Forwarded-Email":              true,
+				"X-Forwarded-Preferred-Username": true,
+				"X-Forwarded-Access-Token":       true,
+				"Authorization":                  true,
+			},
+		},
+		"Nothing setting Authorization": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        false,
+			PassUserHeaders:      true,
+			PassAccessToken:      true,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               true,
+				"X-Forwarded-Email":              true,
+				"X-Forwarded-Preferred-Username": true,
+				"X-Forwarded-Access-Token":       true,
+				"Authorization":                  false,
+			},
+		},
+		"Only Authorization header modified": {
+			SkipAuthStripHeaders: true,
+			PassBasicAuth:        false,
+			PassUserHeaders:      false,
+			PassAccessToken:      false,
+			PassAuthorization:    true,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               false,
+				"X-Forwarded-Email":              false,
+				"X-Forwarded-Preferred-Username": false,
+				"X-Forwarded-Access-Token":       false,
+				"Authorization":                  true,
+			},
+		},
+		"Don't strip any headers (default options)": {
+			SkipAuthStripHeaders: false,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      false,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               false,
+				"X-Forwarded-Email":              false,
+				"X-Forwarded-Preferred-Username": false,
+				"X-Forwarded-Access-Token":       false,
+				"Authorization":                  false,
+			},
+		},
+		"Don't strip any headers (custom options)": {
+			SkipAuthStripHeaders: false,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			PassAccessToken:      true,
+			PassAuthorization:    false,
+			StrippedHeaders: map[string]bool{
+				"X-Forwarded-User":               false,
+				"X-Forwarded-Email":              false,
+				"X-Forwarded-Preferred-Username": false,
+				"X-Forwarded-Access-Token":       false,
+				"Authorization":                  false,
+			},
+		},
+	}
+
+	initialHeaders := map[string]string{
+		"X-Forwarded-User":               "9fcab5c9b889a557",
+		"X-Forwarded-Email":              "john.doe@example.com",
+		"X-Forwarded-Preferred-Username": "john.doe",
+		"X-Forwarded-Access-Token":       "AccessToken",
+		"Authorization":                  "bearer IDToken",
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			opts := baseTestOptions()
+			opts.SkipAuthStripHeaders = tc.SkipAuthStripHeaders
+			opts.PassBasicAuth = tc.PassBasicAuth
+			opts.PassUserHeaders = tc.PassUserHeaders
+			opts.PassAccessToken = tc.PassAccessToken
+			opts.PassAuthorization = tc.PassAuthorization
+			err := validation.Validate(opts)
+			assert.NoError(t, err)
+
+			req, _ := http.NewRequest("GET", fmt.Sprintf("%s/testCase", opts.ProxyPrefix), nil)
+			for header, val := range initialHeaders {
+				req.Header.Set(header, val)
+			}
+
+			proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+			assert.NoError(t, err)
+			if proxy.skipAuthStripHeaders {
+				proxy.stripAuthHeaders(req)
+			}
+
+			for header, stripped := range tc.StrippedHeaders {
+				if stripped {
+					assert.Equal(t, req.Header.Get(header), "")
+				} else {
+					assert.Equal(t, req.Header.Get(header), initialHeaders[header])
+				}
+			}
+		})
 	}
 }
 
@@ -713,13 +736,13 @@ type PassAccessTokenTest struct {
 
 type PassAccessTokenTestOptions struct {
 	PassAccessToken bool
-	ProxyUpstream   string
+	ProxyUpstream   options.Upstream
 }
 
-func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTest {
-	t := &PassAccessTokenTest{}
+func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTest, error) {
+	patt := &PassAccessTokenTest{}
 
-	t.providerServer = httptest.NewServer(
+	patt.providerServer = httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var payload string
 			switch r.URL.Path {
@@ -732,35 +755,42 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) *PassAccessTokenTes
 				}
 			}
 			w.WriteHeader(200)
-			w.Write([]byte(payload))
+			_, err := w.Write([]byte(payload))
+			if err != nil {
+				panic(err)
+			}
 		}))
 
-	t.opts = baseTestOptions()
-	t.opts.Upstreams = append(t.opts.Upstreams, t.providerServer.URL)
-	if opts.ProxyUpstream != "" {
-		t.opts.Upstreams = append(t.opts.Upstreams, opts.ProxyUpstream)
+	patt.opts = baseTestOptions()
+	patt.opts.UpstreamServers = options.Upstreams{
+		{
+			ID:   patt.providerServer.URL,
+			Path: "/",
+			URI:  patt.providerServer.URL,
+		},
 	}
-	// The CookieSecret must be 32 bytes in order to create the AES
-	// cipher.
-	t.opts.Cookie.Secret = "xyzzyplughxyzzyplughxyzzyplughxp"
-	t.opts.ClientID = "slgkj"
-	t.opts.ClientSecret = "gfjgojl"
-	t.opts.Cookie.Secure = false
-	t.opts.PassAccessToken = opts.PassAccessToken
-	validation.Validate(t.opts)
+	if opts.ProxyUpstream.ID != "" {
+		patt.opts.UpstreamServers = append(patt.opts.UpstreamServers, opts.ProxyUpstream)
+	}
 
-	providerURL, _ := url.Parse(t.providerServer.URL)
+	patt.opts.Cookie.Secure = false
+	patt.opts.PassAccessToken = opts.PassAccessToken
+	err := validation.Validate(patt.opts)
+	if err != nil {
+		return nil, err
+	}
+
+	providerURL, _ := url.Parse(patt.providerServer.URL)
 	const emailAddress = "michael.bland@gsa.gov"
 
-	t.opts.SetProvider(NewTestProvider(providerURL, emailAddress))
-	var err error
-	t.proxy, err = NewOAuthProxy(t.opts, func(email string) bool {
+	patt.opts.SetProvider(NewTestProvider(providerURL, emailAddress))
+	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
 		return email == emailAddress
 	})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return t
+	return patt, nil
 }
 
 func (patTest *PassAccessTokenTest) Close() {
@@ -817,17 +847,20 @@ func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoin
 }
 
 func TestForwardAccessTokenUpstream(t *testing.T) {
-	patTest := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
 	})
-	defer patTest.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(patTest.Close)
 
 	// A successful validation will redirect and set the auth cookie.
 	code, cookie := patTest.getCallbackEndpoint()
 	if code != 302 {
 		t.Fatalf("expected 302; got %d", code)
 	}
-	assert.NotEqual(t, nil, cookie)
+	assert.NotNil(t, cookie)
 
 	// Now we make a regular request; the access_token from the cookie is
 	// forwarded as the "X-Forwarded-Access-Token" header. The token is
@@ -840,12 +873,18 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 }
 
 func TestStaticProxyUpstream(t *testing.T) {
-	patTest := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
-		ProxyUpstream:   "static://200/static-proxy",
+		ProxyUpstream: options.Upstream{
+			ID:     "static-proxy",
+			Path:   "/static-proxy",
+			Static: true,
+		},
 	})
-
-	defer patTest.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(patTest.Close)
 
 	// A successful validation will redirect and set the auth cookie.
 	code, cookie := patTest.getCallbackEndpoint()
@@ -864,10 +903,13 @@ func TestStaticProxyUpstream(t *testing.T) {
 }
 
 func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
-	patTest := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: false,
 	})
-	defer patTest.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(patTest.Close)
 
 	// A successful validation will redirect and set the auth cookie.
 	code, cookie := patTest.getCallbackEndpoint()
@@ -895,27 +937,26 @@ type SignInPageTest struct {
 const signInRedirectPattern = `<input type="hidden" name="rd" value="(.*)">`
 const signInSkipProvider = `>Found<`
 
-func NewSignInPageTest(skipProvider bool) *SignInPageTest {
+func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
 	var sipTest SignInPageTest
 
 	sipTest.opts = baseTestOptions()
-	sipTest.opts.Cookie.Secret = rawCookieSecret
-	sipTest.opts.ClientID = "lkdgj"
-	sipTest.opts.ClientSecret = "sgiufgoi"
 	sipTest.opts.SkipProviderButton = skipProvider
-	validation.Validate(sipTest.opts)
+	err := validation.Validate(sipTest.opts)
+	if err != nil {
+		return nil, err
+	}
 
-	var err error
 	sipTest.proxy, err = NewOAuthProxy(sipTest.opts, func(email string) bool {
 		return true
 	})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	sipTest.signInRegexp = regexp.MustCompile(signInRedirectPattern)
 	sipTest.signInProviderRegexp = regexp.MustCompile(signInSkipProvider)
 
-	return &sipTest
+	return &sipTest, nil
 }
 
 func (sipTest *SignInPageTest) GetEndpoint(endpoint string) (int, string) {
@@ -926,7 +967,10 @@ func (sipTest *SignInPageTest) GetEndpoint(endpoint string) (int, string) {
 }
 
 func TestSignInPageIncludesTargetRedirect(t *testing.T) {
-	sipTest := NewSignInPageTest(false)
+	sipTest, err := NewSignInPageTest(false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	const endpoint = "/some/random/endpoint"
 
 	code, body := sipTest.GetEndpoint(endpoint)
@@ -944,7 +988,10 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 }
 
 func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
-	sipTest := NewSignInPageTest(false)
+	sipTest, err := NewSignInPageTest(false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	code, body := sipTest.GetEndpoint("/oauth2/sign_in")
 	assert.Equal(t, 200, code)
 
@@ -959,8 +1006,12 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 }
 
 func TestSignInPageSkipProvider(t *testing.T) {
-	sipTest := NewSignInPageTest(true)
-	const endpoint = "/some/random/endpoint"
+	sipTest, err := NewSignInPageTest(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpoint := "/some/random/endpoint"
 
 	code, body := sipTest.GetEndpoint(endpoint)
 	assert.Equal(t, 302, code)
@@ -973,8 +1024,12 @@ func TestSignInPageSkipProvider(t *testing.T) {
 }
 
 func TestSignInPageSkipProviderDirect(t *testing.T) {
-	sipTest := NewSignInPageTest(true)
-	const endpoint = "/sign_in"
+	sipTest, err := NewSignInPageTest(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpoint := "/sign_in"
 
 	code, body := sipTest.GetEndpoint(endpoint)
 	assert.Equal(t, 302, code)
@@ -1000,27 +1055,26 @@ type ProcessCookieTestOpts struct {
 
 type OptionsModifier func(*options.Options)
 
-func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifier) *ProcessCookieTest {
+func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
 	var pcTest ProcessCookieTest
 
 	pcTest.opts = baseTestOptions()
 	for _, modifier := range modifiers {
 		modifier(pcTest.opts)
 	}
-	pcTest.opts.ClientID = "asdfljk"
-	pcTest.opts.ClientSecret = "lkjfdsig"
-	pcTest.opts.Cookie.Secret = "0123456789abcdef0123456789abcdef"
 	// First, set the CookieRefresh option so proxy.AesCipher is created,
 	// needed to encrypt the access_token.
 	pcTest.opts.Cookie.Refresh = time.Hour
-	validation.Validate(pcTest.opts)
+	err := validation.Validate(pcTest.opts)
+	if err != nil {
+		return nil, err
+	}
 
-	var err error
 	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	pcTest.proxy.provider = &TestProvider{
 		ValidToken: opts.providerValidateCookieResponse,
@@ -1032,16 +1086,16 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
 	pcTest.validateUser = true
-	return &pcTest
+	return &pcTest, nil
 }
 
-func NewProcessCookieTestWithDefaults() *ProcessCookieTest {
+func NewProcessCookieTestWithDefaults() (*ProcessCookieTest, error) {
 	return NewProcessCookieTest(ProcessCookieTestOpts{
 		providerValidateCookieResponse: true,
 	})
 }
 
-func NewProcessCookieTestWithOptionsModifiers(modifiers ...OptionsModifier) *ProcessCookieTest {
+func NewProcessCookieTestWithOptionsModifiers(modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
 	return NewProcessCookieTest(ProcessCookieTestOpts{
 		providerValidateCookieResponse: true,
 	}, modifiers...)
@@ -1063,37 +1117,51 @@ func (p *ProcessCookieTest) LoadCookiedSession() (*sessions.SessionState, error)
 }
 
 func TestLoadCookiedSession(t *testing.T) {
-	pcTest := NewProcessCookieTestWithDefaults()
+	pcTest, err := NewProcessCookieTestWithDefaults()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	created := time.Now()
 	startSession := &sessions.SessionState{Email: "john.doe@example.com", AccessToken: "my_access_token", CreatedAt: &created}
-	pcTest.SaveSession(startSession)
+	err = pcTest.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	session, err := pcTest.LoadCookiedSession()
-	assert.Equal(t, nil, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, startSession.Email, session.Email)
 	assert.Equal(t, "", session.User)
 	assert.Equal(t, startSession.AccessToken, session.AccessToken)
 }
 
 func TestProcessCookieNoCookieError(t *testing.T) {
-	pcTest := NewProcessCookieTestWithDefaults()
+	pcTest, err := NewProcessCookieTestWithDefaults()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	session, err := pcTest.LoadCookiedSession()
-	assert.Equal(t, "cookie \"_oauth2_proxy\" not present", err.Error())
+	assert.Error(t, err, "cookie \"_oauth2_proxy\" not present")
 	if session != nil {
 		t.Errorf("expected nil session. got %#v", session)
 	}
 }
 
 func TestProcessCookieRefreshNotSet(t *testing.T) {
-	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(23) * time.Hour
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	reference := time.Now().Add(time.Duration(-2) * time.Hour)
 
 	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
-	pcTest.SaveSession(startSession)
+	err = pcTest.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	session, err := pcTest.LoadCookiedSession()
 	assert.Equal(t, nil, err)
@@ -1104,12 +1172,17 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 }
 
 func TestProcessCookieFailIfCookieExpired(t *testing.T) {
-	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
-	pcTest.SaveSession(startSession)
+	err = pcTest.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	session, err := pcTest.LoadCookiedSession()
 	assert.NotEqual(t, nil, err)
@@ -1119,12 +1192,17 @@ func TestProcessCookieFailIfCookieExpired(t *testing.T) {
 }
 
 func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
-	pcTest := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
-	pcTest.SaveSession(startSession)
+	err = pcTest.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	pcTest.proxy.CookieRefresh = time.Hour
 	session, err := pcTest.LoadCookiedSession()
@@ -1134,18 +1212,26 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 	}
 }
 
-func NewUserInfoEndpointTest() *ProcessCookieTest {
-	pcTest := NewProcessCookieTestWithDefaults()
+func NewUserInfoEndpointTest() (*ProcessCookieTest, error) {
+	pcTest, err := NewProcessCookieTestWithDefaults()
+	if err != nil {
+		return nil, err
+	}
 	pcTest.req, _ = http.NewRequest("GET",
 		pcTest.opts.ProxyPrefix+"/userinfo", nil)
-	return pcTest
+	return pcTest, nil
 }
 
 func TestUserInfoEndpointAccepted(t *testing.T) {
-	test := NewUserInfoEndpointTest()
+	test, err := NewUserInfoEndpointTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	startSession := &sessions.SessionState{
 		Email: "john.doe@example.com", AccessToken: "my_access_token"}
-	test.SaveSession(startSession)
+	err = test.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusOK, test.rw.Code)
@@ -1154,25 +1240,36 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 }
 
 func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
-	test := NewUserInfoEndpointTest()
+	test, err := NewUserInfoEndpointTest()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 }
 
-func NewAuthOnlyEndpointTest(modifiers ...OptionsModifier) *ProcessCookieTest {
-	pcTest := NewProcessCookieTestWithOptionsModifiers(modifiers...)
+func NewAuthOnlyEndpointTest(modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(modifiers...)
+	if err != nil {
+		return nil, err
+	}
 	pcTest.req, _ = http.NewRequest("GET",
 		pcTest.opts.ProxyPrefix+"/auth", nil)
-	return pcTest
+	return pcTest, nil
 }
 
 func TestAuthOnlyEndpointAccepted(t *testing.T) {
-	test := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	created := time.Now()
 	startSession := &sessions.SessionState{
 		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &created}
-	test.SaveSession(startSession)
+	err = test.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusAccepted, test.rw.Code)
@@ -1181,7 +1278,10 @@ func TestAuthOnlyEndpointAccepted(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
-	test := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
@@ -1190,13 +1290,18 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
-	test := NewAuthOnlyEndpointTest(func(opts *options.Options) {
+	test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	reference := time.Now().Add(time.Duration(25) * time.Hour * -1)
 	startSession := &sessions.SessionState{
 		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &reference}
-	test.SaveSession(startSession)
+	err = test.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
@@ -1205,11 +1310,16 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
-	test := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	created := time.Now()
 	startSession := &sessions.SessionState{
 		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &created}
-	test.SaveSession(startSession)
+	err = test.SaveSession(startSession)
+	assert.NoError(t, err)
 	test.validateUser = false
 
 	test.proxy.ServeHTTP(test.rw, test.req)
@@ -1224,15 +1334,13 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	pcTest.opts = baseTestOptions()
 	pcTest.opts.SetXAuthRequest = true
 	err := validation.Validate(pcTest.opts)
-	if err != nil {
-		panic(err)
-	}
+	assert.NoError(t, err)
 
 	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	pcTest.proxy.provider = &TestProvider{
 		ValidToken: true,
@@ -1247,7 +1355,8 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	created := time.Now()
 	startSession := &sessions.SessionState{
 		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
-	pcTest.SaveSession(startSession)
+	err = pcTest.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
 	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
@@ -1261,14 +1370,14 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 	pcTest.opts = baseTestOptions()
 	pcTest.opts.SetXAuthRequest = true
 	pcTest.opts.SetBasicAuth = true
-	validation.Validate(pcTest.opts)
+	err := validation.Validate(pcTest.opts)
+	assert.NoError(t, err)
 
-	var err error
 	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	pcTest.proxy.provider = &TestProvider{
 		ValidToken: true,
@@ -1283,7 +1392,8 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 	created := time.Now()
 	startSession := &sessions.SessionState{
 		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
-	pcTest.SaveSession(startSession)
+	err = pcTest.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
 	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
@@ -1299,14 +1409,14 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 	pcTest.opts = baseTestOptions()
 	pcTest.opts.SetXAuthRequest = true
 	pcTest.opts.SetBasicAuth = false
-	validation.Validate(pcTest.opts)
+	err := validation.Validate(pcTest.opts)
+	assert.NoError(t, err)
 
-	var err error
 	pcTest.proxy, err = NewOAuthProxy(pcTest.opts, func(email string) bool {
 		return pcTest.validateUser
 	})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	pcTest.proxy.provider = &TestProvider{
 		ValidToken: true,
@@ -1321,7 +1431,8 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 	created := time.Now()
 	startSession := &sessions.SessionState{
 		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
-	pcTest.SaveSession(startSession)
+	err = pcTest.SaveSession(startSession)
+	assert.NoError(t, err)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
 	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
@@ -1333,20 +1444,32 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("response"))
+		_, err := w.Write([]byte("response"))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}))
-	defer upstream.Close()
+	t.Cleanup(upstream.Close)
 
 	opts := baseTestOptions()
-	opts.Upstreams = append(opts.Upstreams, upstream.URL)
+	opts.UpstreamServers = options.Upstreams{
+		{
+			ID:   upstream.URL,
+			Path: "/",
+			URI:  upstream.URL,
+		},
+	}
 	opts.SkipAuthPreflight = true
-	validation.Validate(opts)
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
 
 	upstreamURL, _ := url.Parse(upstream.URL)
 	opts.SetProvider(NewTestProvider(upstreamURL, ""))
 
 	proxy, err := NewOAuthProxy(opts, func(string) bool { return false })
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("OPTIONS", "/preflight-request", nil)
 	proxy.ServeHTTP(rw, req)
@@ -1361,16 +1484,25 @@ type SignatureAuthenticator struct {
 
 func (v *SignatureAuthenticator) Authenticate(w http.ResponseWriter, r *http.Request) {
 	result, headerSig, computedSig := v.auth.AuthenticateRequest(r)
-	if result == hmacauth.ResultNoSignature {
-		w.Write([]byte("no signature received"))
-	} else if result == hmacauth.ResultMatch {
-		w.Write([]byte("signatures match"))
-	} else if result == hmacauth.ResultMismatch {
-		w.Write([]byte("signatures do not match:" +
-			"\n  received: " + headerSig +
-			"\n  computed: " + computedSig))
-	} else {
-		panic("Unknown result value: " + result.String())
+
+	var msg string
+	switch result {
+	case hmacauth.ResultNoSignature:
+		msg = "no signature received"
+	case hmacauth.ResultMatch:
+		msg = "signatures match"
+	case hmacauth.ResultMismatch:
+		msg = fmt.Sprintf(
+			"signatures do not match:\n  received: %s\n  computed: %s",
+			headerSig,
+			computedSig)
+	default:
+		panic("unknown result value: " + result.String())
+	}
+
+	_, err := w.Write([]byte(msg))
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -1384,24 +1516,36 @@ type SignatureTest struct {
 	authenticator *SignatureAuthenticator
 }
 
-func NewSignatureTest() *SignatureTest {
+func NewSignatureTest() (*SignatureTest, error) {
 	opts := baseTestOptions()
-	opts.Cookie.Secret = rawCookieSecret
-	opts.ClientID = "client ID"
-	opts.ClientSecret = "client secret"
 	opts.EmailDomains = []string{"acm.org"}
 
 	authenticator := &SignatureAuthenticator{}
 	upstream := httptest.NewServer(
 		http.HandlerFunc(authenticator.Authenticate))
-	upstreamURL, _ := url.Parse(upstream.URL)
-	opts.Upstreams = append(opts.Upstreams, upstream.URL)
+	upstreamURL, err := url.Parse(upstream.URL)
+	if err != nil {
+		return nil, err
+	}
+	opts.UpstreamServers = options.Upstreams{
+		{
+			ID:   upstream.URL,
+			Path: "/",
+			URI:  upstream.URL,
+		},
+	}
 
 	providerHandler := func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"access_token": "my_auth_token"}`))
+		_, err := w.Write([]byte(`{"access_token": "my_auth_token"}`))
+		if err != nil {
+			panic(err)
+		}
 	}
 	provider := httptest.NewServer(http.HandlerFunc(providerHandler))
-	providerURL, _ := url.Parse(provider.URL)
+	providerURL, err := url.Parse(provider.URL)
+	if err != nil {
+		return nil, err
+	}
 	opts.SetProvider(NewTestProvider(providerURL, "mbland@acm.org"))
 
 	return &SignatureTest{
@@ -1412,7 +1556,7 @@ func NewSignatureTest() *SignatureTest {
 		make(http.Header),
 		httptest.NewRecorder(),
 		authenticator,
-	}
+	}, nil
 }
 
 func (st *SignatureTest) Close() {
@@ -1436,14 +1580,14 @@ func (fnc *fakeNetConn) Read(p []byte) (n int, err error) {
 	return 0, io.EOF
 }
 
-func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
+func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) error {
 	err := validation.Validate(st.opts)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	proxy, err := NewOAuthProxy(st.opts, func(email string) bool { return true })
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	var bodyBuf io.ReadCloser
@@ -1457,42 +1601,61 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) {
 		Email: "mbland@acm.org", AccessToken: "my_access_token"}
 	err = proxy.SaveSession(st.rw, req, state)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for _, c := range st.rw.Result().Cookies() {
 		req.AddCookie(c)
 	}
 	// This is used by the upstream to validate the signature.
 	st.authenticator.auth = hmacauth.NewHmacAuth(
-		crypto.SHA1, []byte(key), SignatureHeader, SignatureHeaders)
+		crypto.SHA1, []byte(key), upstream.SignatureHeader, upstream.SignatureHeaders)
 	proxy.ServeHTTP(st.rw, req)
+
+	return nil
 }
 
-func TestNoRequestSignature(t *testing.T) {
-	st := NewSignatureTest()
-	defer st.Close()
-	st.MakeRequestWithExpectedKey("GET", "", "")
-	assert.Equal(t, 200, st.rw.Code)
-	assert.Equal(t, st.rw.Body.String(), "no signature received")
-}
-
-func TestRequestSignatureGetRequest(t *testing.T) {
-	st := NewSignatureTest()
-	defer st.Close()
-	st.opts.SignatureKey = "sha1:7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d"
-	st.MakeRequestWithExpectedKey("GET", "", "7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d")
-	assert.Equal(t, 200, st.rw.Code)
-	assert.Equal(t, st.rw.Body.String(), "signatures match")
-}
-
-func TestRequestSignaturePostRequest(t *testing.T) {
-	st := NewSignatureTest()
-	defer st.Close()
-	st.opts.SignatureKey = "sha1:d90df39e2d19282840252612dd7c81421a372f61"
-	payload := `{ "hello": "world!" }`
-	st.MakeRequestWithExpectedKey("POST", payload, "d90df39e2d19282840252612dd7c81421a372f61")
-	assert.Equal(t, 200, st.rw.Code)
-	assert.Equal(t, st.rw.Body.String(), "signatures match")
+func TestRequestSignature(t *testing.T) {
+	testCases := map[string]struct {
+		method string
+		body   string
+		key    string
+		resp   string
+	}{
+		"No request signature": {
+			method: "GET",
+			body:   "",
+			key:    "",
+			resp:   "no signature received",
+		},
+		"Get request": {
+			method: "GET",
+			body:   "",
+			key:    "7d9e1aa87a5954e6f9fc59266b3af9d7c35fda2d",
+			resp:   "signatures match",
+		},
+		"Post request": {
+			method: "POST",
+			body:   `{ "hello": "world!" }`,
+			key:    "d90df39e2d19282840252612dd7c81421a372f61",
+			resp:   "signatures match",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			st, err := NewSignatureTest()
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(st.Close)
+			if tc.key != "" {
+				st.opts.SignatureKey = fmt.Sprintf("sha1:%s", tc.key)
+			}
+			err = st.MakeRequestWithExpectedKey(tc.method, tc.body, tc.key)
+			assert.NoError(t, err)
+			assert.Equal(t, 200, st.rw.Code)
+			assert.Equal(t, tc.resp, st.rw.Body.String())
+		})
+	}
 }
 
 func TestGetRedirect(t *testing.T) {
@@ -1501,7 +1664,9 @@ func TestGetRedirect(t *testing.T) {
 	assert.NoError(t, err)
 	require.NotEmpty(t, opts.ProxyPrefix)
 	proxy, err := NewOAuthProxy(opts, func(s string) bool { return false })
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name             string
@@ -1512,6 +1677,11 @@ func TestGetRedirect(t *testing.T) {
 			name:             "request outside of ProxyPrefix redirects to original URL",
 			url:              "/foo/bar",
 			expectedRedirect: "/foo/bar",
+		},
+		{
+			name:             "request with query preserves query",
+			url:              "/foo?bar",
+			expectedRedirect: "/foo?bar",
 		},
 		{
 			name:             "request under ProxyPrefix redirects to root",
@@ -1535,22 +1705,21 @@ type ajaxRequestTest struct {
 	proxy *OAuthProxy
 }
 
-func newAjaxRequestTest() *ajaxRequestTest {
+func newAjaxRequestTest() (*ajaxRequestTest, error) {
 	test := &ajaxRequestTest{}
 	test.opts = baseTestOptions()
-	test.opts.Cookie.Secret = base64CookieSecret
-	test.opts.ClientID = "gkljfdl"
-	test.opts.ClientSecret = "sdflkjs"
-	validation.Validate(test.opts)
+	err := validation.Validate(test.opts)
+	if err != nil {
+		return nil, err
+	}
 
-	var err error
 	test.proxy, err = NewOAuthProxy(test.opts, func(email string) bool {
 		return true
 	})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return test
+	return test, nil
 }
 
 func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (int, http.Header, error) {
@@ -1565,7 +1734,10 @@ func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (i
 }
 
 func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
-	test := newAjaxRequestTest()
+	test, err := newAjaxRequestTest()
+	if err != nil {
+		t.Fatal(err)
+	}
 	endpoint := "/test"
 
 	code, rh, err := test.getEndpoint(endpoint, header)
@@ -1589,7 +1761,10 @@ func TestAjaxUnauthorizedRequest2(t *testing.T) {
 }
 
 func TestAjaxForbiddendRequest(t *testing.T) {
-	test := newAjaxRequestTest()
+	test, err := newAjaxRequestTest()
+	if err != nil {
+		t.Fatal(err)
+	}
 	endpoint := "/test"
 	header := make(http.Header)
 	code, rh, err := test.getEndpoint(endpoint, header)
@@ -1604,8 +1779,14 @@ func TestClearSplitCookie(t *testing.T) {
 	opts.Cookie.Secret = base64CookieSecret
 	opts.Cookie.Name = "oauth2"
 	opts.Cookie.Domains = []string{"abc"}
-	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
-	assert.Equal(t, nil, err)
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	store, err := sessionscookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
@@ -1623,7 +1804,8 @@ func TestClearSplitCookie(t *testing.T) {
 		Value: "oauth2_1",
 	})
 
-	p.ClearSessionCookie(rw, req)
+	err = p.ClearSessionCookie(rw, req)
+	assert.NoError(t, err)
 	header := rw.Header()
 
 	assert.Equal(t, 2, len(header["Set-Cookie"]), "should have 3 set-cookie header entries")
@@ -1633,8 +1815,11 @@ func TestClearSingleCookie(t *testing.T) {
 	opts := baseTestOptions()
 	opts.Cookie.Name = "oauth2"
 	opts.Cookie.Domains = []string{"abc"}
-	store, err := cookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
-	assert.Equal(t, nil, err)
+	store, err := sessionscookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
@@ -1648,7 +1833,8 @@ func TestClearSingleCookie(t *testing.T) {
 		Value: "oauth2",
 	})
 
-	p.ClearSessionCookie(rw, req)
+	err = p.ClearSessionCookie(rw, req)
+	assert.NoError(t, err)
 	header := rw.Header()
 
 	assert.Equal(t, 1, len(header["Set-Cookie"]), "should have 1 set-cookie header entries")
@@ -1686,13 +1872,16 @@ func TestGetJwtSession(t *testing.T) {
 	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
 		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
 
-	test := NewAuthOnlyEndpointTest(func(opts *options.Options) {
+	test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
 		opts.PassAuthorization = true
 		opts.SetAuthorization = true
 		opts.SetXAuthRequest = true
 		opts.SkipJwtBearerTokens = true
 		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), verifier))
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	tp, _ := test.proxy.provider.(*TestProvider)
 	tp.GroupValidator = func(s string) bool {
 		return true
@@ -1705,7 +1894,8 @@ func TestGetJwtSession(t *testing.T) {
 
 	// Bearer
 	expires := time.Unix(1912151821, 0)
-	session, _ := test.proxy.GetJwtSession(test.req)
+	session, err := test.proxy.getAuthenticatedSession(test.rw, test.req)
+	assert.NoError(t, err)
 	assert.Equal(t, session.User, "1234567890")
 	assert.Equal(t, session.Email, "john@example.com")
 	assert.Equal(t, session.ExpiresOn, &expires)
@@ -1727,68 +1917,6 @@ func TestGetJwtSession(t *testing.T) {
 	assert.Equal(t, test.rw.Header().Get("X-Auth-Request-Email"), "john@example.com")
 }
 
-func TestFindJwtBearerToken(t *testing.T) {
-	p := OAuthProxy{CookieName: "oauth2", CookieDomains: []string{"abc"}}
-	getReq := &http.Request{URL: &url.URL{Scheme: "http", Host: "example.com"}}
-
-	validToken := "eyJfoobar.eyJfoobar.12345asdf"
-	var token string
-
-	// Bearer
-	getReq.Header = map[string][]string{
-		"Authorization": {fmt.Sprintf("Bearer %s", validToken)},
-	}
-
-	token, _ = p.findBearerToken(getReq)
-	assert.Equal(t, validToken, token)
-
-	// Basic - no password
-	getReq.SetBasicAuth(token, "")
-	token, _ = p.findBearerToken(getReq)
-	assert.Equal(t, validToken, token)
-
-	// Basic - sentinel password
-	getReq.SetBasicAuth(token, "x-oauth-basic")
-	token, _ = p.findBearerToken(getReq)
-	assert.Equal(t, validToken, token)
-
-	// Basic - any username, password matching jwt pattern
-	getReq.SetBasicAuth("any-username-you-could-wish-for", token)
-	token, _ = p.findBearerToken(getReq)
-	assert.Equal(t, validToken, token)
-
-	failures := []string{
-		// Too many parts
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
-		// Not enough parts
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA",
-		// Invalid encrypted key
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.//////.dGVzdA.dGVzdA.dGVzdA",
-		// Invalid IV
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.//////.dGVzdA.dGVzdA",
-		// Invalid ciphertext
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.//////.dGVzdA",
-		// Invalid tag
-		"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkExMjhHQ00ifQ.dGVzdA.dGVzdA.dGVzdA.//////",
-		// Invalid header
-		"W10.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
-		// Invalid header
-		"######.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
-		// Missing alc/enc params
-		"e30.dGVzdA.dGVzdA.dGVzdA.dGVzdA",
-	}
-
-	for _, failure := range failures {
-		getReq.Header = map[string][]string{
-			"Authorization": {fmt.Sprintf("Bearer %s", failure)},
-		}
-		_, err := p.findBearerToken(getReq)
-		assert.Error(t, err)
-	}
-
-	fmt.Printf("%s", token)
-}
-
 func Test_prepareNoCache(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		prepareNoCache(w)
@@ -1807,18 +1935,28 @@ func Test_prepareNoCache(t *testing.T) {
 
 func Test_noCacheHeaders(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("upstream"))
+		_, err := w.Write([]byte("upstream"))
+		if err != nil {
+			t.Error(err)
+		}
 	}))
 	t.Cleanup(upstream.Close)
 
 	opts := baseTestOptions()
-	opts.Upstreams = []string{upstream.URL}
+	opts.UpstreamServers = options.Upstreams{
+		{
+			ID:   upstream.URL,
+			Path: "/",
+			URI:  upstream.URL,
+		},
+	}
 	opts.SkipAuthRegex = []string{".*"}
-	_ = validation.Validate(opts)
-	proxy, err := NewOAuthProxy(opts, func(email string) bool {
-		return true
-	})
+	err := validation.Validate(opts)
 	assert.NoError(t, err)
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	t.Run("not exist in response from upstream", func(t *testing.T) {
 		rec := httptest.NewRecorder()
@@ -1887,8 +2025,177 @@ func Test_noCacheHeaders(t *testing.T) {
 func baseTestOptions() *options.Options {
 	opts := options.NewOptions()
 	opts.Cookie.Secret = rawCookieSecret
-	opts.ClientID = "cliend-id"
-	opts.ClientSecret = "client-secret"
+	opts.ClientID = clientID
+	opts.ClientSecret = clientSecret
 	opts.EmailDomains = []string{"*"}
 	return opts
+}
+
+func TestTrustedIPs(t *testing.T) {
+	tests := []struct {
+		name               string
+		trustedIPs         []string
+		reverseProxy       bool
+		realClientIPHeader string
+		req                *http.Request
+		expectTrusted      bool
+	}{
+		// Check unconfigured behavior.
+		{
+			name:               "Default",
+			trustedIPs:         nil,
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check using req.RemoteAddr (Options.ReverseProxy == false).
+		{
+			name:               "WithRemoteAddr",
+			trustedIPs:         []string{"127.0.0.1"},
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "127.0.0.1:43670"
+				return req
+			}(),
+			expectTrusted: true,
+		},
+		// Check ignores req.RemoteAddr match when behind a reverse proxy / missing header.
+		{
+			name:               "IgnoresRemoteAddrInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Real-IP", // Default value
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "127.0.0.1:44324"
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check successful trusting of localhost in IPv4.
+		{
+			name:               "TrustsLocalhostInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "127.0.0.1")
+				return req
+			}(),
+			expectTrusted: true,
+		},
+		// Check successful trusting of localhost in IPv6.
+		{
+			name:               "TrustsIP6LocalostInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "::1")
+				return req
+			}(),
+			expectTrusted: true,
+		},
+		// Check does not trust random IPv4 address.
+		{
+			name:               "DoesNotTrustRandomIP4Address",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "12.34.56.78")
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check does not trust random IPv6 address.
+		{
+			name:               "DoesNotTrustRandomIP6Address",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "::2")
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check respects correct header.
+		{
+			name:               "RespectsCorrectHeaderInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Real-IP", "::1")
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check doesn't trust if garbage is provided.
+		{
+			name:               "DoesNotTrustGarbageInReverseProxyMode",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Header.Add("X-Forwarded-For", "adsfljk29242as!!")
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Check doesn't trust if garbage is provided (no reverse-proxy).
+		{
+			name:               "DoesNotTrustGarbage",
+			trustedIPs:         []string{"127.0.0.0/8", "::1"},
+			reverseProxy:       false,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.RemoteAddr = "adsfljk29242as!!"
+				return req
+			}(),
+			expectTrusted: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := baseTestOptions()
+			opts.UpstreamServers = options.Upstreams{
+				{
+					ID:     "static",
+					Path:   "/",
+					Static: true,
+				},
+			}
+			opts.TrustedIPs = tt.trustedIPs
+			opts.ReverseProxy = tt.reverseProxy
+			opts.RealClientIPHeader = tt.realClientIPHeader
+			validation.Validate(opts)
+
+			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
+			assert.NoError(t, err)
+			rw := httptest.NewRecorder()
+
+			proxy.ServeHTTP(rw, tt.req)
+			if tt.expectTrusted {
+				assert.Equal(t, 200, rw.Code)
+			} else {
+				assert.Equal(t, 403, rw.Code)
+			}
+		})
+	}
 }

@@ -18,30 +18,47 @@ type LinkedInProvider struct {
 
 var _ Provider = (*LinkedInProvider)(nil)
 
+const (
+	linkedinProviderName = "LinkedIn"
+	linkedinDefaultScope = "r_emailaddress r_basicprofile"
+)
+
+var (
+	// Default Login URL for LinkedIn.
+	// Pre-parsed URL of https://www.linkedin.com/uas/oauth2/authorization.
+	linkedinDefaultLoginURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.linkedin.com",
+		Path:   "/uas/oauth2/authorization",
+	}
+
+	// Default Redeem URL for LinkedIn.
+	// Pre-parsed URL of https://www.linkedin.com/uas/oauth2/accessToken.
+	linkedinDefaultRedeemURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.linkedin.com",
+		Path:   "/uas/oauth2/accessToken",
+	}
+
+	// Default Profile URL for LinkedIn.
+	// Pre-parsed URL of https://www.linkedin.com/v1/people/~/email-address.
+	linkedinDefaultProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "www.linkedin.com",
+		Path:   "/v1/people/~/email-address",
+	}
+)
+
 // NewLinkedInProvider initiates a new LinkedInProvider
 func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
-	p.ProviderName = "LinkedIn"
-	if p.LoginURL.String() == "" {
-		p.LoginURL = &url.URL{Scheme: "https",
-			Host: "www.linkedin.com",
-			Path: "/uas/oauth2/authorization"}
-	}
-	if p.RedeemURL.String() == "" {
-		p.RedeemURL = &url.URL{Scheme: "https",
-			Host: "www.linkedin.com",
-			Path: "/uas/oauth2/accessToken"}
-	}
-	if p.ProfileURL.String() == "" {
-		p.ProfileURL = &url.URL{Scheme: "https",
-			Host: "www.linkedin.com",
-			Path: "/v1/people/~/email-address"}
-	}
-	if p.ValidateURL.String() == "" {
-		p.ValidateURL = p.ProfileURL
-	}
-	if p.Scope == "" {
-		p.Scope = "r_emailaddress r_basicprofile"
-	}
+	p.setProviderDefaults(providerDefaults{
+		name:        linkedinProviderName,
+		loginURL:    linkedinDefaultLoginURL,
+		redeemURL:   linkedinDefaultRedeemURL,
+		profileURL:  linkedinDefaultProfileURL,
+		validateURL: linkedinDefaultProfileURL,
+		scope:       linkedinDefaultScope,
+	})
 	return &LinkedInProvider{ProviderData: p}
 }
 
@@ -58,13 +75,13 @@ func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
-	req, err := http.NewRequestWithContext(ctx, "GET", p.ProfileURL.String()+"?format=json", nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header = getLinkedInHeader(s.AccessToken)
 
-	json, err := requests.Request(req)
+	requestURL := p.ProfileURL.String() + "?format=json"
+	json, err := requests.New(requestURL).
+		WithContext(ctx).
+		WithHeaders(getLinkedInHeader(s.AccessToken)).
+		Do().
+		UnmarshalJSON()
 	if err != nil {
 		return "", err
 	}

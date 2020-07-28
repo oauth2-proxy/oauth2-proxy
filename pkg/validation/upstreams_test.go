@@ -17,6 +17,7 @@ var _ = Describe("Upstreams", func() {
 
 	flushInterval := 5 * time.Second
 	staticCode200 := 200
+	truth := true
 
 	validHTTPUpstream := options.Upstream{
 		ID:   "validHTTPUpstream",
@@ -24,11 +25,9 @@ var _ = Describe("Upstreams", func() {
 		URI:  "http://localhost:8080",
 	}
 	validStaticUpstream := options.Upstream{
-		ID:              "validStaticUpstream",
-		Path:            "/validStaticUpstream",
-		Static:          true,
-		PassHostHeader:  true, // This would normally be defaulted
-		ProxyWebSockets: true, // this would normally be defaulted
+		ID:     "validStaticUpstream",
+		Path:   "/validStaticUpstream",
+		Static: true,
 	}
 	validFileUpstream := options.Upstream{
 		ID:   "validFileUpstream",
@@ -134,8 +133,8 @@ var _ = Describe("Upstreams", func() {
 					URI:                   "ftp://foo",
 					Static:                true,
 					FlushInterval:         &flushInterval,
-					PassHostHeader:        false,
-					ProxyWebSockets:       false,
+					PassHostHeader:        &truth,
+					ProxyWebSockets:       &truth,
 					InsecureSkipTLSVerify: true,
 				},
 			},

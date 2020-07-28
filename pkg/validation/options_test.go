@@ -2,6 +2,7 @@ package validation
 
 import (
 	"crypto"
+	"errors"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -21,7 +22,11 @@ const (
 
 func testOptions() *options.Options {
 	o := options.NewOptions()
-	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8080/")
+	o.UpstreamServers = append(o.UpstreamServers, options.Upstream{
+		ID:   "upstream",
+		Path: "/",
+		URI:  "http://127.0.0.1:8080/",
+	})
 	o.Cookie.Secret = cookieSecret
 	o.ClientID = clientID
 	o.ClientSecret = clientSecret
@@ -137,26 +142,6 @@ func TestRedirectURL(t *testing.T) {
 	expected := &url.URL{
 		Scheme: "https", Host: "myhost.com", Path: "/oauth2/callback"}
 	assert.Equal(t, expected, o.GetRedirectURL())
-}
-
-func TestProxyURLs(t *testing.T) {
-	o := testOptions()
-	o.Upstreams = append(o.Upstreams, "http://127.0.0.1:8081")
-	assert.Equal(t, nil, Validate(o))
-	expected := []*url.URL{
-		{Scheme: "http", Host: "127.0.0.1:8080", Path: "/"},
-		// note the '/' was added
-		{Scheme: "http", Host: "127.0.0.1:8081", Path: "/"},
-	}
-	assert.Equal(t, expected, o.GetProxyURLs())
-}
-
-func TestProxyURLsError(t *testing.T) {
-	o := testOptions()
-	o.Upstreams = append(o.Upstreams, "127.0.0.1:8081")
-	err := Validate(o)
-	assert.NotEqual(t, nil, err)
-	assert.Contains(t, err.Error(), "error parsing upstream")
 }
 
 func TestCompiledRegex(t *testing.T) {
@@ -350,6 +335,45 @@ func TestRealClientIPHeader(t *testing.T) {
 	})
 	assert.Equal(t, expected, err.Error())
 	assert.Nil(t, o.GetRealClientIPParser())
+}
+
+func TestIPCIDRSetOption(t *testing.T) {
+	tests := []struct {
+		name       string
+		trustedIPs []string
+		err        error
+	}{
+		{
+			"TestSomeIPs",
+			[]string{"127.0.0.1", "10.32.0.1/32", "43.36.201.0/24", "::1", "2a12:105:ee7:9234:0:0:0:0/64"},
+			nil,
+		}, {
+			"TestOverlappingIPs",
+			[]string{"135.180.78.199", "135.180.78.199/32", "d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4", "d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4/128"},
+			nil,
+		}, {
+			"TestInvalidIPs",
+			[]string{"[::1]", "alkwlkbn/32"},
+			errors.New(
+				"invalid configuration:\n" +
+					"  trusted_ips[0] ([::1]) could not be recognized\n" +
+					"  trusted_ips[1] (alkwlkbn/32) could not be recognized",
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := testOptions()
+			o.TrustedIPs = tt.trustedIPs
+			err := Validate(o)
+			if tt.err == nil {
+				assert.Nil(t, err)
+			} else {
+				assert.Equal(t, tt.err.Error(), err.Error())
+			}
+		})
+	}
 }
 
 func TestProviderCAFilesError(t *testing.T) {

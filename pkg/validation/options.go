@@ -31,6 +31,7 @@ const (
 // are of the correct format
 func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
+	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 
 	if o.SSLInsecureSkipVerify {
 		insecureTransport := &http.Transport{
@@ -87,34 +88,34 @@ func Validate(o *options.Options) error {
 
 			logger.Printf("Performing OIDC Discovery...")
 
-			if req, err := http.NewRequest("GET", strings.TrimSuffix(o.OIDCIssuerURL, "/")+"/.well-known/openid-configuration", nil); err == nil {
-				if body, err := requests.Request(req); err == nil {
-
-					// Prefer manually configured URLs. It's a bit unclear
-					// why you'd be doing discovery and also providing the URLs
-					// explicitly though...
-					if o.LoginURL == "" {
-						o.LoginURL = body.Get("authorization_endpoint").MustString()
-					}
-
-					if o.RedeemURL == "" {
-						o.RedeemURL = body.Get("token_endpoint").MustString()
-					}
-
-					if o.OIDCJwksURL == "" {
-						o.OIDCJwksURL = body.Get("jwks_uri").MustString()
-					}
-
-					if o.ProfileURL == "" {
-						o.ProfileURL = body.Get("userinfo_endpoint").MustString()
-					}
-
-					o.SkipOIDCDiscovery = true
-				} else {
-					logger.Printf("error: failed to discover OIDC configuration: %v", err)
-				}
+			requestURL := strings.TrimSuffix(o.OIDCIssuerURL, "/") + "/.well-known/openid-configuration"
+			body, err := requests.New(requestURL).
+				WithContext(ctx).
+				Do().
+				UnmarshalJSON()
+			if err != nil {
+				logger.Printf("error: failed to discover OIDC configuration: %v", err)
 			} else {
-				logger.Printf("error: failed parsing OIDC discovery URL: %v", err)
+				// Prefer manually configured URLs. It's a bit unclear
+				// why you'd be doing discovery and also providing the URLs
+				// explicitly though...
+				if o.LoginURL == "" {
+					o.LoginURL = body.Get("authorization_endpoint").MustString()
+				}
+
+				if o.RedeemURL == "" {
+					o.RedeemURL = body.Get("token_endpoint").MustString()
+				}
+
+				if o.OIDCJwksURL == "" {
+					o.OIDCJwksURL = body.Get("jwks_uri").MustString()
+				}
+
+				if o.ProfileURL == "" {
+					o.ProfileURL = body.Get("userinfo_endpoint").MustString()
+				}
+
+				o.SkipOIDCDiscovery = true
 			}
 		}
 
@@ -179,17 +180,7 @@ func Validate(o *options.Options) error {
 	redirectURL, msgs = parseURL(o.RawRedirectURL, "redirect", msgs)
 	o.SetRedirectURL(redirectURL)
 
-	for _, u := range o.Upstreams {
-		upstreamURL, err := url.Parse(u)
-		if err != nil {
-			msgs = append(msgs, fmt.Sprintf("error parsing upstream: %s", err))
-		} else {
-			if upstreamURL.Path == "" {
-				upstreamURL.Path = "/"
-			}
-			o.SetProxyURLs(append(o.GetProxyURLs(), upstreamURL))
-		}
-	}
+	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
 
 	headerSplitRegex := regexp.MustCompile(HeaderSplitRegex)
 	for _, extraHeader := range o.ExtraHeaders {
@@ -235,6 +226,16 @@ func Validate(o *options.Options) error {
 		logger.SetGetClientFunc(func(r *http.Request) string {
 			return ip.GetClientString(o.GetRealClientIPParser(), r, false)
 		})
+	}
+
+	if len(o.TrustedIPs) > 0 && o.ReverseProxy {
+		fmt.Fprintln(os.Stderr, "WARNING: trusting of IPs with --reverse-proxy poses risks if a header spoofing attack is possible.")
+	}
+
+	for i, ipStr := range o.TrustedIPs {
+		if nil == ip.ParseIPNet(ipStr) {
+			msgs = append(msgs, fmt.Sprintf("trusted_ips[%d] (%s) could not be recognized", i, ipStr))
+		}
 	}
 
 	if len(msgs) != 0 {
@@ -397,10 +398,10 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 	if err != nil {
 		// Try as JWKS URI
 		jwksURI := strings.TrimSuffix(jwtIssuer.issuerURI, "/") + "/.well-known/jwks.json"
-		_, err := http.NewRequest("GET", jwksURI, nil)
-		if err != nil {
+		if err := requests.New(jwksURI).Do().Error(); err != nil {
 			return nil, err
 		}
+
 		verifier = oidc.NewVerifier(jwtIssuer.issuerURI, oidc.NewRemoteKeySet(context.Background(), jwksURI), config)
 	} else {
 		verifier = provider.Verifier(config)

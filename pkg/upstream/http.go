@@ -49,7 +49,7 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 
 	// Set up a WebSocket proxy if required
 	var wsProxy http.Handler
-	if upstream.ProxyWebSockets {
+	if upstream.ProxyWebSockets == nil || *upstream.ProxyWebSockets {
 		wsProxy = newWebSocketReverseProxy(u, upstream.InsecureSkipTLSVerify)
 	}
 
@@ -110,7 +110,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	}
 
 	// Set the request director based on the PassHostHeader option
-	if !upstream.PassHostHeader {
+	if upstream.PassHostHeader != nil && !*upstream.PassHostHeader {
 		setProxyUpstreamHostHeader(proxy, target)
 	} else {
 		setProxyDirector(proxy)

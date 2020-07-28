@@ -38,6 +38,11 @@ func redirectToHTTPS(httpsPort string, next http.Handler) http.Handler {
 		// Set the scheme to HTTPS
 		targetURL.Scheme = httpsScheme
 
+		// Set the req.Host when the targetURL still does not have one
+		if targetURL.Host == "" {
+			targetURL.Host = req.Host
+		}
+
 		// Overwrite the port if the original request was to a non-standard port
 		if targetURL.Port() != "" {
 			// If Port was not empty, this should be fine to ignore the error
