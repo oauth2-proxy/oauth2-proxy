@@ -157,7 +157,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		newSession = &sessions.SessionState{}
 	} else {
 		var err error
-		newSession, err = p.createSessionStateInternal(ctx, token.Extra("id_token").(string), idToken, token)
+		newSession, err = p.createSessionStateInternal(ctx, token.Extra("id_token").(string), idToken, token, false)
 		if err != nil {
 			return nil, err
 		}
@@ -172,7 +172,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 }
 
 func (p *OIDCProvider) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
-	newSession, err := p.createSessionStateInternal(ctx, rawIDToken, idToken, nil)
+	newSession, err := p.createSessionStateInternal(ctx, rawIDToken, idToken, nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (p *OIDCProvider) CreateSessionStateFromBearerToken(ctx context.Context, ra
 	return newSession, nil
 }
 
-func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToken string, idToken *oidc.IDToken, token *oauth2.Token) (*sessions.SessionState, error) {
+func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToken string, idToken *oidc.IDToken, token *oauth2.Token, bearer bool) (*sessions.SessionState, error) {
 
 	newSession := &sessions.SessionState{}
 
@@ -197,7 +197,7 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToke
 		accessToken = token.AccessToken
 	}
 
-	claims, err := p.findClaimsFromIDToken(ctx, idToken, accessToken, p.ProfileURL.String())
+	claims, err := p.findClaimsFromIDToken(ctx, idToken, accessToken, p.ProfileURL.String(), bearer)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
 	}
@@ -230,7 +230,7 @@ func getOIDCHeader(accessToken string) http.Header {
 	return header
 }
 
-func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.IDToken, accessToken string, profileURL string) (*OIDCClaims, error) {
+func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.IDToken, accessToken string, profileURL string, bearer bool) (*OIDCClaims, error) {
 	claims := &OIDCClaims{}
 	// Extract default claims.
 	if err := idToken.Claims(&claims); err != nil {
@@ -249,8 +249,11 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	// userID claim was not present or was empty in the ID Token
 	if claims.UserID == "" {
 		if profileURL == "" {
-			claims.UserID = claims.Subject
-			return claims, nil
+			if bearer {
+				claims.UserID = claims.Subject
+				return claims, nil
+			}
+			return nil, fmt.Errorf("id_token did not contain user ID claim (%q)", p.UserIDClaim)
 		}
 
 		// If the userinfo endpoint profileURL is defined, then there is a chance the userinfo
