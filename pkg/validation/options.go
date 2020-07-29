@@ -72,10 +72,6 @@ func Validate(o *options.Options) error {
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 
-	if o.SetBasicAuth && o.SetAuthorization {
-		msgs = append(msgs, "mutually exclusive: set-basic-auth and set-authorization-header can not both be true")
-	}
-
 	if o.OIDCIssuerURL != "" {
 
 		ctx := context.Background()
@@ -158,10 +154,6 @@ func Validate(o *options.Options) error {
 				o.Scope += " groups"
 			}
 		}
-	}
-
-	if o.PreferEmailToUser && !o.PassBasicAuth && !o.PassUserHeaders {
-		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
 	}
 
 	if o.SkipJwtBearerTokens {
