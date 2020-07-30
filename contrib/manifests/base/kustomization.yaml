@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- deployment.yaml
+- poddisruptionbudget.yaml
+- service.yaml
+- serviceaccount.yaml
+
+images:
+- name: quay.io/oauth2-proxy/oauth2-proxy
+  newName: quay.io/oauth2-proxy/oauth2-proxy
+  newTag: v6.1.0

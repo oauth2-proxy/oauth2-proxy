@@ -98,3 +98,12 @@ validate-go-version:
 .PHONY: local-env-%
 local-env-%:
 	make -C contrib/local-environment $*
+
+.PHONY: set-image
+set-image:
+	cd contrib/manifests/base && kustomize edit set image quay.io/oauth2-proxy/oauth2-proxy=$(REGISTRY)/oauth2-proxy:$(VERSION)
+
+.PHONY: manifests
+manifests: set-image
+	echo '# This is an auto-generated file. DO NOT EDIT' > contrib/manifests/install.yaml
+	kustomize build contrib/manifests/base >> contrib/manifests/install.yaml
