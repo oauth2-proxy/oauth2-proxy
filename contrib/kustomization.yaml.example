@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- github.com/oauth2-proxy/oauth2-proxy/contrib/manifests?ref=master
+
+namespace: oauth2-proxy
+
+configMapGenerator:
+- name: oauth2-proxy
+  files:
+  - oauth2-proxy.toml
+
+secretGenerator:
+- name: oauth2-proxy
+  env: oauth2-proxy.properties
+
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: oauth2-proxy
+    namespace: oauth2-proxy
+  spec:
+    template:
+      spec:
+        containers:
+        - name: oauth2-proxy
+          env:
+          - name: OAUTH2_PROXY_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: oauth2-proxy
+                key: clientSecret
+          - name: OAUTH2_PROXY_COOKIE_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: oauth2-proxy
+                key: cookieSecret

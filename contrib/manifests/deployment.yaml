@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/version: v6.0.0
+  name: oauth2-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: oauth2-proxy
+      app.kubernetes.io/name: oauth2-proxy
+  template:
+    metadata:
+      annotations:
+        checksum/oauth2-proxy-config: ba67538e1df882c022bca2d903040ff0
+      labels:
+        app.kubernetes.io/instance: oauth2-proxy
+        app.kubernetes.io/name: oauth2-proxy
+        app.kubernetes.io/version: v6.0.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: oauth2-proxy
+                  app.kubernetes.io/name: oauth2-proxy
+              namespaces:
+              - oauth2-proxy
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      containers:
+      - args:
+        - --http-address=0.0.0.0:4180
+        - --config=/etc/oauth2-proxy/oauth2-proxy.toml
+        env: []
+        image: quay.io/oauth2-proxy/oauth2-proxy:v6.0.0
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+        name: oauth2-proxy
+        ports:
+        - containerPort: 4180
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: http
+        volumeMounts:
+        - mountPath: /etc/oauth2-proxy
+          name: config
+          readOnly: false
+      securityContext:
+        fsGroup: 2000
+        runAsNonRoot: true
+        runAsUser: 2000
+      serviceAccountName: oauth2-proxy
+      volumes:
+      - configMap:
+          name: oauth2-proxy
+        name: config

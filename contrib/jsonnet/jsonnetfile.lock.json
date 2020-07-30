@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/ksonnet/ksonnet-lib.git",
+          "subdir": ""
+        }
+      },
+      "version": "0d2f82676817bbf9e4acf6495b2090205f323b9f",
+      "sum": "h28BXZ7+vczxYJ2sCt8JuR9+yznRtU/iA6DCpQUrtEg="
+    }
+  ],
+  "legacyImports": false
+}

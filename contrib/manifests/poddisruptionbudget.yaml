@@ -1,0 +1,15 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app.kubernetes.io/instance: oauth2-proxy
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/version: v6.0.0
+  name: oauth2-proxy
+  namespace: oauth2-proxy
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: oauth2-proxy
+      app.kubernetes.io/name: oauth2-proxy

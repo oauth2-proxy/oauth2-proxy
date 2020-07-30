@@ -98,3 +98,52 @@ validate-go-version:
 .PHONY: local-env-%
 local-env-%:
 	make -C contrib/local-environment $*
+
+SHELL=/usr/bin/env bash -o pipefail
+BIN_DIR ?= $(shell pwd)/tmp/bin
+
+GOJSONTOYAML ?= $(BIN_DIR)/gojsontoyaml
+JSONNET ?= $(BIN_DIR)/jsonnet
+JSONNET_BUNDLER ?= $(BIN_DIR)/jb
+JSONNET_FMT ?= $(BIN_DIR)/jsonnetfmt
+
+JSONNET_DIR := contrib/jsonnet
+MANIFESTS := contrib/manifests
+
+JSONNET_SRC = $(shell find $(JSONNET_DIR) -name 'vendor' -prune -o -name 'jsonnet/vendor' -prune -o -name 'tmp' -prune -o -name '*.libsonnet' -print -o -name '*.jsonnet' -print)
+JSONNET_FMT_CMD := $(JSONNET_FMT) -n 2 --max-blank-lines 2 --string-style s --comment-style s
+
+k8s: $(MANIFESTS) jsonnetfmt
+
+.PHONY: $(MANIFESTS)
+$(MANIFESTS): $(JSONNET) $(GOJSONTOYAML) $(JSONNET_DIR)/vendor $(JSONNET_DIR)/kustomize.jsonnet
+	@rm -rf $(MANIFESTS)
+	@mkdir -p $(MANIFESTS)
+	$(JSONNET) -J $(JSONNET_DIR)/vendor -m $(MANIFESTS) $(JSONNET_DIR)/kustomize.jsonnet | xargs -I{} sh -c 'gojsontoyaml < {} > {}.yaml; rm -f {}' -- {}
+
+.PHONY: jsonnetfmt
+jsonnetfmt: $(JSONNET_FMT)
+	PATH=$$PATH:$$(pwd)/$(BIN_DIR) echo $(JSONNET_SRC) | xargs -n 1 -- $(JSONNET_FMT_CMD) -i
+
+contrib/jsonnet/vendor: | $(JSONNET_BUNDLER) $(JSONNET_DIR)/jsonnetfile.json $(JSONNET_DIR)/jsonnetfile.lock.json
+	@cd $(JSONNET_DIR)
+	$(JSONNET_BUNDLER) install
+
+$(BIN_DIR):
+	@mkdir -p $(BIN_DIR)
+
+$(GOJSONTOYAML): $(BIN_DIR)
+	$(GO) get -d github.com/brancz/gojsontoyaml
+	$(GO) build -o $@ github.com/brancz/gojsontoyaml
+
+$(JSONNET): $(BIN_DIR)
+	$(GO) get -d github.com/google/go-jsonnet/cmd/jsonnet
+	$(GO) build -o $@ github.com/google/go-jsonnet/cmd/jsonnet
+
+$(JSONNET_FMT): $(BIN_DIR)
+	$(GO) get -d github.com/google/go-jsonnet/cmd/jsonnetfmt
+	$(GO) build -o $@ github.com/google/go-jsonnet/cmd/jsonnetfmt
+
+$(JSONNET_BUNDLER): $(BIN_DIR)
+	curl -sSfL -o $(JSONNET_BUNDLER) "https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.4.0/jb-$(shell $(GO) env GOOS)-$(shell $(GO) env GOARCH)"
+	chmod +x $(JSONNET_BUNDLER)
