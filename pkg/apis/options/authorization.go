@@ -35,7 +35,6 @@ func authorizationFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
 	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
-	flagSet.Bool("skip-auth-strip-headers", false, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy for trusted requests (--skip-auth-route, --skip-auth-regex, --skip-auth-preflight, --trusted-ip)")
 	flagSet.StringSlice("trusted-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: trusting by IP has inherent security flaws, read the configuration documentation for more information.")
 
 	return flagSet

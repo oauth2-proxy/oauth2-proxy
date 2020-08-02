@@ -189,7 +189,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PassAccessToken:         opts.PassAccessToken,
 		SetAuthorization:        opts.SetAuthorization,
 		PassAuthorization:       opts.PassAuthorization,
-		SkipAuthStripHeaders:    opts.Authorization.SkipAuthStripHeaders,
+		SkipAuthStripHeaders:    opts.SkipAuthStripHeaders,
 		PreferEmailToUser:       opts.PreferEmailToUser,
 		SkipProviderButton:      opts.SkipProviderButton,
 		templates:               templates,

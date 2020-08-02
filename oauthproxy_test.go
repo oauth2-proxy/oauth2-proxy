@@ -698,7 +698,7 @@ func TestStripAuthHeaders(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			opts := baseTestOptions()
-			opts.Authorization.SkipAuthStripHeaders = tc.SkipAuthStripHeaders
+			opts.SkipAuthStripHeaders = tc.SkipAuthStripHeaders
 			opts.PassBasicAuth = tc.PassBasicAuth
 			opts.PassUserHeaders = tc.PassUserHeaders
 			opts.PassAccessToken = tc.PassAccessToken
