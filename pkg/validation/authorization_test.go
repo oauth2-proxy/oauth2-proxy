@@ -13,7 +13,7 @@ import (
 
 func Test_validateAuthorization(t *testing.T) {
 	opts := &options.Options{
-		Authorization: options.Authorization{
+		Authorization: options.LegacyAuthorization{
 			SkipAuthRoutes: []string{
 				"POST=/foo/bar",
 				"PUT=^/foo/bar$",
@@ -123,7 +123,7 @@ func Test_validateRoutes(t *testing.T) {
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			re := authorization.NewRulesEngine(authorization.AuthPolicy)
-			opts := &options.Authorization{
+			opts := &options.LegacyAuthorization{
 				SkipAuthRoutes: tc.Regexes,
 			}
 			msgs := validateRoutes(opts, re)
@@ -187,7 +187,7 @@ func Test_validateRegexes(t *testing.T) {
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			re := authorization.NewRulesEngine(authorization.AuthPolicy)
-			opts := &options.Authorization{
+			opts := &options.LegacyAuthorization{
 				SkipAuthRegex: tc.Regexes,
 			}
 			msgs := validateRegexes(opts, re)
@@ -211,7 +211,7 @@ func Test_validatePreflight(t *testing.T) {
 	for _, skipped := range []bool{true, false} {
 		t.Run(fmt.Sprintf("%t", skipped), func(t *testing.T) {
 			re := authorization.NewRulesEngine(authorization.AuthPolicy)
-			opts := &options.Authorization{
+			opts := &options.LegacyAuthorization{
 				SkipAuthPreflight: skipped,
 			}
 			msgs := validatePreflight(opts, re)
@@ -274,7 +274,7 @@ func Test_validateTrustedIPs(t *testing.T) {
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			re := authorization.NewRulesEngine(authorization.AuthPolicy)
-			opts := &options.Authorization{
+			opts := &options.LegacyAuthorization{
 				TrustedIPs: tc.TrustedIPs,
 			}
 			msgs := validateTrustedIPs(opts, re, nil)

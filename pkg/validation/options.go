@@ -27,6 +27,7 @@ import (
 func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
+	msgs = append(msgs, validateAuthorizationRules(o.RequestAuthZRules)...)
 
 	if o.SSLInsecureSkipVerify {
 		insecureTransport := &http.Transport{
@@ -206,9 +207,6 @@ func Validate(o *options.Options) error {
 			return ip.GetClientString(o.GetRealClientIPParser(), r, false)
 		})
 	}
-
-	// Do this after ReverseProxy validation so RealClientIPParser is set
-	msgs = append(msgs, validateAuthorization(o)...)
 
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",

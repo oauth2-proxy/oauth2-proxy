@@ -56,14 +56,14 @@ type Options struct {
 	Banner                   string   `flag:"banner" cfg:"banner"`
 	Footer                   string   `flag:"footer" cfg:"footer"`
 
-	Authorization Authorization  `cfg:",squash"`
-	Cookie        Cookie         `cfg:",squash"`
-	Session       SessionOptions `cfg:",squash"`
-	Logging       Logging        `cfg:",squash"`
+	Cookie  Cookie         `cfg:",squash"`
+	Session SessionOptions `cfg:",squash"`
+	Logging Logging        `cfg:",squash"`
 
 	// Not used in the legacy config, name not allowed to match an external key (upstreams)
 	// TODO(JoelSpeed): Rename when legacy config is removed
-	UpstreamServers Upstreams `cfg:",internal"`
+	UpstreamServers   Upstreams    `cfg:",internal"`
+	RequestAuthZRules RequestRules `cfg:",squash"`
 
 	SkipAuthStripHeaders  bool     `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
 	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
@@ -143,10 +143,10 @@ func NewOptions() *Options {
 		RealClientIPHeader:               "X-Real-IP",
 		ForceHTTPS:                       false,
 		DisplayHtpasswdForm:              true,
-		Authorization:                    authorizationDefaults(),
 		Cookie:                           cookieDefaults(),
 		Session:                          sessionOptionsDefaults(),
 		AzureTenant:                      "common",
+		SkipAuthStripHeaders:             false,
 		SetXAuthRequest:                  false,
 		PassBasicAuth:                    true,
 		SetBasicAuth:                     false,
@@ -255,9 +255,9 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
 
-	flagSet.AddFlagSet(authorizationFlagSet())
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
+	flagSet.AddFlagSet(legacyAuthorizationFlagSet())
 	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
 
 	return flagSet

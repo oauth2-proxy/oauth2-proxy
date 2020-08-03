@@ -96,7 +96,7 @@ type OAuthProxy struct {
 	extraJwtBearerVerifiers []*oidc.IDTokenVerifier
 	templates               *template.Template
 	realClientIPParser      ipapi.RealClientIPParser
-	rulesEngine             authorization.RulesEngine
+	requestAuthZEngine      authorization.RulesEngine
 	Banner                  string
 	Footer                  string
 
@@ -148,6 +148,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	sessionChain := buildSessionChain(opts, sessionStore, basicAuthValidator)
 
+	requestAuthZEngine, err := buildRequestAuthZEngine(opts)
+	if err != nil {
+		return nil, fmt.Errorf("error initialising request authorization engine: %v", err)
+	}
+
 	return &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
@@ -176,7 +181,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		serveMux:                upstreamProxy,
 		redirectURL:             redirectURL,
 		whitelistDomains:        opts.WhitelistDomains,
-		rulesEngine:             opts.Authorization.GetRulesEngine(),
 		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
 		mainJwtBearerVerifier:   opts.GetOIDCVerifier(),
 		extraJwtBearerVerifiers: opts.GetJWTBearerVerifiers(),
@@ -199,6 +203,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		basicAuthValidator:  basicAuthValidator,
 		displayHtpasswdForm: basicAuthValidator != nil,
 		sessionChain:        sessionChain,
+		requestAuthZEngine:  requestAuthZEngine,
 	}, nil
 }
 
@@ -235,6 +240,18 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	}))
 
 	return chain
+}
+
+func buildRequestAuthZEngine(opts *options.Options) (authorization.RulesEngine, error) {
+	var rules []authorization.Rule
+	for _, cfg := range opts.RequestAuthZRules {
+		rule, err := authorization.NewRequestRule(cfg, opts.GetRealClientIPParser())
+		if err != nil {
+			return nil, fmt.Errorf("error loading request authorization rule: %v", err)
+		}
+		rules = append(rules, rule)
+	}
+	return authorization.NewRulesEngine(rules, authorization.AuthPolicy), nil
 }
 
 // GetRedirectURI returns the redirectURL that the upstream OAuth Provider will
@@ -550,7 +567,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	switch path := req.URL.Path; {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
-	case p.rulesEngine.Match(req, nil) == authorization.AllowPolicy:
+	case p.requestAuthZEngine.Match(req, nil) == authorization.AllowPolicy:
 		p.SkipAuthProxy(rw, req)
 	case path == p.SignInPath:
 		p.SignIn(rw, req)

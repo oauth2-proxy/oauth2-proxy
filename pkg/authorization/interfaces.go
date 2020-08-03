@@ -25,10 +25,6 @@ type Rule interface {
 
 // RulesEngine manages Allow & Deny logic on a hierarchical Rules list
 type RulesEngine interface {
-	// AddRule adds a Rule to the hierarchical Rules list. First in
-	// takes precedence.
-	AddRule(Rule)
-
 	// Match returns the Policy name of the first matching Rule in the
 	// hierarchical Rules list.
 	Match(*http.Request, *sessions.SessionState) Policy

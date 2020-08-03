@@ -14,16 +14,11 @@ type engine struct {
 }
 
 // NewRulesEngine builds a RulesEngine for HTTP request based authZ
-func NewRulesEngine(defaultPolicy Policy) RulesEngine {
+func NewRulesEngine(rules []Rule, defaultPolicy Policy) RulesEngine {
 	return &engine{
-		rules:         []Rule{},
+		rules:         rules,
 		defaultPolicy: defaultPolicy,
 	}
-}
-
-// AddRule adds an authorization Rule to our RulesEngine.
-func (e *engine) AddRule(rule Rule) {
-	e.rules = append(e.rules, rule)
 }
 
 // Match compares an http.Request & SessionState against our list of rules for
