@@ -2,8 +2,10 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"net/url"
 
+	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
@@ -68,6 +70,29 @@ func (p *KeycloakProvider) SetUserIDClaim(claim string) {
 	p.UserIDClaim = claim
 }
 
+func (p *KeycloakProvider) checkGroupAccess(json *simplejson.Json) error {
+	if p.Group != "" {
+		var groups, err = json.Get("groups").Array()
+		if err != nil {
+			logger.Printf("groups not found %s", err)
+			return err
+		}
+
+		var found = false
+		for i := range groups {
+			if groups[i].(string) == p.Group {
+				return nil
+			}
+		}
+
+		if !found {
+			logger.Printf("group not found, access denied")
+			return errors.New("group not found, access denied")
+		}
+	}
+	return nil
+}
+
 func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
@@ -79,25 +104,8 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 		return "", err
 	}
 
-	if p.Group != "" {
-		var groups, err = json.Get("groups").Array()
-		if err != nil {
-			logger.Printf("groups not found %s", err)
-			return "", err
-		}
-
-		var found = false
-		for i := range groups {
-			if groups[i].(string) == p.Group {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			logger.Printf("group not found, access denied")
-			return "", nil
-		}
+	if err := p.checkGroupAccess(json); err != nil {
+		return "", err
 	}
 
 	if p.UserIDClaim != "" {
