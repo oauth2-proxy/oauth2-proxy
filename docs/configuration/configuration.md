@@ -14,7 +14,7 @@ To generate a strong cookie secret use `python -c 'import os,base64; print(base6
 
 ### Config File
 
-Every command line argument can be specified in a config file by replacing hypens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
+Every command line argument can be specified in a config file by replacing hyphens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
 
 An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `--config=/etc/oauth2-proxy.cfg`
 
@@ -29,24 +29,24 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `--azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
 | `--basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
-| `--client-id` | string | the OAuth Client ID: ie: `"123456.apps.googleusercontent.com"` | |
+| `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
 | `--client-secret` | string | the OAuth Client Secret | |
 | `--client-secret-file` | string | the file with OAuth Client Secret | |
 | `--config` | string | path to config file | |
-| `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (ie: `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
+| `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
 | `--cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
 | `--cookie-httponly` | bool | set HttpOnly cookie flag | true |
 | `--cookie-name` | string | the name of the cookie that the oauth_proxy creates | `"_oauth2_proxy"` |
-| `--cookie-path` | string | an optional cookie path to force cookies to (ie: `/poc/`) | `"/"` |
+| `--cookie-path` | string | an optional cookie path to force cookies to (e.g. `/poc/`) | `"/"` |
 | `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;\[[1](#footnote1)\] | |
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
-| `--cookie-samesite` | string | set SameSite cookie attribute (ie: `"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
+| `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
 | `--custom-templates-dir` | string | path to custom html templates | |
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
-| `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, eg: `"/ping,/path2"` |`""` (no paths excluded) |
+| `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
@@ -75,12 +75,12 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--login-url` | string | Authentication endpoint | |
 | `--insecure-oidc-allow-unverified-email` | bool | don't fail if an email address in an id_token is not verified | false |
 | `--insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
-| `--oidc-issuer-url` | string | the OpenID Connect issuer URL. ie: `"https://accounts.google.com"` | |
+| `--oidc-issuer-url` | string | the OpenID Connect issuer URL, e.g. `"https://accounts.google.com"` | |
 | `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
 | `--pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `--pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
-| `--prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with `--pass-basic-auth` and `--pass-user-headers` | false |
+| `--prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, e.g. htaccess authentication. Used in conjunction with `--pass-basic-auth` and `--pass-user-headers` | false |
 | `--pass-host-header` | bool | pass the request Host Header to upstream | true |
 | `--pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `--profile-url` | string | Profile access endpoint | |
@@ -95,17 +95,17 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--pubjwk-url` | string | JWK pubkey access endpoint: required by login.gov | |
 | `--real-client-ip-header` | string | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP) | X-Real-IP |
 | `--redeem-url` | string | Token redemption endpoint | |
-| `--redirect-url` | string | the OAuth Redirect URL. ie: `"https://internalapp.yourcompany.com/oauth2/callback"` | |
-| `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with `--redis-use-cluster` | |
-| `--redis-connection-url` | string | URL of redis server for redis session storage (eg: `redis://HOST[:PORT]`) | |
+| `--redirect-url` | string | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"` | |
+| `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster` | |
+| `--redis-connection-url` | string | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`) | |
 | `--redis-sentinel-master-name` | string | Redis sentinel master name. Used in conjunction with `--redis-use-sentinel` | |
-| `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (eg `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
+| `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `--resource` | string | The resource that is protected (Azure AD only) | |
-| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted | false |
+| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted | false |
 | `--scope` | string | OAuth scope specification | |
 | `--session-cookie-minimal` | bool | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only) | false |
 | `--session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
@@ -130,10 +130,10 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--user-id-claim` | string | which claim contains the user ID | \["email"\] |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
-| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (eg `.example.com`)&nbsp;\[[2](#footnote2)\] | |
-| `--trusted-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in a HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
+| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (e.g. `.example.com`)&nbsp;\[[2](#footnote2)\] | |
+| `--trusted-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in an HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
 
-\[<a name="footnote1">1</a>\]: Only these providers do support `--cookie-refresh`: GitLab, Google and OIDC
+\[<a name="footnote1">1</a>\]: Only these providers support `--cookie-refresh`: GitLab, Google and OIDC
 
 \[<a name="footnote2">2</a>\]: When using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
@@ -141,16 +141,16 @@ See below for provider specific options
 
 ### Upstreams Configuration
 
-`oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers or serve static files from the file system. HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter, this will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+`oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers or serve static files from the file system. HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
 
-Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at. `file:///var/www/static/#/static/` will ie. make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
+Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
 
-Multiple upstreams can either be configured by supplying a comma separated list to the `--upstream` parameter, supplying the parameter multiple times or provinding a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
+Multiple upstreams can either be configured by supplying a comma separated list to the `--upstream` parameter, supplying the parameter multiple times or providing a list in the [config file](#config-file). When multiple upstreams are used routing to them will be based on the path they are set up with.
 
 ### Environment variables
 
 Every command line argument can be specified as an environment variable by
-prefixing it with `OAUTH2_PROXY_`, capitalising it, and replacing hypens (`-`)
+prefixing it with `OAUTH2_PROXY_`, capitalising it, and replacing hyphens (`-`)
 with underscores (`_`). If the argument can be specified multiple times, the
 environment variable should be plural (trailing `S`).
 
@@ -168,7 +168,7 @@ If logging to a file you can also configure the maximum file size (`--logging-ma
 
 There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
 
-Each type of logging has their own configurable format and variables. By default these formats are similar to the Apache Combined Log.
+Each type of logging has its own configurable format and variables. By default these formats are similar to the Apache Combined Log.
 
 Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) can be disabled with `--silence-ping-logging` reducing log volume. This flag appends the `--ping-path` to `--exclude-logging-paths`.
 
@@ -331,7 +331,7 @@ server {
 }
 ```
 
-When you use ingress-nginx in Kubernetes , you MUST use `kubernetes/ingress-nginx` (which includes the Lua module) and the following configuration snippet for your `Ingress`.
+When you use ingress-nginx in Kubernetes, you MUST use `kubernetes/ingress-nginx` (which includes the Lua module) and the following configuration snippet for your `Ingress`.
 Variables set with `auth_request_set` are not `set`-able in plain nginx config when the location is processed via `proxy_pass` and then may only be processed by Lua.
 Note that `nginxinc/kubernetes-ingress` does not include the Lua module.
 
