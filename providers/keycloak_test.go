@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testKeycloakProvider(hostname, group string) *KeycloakProvider {
+func testKeycloakProvider(hostname, group string, userIDClaim string) *KeycloakProvider {
 	p := NewKeycloakProvider(
 		&ProviderData{
 			ProviderName: "",
@@ -24,6 +24,10 @@ func testKeycloakProvider(hostname, group string) *KeycloakProvider {
 
 	if group != "" {
 		p.SetGroup(group)
+	}
+
+	if userIDClaim != "" {
+		p.SetUserIDClaim(userIDClaim)
 	}
 
 	if hostname != "" {
@@ -53,7 +57,7 @@ func testKeycloakBackend(payload string) *httptest.Server {
 }
 
 func TestKeycloakProviderDefaults(t *testing.T) {
-	p := testKeycloakProvider("", "")
+	p := testKeycloakProvider("", "", "")
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Keycloak", p.Data().ProviderName)
 	assert.Equal(t, "https://keycloak.org/oauth/authorize",
@@ -110,12 +114,37 @@ func TestKeycloakProviderGetEmailAddress(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, "", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	userID, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", userID)
+}
+
+func TestKeycloakProviderGetEmailAddressWithUserIDClaim(t *testing.T) {
+	b := testKeycloakBackend("{\"preferred_username\": \"michael.bland\", \"email\": \"michael.bland@gsa.gov\"}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "", "preferred_username")
+
+	session := CreateAuthorizedSession()
+	userID, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland", userID)
+}
+
+func TestKeycloakProviderGetEmailAddressWithNonExistentUserIDClaim(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\"}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "", "preferred_username")
+
+	session := CreateAuthorizedSession()
+	_, err := p.GetEmailAddress(context.Background(), session)
+	assert.NotEqual(t, nil, err)
 }
 
 func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
@@ -123,12 +152,12 @@ func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "test-grp1")
+	p := testKeycloakProvider(bURL.Host, "test-grp1", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	userID, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", userID)
 }
 
 // Note that trying to trigger the "failed building request" case is not
@@ -138,15 +167,15 @@ func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, "", "")
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(context.Background(), session)
+	userID, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", userID)
 }
 
 func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
@@ -154,10 +183,10 @@ func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, "", "")
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	userID, err := p.GetEmailAddress(context.Background(), session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", userID)
 }

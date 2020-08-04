@@ -11,7 +11,8 @@ import (
 
 type KeycloakProvider struct {
 	*ProviderData
-	Group string
+	Group       string
+	UserIDClaim string
 }
 
 var _ Provider = (*KeycloakProvider)(nil)
@@ -63,6 +64,10 @@ func (p *KeycloakProvider) SetGroup(group string) {
 	p.Group = group
 }
 
+func (p *KeycloakProvider) SetUserIDClaim(claim string) {
+	p.UserIDClaim = claim
+}
+
 func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
@@ -95,5 +100,8 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 		}
 	}
 
-	return json.Get("email").String()
+	if p.UserIDClaim != "" {
+		return json.Get(p.UserIDClaim).String()
+	}
+	return json.Get(emailClaim).String()
 }
