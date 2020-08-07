@@ -9,11 +9,107 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
 
 func timePtr(t time.Time) *time.Time {
 	return &t
+}
+
+func TestString(t *testing.T) {
+	g := NewWithT(t)
+	created, err := time.Parse(time.RFC3339, "2000-01-01T00:00:00Z")
+	g.Expect(err).ToNot(HaveOccurred())
+	expires, err := time.Parse(time.RFC3339, "2000-01-01T01:00:00Z")
+	g.Expect(err).ToNot(HaveOccurred())
+
+	testCases := []struct {
+		name         string
+		sessionState *SessionState
+		expected     string
+	}{
+		{
+			name: "Minimal Session",
+			sessionState: &SessionState{
+				Email:             "email@email.email",
+				User:              "some.user",
+				PreferredUsername: "preferred.user",
+			},
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user}",
+		},
+		{
+			name: "Full Session",
+			sessionState: &SessionState{
+				Email:             "email@email.email",
+				User:              "some.user",
+				PreferredUsername: "preferred.user",
+				CreatedAt:         &created,
+				ExpiresOn:         &expires,
+				AccessToken:       "access.token",
+				IDToken:           "id.token",
+				RefreshToken:      "refresh.token",
+			},
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user token:true id_token:true created:2000-01-01 00:00:00 +0000 UTC expires:2000-01-01 01:00:00 +0000 UTC refresh_token:true}",
+		},
+		{
+			name: "With a CreatedAt",
+			sessionState: &SessionState{
+				Email:             "email@email.email",
+				User:              "some.user",
+				PreferredUsername: "preferred.user",
+				CreatedAt:         &created,
+			},
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user created:2000-01-01 00:00:00 +0000 UTC}",
+		},
+		{
+			name: "With an ExpiresOn",
+			sessionState: &SessionState{
+				Email:             "email@email.email",
+				User:              "some.user",
+				PreferredUsername: "preferred.user",
+				ExpiresOn:         &expires,
+			},
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user expires:2000-01-01 01:00:00 +0000 UTC}",
+		},
+		{
+			name: "With an AccessToken",
+			sessionState: &SessionState{
+				Email:             "email@email.email",
+				User:              "some.user",
+				PreferredUsername: "preferred.user",
+				AccessToken:       "access.token",
+			},
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user token:true}",
+		},
+		{
+			name: "With an IDToken",
+			sessionState: &SessionState{
+				Email:             "email@email.email",
+				User:              "some.user",
+				PreferredUsername: "preferred.user",
+				IDToken:           "id.token",
+			},
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user id_token:true}",
+		},
+		{
+			name: "With a RefreshToken",
+			sessionState: &SessionState{
+				Email:             "email@email.email",
+				User:              "some.user",
+				PreferredUsername: "preferred.user",
+				RefreshToken:      "refresh.token",
+			},
+			expected: "Session{email:email@email.email user:some.user PreferredUsername:preferred.user refresh_token:true}",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gs := NewWithT(t)
+			gs.Expect(tc.sessionState.String()).To(Equal(tc.expected))
+		})
+	}
 }
 
 func TestIsExpired(t *testing.T) {
