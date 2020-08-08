@@ -128,11 +128,8 @@ func (l *Logger) formatLogMessage(calldepth int, message string) []byte {
 		file = l.GetFileLineString(calldepth + 1)
 	}
 
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	var logBuff bytes.Buffer
-	err := l.stdLogTemplate.Execute(&logBuff, stdLogMessageData{
+	var logBuff = new(bytes.Buffer)
+	err := l.stdLogTemplate.Execute(logBuff, stdLogMessageData{
 		Timestamp: FormatTimestamp(now),
 		File:      file,
 		Message:   message,
@@ -146,12 +143,15 @@ func (l *Logger) formatLogMessage(calldepth int, message string) []byte {
 		panic(err)
 	}
 	logBuff.Write([]byte("\n"))
+
 	return logBuff.Bytes()
 }
 
 // Output a standard log template with a simple message to default output channel.
 // Write a final newline at the end of every message.
 func (l *Logger) Output(calldepth int, message string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	if !l.stdEnabled {
 		return
 	}
@@ -162,6 +162,8 @@ func (l *Logger) Output(calldepth int, message string) {
 // OutputErr a standard log template with a simple message to the error output channel.
 // Write a final newline at the end of every message.
 func (l *Logger) OutputErr(calldepth int, message string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	if !l.stdEnabled {
 		return
 	}
