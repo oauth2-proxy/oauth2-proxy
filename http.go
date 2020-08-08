@@ -106,7 +106,7 @@ func (s *Server) serve(listener net.Listener) {
 
 	err := srv.Serve(listener)
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Printf("ERROR: http.Serve() - %s", err)
+		logger.Errorf("ERROR: http.Serve() - %s", err)
 	}
 	<-idleConnsClosed
 }

@@ -20,7 +20,7 @@ func MakeCookie(req *http.Request, name string, value string, path string, domai
 			host = h
 		}
 		if !strings.HasSuffix(host, domain) {
-			logger.Printf("Warning: request host is %q but using configured cookie domain of %q", host, domain)
+			logger.Errorf("Warning: request host is %q but using configured cookie domain of %q", host, domain)
 		}
 	}
 
@@ -45,7 +45,7 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, cookieO
 		return MakeCookie(req, name, value, cookieOpts.Path, domain, cookieOpts.HTTPOnly, cookieOpts.Secure, expiration, now, ParseSameSite(cookieOpts.SameSite))
 	}
 	// If nothing matches, create the cookie with the shortest domain
-	logger.Printf("Warning: request host %q did not match any of the specific cookie domains of %q", GetRequestHost(req), strings.Join(cookieOpts.Domains, ","))
+	logger.Errorf("Warning: request host %q did not match any of the specific cookie domains of %q", GetRequestHost(req), strings.Join(cookieOpts.Domains, ","))
 	defaultDomain := ""
 	if len(cookieOpts.Domains) > 0 {
 		defaultDomain = cookieOpts.Domains[len(cookieOpts.Domains)-1]

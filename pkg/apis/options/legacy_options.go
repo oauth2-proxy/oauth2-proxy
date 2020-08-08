@@ -91,7 +91,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 		case "static":
 			responseCode, err := strconv.Atoi(u.Host)
 			if err != nil {
-				logger.Printf("unable to convert %q to int, use default \"200\"", u.Host)
+				logger.Errorf("unable to convert %q to int, use default \"200\"", u.Host)
 				responseCode = 200
 			}
 			upstream.Static = true

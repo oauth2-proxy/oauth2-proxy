@@ -70,7 +70,7 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 		Do().
 		UnmarshalJSON()
 	if err != nil {
-		logger.Printf("failed making request %s", err)
+		logger.Errorf("failed making request %s", err)
 		return "", err
 	}
 

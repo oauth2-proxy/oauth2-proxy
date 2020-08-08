@@ -92,7 +92,7 @@ func Validate(o *options.Options) error {
 				Do().
 				UnmarshalJSON()
 			if err != nil {
-				logger.Printf("error: failed to discover OIDC configuration: %v", err)
+				logger.Errorf("error: failed to discover OIDC configuration: %v", err)
 			} else {
 				// Prefer manually configured URLs. It's a bit unclear
 				// why you'd be doing discovery and also providing the URLs

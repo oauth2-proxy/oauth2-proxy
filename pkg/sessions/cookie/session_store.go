@@ -176,7 +176,7 @@ func splitCookie(c *http.Cookie) []*http.Cookie {
 		return []*http.Cookie{c}
 	}
 
-	logger.Printf("WARNING: Multiple cookies are required for this session as it exceeds the 4kb cookie limit. Please use server side session storage (eg. Redis) instead.")
+	logger.Errorf("WARNING: Multiple cookies are required for this session as it exceeds the 4kb cookie limit. Please use server side session storage (eg. Redis) instead.")
 
 	cookies := []*http.Cookie{}
 	valueBytes := []byte(c.Value)

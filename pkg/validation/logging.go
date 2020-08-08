@@ -40,11 +40,12 @@ func configureLogger(o options.Logging, msgs []string) []string {
 
 	// Supply a sanity warning to the logger if all logging is disabled
 	if !o.StandardEnabled && !o.AuthEnabled && !o.RequestEnabled {
-		logger.Print("Warning: Logging disabled. No further logs will be shown.")
+		logger.Error("Warning: Logging disabled. No further logs will be shown.")
 	}
 
 	// Pass configuration values to the standard logger
 	logger.SetStandardEnabled(o.StandardEnabled)
+	logger.SetErrToStdout(o.ErrToStdout)
 	logger.SetAuthEnabled(o.AuthEnabled)
 	logger.SetReqEnabled(o.RequestEnabled)
 	logger.SetStandardTemplate(o.StandardFormat)

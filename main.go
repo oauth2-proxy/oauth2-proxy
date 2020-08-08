@@ -38,13 +38,13 @@ func main() {
 	legacyOpts := options.NewLegacyOptions()
 	err = options.Load(*config, flagSet, legacyOpts)
 	if err != nil {
-		logger.Printf("ERROR: Failed to load config: %v", err)
+		logger.Errorf("ERROR: Failed to load config: %v", err)
 		os.Exit(1)
 	}
 
 	opts, err := legacyOpts.ToOptions()
 	if err != nil {
-		logger.Printf("ERROR: Failed to convert config: %v", err)
+		logger.Errorf("ERROR: Failed to convert config: %v", err)
 		os.Exit(1)
 	}
 
@@ -57,7 +57,7 @@ func main() {
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 	oauthproxy, err := NewOAuthProxy(opts, validator)
 	if err != nil {
-		logger.Printf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
+		logger.Errorf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 		os.Exit(1)
 	}
 
