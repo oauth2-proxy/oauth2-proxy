@@ -44,8 +44,7 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 	if err != nil {
 		return err
 	}
-	s.setSessionCookie(rw, req, value, *ss.CreatedAt)
-	return nil
+	return s.setSessionCookie(rw, req, value, *ss.CreatedAt)
 }
 
 // Load reads sessions.SessionState information from Cookies within the
@@ -114,24 +113,33 @@ func sessionFromCookie(v []byte, c encryption.Cipher) (s *sessions.SessionState,
 }
 
 // setSessionCookie adds the user's session cookie to the response
-func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val []byte, created time.Time) {
-	for _, c := range s.makeSessionCookie(req, val, created) {
+func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Request, val []byte, created time.Time) error {
+	cookies, err := s.makeSessionCookie(req, val, created)
+	if err != nil {
+		return err
+	}
+	for _, c := range cookies {
 		http.SetCookie(rw, c)
 	}
+	return nil
 }
 
 // makeSessionCookie creates an http.Cookie containing the authenticated user's
 // authentication details
-func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now time.Time) []*http.Cookie {
+func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now time.Time) ([]*http.Cookie, error) {
 	strValue := string(value)
 	if strValue != "" {
-		strValue = encryption.SignedValue(s.Cookie.Secret, s.Cookie.Name, value, now)
+		var err error
+		strValue, err = encryption.SignedValue(s.Cookie.Secret, s.Cookie.Name, value, now)
+		if err != nil {
+			return nil, err
+		}
 	}
 	c := s.makeCookie(req, s.Cookie.Name, strValue, s.Cookie.Expire, now)
 	if len(c.String()) > maxCookieLength {
-		return splitCookie(c)
+		return splitCookie(c), nil
 	}
-	return []*http.Cookie{c}
+	return []*http.Cookie{c}, nil
 }
 
 func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {

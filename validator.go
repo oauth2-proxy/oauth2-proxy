@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -18,10 +19,12 @@ type UserMap struct {
 }
 
 // NewUserMap parses the authenticated emails file into a new UserMap
+//
+// TODO (@NickMeves): Audit usage of `unsafe.Pointer` and potentially refactor
 func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	um := &UserMap{usersFile: usersFile}
 	m := make(map[string]bool)
-	atomic.StorePointer(&um.m, unsafe.Pointer(&m))
+	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
 	if usersFile != "" {
 		logger.Printf("using authenticated emails file %s", usersFile)
 		WatchForUpdates(usersFile, done, func() {
@@ -47,7 +50,12 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	if err != nil {
 		logger.Fatalf("failed opening authenticated-emails-file=%q, %s", um.usersFile, err)
 	}
-	defer r.Close()
+	defer func(c io.Closer) {
+		cerr := c.Close()
+		if cerr != nil {
+			logger.Fatalf("Error closing authenticated emails file: %s", cerr)
+		}
+	}(r)
 	csvReader := csv.NewReader(r)
 	csvReader.Comma = ','
 	csvReader.Comment = '#'
@@ -62,7 +70,7 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 		address := strings.ToLower(strings.TrimSpace(r[0]))
 		updated[address] = true
 	}
-	atomic.StorePointer(&um.m, unsafe.Pointer(&updated))
+	atomic.StorePointer(&um.m, unsafe.Pointer(&updated)) // #nosec G103
 }
 
 func newValidatorImpl(domains []string, usersFile string,

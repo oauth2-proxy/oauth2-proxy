@@ -13,13 +13,16 @@ func configureLogger(o options.Logging, msgs []string) []string {
 	// Setup the log file
 	if len(o.File.Filename) > 0 {
 		// Validate that the file/dir can be written
-		file, err := os.OpenFile(o.File.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+		file, err := os.OpenFile(o.File.Filename, os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
 			if os.IsPermission(err) {
 				return append(msgs, "unable to write to log file: "+o.File.Filename)
 			}
 		}
-		file.Close()
+		err = file.Close()
+		if err != nil {
+			return append(msgs, "error closing the log file: "+o.File.Filename)
+		}
 
 		logger.Printf("Redirecting logging to file: %s", o.File.Filename)
 

@@ -85,6 +85,9 @@ func NewProxyErrorHandler(errorTemplate *template.Template, proxyPrefix string) 
 			Message:     "Error proxying to upstream server",
 			ProxyPrefix: proxyPrefix,
 		}
-		errorTemplate.Execute(rw, data)
+		err := errorTemplate.Execute(rw, data)
+		if err != nil {
+			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+		}
 	}
 }

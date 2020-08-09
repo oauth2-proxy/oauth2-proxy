@@ -103,6 +103,8 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 		proxy.FlushInterval = 1 * time.Second
 	}
 
+	// InsecureSkipVerify is a configurable option we allow
+	/* #nosec G402 */
 	if upstream.InsecureSkipTLSVerify {
 		proxy.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -156,6 +158,7 @@ func newWebSocketReverseProxy(u *url.URL, skipTLSVerify bool) http.Handler {
 	wsURL := &url.URL{Scheme: wsScheme, Host: u.Host}
 
 	wsProxy := wsutil.NewSingleHostReverseProxy(wsURL)
+	/* #nosec G402 */
 	if skipTLSVerify {
 		wsProxy.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}

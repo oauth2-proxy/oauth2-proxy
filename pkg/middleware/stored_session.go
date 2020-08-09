@@ -55,7 +55,7 @@ type storedSessionLoader struct {
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
-// If no session is found, the request will be passed to the nex handler.
+// If no session is found, the request will be passed to the next handler.
 // If a session was loader by a previous handler, it will not be replaced.
 func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -73,7 +73,10 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 			// In the case when there was an error loading the session,
 			// we should clear the session
 			logger.Printf("Error loading cookied session: %v, removing session", err)
-			s.store.Clear(rw, req)
+			err = s.store.Clear(rw, req)
+			if err != nil {
+				logger.Printf("Error removing session: %v", err)
+			}
 		}
 
 		// Add the session to the scope if it was found

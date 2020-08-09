@@ -4,12 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/rsa"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"net/url"
 	"time"
 
@@ -106,28 +103,12 @@ type loginGovCustomClaims struct {
 // checkNonce checks the nonce in the id_token
 func checkNonce(idToken string, p *LoginGovProvider) (err error) {
 	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		resp, myerr := http.Get(p.PubJWKURL.String())
-		if myerr != nil {
-			return nil, myerr
-		}
-		if resp.StatusCode != 200 {
-			myerr = fmt.Errorf("got %d from %q", resp.StatusCode, p.PubJWKURL.String())
-			return nil, myerr
-		}
-		body, myerr := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		if myerr != nil {
-			return nil, myerr
-		}
-
 		var pubkeys jose.JSONWebKeySet
-		myerr = json.Unmarshal(body, &pubkeys)
-		if myerr != nil {
-			return nil, myerr
+		rerr := requests.New(p.PubJWKURL.String()).Do().UnmarshalInto(&pubkeys)
+		if rerr != nil {
+			return nil, rerr
 		}
-		pubkey := pubkeys.Keys[0]
-
-		return pubkey.Key, nil
+		return pubkeys.Keys[0].Key, nil
 	})
 	if err != nil {
 		return

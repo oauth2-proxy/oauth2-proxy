@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
@@ -25,7 +24,11 @@ func main() {
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
 
-	flagSet.Parse(os.Args[1:])
+	err := flagSet.Parse(os.Args[1:])
+	if err != nil {
+		logger.Printf("ERROR: Failed to parse flags: %v", err)
+		os.Exit(1)
+	}
 
 	if *showVersion {
 		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
@@ -33,7 +36,7 @@ func main() {
 	}
 
 	legacyOpts := options.NewLegacyOptions()
-	err := options.Load(*config, flagSet, legacyOpts)
+	err = options.Load(*config, flagSet, legacyOpts)
 	if err != nil {
 		logger.Printf("ERROR: Failed to load config: %v", err)
 		os.Exit(1)
@@ -56,20 +59,6 @@ func main() {
 	if err != nil {
 		logger.Printf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 		os.Exit(1)
-	}
-
-	if len(opts.Banner) >= 1 {
-		if opts.Banner == "-" {
-			oauthproxy.SignInMessage = ""
-		} else {
-			oauthproxy.SignInMessage = opts.Banner
-		}
-	} else if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
-		if len(opts.EmailDomains) > 1 {
-			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.EmailDomains, ", "))
-		} else if opts.EmailDomains[0] != "*" {
-			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using %v", opts.EmailDomains[0])
-		}
 	}
 
 	rand.Seed(time.Now().UnixNano())

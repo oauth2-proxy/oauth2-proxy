@@ -9,6 +9,7 @@ linters:
     - deadcode
     - gofmt
     - goimports
+    - gosec
     - gosimple
     - staticcheck
     - structcheck
@@ -33,6 +34,7 @@ issues:
         - bodyclose
         - unconvert
         - gocritic
+        - gosec
     # If we have tests in shared test folders, these can be less strictly linted
     - path: tests/.*_tests\.go
       linters:
