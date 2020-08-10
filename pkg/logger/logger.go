@@ -90,7 +90,6 @@ type Logger struct {
 	writer         io.Writer
 	errWriter      io.Writer
 	stdEnabled     bool
-	errToStdout    bool
 	authEnabled    bool
 	reqEnabled     bool
 	getClientFunc  GetClientFunc
@@ -107,7 +106,6 @@ func New(flag int) *Logger {
 		errWriter:      os.Stderr,
 		flag:           flag,
 		stdEnabled:     true,
-		errToStdout:    false,
 		authEnabled:    true,
 		reqEnabled:     true,
 		getClientFunc:  func(r *http.Request) string { return r.RemoteAddr },
@@ -168,11 +166,7 @@ func (l *Logger) OutputErr(calldepth int, message string) {
 		return
 	}
 	msg := l.formatLogMessage(calldepth, message)
-	if l.errToStdout {
-		l.writer.Write(msg)
-	} else {
-		l.errWriter.Write(msg)
-	}
+	l.errWriter.Write(msg)
 }
 
 // PrintAuthf writes auth info to the logger. Requires an http.Request to
@@ -330,11 +324,15 @@ func (l *Logger) SetStandardEnabled(e bool) {
 	l.stdEnabled = e
 }
 
-// SetErrToStdout enables or disables error logging to error writer instead of the default.
-func (l *Logger) SetErrToStdout(e bool) {
+// SetErrToInfo enables or disables error logging to error writer instead of the default.
+func (l *Logger) SetErrToInfo(e bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.errToStdout = e
+	if e {
+		l.errWriter = l.writer
+	} else {
+		l.errWriter = os.Stderr
+	}
 }
 
 // SetAuthEnabled enables or disables auth logging.
@@ -426,10 +424,10 @@ func SetStandardEnabled(e bool) {
 	std.SetStandardEnabled(e)
 }
 
-// SetErrToStdout enables or disables error logging to output writer instead of
+// SetErrToInfo enables or disables error logging to output writer instead of
 // error writer.
-func SetErrToStdout(e bool) {
-	std.SetErrToStdout(e)
+func SetErrToInfo(e bool) {
+	std.SetErrToInfo(e)
 }
 
 // SetAuthEnabled enables or disables auth logging for the standard

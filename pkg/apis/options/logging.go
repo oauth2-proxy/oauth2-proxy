@@ -12,8 +12,8 @@ type Logging struct {
 	RequestEnabled  bool           `flag:"request-logging" cfg:"request_logging"`
 	RequestFormat   string         `flag:"request-logging-format" cfg:"request_logging_format"`
 	StandardEnabled bool           `flag:"standard-logging" cfg:"standard_logging"`
-	ErrToStdout     bool           `flag:"errors-to-stdout" cfg:"errors_to_stdout"`
-	StandardFormat  string         `flag:"standard-logging-format" cfg:"_format"`
+	StandardFormat  string         `flag:"standard-logging-format" cfg:"standard_logging_format"`
+	ErrToInfo       bool           `flag:"errors-to-info-log" cfg:"errors_to_info_log"`
 	ExcludePaths    []string       `flag:"exclude-logging-path" cfg:"exclude_logging_paths"`
 	LocalTime       bool           `flag:"logging-local-time" cfg:"logging_local_time"`
 	SilencePing     bool           `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
@@ -35,10 +35,10 @@ func loggingFlagSet() *pflag.FlagSet {
 	flagSet.Bool("auth-logging", true, "Log authentication attempts")
 	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")
 	flagSet.Bool("standard-logging", true, "Log standard runtime information")
-	flagSet.Bool("errors-to-stdout", false, "Log errors to stdout instead of stderr")
 	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
 	flagSet.Bool("request-logging", true, "Log HTTP requests")
 	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
+	flagSet.Bool("errors-to-info-log", false, "Log errors to the standard logging channel instead of stderr")
 
 	flagSet.StringSlice("exclude-logging-path", []string{}, "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
 	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
@@ -64,8 +64,8 @@ func loggingDefaults() Logging {
 		RequestEnabled:  true,
 		RequestFormat:   logger.DefaultRequestLoggingFormat,
 		StandardEnabled: true,
-		ErrToStdout:     false,
 		StandardFormat:  logger.DefaultStandardLoggingFormat,
+		ErrToInfo:       false,
 		File: LogFileOptions{
 			Filename:   "",
 			MaxSize:    100,
