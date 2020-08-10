@@ -16,6 +16,9 @@ import (
 // AuthStatus defines the different types of auth logging that occur
 type AuthStatus string
 
+// Level indicates the log level for log messages
+type Level int
+
 const (
 	// DefaultStandardLoggingFormat defines the default standard log format
 	DefaultStandardLoggingFormat = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
@@ -39,6 +42,11 @@ const (
 	LUTC
 	// LstdFlags flag for initial values for the logger
 	LstdFlags = Lshortfile
+
+	// DEFAULT is the default log level (effectively INFO)
+	DEFAULT Level = iota
+	// ERROR is for error-level logging
+	ERROR
 )
 
 // These are the containers for all values that are available as variables in the logging formats.
@@ -147,26 +155,18 @@ func (l *Logger) formatLogMessage(calldepth int, message string) []byte {
 
 // Output a standard log template with a simple message to default output channel.
 // Write a final newline at the end of every message.
-func (l *Logger) Output(calldepth int, message string) {
+func (l *Logger) Output(lvl Level, calldepth int, message string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if !l.stdEnabled {
 		return
 	}
 	msg := l.formatLogMessage(calldepth, message)
-	l.writer.Write(msg)
-}
-
-// OutputErr a standard log template with a simple message to the error output channel.
-// Write a final newline at the end of every message.
-func (l *Logger) OutputErr(calldepth int, message string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if !l.stdEnabled {
-		return
+	if lvl == DEFAULT {
+		l.writer.Write(msg)
+	} else { // currently we only have info and error levels
+		l.errWriter.Write(msg)
 	}
-	msg := l.formatLogMessage(calldepth, message)
-	l.errWriter.Write(msg)
 }
 
 // PrintAuthf writes auth info to the logger. Requires an http.Request to
@@ -474,75 +474,75 @@ func SetReqTemplate(t string) {
 // Print calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Print.
 func Print(v ...interface{}) {
-	std.Output(2, fmt.Sprint(v...))
+	std.Output(DEFAULT, 2, fmt.Sprint(v...))
 }
 
 // Printf calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Printf.
 func Printf(format string, v ...interface{}) {
-	std.Output(2, fmt.Sprintf(format, v...))
+	std.Output(DEFAULT, 2, fmt.Sprintf(format, v...))
 }
 
 // Println calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Println.
 func Println(v ...interface{}) {
-	std.Output(2, fmt.Sprintln(v...))
+	std.Output(DEFAULT, 2, fmt.Sprintln(v...))
 }
 
 // Error calls OutputErr to print to the standard logger's error channel.
 // Arguments are handled in the manner of fmt.Print.
 func Error(v ...interface{}) {
-	std.OutputErr(2, fmt.Sprint(v...))
+	std.Output(ERROR, 2, fmt.Sprint(v...))
 }
 
 // Errorf calls OutputErr to print to the standard logger's error channel.
 // Arguments are handled in the manner of fmt.Printf.
 func Errorf(format string, v ...interface{}) {
-	std.OutputErr(2, fmt.Sprintf(format, v...))
+	std.Output(ERROR, 2, fmt.Sprintf(format, v...))
 }
 
 // Errorln calls OutputErr to print to the standard logger's error channel.
 // Arguments are handled in the manner of fmt.Println.
 func Errorln(v ...interface{}) {
-	std.OutputErr(2, fmt.Sprintln(v...))
+	std.Output(ERROR, 2, fmt.Sprintln(v...))
 }
 
 // Fatal is equivalent to Print() followed by a call to os.Exit(1).
 func Fatal(v ...interface{}) {
-	std.OutputErr(2, fmt.Sprint(v...))
+	std.Output(ERROR, 2, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 // Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
 func Fatalf(format string, v ...interface{}) {
-	std.OutputErr(2, fmt.Sprintf(format, v...))
+	std.Output(ERROR, 2, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
 // Fatalln is equivalent to Println() followed by a call to os.Exit(1).
 func Fatalln(v ...interface{}) {
-	std.OutputErr(2, fmt.Sprintln(v...))
+	std.Output(ERROR, 2, fmt.Sprintln(v...))
 	os.Exit(1)
 }
 
 // Panic is equivalent to Print() followed by a call to panic().
 func Panic(v ...interface{}) {
 	s := fmt.Sprint(v...)
-	std.OutputErr(2, s)
+	std.Output(ERROR, 2, s)
 	panic(s)
 }
 
 // Panicf is equivalent to Printf() followed by a call to panic().
 func Panicf(format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
-	std.OutputErr(2, s)
+	std.Output(ERROR, 2, s)
 	panic(s)
 }
 
 // Panicln is equivalent to Println() followed by a call to panic().
 func Panicln(v ...interface{}) {
 	s := fmt.Sprintln(v...)
-	std.OutputErr(2, s)
+	std.Output(ERROR, 2, s)
 	panic(s)
 }
 
