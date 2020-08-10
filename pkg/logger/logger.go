@@ -162,10 +162,11 @@ func (l *Logger) Output(lvl Level, calldepth int, message string) {
 		return
 	}
 	msg := l.formatLogMessage(calldepth, message)
-	if lvl == DEFAULT {
-		l.writer.Write(msg)
-	} else { // currently we only have info and error levels
+	switch lvl {
+	case ERROR:
 		l.errWriter.Write(msg)
+	default:
+		l.writer.Write(msg)
 	}
 }
 
