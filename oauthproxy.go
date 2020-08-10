@@ -772,14 +772,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	session, err := p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
 	if err != nil {
-		logger.Errorf("Error redeeming code during OAuth2 callback: %v ", err)
+		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Internal Error")
 		return
 	}
 
 	s := strings.SplitN(req.Form.Get("state"), ":", 2)
 	if len(s) != 2 {
-		logger.Errorf("Error while parsing OAuth2 state: invalid length")
+		logger.Error("Error while parsing OAuth2 state: invalid length")
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Invalid State")
 		return
 	}
