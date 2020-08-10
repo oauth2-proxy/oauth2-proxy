@@ -337,7 +337,7 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 			domain = h
 		}
 		if !strings.HasSuffix(domain, cookieDomain) {
-			logger.Printf("Warning: request host is %q but using configured cookie domain of %q", domain, cookieDomain)
+			logger.Errorf("Warning: request host is %q but using configured cookie domain of %q", domain, cookieDomain)
 		}
 	}
 
@@ -423,7 +423,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	redirectURL, err := p.GetRedirect(req)
 	if err != nil {
-		logger.Printf("Error obtaining redirect: %v", err)
+		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
@@ -623,7 +623,7 @@ func (p *OAuthProxy) IsTrustedIP(req *http.Request) bool {
 
 	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
 	if err != nil {
-		logger.Printf("Error obtaining real IP for trusted IP list: %v", err)
+		logger.Errorf("Error obtaining real IP for trusted IP list: %v", err)
 		// Possibly spoofed X-Real-IP header
 		return false
 	}
@@ -666,7 +666,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
-		logger.Printf("Error obtaining redirect: %v", err)
+		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
@@ -718,13 +718,13 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
-		logger.Printf("Error obtaining redirect: %v", err)
+		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
-		logger.Printf("Error clearing session cookie: %v", err)
+		logger.Errorf("Error clearing session cookie: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
@@ -736,14 +736,14 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	prepareNoCache(rw)
 	nonce, err := encryption.Nonce()
 	if err != nil {
-		logger.Printf("Error obtaining nonce: %v", err)
+		logger.Errorf("Error obtaining nonce: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	p.SetCSRFCookie(rw, req, nonce)
 	redirect, err := p.GetRedirect(req)
 	if err != nil {
-		logger.Printf("Error obtaining redirect: %v", err)
+		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
@@ -759,27 +759,27 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	// finish the oauth cycle
 	err := req.ParseForm()
 	if err != nil {
-		logger.Printf("Error while parsing OAuth2 callback: %v", err)
+		logger.Errorf("Error while parsing OAuth2 callback: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
 	errorString := req.Form.Get("error")
 	if errorString != "" {
-		logger.Printf("Error while parsing OAuth2 callback: %s", errorString)
+		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
 		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", errorString)
 		return
 	}
 
 	session, err := p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
 	if err != nil {
-		logger.Printf("Error redeeming code during OAuth2 callback: %v", err)
+		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Internal Error")
 		return
 	}
 
 	s := strings.SplitN(req.Form.Get("state"), ":", 2)
 	if len(s) != 2 {
-		logger.Printf("Error while parsing OAuth2 state: invalid length")
+		logger.Error("Error while parsing OAuth2 state: invalid length")
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Invalid State")
 		return
 	}
@@ -865,7 +865,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 	default:
 		// unknown error
-		logger.Printf("Unexpected internal error: %s", err)
+		logger.Errorf("Unexpected internal error: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError,
 			"Internal Error", "Internal Error")
 	}

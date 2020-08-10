@@ -34,7 +34,7 @@ func loadBasicAuthSession(validator basic.Validator, next http.Handler) http.Han
 
 		session, err := getBasicSession(validator, req)
 		if err != nil {
-			logger.Printf("Error retrieving session from token in Authorization header: %v", err)
+			logger.Errorf("Error retrieving session from token in Authorization header: %v", err)
 		}
 
 		// Add the session to the scope if it was found

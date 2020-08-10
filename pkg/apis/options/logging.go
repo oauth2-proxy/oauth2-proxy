@@ -13,6 +13,7 @@ type Logging struct {
 	RequestFormat   string         `flag:"request-logging-format" cfg:"request_logging_format"`
 	StandardEnabled bool           `flag:"standard-logging" cfg:"standard_logging"`
 	StandardFormat  string         `flag:"standard-logging-format" cfg:"standard_logging_format"`
+	ErrToInfo       bool           `flag:"errors-to-info-log" cfg:"errors_to_info_log"`
 	ExcludePaths    []string       `flag:"exclude-logging-path" cfg:"exclude_logging_paths"`
 	LocalTime       bool           `flag:"logging-local-time" cfg:"logging_local_time"`
 	SilencePing     bool           `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
@@ -37,6 +38,7 @@ func loggingFlagSet() *pflag.FlagSet {
 	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
 	flagSet.Bool("request-logging", true, "Log HTTP requests")
 	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
+	flagSet.Bool("errors-to-info-log", false, "Log errors to the standard logging channel instead of stderr")
 
 	flagSet.StringSlice("exclude-logging-path", []string{}, "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
 	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
@@ -63,6 +65,7 @@ func loggingDefaults() Logging {
 		RequestFormat:   logger.DefaultRequestLoggingFormat,
 		StandardEnabled: true,
 		StandardFormat:  logger.DefaultStandardLoggingFormat,
+		ErrToInfo:       false,
 		File: LogFileOptions{
 			Filename:   "",
 			MaxSize:    100,

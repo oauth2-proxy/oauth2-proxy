@@ -69,7 +69,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 				logger.Printf("reloading after event: %s", event)
 				action()
 			case err = <-watcher.Errors:
-				logger.Printf("error watching %s: %s", filename, err)
+				logger.Errorf("error watching %s: %s", filename, err)
 			}
 		}
 	}()

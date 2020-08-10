@@ -212,7 +212,7 @@ func userInGroup(service *admin.Service, groups []string, email string) bool {
 			gerr, ok := err.(*googleapi.Error)
 			switch {
 			case ok && gerr.Code == 404:
-				logger.Printf("error checking membership in group %s: group does not exist", group)
+				logger.Errorf("error checking membership in group %s: group does not exist", group)
 			case ok && gerr.Code == 400:
 				// It is possible for Members.HasMember to return false even if the email is a group member.
 				// One case that can cause this is if the user email is from a different domain than the group,
@@ -222,7 +222,7 @@ func userInGroup(service *admin.Service, groups []string, email string) bool {
 				r, err := req.Do()
 
 				if err != nil {
-					logger.Printf("error using get API to check member %s of google group %s: user not in the group", email, group)
+					logger.Errorf("error using get API to check member %s of google group %s: user not in the group", email, group)
 					continue
 				}
 
@@ -232,7 +232,7 @@ func userInGroup(service *admin.Service, groups []string, email string) bool {
 					return true
 				}
 			default:
-				logger.Printf("error checking group membership: %v", err)
+				logger.Errorf("error checking group membership: %v", err)
 			}
 			continue
 		}

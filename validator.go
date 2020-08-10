@@ -62,7 +62,7 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	csvReader.TrimLeadingSpace = true
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		logger.Printf("error reading authenticated-emails-file=%q, %s", um.usersFile, err)
+		logger.Errorf("error reading authenticated-emails-file=%q, %s", um.usersFile, err)
 		return
 	}
 	updated := make(map[string]bool)

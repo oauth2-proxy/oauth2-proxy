@@ -202,12 +202,12 @@ func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.Session
 
 	email, err = json.Get("userPrincipalName").String()
 	if err != nil {
-		logger.Printf("failed making request %s", err)
+		logger.Errorf("failed making request %s", err)
 		return "", err
 	}
 
 	if email == "" {
-		logger.Printf("failed to get email address")
+		logger.Errorf("failed to get email address")
 		return "", err
 	}
 

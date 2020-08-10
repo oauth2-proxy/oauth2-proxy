@@ -78,7 +78,7 @@ func createHtpasswdMap(records [][]string) (*htpasswdMap, error) {
 
 		// Password is neither sha1 or bcrypt
 		// TODO(JoelSpeed): In the next breaking release, make this return an error.
-		logger.Printf("Invalid htpasswd entry for %s. Must be a SHA or bcrypt entry.", user)
+		logger.Errorf("Invalid htpasswd entry for %s. Must be a SHA or bcrypt entry.", user)
 	}
 	return h, nil
 }
