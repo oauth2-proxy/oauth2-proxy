@@ -274,23 +274,18 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 
 	testCases := map[string]struct {
 		IDToken       idTokenClaims
-		ProfileURL    bool
+		ExpectedUser  string
 		ExpectedEmail string
 	}{
 		"Default IDToken": {
 			IDToken:       defaultIDToken,
-			ProfileURL:    true,
-			ExpectedEmail: profileURLEmail,
+			ExpectedUser:  defaultIDToken.Subject,
+			ExpectedEmail: defaultIDToken.Email,
 		},
-		"Minimal IDToken with no OIDC Profile URL": {
+		"Minimal IDToken with no email claim": {
 			IDToken:       minimalIDToken,
-			ProfileURL:    false,
-			ExpectedEmail: "",
-		},
-		"Minimal IDToken with OIDC Profile URL": {
-			IDToken:       minimalIDToken,
-			ProfileURL:    true,
-			ExpectedEmail: profileURLEmail,
+			ExpectedUser:  minimalIDToken.Subject,
+			ExpectedEmail: minimalIDToken.Subject,
 		},
 	}
 	for testName, tc := range testCases {
@@ -298,9 +293,6 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			jsonResp := []byte(fmt.Sprintf(`{"email":"%s"}`, profileURLEmail))
 			server, provider := newTestSetup(jsonResp)
 			defer server.Close()
-			if !tc.ProfileURL {
-				provider.ProfileURL = &url.URL{}
-			}
 
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			assert.NoError(t, err)
@@ -315,13 +307,8 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			ss, err := provider.CreateSessionStateFromBearerToken(context.Background(), rawIDToken, idToken)
 			assert.NoError(t, err)
 
-			if tc.ExpectedEmail != "" {
-				assert.Equal(t, tc.ExpectedEmail, ss.Email)
-				assert.NotEqual(t, ss.Email, ss.User)
-			} else {
-				assert.Equal(t, tc.IDToken.Subject, ss.Email)
-				assert.Equal(t, ss.Email, ss.User)
-			}
+			assert.Equal(t, tc.ExpectedUser, ss.User)
+			assert.Equal(t, tc.ExpectedEmail, ss.Email)
 			assert.Equal(t, rawIDToken, ss.IDToken)
 			assert.Equal(t, rawIDToken, ss.AccessToken)
 			assert.Equal(t, "", ss.RefreshToken)

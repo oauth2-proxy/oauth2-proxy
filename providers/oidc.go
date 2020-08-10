@@ -157,7 +157,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 		newSession = &sessions.SessionState{}
 	} else {
 		var err error
-		newSession, err = p.createSessionStateInternal(ctx, token.Extra("id_token").(string), idToken, token, false)
+		newSession, err = p.createSessionStateInternal(ctx, idToken, token)
 		if err != nil {
 			return nil, err
 		}
@@ -172,7 +172,7 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 }
 
 func (p *OIDCProvider) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
-	newSession, err := p.createSessionStateInternal(ctx, rawIDToken, idToken, nil, true)
+	newSession, err := p.createSessionStateInternal(ctx, idToken, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -185,24 +185,22 @@ func (p *OIDCProvider) CreateSessionStateFromBearerToken(ctx context.Context, ra
 	return newSession, nil
 }
 
-func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToken string, idToken *oidc.IDToken, token *oauth2.Token, bearer bool) (*sessions.SessionState, error) {
+func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, idToken *oidc.IDToken, token *oauth2.Token) (*sessions.SessionState, error) {
 
 	newSession := &sessions.SessionState{}
 
 	if idToken == nil {
 		return newSession, nil
 	}
-	accessToken := ""
-	if token != nil {
-		accessToken = token.AccessToken
-	}
 
-	claims, err := p.findClaimsFromIDToken(ctx, idToken, accessToken, p.ProfileURL.String(), bearer)
+	claims, err := p.findClaimsFromIDToken(ctx, idToken, token)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
 	}
 
-	newSession.IDToken = rawIDToken
+	if token != nil {
+		newSession.IDToken = token.Extra("id_token").(string)
+	}
 
 	newSession.Email = claims.UserID // TODO Rename SessionState.Email to .UserID in the near future
 
@@ -230,7 +228,7 @@ func getOIDCHeader(accessToken string) http.Header {
 	return header
 }
 
-func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.IDToken, accessToken string, profileURL string, bearer bool) (*OIDCClaims, error) {
+func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.IDToken, token *oauth2.Token) (*OIDCClaims, error) {
 	claims := &OIDCClaims{}
 	// Extract default claims.
 	if err := idToken.Claims(&claims); err != nil {
@@ -248,11 +246,15 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 
 	// userID claim was not present or was empty in the ID Token
 	if claims.UserID == "" {
-		if profileURL == "" {
-			if bearer {
-				claims.UserID = claims.Subject
-				return claims, nil
-			}
+		// BearerToken case, allow empty UserID
+		// ProfileURL checks below won't work since we don't have an access token
+		if token == nil {
+			claims.UserID = claims.Subject
+			return claims, nil
+		}
+
+		profileURL := p.ProfileURL.String()
+		if profileURL == "" || token.AccessToken == "" {
 			return nil, fmt.Errorf("id_token did not contain user ID claim (%q)", p.UserIDClaim)
 		}
 
@@ -261,7 +263,7 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
 		respJSON, err := requests.New(profileURL).
 			WithContext(ctx).
-			WithHeaders(getOIDCHeader(accessToken)).
+			WithHeaders(getOIDCHeader(token.AccessToken)).
 			Do().
 			UnmarshalJSON()
 		if err != nil {
