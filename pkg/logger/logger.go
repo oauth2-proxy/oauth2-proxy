@@ -144,11 +144,10 @@ func (l *Logger) formatLogMessage(calldepth int, message string) []byte {
 		panic(err)
 	}
 
-	_, err = l.writer.Write([]byte("\n"))
+	_, err = logBuff.Write([]byte("\n"))
 	if err != nil {
 		panic(err)
 	}
-	logBuff.Write([]byte("\n"))
 
 	return logBuff.Bytes()
 }
@@ -162,11 +161,16 @@ func (l *Logger) Output(lvl Level, calldepth int, message string) {
 		return
 	}
 	msg := l.formatLogMessage(calldepth, message)
+
+	var err error
 	switch lvl {
 	case ERROR:
-		l.errWriter.Write(msg)
+		_, err = l.errWriter.Write(msg)
 	default:
-		l.writer.Write(msg)
+		_, err = l.writer.Write(msg)
+	}
+	if err != nil {
+		panic(err)
 	}
 }
 
