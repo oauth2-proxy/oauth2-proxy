@@ -20,6 +20,7 @@ const emailClaim = "email"
 type OIDCProvider struct {
 	*ProviderData
 
+	Group                string
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
 	UserIDClaim          string
@@ -28,6 +29,9 @@ type OIDCProvider struct {
 // NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData) *OIDCProvider {
 	p.ProviderName = "OpenID Connect"
+	if p.Scope == "" {
+		p.Scope = "openid email groups profile"
+	}
 	return &OIDCProvider{ProviderData: p}
 }
 
@@ -202,6 +206,10 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToke
 		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
 	}
 
+	if err := p.verifyGroupMembership(claims.Groups); err != nil {
+		return nil, fmt.Errorf("group %s not found in group list %s", p.Group, claims.Groups)
+	}
+
 	newSession.IDToken = rawIDToken
 
 	newSession.Email = claims.UserID // TODO Rename SessionState.Email to .UserID in the near future
@@ -221,6 +229,28 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, rawIDToke
 func (p *OIDCProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
+}
+
+func (p *OIDCProvider) verifyGroupMembership(groups []string) error {
+	if p.Group == "" {
+		return nil
+	}
+
+	// Collect user group memberships
+	membershipSet := make(map[string]bool)
+	for _, group := range groups {
+		membershipSet[group] = true
+	}
+
+	// Find a valid group that they are a member of
+	validGroups := strings.Split(p.Group, ";")
+	for _, validGroup := range validGroups {
+		if _, ok := membershipSet[validGroup]; ok {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("user is not a member of '%s'", p.Group)
 }
 
 func getOIDCHeader(accessToken string) http.Header {
@@ -279,7 +309,8 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 type OIDCClaims struct {
 	rawClaims         map[string]interface{}
 	UserID            string
-	Subject           string `json:"sub"`
-	Verified          *bool  `json:"email_verified"`
-	PreferredUsername string `json:"preferred_username"`
+	Subject           string   `json:"sub"`
+	Verified          *bool    `json:"email_verified"`
+	PreferredUsername string   `json:"preferred_username"`
+	Groups            []string `json:"groups"`
 }
