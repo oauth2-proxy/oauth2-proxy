@@ -29,10 +29,11 @@ const clientID = "https://test.myapp.com"
 const secret = "secret"
 
 type idTokenClaims struct {
-	Name    string `json:"name,omitempty"`
-	Email   string `json:"email,omitempty"`
-	Phone   string `json:"phone_number,omitempty"`
-	Picture string `json:"picture,omitempty"`
+	Name    string   `json:"name,omitempty"`
+	Email   string   `json:"email,omitempty"`
+	Phone   string   `json:"phone_number,omitempty"`
+	Picture string   `json:"picture,omitempty"`
+	Groups  []string `json:"groups,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -49,6 +50,7 @@ var defaultIDToken idTokenClaims = idTokenClaims{
 	"janed@me.com",
 	"+4798765432",
 	"http://mugbook.com/janed/me.jpg",
+	[]string{"IT", "Developers"},
 	jwt.StandardClaims{
 		Audience:  "https://test.myapp.com",
 		ExpiresAt: time.Now().Add(time.Duration(5) * time.Minute).Unix(),
@@ -165,6 +167,63 @@ func TestOIDCProviderRedeem(t *testing.T) {
 	assert.Equal(t, idToken, session.IDToken)
 	assert.Equal(t, refreshToken, session.RefreshToken)
 	assert.Equal(t, "123456789", session.User)
+}
+
+func TestOIDCProviderRedeem_groups_present(t *testing.T) {
+
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	})
+
+	server, provider := newTestSetup(body)
+	provider.Group = "IT;Sysadmins"
+	defer server.Close()
+
+	_, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	assert.Equal(t, nil, err)
+}
+
+func TestOIDCProviderRedeem_groups_not_present(t *testing.T) {
+
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	})
+
+	server, provider := newTestSetup(body)
+	provider.Group = "Sysadmins"
+	defer server.Close()
+
+	_, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	assert.Equal(t, errors.New("unable to update session: group Sysadmins not found in group list [IT Developers]"), err)
+}
+
+func TestOIDCProviderRedeem_groups_not_present_in_config(t *testing.T) {
+
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	})
+
+	server, provider := newTestSetup(body)
+	provider.Group = ""
+	defer server.Close()
+
+	_, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	assert.Equal(t, nil, err)
 }
 
 func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
