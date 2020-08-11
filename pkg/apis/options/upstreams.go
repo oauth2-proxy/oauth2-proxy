@@ -57,4 +57,12 @@ type Upstream struct {
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
 	ProxyWebSockets *bool `json:"proxyWebSockets"`
+
+	// Timeout is the maximum amount of time a dial will wait for a connect to complete.
+	// Defaults to 30 seconds
+	Timeout *time.Duration `json:"timeout,omitempty"`
+
+	// KeepAlive specifies the interval between keep-alive probes for an active network connection.
+	// Defaults to 30 seconds
+	KeepAlive *time.Duration `json:"keepAlive,omitempty"`
 }

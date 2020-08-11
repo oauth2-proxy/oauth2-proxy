@@ -10,6 +10,12 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var (
+	defaultFlushInterval = 1 * time.Second
+	defaultTimeout       = 30 * time.Second
+	defaultKeepAlive     = 30 * time.Second
+)
+
 type LegacyOptions struct {
 	// Legacy options related to upstream servers
 	LegacyUpstreams LegacyUpstreams `cfg:",squash"`
@@ -22,7 +28,9 @@ func NewLegacyOptions() *LegacyOptions {
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
-			FlushInterval:   time.Duration(1) * time.Second,
+			FlushInterval:   defaultFlushInterval,
+			Timeout:         defaultTimeout,
+			KeepAlive:       defaultKeepAlive,
 		},
 
 		Options: *NewOptions(),
@@ -41,6 +49,8 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 
 type LegacyUpstreams struct {
 	FlushInterval                 time.Duration `flag:"flush-interval" cfg:"flush_interval"`
+	Timeout                       time.Duration `flag:"timeout" cfg:"timeout"`
+	KeepAlive                     time.Duration `flag:"keep-alive" cfg:"keep_alive"`
 	PassHostHeader                bool          `flag:"pass-host-header" cfg:"pass_host_header"`
 	ProxyWebSockets               bool          `flag:"proxy-websockets" cfg:"proxy_websockets"`
 	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify"`
@@ -50,7 +60,9 @@ type LegacyUpstreams struct {
 func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("upstreams", pflag.ExitOnError)
 
-	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
+	flagSet.Duration("flush-interval", defaultFlushInterval, "period between response flushing when streaming responses")
+	flagSet.Duration("timeout", defaultTimeout, "dialer timeout")
+	flagSet.Duration("keep-alive", defaultKeepAlive, "dialer keepalive")
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
@@ -80,6 +92,8 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			PassHostHeader:        &l.PassHostHeader,
 			ProxyWebSockets:       &l.ProxyWebSockets,
 			FlushInterval:         &l.FlushInterval,
+			Timeout:               &l.Timeout,
+			KeepAlive:             &l.KeepAlive,
 		}
 
 		switch u.Scheme {
@@ -106,8 +120,9 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			upstream.InsecureSkipTLSVerify = false
 			upstream.PassHostHeader = nil
 			upstream.ProxyWebSockets = nil
-			flush := 1 * time.Second
-			upstream.FlushInterval = &flush
+			upstream.FlushInterval = &defaultFlushInterval
+			upstream.Timeout = &defaultTimeout
+			upstream.KeepAlive = &defaultKeepAlive
 		}
 
 		upstreams = append(upstreams, upstream)
