@@ -2,6 +2,12 @@ package options
 
 import "time"
 
+var (
+	DefaultFlushInterval = 1 * time.Second
+	DefaultTimeout       = 30 * time.Second
+	DefaultKeepAlive     = 30 * time.Second
+)
+
 // Upstreams is a collection of definitions for upstream servers.
 type Upstreams []Upstream
 

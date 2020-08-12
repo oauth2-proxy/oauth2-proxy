@@ -21,10 +21,6 @@ const (
 
 	httpScheme  = "http"
 	httpsScheme = "https"
-
-	defaultFlushInterval = 1 * time.Second
-	defaultTimeout       = 30 * time.Second
-	defaultKeepAlive     = 30 * time.Second
 )
 
 // SignatureHeaders contains the headers to be signed by the hmac algorithm
@@ -105,44 +101,36 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	if upstream.FlushInterval != nil {
 		proxy.FlushInterval = *upstream.FlushInterval
 	} else {
-		proxy.FlushInterval = defaultFlushInterval
+		proxy.FlushInterval = options.DefaultFlushInterval
 	}
 
 	var finalTimeout time.Duration
 	if upstream.Timeout != nil {
 		finalTimeout = *upstream.Timeout
 	} else {
-		finalTimeout = defaultTimeout
+		finalTimeout = options.DefaultTimeout
 	}
 
 	var finalKeepAlive time.Duration
 	if upstream.Timeout != nil {
 		finalKeepAlive = *upstream.KeepAlive
 	} else {
-		finalKeepAlive = defaultKeepAlive
+		finalKeepAlive = options.DefaultKeepAlive
 	}
 
-	// Ripped from http.DefaultTransport
-	proxy.Transport = &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   finalTimeout,
-			KeepAlive: finalKeepAlive,
-		}).DialContext,
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
+	defaultTransportClone := http.DefaultTransport.(*http.Transport).Clone()
+	defaultTransportClone.DialContext = (&net.Dialer{
+		Timeout:   finalTimeout,
+		KeepAlive: finalKeepAlive,
+	}).DialContext
 
 	// InsecureSkipVerify is a configurable option we allow
 	/* #nosec G402 */
 	if upstream.InsecureSkipTLSVerify {
-		proxy.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+		defaultTransportClone.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+
+	proxy.Transport = defaultTransportClone
 
 	// Set the request director based on the PassHostHeader option
 	if upstream.PassHostHeader != nil && !*upstream.PassHostHeader {

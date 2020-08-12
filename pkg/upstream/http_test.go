@@ -3,7 +3,6 @@ package upstream
 import (
 	"bytes"
 	"crypto"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,7 +22,6 @@ import (
 var _ = Describe("HTTP Upstream Suite", func() {
 
 	const flushInterval5s = 5 * time.Second
-	const flushInterval1s = 1 * time.Second
 	truth := true
 	falsum := false
 
@@ -52,14 +50,12 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			rw := httptest.NewRecorder()
 
-			flush := 1 * time.Second
-
 			upstream := options.Upstream{
 				ID:                    in.id,
 				PassHostHeader:        &truth,
 				ProxyWebSockets:       &falsum,
 				InsecureSkipTLSVerify: false,
-				FlushInterval:         &flush,
+				FlushInterval:         &options.DefaultFlushInterval,
 			}
 
 			Expect(in.serverAddr).ToNot(BeNil())
@@ -258,13 +254,12 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		req := httptest.NewRequest("", "http://example.localhost/foo", nil)
 		rw := httptest.NewRecorder()
 
-		flush := 1 * time.Second
 		upstream := options.Upstream{
 			ID:                    "noPassHost",
 			PassHostHeader:        &falsum,
 			ProxyWebSockets:       &falsum,
 			InsecureSkipTLSVerify: false,
-			FlushInterval:         &flush,
+			FlushInterval:         &options.DefaultFlushInterval,
 		}
 
 		u, err := url.Parse(serverAddr)
@@ -322,14 +317,14 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			Expect(proxy.FlushInterval).To(Equal(in.flushInterval))
 			Expect(proxy.ErrorHandler != nil).To(Equal(in.errorHandler != nil))
 			if in.skipVerify {
-				Expect(proxy.Transport).To(Equal(&http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}))
+				Expect(proxy.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify).To(BeTrue())
+			} else {
+				Expect(proxy.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify).To(BeFalse())
 			}
 		},
 		Entry("with proxy websockets", &newUpstreamTableInput{
 			proxyWebSockets: true,
-			flushInterval:   flushInterval1s,
+			flushInterval:   options.DefaultFlushInterval,
 			skipVerify:      false,
 			sigData:         nil,
 			errorHandler:    nil,
@@ -343,21 +338,21 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		}),
 		Entry("with a InsecureSkipTLSVerify", &newUpstreamTableInput{
 			proxyWebSockets: false,
-			flushInterval:   flushInterval1s,
+			flushInterval:   options.DefaultFlushInterval,
 			skipVerify:      true,
 			sigData:         nil,
 			errorHandler:    nil,
 		}),
 		Entry("with a SignatureData", &newUpstreamTableInput{
 			proxyWebSockets: false,
-			flushInterval:   flushInterval1s,
+			flushInterval:   options.DefaultFlushInterval,
 			skipVerify:      false,
 			sigData:         &options.SignatureData{Hash: crypto.SHA256, Key: "secret"},
 			errorHandler:    nil,
 		}),
 		Entry("with an error handler", &newUpstreamTableInput{
 			proxyWebSockets: false,
-			flushInterval:   flushInterval1s,
+			flushInterval:   options.DefaultFlushInterval,
 			skipVerify:      false,
 			sigData:         nil,
 			errorHandler: func(rw http.ResponseWriter, req *http.Request, arg3 error) {
@@ -370,13 +365,12 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		var proxyServer *httptest.Server
 
 		BeforeEach(func() {
-			flush := 1 * time.Second
 			upstream := options.Upstream{
 				ID:                    "websocketProxy",
 				PassHostHeader:        &truth,
 				ProxyWebSockets:       &truth,
 				InsecureSkipTLSVerify: false,
-				FlushInterval:         &flush,
+				FlushInterval:         &options.DefaultFlushInterval,
 			}
 
 			u, err := url.Parse(serverAddr)

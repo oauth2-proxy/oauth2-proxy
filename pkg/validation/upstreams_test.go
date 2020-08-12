@@ -15,7 +15,7 @@ var _ = Describe("Upstreams", func() {
 		errStrings []string
 	}
 
-	flushInterval := 5 * time.Second
+	flushInterval5s := 5 * time.Second
 	staticCode200 := 200
 	truth := true
 
@@ -132,7 +132,7 @@ var _ = Describe("Upstreams", func() {
 					Path:                  "/foo",
 					URI:                   "ftp://foo",
 					Static:                true,
-					FlushInterval:         &flushInterval,
+					FlushInterval:         &flushInterval5s,
 					PassHostHeader:        &truth,
 					ProxyWebSockets:       &truth,
 					InsecureSkipTLSVerify: true,

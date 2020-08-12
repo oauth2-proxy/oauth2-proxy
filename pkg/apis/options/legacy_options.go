@@ -10,12 +10,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var (
-	defaultFlushInterval = 1 * time.Second
-	defaultTimeout       = 30 * time.Second
-	defaultKeepAlive     = 30 * time.Second
-)
-
 type LegacyOptions struct {
 	// Legacy options related to upstream servers
 	LegacyUpstreams LegacyUpstreams `cfg:",squash"`
@@ -28,9 +22,9 @@ func NewLegacyOptions() *LegacyOptions {
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
-			FlushInterval:   defaultFlushInterval,
-			Timeout:         defaultTimeout,
-			KeepAlive:       defaultKeepAlive,
+			FlushInterval:   DefaultFlushInterval,
+			Timeout:         DefaultTimeout,
+			KeepAlive:       DefaultKeepAlive,
 		},
 
 		Options: *NewOptions(),
@@ -60,9 +54,9 @@ type LegacyUpstreams struct {
 func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("upstreams", pflag.ExitOnError)
 
-	flagSet.Duration("flush-interval", defaultFlushInterval, "period between response flushing when streaming responses")
-	flagSet.Duration("timeout", defaultTimeout, "dialer timeout")
-	flagSet.Duration("keep-alive", defaultKeepAlive, "dialer keepalive")
+	flagSet.Duration("flush-interval", DefaultFlushInterval, "period between response flushing when streaming responses")
+	flagSet.Duration("timeout", DefaultTimeout, "the maximum amount of time a network dial will wait for a connect to complete")
+	flagSet.Duration("keep-alive", DefaultKeepAlive, "the interval between keep-alive probes for an active network connection")
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
@@ -120,9 +114,9 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			upstream.InsecureSkipTLSVerify = false
 			upstream.PassHostHeader = nil
 			upstream.ProxyWebSockets = nil
-			upstream.FlushInterval = &defaultFlushInterval
-			upstream.Timeout = &defaultTimeout
-			upstream.KeepAlive = &defaultKeepAlive
+			upstream.FlushInterval = &DefaultFlushInterval
+			upstream.Timeout = &DefaultTimeout
+			upstream.KeepAlive = &DefaultKeepAlive
 		}
 
 		upstreams = append(upstreams, upstream)

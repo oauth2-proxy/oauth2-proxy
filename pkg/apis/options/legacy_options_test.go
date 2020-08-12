@@ -16,12 +16,12 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts := NewLegacyOptions()
 
 			// Set upstreams and related options to test their conversion
-			flushInterval := 5 * time.Second
-			timeout := 60 * time.Second
-			keepAlive := 60 * time.Second
-			legacyOpts.LegacyUpstreams.FlushInterval = flushInterval
-			legacyOpts.LegacyUpstreams.Timeout = timeout
-			legacyOpts.LegacyUpstreams.KeepAlive = keepAlive
+			flushInterval5s := 5 * time.Second
+			timeout60s := 60 * time.Second
+			keepAlive60s := 60 * time.Second
+			legacyOpts.LegacyUpstreams.FlushInterval = flushInterval5s
+			legacyOpts.LegacyUpstreams.Timeout = timeout60s
+			legacyOpts.LegacyUpstreams.KeepAlive = keepAlive60s
 			legacyOpts.LegacyUpstreams.PassHostHeader = true
 			legacyOpts.LegacyUpstreams.ProxyWebSockets = true
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
@@ -33,9 +33,9 @@ var _ = Describe("Legacy Options", func() {
 					ID:                    "/baz",
 					Path:                  "/baz",
 					URI:                   "http://foo.bar/baz",
-					FlushInterval:         &flushInterval,
-					Timeout:               &timeout,
-					KeepAlive:             &keepAlive,
+					FlushInterval:         &flushInterval5s,
+					Timeout:               &timeout60s,
+					KeepAlive:             &keepAlive60s,
 					InsecureSkipTLSVerify: true,
 					PassHostHeader:        &truth,
 					ProxyWebSockets:       &truth,
@@ -44,9 +44,9 @@ var _ = Describe("Legacy Options", func() {
 					ID:                    "/bar",
 					Path:                  "/bar",
 					URI:                   "file://var/lib/website#/bar",
-					FlushInterval:         &flushInterval,
-					Timeout:               &timeout,
-					KeepAlive:             &keepAlive,
+					FlushInterval:         &flushInterval5s,
+					Timeout:               &timeout60s,
+					KeepAlive:             &keepAlive60s,
 					InsecureSkipTLSVerify: true,
 					PassHostHeader:        &truth,
 					ProxyWebSockets:       &truth,
@@ -70,9 +70,9 @@ var _ = Describe("Legacy Options", func() {
 		skipVerify := true
 		passHostHeader := false
 		proxyWebSockets := true
-		flushInterval := 5 * time.Second
-		timeout := 60 * time.Second
-		keepAlive := 60 * time.Second
+		flushInterval5s := 5 * time.Second
+		timeout60s := 60 * time.Second
+		keepAlive60s := 60 * time.Second
 
 		// Test cases and expected outcomes
 		validHTTP := "http://foo.bar/baz"
@@ -83,9 +83,9 @@ var _ = Describe("Legacy Options", func() {
 			InsecureSkipTLSVerify: skipVerify,
 			PassHostHeader:        &passHostHeader,
 			ProxyWebSockets:       &proxyWebSockets,
-			FlushInterval:         &flushInterval,
-			Timeout:               &timeout,
-			KeepAlive:             &keepAlive,
+			FlushInterval:         &flushInterval5s,
+			Timeout:               &timeout60s,
+			KeepAlive:             &keepAlive60s,
 		}
 
 		// Test cases and expected outcomes
@@ -97,9 +97,9 @@ var _ = Describe("Legacy Options", func() {
 			InsecureSkipTLSVerify: skipVerify,
 			PassHostHeader:        &passHostHeader,
 			ProxyWebSockets:       &proxyWebSockets,
-			FlushInterval:         &flushInterval,
-			Timeout:               &timeout,
-			KeepAlive:             &keepAlive,
+			FlushInterval:         &flushInterval5s,
+			Timeout:               &timeout60s,
+			KeepAlive:             &keepAlive60s,
 		}
 
 		validFileWithFragment := "file://var/lib/website#/bar"
@@ -110,9 +110,9 @@ var _ = Describe("Legacy Options", func() {
 			InsecureSkipTLSVerify: skipVerify,
 			PassHostHeader:        &passHostHeader,
 			ProxyWebSockets:       &proxyWebSockets,
-			FlushInterval:         &flushInterval,
-			Timeout:               &timeout,
-			KeepAlive:             &keepAlive,
+			FlushInterval:         &flushInterval5s,
+			Timeout:               &timeout60s,
+			KeepAlive:             &keepAlive60s,
 		}
 
 		validStatic := "static://204"
@@ -126,9 +126,9 @@ var _ = Describe("Legacy Options", func() {
 			InsecureSkipTLSVerify: false,
 			PassHostHeader:        nil,
 			ProxyWebSockets:       nil,
-			FlushInterval:         &defaultFlushInterval,
-			Timeout:               &defaultTimeout,
-			KeepAlive:             &defaultKeepAlive,
+			FlushInterval:         &DefaultFlushInterval,
+			Timeout:               &DefaultTimeout,
+			KeepAlive:             &DefaultKeepAlive,
 		}
 
 		invalidStatic := "static://abc"
@@ -142,9 +142,9 @@ var _ = Describe("Legacy Options", func() {
 			InsecureSkipTLSVerify: false,
 			PassHostHeader:        nil,
 			ProxyWebSockets:       nil,
-			FlushInterval:         &defaultFlushInterval,
-			Timeout:               &defaultTimeout,
-			KeepAlive:             &defaultKeepAlive,
+			FlushInterval:         &DefaultFlushInterval,
+			Timeout:               &DefaultTimeout,
+			KeepAlive:             &DefaultKeepAlive,
 		}
 
 		invalidHTTP := ":foo"
@@ -157,9 +157,9 @@ var _ = Describe("Legacy Options", func() {
 					SSLUpstreamInsecureSkipVerify: skipVerify,
 					PassHostHeader:                passHostHeader,
 					ProxyWebSockets:               proxyWebSockets,
-					FlushInterval:                 flushInterval,
-					Timeout:                       timeout,
-					KeepAlive:                     keepAlive,
+					FlushInterval:                 flushInterval5s,
+					Timeout:                       timeout60s,
+					KeepAlive:                     keepAlive60s,
 				}
 
 				upstreams, err := legacyUpstreams.convert()
