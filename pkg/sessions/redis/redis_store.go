@@ -88,8 +88,10 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
 	}
 	client := redis.NewFailoverClient(&redis.FailoverOptions{
-		MasterName:    opts.SentinelMasterName,
-		SentinelAddrs: addrs,
+		MasterName:       opts.SentinelMasterName,
+		SentinelAddrs:    addrs,
+		SentinelPassword: opts.SentinelPassword,
+		Password:         opts.Password,
 	})
 	return newClient(client), nil
 }
@@ -101,7 +103,8 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
 	}
 	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs: addrs,
+		Addrs:    addrs,
+		Password: opts.Password,
 	})
 	return newClusterClient(client), nil
 }
@@ -112,6 +115,10 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 	opt, err := redis.ParseURL(opts.ConnectionURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse redis url: %s", err)
+	}
+
+	if opts.Password != "" {
+		opt.Password = opts.Password
 	}
 
 	if opts.InsecureSkipTLSVerify {
