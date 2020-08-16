@@ -11,6 +11,7 @@
 
 ## Changes since v6.0.0
 
+- [#715](https://github.com/oauth2-proxy/oauth2-proxy/pull/715) Ensure session times are not nil before printing them (@JoelSpeed)
 - [#714](https://github.com/oauth2-proxy/oauth2-proxy/pull/714) Support passwords with Redis session stores (@NickMeves)
 - [#719](https://github.com/oauth2-proxy/oauth2-proxy/pull/719) Add Gosec fixes to areas that are intermittently flagged on PRs (@NickMeves)
 - [#718](https://github.com/oauth2-proxy/oauth2-proxy/pull/718) Allow Logging to stdout with separate Error Log Channel

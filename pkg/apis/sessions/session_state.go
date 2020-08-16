@@ -52,10 +52,10 @@ func (s *SessionState) String() string {
 	if s.IDToken != "" {
 		o += " id_token:true"
 	}
-	if !s.CreatedAt.IsZero() {
+	if s.CreatedAt != nil && !s.CreatedAt.IsZero() {
 		o += fmt.Sprintf(" created:%s", s.CreatedAt)
 	}
-	if !s.ExpiresOn.IsZero() {
+	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() {
 		o += fmt.Sprintf(" expires:%s", s.ExpiresOn)
 	}
 	if s.RefreshToken != "" {
