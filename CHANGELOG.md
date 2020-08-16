@@ -16,6 +16,7 @@
 - [#718](https://github.com/oauth2-proxy/oauth2-proxy/pull/718) Allow Logging to stdout with separate Error Log Channel
 - [#690](https://github.com/oauth2-proxy/oauth2-proxy/pull/690) Address GoSec security findings & remediate (@NickMeves)
 - [#689](https://github.com/oauth2-proxy/oauth2-proxy/pull/689) Fix finicky logging_handler_test from time drift (@NickMeves)
+- [#700](https://github.com/oauth2-proxy/oauth2-proxy/pull/700) Allow OIDC Bearer auth IDTokens to have empty email claim & profile URL (@NickMeves)
 - [#699](https://github.com/oauth2-proxy/oauth2-proxy/pull/699) Align persistence ginkgo tests with conventions (@NickMeves)
 - [#696](https://github.com/oauth2-proxy/oauth2-proxy/pull/696) Preserve query when building redirect
 - [#561](https://github.com/oauth2-proxy/oauth2-proxy/pull/561) Refactor provider URLs to package level vars (@JoelSpeed)
