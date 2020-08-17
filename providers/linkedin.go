@@ -3,7 +3,6 @@ package providers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -62,12 +61,13 @@ func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
 	return &LinkedInProvider{ProviderData: p}
 }
 
-func getLinkedInHeader(accessToken string) http.Header {
-	header := make(http.Header)
-	header.Set("Accept", "application/json")
-	header.Set("x-li-format", "json")
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	return header
+func makeLinkedInHeader(accessToken string) http.Header {
+	// extra headers required by the LinkedIn API when making authenticated requests
+	extraHeaders := map[string]string{
+		acceptHeader:  acceptApplicationJSON,
+		"x-li-format": "json",
+	}
+	return makeAuthorizationHeader(tokenTypeBearer, accessToken, extraHeaders)
 }
 
 // GetEmailAddress returns the Account email address
@@ -79,7 +79,7 @@ func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	requestURL := p.ProfileURL.String() + "?format=json"
 	json, err := requests.New(requestURL).
 		WithContext(ctx).
-		WithHeaders(getLinkedInHeader(s.AccessToken)).
+		WithHeaders(makeLinkedInHeader(s.AccessToken)).
 		Do().
 		UnmarshalJSON()
 	if err != nil {
@@ -95,5 +95,5 @@ func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 
 // ValidateSessionState validates the AccessToken
 func (p *LinkedInProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
-	return validateToken(ctx, p, s.AccessToken, getLinkedInHeader(s.AccessToken))
+	return validateToken(ctx, p, s.AccessToken, makeLinkedInHeader(s.AccessToken))
 }

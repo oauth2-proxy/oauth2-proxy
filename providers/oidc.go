@@ -3,7 +3,6 @@ package providers
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -221,13 +220,6 @@ func (p *OIDCProvider) ValidateSessionState(ctx context.Context, s *sessions.Ses
 	return err == nil
 }
 
-func getOIDCHeader(accessToken string) http.Header {
-	header := make(http.Header)
-	header.Set("Accept", "application/json")
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	return header
-}
-
 func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.IDToken, token *oauth2.Token) (*OIDCClaims, error) {
 	claims := &OIDCClaims{}
 	// Extract default claims.
@@ -263,7 +255,7 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 		// Make a query to the userinfo endpoint, and attempt to locate the email from there.
 		respJSON, err := requests.New(profileURL).
 			WithContext(ctx).
-			WithHeaders(getOIDCHeader(token.AccessToken)).
+			WithHeaders(makeOIDCHeader(token.AccessToken)).
 			Do().
 			UnmarshalJSON()
 		if err != nil {

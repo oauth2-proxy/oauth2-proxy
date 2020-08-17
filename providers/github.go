@@ -74,11 +74,12 @@ func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 	return &GitHubProvider{ProviderData: p}
 }
 
-func getGitHubHeader(accessToken string) http.Header {
-	header := make(http.Header)
-	header.Set("Accept", "application/vnd.github.v3+json")
-	header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
-	return header
+func makeGitHubHeader(accessToken string) http.Header {
+	// extra headers required by the GitHub API when making authenticated requests
+	extraHeaders := map[string]string{
+		acceptHeader: "application/vnd.github.v3+json",
+	}
+	return makeAuthorizationHeader(tokenTypeToken, accessToken, extraHeaders)
 }
 
 // SetOrgTeam adds GitHub org reading parameters to the OAuth2 scope
@@ -129,7 +130,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 		var op orgsPage
 		err := requests.New(endpoint.String()).
 			WithContext(ctx).
-			WithHeaders(getGitHubHeader(accessToken)).
+			WithHeaders(makeGitHubHeader(accessToken)).
 			Do().
 			UnmarshalInto(&op)
 		if err != nil {
@@ -196,7 +197,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 		// nolint:bodyclose
 		result := requests.New(endpoint.String()).
 			WithContext(ctx).
-			WithHeaders(getGitHubHeader(accessToken)).
+			WithHeaders(makeGitHubHeader(accessToken)).
 			Do()
 		if result.Error() != nil {
 			return false, result.Error()
@@ -296,7 +297,7 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 	var repo repository
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(getGitHubHeader(accessToken)).
+		WithHeaders(makeGitHubHeader(accessToken)).
 		Do().
 		UnmarshalInto(&repo)
 	if err != nil {
@@ -324,7 +325,7 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(getGitHubHeader(accessToken)).
+		WithHeaders(makeGitHubHeader(accessToken)).
 		Do().
 		UnmarshalInto(&user)
 	if err != nil {
@@ -347,7 +348,7 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 	}
 	result := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(getGitHubHeader(accessToken)).
+		WithHeaders(makeGitHubHeader(accessToken)).
 		Do()
 	if result.Error() != nil {
 		return false, result.Error()
@@ -411,7 +412,7 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 	}
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(getGitHubHeader(s.AccessToken)).
+		WithHeaders(makeGitHubHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
@@ -446,7 +447,7 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(getGitHubHeader(s.AccessToken)).
+		WithHeaders(makeGitHubHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&user)
 	if err != nil {
@@ -465,7 +466,7 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 
 // ValidateSessionState validates the AccessToken
 func (p *GitHubProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
-	return validateToken(ctx, p, s.AccessToken, getGitHubHeader(s.AccessToken))
+	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
 }
 
 // isVerifiedUser
