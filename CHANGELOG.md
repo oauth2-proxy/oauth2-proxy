@@ -8,6 +8,8 @@
 
 ## Changes since v6.1.0
 
+- [#729](https://github.com/oauth2-proxy/oauth2-proxy/pull/729) Use X-Forwarded-Host consistently when set (@NickMeves)
+
 # v6.1.0
 
 ## Release Highlights
