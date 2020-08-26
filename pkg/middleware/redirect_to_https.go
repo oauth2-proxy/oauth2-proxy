@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/justinas/alice"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
 )
 
 const httpsScheme = "https"
@@ -40,7 +41,7 @@ func redirectToHTTPS(httpsPort string, next http.Handler) http.Handler {
 
 		// Set the req.Host when the targetURL still does not have one
 		if targetURL.Host == "" {
-			targetURL.Host = req.Host
+			targetURL.Host = cookies.GetRequestHost(req)
 		}
 
 		// Overwrite the port if the original request was to a non-standard port
