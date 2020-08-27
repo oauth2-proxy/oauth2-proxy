@@ -11,6 +11,7 @@
 
 ## Changes since v6.0.0
 
+- [#742](https://github.com/oauth2-proxy/oauth2-proxy/pull/742) Only log no cookie match if cookie domains specified (@JoelSpeed)
 - [#562](https://github.com/oauth2-proxy/oauth2-proxy/pull/562) Create generic Authorization Header constructor (@JoelSpeed)
 - [#715](https://github.com/oauth2-proxy/oauth2-proxy/pull/715) Ensure session times are not nil before printing them (@JoelSpeed)
 - [#714](https://github.com/oauth2-proxy/oauth2-proxy/pull/714) Support passwords with Redis session stores (@NickMeves)
