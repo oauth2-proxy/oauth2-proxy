@@ -4,6 +4,22 @@
 
 ## Important Notes
 
+## Breaking Changes
+
+## Changes since v6.1.0
+
+# v6.1.0
+
+## Release Highlights
+
+- Redis session stores now support authenticated connections
+- Error logging can now be separated from info logging by directing error logs to stderr
+- Added --session-cookie-minimal flag which helps prevent large session cookies
+- Improvements to force-https behaviour
+- Allow requests to skip authentication based on their source IP
+
+## Important Notes
+
 - [#632](https://github.com/oauth2-proxy/oauth2-proxy/pull/632) There is backwards compatibility to sessions from v5
   - Any unencrypted sessions from before v5 that only contained a Username & Email will trigger a reauthentication
 
