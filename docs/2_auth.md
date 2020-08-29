@@ -244,7 +244,7 @@ The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Iss
 The `client_id` and `client_secret` are configured in the application settings.
 Generate a unique `client_secret` to encrypt the cookie.
 
-Then you can start the oauth2-proxy with `./oauth2-proxy -config /etc/example.cfg`
+Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.cfg`
 
 #### Configuring the OIDC Provider with Okta - localhost
 1. Signup for developer account: https://developer.okta.com/signup/
@@ -278,7 +278,7 @@ Then you can start the oauth2-proxy with `./oauth2-proxy -config /etc/example.cf
    # Note: use the following for testing within a container
    # http_address = "0.0.0.0:4180"
    ```
-7. Then you can start the oauth2-proxy with `./oauth2-proxy -config /etc/localhost.cfg`
+7. Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/localhost.cfg`
 
 ### login.gov Provider
 
