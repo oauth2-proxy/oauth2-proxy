@@ -4,9 +4,11 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"io/ioutil"
+	"net/http/httptest"
 	"os"
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -70,7 +72,13 @@ func TestGetCertPool_NoRoots(t *testing.T) {
 func TestGetCertPool(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "certtest")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	defer func(path string) {
+		rerr := os.RemoveAll(path)
+		if rerr != nil {
+			panic(rerr)
+		}
+	}(tempDir)
+
 	certFile1 := makeTestCertFile(t, testCA1, tempDir)
 	certFile2 := makeTestCertFile(t, testCA2, tempDir)
 
@@ -88,4 +96,17 @@ func TestGetCertPool(t *testing.T) {
 
 	expectedSubjects := []string{testCA1Subj, testCA2Subj}
 	assert.Equal(t, expectedSubjects, got)
+}
+
+func TestGetRequestHost(t *testing.T) {
+	g := NewWithT(t)
+
+	req := httptest.NewRequest("GET", "https://example.com", nil)
+	host := GetRequestHost(req)
+	g.Expect(host).To(Equal("example.com"))
+
+	proxyReq := httptest.NewRequest("GET", "http://internal.example.com", nil)
+	proxyReq.Header.Add("X-Forwarded-Host", "external.example.com")
+	extHost := GetRequestHost(proxyReq)
+	g.Expect(extHost).To(Equal("external.example.com"))
 }

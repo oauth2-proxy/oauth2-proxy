@@ -164,5 +164,16 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			expectedBody:     permanentRedirectBody("https://example.com/"),
 			expectedLocation: "https://example.com/",
 		}),
+		Entry("without TLS with an X-Forwarded-Host header", &requestTableInput{
+			requestString: "http://internal.example.com",
+			useTLS:        false,
+			headers: map[string]string{
+				"X-Forwarded-Proto": "HTTP",
+				"X-Forwarded-Host":  "external.example.com",
+			},
+			expectedStatus:   308,
+			expectedBody:     permanentRedirectBody("https://external.example.com"),
+			expectedLocation: "https://external.example.com",
+		}),
 	)
 })

@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 )
 
 func GetCertPool(paths []string) (*x509.CertPool, error) {
@@ -22,4 +23,13 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 		}
 	}
 	return pool, nil
+}
+
+// GetRequestHost return the request host header or X-Forwarded-Host if present
+func GetRequestHost(req *http.Request) string {
+	host := req.Header.Get("X-Forwarded-Host")
+	if host == "" {
+		host = req.Host
+	}
+	return host
 }

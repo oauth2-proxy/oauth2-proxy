@@ -28,6 +28,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/upstream"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
 	"github.com/oauth2-proxy/oauth2-proxy/providers"
 )
 
@@ -332,7 +333,7 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 	cookieDomain := cookies.GetCookieDomain(req, p.CookieDomains)
 
 	if cookieDomain != "" {
-		domain := cookies.GetRequestHost(req)
+		domain := util.GetRequestHost(req)
 		if h, _, err := net.SplitHostPort(domain); err == nil {
 			domain = h
 		}
@@ -747,7 +748,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
-	redirectURI := p.GetRedirectURI(req.Host)
+	redirectURI := p.GetRedirectURI(util.GetRequestHost(req))
 	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonce, redirect)), http.StatusFound)
 }
 
@@ -770,7 +771,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, err := p.redeemCode(req.Context(), req.Host, req.Form.Get("code"))
+	session, err := p.redeemCode(req.Context(), util.GetRequestHost(req), req.Form.Get("code"))
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Internal Error")

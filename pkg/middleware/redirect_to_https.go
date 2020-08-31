@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/justinas/alice"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
 )
 
 const httpsScheme = "https"
@@ -38,10 +39,9 @@ func redirectToHTTPS(httpsPort string, next http.Handler) http.Handler {
 		// Set the scheme to HTTPS
 		targetURL.Scheme = httpsScheme
 
-		// Set the req.Host when the targetURL still does not have one
-		if targetURL.Host == "" {
-			targetURL.Host = req.Host
-		}
+		// Set the Host in case the targetURL still does not have one
+		// or it isn't X-Forwarded-Host aware
+		targetURL.Host = util.GetRequestHost(req)
 
 		// Overwrite the port if the original request was to a non-standard port
 		if targetURL.Port() != "" {

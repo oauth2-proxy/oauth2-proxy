@@ -11,6 +11,8 @@ import (
 	"sync"
 	"text/template"
 	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
 )
 
 // AuthStatus defines the different types of auth logging that occur
@@ -195,7 +197,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 
 	err := l.authTemplate.Execute(l.writer, authLogMessageData{
 		Client:        client,
-		Host:          req.Host,
+		Host:          util.GetRequestHost(req),
 		Protocol:      req.Proto,
 		RequestMethod: req.Method,
 		Timestamp:     FormatTimestamp(now),
@@ -249,7 +251,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 
 	err := l.reqTemplate.Execute(l.writer, reqLogMessageData{
 		Client:          client,
-		Host:            req.Host,
+		Host:            util.GetRequestHost(req),
 		Protocol:        req.Proto,
 		RequestDuration: fmt.Sprintf("%0.3f", duration),
 		RequestMethod:   req.Method,
