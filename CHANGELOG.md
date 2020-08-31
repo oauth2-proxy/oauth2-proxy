@@ -6,6 +6,24 @@
 
 ## Breaking Changes
 
+## Changes since v6.1.1
+
+# v6.1.1
+
+## Release Highlights
+
+- Fixed a bug which prevented static upstreams from being used
+- Fixed a bug which prevented file based upstreams from being used
+- Ensure that X-Forwarded-Host is respected consistently
+
+## Important Notes
+
+N/A
+
+## Breaking
+
+N/A
+
 ## Changes since v6.1.0
 
 - [#729](https://github.com/oauth2-proxy/oauth2-proxy/pull/729) Use X-Forwarded-Host consistently when set (@NickMeves)
