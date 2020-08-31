@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
@@ -87,6 +88,8 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			if u.Fragment != "" {
 				upstream.ID = u.Fragment
 				upstream.Path = u.Fragment
+				// Trim the fragment from the end of the URI
+				upstream.URI = strings.SplitN(upstreamString, "#", 2)[0]
 			}
 		case "static":
 			responseCode, err := strconv.Atoi(u.Host)

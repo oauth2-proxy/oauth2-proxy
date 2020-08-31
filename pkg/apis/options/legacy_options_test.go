@@ -21,7 +21,7 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts.LegacyUpstreams.PassHostHeader = true
 			legacyOpts.LegacyUpstreams.ProxyWebSockets = true
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
-			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file://var/lib/website#/bar", "static://204"}
+			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file:///var/lib/website#/bar", "static://204"}
 
 			truth := true
 			staticCode := 204
@@ -38,7 +38,7 @@ var _ = Describe("Legacy Options", func() {
 				{
 					ID:                    "/bar",
 					Path:                  "/bar",
-					URI:                   "file://var/lib/website#/bar",
+					URI:                   "file:///var/lib/website",
 					FlushInterval:         &flushInterval,
 					InsecureSkipTLSVerify: true,
 					PassHostHeader:        &truth,
@@ -100,11 +100,11 @@ var _ = Describe("Legacy Options", func() {
 			FlushInterval:         &flushInterval,
 		}
 
-		validFileWithFragment := "file://var/lib/website#/bar"
+		validFileWithFragment := "file:///var/lib/website#/bar"
 		validFileWithFragmentUpstream := Upstream{
 			ID:                    "/bar",
 			Path:                  "/bar",
-			URI:                   validFileWithFragment,
+			URI:                   "file:///var/lib/website",
 			InsecureSkipTLSVerify: skipVerify,
 			PassHostHeader:        &passHostHeader,
 			ProxyWebSockets:       &proxyWebSockets,
