@@ -21,9 +21,10 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts.LegacyUpstreams.PassHostHeader = true
 			legacyOpts.LegacyUpstreams.ProxyWebSockets = true
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
-			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file://var/lib/website#/bar"}
+			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file:///var/lib/website#/bar", "static://204"}
 
 			truth := true
+			staticCode := 204
 			opts.UpstreamServers = Upstreams{
 				{
 					ID:                    "/baz",
@@ -37,11 +38,22 @@ var _ = Describe("Legacy Options", func() {
 				{
 					ID:                    "/bar",
 					Path:                  "/bar",
-					URI:                   "file://var/lib/website#/bar",
+					URI:                   "file:///var/lib/website",
 					FlushInterval:         &flushInterval,
 					InsecureSkipTLSVerify: true,
 					PassHostHeader:        &truth,
 					ProxyWebSockets:       &truth,
+				},
+				{
+					ID:                    "static://204",
+					Path:                  "/",
+					URI:                   "",
+					Static:                true,
+					StaticCode:            &staticCode,
+					FlushInterval:         nil,
+					InsecureSkipTLSVerify: false,
+					PassHostHeader:        nil,
+					ProxyWebSockets:       nil,
 				},
 			}
 
@@ -57,8 +69,6 @@ var _ = Describe("Legacy Options", func() {
 			expectedUpstreams Upstreams
 			errMsg            string
 		}
-
-		defaultFlushInterval := 1 * time.Second
 
 		// Non defaults for these options
 		skipVerify := true
@@ -90,11 +100,11 @@ var _ = Describe("Legacy Options", func() {
 			FlushInterval:         &flushInterval,
 		}
 
-		validFileWithFragment := "file://var/lib/website#/bar"
+		validFileWithFragment := "file:///var/lib/website#/bar"
 		validFileWithFragmentUpstream := Upstream{
 			ID:                    "/bar",
 			Path:                  "/bar",
-			URI:                   validFileWithFragment,
+			URI:                   "file:///var/lib/website",
 			InsecureSkipTLSVerify: skipVerify,
 			PassHostHeader:        &passHostHeader,
 			ProxyWebSockets:       &proxyWebSockets,
@@ -105,28 +115,28 @@ var _ = Describe("Legacy Options", func() {
 		validStaticCode := 204
 		validStaticUpstream := Upstream{
 			ID:                    validStatic,
-			Path:                  validStatic,
+			Path:                  "/",
 			URI:                   "",
 			Static:                true,
 			StaticCode:            &validStaticCode,
 			InsecureSkipTLSVerify: false,
 			PassHostHeader:        nil,
 			ProxyWebSockets:       nil,
-			FlushInterval:         &defaultFlushInterval,
+			FlushInterval:         nil,
 		}
 
 		invalidStatic := "static://abc"
 		invalidStaticCode := 200
 		invalidStaticUpstream := Upstream{
 			ID:                    invalidStatic,
-			Path:                  invalidStatic,
+			Path:                  "/",
 			URI:                   "",
 			Static:                true,
 			StaticCode:            &invalidStaticCode,
 			InsecureSkipTLSVerify: false,
 			PassHostHeader:        nil,
 			ProxyWebSockets:       nil,
-			FlushInterval:         &defaultFlushInterval,
+			FlushInterval:         nil,
 		}
 
 		invalidHTTP := ":foo"

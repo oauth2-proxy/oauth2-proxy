@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
@@ -87,6 +88,8 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			if u.Fragment != "" {
 				upstream.ID = u.Fragment
 				upstream.Path = u.Fragment
+				// Trim the fragment from the end of the URI
+				upstream.URI = strings.SplitN(upstreamString, "#", 2)[0]
 			}
 		case "static":
 			responseCode, err := strconv.Atoi(u.Host)
@@ -97,17 +100,18 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			upstream.Static = true
 			upstream.StaticCode = &responseCode
 
-			// These are not allowed to be empty and must be unique
+			// This is not allowed to be empty and must be unique
 			upstream.ID = upstreamString
-			upstream.Path = upstreamString
+
+			// We only support the root path in the legacy config
+			upstream.Path = "/"
 
 			// Force defaults compatible with static responses
 			upstream.URI = ""
 			upstream.InsecureSkipTLSVerify = false
 			upstream.PassHostHeader = nil
 			upstream.ProxyWebSockets = nil
-			flush := 1 * time.Second
-			upstream.FlushInterval = &flush
+			upstream.FlushInterval = nil
 		}
 
 		upstreams = append(upstreams, upstream)

@@ -10,12 +10,8 @@ const defaultStaticResponseCode = 200
 // newStaticResponseHandler creates a new staticResponseHandler that serves a
 // a static response code.
 func newStaticResponseHandler(upstream string, code *int) http.Handler {
-	if code == nil {
-		c := defaultStaticResponseCode
-		code = &c
-	}
 	return &staticResponseHandler{
-		code:     *code,
+		code:     derefStaticCode(code),
 		upstream: upstream,
 	}
 }
@@ -31,4 +27,12 @@ func (s *staticResponseHandler) ServeHTTP(rw http.ResponseWriter, req *http.Requ
 	rw.Header().Set("GAP-Upstream-Address", s.upstream)
 	rw.WriteHeader(s.code)
 	fmt.Fprintf(rw, "Authenticated")
+}
+
+// derefStaticCode returns the derefenced value, or the default if the value is nil
+func derefStaticCode(code *int) int {
+	if code != nil {
+		return *code
+	}
+	return defaultStaticResponseCode
 }
