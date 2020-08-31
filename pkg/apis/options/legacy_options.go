@@ -97,17 +97,18 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			upstream.Static = true
 			upstream.StaticCode = &responseCode
 
-			// These are not allowed to be empty and must be unique
+			// This is not allowed to be empty and must be unique
 			upstream.ID = upstreamString
-			upstream.Path = upstreamString
+
+			// We only support the root path in the legacy config
+			upstream.Path = "/"
 
 			// Force defaults compatible with static responses
 			upstream.URI = ""
 			upstream.InsecureSkipTLSVerify = false
 			upstream.PassHostHeader = nil
 			upstream.ProxyWebSockets = nil
-			flush := 1 * time.Second
-			upstream.FlushInterval = &flush
+			upstream.FlushInterval = nil
 		}
 
 		upstreams = append(upstreams, upstream)

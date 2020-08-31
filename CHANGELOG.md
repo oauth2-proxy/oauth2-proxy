@@ -9,6 +9,7 @@
 ## Changes since v6.1.0
 
 - [#729](https://github.com/oauth2-proxy/oauth2-proxy/pull/729) Use X-Forwarded-Host consistently when set (@NickMeves)
+- [#746](https://github.com/oauth2-proxy/oauth2-proxy/pull/746) Fix conversion of static responses in upstreams (@JoelSpeed)
 
 # v6.1.0
 
