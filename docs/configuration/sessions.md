@@ -29,7 +29,7 @@ side cookies and transferred with each and every request.
 The following should be known when using this implementation:
 - Since all state is stored client side, this storage backend means that the OAuth2 Proxy is completely stateless
 - Cookies are signed server side to prevent modification client-side
-- It is recommended to set a `cookie-secret` which will ensure data is encrypted within the cookie data.
+- It is mandatory to set a `cookie-secret` which will ensure data is encrypted within the cookie data.
 - Since multiple requests can be made concurrently to the OAuth2 Proxy, this session implementation
 cannot lock sessions and while updating and refreshing sessions, there can be conflicts which force
 users to re-authenticate
