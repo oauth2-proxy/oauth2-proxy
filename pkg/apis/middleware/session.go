@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/coreos/go-oidc"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/sessions"
 )
 
 // TokenToSessionFunc takes a rawIDToken and an idToken and converts it into a

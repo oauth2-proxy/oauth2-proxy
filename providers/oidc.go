@@ -9,8 +9,8 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/requests"
 )
 
 const emailClaim = "email"

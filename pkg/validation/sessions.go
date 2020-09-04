@@ -3,7 +3,7 @@ package validation
 import (
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/options"
 )
 
 func validateSessionCookieMinimal(o *options.Options) []string {

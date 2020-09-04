@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/justinas/alice"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/util"
 )
 
 const httpsScheme = "https"

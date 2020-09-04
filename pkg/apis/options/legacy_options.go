@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/logger"
 	"github.com/spf13/pflag"
 )
 

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/justinas/alice"
-	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/middleware"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/middleware"
 )
 
 type scopeKey string

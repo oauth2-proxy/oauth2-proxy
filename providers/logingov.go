@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/requests"
 	"gopkg.in/square/go-jose.v2"
 )
 

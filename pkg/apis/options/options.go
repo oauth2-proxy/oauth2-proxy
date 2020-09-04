@@ -6,8 +6,8 @@ import (
 	"regexp"
 
 	oidc "github.com/coreos/go-oidc"
-	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/providers"
+	ipapi "github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/providers"
 	"github.com/spf13/pflag"
 )
 

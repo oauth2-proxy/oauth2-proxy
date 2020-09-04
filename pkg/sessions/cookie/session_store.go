@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	pkgcookies "github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/sessions"
+	pkgcookies "github.com/oauth2-proxy/oauth2-proxy/v6/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/logger"
 )
 
 const (

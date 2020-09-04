@@ -8,9 +8,9 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/justinas/alice"
-	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/middleware"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/middleware"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/logger"
 )
 
 const jwtRegexFormat = `^eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/encryption"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )

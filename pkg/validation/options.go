@@ -15,12 +15,12 @@ import (
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
-	"github.com/oauth2-proxy/oauth2-proxy/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v6/providers"
 )
 
 // Validate checks that required options are set and validates those that they
@@ -41,7 +41,9 @@ func Validate(o *options.Options) error {
 		if err == nil {
 			transport := &http.Transport{
 				TLSClientConfig: &tls.Config{
-					RootCAs: pool,
+					RootCAs:    pool,
+					MinVersion: tls.VersionTLS12,
+					MaxVersion: tls.VersionTLS13,
 				},
 			}
 

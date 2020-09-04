@@ -11,7 +11,7 @@ nav_order: 1
 
     a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v6.1.1`)
 
-    b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy` which will put the binary in `$GOROOT/bin`
+    b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy/v6` which will put the binary in `$GOPATH/bin`
 
     c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, ARMv6 and ARM64 tags available)
 
