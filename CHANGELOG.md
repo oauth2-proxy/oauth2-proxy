@@ -8,6 +8,8 @@
 
 ## Changes since v6.1.1
 
+- [#758](https://github.com/oauth2-proxy/oauth2-proxy/pull/758) Properly use the go module to support go get installation (@johejo)
+
 # v6.1.1
 
 ## Release Highlights
