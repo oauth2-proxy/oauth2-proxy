@@ -59,6 +59,18 @@ func (vt *ValidatorTest) WriteEmails(t *testing.T, emails []string) {
 	}
 }
 
+func TestValidatorWildcardDomainAndEmptyEmail(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	domains := []string{"*"}
+	validator := vt.NewValidator(domains, nil)
+
+	if !validator("") {
+		t.Error("empty email should be valid when wildcard domain set")
+	}
+}
+
 func TestValidatorEmpty(t *testing.T) {
 	vt := NewValidatorTest(t)
 	defer vt.TearDown()
