@@ -50,10 +50,4 @@ jobs:
     - name: Test
       run: |
         cd src/github.com/${{ github.repository }}
-        ./cc-test-reporter before-build
-        make test
-
-    - run: |
-        cd src/github.com/${{ github.repository }}
-        ./cc-test-reporter after-build -t gocov
-      if: ${{ always() }}
+        ./test.sh
