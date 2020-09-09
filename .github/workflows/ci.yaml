@@ -53,5 +53,7 @@ jobs:
         ./cc-test-reporter before-build
         make test
 
-    - run: ./cc-test-reporter after-build -t gocov
+    - run: |
+        cd src/github.com/${{ github.repository }}
+        ./cc-test-reporter after-build -t gocov
       if: ${{ always() }}
