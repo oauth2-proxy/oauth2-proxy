@@ -975,11 +975,12 @@ type SignInPageTest struct {
 const signInRedirectPattern = `<input type="hidden" name="rd" value="(.*)">`
 const signInSkipProvider = `>Found<`
 
-func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
+func NewSignInPageTest(skipProvider bool, authSignIn bool) (*SignInPageTest, error) {
 	var sipTest SignInPageTest
 
 	sipTest.opts = baseTestOptions()
 	sipTest.opts.SkipProviderButton = skipProvider
+	sipTest.opts.AuthEndpointSignIn = authSignIn
 	err := validation.Validate(sipTest.opts)
 	if err != nil {
 		return nil, err
@@ -1005,7 +1006,7 @@ func (sipTest *SignInPageTest) GetEndpoint(endpoint string) (int, string) {
 }
 
 func TestSignInPageIncludesTargetRedirect(t *testing.T) {
-	sipTest, err := NewSignInPageTest(false)
+	sipTest, err := NewSignInPageTest(false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1026,7 +1027,7 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 }
 
 func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
-	sipTest, err := NewSignInPageTest(false)
+	sipTest, err := NewSignInPageTest(false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1044,7 +1045,7 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 }
 
 func TestSignInPageSkipProvider(t *testing.T) {
-	sipTest, err := NewSignInPageTest(true)
+	sipTest, err := NewSignInPageTest(true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1062,7 +1063,7 @@ func TestSignInPageSkipProvider(t *testing.T) {
 }
 
 func TestSignInPageSkipProviderDirect(t *testing.T) {
-	sipTest, err := NewSignInPageTest(true)
+	sipTest, err := NewSignInPageTest(true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1327,6 +1328,29 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
 }
 
+func TestAuthEndpointUnauthorizedRedirect(t *testing.T) {
+	sipTest, err := NewSignInPageTest(false, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var endpoint = sipTest.opts.ProxyPrefix + "/auth"
+
+	code, body := sipTest.GetEndpoint(endpoint)
+	assert.Equal(t, http.StatusForbidden, code)
+	assert.Contains(t, body, "Sign in with Google")
+}
+
+func TestAuthEndpointUnauthorizedRedirectSkipProviderPage(t *testing.T) {
+	sipTest, err := NewSignInPageTest(true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var endpoint = sipTest.opts.ProxyPrefix + "/auth"
+
+	code, body := sipTest.GetEndpoint(endpoint)
+	assert.Equal(t, http.StatusFound, code)
+	assert.Contains(t, body, "accounts.google.com")
+}
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 	test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour

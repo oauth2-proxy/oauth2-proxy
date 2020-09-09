@@ -33,3 +33,21 @@ func GetRequestHost(req *http.Request) string {
 	}
 	return host
 }
+
+// GetRequestProto return the request host header or X-Forwarded-Proto if present
+func GetRequestProto(req *http.Request) string {
+	proto := req.Header.Get("X-Forwarded-Proto")
+	if proto == "" {
+		proto = req.URL.Scheme
+	}
+	return proto
+}
+
+// GetRequestUri return the request host header or X-Forwarded-Uri if present
+func GetRequestURI(req *http.Request) string {
+	uri := req.Header.Get("X-Forwarded-Uri")
+	if uri == "" {
+		uri = req.URL.Path
+	}
+	return uri
+}

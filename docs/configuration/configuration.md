@@ -24,6 +24,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | ------ | ---- | ----------- | ------- |
 | `--acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
 | `--approval-prompt` | string | OAuth approval_prompt | `"force"` |
+| `--auth-endpoint-sign-in` | bool | Show sign in page, when request to /oauth2/auth is not authorized | `false` |
 | `--auth-logging` | bool | Log authentication attempts | true |
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |

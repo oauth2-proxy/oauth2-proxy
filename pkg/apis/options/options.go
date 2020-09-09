@@ -80,6 +80,7 @@ type Options struct {
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	SetXAuthRequest       bool     `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
 	SetAuthorization      bool     `flag:"set-authorization-header" cfg:"set_authorization_header"`
+	AuthEndpointSignIn    bool     `flag:"auth-endpoint-sign-in" cfg:"auth_endpoint_sign_in"`
 	PassAuthorization     bool     `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 
@@ -162,6 +163,7 @@ func NewOptions() *Options {
 		PassAccessToken:                  false,
 		SetAuthorization:                 false,
 		PassAuthorization:                false,
+		AuthEndpointSignIn:               false,
 		PreferEmailToUser:                false,
 		Prompt:                           "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                   "force",
@@ -193,6 +195,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
 	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
+	flagSet.Bool("auth-endpoint-sign-in", false, "show sign in page, when request to /oauth2/auth is not authorized")
 	flagSet.Bool("pass-authorization-header", false, "pass the Authorization Header to upstream")
 	flagSet.Bool("set-authorization-header", false, "set Authorization response headers (useful in Nginx auth_request mode)")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "bypass authentication for requests path's that match (may be given multiple times)")

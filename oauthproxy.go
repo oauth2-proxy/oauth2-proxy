@@ -69,8 +69,6 @@ type OAuthProxy struct {
 	OAuthCallbackPath string
 	AuthOnlyPath      string
 	UserInfoPath      string
-	// originally contributed but not merged by: https://github.com/oauth2-proxy/oauth2-proxy/compare/master...maxlaverse:support_traefik?expand=1
-	AuthenticateOrStartPath string
 
 	redirectURL             *url.URL // the url to receive requests at
 	whitelistDomains        []string
@@ -91,6 +89,7 @@ type OAuthProxy struct {
 	PassAccessToken         bool
 	SetAuthorization        bool
 	PassAuthorization       bool
+	AuthEndpointSignIn      bool
 	PreferEmailToUser       bool
 	skipAuthRegex           []string
 	skipAuthPreflight       bool
@@ -180,14 +179,13 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
-		RobotsPath:              "/robots.txt",
-		SignInPath:              fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
-		SignOutPath:             fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
-		OAuthStartPath:          fmt.Sprintf("%s/start", opts.ProxyPrefix),
-		OAuthCallbackPath:       fmt.Sprintf("%s/callback", opts.ProxyPrefix),
-		AuthOnlyPath:            fmt.Sprintf("%s/auth", opts.ProxyPrefix),
-		UserInfoPath:            fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
-		AuthenticateOrStartPath: fmt.Sprintf("%s/auth_or_start", opts.ProxyPrefix), // originally contributed but not merged by: https://github.com/oauth2-proxy/oauth2-proxy/compare/master...maxlaverse:support_traefik?expand=1
+		RobotsPath:        "/robots.txt",
+		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
+		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
+		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
+		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
+		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
+		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
 		ProxyPrefix:             opts.ProxyPrefix,
 		provider:                opts.GetProvider(),
@@ -211,6 +209,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		BasicAuthPassword:       opts.BasicAuthPassword,
 		PassAccessToken:         opts.PassAccessToken,
 		SetAuthorization:        opts.SetAuthorization,
+		AuthEndpointSignIn:      opts.AuthEndpointSignIn,
 		PassAuthorization:       opts.PassAuthorization,
 		PreferEmailToUser:       opts.PreferEmailToUser,
 		SkipProviderButton:      opts.SkipProviderButton,
@@ -495,11 +494,9 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	}
 
 	redirect = req.Header.Get("X-Auth-Request-Redirect")
-	logger.Printf("X-Auth-Request-Redirect: %s", redirect)
 	// traefik does not send X-Auth-Request-Redirect, so give the traefik headers a try in case X-Auth-Request-Redirect is not set
 	if !p.IsValidRedirect(redirect) {
-		redirect = req.Header.Get("X-Forwarded-Proto") + "://" + req.Header.Get("X-Forwarded-Host") + req.Header.Get("X-Forwarded-Uri")
-		logger.Printf("X-Forwarded-* headers combined: %s", redirect)
+		redirect = util.GetRequestProto(req) + "://" + util.GetRequestHost(req) + util.GetRequestURI(req)
 	}
 	if req.Form.Get("rd") != "" {
 		redirect = req.Form.Get("rd")
@@ -670,9 +667,6 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.AuthenticateOnly(rw, req)
 	case path == p.UserInfoPath:
 		p.UserInfo(rw, req)
-	// originally contributed but not merged by: https://github.com/oauth2-proxy/oauth2-proxy/compare/master...maxlaverse:support_traefik?expand=1
-	case path == p.AuthenticateOrStartPath:
-		p.AuthenticateOrStart(rw, req)
 	default:
 		p.Proxy(rw, req)
 	}
@@ -838,13 +832,28 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
-		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
-		return
+		if p.AuthEndpointSignIn {
+			if isAjax(req) {
+				// no point redirecting an AJAX request
+				p.ErrorJSON(rw, http.StatusUnauthorized)
+				return
+			}
+
+			if p.SkipProviderButton {
+				p.OAuthStart(rw, req)
+			} else {
+				p.SignInPage(rw, req, http.StatusForbidden)
+			}
+		} else {
+			http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+			return
+		}
+	} else {
+		// we are authenticated
+		p.addHeadersForProxying(rw, req, session)
+		rw.WriteHeader(http.StatusAccepted)
 	}
 
-	// we are authenticated
-	p.addHeadersForProxying(rw, req, session)
-	rw.WriteHeader(http.StatusAccepted)
 }
 
 // SkipAuthProxy proxies whitelisted requests and skips authentication
@@ -853,38 +862,6 @@ func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
 		p.stripAuthHeaders(req)
 	}
 	p.serveMux.ServeHTTP(rw, req)
-}
-
-// originally contributed but not merged by: https://github.com/oauth2-proxy/oauth2-proxy/compare/master...maxlaverse:support_traefik?expand=1
-// AuthenticateOrStart checks whether the user is currently logged in and start
-func (p *OAuthProxy) AuthenticateOrStart(rw http.ResponseWriter, req *http.Request) {
-	session, err := p.getAuthenticatedSession(rw, req)
-	switch err {
-	case nil:
-		// we are authenticated
-		p.addHeadersForProxying(rw, req, session)
-		rw.WriteHeader(http.StatusAccepted)
-
-	case ErrNeedsLogin:
-		// we need to send the user to a login screen
-		if isAjax(req) {
-			// no point redirecting an AJAX request
-			p.ErrorJSON(rw, http.StatusUnauthorized)
-			return
-		}
-
-		if p.SkipProviderButton {
-			p.OAuthStart(rw, req)
-		} else {
-			p.SignInPage(rw, req, http.StatusForbidden)
-		}
-
-	default:
-		// unknown error
-		logger.Errorf("Unexpected internal error: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError,
-			"Internal Error", "Internal Error")
-	}
 }
 
 // Proxy proxies the user request if the user is authenticated else it prompts
