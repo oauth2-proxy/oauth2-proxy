@@ -37,11 +37,6 @@ jobs:
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
 
-    - name: Before Build
-      run: |
-        cd src/github.com/${{ github.repository }}
-        ./cc-test-reporter before-build
-
     - name: Lint
       run: |
         cd src/github.com/${{ github.repository }}
@@ -55,9 +50,8 @@ jobs:
     - name: Test
       run: |
         cd src/github.com/${{ github.repository }}
+        ./cc-test-reporter before-build
         make test
 
-    - name: After build
-      run: |
-        cd src/github.com/${{ github.repository }}
-        ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT -t gocov
+    - run: ./cc-test-reporter after-build -t gocov
+      if: ${{ always() }}
