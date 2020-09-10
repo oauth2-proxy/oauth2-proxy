@@ -88,7 +88,7 @@ func newValidatorImpl(domains []string, usersFile string,
 
 	validator := func(email string) (valid bool) {
 		if allowAll {
-			valid = true
+			return true
 		}
 		if email == "" {
 			return
