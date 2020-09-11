@@ -8,6 +8,8 @@
 
 ## Changes since v6.1.1
 
+- [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
+
 # v6.1.1
 
 ## Release Highlights
