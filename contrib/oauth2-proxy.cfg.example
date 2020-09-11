@@ -59,7 +59,7 @@
 # authenticated_emails_file = ""
 
 ## Htpasswd File (optional)
-## Additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
+## Additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -B" for bcrypt encryption
 ## enabling exposes a username/login signin form
 # htpasswd_file = ""
 
