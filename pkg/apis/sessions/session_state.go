@@ -11,7 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
-	"github.com/pierrec/lz4"
+	"github.com/pierrec/lz4/v4"
 	"github.com/vmihailenco/msgpack/v4"
 )
 
@@ -164,12 +164,11 @@ func into(s *string, f codecFunc) error {
 // algorithms.
 func lz4Compress(payload []byte) ([]byte, error) {
 	buf := new(bytes.Buffer)
-	zw := lz4.NewWriter(nil)
-	zw.Header = lz4.Header{
-		BlockMaxSize:     65536,
-		CompressionLevel: 0,
-	}
-	zw.Reset(buf)
+	zw := lz4.NewWriter(buf)
+	zw.Apply(
+		lz4.BlockSizeOption(65536),
+		lz4.CompressionLevelOption(lz4.Fast),
+	)
 
 	reader := bytes.NewReader(payload)
 	_, err := io.Copy(zw, reader)

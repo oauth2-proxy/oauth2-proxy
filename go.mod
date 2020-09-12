@@ -9,7 +9,6 @@ require (
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/justinas/alice v1.2.0
@@ -17,7 +16,7 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
-	github.com/pierrec/lz4 v2.5.2+incompatible
+	github.com/pierrec/lz4/v4 v4.0.2
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
