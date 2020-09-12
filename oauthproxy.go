@@ -691,7 +691,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-//UserInfo endpoint outputs session email and preferred username in JSON format
+// UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
 	session, err := p.getAuthenticatedSession(rw, req)

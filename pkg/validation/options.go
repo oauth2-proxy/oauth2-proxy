@@ -41,7 +41,9 @@ func Validate(o *options.Options) error {
 		if err == nil {
 			transport := &http.Transport{
 				TLSClientConfig: &tls.Config{
-					RootCAs: pool,
+					RootCAs:    pool,
+					MinVersion: tls.VersionTLS12,
+					MaxVersion: tls.VersionTLS13,
 				},
 			}
 
