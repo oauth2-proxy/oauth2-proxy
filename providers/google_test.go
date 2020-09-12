@@ -198,33 +198,36 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 
 func TestGoogleProviderUserInGroup(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/groups/group@example.com/hasMember/member-in-domain@example.com" {
+		switch r.URL.Path {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/member-in-domain@example.com":
 			fmt.Fprintln(w, `{"isMember": true}`)
-		} else if r.URL.Path == "/groups/group@example.com/hasMember/non-member-in-domain@example.com" {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/non-member-in-domain@example.com":
 			fmt.Fprintln(w, `{"isMember": false}`)
-		} else if r.URL.Path == "/groups/group@example.com/hasMember/member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/member-out-of-domain@otherexample.com":
 			http.Error(
 				w,
 				`{"error": {"errors": [{"domain": "global","reason": "invalid","message": "Invalid Input: memberKey"}],"code": 400,"message": "Invalid Input: memberKey"}}`,
 				http.StatusBadRequest,
 			)
-		} else if r.URL.Path == "/groups/group@example.com/hasMember/non-member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/hasMember/non-member-out-of-domain@otherexample.com":
 			http.Error(
 				w,
 				`{"error": {"errors": [{"domain": "global","reason": "invalid","message": "Invalid Input: memberKey"}],"code": 400,"message": "Invalid Input: memberKey"}}`,
 				http.StatusBadRequest,
 			)
-		} else if r.URL.Path == "/groups/group@example.com/members/non-member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/members/non-member-out-of-domain@otherexample.com":
 			// note that the client currently doesn't care what this response text or code is - any error here results in failure to match the group
 			http.Error(
 				w,
 				`{"error": {"errors": [{"domain": "global","reason": "notFound","message": "Resource Not Found: memberKey"}],"code": 404,"message": "Resource Not Found: memberKey"}}`,
 				http.StatusNotFound,
 			)
-		} else if r.URL.Path == "/groups/group@example.com/members/member-out-of-domain@otherexample.com" {
+		case "/admin/directory/v1/groups/group@example.com/members/member-out-of-domain@otherexample.com":
 			fmt.Fprintln(w,
 				`{"kind": "admin#directory#member","etag":"12345","id":"1234567890","email": "member-out-of-domain@otherexample.com","role": "MEMBER","type": "USER","status": "ACTIVE","delivery_settings": "ALL_MAIL"}}`,
 			)
+		default:
+			t.Error("url does not matched", r.URL.Path)
 		}
 	}))
 	defer ts.Close()
@@ -233,8 +236,8 @@ func TestGoogleProviderUserInGroup(t *testing.T) {
 	ctx := context.Background()
 
 	service, err := admin.NewService(ctx, option.WithHTTPClient(client))
-	service.BasePath = ts.URL
 	assert.Equal(t, nil, err)
+	service.BasePath = ts.URL
 
 	result := userInGroup(service, []string{"group@example.com"}, "member-in-domain@example.com")
 	assert.True(t, result)
