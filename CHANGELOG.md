@@ -4,11 +4,14 @@
 
 ## Important Notes
 
+- Drop support for TLS 1.1 or lower.
+
 ## Breaking Changes
 
 ## Changes since v6.1.1
 
 - [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
+- [#774](https://github.com/oauth2-proxy/oauth2-proxy/pull/774) Update Go version and dependencies (@johejo)
 
 # v6.1.1
 
