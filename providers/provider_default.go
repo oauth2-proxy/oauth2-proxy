@@ -73,8 +73,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 	return
 }
 
-// GetLoginURL with typical oauth parameters
-func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
+func DefaultGetLoginURL(p *ProviderData, redirectURI, state string) (url.URL, url.Values) {
 	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
@@ -93,6 +92,12 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}
+	return a, params
+}
+
+// GetLoginURL with typical oauth parameters
+func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
+	a, params := DefaultGetLoginURL(p, redirectURI, state)
 	a.RawQuery = params.Encode()
 	return a.String()
 }
