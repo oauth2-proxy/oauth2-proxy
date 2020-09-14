@@ -225,19 +225,11 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
 func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
-	a := *p.LoginURL
-	params, _ := url.ParseQuery(a.RawQuery)
-	params.Set("redirect_uri", redirectURI)
-	params.Set("approval_prompt", p.ApprovalPrompt)
-	params.Add("scope", p.Scope)
-	params.Set("client_id", p.ClientID)
-	params.Set("response_type", "code")
-	params.Add("state", state)
-	acr := p.AcrValues
-	if acr == "" {
-		acr = "http://idmanagement.gov/ns/assurance/loa/1"
+	a, params := DefaultGetLoginURL(p.ProviderData, redirectURI, state)
+	if p.AcrValues == "" {
+		acr := "http://idmanagement.gov/ns/assurance/loa/1"
+		params.Add("acr_values", acr)
 	}
-	params.Add("acr_values", acr)
 	params.Add("nonce", p.Nonce)
 	a.RawQuery = params.Encode()
 	return a.String()
