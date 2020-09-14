@@ -47,21 +47,3 @@ func TestAcrValuesConfigured(t *testing.T) {
 	result := p.GetLoginURL("https://my.test.app/oauth", "")
 	assert.Contains(t, result, "acr_values=testValue")
 }
-
-func TestProtectedResourceConfigured(t *testing.T) {
-	p := &ProviderData{
-		LoginURL: &url.URL{
-			Scheme: "http",
-			Host:   "my.test.idp",
-			Path:   "/oauth/authorize",
-		},
-		AcrValues: "testValue",
-		ProtectedResource: &url.URL{
-			Scheme: "http",
-			Host:   "my.resource.test",
-		},
-	}
-
-	result := p.GetLoginURL("https://my.test.app/oauth", "")
-	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
-}

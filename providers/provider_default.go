@@ -89,9 +89,6 @@ func DefaultGetLoginURL(p *ProviderData, redirectURI, state string) (url.URL, ur
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
 	params.Add("state", state)
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		params.Add("resource", p.ProtectedResource.String())
-	}
 	return a, params
 }
 
