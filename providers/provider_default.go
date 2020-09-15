@@ -75,8 +75,8 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 
 // GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	a, params := makeLoginURL(p, redirectURI, state)
-	a.RawQuery = params.Encode()
+	extraParams := url.Values{}
+	a := makeLoginURL(p, redirectURI, state, extraParams)
 	return a.String()
 }
 

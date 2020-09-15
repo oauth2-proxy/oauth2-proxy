@@ -31,7 +31,7 @@ func makeOIDCHeader(accessToken string) http.Header {
 	return makeAuthorizationHeader(tokenTypeBearer, accessToken, extraHeaders)
 }
 
-func makeLoginURL(p *ProviderData, redirectURI, state string) (url.URL, url.Values) {
+func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Values) url.URL {
 	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
@@ -47,5 +47,11 @@ func makeLoginURL(p *ProviderData, redirectURI, state string) (url.URL, url.Valu
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
 	params.Add("state", state)
-	return a, params
+	for n, p := range extraParams {
+		for _, v := range p {
+			params.Add(n, v)
+		}
+	}
+	a.RawQuery = params.Encode()
+	return a
 }
