@@ -73,28 +73,9 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 	return
 }
 
-func DefaultGetLoginURL(p *ProviderData, redirectURI, state string) (url.URL, url.Values) {
-	a := *p.LoginURL
-	params, _ := url.ParseQuery(a.RawQuery)
-	params.Set("redirect_uri", redirectURI)
-	if p.AcrValues != "" {
-		params.Add("acr_values", p.AcrValues)
-	}
-	if p.Prompt != "" {
-		params.Set("prompt", p.Prompt)
-	} else { // Legacy variant of the prompt param:
-		params.Set("approval_prompt", p.ApprovalPrompt)
-	}
-	params.Add("scope", p.Scope)
-	params.Set("client_id", p.ClientID)
-	params.Set("response_type", "code")
-	params.Add("state", state)
-	return a, params
-}
-
 // GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	a, params := DefaultGetLoginURL(p, redirectURI, state)
+	a, params := makeLoginURL(p, redirectURI, state)
 	a.RawQuery = params.Encode()
 	return a.String()
 }

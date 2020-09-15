@@ -212,7 +212,7 @@ func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.Session
 }
 
 func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
-	a, params := DefaultGetLoginURL(p.ProviderData, redirectURI, state)
+	a, params := makeLoginURL(p.ProviderData, redirectURI, state)
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}
