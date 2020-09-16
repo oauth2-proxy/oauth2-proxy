@@ -217,7 +217,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		SignInMessage:           buildSignInMessage(opts),
 
 		basicAuthValidator:  basicAuthValidator,
-		displayHtpasswdForm: basicAuthValidator != nil,
+		displayHtpasswdForm: basicAuthValidator != nil && opts.DisplayHtpasswdForm,
 		sessionChain:        sessionChain,
 	}, nil
 }

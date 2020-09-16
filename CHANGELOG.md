@@ -9,6 +9,7 @@
 ## Changes since v6.1.1
 
 - [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
+- [#778](https://github.com/oauth2-proxy/oauth2-proxy/pull/778) Use display-htpasswd-form flag
 
 # v6.1.1
 
