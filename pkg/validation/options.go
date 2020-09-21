@@ -152,6 +152,10 @@ func Validate(o *options.Options) error {
 		}
 		if o.Scope == "" {
 			o.Scope = "openid email profile"
+
+			if len(o.AllowedGroups) > 0 {
+				o.Scope += " groups"
+			}
 		}
 	}
 
@@ -279,6 +283,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.OIDCProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.UserIDClaim = o.UserIDClaim
+		p.GroupsClaim = o.OIDCGroupsClaim
 		if o.GetOIDCVerifier() == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {
