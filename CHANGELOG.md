@@ -8,10 +8,23 @@
 
 ## Breaking Changes
 
+- A bug in the Azure provider prevented it from properly passing the configured protected `--resource`
+  via the login url. If this option was used in the past, behavior will change with this release as it will
+  affect the tokens returned by Azure. In the past, the tokens were always for `https://graph.microsoft.com` (the default)
+  and will now be for the configured resource (if it exists, otherwise it will run into errors)
+- The Azure provider now has token refresh functionality implemented. This means that there won't
+  be any redirects in the browser anymore when tokens expire, but instead a token refresh is initiated
+  in the background, which leads to new tokens being returned in the cookies.
+- Pleas note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
+  Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
+  to decide if a refresh is required.
+
 ## Changes since v6.1.1
 
 - [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
 - [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Add support to ensure user belongs in required groups when using the OIDC provider (@stefansedich)
+- [#753](https://github.com/oauth2-proxy/oauth2-proxy/pull/753) Pass resource parameter in login url (@codablock)
+- [#754](https://github.com/oauth2-proxy/oauth2-proxy/pull/754) Azure token refresh (@codablock)
 
 # v6.1.1
 
