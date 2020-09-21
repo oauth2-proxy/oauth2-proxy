@@ -12,9 +12,14 @@
 ## Breaking Changes
 
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) When a Redis session store is configured, OAuth2-Proxy will fail to start up unless connection and health checks to Redis pass
+- A bug in the Azure provider prevented it from properly passing the configured protected `--resource`
+  via the login url. If this option was used in the past, behavior will change with this release as it will
+  affect the tokens returned by Azure. In the past, the tokens were always for `https://graph.microsoft.com` (the default)
+  and will now be for the configured resource (if it exists, otherwise it will run into errors)
 
 ## Changes since v6.1.1
 
+- [#753](https://github.com/oauth2-proxy/oauth2-proxy/pull/753) Pass resource parameter in login url (@codablock)
 - [#575](https://github.com/oauth2-proxy/oauth2-proxy/pull/575) Stop accepting legacy SHA1 signed cookies (@NickMeves)
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) Validate Redis configuration options at startup (@NickMeves)
 - [#791](https://github.com/oauth2-proxy/oauth2-proxy/pull/791) Remove GetPreferredUsername method from provider interface (@NickMeves)
