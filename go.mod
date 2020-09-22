@@ -16,6 +16,7 @@ require (
 	github.com/go-redis/redis/v8 v8.2.3
 	github.com/google/uuid v1.2.0
 	github.com/justinas/alice v1.2.0
+	github.com/lib/pq v1.10.2
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/oauth2-proxy/tools/reference-gen v0.0.0-20210118095127-56ffd7384404

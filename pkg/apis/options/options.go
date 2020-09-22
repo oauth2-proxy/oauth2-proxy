@@ -143,6 +143,9 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("redis-sentinel-connection-urls", []string{}, "List of Redis sentinel connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-sentinel")
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-cluster")
+	flagSet.String("sql-driver", "", "go SQL driver")
+	flagSet.String("sql-dsn", "", "SQL server DSN")
+	flagSet.String("sql-prefix", "oauth2", "SQL table name prefix")
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")

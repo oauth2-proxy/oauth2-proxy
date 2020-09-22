@@ -5,6 +5,7 @@ type SessionOptions struct {
 	Type   string             `flag:"session-store-type" cfg:"session_store_type"`
 	Cookie CookieStoreOptions `cfg:",squash"`
 	Redis  RedisStoreOptions  `cfg:",squash"`
+	SQL    SQLStoreOptions    `cfg:",squash"`
 }
 
 // CookieSessionStoreType is used to indicate the CookieSessionStore should be
@@ -14,6 +15,10 @@ var CookieSessionStoreType = "cookie"
 // RedisSessionStoreType is used to indicate the RedisSessionStore should be
 // used for storing sessions.
 var RedisSessionStoreType = "redis"
+
+// SQLSessionStoreType is used to indicate the SqlSessionStore should be
+// used for storing sessions.
+var SQLSessionStoreType = "sql"
 
 // CookieStoreOptions contains configuration options for the CookieSessionStore.
 type CookieStoreOptions struct {
@@ -34,11 +39,20 @@ type RedisStoreOptions struct {
 	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
 }
 
+type SQLStoreOptions struct {
+	Driver      string `flag:"sql-driver" cfg:"sql_driver"`
+	DSN         string `flag:"sql-dsn" cfg:"sql_dsn"`
+	TablePrefix string `flag:"sql-prefix" cfg:"sql_prefix"`
+}
+
 func sessionOptionsDefaults() SessionOptions {
 	return SessionOptions{
 		Type: CookieSessionStoreType,
 		Cookie: CookieStoreOptions{
 			Minimal: false,
+		},
+		SQL: SQLStoreOptions{
+			TablePrefix: "oauth2",
 		},
 	}
 }
