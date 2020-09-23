@@ -48,6 +48,12 @@ var (
 	invalidRedirectRegex = regexp.MustCompile(`[/\\](?:[\s\v]*|\.{1,2})[/\\]`)
 )
 
+// allowedRoute manages method + path based allowlists
+type allowedRoute struct {
+	method    string
+	pathRegex *regexp.Regexp
+}
+
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
 	CookieSeed     string
@@ -70,6 +76,7 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
+	allowedRoutes           []*allowedRoute
 	redirectURL             *url.URL // the url to receive requests at
 	whitelistDomains        []string
 	provider                providers.Provider
@@ -90,13 +97,11 @@ type OAuthProxy struct {
 	SetAuthorization        bool
 	PassAuthorization       bool
 	PreferEmailToUser       bool
-	skipAuthRegex           []string
 	skipAuthPreflight       bool
 	skipAuthStripHeaders    bool
 	skipJwtBearerTokens     bool
 	mainJwtBearerVerifier   *oidc.IDTokenVerifier
 	extraJwtBearerVerifiers []*oidc.IDTokenVerifier
-	compiledRegex           []*regexp.Regexp
 	templates               *template.Template
 	realClientIPParser      ipapi.RealClientIPParser
 	trustedIPs              *ip.NetSet
@@ -119,10 +124,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), proxyErrorHandler)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
-	}
-
-	for _, u := range opts.GetCompiledRegex() {
-		logger.Printf("compiled skip-auth-regex => %q", u)
 	}
 
 	if opts.SkipJwtBearerTokens {
@@ -163,6 +164,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
+	allowedRoutes, err := buildRoutesAllowlist(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	sessionChain := buildSessionChain(opts, sessionStore, basicAuthValidator)
 
 	return &OAuthProxy{
@@ -192,14 +198,13 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		sessionStore:            sessionStore,
 		serveMux:                upstreamProxy,
 		redirectURL:             redirectURL,
+		allowedRoutes:           allowedRoutes,
 		whitelistDomains:        opts.WhitelistDomains,
-		skipAuthRegex:           opts.SkipAuthRegex,
 		skipAuthPreflight:       opts.SkipAuthPreflight,
 		skipAuthStripHeaders:    opts.SkipAuthStripHeaders,
 		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
 		mainJwtBearerVerifier:   opts.GetOIDCVerifier(),
 		extraJwtBearerVerifiers: opts.GetJWTBearerVerifiers(),
-		compiledRegex:           opts.GetCompiledRegex(),
 		realClientIPParser:      opts.GetRealClientIPParser(),
 		SetXAuthRequest:         opts.SetXAuthRequest,
 		PassBasicAuth:           opts.PassBasicAuth,
@@ -275,6 +280,51 @@ func buildSignInMessage(opts *options.Options) string {
 		}
 	}
 	return msg
+}
+
+// buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
+// SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
+// (method=path support)
+func buildRoutesAllowlist(opts *options.Options) ([]*allowedRoute, error) {
+	var routes []*allowedRoute
+
+	for _, path := range opts.SkipAuthRegex {
+		compiledRegex, err := regexp.Compile(path)
+		if err != nil {
+			return nil, err
+		}
+		routes = append(routes, &allowedRoute{
+			method:    "",
+			pathRegex: compiledRegex,
+		})
+	}
+
+	for _, methodPath := range opts.SkipAuthRoutes {
+		var (
+			method string
+			path   string
+		)
+
+		parts := strings.Split(methodPath, "=")
+		if len(parts) == 1 {
+			method = ""
+			path = parts[0]
+		} else {
+			method = strings.ToUpper(parts[0])
+			path = strings.Join(parts[1:], "=")
+		}
+
+		compiledRegex, err := regexp.Compile(path)
+		if err != nil {
+			return nil, err
+		}
+		routes = append(routes, &allowedRoute{
+			method:    method,
+			pathRegex: compiledRegex,
+		})
+	}
+
+	return routes, nil
 }
 
 // GetRedirectURI returns the redirectURL that the upstream OAuth Provider will
@@ -584,16 +634,16 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 	}
 }
 
-// IsWhitelistedRequest is used to check if auth should be skipped for this request
-func (p *OAuthProxy) IsWhitelistedRequest(req *http.Request) bool {
+// IsAllowedRequest is used to check if auth should be skipped for this request
+func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.IsWhitelistedPath(req.URL.Path) || p.IsTrustedIP(req)
+	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.IsTrustedIP(req)
 }
 
-// IsWhitelistedPath is used to check if the request path is allowed without auth
-func (p *OAuthProxy) IsWhitelistedPath(path string) bool {
-	for _, u := range p.compiledRegex {
-		if u.MatchString(path) {
+// IsAllowedRoute is used to check if the request method & path is allowed without auth
+func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
+	for _, route := range p.allowedRoutes {
+		if (route.method == "" || req.Method == route.method) && route.pathRegex.MatchString(req.URL.Path) {
 			return true
 		}
 	}
@@ -643,7 +693,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	switch path := req.URL.Path; {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
-	case p.IsWhitelistedRequest(req):
+	case p.IsAllowedRequest(req):
 		p.SkipAuthProxy(rw, req)
 	case path == p.SignInPath:
 		p.SignIn(rw, req)
@@ -831,7 +881,7 @@ func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request)
 	rw.WriteHeader(http.StatusAccepted)
 }
 
-// SkipAuthProxy proxies whitelisted requests and skips authentication
+// SkipAuthProxy proxies allowlisted requests and skips authentication
 func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
 	if p.skipAuthStripHeaders {
 		p.stripAuthHeaders(req)
@@ -1026,7 +1076,7 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	}
 }
 
-// stripAuthHeaders removes Auth headers for whitelisted routes from skipAuthRegex
+// stripAuthHeaders removes Auth headers for allowlisted routes from skipAuthRegex
 func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
 	if p.PassBasicAuth {
 		req.Header.Del("X-Forwarded-User")
