@@ -104,11 +104,6 @@ func (p *ProviderData) GetUserName(ctx context.Context, s *sessions.SessionState
 	return "", errors.New("not implemented")
 }
 
-// GetPreferredUsername returns the Account preferred username
-func (p *ProviderData) GetPreferredUsername(ctx context.Context, s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
-}
-
 // ValidateGroup validates that the provided email exists in the configured provider
 // email group(s).
 func (p *ProviderData) ValidateGroup(email string) bool {

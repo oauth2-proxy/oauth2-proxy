@@ -310,13 +310,6 @@ func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (s *sess
 		s.Email, err = p.provider.GetEmailAddress(ctx, s)
 	}
 
-	if s.PreferredUsername == "" {
-		s.PreferredUsername, err = p.provider.GetPreferredUsername(ctx, s)
-		if err != nil && err.Error() == "not implemented" {
-			err = nil
-		}
-	}
-
 	if s.User == "" {
 		s.User, err = p.provider.GetUserName(ctx, s)
 		if err != nil && err.Error() == "not implemented" {
