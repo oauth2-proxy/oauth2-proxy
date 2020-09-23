@@ -297,6 +297,16 @@ func TestIsValidRedirect(t *testing.T) {
 			Redirect:       "/\t/\t\\evil.com",
 			ExpectedResult: false,
 		},
+		{
+			Desc:           "validHTTPwithQueryIncURL",
+			Redirect:       "https://foo.bar/redirect?param=https://evil.com/path|12345",
+			ExpectedResult: true,
+		},
+		{
+			Desc:           "validSingleSlashWithQueryIncURL",
+			Redirect:       "/redirect?param=https://evil.com/path|12345",
+			ExpectedResult: true,
+		},
 	}
 
 	for _, tc := range testCases {
