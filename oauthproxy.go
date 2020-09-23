@@ -296,27 +296,31 @@ func (p *OAuthProxy) GetRedirectURI(host string) string {
 	return u.String()
 }
 
-func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (s *sessionsapi.SessionState, err error) {
+func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (*sessionsapi.SessionState, error) {
 	if code == "" {
 		return nil, errors.New("missing code")
 	}
 	redirectURI := p.GetRedirectURI(host)
-	s, err = p.provider.Redeem(ctx, redirectURI, code)
+	s, err := p.provider.Redeem(ctx, redirectURI, code)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if s.Email == "" {
 		s.Email, err = p.provider.GetEmailAddress(ctx, s)
+		if err != nil && err.Error() != "not implemented" {
+			return nil, err
+		}
 	}
 
 	if s.User == "" {
 		s.User, err = p.provider.GetUserName(ctx, s)
-		if err != nil && err.Error() == "not implemented" {
-			err = nil
+		if err != nil && err.Error() != "not implemented" {
+			return nil, err
 		}
 	}
-	return
+
+	return s, nil
 }
 
 // MakeCSRFCookie creates a cookie for CSRF

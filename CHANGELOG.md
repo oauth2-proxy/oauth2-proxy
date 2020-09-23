@@ -17,6 +17,7 @@
 
 - [#575](https://github.com/oauth2-proxy/oauth2-proxy/pull/575) Stop accepting legacy SHA1 signed cookies (@NickMeves)
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) Validate Redis configuration options at startup (@NickMeves)
+- [#791](https://github.com/oauth2-proxy/oauth2-proxy/pull/791) Remove GetPreferredUsername method from provider interface (@NickMeves)
 - [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
 - [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Add support to ensure user belongs in required groups when using the OIDC provider (@stefansedich)
 
