@@ -1,149 +1,124 @@
 package validation
 
 import (
-	"testing"
-
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/stretchr/testify/assert"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 )
 
-func Test_validateAllowlists(t *testing.T) {
-	opts := &options.Options{
-		SkipAuthRoutes: []string{
-			"POST=/foo/bar",
-			"PUT=^/foo/bar$",
-		},
-		SkipAuthRegex: []string{"/foo/baz"},
-		TrustedIPs: []string{
-			"10.32.0.1/32",
-			"43.36.201.0/24",
-		},
+var _ = Describe("Allowlist", func() {
+	type validateRoutesTableInput struct {
+		routes     []string
+		errStrings []string
 	}
-	assert.Equal(t, []string{}, validateAllowlists(opts))
-}
 
-func Test_validateRoutes(t *testing.T) {
-	testCases := map[string]struct {
-		Regexes  []string
-		Expected []string
-	}{
-		"Valid regex routes": {
-			Regexes: []string{
+	type validateRegexesTableInput struct {
+		regexes    []string
+		errStrings []string
+	}
+
+	type validateTrustedIPsTableInput struct {
+		trustedIPs []string
+		errStrings []string
+	}
+
+	DescribeTable("validateRoutes",
+		func(r *validateRoutesTableInput) {
+			opts := &options.Options{
+				SkipAuthRoutes: r.routes,
+			}
+			Expect(validateRoutes(opts)).To(ConsistOf(r.errStrings))
+		},
+		Entry("Valid regex routes", &validateRoutesTableInput{
+			routes: []string{
 				"/foo",
 				"POST=/foo/bar",
 				"PUT=^/foo/bar$",
 				"DELETE=/crazy/(?:regex)?/[^/]+/stuff$",
 			},
-			Expected: []string{},
-		},
-		"Bad regexes do not compile": {
-			Regexes: []string{
+			errStrings: []string{},
+		}),
+		Entry("Bad regexes do not compile", &validateRoutesTableInput{
+			routes: []string{
 				"POST=/(foo",
 				"OPTIONS=/foo/bar)",
 				"GET=^]/foo/bar[$",
 				"GET=^]/foo/bar[$",
 			},
-			Expected: []string{
+			errStrings: []string{
 				"error compiling regex //(foo/: error parsing regexp: missing closing ): `/(foo`",
 				"error compiling regex //foo/bar)/: error parsing regexp: unexpected ): `/foo/bar)`",
 				"error compiling regex /^]/foo/bar[$/: error parsing regexp: missing closing ]: `[$`",
 				"error compiling regex /^]/foo/bar[$/: error parsing regexp: missing closing ]: `[$`",
 			},
-		},
-	}
+		}),
+	)
 
-	for testName, tc := range testCases {
-		t.Run(testName, func(t *testing.T) {
+	DescribeTable("validateRegexes",
+		func(r *validateRegexesTableInput) {
 			opts := &options.Options{
-				SkipAuthRoutes: tc.Regexes,
+				SkipAuthRegex: r.regexes,
 			}
-			msgs := validateRoutes(opts)
-			assert.Equal(t, tc.Expected, msgs)
-		})
-	}
-}
-
-func Test_validateRegexes(t *testing.T) {
-	testCases := map[string]struct {
-		Regexes  []string
-		Expected []string
-	}{
-		"Valid regex routes": {
-			Regexes: []string{
+			Expect(validateRegexes(opts)).To(ConsistOf(r.errStrings))
+		},
+		Entry("Valid regex routes", &validateRegexesTableInput{
+			regexes: []string{
 				"/foo",
 				"/foo/bar",
 				"^/foo/bar$",
 				"/crazy/(?:regex)?/[^/]+/stuff$",
 			},
-			Expected: []string{},
-		},
-		"Bad regexes do not compile": {
-			Regexes: []string{
+			errStrings: []string{},
+		}),
+		Entry("Bad regexes do not compile", &validateRegexesTableInput{
+			regexes: []string{
 				"/(foo",
 				"/foo/bar)",
 				"^]/foo/bar[$",
 				"^]/foo/bar[$",
 			},
-			Expected: []string{
+			errStrings: []string{
 				"error compiling regex //(foo/: error parsing regexp: missing closing ): `/(foo`",
 				"error compiling regex //foo/bar)/: error parsing regexp: unexpected ): `/foo/bar)`",
 				"error compiling regex /^]/foo/bar[$/: error parsing regexp: missing closing ]: `[$`",
 				"error compiling regex /^]/foo/bar[$/: error parsing regexp: missing closing ]: `[$`",
 			},
-		},
-	}
+		}),
+	)
 
-	for testName, tc := range testCases {
-		t.Run(testName, func(t *testing.T) {
+	DescribeTable("validateTrustedIPs",
+		func(t *validateTrustedIPsTableInput) {
 			opts := &options.Options{
-				SkipAuthRegex: tc.Regexes,
+				TrustedIPs: t.trustedIPs,
 			}
-			msgs := validateRegexes(opts)
-			assert.Equal(t, tc.Expected, msgs)
-		})
-	}
-}
-
-func Test_validateTrustedIPs(t *testing.T) {
-	testCases := map[string]struct {
-		TrustedIPs []string
-		Expected   []string
-	}{
-		"Non-overlapping valid IPs": {
-			TrustedIPs: []string{
+			Expect(validateTrustedIPs(opts)).To(ConsistOf(t.errStrings))
+		},
+		Entry("Non-overlapping valid IPs", &validateTrustedIPsTableInput{
+			trustedIPs: []string{
 				"127.0.0.1",
 				"10.32.0.1/32",
 				"43.36.201.0/24",
 				"::1",
 				"2a12:105:ee7:9234:0:0:0:0/64",
 			},
-			Expected: []string{},
-		},
-		"Overlapping valid IPs": {
-			TrustedIPs: []string{
+			errStrings: []string{},
+		}),
+		Entry("Overlapping valid IPs", &validateTrustedIPsTableInput{
+			trustedIPs: []string{
 				"135.180.78.199",
 				"135.180.78.199/32",
 				"d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4",
 				"d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4/128",
 			},
-			Expected: []string{},
-		},
-		"Invalid IPs": {
-			TrustedIPs: []string{"[::1]", "alkwlkbn/32"},
-			Expected: []string{
+			errStrings: []string{},
+		}),
+		Entry("Invalid IPs", &validateTrustedIPsTableInput{
+			trustedIPs: []string{"[::1]", "alkwlkbn/32"},
+			errStrings: []string{
 				"trusted_ips[0] ([::1]) could not be recognized",
 				"trusted_ips[1] (alkwlkbn/32) could not be recognized",
 			},
-		},
-	}
-
-	for testName, tc := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			opts := &options.Options{
-				TrustedIPs: tc.TrustedIPs,
-			}
-			msgs := validateTrustedIPs(opts)
-			assert.Equal(t, tc.Expected, msgs)
-		})
-	}
-}
+		}),
+	)
+})
