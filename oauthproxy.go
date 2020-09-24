@@ -286,7 +286,7 @@ func buildSignInMessage(opts *options.Options) string {
 // SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
 // (method=path support)
 func buildRoutesAllowlist(opts *options.Options) ([]*allowedRoute, error) {
-	var routes []*allowedRoute
+	routes := make([]*allowedRoute, 0, len(opts.SkipAuthRegex)+len(opts.SkipAuthRoutes))
 
 	for _, path := range opts.SkipAuthRegex {
 		compiledRegex, err := regexp.Compile(path)
