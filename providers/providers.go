@@ -12,7 +12,6 @@ type Provider interface {
 	Data() *ProviderData
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	GetUserName(ctx context.Context, s *sessions.SessionState) (string, error)
-	GetPreferredUsername(ctx context.Context, s *sessions.SessionState) (string, error)
 	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
 	ValidateGroup(string) bool
 	ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool
