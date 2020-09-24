@@ -1,14 +1,17 @@
 package validation
 
 import (
-	"testing"
 	"time"
 
+	"github.com/Bose/minisentinel"
+	"github.com/alicebob/miniredis/v2"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
-func Test_validateSessionCookieMinimal(t *testing.T) {
+var _ = Describe("Sessions", func() {
 	const (
 		passAuthorizationMsg = "pass_authorization_header requires oauth tokens in sessions. session_cookie_minimal cannot be set"
 		setAuthorizationMsg  = "set_authorization_header requires oauth tokens in sessions. session_cookie_minimal cannot be set"
@@ -16,11 +19,16 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 		cookieRefreshMsg     = "cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set"
 	)
 
-	testCases := map[string]struct {
+	type cookieMinimalTableInput struct {
 		opts       *options.Options
 		errStrings []string
-	}{
-		"No minimal cookie session": {
+	}
+
+	DescribeTable("validateSessionCookieMinimal",
+		func(o *cookieMinimalTableInput) {
+			Expect(validateSessionCookieMinimal(o.opts)).To(ConsistOf(o.errStrings))
+		},
+		Entry("No minimal cookie session", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
@@ -29,8 +37,8 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 				},
 			},
 			errStrings: []string{},
-		},
-		"No minimal cookie session & passAuthorization": {
+		}),
+		Entry("No minimal cookie session & passAuthorization", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
@@ -40,8 +48,8 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 				PassAuthorization: true,
 			},
 			errStrings: []string{},
-		},
-		"Minimal cookie session no conflicts": {
+		}),
+		Entry("Minimal cookie session no conflicts", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
@@ -50,8 +58,8 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 				},
 			},
 			errStrings: []string{},
-		},
-		"PassAuthorization conflict": {
+		}),
+		Entry("PassAuthorization conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
@@ -61,8 +69,8 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 				PassAuthorization: true,
 			},
 			errStrings: []string{passAuthorizationMsg},
-		},
-		"SetAuthorization conflict": {
+		}),
+		Entry("SetAuthorization conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
@@ -72,8 +80,8 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 				SetAuthorization: true,
 			},
 			errStrings: []string{setAuthorizationMsg},
-		},
-		"PassAccessToken conflict": {
+		}),
+		Entry("PassAccessToken conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
@@ -83,8 +91,8 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 				PassAccessToken: true,
 			},
 			errStrings: []string{passAccessTokenMsg},
-		},
-		"CookieRefresh conflict": {
+		}),
+		Entry("CookieRefresh conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Cookie: options.Cookie{
 					Refresh: time.Hour,
@@ -96,8 +104,8 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 				},
 			},
 			errStrings: []string{cookieRefreshMsg},
-		},
-		"Multiple conflicts": {
+		}),
+		Entry("Multiple conflicts", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
@@ -108,14 +116,228 @@ func Test_validateSessionCookieMinimal(t *testing.T) {
 				PassAccessToken:   true,
 			},
 			errStrings: []string{passAuthorizationMsg, passAccessTokenMsg},
-		},
+		}),
+	)
+
+	const (
+		clusterAndSentinelMsg     = "unable to initialize a redis client: options redis-use-sentinel and redis-use-cluster are mutually exclusive"
+		parseWrongSchemeMsg       = "unable to initialize a redis client: unable to parse redis url: invalid redis URL scheme: https"
+		parseWrongFormatMsg       = "unable to initialize a redis client: unable to parse redis url: invalid redis database number: \"wrong\""
+		invalidPasswordSetMsg     = "unable to set a redis initialization key: WRONGPASS invalid username-password pair"
+		invalidPasswordDelMsg     = "unable to delete the redis initialization key: WRONGPASS invalid username-password pair"
+		unreachableRedisSetMsg    = "unable to set a redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"
+		unreachableRedisDelMsg    = "unable to delete the redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"
+		unreachableSentinelSetMsg = "unable to set a redis initialization key: redis: all sentinels are unreachable"
+		unrechableSentinelDelMsg  = "unable to delete the redis initialization key: redis: all sentinels are unreachable"
+	)
+
+	type redisStoreTableInput struct {
+		// miniredis setup details
+		password        string
+		useSentinel     bool
+		setAddr         bool
+		setSentinelAddr bool
+		setMasterName   bool
+
+		opts       *options.Options
+		errStrings []string
 	}
 
-	for testName, tc := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			errStrings := validateSessionCookieMinimal(tc.opts)
-			g := NewWithT(t)
-			g.Expect(errStrings).To(ConsistOf(tc.errStrings))
-		})
-	}
-}
+	DescribeTable("validateRedisSessionStore",
+		func(o *redisStoreTableInput) {
+			mr, err := miniredis.Run()
+			Expect(err).ToNot(HaveOccurred())
+			mr.RequireAuth(o.password)
+			defer mr.Close()
+
+			if o.setAddr && !o.useSentinel {
+				o.opts.Session.Redis.ConnectionURL = "redis://" + mr.Addr()
+			}
+
+			if o.useSentinel {
+				ms := minisentinel.NewSentinel(mr)
+				Expect(ms.Start()).To(Succeed())
+				defer ms.Close()
+
+				if o.setSentinelAddr {
+					o.opts.Session.Redis.SentinelConnectionURLs = []string{"redis://" + ms.Addr()}
+				}
+				if o.setMasterName {
+					o.opts.Session.Redis.SentinelMasterName = ms.MasterInfo().Name
+				}
+			}
+
+			Expect(validateRedisSessionStore(o.opts)).To(ConsistOf(o.errStrings))
+		},
+		Entry("cookie sessions are skipped", &redisStoreTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.CookieSessionStoreType,
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("connect successfully to pure redis", &redisStoreTableInput{
+			setAddr: true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("failed redis connection with wrong address", &redisStoreTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						ConnectionURL: "redis://127.0.0.1:65535",
+					},
+				},
+			},
+			errStrings: []string{unreachableRedisSetMsg, unreachableRedisDelMsg},
+		}),
+		Entry("fail to parse an invalid connection URL with wrong scheme", &redisStoreTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						ConnectionURL: "https://example.com",
+					},
+				},
+			},
+			errStrings: []string{parseWrongSchemeMsg},
+		}),
+		Entry("fail to parse an invalid connection URL with invalid format", &redisStoreTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						ConnectionURL: "redis://127.0.0.1:6379/wrong",
+					},
+				},
+			},
+			errStrings: []string{parseWrongFormatMsg},
+		}),
+		Entry("connect successfully to pure redis with password", &redisStoreTableInput{
+			password: "abcdef123",
+			setAddr:  true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						Password: "abcdef123",
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("failed connection with wrong password", &redisStoreTableInput{
+			password: "abcdef123",
+			setAddr:  true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						Password: "zyxwtuv987",
+					},
+				},
+			},
+			errStrings: []string{invalidPasswordSetMsg, invalidPasswordDelMsg},
+		}),
+		Entry("connect successfully to sentinel redis", &redisStoreTableInput{
+			useSentinel:     true,
+			setSentinelAddr: true,
+			setMasterName:   true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseSentinel: true,
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("connect successfully to sentinel redis with password", &redisStoreTableInput{
+			password:        "abcdef123",
+			useSentinel:     true,
+			setSentinelAddr: true,
+			setMasterName:   true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						Password:    "abcdef123",
+						UseSentinel: true,
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("failed connection to sentinel redis with wrong password", &redisStoreTableInput{
+			password:        "abcdef123",
+			useSentinel:     true,
+			setSentinelAddr: true,
+			setMasterName:   true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						Password:    "zyxwtuv987",
+						UseSentinel: true,
+					},
+				},
+			},
+			errStrings: []string{invalidPasswordSetMsg, invalidPasswordDelMsg},
+		}),
+		Entry("failed connection to sentinel redis with wrong master name", &redisStoreTableInput{
+			useSentinel:     true,
+			setSentinelAddr: true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseSentinel:        true,
+						SentinelMasterName: "WRONG",
+					},
+				},
+			},
+			errStrings: []string{unreachableSentinelSetMsg, unrechableSentinelDelMsg},
+		}),
+		Entry("failed connection to sentinel redis with wrong address", &redisStoreTableInput{
+			useSentinel:   true,
+			setMasterName: true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseSentinel:            true,
+						SentinelConnectionURLs: []string{"redis://127.0.0.1:65535"},
+					},
+				},
+			},
+			errStrings: []string{unreachableSentinelSetMsg, unrechableSentinelDelMsg},
+		}),
+		Entry("sentinel and cluster both enabled fails", &redisStoreTableInput{
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						UseSentinel: true,
+						UseCluster:  true,
+					},
+				},
+			},
+			errStrings: []string{clusterAndSentinelMsg},
+		}),
+	)
+})
