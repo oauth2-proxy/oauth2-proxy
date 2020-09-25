@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"time"
 	"unicode/utf8"
 
@@ -24,6 +25,7 @@ type SessionState struct {
 	RefreshToken      string     `json:",omitempty" msgpack:"rt,omitempty"`
 	Email             string     `json:",omitempty" msgpack:"e,omitempty"`
 	User              string     `json:",omitempty" msgpack:"u,omitempty"`
+	Groups            []string   `json:",omitempty" msgpack:"g,omitempty"`
 	PreferredUsername string     `json:",omitempty" msgpack:"pu,omitempty"`
 }
 
@@ -60,6 +62,9 @@ func (s *SessionState) String() string {
 	}
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
+	}
+	if len(s.Groups) > 0 {
+		o += fmt.Sprintf(" groups:%v", s.Groups)
 	}
 	return o + "}"
 }
@@ -233,7 +238,7 @@ func (s *SessionState) validate() error {
 	}
 
 	empty := new(SessionState)
-	if *s == *empty {
+	if reflect.DeepEqual(*s, *empty) {
 		return errors.New("invalid empty session unmarshalled")
 	}
 

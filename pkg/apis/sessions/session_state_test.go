@@ -186,6 +186,17 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			IDToken:     "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
 			ExpiresOn:   &expires,
 		},
+		"With groups": {
+			Email:             "username@example.com",
+			User:              "username",
+			PreferredUsername: "preferred.username",
+			AccessToken:       "AccessToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			IDToken:           "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			CreatedAt:         &created,
+			ExpiresOn:         &expires,
+			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			Groups:            []string{"group-a", "group-b"},
+		},
 	}
 
 	for _, secretSize := range []int{16, 24, 32} {
