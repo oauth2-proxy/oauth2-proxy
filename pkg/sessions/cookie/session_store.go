@@ -107,7 +107,14 @@ func sessionFromCookie(v []byte, c encryption.Cipher) (s *sessions.SessionState,
 	if err != nil {
 		// Legacy used Base64 + AES CFB
 		legacyCipher := encryption.NewBase64Cipher(c)
-		return sessions.LegacyV5DecodeSessionState(string(v), legacyCipher)
+		ss, err = sessions.LegacyV5DecodeSessionState(string(v), legacyCipher)
+		if err != nil {
+			tempVal, err := sessions.LegacyV5EncodeSessionState(string(v), legacyCipher)
+			if err != nil {
+				logger.Printf("encrypt with legacy fail :%s", err)
+			}
+			return sessions.LegacyV5DecodeSessionState(string(tempVal), legacyCipher)
+		}
 	}
 	return ss, nil
 }

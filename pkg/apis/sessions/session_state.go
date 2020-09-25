@@ -145,6 +145,29 @@ func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, e
 	return &ss, nil
 }
 
+// LegacyV5DecodeSessionState decodes a legacy JSON session cookie string into a SessionState
+func LegacyV5EncodeSessionState(v string, c encryption.Cipher) ([]byte, error) {
+	var ss SessionState
+	err := json.Unmarshal([]byte(v), &ss)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling in Encode session: %w", err)
+	}
+	for _, s := range []*string{
+		&ss.User,
+		&ss.Email,
+		&ss.PreferredUsername,
+		&ss.AccessToken,
+		&ss.IDToken,
+		&ss.RefreshToken,
+	} {
+		err := into(s, c.Encrypt)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(&ss)
+}
+
 // codecFunc is a function that takes a []byte and encodes/decodes it
 type codecFunc func([]byte) ([]byte, error)
 
