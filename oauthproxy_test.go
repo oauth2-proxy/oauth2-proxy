@@ -2365,9 +2365,9 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 			if tc.shouldError {
 				assert.Error(t, err)
 				return
-			} else {
-				assert.NoError(t, err)
 			}
+			assert.NoError(t, err)
+
 			for i, route := range routes {
 				assert.Greater(t, len(tc.expectedMethods), i)
 				assert.Equal(t, route.method, tc.expectedMethods[i])

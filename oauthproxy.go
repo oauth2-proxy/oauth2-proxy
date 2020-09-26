@@ -293,6 +293,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]*allowedRoute, error) {
 		if err != nil {
 			return nil, err
 		}
+		logger.Printf("Skipping auth - Method: ALL | Path: %s", path)
 		routes = append(routes, &allowedRoute{
 			method:    "",
 			pathRegex: compiledRegex,
@@ -318,6 +319,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]*allowedRoute, error) {
 		if err != nil {
 			return nil, err
 		}
+		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
 		routes = append(routes, &allowedRoute{
 			method:    method,
 			pathRegex: compiledRegex,
