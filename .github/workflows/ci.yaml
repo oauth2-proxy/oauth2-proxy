@@ -48,6 +48,8 @@ jobs:
         make build
 
     - name: Test
+      env:
+        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       run: |
         cd src/github.com/${{ github.repository }}
         ./test.sh
