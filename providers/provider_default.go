@@ -14,7 +14,13 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
-var _ Provider = (*ProviderData)(nil)
+var (
+	// ErrNotImplemented is returned when a provider did not override a default
+	// implementation method that doesn't have sensible defaults
+	ErrNotImplemented = errors.New("not implemented")
+
+	_ Provider = (*ProviderData)(nil)
+)
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
 func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
@@ -82,12 +88,12 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 
 // GetEmailAddress returns the Account email address
 func (p *ProviderData) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
+	return "", ErrNotImplemented
 }
 
 // GetUserName returns the Account username
 func (p *ProviderData) GetUserName(ctx context.Context, s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
+	return "", ErrNotImplemented
 }
 
 // ValidateGroup validates that the provided email exists in the configured provider
@@ -110,5 +116,5 @@ func (p *ProviderData) RefreshSessionIfNeeded(ctx context.Context, s *sessions.S
 // CreateSessionStateFromBearerToken should be implemented to allow providers
 // to convert ID tokens into sessions
 func (p *ProviderData) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
-	return nil, errors.New("not implemented")
+	return nil, ErrNotImplemented
 }

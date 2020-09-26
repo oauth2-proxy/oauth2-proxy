@@ -364,13 +364,13 @@ func (p *OAuthProxy) enrichSession(ctx context.Context, s *sessionsapi.SessionSt
 	var err error
 	if s.Email == "" {
 		s.Email, err = p.provider.GetEmailAddress(ctx, s)
-		if err != nil && err.Error() != "not implemented" {
+		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 			return err
 		}
 	}
 	if s.User == "" {
 		s.User, err = p.provider.GetUserName(ctx, s)
-		if err != nil && err.Error() != "not implemented" {
+		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 			return err
 		}
 	}
