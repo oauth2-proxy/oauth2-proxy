@@ -26,6 +26,10 @@ type ProviderData struct {
 	ClientSecretFile string
 	Scope            string
 	Prompt           string
+
+	// Universal Group authorization data structure
+	// any provider can set to consume
+	AllowedGroups map[string]struct{}
 }
 
 // Data returns the ProviderData
@@ -43,6 +47,15 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 		return "", errors.New("could not read client secret file")
 	}
 	return string(fileClientSecret), nil
+}
+
+// SetAllowedGroups organizes a group list into the AllowedGroups map
+// to be consumed by Authorize implementations
+func (p *ProviderData) SetAllowedGroups(groups []string) {
+	p.AllowedGroups = map[string]struct{}{}
+	for _, group := range groups {
+		p.AllowedGroups[group] = struct{}{}
+	}
 }
 
 type providerDefaults struct {

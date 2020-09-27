@@ -105,7 +105,6 @@ type OAuthProxy struct {
 	trustedIPs              *ip.NetSet
 	Banner                  string
 	Footer                  string
-	AllowedGroups           []string
 
 	sessionChain alice.Chain
 	headersChain alice.Chain
@@ -219,7 +218,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
 		SignInMessage:           buildSignInMessage(opts),
-		AllowedGroups:           opts.AllowedGroups,
 
 		basicAuthValidator:  basicAuthValidator,
 		displayHtpasswdForm: basicAuthValidator != nil && opts.DisplayHtpasswdForm,
@@ -992,13 +990,12 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	invalidEmail := session.Email != "" && !p.Validator(session.Email)
-	invalidGroups := session != nil && !p.validateGroups(session.Groups)
 	authorized, err := p.provider.Authorize(req.Context(), session)
 	if err != nil {
 		logger.Errorf("Error with authorization: %v", err)
 	}
 
-	if invalidEmail || invalidGroups || !authorized {
+	if invalidEmail || !authorized {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
@@ -1036,24 +1033,4 @@ func isAjax(req *http.Request) bool {
 func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)
-}
-
-func (p *OAuthProxy) validateGroups(groups []string) bool {
-	if len(p.AllowedGroups) == 0 {
-		return true
-	}
-
-	allowedGroups := map[string]struct{}{}
-
-	for _, group := range p.AllowedGroups {
-		allowedGroups[group] = struct{}{}
-	}
-
-	for _, group := range groups {
-		if _, ok := allowedGroups[group]; ok {
-			return true
-		}
-	}
-
-	return false
 }

@@ -233,6 +233,8 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
 
+	p.SetAllowedGroups(o.AllowedGroups)
+
 	provider := providers.New(o.ProviderType, p)
 	if provider == nil {
 		msgs = append(msgs, fmt.Sprintf("invalid setting: provider '%s' is not available", o.ProviderType))

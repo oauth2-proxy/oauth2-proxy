@@ -92,12 +92,6 @@ func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionSta
 	return "", ErrNotImplemented
 }
 
-// ValidateGroup validates that the provided email exists in the configured provider
-// email group(s).
-func (p *ProviderData) ValidateGroup(_ string) bool {
-	return true
-}
-
 // EnrichSessionState is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
 func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.SessionState) error {
@@ -107,7 +101,17 @@ func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.Session
 // Authorize performs global authorization on an authenticated session.
 // This is not used for fine-grained per route authorization rules.
 func (p *ProviderData) Authorize(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	return true, nil
+	if len(p.AllowedGroups) == 0 {
+		return true, nil
+	}
+
+	for _, group := range s.Groups {
+		if _, ok := p.AllowedGroups[group]; ok {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // ValidateSessionState validates the AccessToken
