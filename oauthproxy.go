@@ -368,12 +368,6 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 			return err
 		}
 	}
-	if s.User == "" {
-		s.User, err = p.provider.GetUserName(ctx, s)
-		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
-			return err
-		}
-	}
 
 	return p.provider.EnrichSessionState(ctx, s)
 }

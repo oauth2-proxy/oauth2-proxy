@@ -92,12 +92,6 @@ func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionSta
 	return "", ErrNotImplemented
 }
 
-// GetUserName returns the Account username
-// DEPRECATED: Migrate to EnrichSessionState
-func (p *ProviderData) GetUserName(_ context.Context, _ *sessions.SessionState) (string, error) {
-	return "", ErrNotImplemented
-}
-
 // ValidateGroup validates that the provided email exists in the configured provider
 // email group(s).
 func (p *ProviderData) ValidateGroup(_ string) bool {

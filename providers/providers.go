@@ -12,8 +12,6 @@ type Provider interface {
 	Data() *ProviderData
 	// DEPRECATED: Migrate to EnrichSessionState
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
-	// DEPRECATED: Migrate to EnrichSessionState
-	GetUserName(ctx context.Context, s *sessions.SessionState) (string, error)
 	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
 	ValidateGroup(string) bool
 	EnrichSessionState(ctx context.Context, s *sessions.SessionState) error
