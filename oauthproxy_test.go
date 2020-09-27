@@ -1133,8 +1133,6 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 		Email: "john.doe@example.com", AccessToken: "my_access_token"}
 	err = test.SaveSession(startSession)
 	assert.NoError(t, err)
-
-	return
 }
 
 func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {

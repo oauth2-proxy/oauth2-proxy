@@ -257,7 +257,13 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 			if err != nil {
 				msgs = append(msgs, "invalid Google credentials file: "+o.GoogleServiceAccountJSON)
 			} else {
-				p.SetGroupRestriction(o.GoogleGroups, o.GoogleAdminEmail, file)
+				groups := o.AllowedGroups
+				// Backwards compatibility with `--google-group` option
+				if len(o.GoogleGroups) > 0 {
+					groups = o.GoogleGroups
+					p.SetAllowedGroups(groups)
+				}
+				p.SetGroupRestriction(groups, o.GoogleAdminEmail, file)
 			}
 		}
 	case *providers.BitbucketProvider:

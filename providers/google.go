@@ -27,11 +27,14 @@ type GoogleProvider struct {
 	*ProviderData
 
 	RedeemRefreshURL *url.URL
+
 	// GroupValidator is a function that determines if the user in the passed
 	// session is a member of any of the configured Google groups.
-	GroupValidator func(*sessions.SessionState, bool) bool
-
-	allowedGroups map[string]struct{}
+	//
+	// This hits the Google API for each group, so it is called on Redeem &
+	// Refresh. `Authorize` uses the results of this saved in `session.Groups`
+	// Since it is called on every request.
+	GroupValidator func(*sessions.SessionState) bool
 }
 
 var _ Provider = (*GoogleProvider)(nil)
@@ -89,7 +92,7 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 		ProviderData: p,
 		// Set a default GroupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
-		GroupValidator: func(*sessions.SessionState, bool) bool {
+		GroupValidator: func(*sessions.SessionState) bool {
 			return true
 		},
 	}
@@ -172,13 +175,9 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		Email:        c.Email,
 		User:         c.Subject,
 	}
-	p.GroupValidator(s, true)
+	p.GroupValidator(s)
 
 	return s, nil
-}
-
-func (p *GoogleProvider) Authorize(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	return p.GroupValidator(s, false), nil
 }
 
 // SetGroupRestriction configures the GoogleProvider to restrict access to the
@@ -187,30 +186,16 @@ func (p *GoogleProvider) Authorize(ctx context.Context, s *sessions.SessionState
 // account credentials.
 func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
 	adminService := getAdminService(adminEmail, credentialsReader)
-	for _, group := range groups {
-		p.allowedGroups[group] = struct{}{}
-	}
-
-	p.GroupValidator = func(s *sessions.SessionState, sync bool) bool {
-		if sync {
-			// Reset our saved Groups in case membership changed
-			s.Groups = make([]string, 0, len(groups))
-			for _, group := range groups {
-				if userInGroup(adminService, group, s.Email) {
-					s.Groups = append(s.Groups, group)
-				}
-			}
-			return len(s.Groups) > 0
-		}
-
-		// Don't resync with Google, handles when OAuth2-Proxy settings
-		// alter allowed groups but existing sessions are still valid
-		for _, group := range s.Groups {
-			if _, ok := p.allowedGroups[group]; ok {
-				return true
+	p.GroupValidator = func(s *sessions.SessionState) bool {
+		// Reset our saved Groups in case membership changed
+		// This is used by `Authorize` on every request
+		s.Groups = make([]string, 0, len(groups))
+		for _, group := range groups {
+			if userInGroup(adminService, group, s.Email) {
+				s.Groups = append(s.Groups, group)
 			}
 		}
-		return false
+		return len(s.Groups) > 0
 	}
 }
 
@@ -282,7 +267,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	}
 
 	// re-check that the user is in the proper google group(s)
-	if !p.GroupValidator(s, true) {
+	if !p.GroupValidator(s) {
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 

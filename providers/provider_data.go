@@ -52,7 +52,7 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 // SetAllowedGroups organizes a group list into the AllowedGroups map
 // to be consumed by Authorize implementations
 func (p *ProviderData) SetAllowedGroups(groups []string) {
-	p.AllowedGroups = map[string]struct{}{}
+	p.AllowedGroups = make(map[string]struct{}, len(groups))
 	for _, group := range groups {
 		p.AllowedGroups[group] = struct{}{}
 	}

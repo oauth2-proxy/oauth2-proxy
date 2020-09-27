@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	admin "google.golang.org/api/admin/directory/v1"
@@ -110,19 +110,19 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	assert.Equal(t, "refresh12345", session.RefreshToken)
 }
 
-func TestGoogleProviderAuthorize(t *testing.T) {
+func TestGoogleProviderGroupValidator(t *testing.T) {
 	const sessionEmail = "michael.bland@gsa.gov"
 
 	testCases := map[string]struct {
 		session       *sessions.SessionState
-		validatorFunc func(*sessions.SessionState, bool) bool
+		validatorFunc func(*sessions.SessionState) bool
 		expectedAuthZ bool
 	}{
 		"Email is authorized with GroupValidator": {
 			session: &sessions.SessionState{
 				Email: sessionEmail,
 			},
-			validatorFunc: func(s *sessions.SessionState, _ bool) bool {
+			validatorFunc: func(s *sessions.SessionState) bool {
 				return s.Email == sessionEmail
 			},
 			expectedAuthZ: true,
@@ -131,7 +131,7 @@ func TestGoogleProviderAuthorize(t *testing.T) {
 			session: &sessions.SessionState{
 				Email: sessionEmail,
 			},
-			validatorFunc: func(s *sessions.SessionState, _ bool) bool {
+			validatorFunc: func(s *sessions.SessionState) bool {
 				return s.Email != sessionEmail
 			},
 			expectedAuthZ: false,
@@ -151,9 +151,7 @@ func TestGoogleProviderAuthorize(t *testing.T) {
 			if tc.validatorFunc != nil {
 				p.GroupValidator = tc.validatorFunc
 			}
-			authorized, err := p.Authorize(context.Background(), tc.session)
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
+			g.Expect(p.GroupValidator(tc.session)).To(Equal(tc.expectedAuthZ))
 		})
 	}
 }
