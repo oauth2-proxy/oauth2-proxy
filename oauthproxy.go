@@ -909,7 +909,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
+	if p.Validator(session.Email) {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -991,15 +991,19 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return nil, ErrNeedsLogin
 	}
 
-	invalidEmail := session != nil && session.Email != "" && !p.Validator(session.Email)
+	invalidEmail := session.Email != "" && !p.Validator(session.Email)
 	invalidGroups := session != nil && !p.validateGroups(session.Groups)
+	authorized, err := p.provider.Authorize(req.Context(), session)
+	if err != nil {
+		logger.Errorf("Error with authorization: %v", err)
+	}
 
-	if invalidEmail || invalidGroups {
-		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+	if invalidEmail || invalidGroups || !authorized {
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
 		if err != nil {
-			logger.Printf("Error clearing session cookie: %v", err)
+			logger.Errorf("Error clearing session cookie: %v", err)
 		}
 		return nil, ErrNeedsLogin
 	}

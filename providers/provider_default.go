@@ -104,6 +104,12 @@ func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.Session
 	return nil
 }
 
+// Authorize performs global authorization on an authenticated session.
+// This is not used for fine-grained per route authorization rules.
+func (p *ProviderData) Authorize(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	return true, nil
+}
+
 // ValidateSessionState validates the AccessToken
 func (p *ProviderData) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, nil)
