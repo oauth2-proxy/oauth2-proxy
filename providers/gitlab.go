@@ -15,9 +15,7 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Groups       []string
-	EmailDomains []string
-
+	Groups               []string
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
 }
