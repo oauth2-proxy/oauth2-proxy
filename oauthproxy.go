@@ -360,7 +360,7 @@ func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (*sessio
 	return s, nil
 }
 
-func (p *OAuthProxy) enrichSession(ctx context.Context, s *sessionsapi.SessionState) error {
+func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
 	var err error
 	if s.Email == "" {
 		s.Email, err = p.provider.GetEmailAddress(ctx, s)
@@ -374,7 +374,8 @@ func (p *OAuthProxy) enrichSession(ctx context.Context, s *sessionsapi.SessionSt
 			return err
 		}
 	}
-	return nil
+
+	return p.provider.EnrichSessionState(ctx, s)
 }
 
 // MakeCSRFCookie creates a cookie for CSRF
@@ -831,7 +832,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = p.enrichSession(req.Context(), session)
+	err = p.enrichSessionState(req.Context(), session)
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Internal Error")

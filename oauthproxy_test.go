@@ -396,11 +396,11 @@ func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 	}
 }
 
-func (tp *TestProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {
+func (tp *TestProvider) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return tp.EmailAddress, nil
 }
 
-func (tp *TestProvider) ValidateSessionState(ctx context.Context, session *sessions.SessionState) bool {
+func (tp *TestProvider) ValidateSessionState(_ context.Context, _ *sessions.SessionState) bool {
 	return tp.ValidToken
 }
 
@@ -468,7 +468,7 @@ func Test_enrichSession(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = proxy.enrichSession(context.Background(), tc.session)
+			err = proxy.enrichSessionState(context.Background(), tc.session)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedUser, tc.session.User)
 			assert.Equal(t, tc.expectedEmail, tc.session.Email)
@@ -1955,7 +1955,7 @@ func TestClearSingleCookie(t *testing.T) {
 type NoOpKeySet struct {
 }
 
-func (NoOpKeySet) VerifySignature(ctx context.Context, jwt string) (payload []byte, err error) {
+func (NoOpKeySet) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
 	splitStrings := strings.Split(jwt, ".")
 	payloadString := splitStrings[1]
 	return base64.RawURLEncoding.DecodeString(payloadString)

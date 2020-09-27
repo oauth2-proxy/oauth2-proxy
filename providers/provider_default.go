@@ -87,19 +87,27 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 }
 
 // GetEmailAddress returns the Account email address
-func (p *ProviderData) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+// DEPRECATED: Migrate to EnrichSessionState
+func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", ErrNotImplemented
 }
 
 // GetUserName returns the Account username
-func (p *ProviderData) GetUserName(ctx context.Context, s *sessions.SessionState) (string, error) {
+// DEPRECATED: Migrate to EnrichSessionState
+func (p *ProviderData) GetUserName(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", ErrNotImplemented
 }
 
 // ValidateGroup validates that the provided email exists in the configured provider
 // email group(s).
-func (p *ProviderData) ValidateGroup(email string) bool {
+func (p *ProviderData) ValidateGroup(_ string) bool {
 	return true
+}
+
+// EnrichSessionState is called after Redeem to allow providers to enrich session fields
+// such as User, Email, Groups with provider specific API calls.
+func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.SessionState) error {
+	return nil
 }
 
 // ValidateSessionState validates the AccessToken
@@ -109,12 +117,12 @@ func (p *ProviderData) ValidateSessionState(ctx context.Context, s *sessions.Ses
 
 // RefreshSessionIfNeeded should refresh the user's session if required and
 // do nothing if a refresh is not required
-func (p *ProviderData) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
+func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.SessionState) (bool, error) {
 	return false, nil
 }
 
 // CreateSessionStateFromBearerToken should be implemented to allow providers
 // to convert ID tokens into sessions
-func (p *ProviderData) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *ProviderData) CreateSessionStateFromBearerToken(_ context.Context, _ string, _ *oidc.IDToken) (*sessions.SessionState, error) {
 	return nil, ErrNotImplemented
 }
