@@ -85,6 +85,7 @@ type OAuthProxy struct {
 	SetBasicAuth            bool
 	SkipProviderButton      bool
 	PassUserHeaders         bool
+	BasicAuthUser           string
 	BasicAuthPassword       string
 	PassAccessToken         bool
 	SetAuthorization        bool
@@ -205,6 +206,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PassBasicAuth:           opts.PassBasicAuth,
 		SetBasicAuth:            opts.SetBasicAuth,
 		PassUserHeaders:         opts.PassUserHeaders,
+		BasicAuthUser:           opts.BasicAuthUser,
 		BasicAuthPassword:       opts.BasicAuthPassword,
 		PassAccessToken:         opts.PassAccessToken,
 		SetAuthorization:        opts.SetAuthorization,
@@ -919,6 +921,9 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 				req.Header.Del("X-Forwarded-Email")
 			}
 		}
+		if p.BasicAuthUser != "" {
+			req.SetBasicAuth(p.BasicAuthUser, p.BasicAuthPassword)
+		}
 		if session.PreferredUsername != "" {
 			req.Header["X-Forwarded-Preferred-Username"] = []string{session.PreferredUsername}
 		} else {
@@ -1001,6 +1006,9 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	}
 	if p.SetBasicAuth {
 		switch {
+		case p.BasicAuthUser != "":
+			authVal := b64.StdEncoding.EncodeToString([]byte(p.BasicAuthUser + ":" + p.BasicAuthPassword))
+			rw.Header().Set("Authorization", "Basic "+authVal)
 		case p.PreferEmailToUser && session.Email != "":
 			authVal := b64.StdEncoding.EncodeToString([]byte(session.Email + ":" + p.BasicAuthPassword))
 			rw.Header().Set("Authorization", "Basic "+authVal)

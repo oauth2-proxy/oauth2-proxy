@@ -73,6 +73,7 @@ type Options struct {
 	PassBasicAuth         bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
 	SetBasicAuth          bool     `flag:"set-basic-auth" cfg:"set_basic_auth"`
 	PreferEmailToUser     bool     `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
+	BasicAuthUser         string   `flag:"basic-auth-user" cfg:"basic_auth_user"`
 	BasicAuthPassword     string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
 	PassAccessToken       bool     `flag:"pass-access-token" cfg:"pass_access_token"`
 	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
