@@ -31,6 +31,7 @@
 - [#800](https://github.com/oauth2-proxy/oauth2-proxy/pull/800) Fix import path for v7 (@johejo)
 - [#783](https://github.com/oauth2-proxy/oauth2-proxy/pull/783) Update Go to 1.15 (@johejo)
 - [#813](https://github.com/oauth2-proxy/oauth2-proxy/pull/813) Fix build (@thiagocaiubi)
+- [#801](https://github.com/oauth2-proxy/oauth2-proxy/pull/801) Update go-redis/redis to v8 (@johejo)
 
 # v6.1.1
 
