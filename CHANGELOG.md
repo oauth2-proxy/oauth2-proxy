@@ -13,6 +13,8 @@
 
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) When a Redis session store is configured, OAuth2-Proxy will fail to start up unless connection and health checks to Redis pass
 - [#800](https://github.com/oauth2-proxy/oauth2-proxy/pull/800) Fix import path for v7. The import path has changed to support the go get installation.
+  - You can now `go get github.com/oauth2-proxy/oauth2-proxy/v7` to get the latest `v7` version of OAuth2 Proxy
+  - Import paths for package are now under `v7`, eg `github.com/oauth2-proxy/oauth2-proxy/v7/pkg/<module>`
 
 ## Changes since v6.1.1
 
