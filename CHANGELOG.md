@@ -12,7 +12,7 @@
 ## Breaking Changes
 
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) When a Redis session store is configured, OAuth2-Proxy will fail to start up unless connection and health checks to Redis pass
-- A bug in the Azure provider prevented it from properly passing the configured protected `--resource`
+- [#753](https://github.com/oauth2-proxy/oauth2-proxy/pull/753) A bug in the Azure provider prevented it from properly passing the configured protected `--resource`
   via the login url. If this option was used in the past, behavior will change with this release as it will
   affect the tokens returned by Azure. In the past, the tokens were always for `https://graph.microsoft.com` (the default)
   and will now be for the configured resource (if it exists, otherwise it will run into errors)
