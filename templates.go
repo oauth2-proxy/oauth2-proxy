@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 func loadTemplates(dir string) *template.Template {

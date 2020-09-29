@@ -15,8 +15,8 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
-	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/middleware"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
