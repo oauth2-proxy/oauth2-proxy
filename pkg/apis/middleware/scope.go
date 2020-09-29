@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 // RequestScope contains information regarding the request that is being made.
