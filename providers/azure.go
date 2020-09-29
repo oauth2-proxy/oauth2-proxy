@@ -210,3 +210,12 @@ func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.Session
 
 	return email, err
 }
+
+func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
+	extraParams := url.Values{}
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		extraParams.Add("resource", p.ProtectedResource.String())
+	}
+	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
+	return a.String()
+}
