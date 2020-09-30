@@ -289,3 +289,10 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 	// The "badfakenonce" in the idtoken above should cause this to error out
 	assert.Error(t, err)
 }
+
+func TestLoginGovProviderGetLoginURL(t *testing.T) {
+	p, _, _ := newLoginGovProvider()
+	result := p.GetLoginURL("http://redirect/", "")
+	assert.Contains(t, result, "acr_values="+url.QueryEscape("http://idmanagement.gov/ns/assurance/loa/1"))
+	assert.Contains(t, result, "nonce=fakenonce")
+}

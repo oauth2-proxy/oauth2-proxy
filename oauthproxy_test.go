@@ -19,13 +19,13 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/upstream"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/validation"
-	"github.com/oauth2-proxy/oauth2-proxy/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -592,6 +592,37 @@ func TestPassUserHeadersWithEmail(t *testing.T) {
 	}
 }
 
+func TestPassGroupsHeadersWithGroups(t *testing.T) {
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+
+	groups := []string{"a", "b"}
+	created := time.Now()
+	session := &sessions.SessionState{
+		User:        userName,
+		Groups:      groups,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   &created,
+	}
+	{
+		rw := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", opts.ProxyPrefix+"/testCase0", nil)
+		proxy, err := NewOAuthProxy(opts, func(email string) bool {
+			return email == emailAddress
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		proxy.addHeadersForProxying(rw, req, session)
+		assert.Equal(t, groups, req.Header["X-Forwarded-Groups"])
+	}
+}
+
 func TestStripAuthHeaders(t *testing.T) {
 	testCases := map[string]struct {
 		SkipAuthStripHeaders bool
@@ -609,6 +640,7 @@ func TestStripAuthHeaders(t *testing.T) {
 			PassAuthorization:    false,
 			StrippedHeaders: map[string]bool{
 				"X-Forwarded-User":               true,
+				"X-Forwared-Groups":              true,
 				"X-Forwarded-Email":              true,
 				"X-Forwarded-Preferred-Username": true,
 				"X-Forwarded-Access-Token":       false,
@@ -623,6 +655,7 @@ func TestStripAuthHeaders(t *testing.T) {
 			PassAuthorization:    false,
 			StrippedHeaders: map[string]bool{
 				"X-Forwarded-User":               true,
+				"X-Forwared-Groups":              true,
 				"X-Forwarded-Email":              true,
 				"X-Forwarded-Preferred-Username": true,
 				"X-Forwarded-Access-Token":       true,
@@ -637,6 +670,7 @@ func TestStripAuthHeaders(t *testing.T) {
 			PassAuthorization:    false,
 			StrippedHeaders: map[string]bool{
 				"X-Forwarded-User":               true,
+				"X-Forwared-Groups":              true,
 				"X-Forwarded-Email":              true,
 				"X-Forwarded-Preferred-Username": true,
 				"X-Forwarded-Access-Token":       true,
@@ -651,6 +685,7 @@ func TestStripAuthHeaders(t *testing.T) {
 			PassAuthorization:    true,
 			StrippedHeaders: map[string]bool{
 				"X-Forwarded-User":               false,
+				"X-Forwared-Groups":              false,
 				"X-Forwarded-Email":              false,
 				"X-Forwarded-Preferred-Username": false,
 				"X-Forwarded-Access-Token":       false,
@@ -665,6 +700,7 @@ func TestStripAuthHeaders(t *testing.T) {
 			PassAuthorization:    false,
 			StrippedHeaders: map[string]bool{
 				"X-Forwarded-User":               false,
+				"X-Forwared-Groups":              false,
 				"X-Forwarded-Email":              false,
 				"X-Forwarded-Preferred-Username": false,
 				"X-Forwarded-Access-Token":       false,
@@ -679,6 +715,7 @@ func TestStripAuthHeaders(t *testing.T) {
 			PassAuthorization:    false,
 			StrippedHeaders: map[string]bool{
 				"X-Forwarded-User":               false,
+				"X-Forwared-Groups":              false,
 				"X-Forwarded-Email":              false,
 				"X-Forwarded-Preferred-Username": false,
 				"X-Forwarded-Access-Token":       false,
@@ -690,6 +727,7 @@ func TestStripAuthHeaders(t *testing.T) {
 	initialHeaders := map[string]string{
 		"X-Forwarded-User":               "9fcab5c9b889a557",
 		"X-Forwarded-Email":              "john.doe@example.com",
+		"X-Forwarded-Groups":             "a,b,c",
 		"X-Forwarded-Preferred-Username": "john.doe",
 		"X-Forwarded-Access-Token":       "AccessToken",
 		"Authorization":                  "bearer IDToken",
@@ -1333,6 +1371,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 
 	pcTest.opts = baseTestOptions()
 	pcTest.opts.SetXAuthRequest = true
+	pcTest.opts.AllowedGroups = []string{"oauth_groups"}
 	err := validation.Validate(pcTest.opts)
 	assert.NoError(t, err)
 
@@ -1354,13 +1393,14 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
+		User: "oauth_user", Groups: []string{"oauth_groups"}, Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
 	err = pcTest.SaveSession(startSession)
 	assert.NoError(t, err)
 
 	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
 	assert.Equal(t, http.StatusAccepted, pcTest.rw.Code)
 	assert.Equal(t, "oauth_user", pcTest.rw.Header().Get("X-Auth-Request-User"))
+	assert.Equal(t, startSession.Groups, pcTest.rw.Header().Values("X-Auth-Request-Groups"))
 	assert.Equal(t, "oauth_user@example.com", pcTest.rw.Header().Get("X-Auth-Request-Email"))
 }
 
@@ -2195,6 +2235,111 @@ func TestTrustedIPs(t *testing.T) {
 				assert.Equal(t, 200, rw.Code)
 			} else {
 				assert.Equal(t, 403, rw.Code)
+			}
+		})
+	}
+}
+
+func TestProxyAllowedGroups(t *testing.T) {
+	tests := []struct {
+		name               string
+		allowedGroups      []string
+		groups             []string
+		expectUnauthorized bool
+	}{
+		{"NoAllowedGroups", []string{}, []string{}, false},
+		{"NoAllowedGroupsUserHasGroups", []string{}, []string{"a", "b"}, false},
+		{"UserInAllowedGroup", []string{"a"}, []string{"a", "b"}, false},
+		{"UserNotInAllowedGroup", []string{"a"}, []string{"c"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			emailAddress := "test"
+			created := time.Now()
+
+			session := &sessions.SessionState{
+				Groups:      tt.groups,
+				Email:       emailAddress,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+			}))
+			t.Cleanup(upstream.Close)
+
+			test, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
+				opts.AllowedGroups = tt.allowedGroups
+				opts.UpstreamServers = options.Upstreams{
+					{
+						ID:   upstream.URL,
+						Path: "/",
+						URI:  upstream.URL,
+					},
+				}
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			test.req, _ = http.NewRequest("GET", "/", nil)
+
+			test.req.Header.Add("accept", applicationJSON)
+			test.SaveSession(session)
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			if tt.expectUnauthorized {
+				assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+			} else {
+				assert.Equal(t, http.StatusOK, test.rw.Code)
+			}
+		})
+	}
+}
+
+func TestAuthOnlyAllowedGroups(t *testing.T) {
+	tests := []struct {
+		name               string
+		allowedGroups      []string
+		groups             []string
+		expectUnauthorized bool
+	}{
+		{"NoAllowedGroups", []string{}, []string{}, false},
+		{"NoAllowedGroupsUserHasGroups", []string{}, []string{"a", "b"}, false},
+		{"UserInAllowedGroup", []string{"a"}, []string{"a", "b"}, false},
+		{"UserNotInAllowedGroup", []string{"a"}, []string{"c"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			emailAddress := "test"
+			created := time.Now()
+
+			session := &sessions.SessionState{
+				Groups:      tt.groups,
+				Email:       emailAddress,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
+				opts.AllowedGroups = tt.allowedGroups
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = test.SaveSession(session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			if tt.expectUnauthorized {
+				assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+			} else {
+				assert.Equal(t, http.StatusAccepted, test.rw.Code)
 			}
 		})
 	}

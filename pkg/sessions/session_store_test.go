@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
-	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/cookie"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/redis"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
+	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

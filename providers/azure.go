@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
 // AzureProvider represents an Azure based Identity Provider
@@ -209,4 +209,13 @@ func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.Session
 	}
 
 	return email, err
+}
+
+func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
+	extraParams := url.Values{}
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		extraParams.Add("resource", p.ProtectedResource.String())
+	}
+	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
+	return a.String()
 }
