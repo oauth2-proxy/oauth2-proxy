@@ -1748,7 +1748,7 @@ type ajaxRequestTest struct {
 func newAjaxRequestTest(apiMode bool) (*ajaxRequestTest, error) {
 	test := &ajaxRequestTest{}
 	test.opts = baseTestOptions()
-	test.opts.ApiMode = apiMode
+	test.opts.APIMode = apiMode
 	err := validation.Validate(test.opts)
 	if err != nil {
 		return nil, err
@@ -1826,7 +1826,7 @@ func TestAjaxForbiddenRequest(t *testing.T) {
 	assert.NotEqual(t, applicationJSON, mime)
 }
 
-func TestNotAuthorizedInApiMode(t *testing.T) {
+func TestNotAuthorizedInAPIMode(t *testing.T) {
 	test, err := newAjaxRequestTest(true)
 	if err != nil {
 		t.Fatal(err)
@@ -1851,21 +1851,21 @@ func testAjaxForwardedRequest(t *testing.T, header http.Header) {
 	assert.Equal(t, applicationJSON, mime)
 }
 
-func TestAjaxUnauthorizedRequestWithApiMode1(t *testing.T) {
+func TestAjaxUnauthorizedRequestWithAPIMode1(t *testing.T) {
 	header := make(http.Header)
 	header.Add("accept", applicationJSON)
 
 	testAjaxForwardedRequest(t, header)
 }
 
-func TestAjaxUnauthorizedRequestWithApiMode2(t *testing.T) {
+func TestAjaxUnauthorizedRequestWithAPIMode2(t *testing.T) {
 	header := make(http.Header)
 	header.Add("Accept", applicationJSON)
 
 	testAjaxForwardedRequest(t, header)
 }
 
-func TestAjaxRedirectIsSuccessfulWithApiMode(t *testing.T) {
+func TestAjaxRedirectIsSuccessfulWithAPIMode(t *testing.T) {
 	test, err := newAjaxRequestTest(true)
 	if err != nil {
 		t.Fatal(err)

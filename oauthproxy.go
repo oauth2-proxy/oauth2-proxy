@@ -84,7 +84,7 @@ type OAuthProxy struct {
 	PassBasicAuth           bool
 	SetBasicAuth            bool
 	SkipProviderButton      bool
-	ApiMode                 bool
+	APIMode                 bool
 	PassUserHeaders         bool
 	BasicAuthPassword       string
 	PassAccessToken         bool
@@ -212,7 +212,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PassAuthorization:       opts.PassAuthorization,
 		PreferEmailToUser:       opts.PreferEmailToUser,
 		SkipProviderButton:      opts.SkipProviderButton,
-		ApiMode:                 opts.ApiMode,
+		APIMode:                 opts.APIMode,
 		templates:               templates,
 		trustedIPs:              trustedIPs,
 		Banner:                  opts.Banner,
@@ -395,7 +395,7 @@ func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 
 // ErrorPage writes an error response
 func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
-	if p.ApiMode {
+	if p.APIMode {
 		rw.WriteHeader(code)
 		rw.Header().Set("Content-Type", applicationJSON)
 		content, _ := json.Marshal(map[string]string{
@@ -764,7 +764,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	redirectURI := p.GetRedirectURI(util.GetRequestHost(req))
-	if p.ApiMode {
+	if p.APIMode {
 		rw.Header().Set("Content-Type", applicationJSON)
 	}
 	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonce, redirect)), http.StatusFound)
@@ -870,13 +870,13 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
-		if isAjax(req) && !p.ApiMode {
+		if isAjax(req) && !p.APIMode {
 			// no point redirecting an AJAX request
 			p.ErrorJSON(rw, http.StatusUnauthorized)
 			return
 		}
 
-		if p.SkipProviderButton || p.ApiMode {
+		if p.SkipProviderButton || p.APIMode {
 			p.OAuthStart(rw, req)
 		} else {
 			p.SignInPage(rw, req, http.StatusForbidden)

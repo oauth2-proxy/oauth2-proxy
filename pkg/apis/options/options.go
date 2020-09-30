@@ -102,7 +102,7 @@ type Options struct {
 	Scope                              string   `flag:"scope" cfg:"scope"`
 	Prompt                             string   `flag:"prompt" cfg:"prompt"`
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
-	ApiMode                            bool     `flag:"api-mode" cfg:"api-mode"`
+	APIMode                            bool     `flag:"api-mode" cfg:"api-mode"`
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 

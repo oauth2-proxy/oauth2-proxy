@@ -38,7 +38,7 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	if p.AcrValues != "" {
 		params.Add("acr_values", p.AcrValues)
 	}
-	if !p.ApiMode {
+	if !p.APIMode {
 		if p.Prompt != "" {
 			params.Set("prompt", p.Prompt)
 		} else { // Legacy variant of the prompt param:

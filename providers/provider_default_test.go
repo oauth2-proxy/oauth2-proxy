@@ -48,14 +48,14 @@ func TestAcrValuesConfigured(t *testing.T) {
 	assert.Contains(t, result, "acr_values=testValue")
 }
 
-func TestApiModeIsSet(t *testing.T) {
+func TestAPIModeIsSet(t *testing.T) {
 	p := &ProviderData{
 		LoginURL: &url.URL{
 			Scheme: "http",
 			Host:   "my.test.idp",
 			Path:   "/oauth/authorize",
 		},
-		ApiMode: true,
+		APIMode: true,
 	}
 
 	result := p.GetLoginURL("https://my.test.app/oauth", "")

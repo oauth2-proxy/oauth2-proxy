@@ -26,7 +26,7 @@ type ProviderData struct {
 	ClientSecretFile string
 	Scope            string
 	Prompt           string
-	ApiMode          bool
+	APIMode          bool
 }
 
 // Data returns the ProviderData
