@@ -81,10 +81,14 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 	if p.AcrValues != "" {
 		params.Add("acr_values", p.AcrValues)
 	}
-	if p.Prompt != "" {
-		params.Set("prompt", p.Prompt)
-	} else { // Legacy variant of the prompt param:
-		params.Set("approval_prompt", p.ApprovalPrompt)
+	if !p.ApiMode {
+		if p.Prompt != "" {
+			params.Set("prompt", p.Prompt)
+		} else { // Legacy variant of the prompt param:
+			params.Set("approval_prompt", p.ApprovalPrompt)
+		}
+	} else {
+		params.Set("prompt", "none")
 	}
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
