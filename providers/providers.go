@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/coreos/go-oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 // Provider represents an upstream identity provider implementation
@@ -12,7 +12,6 @@ type Provider interface {
 	Data() *ProviderData
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	GetUserName(ctx context.Context, s *sessions.SessionState) (string, error)
-	GetPreferredUsername(ctx context.Context, s *sessions.SessionState) (string, error)
 	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
 	ValidateGroup(string) bool
 	ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool

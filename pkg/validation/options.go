@@ -15,12 +15,12 @@ import (
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
-	"github.com/oauth2-proxy/oauth2-proxy/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
 // Validate checks that required options are set and validates those that they
@@ -28,6 +28,7 @@ import (
 func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
+	msgs = append(msgs, validateRedisSessionStore(o)...)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -152,6 +153,10 @@ func Validate(o *options.Options) error {
 		}
 		if o.Scope == "" {
 			o.Scope = "openid email profile"
+
+			if len(o.AllowedGroups) > 0 {
+				o.Scope += " groups"
+			}
 		}
 	}
 
@@ -280,6 +285,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.OIDCProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.UserIDClaim = o.UserIDClaim
+		p.GroupsClaim = o.OIDCGroupsClaim
 		if o.GetOIDCVerifier() == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		} else {

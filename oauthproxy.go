@@ -16,20 +16,20 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/justinas/alice"
-	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
-	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/middleware"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/authentication/basic"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/middleware"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/upstream"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
-	"github.com/oauth2-proxy/oauth2-proxy/providers"
+	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
 const (
@@ -103,6 +103,7 @@ type OAuthProxy struct {
 	trustedIPs              *ip.NetSet
 	Banner                  string
 	Footer                  string
+	AllowedGroups           []string
 
 	sessionChain alice.Chain
 }
@@ -217,6 +218,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
 		SignInMessage:           buildSignInMessage(opts),
+		AllowedGroups:           opts.AllowedGroups,
 
 		basicAuthValidator:  basicAuthValidator,
 		displayHtpasswdForm: basicAuthValidator != nil,
@@ -296,34 +298,31 @@ func (p *OAuthProxy) GetRedirectURI(host string) string {
 	return u.String()
 }
 
-func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (s *sessionsapi.SessionState, err error) {
+func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (*sessionsapi.SessionState, error) {
 	if code == "" {
 		return nil, errors.New("missing code")
 	}
 	redirectURI := p.GetRedirectURI(host)
-	s, err = p.provider.Redeem(ctx, redirectURI, code)
+	s, err := p.provider.Redeem(ctx, redirectURI, code)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if s.Email == "" {
 		s.Email, err = p.provider.GetEmailAddress(ctx, s)
-	}
-
-	if s.PreferredUsername == "" {
-		s.PreferredUsername, err = p.provider.GetPreferredUsername(ctx, s)
-		if err != nil && err.Error() == "not implemented" {
-			err = nil
+		if err != nil && err.Error() != "not implemented" {
+			return nil, err
 		}
 	}
 
 	if s.User == "" {
 		s.User, err = p.provider.GetUserName(ctx, s)
-		if err != nil && err.Error() == "not implemented" {
-			err = nil
+		if err != nil && err.Error() != "not implemented" {
+			return nil, err
 		}
 	}
-	return
+
+	return s, nil
 }
 
 // MakeCSRFCookie creates a cookie for CSRF
@@ -907,7 +906,10 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return nil, ErrNeedsLogin
 	}
 
-	if session != nil && session.Email != "" && !p.Validator(session.Email) {
+	invalidEmail := session != nil && session.Email != "" && !p.Validator(session.Email)
+	invalidGroups := session != nil && !p.validateGroups(session.Groups)
+
+	if invalidEmail || invalidGroups {
 		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
@@ -961,6 +963,14 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 		} else {
 			req.Header.Del("X-Forwarded-Preferred-Username")
 		}
+
+		if len(session.Groups) > 0 {
+			for _, group := range session.Groups {
+				req.Header.Add("X-Forwarded-Groups", group)
+			}
+		} else {
+			req.Header.Del("X-Forwarded-Groups")
+		}
 	}
 
 	if p.SetXAuthRequest {
@@ -982,6 +992,14 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			} else {
 				rw.Header().Del("X-Auth-Request-Access-Token")
 			}
+		}
+
+		if len(session.Groups) > 0 {
+			for _, group := range session.Groups {
+				rw.Header().Add("X-Auth-Request-Groups", group)
+			}
+		} else {
+			rw.Header().Del("X-Auth-Request-Groups")
 		}
 	}
 
@@ -1031,6 +1049,7 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
 	if p.PassBasicAuth {
 		req.Header.Del("X-Forwarded-User")
+		req.Header.Del("X-Forwarded-Groups")
 		req.Header.Del("X-Forwarded-Email")
 		req.Header.Del("X-Forwarded-Preferred-Username")
 		req.Header.Del("Authorization")
@@ -1038,6 +1057,7 @@ func (p *OAuthProxy) stripAuthHeaders(req *http.Request) {
 
 	if p.PassUserHeaders {
 		req.Header.Del("X-Forwarded-User")
+		req.Header.Del("X-Forwarded-Groups")
 		req.Header.Del("X-Forwarded-Email")
 		req.Header.Del("X-Forwarded-Preferred-Username")
 	}
@@ -1067,4 +1087,24 @@ func isAjax(req *http.Request) bool {
 func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)
+}
+
+func (p *OAuthProxy) validateGroups(groups []string) bool {
+	if len(p.AllowedGroups) == 0 {
+		return true
+	}
+
+	allowedGroups := map[string]struct{}{}
+
+	for _, group := range p.AllowedGroups {
+		allowedGroups[group] = struct{}{}
+	}
+
+	for _, group := range groups {
+		if _, ok := allowedGroups[group]; ok {
+			return true
+		}
+	}
+
+	return false
 }

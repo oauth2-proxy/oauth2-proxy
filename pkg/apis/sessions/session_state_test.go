@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
@@ -185,6 +185,17 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			AccessToken: "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
 			IDToken:     "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
 			ExpiresOn:   &expires,
+		},
+		"With groups": {
+			Email:             "username@example.com",
+			User:              "username",
+			PreferredUsername: "preferred.username",
+			AccessToken:       "AccessToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			IDToken:           "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			CreatedAt:         &created,
+			ExpiresOn:         &expires,
+			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			Groups:            []string{"group-a", "group-b"},
 		},
 	}
 

@@ -12,7 +12,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 )
 
 // AuthStatus defines the different types of auth logging that occur
