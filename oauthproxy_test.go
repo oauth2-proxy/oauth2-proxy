@@ -37,6 +37,7 @@ const (
 	base64CookieSecret = "c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams"
 	clientID           = "3984n253984d7348dm8234yf982t"
 	clientSecret       = "gv3498mfc9t23y23974dm2394dm9"
+	testEndpoint       = "/test"
 )
 
 func init() {
@@ -1789,7 +1790,7 @@ func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	endpoint := "/test"
+	endpoint := testEndpoint
 
 	code, rh, err := test.getEndpoint(endpoint, header)
 	assert.NoError(t, err)
@@ -1817,9 +1818,8 @@ func TestAjaxForbiddenRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	endpoint := "/test"
 	header := make(http.Header)
-	code, rh, err := test.getEndpoint(endpoint, header)
+	code, rh, err := test.getEndpoint(testEndpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, code)
 	mime := rh.Get("Content-Type")
@@ -1842,9 +1842,8 @@ func testAjaxForwardedRequest(t *testing.T, header http.Header) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	endpoint := "/test"
 
-	code, rh, err := test.getEndpoint(endpoint, header)
+	code, rh, err := test.getEndpoint(testEndpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusFound, code)
 	mime := rh.Get("Content-Type")
@@ -1870,9 +1869,8 @@ func TestAjaxRedirectIsSuccessfulWithAPIMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	endpoint := "/test"
 	header := make(http.Header)
-	code, rh, err := test.getEndpoint(endpoint, header)
+	code, rh, err := test.getEndpoint(testEndpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusFound, code)
 	mime := rh.Get("Content-Type")
