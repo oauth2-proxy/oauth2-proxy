@@ -1705,9 +1705,10 @@ type ajaxRequestTest struct {
 	proxy *OAuthProxy
 }
 
-func newAjaxRequestTest() (*ajaxRequestTest, error) {
+func newAjaxRequestTest(apiMode bool) (*ajaxRequestTest, error) {
 	test := &ajaxRequestTest{}
 	test.opts = baseTestOptions()
+	test.opts.ApiMode = apiMode
 	err := validation.Validate(test.opts)
 	if err != nil {
 		return nil, err
@@ -1733,8 +1734,18 @@ func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (i
 	return rw.Code, rw.Header(), nil
 }
 
+func (test *ajaxRequestTest) getCallbackEndpoint() (int, http.Header) {
+	rw := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodGet, "/oauth2/callback?error=login_required", strings.NewReader(""))
+	if err != nil {
+		return 0, nil
+	}
+	test.proxy.ServeHTTP(rw, req)
+	return rw.Code, rw.Header()
+}
+
 func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
-	test, err := newAjaxRequestTest()
+	test, err := newAjaxRequestTest(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1746,6 +1757,7 @@ func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
 	mime := rh.Get("Content-Type")
 	assert.Equal(t, applicationJSON, mime)
 }
+
 func TestAjaxUnauthorizedRequest1(t *testing.T) {
 	header := make(http.Header)
 	header.Add("accept", applicationJSON)
@@ -1760,8 +1772,8 @@ func TestAjaxUnauthorizedRequest2(t *testing.T) {
 	testAjaxUnauthorizedRequest(t, header)
 }
 
-func TestAjaxForbiddendRequest(t *testing.T) {
-	test, err := newAjaxRequestTest()
+func TestAjaxForbiddenRequest(t *testing.T) {
+	test, err := newAjaxRequestTest(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1772,6 +1784,59 @@ func TestAjaxForbiddendRequest(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, code)
 	mime := rh.Get("Content-Type")
 	assert.NotEqual(t, applicationJSON, mime)
+}
+
+func TestNotAuthorizedInApiMode(t *testing.T) {
+	test, err := newAjaxRequestTest(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code, header := test.getCallbackEndpoint()
+	assert.Equal(t, 403, code)
+	assert.Equal(t, applicationJSON, header.Get("Content-Type"))
+}
+
+func testAjaxForwardedRequest(t *testing.T, header http.Header) {
+	test, err := newAjaxRequestTest(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpoint := "/test"
+
+	code, rh, err := test.getEndpoint(endpoint, header)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusFound, code)
+	mime := rh.Get("Content-Type")
+	assert.Equal(t, applicationJSON, mime)
+}
+
+func TestAjaxUnauthorizedRequestWithApiMode1(t *testing.T) {
+	header := make(http.Header)
+	header.Add("accept", applicationJSON)
+
+	testAjaxForwardedRequest(t, header)
+}
+
+func TestAjaxUnauthorizedRequestWithApiMode2(t *testing.T) {
+	header := make(http.Header)
+	header.Add("Accept", applicationJSON)
+
+	testAjaxForwardedRequest(t, header)
+}
+
+func TestAjaxRedirectIsSuccessfulWithApiMode(t *testing.T) {
+	test, err := newAjaxRequestTest(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpoint := "/test"
+	header := make(http.Header)
+	code, rh, err := test.getEndpoint(endpoint, header)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusFound, code)
+	mime := rh.Get("Content-Type")
+	assert.Equal(t, applicationJSON, mime)
 }
 
 func TestClearSplitCookie(t *testing.T) {

@@ -397,12 +397,17 @@ func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 // ErrorPage writes an error response
 func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
 	if p.ApiMode {
-		// status 403 forbidden is not correct here, because authentication will solve the problem
-		if code == http.StatusForbidden {
-			code = http.StatusUnauthorized
-		}
 		rw.WriteHeader(code)
-		rw.Write([]byte(message))
+		rw.Header().Set("Content-Type", applicationJSON)
+		content, _ := json.Marshal(map[string]string{
+			"error_message": message,
+		})
+		code, err := rw.Write(content)
+		if err != nil {
+			logger.Errorf("Set json response for error.")
+			http.Error(rw, fmt.Sprintf("Error: %v", err), code)
+			return
+		}
 		return
 	}
 	rw.WriteHeader(code)
@@ -760,6 +765,9 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	redirectURI := p.GetRedirectURI(util.GetRequestHost(req))
+	if p.ApiMode {
+		rw.Header().Set("Content-Type", applicationJSON)
+	}
 	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonce, redirect)), http.StatusFound)
 }
 
@@ -771,7 +779,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	// finish the oauth cycle
 	err := req.ParseForm()
 	if err != nil {
-		logger.Errorf("Error while parsing OAuth2 callback: %v", err)
+		logger.Errorf("1Error while parsing OAuth2 callback: %v", err)
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
