@@ -1837,44 +1837,15 @@ func TestNotAuthorizedInAPIMode(t *testing.T) {
 	assert.Equal(t, applicationJSON, header.Get("Content-Type"))
 }
 
-func testAjaxForwardedRequest(t *testing.T, header http.Header) {
-	test, err := newAjaxRequestTest(true)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	code, rh, err := test.getEndpoint(testEndpoint, header)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusFound, code)
-	mime := rh.Get("Content-Type")
-	assert.Equal(t, applicationJSON, mime)
-}
-
-func TestAjaxUnauthorizedRequestWithAPIMode1(t *testing.T) {
-	header := make(http.Header)
-	header.Add("accept", applicationJSON)
-
-	testAjaxForwardedRequest(t, header)
-}
-
-func TestAjaxUnauthorizedRequestWithAPIMode2(t *testing.T) {
-	header := make(http.Header)
-	header.Add("Accept", applicationJSON)
-
-	testAjaxForwardedRequest(t, header)
-}
-
 func TestAjaxRedirectIsSuccessfulWithAPIMode(t *testing.T) {
 	test, err := newAjaxRequestTest(true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	header := make(http.Header)
-	code, rh, err := test.getEndpoint(testEndpoint, header)
+	code, _, err := test.getEndpoint(testEndpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusFound, code)
-	mime := rh.Get("Content-Type")
-	assert.Equal(t, applicationJSON, mime)
 }
 
 func TestClearSplitCookie(t *testing.T) {
