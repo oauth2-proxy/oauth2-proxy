@@ -1837,7 +1837,7 @@ func TestNotAuthorizedInAPIMode(t *testing.T) {
 	assert.Equal(t, applicationJSON, header.Get("Content-Type"))
 }
 
-func TestAjaxRedirectIsSuccessfulWithAPIMode(t *testing.T) {
+func TestAjaxRedirectIsSuccessfulInAPIMode(t *testing.T) {
 	test, err := newAjaxRequestTest(true)
 	if err != nil {
 		t.Fatal(err)
