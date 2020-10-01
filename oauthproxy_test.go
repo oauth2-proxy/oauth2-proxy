@@ -1775,14 +1775,17 @@ func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (i
 	return rw.Code, rw.Header(), nil
 }
 
-func (test *ajaxRequestTest) getCallbackEndpoint() (int, http.Header) {
+func (test *ajaxRequestTest) getCallbackEndpoint(errorMessage string) (int, http.Header, string) {
 	rw := httptest.NewRecorder()
-	req, err := http.NewRequest(http.MethodGet, "/oauth2/callback?error=login_required", strings.NewReader(""))
+	req, err := http.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf("/oauth2/callback?error=%s", errorMessage),
+		strings.NewReader(""))
 	if err != nil {
-		return 0, nil
+		return 0, nil, ""
 	}
 	test.proxy.ServeHTTP(rw, req)
-	return rw.Code, rw.Header()
+	return rw.Code, rw.Header(), rw.Body.String()
 }
 
 func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
@@ -1832,9 +1835,22 @@ func TestNotAuthorizedInAPIMode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	code, header := test.getCallbackEndpoint()
+	code, header, body := test.getCallbackEndpoint("login_required")
 	assert.Equal(t, 403, code)
 	assert.Equal(t, applicationJSON, header.Get("Content-Type"))
+	assert.Equal(t, "{\"error_message\":\"login_required\"}\n", body)
+}
+
+func TestNotAuthorizedInAPIModeWithXSSAttack(t *testing.T) {
+	test, err := newAjaxRequestTest(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code, header, body := test.getCallbackEndpoint("<script>some evil code</script>")
+	assert.Equal(t, 403, code)
+	assert.Equal(t, applicationJSON, header.Get("Content-Type"))
+	assert.Equal(t, "{\"error_message\":\"\\u0026lt;script\\u0026gt;some evil code\\u0026lt;/script\\u0026gt;\"}\n", body)
 }
 
 func TestAjaxRedirectIsSuccessfulInAPIMode(t *testing.T) {
