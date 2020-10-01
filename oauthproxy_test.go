@@ -1850,7 +1850,10 @@ func TestNotAuthorizedInAPIModeWithXSSAttack(t *testing.T) {
 	code, header, body := test.getCallbackEndpoint("<script>some evil code</script>")
 	assert.Equal(t, 403, code)
 	assert.Equal(t, applicationJSON, header.Get("Content-Type"))
-	assert.Equal(t, "{\"error_message\":\"\\u0026lt;script\\u0026gt;some evil code\\u0026lt;/script\\u0026gt;\"}\n", body)
+	assert.Equal(
+		t,
+		"{\"error_message\":\"\\u0026lt;script\\u0026gt;some evil code\\u0026lt;/script\\u0026gt;\"}\n",
+		body)
 }
 
 func TestAjaxRedirectIsSuccessfulInAPIMode(t *testing.T) {
