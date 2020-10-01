@@ -773,7 +773,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
-	errorString := req.Form.Get("error")
+	errorString := template.HTMLEscapeString(req.Form.Get("error"))
 	if errorString != "" {
 		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
 		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", errorString)
