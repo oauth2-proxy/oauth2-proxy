@@ -21,9 +21,6 @@ else
   ./cc-test-reporter after-build --exit-code $TEST_STATUS -t gocov
 fi
 
-REPORT_STATUS=$?
-echo "REPORT_STATUS: ${REPORT_STATUS}"
-
 if [ "$TEST_STATUS" -ne 0 ]; then
   echo "Test failed, status code: $TEST_STATUS"
   exit $TEST_STATUS
