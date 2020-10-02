@@ -29,6 +29,7 @@
 - [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
 - [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Add support to ensure user belongs in required groups when using the OIDC provider (@stefansedich)
 - [#800](https://github.com/oauth2-proxy/oauth2-proxy/pull/800) Fix import path for v7 (@johejo)
+- [#783](https://github.com/oauth2-proxy/oauth2-proxy/pull/783) Update Go to 1.15 (@johejo)
 
 # v6.1.1
 
