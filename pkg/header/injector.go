@@ -85,28 +85,34 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 			return nil, fmt.Errorf("error loading basicAuthPassword: %v", err)
 		}
 		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
-			claim := session.GetClaim(source.Claim)
-			if claim == "" {
-				return
+			claimValues := session.GetClaim(source.Claim)
+			for _, claim := range claimValues {
+				if claim == "" {
+					continue
+				}
+				auth := claim + ":" + string(password)
+				header.Add(name, "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 			}
-			auth := claim + ":" + string(password)
-			header.Add(name, "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 		}), nil
 	case source.Prefix != "":
 		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
-			claim := session.GetClaim(source.Claim)
-			if claim == "" {
-				return
+			claimValues := session.GetClaim(source.Claim)
+			for _, claim := range claimValues {
+				if claim == "" {
+					continue
+				}
+				header.Add(name, source.Prefix+claim)
 			}
-			header.Add(name, source.Prefix+claim)
 		}), nil
 	default:
 		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
-			claim := session.GetClaim(source.Claim)
-			if claim == "" {
-				return
+			claimValues := session.GetClaim(source.Claim)
+			for _, claim := range claimValues {
+				if claim == "" {
+					continue
+				}
+				header.Add(name, claim)
 			}
-			header.Add(name, claim)
 		}), nil
 	}
 }
