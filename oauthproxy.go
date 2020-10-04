@@ -871,14 +871,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 // AuthenticateOnly checks whether the user is currently logged in
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
-	session, err := p.getAuthenticatedSession(rw, req)
+	_, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
 		return
 	}
 
 	// we are authenticated
-	p.addHeadersForProxying(rw, req, session)
 	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusAccepted)
 	})).ServeHTTP(rw, req)
@@ -892,11 +891,10 @@ func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
 // Proxy proxies the user request if the user is authenticated else it prompts
 // them to authenticate
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
-	session, err := p.getAuthenticatedSession(rw, req)
+	_, err := p.getAuthenticatedSession(rw, req)
 	switch err {
 	case nil:
 		// we are authenticated
-		p.addHeadersForProxying(rw, req, session)
 		p.headersChain.Then(p.serveMux).ServeHTTP(rw, req)
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
@@ -950,15 +948,6 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	return session, nil
-}
-
-// addHeadersForProxying adds the appropriate headers the request / response for proxying
-func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
-	if session.Email == "" {
-		rw.Header().Set("GAP-Auth", session.User)
-	} else {
-		rw.Header().Set("GAP-Auth", session.Email)
-	}
 }
 
 // isAjax checks if a request is an ajax request

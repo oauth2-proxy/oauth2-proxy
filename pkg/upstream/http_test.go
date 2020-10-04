@@ -226,8 +226,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 					Method: "GET",
 					URL:    "http://example.localhost/withSignature",
 					Header: map[string][]string{
-						gapAuth:      {""},
-						gapSignature: {"sha256 osMWI8Rr0Zr5HgNq6wakrgJITVJQMmFN1fXCesrqrmM="},
+						gapSignature: {"sha256 md39qRfodR3ya5kMZxDS5nMXtG3BZoh4DUTkrXqLtow="},
 					},
 					Body:       []byte{},
 					Host:       "example.localhost",

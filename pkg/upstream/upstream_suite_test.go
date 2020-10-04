@@ -58,7 +58,6 @@ const (
 	acceptEncoding  = "Accept-Encoding"
 	applicationJSON = "application/json"
 	textPlainUTF8   = "text/plain; charset=utf-8"
-	gapAuth         = "Gap-Auth"
 	gapSignature    = "Gap-Signature"
 )
 

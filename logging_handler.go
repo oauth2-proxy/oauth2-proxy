@@ -40,9 +40,12 @@ func extractMetadata(rw http.ResponseWriter, req *http.Request) (string, string)
 	scope := middleware.GetRequestScope(req)
 	upstream := scope.Upstream
 
-	authInfo := rw.Header().Get("GAP-Auth")
-	if authInfo != "" {
-		rw.Header().Del("GAP-Auth")
+	var authInfo string
+	if scope.Session != nil {
+		authInfo = scope.Session.Email
+		if authInfo == "" {
+			authInfo = scope.Session.User
+		}
 	}
 
 	return authInfo, upstream

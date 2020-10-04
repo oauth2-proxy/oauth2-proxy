@@ -123,8 +123,7 @@ var _ = Describe("Proxy Suite", func() {
 					Method: "GET",
 					URL:    "http://example.localhost/http/1234",
 					Header: map[string][]string{
-						"Gap-Auth":      {""},
-						"Gap-Signature": {"sha256 ofB1u6+FhEUbFLc3/uGbJVkl7GaN4egFqVvyO3+2I1w="},
+						"Gap-Signature": {"sha256 yu9y53XTRAnczM51Nv6LAbeU2mI577iUPeK8zHuY9MM="},
 					},
 					Body:       []byte{},
 					Host:       "example.localhost",
