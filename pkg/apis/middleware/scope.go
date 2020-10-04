@@ -21,4 +21,7 @@ type RequestScope struct {
 	// SessionRevalidated indicates whether the session has been revalidated since
 	// it was loaded or not.
 	SessionRevalidated bool
+
+	// Upstream indicates which (if any) upstream server the request was proxied to.
+	Upstream string
 }

@@ -13,7 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/justinas/alice"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -35,6 +38,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		body             []byte
 		signatureData    *options.SignatureData
 		existingHeaders  map[string]string
+		expectedUpstream string
 		expectedResponse testHTTPResponse
 		errorHandler     ProxyErrorHandler
 	}
@@ -66,10 +70,21 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			u, err := url.Parse(*in.serverAddr)
 			Expect(err).ToNot(HaveOccurred())
 
-			handler := newHTTPUpstreamProxy(upstream, u, in.signatureData, in.errorHandler)
+			var scope *middlewareapi.RequestScope
+			// Extract the scope so that we can see that the upstream has been set
+			// correctly
+			extractScope := func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+					scope = middleware.GetRequestScope(req)
+					next.ServeHTTP(rw, req)
+				})
+			}
+
+			handler := alice.New(middleware.NewScope(), extractScope).Then(newHTTPUpstreamProxy(upstream, u, in.signatureData, in.errorHandler))
 			handler.ServeHTTP(rw, req)
 
 			Expect(rw.Code).To(Equal(in.expectedResponse.code))
+			Expect(scope.Upstream).To(Equal(in.expectedUpstream))
 
 			// Delete extra headers that aren't relevant to tests
 			testSanitizeResponseHeader(rw.Header())
@@ -88,16 +103,16 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			Expect(request).To(Equal(in.expectedResponse.request))
 		},
 		Entry("request a path on the server", &httpUpstreamTableInput{
-			id:           "default",
-			serverAddr:   &serverAddr,
-			target:       "http://example.localhost/foo",
-			method:       "GET",
-			body:         []byte{},
-			errorHandler: nil,
+			id:               "default",
+			serverAddr:       &serverAddr,
+			target:           "http://example.localhost/foo",
+			method:           "GET",
+			body:             []byte{},
+			errorHandler:     nil,
+			expectedUpstream: "default",
 			expectedResponse: testHTTPResponse{
 				code: 200,
 				header: map[string][]string{
-					gapUpstream: {"default"},
 					contentType: {applicationJSON},
 				},
 				request: testHTTPRequest{
@@ -111,16 +126,16 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			},
 		}),
 		Entry("request a path with encoded slashes", &httpUpstreamTableInput{
-			id:           "encodedSlashes",
-			serverAddr:   &serverAddr,
-			target:       "http://example.localhost/foo%2fbar/?baz=1",
-			method:       "GET",
-			body:         []byte{},
-			errorHandler: nil,
+			id:               "encodedSlashes",
+			serverAddr:       &serverAddr,
+			target:           "http://example.localhost/foo%2fbar/?baz=1",
+			method:           "GET",
+			body:             []byte{},
+			errorHandler:     nil,
+			expectedUpstream: "encodedSlashes",
 			expectedResponse: testHTTPResponse{
 				code: 200,
 				header: map[string][]string{
-					gapUpstream: {"encodedSlashes"},
 					contentType: {applicationJSON},
 				},
 				request: testHTTPRequest{
@@ -134,16 +149,16 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			},
 		}),
 		Entry("when the request has a body", &httpUpstreamTableInput{
-			id:           "requestWithBody",
-			serverAddr:   &serverAddr,
-			target:       "http://example.localhost/withBody",
-			method:       "POST",
-			body:         []byte("body"),
-			errorHandler: nil,
+			id:               "requestWithBody",
+			serverAddr:       &serverAddr,
+			target:           "http://example.localhost/withBody",
+			method:           "POST",
+			body:             []byte("body"),
+			errorHandler:     nil,
+			expectedUpstream: "requestWithBody",
 			expectedResponse: testHTTPResponse{
 				code: 200,
 				header: map[string][]string{
-					gapUpstream: {"requestWithBody"},
 					contentType: {applicationJSON},
 				},
 				request: testHTTPRequest{
@@ -159,17 +174,16 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			},
 		}),
 		Entry("when the upstream is unavailable", &httpUpstreamTableInput{
-			id:           "unavailableUpstream",
-			serverAddr:   &invalidServer,
-			target:       "http://example.localhost/unavailableUpstream",
-			method:       "GET",
-			body:         []byte{},
-			errorHandler: nil,
+			id:               "unavailableUpstream",
+			serverAddr:       &invalidServer,
+			target:           "http://example.localhost/unavailableUpstream",
+			method:           "GET",
+			body:             []byte{},
+			errorHandler:     nil,
+			expectedUpstream: "unavailableUpstream",
 			expectedResponse: testHTTPResponse{
-				code: 502,
-				header: map[string][]string{
-					gapUpstream: {"unavailableUpstream"},
-				},
+				code:    502,
+				header:  map[string][]string{},
 				request: testHTTPRequest{},
 			},
 		}),
@@ -183,11 +197,10 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				rw.WriteHeader(502)
 				rw.Write([]byte("error"))
 			},
+			expectedUpstream: "withErrorHandler",
 			expectedResponse: testHTTPResponse{
-				code: 502,
-				header: map[string][]string{
-					gapUpstream: {"withErrorHandler"},
-				},
+				code:    502,
+				header:  map[string][]string{},
 				raw:     "error",
 				request: testHTTPRequest{},
 			},
@@ -202,12 +215,12 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				Hash: crypto.SHA256,
 				Key:  "key",
 			},
-			errorHandler: nil,
+			errorHandler:     nil,
+			expectedUpstream: "withSignature",
 			expectedResponse: testHTTPResponse{
 				code: 200,
 				header: map[string][]string{
 					contentType: {applicationJSON},
-					gapUpstream: {"withSignature"},
 				},
 				request: testHTTPRequest{
 					Method: "GET",
@@ -223,12 +236,13 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			},
 		}),
 		Entry("with existing headers", &httpUpstreamTableInput{
-			id:           "existingHeaders",
-			serverAddr:   &serverAddr,
-			target:       "http://example.localhost/existingHeaders",
-			method:       "GET",
-			body:         []byte{},
-			errorHandler: nil,
+			id:               "existingHeaders",
+			serverAddr:       &serverAddr,
+			target:           "http://example.localhost/existingHeaders",
+			method:           "GET",
+			body:             []byte{},
+			errorHandler:     nil,
+			expectedUpstream: "existingHeaders",
 			existingHeaders: map[string]string{
 				"Header1": "value1",
 				"Header2": "value2",
@@ -236,7 +250,6 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			expectedResponse: testHTTPResponse{
 				code: 200,
 				header: map[string][]string{
-					gapUpstream: {"existingHeaders"},
 					contentType: {applicationJSON},
 				},
 				request: testHTTPRequest{
@@ -274,18 +287,21 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		httpUpstream, ok := handler.(*httpUpstreamProxy)
 		Expect(ok).To(BeTrue())
 
+		var gotRequest *http.Request
 		// Override the handler to just run the director and not actually send the request
 		requestInterceptor := func(h http.Handler) http.Handler {
 			return http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 				proxy, ok := h.(*httputil.ReverseProxy)
 				Expect(ok).To(BeTrue())
 				proxy.Director(req)
+
+				gotRequest = req
 			})
 		}
 		httpUpstream.handler = requestInterceptor(httpUpstream.handler)
 
-		httpUpstream.ServeHTTP(rw, req)
-		Expect(req.Host).To(Equal(strings.TrimPrefix(serverAddr, "http://")))
+		alice.New(middleware.NewScope()).Then(httpUpstream).ServeHTTP(rw, req)
+		Expect(gotRequest.Host).To(Equal(strings.TrimPrefix(serverAddr, "http://")))
 	})
 
 	type newUpstreamTableInput struct {
@@ -368,6 +384,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 	Context("with a websocket proxy", func() {
 		var proxyServer *httptest.Server
+		var scope *middlewareapi.RequestScope
 
 		BeforeEach(func() {
 			flush := 1 * time.Second
@@ -382,7 +399,17 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			u, err := url.Parse(serverAddr)
 			Expect(err).ToNot(HaveOccurred())
 
-			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
+			scope = nil
+			// Extract the scope so that we can see that the upstream has been set
+			// correctly
+			extractScope := func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+					scope = middleware.GetRequestScope(req)
+					next.ServeHTTP(rw, req)
+				})
+			}
+
+			handler := alice.New(middleware.NewScope(), extractScope).Then(newHTTPUpstreamProxy(upstream, u, nil, nil))
 			proxyServer = httptest.NewServer(handler)
 		})
 
@@ -414,7 +441,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			response, err := http.Get(fmt.Sprintf("http://%s", proxyServer.Listener.Addr().String()))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(response.StatusCode).To(Equal(200))
-			Expect(response.Header.Get(gapUpstream)).To(Equal("websocketProxy"))
+			Expect(scope.Upstream).To(Equal("websocketProxy"))
 		})
 	})
 })

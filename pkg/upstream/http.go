@@ -10,6 +10,7 @@ import (
 
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	"github.com/yhat/wsutil"
 )
 
@@ -77,7 +78,12 @@ type httpUpstreamProxy struct {
 // ServeHTTP proxies requests to the upstream provider while signing the
 // request headers
 func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("GAP-Upstream-Address", h.upstream)
+	scope := middleware.GetRequestScope(req)
+
+	// If scope is nil, this will panic.
+	// A scope should always be injected before this handler is called.
+	scope.Upstream = h.upstream
+
 	if h.auth != nil {
 		req.Header.Set("GAP-Auth", rw.Header().Get("GAP-Auth"))
 		h.auth.SignRequest(req)

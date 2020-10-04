@@ -7,6 +7,9 @@ import (
 	"net/http/httptest"
 	"os"
 
+	"github.com/justinas/alice"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -16,6 +19,7 @@ var _ = Describe("File Server Suite", func() {
 	var dir string
 	var handler http.Handler
 	var id string
+	var scope *middlewareapi.RequestScope
 
 	const (
 		foo          = "foo"
@@ -25,14 +29,24 @@ var _ = Describe("File Server Suite", func() {
 	)
 
 	BeforeEach(func() {
-		// Generate a random id before each test to check the GAP-Upstream-Address
-		// is being set correctly
+		// Generate a random id before each test to check the upstream
+		// is being set correctly in the scope
 		idBytes := make([]byte, 16)
 		_, err := io.ReadFull(rand.Reader, idBytes)
 		Expect(err).ToNot(HaveOccurred())
 		id = string(idBytes)
 
-		handler = newFileServer(id, "/files", filesDir)
+		scope = nil
+		// Extract the scope so that we can see that the upstream has been set
+		// correctly
+		extractScope := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				scope = middleware.GetRequestScope(req)
+				next.ServeHTTP(rw, req)
+			})
+		}
+
+		handler = alice.New(middleware.NewScope(), extractScope).Then(newFileServer(id, "/files", filesDir))
 	})
 
 	AfterEach(func() {
@@ -45,7 +59,7 @@ var _ = Describe("File Server Suite", func() {
 			rw := httptest.NewRecorder()
 			handler.ServeHTTP(rw, req)
 
-			Expect(rw.Header().Get("GAP-Upstream-Address")).To(Equal(id))
+			Expect(scope.Upstream).To(Equal(id))
 			Expect(rw.Code).To(Equal(expectedResponseCode))
 			Expect(rw.Body.String()).To(Equal(expectedBody))
 		},

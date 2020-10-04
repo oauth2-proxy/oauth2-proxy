@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/justinas/alice"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -16,8 +19,8 @@ var _ = Describe("Static Response Suite", func() {
 	var id string
 
 	BeforeEach(func() {
-		// Generate a random id before each test to check the GAP-Upstream-Address
-		// is being set correctly
+		// Generate a random id before each test to check the upstream
+		// is being set correctly in the scope
 		idBytes := make([]byte, 16)
 		_, err := io.ReadFull(rand.Reader, idBytes)
 		Expect(err).ToNot(HaveOccurred())
@@ -37,13 +40,24 @@ var _ = Describe("Static Response Suite", func() {
 			if in.staticCode != 0 {
 				code = &in.staticCode
 			}
-			handler := newStaticResponseHandler(id, code)
+
+			var scope *middlewareapi.RequestScope
+			// Extract the scope so that we can see that the upstream has been set
+			// correctly
+			extractScope := func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+					scope = middleware.GetRequestScope(req)
+					next.ServeHTTP(rw, req)
+				})
+			}
+
+			handler := alice.New(middleware.NewScope(), extractScope).Then(newStaticResponseHandler(id, code))
 
 			req := httptest.NewRequest("", in.requestPath, nil)
 			rw := httptest.NewRecorder()
 			handler.ServeHTTP(rw, req)
 
-			Expect(rw.Header().Get("GAP-Upstream-Address")).To(Equal(id))
+			Expect(scope.Upstream).To(Equal(id))
 			Expect(rw.Code).To(Equal(in.expectedCode))
 			Expect(rw.Body.String()).To(Equal(in.expectedBody))
 		},

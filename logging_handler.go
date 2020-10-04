@@ -11,16 +11,15 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 )
 
 // responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP status
 // code and body size
 type responseLogger struct {
-	w        http.ResponseWriter
-	status   int
-	size     int
-	upstream string
-	authInfo string
+	w      http.ResponseWriter
+	status int
+	size   int
 }
 
 // Header returns the ResponseWriter's Header
@@ -36,19 +35,17 @@ func (l *responseLogger) Hijack() (rwc net.Conn, buf *bufio.ReadWriter, err erro
 	return nil, nil, errors.New("http.Hijacker is not available on writer")
 }
 
-// ExtractGAPMetadata extracts and removes GAP headers from the ResponseWriter's
-// Header
-func (l *responseLogger) ExtractGAPMetadata() {
-	upstream := l.w.Header().Get("GAP-Upstream-Address")
-	if upstream != "" {
-		l.upstream = upstream
-		l.w.Header().Del("GAP-Upstream-Address")
-	}
-	authInfo := l.w.Header().Get("GAP-Auth")
+// extractMetadata extracts metadata from the request/reqsponse for logging
+func extractMetadata(rw http.ResponseWriter, req *http.Request) (string, string) {
+	scope := middleware.GetRequestScope(req)
+	upstream := scope.Upstream
+
+	authInfo := rw.Header().Get("GAP-Auth")
 	if authInfo != "" {
-		l.authInfo = authInfo
-		l.w.Header().Del("GAP-Auth")
+		rw.Header().Del("GAP-Auth")
 	}
+
+	return authInfo, upstream
 }
 
 // Write writes the response using the ResponseWriter
@@ -57,7 +54,6 @@ func (l *responseLogger) Write(b []byte) (int, error) {
 		// The status will be StatusOK if WriteHeader has not been called yet
 		l.status = http.StatusOK
 	}
-	l.ExtractGAPMetadata()
 	size, err := l.w.Write(b)
 	l.size += size
 	return size, err
@@ -65,7 +61,6 @@ func (l *responseLogger) Write(b []byte) (int, error) {
 
 // WriteHeader writes the status code for the Response
 func (l *responseLogger) WriteHeader(s int) {
-	l.ExtractGAPMetadata()
 	l.w.WriteHeader(s)
 	l.status = s
 }
@@ -104,5 +99,7 @@ func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	url := *req.URL
 	responseLogger := &responseLogger{w: w}
 	h.handler.ServeHTTP(responseLogger, req)
-	logger.PrintReq(responseLogger.authInfo, responseLogger.upstream, req, url, t, responseLogger.Status(), responseLogger.Size())
+
+	authInfo, upstream := extractMetadata(w, req)
+	logger.PrintReq(authInfo, upstream, req, url, t, responseLogger.Status(), responseLogger.Size())
 }

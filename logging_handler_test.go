@@ -6,7 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/justinas/alice"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -102,7 +104,7 @@ func TestLoggingHandler_ServeHTTP(t *testing.T) {
 		logger.SetOutput(buf)
 		logger.SetReqTemplate(test.Format)
 		logger.SetExcludePaths(test.ExcludePaths)
-		h := LoggingHandler(http.HandlerFunc(handler))
+		h := alice.New(middleware.NewScope(), LoggingHandler).Then(http.HandlerFunc(handler))
 
 		r, _ := http.NewRequest("GET", test.Path, nil)
 		r.RemoteAddr = "127.0.0.1"
