@@ -213,3 +213,10 @@ func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
 	assert.Equal(t, timestamp, s.ExpiresOn.UTC())
 	assert.Equal(t, "refresh1234", s.RefreshToken)
 }
+
+func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
+	p := testAzureProvider("")
+	p.ProtectedResource, _ = url.Parse("http://my.resource.test")
+	result := p.GetLoginURL("https://my.test.app/oauth", "")
+	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
+}
