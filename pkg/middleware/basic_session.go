@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/justinas/alice"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/authentication/basic"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 func NewBasicAuthSessionLoader(validator basic.Validator) alice.Constructor {
