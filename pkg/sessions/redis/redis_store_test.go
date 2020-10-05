@@ -21,6 +21,8 @@ import (
 
 const redisPassword = "0123456789abcdefghijklmnopqrstuv"
 
+// wrappedRedisLogger wraps a logger so that we can coerce the logger to
+// fit the expected signature for go-redis logging
 type wrappedRedisLogger struct {
 	*log.Logger
 }
