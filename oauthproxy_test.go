@@ -2242,21 +2242,24 @@ func TestTrustedIPs(t *testing.T) {
 }
 
 func Test_buildRoutesAllowlist(t *testing.T) {
+	type expectedAllowedRoute struct {
+		method      string
+		regexString string
+	}
+
 	testCases := []struct {
-		name            string
-		skipAuthRegex   []string
-		skipAuthRoutes  []string
-		expectedMethods []string
-		expectedRegexes []string
-		shouldError     bool
+		name           string
+		skipAuthRegex  []string
+		skipAuthRoutes []string
+		expectedRoutes []expectedAllowedRoute
+		shouldError    bool
 	}{
 		{
-			name:            "No skip auth configured",
-			skipAuthRegex:   []string{},
-			skipAuthRoutes:  []string{},
-			expectedMethods: []string{},
-			expectedRegexes: []string{},
-			shouldError:     false,
+			name:           "No skip auth configured",
+			skipAuthRegex:  []string{},
+			skipAuthRoutes: []string{},
+			expectedRoutes: []expectedAllowedRoute{},
+			shouldError:    false,
 		},
 		{
 			name: "Only skipAuthRegex configured",
@@ -2265,13 +2268,15 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 				"^/baz/[0-9]+/thing",
 			},
 			skipAuthRoutes: []string{},
-			expectedMethods: []string{
-				"",
-				"",
-			},
-			expectedRegexes: []string{
-				"^/foo/bar",
-				"^/baz/[0-9]+/thing",
+			expectedRoutes: []expectedAllowedRoute{
+				{
+					method:      "",
+					regexString: "^/foo/bar",
+				},
+				{
+					method:      "",
+					regexString: "^/baz/[0-9]+/thing",
+				},
 			},
 			shouldError: false,
 		},
@@ -2285,19 +2290,27 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 				"WEIRD=^/methods/are/allowed",
 				"PATCH=/second/equals?are=handled&just=fine",
 			},
-			expectedMethods: []string{
-				"GET",
-				"POST",
-				"",
-				"WEIRD",
-				"PATCH",
-			},
-			expectedRegexes: []string{
-				"^/foo/bar",
-				"^/baz/[0-9]+/thing",
-				"^/all/methods$",
-				"^/methods/are/allowed",
-				"/second/equals?are=handled&just=fine",
+			expectedRoutes: []expectedAllowedRoute{
+				{
+					method:      "GET",
+					regexString: "^/foo/bar",
+				},
+				{
+					method:      "POST",
+					regexString: "^/baz/[0-9]+/thing",
+				},
+				{
+					method:      "",
+					regexString: "^/all/methods$",
+				},
+				{
+					method:      "WEIRD",
+					regexString: "^/methods/are/allowed",
+				},
+				{
+					method:      "PATCH",
+					regexString: "/second/equals?are=handled&just=fine",
+				},
 			},
 			shouldError: false,
 		},
@@ -2312,19 +2325,27 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 				"POST=^/baz/[0-9]+/thing",
 				"^/all/methods$",
 			},
-			expectedMethods: []string{
-				"",
-				"",
-				"GET",
-				"POST",
-				"",
-			},
-			expectedRegexes: []string{
-				"^/foo/bar/regex",
-				"^/baz/[0-9]+/thing/regex",
-				"^/foo/bar",
-				"^/baz/[0-9]+/thing",
-				"^/all/methods$",
+			expectedRoutes: []expectedAllowedRoute{
+				{
+					method:      "",
+					regexString: "^/foo/bar/regex",
+				},
+				{
+					method:      "",
+					regexString: "^/baz/[0-9]+/thing/regex",
+				},
+				{
+					method:      "GET",
+					regexString: "^/foo/bar",
+				},
+				{
+					method:      "POST",
+					regexString: "^/baz/[0-9]+/thing",
+				},
+				{
+					method:      "",
+					regexString: "^/all/methods$",
+				},
 			},
 			shouldError: false,
 		},
@@ -2335,10 +2356,9 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 				"^/baz/[0-9]+/thing",
 				"(bad[regex",
 			},
-			skipAuthRoutes:  []string{},
-			expectedMethods: []string{},
-			expectedRegexes: []string{},
-			shouldError:     true,
+			skipAuthRoutes: []string{},
+			expectedRoutes: []expectedAllowedRoute{},
+			shouldError:    true,
 		},
 		{
 			name:          "Invalid skipAuthRoutes entry",
@@ -2349,9 +2369,8 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 				"^/all/methods$",
 				"PUT=(bad[regex",
 			},
-			expectedMethods: []string{},
-			expectedRegexes: []string{},
-			shouldError:     true,
+			expectedRoutes: []expectedAllowedRoute{},
+			shouldError:    true,
 		},
 	}
 
@@ -2369,10 +2388,9 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 			assert.NoError(t, err)
 
 			for i, route := range routes {
-				assert.Greater(t, len(tc.expectedMethods), i)
-				assert.Equal(t, route.method, tc.expectedMethods[i])
-				assert.Greater(t, len(tc.expectedRegexes), i)
-				assert.Equal(t, route.pathRegex.String(), tc.expectedRegexes[i])
+				assert.Greater(t, len(tc.expectedRoutes), i)
+				assert.Equal(t, route.method, tc.expectedRoutes[i].method)
+				assert.Equal(t, route.pathRegex.String(), tc.expectedRoutes[i].regexString)
 			}
 		})
 	}

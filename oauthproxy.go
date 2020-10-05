@@ -76,7 +76,7 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	allowedRoutes           []*allowedRoute
+	allowedRoutes           []allowedRoute
 	redirectURL             *url.URL // the url to receive requests at
 	whitelistDomains        []string
 	provider                providers.Provider
@@ -285,8 +285,8 @@ func buildSignInMessage(opts *options.Options) string {
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
 // SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
 // (method=path support)
-func buildRoutesAllowlist(opts *options.Options) ([]*allowedRoute, error) {
-	routes := make([]*allowedRoute, 0, len(opts.SkipAuthRegex)+len(opts.SkipAuthRoutes))
+func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
+	routes := make([]allowedRoute, 0, len(opts.SkipAuthRegex)+len(opts.SkipAuthRoutes))
 
 	for _, path := range opts.SkipAuthRegex {
 		compiledRegex, err := regexp.Compile(path)
@@ -294,7 +294,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]*allowedRoute, error) {
 			return nil, err
 		}
 		logger.Printf("Skipping auth - Method: ALL | Path: %s", path)
-		routes = append(routes, &allowedRoute{
+		routes = append(routes, allowedRoute{
 			method:    "",
 			pathRegex: compiledRegex,
 		})
@@ -306,13 +306,13 @@ func buildRoutesAllowlist(opts *options.Options) ([]*allowedRoute, error) {
 			path   string
 		)
 
-		parts := strings.Split(methodPath, "=")
+		parts := strings.SplitN(methodPath, "=", 2)
 		if len(parts) == 1 {
 			method = ""
 			path = parts[0]
 		} else {
 			method = strings.ToUpper(parts[0])
-			path = strings.Join(parts[1:], "=")
+			path = parts[1]
 		}
 
 		compiledRegex, err := regexp.Compile(path)
@@ -320,7 +320,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]*allowedRoute, error) {
 			return nil, err
 		}
 		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
-		routes = append(routes, &allowedRoute{
+		routes = append(routes, allowedRoute{
 			method:    method,
 			pathRegex: compiledRegex,
 		})

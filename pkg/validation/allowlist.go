@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 )
 
 func validateAllowlists(o *options.Options) []string {
@@ -32,11 +32,11 @@ func validateRoutes(o *options.Options) []string {
 	msgs := []string{}
 	for _, route := range o.SkipAuthRoutes {
 		var regex string
-		parts := strings.Split(route, "=")
+		parts := strings.SplitN(route, "=", 2)
 		if len(parts) == 1 {
 			regex = parts[0]
 		} else {
-			regex = strings.Join(parts[1:], "=")
+			regex = parts[1]
 		}
 		_, err := regexp.Compile(regex)
 		if err != nil {
