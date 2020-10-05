@@ -29,4 +29,4 @@ A list of changes can be seen in the [CHANGELOG]({{ site.gitweb }}/CHANGELOG.md)
 3. After returning from the authentication provider, the oauth tokens are stored in the configured session store (cookie, redis, ...) and a cookie is set
 4. The request is forwarded to the upstream server with added user info and authentication headers (depending on the configuration)
 
-Notice that the proxy alos provides a number of useful [endpoints](/oauth2-proxy/endpoints)
+Notice that the proxy also provides a number of useful [endpoints](/oauth2-proxy/endpoints).
