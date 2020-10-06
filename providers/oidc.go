@@ -281,13 +281,26 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 }
 
 func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface{}) []string {
-	var groups []string
+	groups := []string{}
 
 	switch rawGroups := rawClaims[p.GroupsClaim].(type) {
 	case []string:
 		groups = append(groups, rawGroups...)
+	case *[]string:
+		groups = append(groups, *rawGroups...)
 	case string:
 		groups = append(groups, rawGroups)
+	case *string:
+		groups = append(groups, *rawGroups)
+	case []interface{}:
+		if rawGroups != nil {
+			for _, rawGroup := range rawGroups {
+				group, ok := rawGroup.(string)
+				if ok {
+					groups = append(groups, group)
+				}
+			}
+		}
 	}
 	return groups
 }
