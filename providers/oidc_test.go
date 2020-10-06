@@ -404,7 +404,7 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	assert.Equal(t, true, verifiedIDToken == nil)
 }
 
-func TestExtractRawgroupsFromClaim(t *testing.T) {
+func Test_extractRawGroupsFromClaim(t *testing.T) {
 	server, provider := newTestSetup([]byte(""))
 	defer server.Close()
 
