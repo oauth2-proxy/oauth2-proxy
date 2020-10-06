@@ -285,6 +285,9 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface{}) []string {
 	groups := []string{}
 
+	if group, ok := rawClaims[p.GroupsClaim].(string); ok {
+		groups = append(groups, group)
+	}
 	rawGroups, ok := rawClaims[p.GroupsClaim].([]interface{})
 	if rawGroups != nil && ok {
 		for _, rawGroup := range rawGroups {
