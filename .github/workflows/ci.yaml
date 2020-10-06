@@ -14,42 +14,35 @@ jobs:
   build:
     env:
       COVER: true
-      GOPATH: ${{ github.workspace }}
     runs-on: ubuntu-18.04
     steps:
 
-    - name: Check out code into the Go module directory
+    - name: Check out code
       uses: actions/checkout@v2
-      with:
-        path: ./src/github.com/${{ github.repository }}
 
-    - name: Set up Go 1.14
+    - name: Set up Go 1.15
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.14
+        go-version: 1.15.x
       id: go
 
     - name: Get dependencies
       run: |
-        cd src/github.com/${{ github.repository }}
         curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $GOPATH/bin v1.24.0
-        GO111MODULE=on go mod download
+        go mod download
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
 
     - name: Lint
       run: |
-        cd src/github.com/${{ github.repository }}
         make lint
 
     - name: Build
       run: |
-        cd src/github.com/${{ github.repository }}
         make build
 
     - name: Test
       env:
         CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       run: |
-        cd src/github.com/${{ github.repository }}
         ./test.sh
