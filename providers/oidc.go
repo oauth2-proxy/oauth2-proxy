@@ -293,12 +293,10 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 	case *string:
 		groups = append(groups, *rawGroups)
 	case []interface{}:
-		if rawGroups != nil {
-			for _, rawGroup := range rawGroups {
-				group, ok := rawGroup.(string)
-				if ok {
-					groups = append(groups, group)
-				}
+		for _, rawGroup := range rawGroups {
+			group, ok := rawGroup.(string)
+			if ok {
+				groups = append(groups, group)
 			}
 		}
 	}
