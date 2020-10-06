@@ -340,7 +340,7 @@ func TestOpenRedirects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := os.Open("./test/openredirects.txt")
+	file, err := os.Open("./testdata/openredirects.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
