@@ -32,6 +32,7 @@
 - [#783](https://github.com/oauth2-proxy/oauth2-proxy/pull/783) Update Go to 1.15 (@johejo)
 - [#813](https://github.com/oauth2-proxy/oauth2-proxy/pull/813) Fix build (@thiagocaiubi)
 - [#750](https://github.com/oauth2-proxy/oauth2-proxy/pull/750) ci: Migrate to Github Actions (@shinebayar-g)
+- [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
 
 # v6.1.1
 
