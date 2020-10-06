@@ -404,30 +404,35 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	assert.Equal(t, true, verifiedIDToken == nil)
 }
 
-func Test_formatGroup(t *testing.T) {
+func TestExtractRawgroupsFromClaim(t *testing.T) {
+	server, provider := newTestSetup([]byte(""))
+	defer server.Close()
+
+	provider.GroupsClaim = "groups"
+
 	testCases := map[string]struct {
-		RawGroup                    interface{}
-		ExpectedFormattedGroupValue string
+		RawClaims map[string]interface{}
+		Groups    []string
 	}{
-		"String Group": {
-			RawGroup:                    "group",
-			ExpectedFormattedGroupValue: "group",
+		"ArrayGroup": {
+			RawClaims: map[string]interface{}{"groups": []string{"one_group", "another_group"}},
+			Groups:    []string{"one_group", "another_group"},
 		},
-		"Map Group": {
-			RawGroup:                    map[string]string{"id": "1", "name": "Test"},
-			ExpectedFormattedGroupValue: "{\"id\":\"1\",\"name\":\"Test\"}",
+		"StringGroup": {
+			RawClaims: map[string]interface{}{"groups": "one_group"},
+			Groups:    []string{"one_group"},
 		},
-		"List Group": {
-			RawGroup:                    []string{"First", "Second"},
-			ExpectedFormattedGroupValue: "[\"First\",\"Second\"]",
+		"NumberGroup": {
+			RawClaims: map[string]interface{}{"groups": 42},
+			Groups:    []string(nil),
 		},
 	}
 
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			formattedGroup, err := formatGroup(tc.RawGroup)
-			assert.Nil(t, err)
-			assert.Equal(t, tc.ExpectedFormattedGroupValue, formattedGroup)
+			groups := provider.extractGroupsFromRawClaims(tc.RawClaims)
+			assert.Equal(t, tc.Groups, groups)
 		})
 	}
+
 }

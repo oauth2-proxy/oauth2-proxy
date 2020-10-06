@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
@@ -283,25 +281,15 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 }
 
 func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface{}) []string {
-	groups := []string{}
+	var groups []string
 
-	if group, ok := rawClaims[p.GroupsClaim].(string); ok {
-		groups = append(groups, group)
+	switch rawGroups := rawClaims[p.GroupsClaim].(type) {
+	case []string:
+		groups = append(groups, rawGroups...)
+	case string:
+		groups = append(groups, rawGroups)
 	}
-	rawGroups, ok := rawClaims[p.GroupsClaim].([]interface{})
-	if rawGroups != nil && ok {
-		for _, rawGroup := range rawGroups {
-			formattedGroup, err := formatGroup(rawGroup)
-			if err != nil {
-				logger.Errorf("unable to format group of type %s with error %s", reflect.TypeOf(rawGroup), err)
-				continue
-			}
-			groups = append(groups, formattedGroup)
-		}
-	}
-
 	return groups
-
 }
 
 func formatGroup(rawGroup interface{}) (string, error) {
