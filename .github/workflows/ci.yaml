@@ -46,3 +46,14 @@ jobs:
         CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       run: |
         ./test.sh
+
+  docker:
+    runs-on: ubuntu-18.04
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Docker Build
+      run: |
+        make docker
