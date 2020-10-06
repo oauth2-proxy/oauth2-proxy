@@ -1,9 +1,6 @@
 FROM golang:1.15-buster AS builder
 ARG VERSION
 
-# Download tools
-RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
-
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
 
@@ -13,6 +10,9 @@ RUN GO111MODULE=on go mod download
 
 # Now pull in our code
 COPY . .
+
+# Download tools
+RUN ./install_golangci-lint.sh
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because
