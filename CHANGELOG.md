@@ -33,6 +33,7 @@
 - [#813](https://github.com/oauth2-proxy/oauth2-proxy/pull/813) Fix build (@thiagocaiubi)
 - [#801](https://github.com/oauth2-proxy/oauth2-proxy/pull/801) Update go-redis/redis to v8 (@johejo)
 - [#750](https://github.com/oauth2-proxy/oauth2-proxy/pull/750) ci: Migrate to Github Actions (@shinebayar-g)
+- [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
 
 # v6.1.1
 
