@@ -424,7 +424,7 @@ func Test_extractRawGroupsFromClaim(t *testing.T) {
 		},
 		"NumberGroup": {
 			RawClaims: map[string]interface{}{"groups": 42},
-			Groups:    []string{},
+			Groups:    []string{"42"},
 		},
 	}
 

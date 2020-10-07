@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -286,12 +287,10 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 	switch rawGroups := rawClaims[p.GroupsClaim].(type) {
 	case []string:
 		groups = append(groups, rawGroups...)
-	case *[]string:
-		groups = append(groups, *rawGroups...)
 	case string:
 		groups = append(groups, rawGroups)
-	case *string:
-		groups = append(groups, *rawGroups)
+	case int:
+		groups = append(groups, strconv.Itoa(rawGroups))
 	case []interface{}:
 		for _, rawGroup := range rawGroups {
 			group, ok := rawGroup.(string)
