@@ -3,7 +3,6 @@ package options
 import (
 	"crypto"
 	"net/url"
-	"regexp"
 
 	oidc "github.com/coreos/go-oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
@@ -67,6 +66,7 @@ type Options struct {
 	UpstreamServers Upstreams `cfg:",internal"`
 
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
+	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
 	SkipAuthStripHeaders  bool     `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
 	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
 	ExtraJwtIssuers       []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
@@ -114,7 +114,6 @@ type Options struct {
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
-	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
@@ -124,7 +123,6 @@ type Options struct {
 
 // Options for Getting internal values
 func (o *Options) GetRedirectURL() *url.URL                        { return o.redirectURL }
-func (o *Options) GetCompiledRegex() []*regexp.Regexp              { return o.compiledRegex }
 func (o *Options) GetProvider() providers.Provider                 { return o.provider }
 func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
 func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
@@ -133,7 +131,6 @@ func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.re
 
 // Options for Setting internal values
 func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
-func (o *Options) SetCompiledRegex(s []*regexp.Regexp)              { o.compiledRegex = s }
 func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
 func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
 func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
@@ -195,8 +192,9 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
 	flagSet.Bool("pass-authorization-header", false, "pass the Authorization Header to upstream")
 	flagSet.Bool("set-authorization-header", false, "set Authorization response headers (useful in Nginx auth_request mode)")
-	flagSet.StringSlice("skip-auth-regex", []string{}, "bypass authentication for requests path's that match (may be given multiple times)")
-	flagSet.Bool("skip-auth-strip-headers", false, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy for request paths in --skip-auth-regex")
+	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
+	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods")
+	flagSet.Bool("skip-auth-strip-headers", false, "strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy for allowlisted requests (`--skip-auth-route`, `--skip-auth-regex`, `--skip-auth-preflight`, `--trusted-ip`)")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
