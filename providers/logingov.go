@@ -3,10 +3,11 @@ package providers
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/url"
 	"time"
 
@@ -34,8 +35,15 @@ var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func randSeq(n int) string {
 	b := make([]rune, n)
+	var length = &big.Int{}
+	length = length.SetInt64(int64(len(letters)))
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		randomNum, err := rand.Int(rand.Reader, length)
+		if err != nil {
+			panic(err)
+		}
+		index := randomNum.Int64()
+		b[i] = letters[index]
 	}
 	return string(b)
 }
