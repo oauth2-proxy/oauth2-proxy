@@ -331,6 +331,7 @@ func (p *OAuthProxy) MakeCSRFCookie(req *http.Request, value string, expiration 
 
 func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
 	cookieDomain := cookies.GetCookieDomain(req, p.CookieDomains)
+	cookieSameSite := cookies.ParseSameSite(p.CookieSameSite)
 
 	if cookieDomain != "" {
 		domain := util.GetRequestHost(req)
@@ -342,6 +343,9 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 		}
 	}
 
+	// Adapt the cookie in case of "SameSite=None" Apple issue
+	cookieSameSite = cookies.AdaptSameSiteIfAppleIssue(req, cookieSameSite)
+
 	return &http.Cookie{
 		Name:     name,
 		Value:    value,
@@ -350,7 +354,7 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 		HttpOnly: p.CookieHTTPOnly,
 		Secure:   p.CookieSecure,
 		Expires:  now.Add(expiration),
-		SameSite: cookies.ParseSameSite(p.CookieSameSite),
+		SameSite: cookieSameSite,
 	}
 }
 

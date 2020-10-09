@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avct/uasurfer"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
@@ -24,6 +25,9 @@ func MakeCookie(req *http.Request, name string, value string, path string, domai
 			logger.Errorf("Warning: request host is %q but using configured cookie domain of %q", host, domain)
 		}
 	}
+
+	// Adapt the cookie in case of "SameSite=None" Apple issue
+	sameSite = AdaptSameSiteIfAppleIssue(req, sameSite)
 
 	return &http.Cookie{
 		Name:     name,
@@ -80,4 +84,32 @@ func ParseSameSite(v string) http.SameSite {
 	default:
 		panic(fmt.Sprintf("Invalid value for SameSite: %s", v))
 	}
+}
+
+// AdaptSameSiteIfAppleIssue adapts the SameSite property in case of the "SameSite=None" Apple issue
+// by checking the User-Agent of an http request
+// Ref: https://github.com/oauth2-proxy/oauth2-proxy/issues/830
+func AdaptSameSiteIfAppleIssue(req *http.Request, sameSite http.SameSite) http.SameSite {
+	if sameSite == http.SameSiteNoneMode {
+		userAgent := uasurfer.Parse(req.UserAgent())
+
+		// Versions from which this issue has been solved
+		macOSXVersionFixingIssue := uasurfer.Version{
+			Major: 10,
+			Minor: 15,
+			Patch: 0,
+		}
+		iOSVersionFixingIssue := uasurfer.Version{
+			Major: 14,
+			Minor: 0,
+			Patch: 0,
+		}
+
+		// If the user agent is concerned by the issue, do not provide "SameSite" value since it reproduces the "None" value behavior
+		if (userAgent.OS.Name == uasurfer.OSMacOSX && userAgent.OS.Version.Less(macOSXVersionFixingIssue)) || (userAgent.OS.Name == uasurfer.OSiOS && userAgent.OS.Version.Less(iOSVersionFixingIssue)) {
+			sameSite = http.SameSiteLaxMode
+		}
+	}
+
+	return sameSite
 }
