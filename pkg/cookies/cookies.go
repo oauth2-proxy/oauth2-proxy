@@ -105,7 +105,7 @@ func AdaptSameSiteIfAppleIssue(req *http.Request, sameSite http.SameSite) http.S
 			Patch: 0,
 		}
 
-		// If the user agent is concerned by the issue, do not provide "SameSite" value since it reproduces the "None" value behavior
+		// If the user agent is concerned by the issue, provide "SameSite=Lax" instead of "None" to allow some CORS requests within the same domain
 		if (userAgent.OS.Name == uasurfer.OSMacOSX && userAgent.OS.Version.Less(macOSXVersionFixingIssue)) || (userAgent.OS.Name == uasurfer.OSiOS && userAgent.OS.Version.Less(iOSVersionFixingIssue)) {
 			sameSite = http.SameSiteLaxMode
 		}
