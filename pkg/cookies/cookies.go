@@ -96,7 +96,7 @@ func AdaptSameSiteIfAppleIssue(req *http.Request, sameSite http.SameSite) http.S
 		// Versions from which this issue has been solved
 		macOSXVersionFixingIssue := uasurfer.Version{
 			Major: 10,
-			Minor: 15,
+			Minor: 14,
 			Patch: 0,
 		}
 		iOSVersionFixingIssue := uasurfer.Version{
