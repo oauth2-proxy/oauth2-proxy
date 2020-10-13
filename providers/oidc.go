@@ -15,7 +15,6 @@ import (
 )
 
 const emailClaim = "email"
-const DefaultGroupsClaimName = "groups"
 
 // OIDCProvider represents an OIDC based Identity Provider
 type OIDCProvider struct {
