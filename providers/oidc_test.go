@@ -64,7 +64,7 @@ var defaultIDToken idTokenClaims = idTokenClaims{
 	},
 }
 
-var customGroupIdToken idTokenClaims = idTokenClaims{
+var customGroupClaimIdToken idTokenClaims = idTokenClaims{
 	"Jane Dobbs",
 	"janed@me.com",
 	"+4798765432",
@@ -330,10 +330,10 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			ExpectedGroups: []string{"test:c", "test:d"},
 		},
 		"Custom Groups Claim2": {
-			IDToken:        customGroupIdToken,
+			IDToken:        customGroupClaimIdToken,
 			GroupsClaim:    "groups",
-			ExpectedUser:   customGroupIdToken.Subject,
-			ExpectedEmail:  customGroupIdToken.Email,
+			ExpectedUser:   customGroupClaimIdToken.Subject,
+			ExpectedEmail:  customGroupClaimIdToken.Email,
 			ExpectedGroups: []string{"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}"},
 		},
 	}
