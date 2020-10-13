@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 )
 
 const emailClaim = "email"
+const DefaultGroupsClaimName = "groups"
 
 // OIDCProvider represents an OIDC based Identity Provider
 type OIDCProvider struct {
@@ -240,7 +242,11 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 		claims.UserID = fmt.Sprint(userID)
 	}
 
-	claims.Groups = p.extractGroupsFromRawClaims(claims.rawClaims)
+	groups, err := p.extractGroupsFromRawClaims(claims.rawClaims)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract group claim: %v", err)
+	}
+	claims.Groups = groups
 
 	// userID claim was not present or was empty in the ID Token
 	if claims.UserID == "" {
@@ -279,27 +285,32 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	return claims, nil
 }
 
-func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface{}) []string {
+func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface{}) ([]string, error) {
 	groups := []string{}
 
 	rawGroups, ok := rawClaims[p.GroupsClaim].([]interface{})
 	if rawGroups != nil && ok {
 		for _, rawGroup := range rawGroups {
 			group, ok := rawGroup.(string)
-			if ok {
-				groups = append(groups, group)
+			if !ok {
+				jsonGroup, err := json.Marshal(rawGroup)
+				if err != nil {
+					return []string{}, err
+				}
+				group = string(jsonGroup)
 			}
+			groups = append(groups, group)
 		}
 	}
 
-	return groups
+	return groups, nil
 }
 
 type OIDCClaims struct {
 	rawClaims         map[string]interface{}
 	UserID            string
-	Subject           string `json:"sub"`
-	Verified          *bool  `json:"email_verified"`
-	PreferredUsername string `json:"preferred_username"`
-	Groups            []string
+	Subject           string   `json:"sub"`
+	Verified          *bool    `json:"email_verified"`
+	PreferredUsername string   `json:"preferred_username"`
+	Groups            []string `json:"-"`
 }

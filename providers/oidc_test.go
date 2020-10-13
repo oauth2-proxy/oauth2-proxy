@@ -29,12 +29,12 @@ const clientID = "https://test.myapp.com"
 const secret = "secret"
 
 type idTokenClaims struct {
-	Name        string   `json:"name,omitempty"`
-	Email       string   `json:"email,omitempty"`
-	Phone       string   `json:"phone_number,omitempty"`
-	Picture     string   `json:"picture,omitempty"`
-	Groups      []string `json:"groups,omitempty"`
-	OtherGroups []string `json:"other_groups,omitempty"`
+	Name        string      `json:"name,omitempty"`
+	Email       string      `json:"email,omitempty"`
+	Phone       string      `json:"phone_number,omitempty"`
+	Picture     string      `json:"picture,omitempty"`
+	Groups      interface{} `json:"groups,omitempty"`
+	OtherGroups interface{} `json:"other_groups,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -52,6 +52,29 @@ var defaultIDToken idTokenClaims = idTokenClaims{
 	"+4798765432",
 	"http://mugbook.com/janed/me.jpg",
 	[]string{"test:a", "test:b"},
+	[]string{"test:c", "test:d"},
+	jwt.StandardClaims{
+		Audience:  "https://test.myapp.com",
+		ExpiresAt: time.Now().Add(time.Duration(5) * time.Minute).Unix(),
+		Id:        "id-some-id",
+		IssuedAt:  time.Now().Unix(),
+		Issuer:    "https://issuer.example.com",
+		NotBefore: 0,
+		Subject:   "123456789",
+	},
+}
+
+var customGroupIdToken idTokenClaims = idTokenClaims{
+	"Jane Dobbs",
+	"janed@me.com",
+	"+4798765432",
+	"http://mugbook.com/janed/me.jpg",
+	[]map[string]interface{}{
+		{
+			"groupId": "Admin Group Id",
+			"roles":   []string{"Admin"},
+		},
+	},
 	[]string{"test:c", "test:d"},
 	jwt.StandardClaims{
 		Audience:  "https://test.myapp.com",
@@ -283,7 +306,7 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 		GroupsClaim    string
 		ExpectedUser   string
 		ExpectedEmail  string
-		ExpectedGroups []string
+		ExpectedGroups interface{}
 	}{
 		"Default IDToken": {
 			IDToken:        defaultIDToken,
@@ -305,6 +328,13 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			ExpectedUser:   defaultIDToken.Subject,
 			ExpectedEmail:  defaultIDToken.Email,
 			ExpectedGroups: []string{"test:c", "test:d"},
+		},
+		"Custom Groups Claim2": {
+			IDToken:        customGroupIdToken,
+			GroupsClaim:    "groups",
+			ExpectedUser:   customGroupIdToken.Subject,
+			ExpectedEmail:  customGroupIdToken.Email,
+			ExpectedGroups: []string{"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}"},
 		},
 	}
 	for testName, tc := range testCases {
