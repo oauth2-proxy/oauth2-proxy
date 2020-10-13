@@ -69,6 +69,36 @@ func (s *SessionState) String() string {
 	return o + "}"
 }
 
+func (s *SessionState) GetClaim(claim string) []string {
+	if s == nil {
+		return []string{}
+	}
+	switch claim {
+	case "access_token":
+		return []string{s.AccessToken}
+	case "id_token":
+		return []string{s.IDToken}
+	case "created_at":
+		return []string{s.CreatedAt.String()}
+	case "expires_on":
+		return []string{s.ExpiresOn.String()}
+	case "refresh_token":
+		return []string{s.RefreshToken}
+	case "email":
+		return []string{s.Email}
+	case "user":
+		return []string{s.User}
+	case "groups":
+		groups := make([]string, len(s.Groups))
+		copy(groups, s.Groups)
+		return groups
+	case "preferred_username":
+		return []string{s.PreferredUsername}
+	default:
+		return []string{}
+	}
+}
+
 // EncodeSessionState returns an encrypted, lz4 compressed, MessagePack encoded session
 func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([]byte, error) {
 	packed, err := msgpack.Marshal(s)

@@ -4,6 +4,9 @@
 
 ## Important Notes
 
+- [#789](https://github.com/oauth2-proxy/oauth2-proxy/pull/789) `--skip-auth-route` is (almost) backwards compatible with `--skip-auth-regex`
+  - We are marking `--skip-auth-regex` as DEPRECATED and will remove it in the next major version.
+  - If your regex contains an `=` and you want it for all methods, you will need to add a leading `=` (this is the area where `--skip-auth-regex` doesn't port perfectly)
 - [#575](https://github.com/oauth2-proxy/oauth2-proxy/pull/575) Sessions from v5.1.1 or earlier will no longer validate since they were not signed with SHA1.
   - Sessions from v6.0.0 or later had a graceful conversion to SHA256 that resulted in no reauthentication
   - Upgrading from v5.1.1 or earlier will result in a reauthentication
@@ -22,13 +25,21 @@
 
 ## Changes since v6.1.1
 
+- [#705](https://github.com/oauth2-proxy/oauth2-proxy/pull/705) Add generic Header injectors for upstream request and response headers (@JoelSpeed)
 - [#753](https://github.com/oauth2-proxy/oauth2-proxy/pull/753) Pass resource parameter in login url (@codablock)
+- [#789](https://github.com/oauth2-proxy/oauth2-proxy/pull/789) Add `--skip-auth-route` configuration option for `METHOD=pathRegex` based allowlists (@NickMeves)
 - [#575](https://github.com/oauth2-proxy/oauth2-proxy/pull/575) Stop accepting legacy SHA1 signed cookies (@NickMeves)
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) Validate Redis configuration options at startup (@NickMeves)
 - [#791](https://github.com/oauth2-proxy/oauth2-proxy/pull/791) Remove GetPreferredUsername method from provider interface (@NickMeves)
 - [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
 - [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Add support to ensure user belongs in required groups when using the OIDC provider (@stefansedich)
 - [#800](https://github.com/oauth2-proxy/oauth2-proxy/pull/800) Fix import path for v7 (@johejo)
+- [#783](https://github.com/oauth2-proxy/oauth2-proxy/pull/783) Update Go to 1.15 (@johejo)
+- [#813](https://github.com/oauth2-proxy/oauth2-proxy/pull/813) Fix build (@thiagocaiubi)
+- [#801](https://github.com/oauth2-proxy/oauth2-proxy/pull/801) Update go-redis/redis to v8 (@johejo)
+- [#750](https://github.com/oauth2-proxy/oauth2-proxy/pull/750) ci: Migrate to Github Actions (@shinebayar-g)
+- [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
+- [#819](https://github.com/oauth2-proxy/oauth2-proxy/pull/819) Improve CI (@johejo)
 
 # v6.1.1
 

@@ -121,8 +121,8 @@ var _ = Describe("Sessions", func() {
 
 	const (
 		clusterAndSentinelMsg     = "unable to initialize a redis client: options redis-use-sentinel and redis-use-cluster are mutually exclusive"
-		parseWrongSchemeMsg       = "unable to initialize a redis client: unable to parse redis url: invalid redis URL scheme: https"
-		parseWrongFormatMsg       = "unable to initialize a redis client: unable to parse redis url: invalid redis database number: \"wrong\""
+		parseWrongSchemeMsg       = "unable to initialize a redis client: unable to parse redis url: redis: invalid URL scheme: https"
+		parseWrongFormatMsg       = "unable to initialize a redis client: unable to parse redis url: redis: invalid database number: \"wrong\""
 		invalidPasswordSetMsg     = "unable to set a redis initialization key: WRONGPASS invalid username-password pair"
 		invalidPasswordDelMsg     = "unable to delete the redis initialization key: WRONGPASS invalid username-password pair"
 		unreachableRedisSetMsg    = "unable to set a redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"
