@@ -744,7 +744,7 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 	case path == p.OAuthCallbackPath:
 		p.OAuthCallback(rw, req)
 	case path == p.AuthOnlyPath:
-		p.AuthenticateOnly(rw, req)
+		p.AuthOnly(rw, req)
 	case path == p.UserInfoPath:
 		p.UserInfo(rw, req)
 	default:
@@ -925,10 +925,18 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// AuthenticateOnly checks whether the user is currently logged in
-func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
+// AuthOnly checks whether the user is currently logged in (both authentication
+// and optional authorization via `allowed_groups` querystring).
+func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
+		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+		return
+	}
+
+	// Allow secondary group restrictions based on the `allowed_group` or
+	// `allowed_groups` querystring parameter
+	if !checkAllowedGroups(req, session) {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
 		return
 	}
@@ -1014,6 +1022,42 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	return session, nil
+}
+
+func checkAllowedGroups(req *http.Request, session *sessionsapi.SessionState) bool {
+	allowedGroups := extractAllowedGroups(req)
+	if len(allowedGroups) == 0 {
+		return true
+	}
+
+	for _, group := range session.Groups {
+		if _, ok := allowedGroups[group]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func extractAllowedGroups(req *http.Request) map[string]struct{} {
+	groups := map[string]struct{}{}
+	query := req.URL.Query()
+
+	// multi-key singular support
+	if multiGroups, ok := query["allowed_group"]; ok {
+		for _, group := range multiGroups {
+			groups[group] = struct{}{}
+		}
+	}
+
+	// single key plural comma delimited support
+	for _, group := range strings.Split(query.Get("allowed_groups"), ",") {
+		if group != "" {
+			groups[group] = struct{}{}
+		}
+	}
+
+	return groups
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying

@@ -1197,18 +1197,20 @@ func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 }
 
-func NewAuthOnlyEndpointTest(modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
+func NewAuthOnlyEndpointTest(querystring string, modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
 	pcTest, err := NewProcessCookieTestWithOptionsModifiers(modifiers...)
 	if err != nil {
 		return nil, err
 	}
-	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/auth", nil)
+	pcTest.req, _ = http.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/auth%s", pcTest.opts.ProxyPrefix, querystring),
+		nil)
 	return pcTest, nil
 }
 
 func TestAuthOnlyEndpointAccepted(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1226,7 +1228,7 @@ func TestAuthOnlyEndpointAccepted(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1238,7 +1240,7 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	if err != nil {
@@ -1258,7 +1260,7 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1960,7 +1962,7 @@ func TestGetJwtSession(t *testing.T) {
 	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
 		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
 
-	test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.InjectRequestHeaders = []options.Header{
 			{
 				Name: "Authorization",
@@ -2028,7 +2030,6 @@ func TestGetJwtSession(t *testing.T) {
 				},
 			},
 		}
-
 		opts.SkipJwtBearerTokens = true
 		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), verifier))
 	})
@@ -2692,32 +2693,106 @@ func TestProxyAllowedGroups(t *testing.T) {
 }
 
 func TestAuthOnlyAllowedGroups(t *testing.T) {
-	tests := []struct {
+	testCases := []struct {
 		name               string
 		allowedGroups      []string
 		groups             []string
+		querystring        string
 		expectUnauthorized bool
 	}{
-		{"NoAllowedGroups", []string{}, []string{}, false},
-		{"NoAllowedGroupsUserHasGroups", []string{}, []string{"a", "b"}, false},
-		{"UserInAllowedGroup", []string{"a"}, []string{"a", "b"}, false},
-		{"UserNotInAllowedGroup", []string{"a"}, []string{"c"}, true},
+		{
+			name:               "NoAllowedGroups",
+			allowedGroups:      []string{},
+			groups:             []string{},
+			querystring:        "",
+			expectUnauthorized: false,
+		},
+		{
+			name:               "NoAllowedGroupsUserHasGroups",
+			allowedGroups:      []string{},
+			groups:             []string{"a", "b"},
+			querystring:        "",
+			expectUnauthorized: false,
+		},
+		{
+			name:               "UserInAllowedGroup",
+			allowedGroups:      []string{"a"},
+			groups:             []string{"a", "b"},
+			querystring:        "",
+			expectUnauthorized: false,
+		},
+		{
+			name:               "UserNotInAllowedGroup",
+			allowedGroups:      []string{"a"},
+			groups:             []string{"c"},
+			querystring:        "",
+			expectUnauthorized: true,
+		},
+		{
+			name:               "UserInQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"a", "c"},
+			querystring:        "?allowed_group=a",
+			expectUnauthorized: false,
+		},
+		{
+			name:               "UserInOnlyQuerystringGroup",
+			allowedGroups:      []string{},
+			groups:             []string{"a", "c"},
+			querystring:        "?allowed_groups=a,b",
+			expectUnauthorized: false,
+		},
+		{
+			name:               "UserInMultiParamQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"b"},
+			querystring:        "?allowed_group=a&allowed_group=b",
+			expectUnauthorized: false,
+		},
+		{
+			name:               "UserInDelimitedQuerystringGroup",
+			allowedGroups:      []string{"a", "b", "c"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,c",
+			expectUnauthorized: false,
+		},
+		{
+			name:               "UserNotInQuerystringGroup",
+			allowedGroups:      []string{},
+			groups:             []string{"c"},
+			querystring:        "?allowed_group=a&allowed_group=b",
+			expectUnauthorized: true,
+		},
+		{
+			name:               "UserInConfigGroupNotInQuerystringGroup",
+			allowedGroups:      []string{"a", "b", "c"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_group=a&allowed_group=b",
+			expectUnauthorized: true,
+		},
+		{
+			name:               "UserInQuerystringGroupNotInConfigGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=b,c",
+			expectUnauthorized: true,
+		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			emailAddress := "test"
 			created := time.Now()
 
 			session := &sessions.SessionState{
-				Groups:      tt.groups,
+				Groups:      tc.groups,
 				Email:       emailAddress,
 				AccessToken: "oauth_token",
 				CreatedAt:   &created,
 			}
 
-			test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
-				opts.AllowedGroups = tt.allowedGroups
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {
+				opts.AllowedGroups = tc.allowedGroups
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -2728,7 +2803,7 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 
 			test.proxy.ServeHTTP(test.rw, test.req)
 
-			if tt.expectUnauthorized {
+			if tc.expectUnauthorized {
 				assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 			} else {
 				assert.Equal(t, http.StatusAccepted, test.rw.Code)
