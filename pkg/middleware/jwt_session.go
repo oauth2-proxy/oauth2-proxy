@@ -81,14 +81,18 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 	}
 
 	for _, loader := range j.sessionLoaders {
-		bearerToken, err := loader.Verifier.Verify(req.Context(), rawBearerToken)
-		if err == nil {
+		bearerToken, verifyErr := loader.Verifier.Verify(req.Context(), rawBearerToken)
+		if verifyErr == nil {
 			// The token was verified, convert it to a session
 			return loader.TokenToSession(req.Context(), rawBearerToken, bearerToken)
 		}
+		err = verifyErr
 	}
 
-	return nil, fmt.Errorf("unable to verify jwt token: %q", req.Header.Get("Authorization"))
+	return nil, fmt.Errorf("unable to verify jwt token: %q. Last of %d errors: %v",
+		req.Header.Get("Authorization"),
+		len(j.sessionLoaders),
+		err)
 }
 
 // findBearerTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
