@@ -1130,14 +1130,18 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 	}
 
 	startSession := &sessions.SessionState{
-		Email: "john.doe@example.com", AccessToken: "my_access_token"}
+		User:        "john.doe",
+		Email:       "john.doe@example.com",
+		Groups:      []string{"example", "groups"},
+		AccessToken: "my_access_token",
+	}
 	err = test.SaveSession(startSession)
 	assert.NoError(t, err)
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusOK, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "{\"email\":\"john.doe@example.com\"}\n", string(bodyBytes))
+	assert.Equal(t, "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"]}\n", string(bodyBytes))
 }
 
 func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
