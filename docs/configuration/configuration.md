@@ -46,7 +46,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
-| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
+| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
 | `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
@@ -122,7 +122,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--skip-auth-regex` | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times) | |
 | `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods | |
 | `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy for allowlisted requests (`--skip-auth-route`, `--skip-auth-regex`, `--skip-auth-preflight`, `--trusted-ip`) | false |
-| `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
+| `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens (the token must have [`aud`](https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields) that matches this client id or one of the extras from `extra-jwt-issuers`) | false |
 | `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
 | `--skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
 | `--ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |
