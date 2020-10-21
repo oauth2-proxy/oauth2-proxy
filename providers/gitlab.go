@@ -3,7 +3,6 @@ package providers
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
@@ -16,9 +15,7 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Groups       []string
-	EmailDomains []string
-
+	Groups               []string
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
 }
@@ -168,20 +165,6 @@ func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
 	return fmt.Errorf("user is not a member of '%s'", p.Groups)
 }
 
-func (p *GitLabProvider) verifyEmailDomain(userInfo *gitlabUserInfo) error {
-	if len(p.EmailDomains) == 0 || p.EmailDomains[0] == "*" {
-		return nil
-	}
-
-	for _, domain := range p.EmailDomains {
-		if strings.HasSuffix(userInfo.Email, domain) {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("user email is not one of the valid domains '%v'", p.EmailDomains)
-}
-
 func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
@@ -211,39 +194,27 @@ func (p *GitLabProvider) ValidateSessionState(ctx context.Context, s *sessions.S
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitLabProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+func (p *GitLabProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
 	// Retrieve user info
 	userInfo, err := p.getUserInfo(ctx, s)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve user info: %v", err)
+		return fmt.Errorf("failed to retrieve user info: %v", err)
 	}
 
 	// Check if email is verified
 	if !p.AllowUnverifiedEmail && !userInfo.EmailVerified {
-		return "", fmt.Errorf("user email is not verified")
-	}
-
-	// Check if email has valid domain
-	err = p.verifyEmailDomain(userInfo)
-	if err != nil {
-		return "", fmt.Errorf("email domain check failed: %v", err)
+		return fmt.Errorf("user email is not verified")
 	}
 
 	// Check group membership
+	// TODO (@NickMeves) - Refactor to Authorize
 	err = p.verifyGroupMembership(userInfo)
 	if err != nil {
-		return "", fmt.Errorf("group membership check failed: %v", err)
+		return fmt.Errorf("group membership check failed: %v", err)
 	}
 
-	return userInfo.Email, nil
-}
+	s.User = userInfo.Username
+	s.Email = userInfo.Email
 
-// GetUserName returns the Account user name
-func (p *GitLabProvider) GetUserName(ctx context.Context, s *sessions.SessionState) (string, error) {
-	userInfo, err := p.getUserInfo(ctx, s)
-	if err != nil {
-		return "", fmt.Errorf("failed to retrieve user info: %v", err)
-	}
-
-	return userInfo.Username, nil
+	return nil
 }
