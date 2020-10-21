@@ -11,7 +11,7 @@ import (
 
 type KeycloakProvider struct {
 	*ProviderData
-	Group string
+	Groups []string
 }
 
 var _ Provider = (*KeycloakProvider)(nil)
@@ -59,8 +59,8 @@ func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 	return &KeycloakProvider{ProviderData: p}
 }
 
-func (p *KeycloakProvider) SetGroup(group string) {
-	p.Group = group
+func (p *KeycloakProvider) SetGroups(groups []string) {
+	p.Groups = groups
 }
 
 func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
@@ -74,7 +74,7 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 		return "", err
 	}
 
-	if p.Group != "" {
+	if p.Groups != nil {
 		var groups, err = json.Get("groups").Array()
 		if err != nil {
 			logger.Printf("groups not found %s", err)
@@ -83,7 +83,7 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 
 		var found = false
 		for i := range groups {
-			if groups[i].(string) == p.Group {
+			if contains(p.Groups, groups[i].(string)) {
 				found = true
 				break
 			}
@@ -96,4 +96,13 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	}
 
 	return json.Get("email").String()
+}
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }

@@ -42,6 +42,7 @@
 - [#750](https://github.com/oauth2-proxy/oauth2-proxy/pull/750) ci: Migrate to Github Actions (@shinebayar-g)
 - [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
 - [#819](https://github.com/oauth2-proxy/oauth2-proxy/pull/819) Improve CI (@johejo)
+- [#861](https://github.com/oauth2-proxy/oauth2-proxy/pull/861) Change Keycloak config to support multiple groups
 
 # v6.1.1
 

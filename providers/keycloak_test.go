@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testKeycloakProvider(hostname, group string) *KeycloakProvider {
+func testKeycloakProvider(hostname string, groups []string) *KeycloakProvider {
 	p := NewKeycloakProvider(
 		&ProviderData{
 			ProviderName: "",
@@ -22,8 +22,8 @@ func testKeycloakProvider(hostname, group string) *KeycloakProvider {
 			ValidateURL:  &url.URL{},
 			Scope:        ""})
 
-	if group != "" {
-		p.SetGroup(group)
+	if groups != nil {
+		p.SetGroups(groups)
 	}
 
 	if hostname != "" {
@@ -53,7 +53,7 @@ func testKeycloakBackend(payload string) *httptest.Server {
 }
 
 func TestKeycloakProviderDefaults(t *testing.T) {
-	p := testKeycloakProvider("", "")
+	p := testKeycloakProvider("", []string{})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Keycloak", p.Data().ProviderName)
 	assert.Equal(t, "https://keycloak.org/oauth/authorize",
@@ -110,7 +110,7 @@ func TestKeycloakProviderGetEmailAddress(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, nil)
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
@@ -123,7 +123,7 @@ func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "test-grp1")
+	p := testKeycloakProvider(bURL.Host, []string{"test-grp1"})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
@@ -138,7 +138,7 @@ func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, []string{})
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -154,7 +154,7 @@ func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, []string{})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
