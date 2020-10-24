@@ -52,7 +52,7 @@ func TestAcrValuesConfigured(t *testing.T) {
 func TestEnrichSessionState(t *testing.T) {
 	p := &ProviderData{}
 	s := &sessions.SessionState{}
-	assert.NoError(t, p.EnrichSessionState(context.Background(), s))
+	assert.NoError(t, p.EnrichSession(context.Background(), s))
 }
 
 func TestProviderDataAuthorize(t *testing.T) {

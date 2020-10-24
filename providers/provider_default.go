@@ -94,7 +94,7 @@ func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionSta
 
 // EnrichSessionState is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
-func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.SessionState) error {
+func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState) error {
 	return nil
 }
 
@@ -115,7 +115,7 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *ProviderData) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, nil)
 }
 
@@ -127,6 +127,6 @@ func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.Ses
 
 // CreateSessionStateFromBearerToken should be implemented to allow providers
 // to convert ID tokens into sessions
-func (p *ProviderData) CreateSessionStateFromBearerToken(_ context.Context, _ string, _ *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *ProviderData) CreateSessionFromBearer(_ context.Context, _ string, _ *oidc.IDToken) (*sessions.SessionState, error) {
 	return nil, ErrNotImplemented
 }

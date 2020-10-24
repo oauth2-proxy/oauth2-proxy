@@ -354,7 +354,7 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			idToken, err := verifier.Verify(context.Background(), rawIDToken)
 			assert.NoError(t, err)
 
-			ss, err := provider.CreateSessionStateFromBearerToken(context.Background(), rawIDToken, idToken)
+			ss, err := provider.CreateSessionFromBearer(context.Background(), rawIDToken, idToken)
 			assert.NoError(t, err)
 
 			assert.Equal(t, tc.ExpectedUser, ss.User)

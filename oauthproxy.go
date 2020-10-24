@@ -270,7 +270,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 		if opts.GetOIDCVerifier() != nil {
 			sessionLoaders = append(sessionLoaders, middlewareapi.TokenToSessionLoader{
 				Verifier:       opts.GetOIDCVerifier(),
-				TokenToSession: opts.GetProvider().CreateSessionStateFromBearerToken,
+				TokenToSession: opts.GetProvider().CreateSessionFromBearer,
 			})
 		}
 
@@ -291,7 +291,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 		SessionStore:           sessionStore,
 		RefreshPeriod:          opts.Cookie.Refresh,
 		RefreshSessionIfNeeded: opts.GetProvider().RefreshSessionIfNeeded,
-		ValidateSessionState:   opts.GetProvider().ValidateSessionState,
+		ValidateSessionState:   opts.GetProvider().ValidateSession,
 	}))
 
 	return chain
@@ -416,7 +416,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 		}
 	}
 
-	return p.provider.EnrichSessionState(ctx, s)
+	return p.provider.EnrichSession(ctx, s)
 }
 
 // MakeCSRFCookie creates a cookie for CSRF

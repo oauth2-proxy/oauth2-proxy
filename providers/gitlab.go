@@ -188,13 +188,13 @@ func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.T
 }
 
 // ValidateSessionState checks that the session's IDToken is still valid
-func (p *GitLabProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+func (p *GitLabProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitLabProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
+func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Retrieve user info
 	userInfo, err := p.getUserInfo(ctx, s)
 	if err != nil {

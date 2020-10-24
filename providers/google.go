@@ -179,7 +179,7 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 
 // EnrichSessionState checks the listed Google Groups configured and adds any
 // that the user is a member of to session.Groups.
-func (p *GoogleProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
+func (p *GoogleProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// TODO (@NickMeves) - Move to pure EnrichSessionState logic and stop
 	// reusing legacy `groupValidator`.
 	//
