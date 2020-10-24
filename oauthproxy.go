@@ -269,14 +269,18 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 		sessionLoaders := []middlewareapi.TokenToSessionLoader{}
 		if opts.GetOIDCVerifier() != nil {
 			sessionLoaders = append(sessionLoaders, middlewareapi.TokenToSessionLoader{
-				Verifier:       opts.GetOIDCVerifier(),
-				TokenToSession: opts.GetProvider().CreateSessionFromBearer,
+				Verifier: func(ctx context.Context, token string) (interface{}, error) {
+					return opts.GetOIDCVerifier().Verify(ctx, token)
+				},
+				TokenToSession: opts.GetProvider().CreateSessionFromToken,
 			})
 		}
 
 		for _, verifier := range opts.GetJWTBearerVerifiers() {
 			sessionLoaders = append(sessionLoaders, middlewareapi.TokenToSessionLoader{
-				Verifier: verifier,
+				Verifier: func(ctx context.Context, token string) (interface{}, error) {
+					return verifier.Verify(ctx, token)
+				},
 			})
 		}
 

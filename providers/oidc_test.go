@@ -347,14 +347,18 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			assert.NoError(t, err)
 
-			keyset := fakeKeySetStub{}
-			verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
-				&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+			verifyFunc := func(ctx context.Context, token string) (interface{}, error) {
+				keyset := fakeKeySetStub{}
+				verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
+					&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
 
-			idToken, err := verifier.Verify(context.Background(), rawIDToken)
-			assert.NoError(t, err)
+				idToken, err := verifier.Verify(ctx, token)
+				assert.NoError(t, err)
 
-			ss, err := provider.CreateSessionFromBearer(context.Background(), rawIDToken, idToken)
+				return idToken, nil
+			}
+
+			ss, err := provider.CreateSessionFromToken(context.Background(), rawIDToken, verifyFunc)
 			assert.NoError(t, err)
 
 			assert.Equal(t, tc.ExpectedUser, ss.User)

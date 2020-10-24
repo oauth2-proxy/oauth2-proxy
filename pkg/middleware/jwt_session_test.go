@@ -73,13 +73,20 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 	const validToken = "eyJfoobar.eyJfoobar.12345asdf"
 
 	Context("JwtSessionLoader", func() {
-		var verifier *oidc.IDTokenVerifier
+		var verifier middlewareapi.VerifyFunc
 		const nonVerifiedToken = validToken
 
 		BeforeEach(func() {
-			keyset := noOpKeySet{}
-			verifier = oidc.NewVerifier("https://issuer.example.com", keyset,
-				&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+			verifier = func(ctx context.Context, token string) (interface{}, error) {
+				return oidc.NewVerifier(
+					"https://issuer.example.com",
+					noOpKeySet{},
+					&oidc.Config{
+						ClientID:        "https://test.myapp.com",
+						SkipExpiryCheck: true,
+					},
+				).Verify(ctx, token)
+			}
 		})
 
 		type jwtSessionLoaderTableInput struct {
@@ -167,16 +174,23 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		const nonVerifiedToken = validToken
 
 		BeforeEach(func() {
-			keyset := noOpKeySet{}
-			verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
-				&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+			verifier := func(ctx context.Context, token string) (interface{}, error) {
+				return oidc.NewVerifier(
+					"https://issuer.example.com",
+					noOpKeySet{},
+					&oidc.Config{
+						ClientID:        "https://test.myapp.com",
+						SkipExpiryCheck: true,
+					},
+				).Verify(ctx, token)
+			}
 
 			j = &jwtSessionLoader{
 				jwtRegex: regexp.MustCompile(jwtRegexFormat),
 				sessionLoaders: []middlewareapi.TokenToSessionLoader{
 					{
 						Verifier:       verifier,
-						TokenToSession: createSessionStateFromBearerToken,
+						TokenToSession: createSessionFromToken,
 					},
 				},
 			}
@@ -239,7 +253,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		)
 	})
 
-	Context("findBearerTokenFromHeader", func() {
+	Context("findTokenFromHeader", func() {
 		var j *jwtSessionLoader
 
 		BeforeEach(func() {
@@ -256,7 +270,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 		DescribeTable("with a header",
 			func(in findBearerTokenFromHeaderTableInput) {
-				token, err := j.findBearerTokenFromHeader(in.header)
+				token, err := j.findTokenFromHeader(in.header)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
@@ -381,7 +395,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		)
 	})
 
-	Context("createSessionStateFromBearerToken", func() {
+	Context("createSessionFromToken", func() {
 		ctx := context.Background()
 		expiresFuture := time.Now().Add(time.Duration(5) * time.Minute)
 		verified := true
@@ -403,11 +417,18 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 		DescribeTable("when creating a session from an IDToken",
 			func(in createSessionStateTableInput) {
-				verifier := oidc.NewVerifier(
-					"https://issuer.example.com",
-					noOpKeySet{},
-					&oidc.Config{ClientID: "asdf1234"},
-				)
+				verifier := func(ctx context.Context, token string) (interface{}, error) {
+					oidcVerifier := oidc.NewVerifier(
+						"https://issuer.example.com",
+						noOpKeySet{},
+						&oidc.Config{ClientID: "asdf1234"},
+					)
+
+					idToken, err := oidcVerifier.Verify(ctx, token)
+					Expect(err).ToNot(HaveOccurred())
+
+					return idToken, nil
+				}
 
 				key, err := rsa.GenerateKey(rand.Reader, 2048)
 				Expect(err).ToNot(HaveOccurred())
@@ -415,11 +436,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rawIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, in.idToken).SignedString(key)
 				Expect(err).ToNot(HaveOccurred())
 
-				// Pass to a dummy Verifier to get an oidc.IDToken from the rawIDToken for our actual test below
-				idToken, err := verifier.Verify(context.Background(), rawIDToken)
-				Expect(err).ToNot(HaveOccurred())
-
-				session, err := createSessionStateFromBearerToken(ctx, rawIDToken, idToken)
+				session, err := createSessionFromToken(ctx, rawIDToken, verifier)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 					Expect(session).To(BeNil())

@@ -8,8 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/coreos/go-oidc"
-
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
@@ -127,6 +126,6 @@ func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.Ses
 
 // CreateSessionStateFromBearerToken should be implemented to allow providers
 // to convert ID tokens into sessions
-func (p *ProviderData) CreateSessionFromBearer(_ context.Context, _ string, _ *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *ProviderData) CreateSessionFromToken(_ context.Context, _ string, _ middleware.VerifyFunc) (*sessions.SessionState, error) {
 	return nil, ErrNotImplemented
 }

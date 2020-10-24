@@ -13,14 +13,14 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
-const jwtRegexFormat = `^eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
+const jwtRegexFormat = `^ey[IJ][a-zA-Z0-9_-]*\.ey[IJ][a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
 func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionLoader) alice.Constructor {
 	for i, loader := range sessionLoaders {
 		if loader.TokenToSession == nil {
 			sessionLoaders[i] = middlewareapi.TokenToSessionLoader{
 				Verifier:       loader.Verifier,
-				TokenToSession: createSessionStateFromBearerToken,
+				TokenToSession: createSessionFromToken,
 			}
 		}
 	}
@@ -75,24 +75,24 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 		return nil, nil
 	}
 
-	rawBearerToken, err := j.findBearerTokenFromHeader(auth)
+	token, err := j.findTokenFromHeader(auth)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, loader := range j.sessionLoaders {
-		bearerToken, err := loader.Verifier.Verify(req.Context(), rawBearerToken)
+		session, err := loader.TokenToSession(req.Context(), token, loader.Verifier)
 		if err == nil {
-			// The token was verified, convert it to a session
-			return loader.TokenToSession(req.Context(), rawBearerToken, bearerToken)
+			return session, nil
 		}
 	}
 
+	// TODO (@NickMeves) Aggregate error logs in the chain
 	return nil, fmt.Errorf("unable to verify jwt token: %q", req.Header.Get("Authorization"))
 }
 
-// findBearerTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
-func (j *jwtSessionLoader) findBearerTokenFromHeader(header string) (string, error) {
+// findTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
+func (j *jwtSessionLoader) findTokenFromHeader(header string) (string, error) {
 	tokenType, token, err := splitAuthHeader(header)
 	if err != nil {
 		return "", err
@@ -133,14 +133,24 @@ func (j *jwtSessionLoader) getBasicToken(token string) (string, error) {
 	return "", fmt.Errorf("invalid basic auth token found in authorization header")
 }
 
-// createSessionStateFromBearerToken is a default implementation for converting
+// createSessionFromToken is a default implementation for converting
 // a JWT into a session state.
-func createSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessionsapi.SessionState, error) {
+func createSessionFromToken(ctx context.Context, token string, verify middlewareapi.VerifyFunc) (*sessionsapi.SessionState, error) {
 	var claims struct {
 		Subject           string `json:"sub"`
 		Email             string `json:"email"`
 		Verified          *bool  `json:"email_verified"`
 		PreferredUsername string `json:"preferred_username"`
+	}
+
+	verifiedToken, err := verify(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	idToken, ok := verifiedToken.(*oidc.IDToken)
+	if !ok {
+		return nil, fmt.Errorf("failed to create IDToken from bearer token: %s", token)
 	}
 
 	if err := idToken.Claims(&claims); err != nil {
@@ -159,8 +169,8 @@ func createSessionStateFromBearerToken(ctx context.Context, rawIDToken string, i
 		Email:             claims.Email,
 		User:              claims.Subject,
 		PreferredUsername: claims.PreferredUsername,
-		AccessToken:       rawIDToken,
-		IDToken:           rawIDToken,
+		AccessToken:       token,
+		IDToken:           token,
 		RefreshToken:      "",
 		ExpiresOn:         &idToken.Expiry,
 	}

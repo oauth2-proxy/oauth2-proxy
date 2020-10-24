@@ -11,6 +11,7 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -175,14 +176,24 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 	return newSession, nil
 }
 
-func (p *OIDCProvider) CreateSessionFromBearer(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string, verify middleware.VerifyFunc) (*sessions.SessionState, error) {
+	verifiedToken, err := verify(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	idToken, ok := verifiedToken.(*oidc.IDToken)
+	if !ok {
+		return nil, fmt.Errorf("failed to create IDToken from bearer token: %s", token)
+	}
+
 	newSession, err := p.createSessionStateInternal(ctx, idToken, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	newSession.AccessToken = rawIDToken
-	newSession.IDToken = rawIDToken
+	newSession.AccessToken = token
+	newSession.IDToken = token
 	newSession.RefreshToken = ""
 	newSession.ExpiresOn = &idToken.Expiry
 
