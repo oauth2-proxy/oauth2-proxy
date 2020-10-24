@@ -8,6 +8,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
+const multipleValuesForSecretSource = "multiple values specified for secret source: specify either value, fromEnv of fromFile"
+
 func validateSecretSource(source options.SecretSource) string {
 	switch {
 	case len(source.Value) > 0 && source.FromEnv == "" && source.FromFile == "":
@@ -17,7 +19,7 @@ func validateSecretSource(source options.SecretSource) string {
 	case len(source.Value) == 0 && source.FromEnv == "" && source.FromFile != "":
 		return validateSecretSourceFile(source.FromFile)
 	default:
-		return "multiple values specified for secret source: specify either value, fromEnv of fromFile"
+		return multipleValuesForSecretSource
 	}
 }
 
