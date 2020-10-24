@@ -1133,6 +1133,11 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 		Email: "john.doe@example.com", AccessToken: "my_access_token"}
 	err = test.SaveSession(startSession)
 	assert.NoError(t, err)
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusOK, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "{\"email\":\"john.doe@example.com\"}\n", string(bodyBytes))
 }
 
 func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {

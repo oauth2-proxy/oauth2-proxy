@@ -126,8 +126,7 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err := errors.New("missing code")
-		return nil, err
+		return nil, ErrMissingCode
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {

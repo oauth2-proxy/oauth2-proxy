@@ -394,7 +394,7 @@ func (p *OAuthProxy) GetRedirectURI(host string) string {
 
 func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (*sessionsapi.SessionState, error) {
 	if code == "" {
-		return nil, errors.New("missing code")
+		return nil, providers.ErrMissingCode
 	}
 	redirectURI := p.GetRedirectURI(host)
 	s, err := p.provider.Redeem(ctx, redirectURI, code)

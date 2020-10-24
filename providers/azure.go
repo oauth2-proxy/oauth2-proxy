@@ -108,14 +108,13 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, ErrMissingCode
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -149,15 +148,14 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s
 
 	created := time.Now()
 	expires := time.Unix(jsonResponse.ExpiresOn, 0)
-	s = &sessions.SessionState{
+
+	return &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
 		CreatedAt:    &created,
 		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
-	}
-	return
-
+	}, nil
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
