@@ -7,7 +7,7 @@
 - [#905](https://github.com/oauth2-proxy/oauth2-proxy/pull/905) Existing sessions from v6.0.0 or earlier are no longer valid. They will trigger a reauthentication.
 - [#826](https://github.com/oauth2-proxy/oauth2-proxy/pull/826) `skip-auth-strip-headers` now applies to all requests, not just those where authentication would be skipped.
 - [#797](https://github.com/oauth2-proxy/oauth2-proxy/pull/797) The behavior of the Google provider Groups restriction changes with this
-  - Either `--google-group` or the new `--allowed-group` will work for Google now (`--google-group` will be used it both are set)
+  - Either `--google-group` or the new `--allowed-group` will work for Google now (`--google-group` will be used if both are set)
   - Group membership lists will be passed to the backend with the `X-Forwarded-Groups` header
   - If you change the list of allowed groups, existing sessions that now don't have a valid group will be logged out immediately.
       - Previously, group membership was only checked on session creation and refresh.

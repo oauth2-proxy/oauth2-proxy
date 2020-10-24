@@ -118,7 +118,7 @@ func TestGoogleProviderGroupValidator(t *testing.T) {
 		validatorFunc func(*sessions.SessionState) bool
 		expectedAuthZ bool
 	}{
-		"Email is authorized with GroupValidator": {
+		"Email is authorized with groupValidator": {
 			session: &sessions.SessionState{
 				Email: sessionEmail,
 			},
@@ -127,7 +127,7 @@ func TestGoogleProviderGroupValidator(t *testing.T) {
 			},
 			expectedAuthZ: true,
 		},
-		"Email is denied with GroupValidator": {
+		"Email is denied with groupValidator": {
 			session: &sessions.SessionState{
 				Email: sessionEmail,
 			},
@@ -149,9 +149,9 @@ func TestGoogleProviderGroupValidator(t *testing.T) {
 			g := NewWithT(t)
 			p := newGoogleProvider()
 			if tc.validatorFunc != nil {
-				p.GroupValidator = tc.validatorFunc
+				p.groupValidator = tc.validatorFunc
 			}
-			g.Expect(p.GroupValidator(tc.session)).To(Equal(tc.expectedAuthZ))
+			g.Expect(p.groupValidator(tc.session)).To(Equal(tc.expectedAuthZ))
 		})
 	}
 }

@@ -28,13 +28,13 @@ type GoogleProvider struct {
 
 	RedeemRefreshURL *url.URL
 
-	// GroupValidator is a function that determines if the user in the passed
+	// groupValidator is a function that determines if the user in the passed
 	// session is a member of any of the configured Google groups.
 	//
 	// This hits the Google API for each group, so it is called on Redeem &
 	// Refresh. `Authorize` uses the results of this saved in `session.Groups`
 	// Since it is called on every request.
-	GroupValidator func(*sessions.SessionState) bool
+	groupValidator func(*sessions.SessionState) bool
 }
 
 var _ Provider = (*GoogleProvider)(nil)
@@ -90,9 +90,9 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	})
 	return &GoogleProvider{
 		ProviderData: p,
-		// Set a default GroupValidator to just always return valid (true), it will
+		// Set a default groupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
-		GroupValidator: func(*sessions.SessionState) bool {
+		groupValidator: func(*sessions.SessionState) bool {
 			return true
 		},
 	}
@@ -165,7 +165,8 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 
 	created := time.Now()
 	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
-	s := &sessions.SessionState{
+
+	return &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
 		CreatedAt:    &created,
@@ -173,19 +174,26 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		RefreshToken: jsonResponse.RefreshToken,
 		Email:        c.Email,
 		User:         c.Subject,
-	}
-	p.GroupValidator(s)
+	}, nil
+}
 
-	return s, nil
+// EnrichSessionState checks the listed Google Groups configured and adds any
+// that the user is a member of to session.Groups.
+func (p *GoogleProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
+	p.groupValidator(s)
+
+	return nil
 }
 
 // SetGroupRestriction configures the GoogleProvider to restrict access to the
 // specified group(s). AdminEmail has to be an administrative email on the domain that is
 // checked. CredentialsFile is the path to a json file containing a Google service
 // account credentials.
+//
+// TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
 func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
 	adminService := getAdminService(adminEmail, credentialsReader)
-	p.GroupValidator = func(s *sessions.SessionState) bool {
+	p.groupValidator = func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
 		s.Groups = make([]string, 0, len(groups))
@@ -266,7 +274,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	}
 
 	// re-check that the user is in the proper google group(s)
-	if !p.GroupValidator(s) {
+	if !p.groupValidator(s) {
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 
