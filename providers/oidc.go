@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"reflect"
 	"strings"
 	"time"
 
@@ -292,7 +294,7 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 		for _, rawGroup := range rawGroups {
 			err := appendGroup(&groups, rawGroup)
 			if err != nil {
-				return nil, err
+				logger.Errorf("unable to append group of type %s with error %s", reflect.TypeOf(rawGroup), err)
 			}
 		}
 	}
