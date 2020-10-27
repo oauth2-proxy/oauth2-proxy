@@ -403,3 +403,22 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, verifiedIDToken == nil)
 }
+
+func TestAppendStringGroup(t *testing.T) {
+	var groups []string
+
+	err := appendGroup(&groups, "group")
+
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"group"}, groups)
+}
+
+func TestAppendComplexGroup(t *testing.T) {
+	var groups []string
+	complexGroup := map[string]string{"id": "1", "name": "Test"}
+
+	err := appendGroup(&groups, complexGroup)
+
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"{\"id\":\"1\",\"name\":\"Test\"}"}, groups)
+}
