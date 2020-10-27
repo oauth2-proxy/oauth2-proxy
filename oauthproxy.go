@@ -1001,12 +1001,12 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 			req.Header.Del("X-Forwarded-Preferred-Username")
 		}
 
+		req.Header.Del("X-Forwarded-Groups")
+
 		if len(session.Groups) > 0 {
 			for _, group := range session.Groups {
 				req.Header.Add("X-Forwarded-Groups", group)
 			}
-		} else {
-			req.Header.Del("X-Forwarded-Groups")
 		}
 	}
 
