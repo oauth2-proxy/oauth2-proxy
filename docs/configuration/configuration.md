@@ -23,7 +23,6 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | Option | Type | Description | Default |
 | ------ | ---- | ----------- | ------- |
 | `--acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
-| `--api-mode` | bool | set to true if upstream is a backend api that expects and responds json content 
 | `--approval-prompt` | string | OAuth approval_prompt | `"force"` |
 | `--auth-logging` | bool | Log authentication attempts | true |
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |

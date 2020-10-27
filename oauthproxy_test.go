@@ -37,7 +37,6 @@ const (
 	base64CookieSecret = "c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams"
 	clientID           = "3984n253984d7348dm8234yf982t"
 	clientSecret       = "gv3498mfc9t23y23974dm2394dm9"
-	testEndpoint       = "/test"
 )
 
 func init() {
@@ -1746,10 +1745,9 @@ type ajaxRequestTest struct {
 	proxy *OAuthProxy
 }
 
-func newAjaxRequestTest(apiMode bool) (*ajaxRequestTest, error) {
+func newAjaxRequestTest() (*ajaxRequestTest, error) {
 	test := &ajaxRequestTest{}
 	test.opts = baseTestOptions()
-	test.opts.APIMode = apiMode
 	err := validation.Validate(test.opts)
 	if err != nil {
 		return nil, err
@@ -1775,25 +1773,12 @@ func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (i
 	return rw.Code, rw.Header(), nil
 }
 
-func (test *ajaxRequestTest) getCallbackEndpoint(errorMessage string) (int, http.Header, string) {
-	rw := httptest.NewRecorder()
-	req, err := http.NewRequest(
-		http.MethodGet,
-		fmt.Sprintf("/oauth2/callback?error=%s", errorMessage),
-		strings.NewReader(""))
-	if err != nil {
-		return 0, nil, ""
-	}
-	test.proxy.ServeHTTP(rw, req)
-	return rw.Code, rw.Header(), rw.Body.String()
-}
-
 func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
-	test, err := newAjaxRequestTest(false)
+	test, err := newAjaxRequestTest()
 	if err != nil {
 		t.Fatal(err)
 	}
-	endpoint := testEndpoint
+	endpoint := "/test"
 
 	code, rh, err := test.getEndpoint(endpoint, header)
 	assert.NoError(t, err)
@@ -1801,7 +1786,6 @@ func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
 	mime := rh.Get("Content-Type")
 	assert.Equal(t, applicationJSON, mime)
 }
-
 func TestAjaxUnauthorizedRequest1(t *testing.T) {
 	header := make(http.Header)
 	header.Add("accept", applicationJSON)
@@ -1816,55 +1800,18 @@ func TestAjaxUnauthorizedRequest2(t *testing.T) {
 	testAjaxUnauthorizedRequest(t, header)
 }
 
-func TestAjaxForbiddenRequest(t *testing.T) {
-	test, err := newAjaxRequestTest(false)
+func TestAjaxForbiddendRequest(t *testing.T) {
+	test, err := newAjaxRequestTest()
 	if err != nil {
 		t.Fatal(err)
 	}
+	endpoint := "/test"
 	header := make(http.Header)
-	code, rh, err := test.getEndpoint(testEndpoint, header)
+	code, rh, err := test.getEndpoint(endpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, code)
 	mime := rh.Get("Content-Type")
 	assert.NotEqual(t, applicationJSON, mime)
-}
-
-func TestNotAuthorizedInAPIMode(t *testing.T) {
-	test, err := newAjaxRequestTest(true)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	code, header, body := test.getCallbackEndpoint("login_required")
-	assert.Equal(t, 403, code)
-	assert.Equal(t, applicationJSON, header.Get("Content-Type"))
-	assert.Equal(t, "{\"error_message\":\"login_required\"}\n", body)
-}
-
-func TestNotAuthorizedInAPIModeWithXSSAttack(t *testing.T) {
-	test, err := newAjaxRequestTest(true)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	code, header, body := test.getCallbackEndpoint("<script>some evil code</script>")
-	assert.Equal(t, 403, code)
-	assert.Equal(t, applicationJSON, header.Get("Content-Type"))
-	assert.Equal(
-		t,
-		"{\"error_message\":\"\\u0026lt;script\\u0026gt;some evil code\\u0026lt;/script\\u0026gt;\"}\n",
-		body)
-}
-
-func TestAjaxRedirectIsSuccessfulInAPIMode(t *testing.T) {
-	test, err := newAjaxRequestTest(true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	header := make(http.Header)
-	code, _, err := test.getEndpoint(testEndpoint, header)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusFound, code)
 }
 
 func TestClearSplitCookie(t *testing.T) {

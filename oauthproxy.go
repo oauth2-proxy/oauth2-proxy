@@ -91,7 +91,6 @@ type OAuthProxy struct {
 	PassBasicAuth              bool
 	SetBasicAuth               bool
 	SkipProviderButton         bool
-	APIMode                    bool
 	PassUserHeaders            bool
 	BasicAuthPassword          string
 	PassRequestsWithoutSession bool
@@ -219,7 +218,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		PassAuthorization:          opts.PassAuthorization,
 		PreferEmailToUser:          opts.PreferEmailToUser,
 		SkipProviderButton:         opts.SkipProviderButton,
-		APIMode:                    opts.APIMode,
 		templates:                  templates,
 		trustedIPs:                 trustedIPs,
 		Banner:                     opts.Banner,
@@ -449,14 +447,6 @@ func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
 
 // ErrorPage writes an error response
 func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
-	if p.APIMode {
-		rw.Header().Set("Content-Type", applicationJSON)
-		rw.WriteHeader(code)
-		json.NewEncoder(rw).Encode(map[string]string{
-			"error_message": message,
-		})
-		return
-	}
 	rw.WriteHeader(code)
 	t := struct {
 		Title       string
@@ -827,7 +817,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 		return
 	}
-	errorString := template.HTMLEscapeString(req.Form.Get("error"))
+	errorString := req.Form.Get("error")
 	if errorString != "" {
 		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
 		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", errorString)
@@ -919,13 +909,13 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		}
 
 		// we need to send the user to a login screen
-		if isAjax(req) && !p.APIMode {
+		if isAjax(req) {
 			// no point redirecting an AJAX request
 			p.ErrorJSON(rw, http.StatusUnauthorized)
 			return
 		}
 
-		if p.SkipProviderButton || p.APIMode {
+		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
 			p.SignInPage(rw, req, http.StatusForbidden)
