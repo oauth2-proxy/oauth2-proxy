@@ -5,8 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	dynamo "github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/dynamodb"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
 )
 
@@ -36,6 +41,96 @@ func validateSessionCookieMinimal(o *options.Options) []string {
 			"cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set")
 	}
 	return msgs
+}
+
+func validateDynamoDBSessionStore(o *options.Options) []string {
+	if o.Session.Type != options.DynamoDBSessionType {
+		return []string{}
+	}
+
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
+		return []string{fmt.Sprintf("unable to create dynamoDB client: %v", err)}
+	}
+
+	nonce, err := encryption.Nonce()
+	if err != nil {
+		return []string{fmt.Sprintf("unable to generate a dynamoDB initialization test key: %v", err)}
+	}
+
+	key := fmt.Sprintf("%s-healthcheck-%s", o.Cookie.Name, nonce)
+	return sendDynamoDBConnectionTest(dynamo.New(sess), o.Session.DynamoDB.TableName, key, nonce)
+}
+
+func sendDynamoDBConnectionTest(service *dynamo.DynamoDB, tableName string, key string, nonce string) []string {
+	ctx := context.Background()
+	msgs := []string{}
+
+	av, err := dynamodbattribute.MarshalMap(dynamodb.DynamoSessionItem{
+		SessionKey: key,
+		Value:      []byte(nonce),
+		Expiry:     "",
+	})
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("error saving dynamodb initialisation key: %v", err))
+		return msgs
+	}
+
+	_, err = service.PutItemWithContext(ctx, &dynamo.PutItemInput{
+		Item:      av,
+		TableName: aws.String(tableName),
+	})
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("unable to save dynamodb initialisation key: %v", err))
+		return msgs
+	}
+
+	result, err := service.GetItemWithContext(ctx, &dynamo.GetItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string]*dynamo.AttributeValue{
+			dynamodb.SessionKeyName: {
+				S: aws.String(key),
+			},
+		},
+		ConsistentRead: aws.Bool(true),
+	})
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("error reading dynamodb initialisation key: %v", err))
+		return msgs
+	}
+
+	item := dynamodb.DynamoSessionItem{}
+	if err := dynamodbattribute.UnmarshalMap(result.Item, &item); err != nil {
+		msgs = append(msgs, fmt.Sprintf("error reading dynamodb initialisation key: %v", err))
+		return msgs
+	}
+
+	if string(item.Value) != nonce {
+		msgs = append(msgs, "the retrieved dynamodb initialization key did not match the value we set")
+	}
+
+	_, err = cleanUpDynamoDBConnectionTest(service, key, tableName)
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("error cleaning up dynamodb initialisation key: %v", err))
+		return msgs
+	}
+
+	return msgs
+}
+
+func cleanUpDynamoDBConnectionTest(service *dynamo.DynamoDB, key, tableName string) (*dynamo.DeleteItemOutput, error) {
+	input := &dynamo.DeleteItemInput{
+		Key: map[string]*dynamo.AttributeValue{
+			dynamodb.SessionKeyName: {
+				S: aws.String(key),
+			},
+		},
+		TableName: aws.String(tableName),
+	}
+
+	return service.DeleteItem(input)
 }
 
 // validateRedisSessionStore builds a Redis Client from the options and

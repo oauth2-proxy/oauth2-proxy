@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
 	github.com/alicebob/miniredis/v2 v2.13.0
+	github.com/aws/aws-sdk-go v1.35.14
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible
