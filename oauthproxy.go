@@ -1051,6 +1051,8 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 	if p.PassAuthorization {
 		if session.IDToken != "" {
 			req.Header["Authorization"] = []string{fmt.Sprintf("Bearer %s", session.IDToken)}
+		} else if session.AccessToken != "" {
+			req.Header["Authorization"] = []string{fmt.Sprintf("Bearer %s", session.AccessToken)}
 		} else {
 			req.Header.Del("Authorization")
 		}
