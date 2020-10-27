@@ -76,38 +76,39 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	allowedRoutes           []allowedRoute
-	redirectURL             *url.URL // the url to receive requests at
-	whitelistDomains        []string
-	provider                providers.Provider
-	providerNameOverride    string
-	sessionStore            sessionsapi.SessionStore
-	ProxyPrefix             string
-	SignInMessage           string
-	basicAuthValidator      basic.Validator
-	displayHtpasswdForm     bool
-	serveMux                http.Handler
-	SetXAuthRequest         bool
-	PassBasicAuth           bool
-	SetBasicAuth            bool
-	SkipProviderButton      bool
-	PassUserHeaders         bool
-	BasicAuthPassword       string
-	PassAccessToken         bool
-	SetAuthorization        bool
-	PassAuthorization       bool
-	PreferEmailToUser       bool
-	skipAuthPreflight       bool
-	skipAuthStripHeaders    bool
-	skipJwtBearerTokens     bool
-	mainJwtBearerVerifier   *oidc.IDTokenVerifier
-	extraJwtBearerVerifiers []*oidc.IDTokenVerifier
-	templates               *template.Template
-	realClientIPParser      ipapi.RealClientIPParser
-	trustedIPs              *ip.NetSet
-	Banner                  string
-	Footer                  string
-	AllowedGroups           []string
+	allowedRoutes              []allowedRoute
+	redirectURL                *url.URL // the url to receive requests at
+	whitelistDomains           []string
+	provider                   providers.Provider
+	providerNameOverride       string
+	sessionStore               sessionsapi.SessionStore
+	ProxyPrefix                string
+	SignInMessage              string
+	basicAuthValidator         basic.Validator
+	displayHtpasswdForm        bool
+	serveMux                   http.Handler
+	SetXAuthRequest            bool
+	PassBasicAuth              bool
+	SetBasicAuth               bool
+	SkipProviderButton         bool
+	PassUserHeaders            bool
+	BasicAuthPassword          string
+	PassRequestsWithoutSession bool
+	PassAccessToken            bool
+	SetAuthorization           bool
+	PassAuthorization          bool
+	PreferEmailToUser          bool
+	skipAuthPreflight          bool
+	skipAuthStripHeaders       bool
+	skipJwtBearerTokens        bool
+	mainJwtBearerVerifier      *oidc.IDTokenVerifier
+	extraJwtBearerVerifiers    []*oidc.IDTokenVerifier
+	templates                  *template.Template
+	realClientIPParser         ipapi.RealClientIPParser
+	trustedIPs                 *ip.NetSet
+	Banner                     string
+	Footer                     string
+	AllowedGroups              []string
 
 	sessionChain alice.Chain
 }
@@ -192,36 +193,37 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
-		ProxyPrefix:             opts.ProxyPrefix,
-		provider:                opts.GetProvider(),
-		providerNameOverride:    opts.ProviderName,
-		sessionStore:            sessionStore,
-		serveMux:                upstreamProxy,
-		redirectURL:             redirectURL,
-		allowedRoutes:           allowedRoutes,
-		whitelistDomains:        opts.WhitelistDomains,
-		skipAuthPreflight:       opts.SkipAuthPreflight,
-		skipAuthStripHeaders:    opts.SkipAuthStripHeaders,
-		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
-		mainJwtBearerVerifier:   opts.GetOIDCVerifier(),
-		extraJwtBearerVerifiers: opts.GetJWTBearerVerifiers(),
-		realClientIPParser:      opts.GetRealClientIPParser(),
-		SetXAuthRequest:         opts.SetXAuthRequest,
-		PassBasicAuth:           opts.PassBasicAuth,
-		SetBasicAuth:            opts.SetBasicAuth,
-		PassUserHeaders:         opts.PassUserHeaders,
-		BasicAuthPassword:       opts.BasicAuthPassword,
-		PassAccessToken:         opts.PassAccessToken,
-		SetAuthorization:        opts.SetAuthorization,
-		PassAuthorization:       opts.PassAuthorization,
-		PreferEmailToUser:       opts.PreferEmailToUser,
-		SkipProviderButton:      opts.SkipProviderButton,
-		templates:               templates,
-		trustedIPs:              trustedIPs,
-		Banner:                  opts.Banner,
-		Footer:                  opts.Footer,
-		SignInMessage:           buildSignInMessage(opts),
-		AllowedGroups:           opts.AllowedGroups,
+		ProxyPrefix:                opts.ProxyPrefix,
+		PassRequestsWithoutSession: opts.PassAllRequests,
+		provider:                   opts.GetProvider(),
+		providerNameOverride:       opts.ProviderName,
+		sessionStore:               sessionStore,
+		serveMux:                   upstreamProxy,
+		redirectURL:                redirectURL,
+		allowedRoutes:              allowedRoutes,
+		whitelistDomains:           opts.WhitelistDomains,
+		skipAuthPreflight:          opts.SkipAuthPreflight,
+		skipAuthStripHeaders:       opts.SkipAuthStripHeaders,
+		skipJwtBearerTokens:        opts.SkipJwtBearerTokens,
+		mainJwtBearerVerifier:      opts.GetOIDCVerifier(),
+		extraJwtBearerVerifiers:    opts.GetJWTBearerVerifiers(),
+		realClientIPParser:         opts.GetRealClientIPParser(),
+		SetXAuthRequest:            opts.SetXAuthRequest,
+		PassBasicAuth:              opts.PassBasicAuth,
+		SetBasicAuth:               opts.SetBasicAuth,
+		PassUserHeaders:            opts.PassUserHeaders,
+		BasicAuthPassword:          opts.BasicAuthPassword,
+		PassAccessToken:            opts.PassAccessToken,
+		SetAuthorization:           opts.SetAuthorization,
+		PassAuthorization:          opts.PassAuthorization,
+		PreferEmailToUser:          opts.PreferEmailToUser,
+		SkipProviderButton:         opts.SkipProviderButton,
+		templates:                  templates,
+		trustedIPs:                 trustedIPs,
+		Banner:                     opts.Banner,
+		Footer:                     opts.Footer,
+		SignInMessage:              buildSignInMessage(opts),
+		AllowedGroups:              opts.AllowedGroups,
 
 		basicAuthValidator:  basicAuthValidator,
 		displayHtpasswdForm: basicAuthValidator != nil,
@@ -902,6 +904,10 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		p.serveMux.ServeHTTP(rw, req)
 
 	case ErrNeedsLogin:
+		if p.PassRequestsWithoutSession {
+			p.serveMux.ServeHTTP(rw, req)
+		}
+
 		// we need to send the user to a login screen
 		if isAjax(req) {
 			// no point redirecting an AJAX request
