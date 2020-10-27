@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
