@@ -68,13 +68,14 @@ type OAuthProxy struct {
 	CookieSameSite string
 	Validator      func(string) bool
 
-	RobotsPath        string
-	SignInPath        string
-	SignOutPath       string
-	OAuthStartPath    string
-	OAuthCallbackPath string
-	AuthOnlyPath      string
-	UserInfoPath      string
+	RobotsPath             string
+	SignInPath             string
+	SignOutPath            string
+	OAuthStartPath         string
+	OAuthCallbackPath      string
+	AuthOnlyPath           string
+	ExtractSessionOnlyPath string
+	UserInfoPath           string
 
 	allowedRoutes           []allowedRoute
 	redirectURL             *url.URL // the url to receive requests at
@@ -184,13 +185,14 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
-		RobotsPath:        "/robots.txt",
-		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
-		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
-		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
-		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
-		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
-		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
+		RobotsPath:             "/robots.txt",
+		SignInPath:             fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
+		SignOutPath:            fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
+		OAuthStartPath:         fmt.Sprintf("%s/start", opts.ProxyPrefix),
+		OAuthCallbackPath:      fmt.Sprintf("%s/callback", opts.ProxyPrefix),
+		AuthOnlyPath:           fmt.Sprintf("%s/auth", opts.ProxyPrefix),
+		UserInfoPath:           fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
+		ExtractSessionOnlyPath: fmt.Sprintf("%s/session", opts.ProxyPrefix),
 
 		ProxyPrefix:             opts.ProxyPrefix,
 		provider:                opts.GetProvider(),
@@ -707,6 +709,8 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.OAuthCallback(rw, req)
 	case path == p.AuthOnlyPath:
 		p.AuthenticateOnly(rw, req)
+	case path == p.ExtractSessionOnlyPath:
+		p.ExtractSessionOnly(rw, req)
 	case path == p.UserInfoPath:
 		p.UserInfo(rw, req)
 	default:
@@ -875,6 +879,18 @@ func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request)
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
 		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+		return
+	}
+
+	// we are authenticated
+	p.addHeadersForProxying(rw, req, session)
+	rw.WriteHeader(http.StatusAccepted)
+}
+
+func (p *OAuthProxy) ExtractSessionOnly(rw http.ResponseWriter, req *http.Request) {
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
+		rw.WriteHeader(http.StatusAccepted)
 		return
 	}
 
