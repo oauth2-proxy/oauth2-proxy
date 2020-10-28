@@ -45,7 +45,7 @@ jobs:
       env:
         CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       run: |
-        ./test.sh
+        ./.github/workflows/test.sh
 
   docker:
     runs-on: ubuntu-18.04

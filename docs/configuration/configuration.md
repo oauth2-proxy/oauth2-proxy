@@ -46,7 +46,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
-| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
+| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
 | `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
@@ -79,7 +79,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--oidc-issuer-url` | string | the OpenID Connect issuer URL, e.g. `"https://accounts.google.com"` | |
 | `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `--oidc-groups-claim` | string | which claim contains the user groups | `"groups"` |
-| `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
+| `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header. When used with `--set-xauthrequest` this adds the X-Auth-Request-Access-Token header to the response | false |
 | `--pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `--pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `--prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, e.g. htaccess authentication. Used in conjunction with `--pass-basic-auth` and `--pass-user-headers` | false |
@@ -113,7 +113,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--scope` | string | OAuth scope specification | |
 | `--session-cookie-minimal` | bool | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only) | false |
 | `--session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
-| `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode) | false |
+| `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode). When used with `--pass-access-token`, X-Auth-Request-Access-Token is added to response headers.  | false |
 | `--set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
 | `--set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
 | `--signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
@@ -122,7 +122,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--skip-auth-regex` | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times) | |
 | `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods | |
 | `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy for allowlisted requests (`--skip-auth-route`, `--skip-auth-regex`, `--skip-auth-preflight`, `--trusted-ip`) | false |
-| `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
+| `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens (the token must have [`aud`](https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields) that matches this client id or one of the extras from `extra-jwt-issuers`) | false |
 | `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
 | `--skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
 | `--ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |
