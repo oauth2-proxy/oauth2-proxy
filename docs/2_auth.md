@@ -151,15 +151,25 @@ The group management in keycloak is using a tree. If you create a group named ad
 
 ### GitLab Auth Provider
 
-Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](https://docs.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes.
+Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](https://docs.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes, and set the redirect url to your application url e.g. https://myapp.com/oauth2/callback.
 
+The following config should be set to ensure that the oauth will work properly. To get a cookie secret follow [these steps](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/configuration/configuration.md#configuration)
+
+```
+    --provider="gitlab"
+    --redirect-url="https://myapp.com/oauth2/callback" // Should be the same as the redirect url for the application in gitlab
+    --client-id=GITLAB_CLIENT_ID
+    --client-secret=GITLAB_CLIENT_SECRET
+    --cookie-secret=COOKIE_SECRET
+```
+    
 Restricting by group membership is possible with the following option:
 
-    -gitlab-group="": restrict logins to members of any of these groups (slug), separated by a comma
+    --gitlab-group="mygroup,myothergroup": restrict logins to members of any of these groups (slug), separated by a comma
 
 If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
 
-    -oidc-issuer-url="<your gitlab url>"
+    --oidc-issuer-url="<your gitlab url>"
 
 ### LinkedIn Auth Provider
 
