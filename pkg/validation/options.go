@@ -86,34 +86,41 @@ func Validate(o *options.Options) error {
 
 			logger.Printf("Performing OIDC Discovery...")
 
-			requestURL := strings.TrimSuffix(o.OIDCIssuerURL, "/") + "/.well-known/openid-configuration"
-			body, err := requests.New(requestURL).
-				WithContext(ctx).
-				Do().
-				UnmarshalJSON()
+			url, err := url.Parse(o.OIDCIssuerURL)
 			if err != nil {
-				logger.Errorf("error: failed to discover OIDC configuration: %v", err)
+				logger.Errorf("error parsing issuer URL:  %v", err)
 			} else {
-				// Prefer manually configured URLs. It's a bit unclear
-				// why you'd be doing discovery and also providing the URLs
-				// explicitly though...
-				if o.LoginURL == "" {
-					o.LoginURL = body.Get("authorization_endpoint").MustString()
-				}
+				url.Path = strings.TrimSuffix(url.Path, "/") + "/.well-known/openid-configuration"
+				requestURL := url.String()
 
-				if o.RedeemURL == "" {
-					o.RedeemURL = body.Get("token_endpoint").MustString()
-				}
+				body, err := requests.New(requestURL).
+					WithContext(ctx).
+					Do().
+					UnmarshalJSON()
+				if err != nil {
+					logger.Errorf("error: failed to discover OIDC configuration: %v", err)
+				} else {
+					// Prefer manually configured URLs. It's a bit unclear
+					// why you'd be doing discovery and also providing the URLs
+					// explicitly though...
+					if o.LoginURL == "" {
+						o.LoginURL = body.Get("authorization_endpoint").MustString()
+					}
 
-				if o.OIDCJwksURL == "" {
-					o.OIDCJwksURL = body.Get("jwks_uri").MustString()
-				}
+					if o.RedeemURL == "" {
+						o.RedeemURL = body.Get("token_endpoint").MustString()
+					}
 
-				if o.ProfileURL == "" {
-					o.ProfileURL = body.Get("userinfo_endpoint").MustString()
-				}
+					if o.OIDCJwksURL == "" {
+						o.OIDCJwksURL = body.Get("jwks_uri").MustString()
+					}
 
-				o.SkipOIDCDiscovery = true
+					if o.ProfileURL == "" {
+						o.ProfileURL = body.Get("userinfo_endpoint").MustString()
+					}
+
+					o.SkipOIDCDiscovery = true
+				}
 			}
 		}
 
