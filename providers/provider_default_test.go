@@ -47,3 +47,9 @@ func TestAcrValuesConfigured(t *testing.T) {
 	result := p.GetLoginURL("https://my.test.app/oauth", "")
 	assert.Contains(t, result, "acr_values=testValue")
 }
+
+func TestEnrichSessionState(t *testing.T) {
+	p := &ProviderData{}
+	s := &sessions.SessionState{}
+	assert.NoError(t, p.EnrichSessionState(context.Background(), s))
+}
