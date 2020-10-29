@@ -11,6 +11,7 @@
   - Sessions from v6.0.0 or later had a graceful conversion to SHA256 that resulted in no reauthentication
   - Upgrading from v5.1.1 or earlier will result in a reauthentication
 - [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Ensure you have configured oauth2-proxy to use the `groups` scope. The user may be logged out initially as they may not currently have the `groups` claim however after going back through login process wil be authenticated.
+- [#855](https://github.com/oauth2-proxy/oauth2-proxy/pull/855) Add `groups` validation implemented in [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) also to `callback` endpoint.
 
 ## Breaking Changes
 
