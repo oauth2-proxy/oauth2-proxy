@@ -42,6 +42,9 @@ var (
 	// ErrNeedsLogin means the user should be redirected to the login page
 	ErrNeedsLogin = errors.New("redirect to login page")
 
+	// ErrAccessDenied means the user should receive a 401 Unauthorized response
+	ErrAccessDenied = errors.New("access denied")
+
 	// Used to check final redirects are not susceptible to open redirects.
 	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
 	invalidRedirectRegex = regexp.MustCompile(`[/\\](?:[\s\v]*|\.{1,2})[/\\]`)
@@ -969,6 +972,9 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 			p.SignInPage(rw, req, http.StatusForbidden)
 		}
 
+	case ErrAccessDenied:
+		p.ErrorPage(rw, http.StatusUnauthorized, "Permission Denied", "Unauthorized")
+
 	default:
 		// unknown error
 		logger.Errorf("Unexpected internal error: %v", err)
@@ -979,7 +985,9 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 }
 
 // getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
-// Returns nil, ErrNeedsLogin if user needs to login.
+// Returns:
+// - `nil, ErrNeedsLogin` if user needs to login.
+// - `nil, ErrAccessDenied` if the authenticated user is not authorized
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
 func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	var session *sessionsapi.SessionState
@@ -1000,13 +1008,13 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	if invalidEmail || !authorized {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authorization via session: removing session %s", session)
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
 		if err != nil {
 			logger.Errorf("Error clearing session cookie: %v", err)
 		}
-		return nil, ErrNeedsLogin
+		return nil, ErrAccessDenied
 	}
 
 	return session, nil
