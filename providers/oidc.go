@@ -293,27 +293,26 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 	rawGroups, ok := rawClaims[p.GroupsClaim].([]interface{})
 	if rawGroups != nil && ok {
 		for _, rawGroup := range rawGroups {
-			err := appendGroup(&groups, rawGroup)
-			if err != nil {
-				logger.Errorf("unable to append group of type %s with error %s", reflect.TypeOf(rawGroup), err)
-			}
+			formattedGroups := formatGroup(rawGroup)
+			groups = append(groups, formattedGroups...)
 		}
 	}
 
 	return groups, nil
+
 }
 
-func appendGroup(groups *[]string, rawGroup interface{}) error {
+func formatGroup(rawGroup interface{}) []string {
 	group, ok := rawGroup.(string)
 	if !ok {
 		jsonGroup, err := json.Marshal(rawGroup)
 		if err != nil {
-			return err
+			logger.Errorf("unable to format group of type %s with error %s", reflect.TypeOf(rawGroup), err)
+			return []string{}
 		}
 		group = string(jsonGroup)
 	}
-	*groups = append(*groups, group)
-	return nil
+	return []string{group}
 }
 
 type OIDCClaims struct {

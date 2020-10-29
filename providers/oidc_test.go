@@ -404,21 +404,29 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	assert.Equal(t, true, verifiedIDToken == nil)
 }
 
-func TestAppendStringGroup(t *testing.T) {
-	var groups []string
+func Test_formatGroup(t *testing.T) {
+	testCases := map[string]struct {
+		RawGroup                     interface{}
+		ExpectedFormattedGroupValues []string
+	}{
+		"String Group": {
+			RawGroup:                     "group",
+			ExpectedFormattedGroupValues: []string{"group"},
+		},
+		"Map Group": {
+			RawGroup:                     map[string]string{"id": "1", "name": "Test"},
+			ExpectedFormattedGroupValues: []string{"{\"id\":\"1\",\"name\":\"Test\"}"},
+		},
+		"List Group": {
+			RawGroup:                     []string{"First", "Second"},
+			ExpectedFormattedGroupValues: []string{"[\"First\",\"Second\"]"},
+		},
+	}
 
-	err := appendGroup(&groups, "group")
-
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"group"}, groups)
-}
-
-func TestAppendComplexGroup(t *testing.T) {
-	var groups []string
-	complexGroup := map[string]string{"id": "1", "name": "Test"}
-
-	err := appendGroup(&groups, complexGroup)
-
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"{\"id\":\"1\",\"name\":\"Test\"}"}, groups)
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			formattedGroups := formatGroup(tc.RawGroup)
+			assert.Equal(t, tc.ExpectedFormattedGroupValues, formattedGroups)
+		})
+	}
 }
