@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -118,7 +119,7 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *GoogleProvider) Redeem(ctx context.Context, ps mw.ProxyState, redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -251,7 +252,7 @@ func (p *GoogleProvider) ValidateGroup(email string) bool {
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
+func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, ps mw.ProxyState, s *sessions.SessionState) (bool, error) {
 	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
 		return false, nil
 	}

@@ -27,7 +27,7 @@ var _ = Describe("Stored Session Suite", func() {
 		createdPast := time.Now().Add(-5 * time.Minute)
 		createdFuture := time.Now().Add(5 * time.Minute)
 
-		var defaultRefreshFunc = func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+		var defaultRefreshFunc = func(_ context.Context, ps middlewareapi.ProxyState, ss *sessionsapi.SessionState) (bool, error) {
 			switch ss.RefreshToken {
 			case refresh:
 				ss.RefreshToken = "Refreshed"
@@ -39,7 +39,7 @@ var _ = Describe("Stored Session Suite", func() {
 			}
 		}
 
-		var defaultValidateFunc = func(_ context.Context, ss *sessionsapi.SessionState) bool {
+		var defaultValidateFunc = func(_ context.Context, ps middlewareapi.ProxyState, ss *sessionsapi.SessionState) bool {
 			return ss.AccessToken != "Invalid"
 		}
 
@@ -89,10 +89,9 @@ var _ = Describe("Stored Session Suite", func() {
 			requestHeaders  http.Header
 			existingSession *sessionsapi.SessionState
 			expectedSession *sessionsapi.SessionState
-			store           sessionsapi.SessionStore
-			refreshPeriod   time.Duration
-			refreshSession  func(context.Context, *sessionsapi.SessionState) (bool, error)
-			validateSession func(context.Context, *sessionsapi.SessionState) bool
+			proxyState      middlewareapi.ProxyState
+			refreshSession  func(context.Context, middlewareapi.ProxyState, *sessionsapi.SessionState) (bool, error)
+			validateSession func(context.Context, middlewareapi.ProxyState, *sessionsapi.SessionState) bool
 		}
 
 		DescribeTable("when serving a request",
@@ -110,8 +109,7 @@ var _ = Describe("Stored Session Suite", func() {
 				rw := httptest.NewRecorder()
 
 				opts := &StoredSessionLoaderOptions{
-					SessionStore:           in.store,
-					RefreshPeriod:          in.refreshPeriod,
+					ProxyState:             in.proxyState,
 					RefreshSessionIfNeeded: in.refreshSession,
 					ValidateSessionState:   in.validateSession,
 				}
@@ -130,8 +128,10 @@ var _ = Describe("Stored Session Suite", func() {
 				requestHeaders:  http.Header{},
 				existingSession: nil,
 				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 1 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -141,8 +141,10 @@ var _ = Describe("Stored Session Suite", func() {
 				},
 				existingSession: nil,
 				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 1 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -156,8 +158,10 @@ var _ = Describe("Stored Session Suite", func() {
 				expectedSession: &sessionsapi.SessionState{
 					RefreshToken: "Existing",
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 1 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -171,8 +175,10 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 1 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -182,8 +188,10 @@ var _ = Describe("Stored Session Suite", func() {
 				},
 				existingSession: nil,
 				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 1 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -197,8 +205,10 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   10 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 10 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -212,8 +222,10 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 1 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -223,8 +235,10 @@ var _ = Describe("Stored Session Suite", func() {
 				},
 				existingSession: nil,
 				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 1 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -234,8 +248,10 @@ var _ = Describe("Stored Session Suite", func() {
 				},
 				existingSession: nil,
 				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
+				proxyState: middlewareapi.ProxyState{
+					SessionStore:        defaultSessionStore,
+					CookieRefreshPeriod: 1 * time.Minute,
+				},
 				refreshSession:  defaultRefreshFunc,
 				validateSession: defaultValidateFunc,
 			}),
@@ -260,9 +276,11 @@ var _ = Describe("Stored Session Suite", func() {
 				validated := false
 
 				s := &storedSessionLoader{
-					refreshPeriod: in.refreshPeriod,
-					store:         &fakeSessionStore{},
-					refreshSessionWithProviderIfNeeded: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+					proxyState: middlewareapi.ProxyState{
+						SessionStore:        &fakeSessionStore{},
+						CookieRefreshPeriod: in.refreshPeriod,
+					},
+					refreshSessionWithProviderIfNeeded: func(_ context.Context, ps middlewareapi.ProxyState, ss *sessionsapi.SessionState) (bool, error) {
 						refreshed = true
 						switch ss.RefreshToken {
 						case refresh:
@@ -273,7 +291,7 @@ var _ = Describe("Stored Session Suite", func() {
 							return false, errors.New("error refreshing session")
 						}
 					},
-					validateSessionState: func(_ context.Context, ss *sessionsapi.SessionState) bool {
+					validateSessionState: func(_ context.Context, ps middlewareapi.ProxyState, ss *sessionsapi.SessionState) bool {
 						validated = true
 						return ss.AccessToken != "Invalid"
 					},
@@ -380,16 +398,17 @@ var _ = Describe("Stored Session Suite", func() {
 				saved := false
 
 				s := &storedSessionLoader{
-					store: &fakeSessionStore{
-						SaveFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
-							saved = true
-							if ss.AccessToken == "NoSave" {
-								return errors.New("unable to save session")
-							}
-							return nil
-						},
-					},
-					refreshSessionWithProviderIfNeeded: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+					proxyState: middlewareapi.ProxyState{
+						SessionStore: &fakeSessionStore{
+							SaveFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
+								saved = true
+								if ss.AccessToken == "NoSave" {
+									return errors.New("unable to save session")
+								}
+								return nil
+							},
+						}},
+					refreshSessionWithProviderIfNeeded: func(_ context.Context, ps middlewareapi.ProxyState, ss *sessionsapi.SessionState) (bool, error) {
 						switch ss.RefreshToken {
 						case refresh:
 							return true, nil
@@ -454,7 +473,7 @@ var _ = Describe("Stored Session Suite", func() {
 
 		BeforeEach(func() {
 			s = &storedSessionLoader{
-				validateSessionState: func(_ context.Context, ss *sessionsapi.SessionState) bool {
+				validateSessionState: func(_ context.Context, ps middlewareapi.ProxyState, ss *sessionsapi.SessionState) bool {
 					return ss.AccessToken == "Valid"
 				},
 			}

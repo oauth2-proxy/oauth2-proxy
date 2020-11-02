@@ -6,6 +6,7 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
@@ -39,7 +40,7 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GitLabProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *GitLabProvider) Redeem(ctx context.Context, ps mw.ProxyState, redirectURL, code string) (s *sessions.SessionState, err error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return
@@ -66,7 +67,7 @@ func (p *GitLabProvider) Redeem(ctx context.Context, redirectURL, code string) (
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
+func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, ps mw.ProxyState, s *sessions.SessionState) (bool, error) {
 	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
 		return false, nil
 	}
@@ -188,13 +189,13 @@ func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.T
 }
 
 // ValidateSessionState checks that the session's IDToken is still valid
-func (p *GitLabProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+func (p *GitLabProvider) ValidateSessionState(ctx context.Context, ps mw.ProxyState, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
 }
 
 // GetEmailAddress returns the Account email address
-func (p *GitLabProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
+func (p *GitLabProvider) EnrichSessionState(ctx context.Context, ps mw.ProxyState, s *sessions.SessionState) error {
 	// Retrieve user info
 	userInfo, err := p.getUserInfo(ctx, s)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
@@ -204,10 +205,11 @@ func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
 	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
 	assert.Equal(t, nil, err)
 
+	proxyState := mw.ProxyState{}
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 	p.Data().RedeemURL.Path = "/common/oauth2/token"
-	s, err := p.Redeem(context.Background(), "https://localhost", "1234")
+	s, err := p.Redeem(context.Background(), proxyState, "https://localhost", "1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "testtoken1234", s.IDToken)
 	assert.Equal(t, timestamp, s.ExpiresOn.UTC())

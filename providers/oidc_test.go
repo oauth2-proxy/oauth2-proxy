@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/oauth2"
 
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -180,7 +181,8 @@ func TestOIDCProviderRedeem(t *testing.T) {
 	server, provider := newTestSetup(body)
 	defer server.Close()
 
-	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	proxyState := mw.ProxyState{}
+	session, err := provider.Redeem(context.Background(), proxyState, provider.RedeemURL.String(), "code1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Email, session.Email)
 	assert.Equal(t, accessToken, session.AccessToken)
@@ -204,7 +206,8 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 	provider.UserIDClaim = "phone_number"
 	defer server.Close()
 
-	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	proxyState := mw.ProxyState{}
+	session, err := provider.Redeem(context.Background(), proxyState, provider.RedeemURL.String(), "code1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Phone, session.Email)
 }
@@ -232,7 +235,8 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 		User:         "11223344",
 	}
 
-	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), existingSession)
+	proxyState := mw.ProxyState{}
+	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), proxyState, existingSession)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, refreshed, true)
 	assert.Equal(t, "janedoe@example.com", existingSession.Email)
@@ -265,7 +269,9 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 		Email:        "changeit",
 		User:         "changeit",
 	}
-	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), existingSession)
+
+	proxyState := mw.ProxyState{}
+	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), proxyState, existingSession)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, refreshed, true)
 	assert.Equal(t, defaultIDToken.Email, existingSession.Email)
@@ -273,6 +279,70 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	assert.Equal(t, accessToken, existingSession.AccessToken)
 	assert.Equal(t, idToken, existingSession.IDToken)
 	assert.Equal(t, refreshToken, existingSession.RefreshToken)
+}
+
+func TestOIDCProviderRefreshSessionIfNeededWithIdTokenExpiresBeforeAccess(t *testing.T) {
+
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	accessToken := redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    3600,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	}
+	body, _ := json.Marshal(accessToken)
+
+	server, provider := newTestSetup(body)
+	defer server.Close()
+
+	existingSession := &sessions.SessionState{
+		AccessToken:  "changeit",
+		IDToken:      "changeit",
+		CreatedAt:    nil,
+		ExpiresOn:    nil,
+		RefreshToken: refreshToken,
+		Email:        "changeit",
+		User:         "changeit",
+	}
+
+	proxyState := mw.ProxyState{}
+	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), proxyState, existingSession)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, refreshed, true)
+	assert.Equal(t, defaultIDToken.ExpiresAt, existingSession.ExpiresOn.Unix())
+}
+
+func TestOIDCProviderRefreshSessionIfNeededWithIdTokenExpiresAfterAccess(t *testing.T) {
+
+	idToken, _ := newSignedTestIDToken(defaultIDToken)
+	accessToken := redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+		IDToken:      idToken,
+	}
+	body, _ := json.Marshal(accessToken)
+
+	server, provider := newTestSetup(body)
+	defer server.Close()
+
+	existingSession := &sessions.SessionState{
+		AccessToken:  "changeit",
+		IDToken:      "changeit",
+		CreatedAt:    nil,
+		ExpiresOn:    nil,
+		RefreshToken: refreshToken,
+		Email:        "changeit",
+		User:         "changeit",
+	}
+
+	proxyState := mw.ProxyState{}
+	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), proxyState, existingSession)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, refreshed, true)
+	assert.NotEqual(t, defaultIDToken.ExpiresAt, existingSession.ExpiresOn.Unix())
 }
 
 func TestCreateSessionStateFromBearerToken(t *testing.T) {
@@ -324,7 +394,8 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			idToken, err := verifier.Verify(context.Background(), rawIDToken)
 			assert.NoError(t, err)
 
-			ss, err := provider.CreateSessionStateFromBearerToken(context.Background(), rawIDToken, idToken)
+			proxyState := mw.ProxyState{}
+			ss, err := provider.CreateSessionStateFromBearerToken(context.Background(), proxyState, rawIDToken, idToken)
 			assert.NoError(t, err)
 
 			assert.Equal(t, tc.ExpectedUser, ss.User)

@@ -15,7 +15,7 @@ import (
 
 const jwtRegexFormat = `^eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
-func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionLoader) alice.Constructor {
+func NewJwtSessionLoader(proxyState middlewareapi.ProxyState, sessionLoaders []middlewareapi.TokenToSessionLoader) alice.Constructor {
 	for i, loader := range sessionLoaders {
 		if loader.TokenToSession == nil {
 			sessionLoaders[i] = middlewareapi.TokenToSessionLoader{
@@ -35,6 +35,7 @@ func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionLoader) al
 // jwtSessionLoader is responsible for loading sessions from JWTs in
 // Authorization headers.
 type jwtSessionLoader struct {
+	proxyState     middlewareapi.ProxyState
 	jwtRegex       *regexp.Regexp
 	sessionLoaders []middlewareapi.TokenToSessionLoader
 }
@@ -84,7 +85,7 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 		bearerToken, err := loader.Verifier.Verify(req.Context(), rawBearerToken)
 		if err == nil {
 			// The token was verified, convert it to a session
-			return loader.TokenToSession(req.Context(), rawBearerToken, bearerToken)
+			return loader.TokenToSession(req.Context(), j.proxyState, rawBearerToken, bearerToken)
 		}
 	}
 
@@ -135,7 +136,7 @@ func (j *jwtSessionLoader) getBasicToken(token string) (string, error) {
 
 // createSessionStateFromBearerToken is a default implementation for converting
 // a JWT into a session state.
-func createSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessionsapi.SessionState, error) {
+func createSessionStateFromBearerToken(ctx context.Context, ps middlewareapi.ProxyState, rawIDToken string, idToken *oidc.IDToken) (*sessionsapi.SessionState, error) {
 	var claims struct {
 		Subject           string `json:"sub"`
 		Email             string `json:"email"`

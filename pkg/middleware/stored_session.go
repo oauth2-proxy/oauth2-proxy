@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/justinas/alice"
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
@@ -16,19 +17,16 @@ import (
 // a stored session loader.
 // All options must be provided.
 type StoredSessionLoaderOptions struct {
-	// Session storage basckend
-	SessionStore sessionsapi.SessionStore
-
-	// How often should sessions be refreshed
-	RefreshPeriod time.Duration
+	// Proxy configuration information
+	ProxyState mw.ProxyState
 
 	// Provider based sesssion refreshing
-	RefreshSessionIfNeeded func(context.Context, *sessionsapi.SessionState) (bool, error)
+	RefreshSessionIfNeeded func(context.Context, mw.ProxyState, *sessionsapi.SessionState) (bool, error)
 
 	// Provider based session validation.
 	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
 	// refresh it, we must re-validate using this validation.
-	ValidateSessionState func(context.Context, *sessionsapi.SessionState) bool
+	ValidateSessionState func(context.Context, mw.ProxyState, *sessionsapi.SessionState) bool
 }
 
 // NewStoredSessionLoader creates a new storedSessionLoader which loads
@@ -37,8 +35,7 @@ type StoredSessionLoaderOptions struct {
 // If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
 	ss := &storedSessionLoader{
-		store:                              opts.SessionStore,
-		refreshPeriod:                      opts.RefreshPeriod,
+		proxyState:                         opts.ProxyState,
 		refreshSessionWithProviderIfNeeded: opts.RefreshSessionIfNeeded,
 		validateSessionState:               opts.ValidateSessionState,
 	}
@@ -48,10 +45,9 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 // storedSessionLoader is responsible for loading sessions from cookie
 // identified sessions in the session store.
 type storedSessionLoader struct {
-	store                              sessionsapi.SessionStore
-	refreshPeriod                      time.Duration
-	refreshSessionWithProviderIfNeeded func(context.Context, *sessionsapi.SessionState) (bool, error)
-	validateSessionState               func(context.Context, *sessionsapi.SessionState) bool
+	proxyState                         mw.ProxyState
+	refreshSessionWithProviderIfNeeded func(context.Context, mw.ProxyState, *sessionsapi.SessionState) (bool, error)
+	validateSessionState               func(context.Context, mw.ProxyState, *sessionsapi.SessionState) bool
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -73,7 +69,7 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 			// In the case when there was an error loading the session,
 			// we should clear the session
 			logger.Errorf("Error loading cookied session: %v, removing session", err)
-			err = s.store.Clear(rw, req)
+			err = s.proxyState.SessionStore.Clear(rw, req)
 			if err != nil {
 				logger.Errorf("Error removing session: %v", err)
 			}
@@ -88,7 +84,7 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 // getValidatedSession is responsible for loading a session and making sure
 // that is is valid.
 func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
-	session, err := s.store.Load(req)
+	session, err := s.proxyState.SessionStore.Load(req)
 	if err != nil {
 		return nil, err
 	}
@@ -113,15 +109,24 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 // we must validate the session to ensure that the returned session is still
 // valid.
 func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	if s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod {
+	if s.proxyState.CookieRefreshPeriod == time.Duration(0) || session.Age() < s.proxyState.CookieRefreshPeriod {
 		// Refresh is disabled or the session is not old enough, do nothing
 		return nil
 	}
 
-	logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, s.refreshPeriod)
+	oldAge := session.Age()
 	refreshed, err := s.refreshSessionWithProvider(rw, req, session)
 	if err != nil {
 		return err
+	}
+
+	if refreshed {
+		refreshMsg := "(automatic)"
+		refreshPeriod := s.proxyState.CookieRefreshPeriod
+		if refreshPeriod > time.Duration(0) {
+			refreshMsg = fmt.Sprintf("(refresh after %s)", refreshPeriod)
+		}
+		logger.Printf("refreshed %s old session cookie for %s %s", oldAge, session, refreshMsg)
 	}
 
 	if !refreshed {
@@ -134,7 +139,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 // refreshSessionWithProvider attempts to refresh the sessinon with the provider
 // and will save the session if it was updated.
 func (s *storedSessionLoader) refreshSessionWithProvider(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) (bool, error) {
-	refreshed, err := s.refreshSessionWithProviderIfNeeded(req.Context(), session)
+	refreshed, err := s.refreshSessionWithProviderIfNeeded(req.Context(), s.proxyState, session)
 	if err != nil {
 		return false, fmt.Errorf("error refreshing access token: %v", err)
 	}
@@ -144,7 +149,7 @@ func (s *storedSessionLoader) refreshSessionWithProvider(rw http.ResponseWriter,
 	}
 
 	// Because the session was refreshed, make sure to save it
-	err = s.store.Save(rw, req, session)
+	err = s.proxyState.SessionStore.Save(rw, req, session)
 	if err != nil {
 		logger.PrintAuthf(session.Email, req, logger.AuthError, "error saving session: %v", err)
 		return false, fmt.Errorf("error saving session: %v", err)
@@ -160,7 +165,7 @@ func (s *storedSessionLoader) validateSession(ctx context.Context, session *sess
 		return errors.New("session is expired")
 	}
 
-	if !s.validateSessionState(ctx, session) {
+	if !s.validateSessionState(ctx, s.proxyState, session) {
 		return errors.New("session is invalid")
 	}
 

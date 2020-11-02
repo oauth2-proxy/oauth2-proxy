@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"testing"
 
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
 )
@@ -63,8 +64,9 @@ func TestGitLabProviderBadToken(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 
+	proxyState := mw.ProxyState{}
 	session := &sessions.SessionState{AccessToken: "unexpected_gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), proxyState, session)
 	assert.Error(t, err)
 }
 
@@ -75,8 +77,9 @@ func TestGitLabProviderUnverifiedEmailDenied(t *testing.T) {
 	bURL, _ := url.Parse(b.URL)
 	p := testGitLabProvider(bURL.Host)
 
+	proxyState := mw.ProxyState{}
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), proxyState, session)
 	assert.Error(t, err)
 }
 
@@ -88,8 +91,9 @@ func TestGitLabProviderUnverifiedEmailAllowed(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 	p.AllowUnverifiedEmail = true
 
+	proxyState := mw.ProxyState{}
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), proxyState, session)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo@bar.com", session.Email)
 }
@@ -102,8 +106,9 @@ func TestGitLabProviderUsername(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 	p.AllowUnverifiedEmail = true
 
+	proxyState := mw.ProxyState{}
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), proxyState, session)
 	assert.NoError(t, err)
 	assert.Equal(t, "FooBar", session.User)
 }
@@ -117,8 +122,9 @@ func TestGitLabProviderGroupMembershipValid(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 	p.Groups = []string{"foo"}
 
+	proxyState := mw.ProxyState{}
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), proxyState, session)
 	assert.NoError(t, err)
 	assert.Equal(t, "FooBar", session.User)
 }
@@ -132,7 +138,8 @@ func TestGitLabProviderGroupMembershipMissing(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 	p.Groups = []string{"baz"}
 
+	proxyState := mw.ProxyState{}
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), proxyState, session)
 	assert.Error(t, err)
 }

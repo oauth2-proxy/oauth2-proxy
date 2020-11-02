@@ -28,7 +28,7 @@ func validateSessionCookieMinimal(o *options.Options) []string {
 		msgs = append(msgs,
 			"pass_access_token requires oauth tokens in sessions. session_cookie_minimal cannot be set")
 	}
-	if o.Cookie.Refresh != time.Duration(0) {
+	if o.Cookie.Refresh > time.Duration(0) {
 		msgs = append(msgs,
 			"cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set")
 	}

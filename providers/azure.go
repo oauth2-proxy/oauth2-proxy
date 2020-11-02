@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -103,7 +104,7 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
-func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *AzureProvider) Redeem(ctx context.Context, ps mw.ProxyState, redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return

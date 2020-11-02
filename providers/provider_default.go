@@ -10,6 +10,7 @@ import (
 
 	"github.com/coreos/go-oidc"
 
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
@@ -23,7 +24,7 @@ var (
 )
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *ProviderData) Redeem(ctx context.Context, ps mw.ProxyState, redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -100,23 +101,23 @@ func (p *ProviderData) ValidateGroup(_ string) bool {
 
 // EnrichSessionState is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
-func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.SessionState) error {
+func (p *ProviderData) EnrichSessionState(_ context.Context, ps mw.ProxyState, _ *sessions.SessionState) error {
 	return nil
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *ProviderData) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+func (p *ProviderData) ValidateSessionState(ctx context.Context, ps mw.ProxyState, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, nil)
 }
 
 // RefreshSessionIfNeeded should refresh the user's session if required and
 // do nothing if a refresh is not required
-func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.SessionState) (bool, error) {
+func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, ps mw.ProxyState, _ *sessions.SessionState) (bool, error) {
 	return false, nil
 }
 
 // CreateSessionStateFromBearerToken should be implemented to allow providers
 // to convert ID tokens into sessions
-func (p *ProviderData) CreateSessionStateFromBearerToken(_ context.Context, _ string, _ *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *ProviderData) CreateSessionStateFromBearerToken(_ context.Context, ps mw.ProxyState, _ string, _ *oidc.IDToken) (*sessions.SessionState, error) {
 	return nil, ErrNotImplemented
 }

@@ -3,13 +3,16 @@ package providers
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
@@ -34,7 +37,7 @@ func NewOIDCProvider(p *ProviderData) *OIDCProvider {
 var _ Provider = (*OIDCProvider)(nil)
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *OIDCProvider) Redeem(ctx context.Context, ps mw.ProxyState, redirectURL, code string) (s *sessions.SessionState, err error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return
@@ -61,7 +64,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (s 
 		return nil, fmt.Errorf("token response did not contain an id_token")
 	}
 
-	s, err = p.createSessionState(ctx, token, idToken)
+	s, err = p.createSessionState(ctx, ps, token, idToken)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update session: %v", err)
 	}
@@ -71,21 +74,25 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (s 
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new Access Token (and optional ID token) if required
-func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
+func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, ps mw.ProxyState, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.RefreshToken == "" || ps.CookieRefreshPeriod == 0 {
 		return false, nil
 	}
 
-	err := p.redeemRefreshToken(ctx, s)
+	if s.ExpiresOn != nil && (ps.CookieRefreshPeriod == -1 || ps.CookieRefreshPeriod > 0) && s.ExpiresOn.After(time.Now()) {
+		return false, nil
+	}
+
+	err := p.redeemRefreshToken(ctx, ps, s)
 	if err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
-	fmt.Printf("refreshed access token %s (expired on %s)\n", s, s.ExpiresOn)
+	logger.Printf("refreshed OIDC access token %s (expires on %s)", s, s.ExpiresOn)
 	return true, nil
 }
 
-func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
+func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, ps mw.ProxyState, s *sessions.SessionState) (err error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return
@@ -113,7 +120,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		return fmt.Errorf("unable to extract id_token from response: %v", err)
 	}
 
-	newSession, err := p.createSessionState(ctx, token, idToken)
+	newSession, err := p.createSessionState(ctx, ps, token, idToken)
 	if err != nil {
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
@@ -150,7 +157,7 @@ func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.To
 	return nil, nil
 }
 
-func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *OIDCProvider) createSessionState(ctx context.Context, ps mw.ProxyState, token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error) {
 
 	var newSession *sessions.SessionState
 
@@ -168,11 +175,27 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 	newSession.AccessToken = token.AccessToken
 	newSession.RefreshToken = token.RefreshToken
 	newSession.CreatedAt = &created
-	newSession.ExpiresOn = &token.Expiry
+
+	var tokenExpiry, graceExpiry time.Time
+	// ID Token and Access Tokens may have different expiry
+	if idToken == nil || token.Expiry.Before(idToken.Expiry) {
+		tokenExpiry = token.Expiry
+	} else {
+		tokenExpiry = idToken.Expiry
+	}
+
+	if ps.CookieRefreshPeriod == -1 {
+		graceExpiry = created.Add(time.Duration(math.Ceil(tokenExpiry.Sub(created).Seconds()*float64(ps.CookieRefreshGracePcnt)/100.0)) * time.Second)
+		newSession.ExpiresOn = &graceExpiry
+		logger.Printf("OIDC session created %s, gracefully expires %s (actual %s)", created, graceExpiry, tokenExpiry)
+	} else {
+		newSession.ExpiresOn = &tokenExpiry
+		logger.Printf("OIDC session created %s, expires %s", created, tokenExpiry)
+	}
 	return newSession, nil
 }
 
-func (p *OIDCProvider) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *OIDCProvider) CreateSessionStateFromBearerToken(ctx context.Context, ps mw.ProxyState, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
 	newSession, err := p.createSessionStateInternal(ctx, idToken, nil)
 	if err != nil {
 		return nil, err
@@ -218,7 +241,7 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, idToken *
 }
 
 // ValidateSessionState checks that the session's IDToken is still valid
-func (p *OIDCProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+func (p *OIDCProvider) ValidateSessionState(ctx context.Context, ps mw.ProxyState, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
 }

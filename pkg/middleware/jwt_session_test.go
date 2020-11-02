@@ -111,7 +111,8 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewJwtSessionLoader(sessionLoaders)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				proxyState := middlewareapi.ProxyState{}
+				handler := NewJwtSessionLoader(proxyState, sessionLoaders)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = r.Context().Value(requestScopeKey).(*middlewareapi.RequestScope).Session
 				}))
 				handler.ServeHTTP(rw, req)
@@ -419,7 +420,8 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				idToken, err := verifier.Verify(context.Background(), rawIDToken)
 				Expect(err).ToNot(HaveOccurred())
 
-				session, err := createSessionStateFromBearerToken(ctx, rawIDToken, idToken)
+				proxyState := middlewareapi.ProxyState{}
+				session, err := createSessionStateFromBearerToken(ctx, proxyState, rawIDToken, idToken)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 					Expect(session).To(BeNil())

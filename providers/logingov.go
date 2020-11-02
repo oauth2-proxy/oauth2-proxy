@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"gopkg.in/square/go-jose.v2"
@@ -153,7 +154,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *LoginGovProvider) Redeem(ctx context.Context, ps mw.ProxyState, redirectURL, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return

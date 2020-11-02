@@ -19,6 +19,7 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -400,7 +401,7 @@ func (tp *TestProvider) GetEmailAddress(_ context.Context, _ *sessions.SessionSt
 	return tp.EmailAddress, nil
 }
 
-func (tp *TestProvider) ValidateSessionState(_ context.Context, _ *sessions.SessionState) bool {
+func (tp *TestProvider) ValidateSessionState(_ context.Context, _ mw.ProxyState, _ *sessions.SessionState) bool {
 	return tp.ValidToken
 }
 
@@ -526,7 +527,7 @@ func TestBasicAuthPassword(t *testing.T) {
 
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/oauth2/callback?code=callback_code&state=nonce:", strings.NewReader(""))
-	req.AddCookie(proxy.MakeCSRFCookie(req, "nonce", proxy.CookieExpire, time.Now()))
+	req.AddCookie(proxy.MakeCSRFCookie(req, "nonce", proxy.proxyState.CookieExpire, time.Now()))
 	proxy.ServeHTTP(rw, req)
 	if rw.Code >= 400 {
 		t.Fatalf("expected 3xx got %d", rw.Code)
@@ -554,7 +555,7 @@ func TestBasicAuthPassword(t *testing.T) {
 		Expires:  time.Now().Add(time.Duration(24)),
 		HttpOnly: true,
 	})
-	req.AddCookie(proxy.MakeCSRFCookie(req, "nonce", proxy.CookieExpire, time.Now()))
+	req.AddCookie(proxy.MakeCSRFCookie(req, "nonce", proxy.proxyState.CookieExpire, time.Now()))
 
 	rw = httptest.NewRecorder()
 	proxy.ServeHTTP(rw, req)
@@ -1192,7 +1193,7 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 
 	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
 	// access_token validation.
-	pcTest.proxy.CookieRefresh = time.Duration(0)
+	pcTest.proxy.proxyState.CookieRefreshPeriod = time.Duration(0)
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
 	pcTest.validateUser = true
@@ -1314,7 +1315,7 @@ func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
 	err = pcTest.SaveSession(startSession)
 	assert.NoError(t, err)
 
-	pcTest.proxy.CookieRefresh = time.Hour
+	pcTest.proxy.proxyState.CookieRefreshPeriod = time.Hour
 	session, err := pcTest.LoadCookiedSession()
 	assert.NotEqual(t, nil, err)
 	if session != nil {
@@ -1899,7 +1900,8 @@ func TestClearSplitCookie(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
+	ps := mw.ProxyState{SessionStore: store}
+	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, proxyState: ps}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -1932,7 +1934,8 @@ func TestClearSingleCookie(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, sessionStore: store}
+	ps := mw.ProxyState{SessionStore: store}
+	p := OAuthProxy{CookieName: opts.Cookie.Name, CookieDomains: opts.Cookie.Domains, proxyState: ps}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 

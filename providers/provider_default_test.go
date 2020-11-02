@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,7 +15,7 @@ func TestRefresh(t *testing.T) {
 	p := &ProviderData{}
 
 	expires := time.Now().Add(time.Duration(-11) * time.Minute)
-	refreshed, err := p.RefreshSessionIfNeeded(context.Background(), &sessions.SessionState{
+	refreshed, err := p.RefreshSessionIfNeeded(context.Background(), mw.ProxyState{}, &sessions.SessionState{
 		ExpiresOn: &expires,
 	})
 	assert.Equal(t, false, refreshed)
@@ -51,5 +52,5 @@ func TestAcrValuesConfigured(t *testing.T) {
 func TestEnrichSessionState(t *testing.T) {
 	p := &ProviderData{}
 	s := &sessions.SessionState{}
-	assert.NoError(t, p.EnrichSessionState(context.Background(), s))
+	assert.NoError(t, p.EnrichSessionState(context.Background(), mw.ProxyState{}, s))
 }

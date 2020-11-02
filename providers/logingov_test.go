@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2"
@@ -190,7 +191,8 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 	defer pubjwkserver.Close()
 
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	proxyState := mw.ProxyState{}
+	session, err := p.Redeem(context.Background(), proxyState, "http://redirect/", "code1234")
 	assert.NoError(t, err)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "timothy.spencer@gsa.gov", session.Email)
@@ -284,7 +286,8 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 	defer pubjwkserver.Close()
 
-	_, err = p.Redeem(context.Background(), "http://redirect/", "code1234")
+	proxyState := mw.ProxyState{}
+	_, err = p.Redeem(context.Background(), proxyState, "http://redirect/", "code1234")
 
 	// The "badfakenonce" in the idtoken above should cause this to error out
 	assert.Error(t, err)

@@ -11,7 +11,11 @@ import (
 
 func validateCookie(o options.Cookie) []string {
 	msgs := validateCookieSecret(o.Secret)
-
+	if o.Refresh < -1 {
+		msgs = append(msgs, fmt.Sprintf(
+			"cookie_refresh (%q) must be -1, 0 or positive",
+			o.Refresh.String()))
+	}
 	if o.Refresh >= o.Expire {
 		msgs = append(msgs, fmt.Sprintf(
 			"cookie_refresh (%q) must be less than cookie_expire (%q)",
@@ -32,6 +36,13 @@ func validateCookie(o options.Cookie) []string {
 
 	msgs = append(msgs, validateCookieName(o.Name)...)
 	return msgs
+}
+
+func validateCookieRefreshGracePcnt(pcnt uint8) {
+	msgs := []string{}
+	if pcnt < 1 || pcnt > 100 {
+		msgs = append(msgs, fmt.Sprintf("cookie refresh grace percentage of %d%% is invalid - must be an integer between 1 and 100", pcnt))
+	}
 }
 
 func validateCookieName(name string) []string {

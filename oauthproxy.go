@@ -63,8 +63,6 @@ type OAuthProxy struct {
 	CookiePath     string
 	CookieSecure   bool
 	CookieHTTPOnly bool
-	CookieExpire   time.Duration
-	CookieRefresh  time.Duration
 	CookieSameSite string
 	Validator      func(string) bool
 
@@ -81,7 +79,6 @@ type OAuthProxy struct {
 	whitelistDomains        []string
 	provider                providers.Provider
 	providerNameOverride    string
-	sessionStore            sessionsapi.SessionStore
 	ProxyPrefix             string
 	SignInMessage           string
 	basicAuthValidator      basic.Validator
@@ -109,6 +106,7 @@ type OAuthProxy struct {
 	Footer                  string
 	AllowedGroups           []string
 
+	proxyState   middlewareapi.ProxyState
 	sessionChain alice.Chain
 }
 
@@ -139,11 +137,15 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.GetProvider().Data().ProviderName, opts.ClientID)
 	refresh := "disabled"
-	if opts.Cookie.Refresh != time.Duration(0) {
+	if opts.Cookie.Refresh == time.Duration(-1) {
+		refresh = fmt.Sprintf("automatic (grace period %d%%)", opts.Cookie.RefreshGracePcnt)
+	} else {
 		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s",
+		opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","),
+		opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -169,9 +171,14 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	sessionChain := buildSessionChain(opts, sessionStore, basicAuthValidator)
+	proxyState := middlewareapi.ProxyState{
+		SessionStore:           sessionStore,
+		CookieExpire:           opts.Cookie.Expire,
+		CookieRefreshPeriod:    opts.Cookie.Refresh,
+		CookieRefreshGracePcnt: opts.Cookie.RefreshGracePcnt,
+	}
 
-	return &OAuthProxy{
+	oauthProxy := &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
 		CookieSeed:     opts.Cookie.Secret,
@@ -179,8 +186,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		CookiePath:     opts.Cookie.Path,
 		CookieSecure:   opts.Cookie.Secure,
 		CookieHTTPOnly: opts.Cookie.HTTPOnly,
-		CookieExpire:   opts.Cookie.Expire,
-		CookieRefresh:  opts.Cookie.Refresh,
+		proxyState:     proxyState,
 		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
@@ -195,7 +201,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		ProxyPrefix:             opts.ProxyPrefix,
 		provider:                opts.GetProvider(),
 		providerNameOverride:    opts.ProviderName,
-		sessionStore:            sessionStore,
 		serveMux:                upstreamProxy,
 		redirectURL:             redirectURL,
 		allowedRoutes:           allowedRoutes,
@@ -225,11 +230,13 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 		basicAuthValidator:  basicAuthValidator,
 		displayHtpasswdForm: basicAuthValidator != nil,
-		sessionChain:        sessionChain,
-	}, nil
+	}
+
+	oauthProxy.sessionChain = buildSessionChain(opts, oauthProxy, sessionStore, basicAuthValidator)
+	return oauthProxy, nil
 }
 
-func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
+func buildSessionChain(opts *options.Options, oauthProxy *OAuthProxy, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
 	chain := alice.New(middleware.NewScope())
 
 	if opts.SkipJwtBearerTokens {
@@ -247,7 +254,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 			})
 		}
 
-		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders))
+		chain = chain.Append(middleware.NewJwtSessionLoader(oauthProxy.proxyState, sessionLoaders))
 	}
 
 	if validator != nil {
@@ -255,8 +262,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:           sessionStore,
-		RefreshPeriod:          opts.Cookie.Refresh,
+		ProxyState:             oauthProxy.proxyState,
 		RefreshSessionIfNeeded: opts.GetProvider().RefreshSessionIfNeeded,
 		ValidateSessionState:   opts.GetProvider().ValidateSessionState,
 	}))
@@ -353,7 +359,7 @@ func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (*sessio
 		return nil, errors.New("missing code")
 	}
 	redirectURI := p.GetRedirectURI(host)
-	s, err := p.provider.Redeem(ctx, redirectURI, code)
+	s, err := p.provider.Redeem(ctx, p.proxyState, redirectURI, code)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +375,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 		}
 	}
 
-	return p.provider.EnrichSessionState(ctx, s)
+	return p.provider.EnrichSessionState(ctx, p.proxyState, s)
 }
 
 // MakeCSRFCookie creates a cookie for CSRF
@@ -410,23 +416,23 @@ func (p *OAuthProxy) ClearCSRFCookie(rw http.ResponseWriter, req *http.Request) 
 
 // SetCSRFCookie adds a CSRF cookie to the response
 func (p *OAuthProxy) SetCSRFCookie(rw http.ResponseWriter, req *http.Request, val string) {
-	http.SetCookie(rw, p.MakeCSRFCookie(req, val, p.CookieExpire, time.Now()))
+	http.SetCookie(rw, p.MakeCSRFCookie(req, val, p.proxyState.CookieExpire, time.Now()))
 }
 
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) error {
-	return p.sessionStore.Clear(rw, req)
+	return p.proxyState.SessionStore.Clear(rw, req)
 }
 
 // LoadCookiedSession reads the user's authentication details from the request
 func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*sessionsapi.SessionState, error) {
-	return p.sessionStore.Load(req)
+	return p.proxyState.SessionStore.Load(req)
 }
 
 // SaveSession creates a new session cookie value and sets this on the response
 func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) error {
-	return p.sessionStore.Save(rw, req, s)
+	return p.proxyState.SessionStore.Save(rw, req, s)
 }
 
 // RobotsTxt disallows scraping pages from the OAuthProxy
