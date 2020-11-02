@@ -406,27 +406,27 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 
 func Test_formatGroup(t *testing.T) {
 	testCases := map[string]struct {
-		RawGroup                     interface{}
-		ExpectedFormattedGroupValues []string
+		RawGroup                    interface{}
+		ExpectedFormattedGroupValue string
 	}{
 		"String Group": {
-			RawGroup:                     "group",
-			ExpectedFormattedGroupValues: []string{"group"},
+			RawGroup:                    "group",
+			ExpectedFormattedGroupValue: "group",
 		},
 		"Map Group": {
-			RawGroup:                     map[string]string{"id": "1", "name": "Test"},
-			ExpectedFormattedGroupValues: []string{"{\"id\":\"1\",\"name\":\"Test\"}"},
+			RawGroup:                    map[string]string{"id": "1", "name": "Test"},
+			ExpectedFormattedGroupValue: "{\"id\":\"1\",\"name\":\"Test\"}",
 		},
 		"List Group": {
-			RawGroup:                     []string{"First", "Second"},
-			ExpectedFormattedGroupValues: []string{"[\"First\",\"Second\"]"},
+			RawGroup:                    []string{"First", "Second"},
+			ExpectedFormattedGroupValue: "[\"First\",\"Second\"]",
 		},
 	}
 
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			formattedGroups := formatGroup(tc.RawGroup)
-			assert.Equal(t, tc.ExpectedFormattedGroupValues, formattedGroups)
+			formattedGroup := formatGroup(tc.RawGroup)
+			assert.Equal(t, tc.ExpectedFormattedGroupValue, formattedGroup)
 		})
 	}
 }

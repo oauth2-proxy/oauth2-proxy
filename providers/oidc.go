@@ -244,10 +244,7 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 		claims.UserID = fmt.Sprint(userID)
 	}
 
-	groups, err := p.extractGroupsFromRawClaims(claims.rawClaims)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract group claim: %v", err)
-	}
+	groups := p.extractGroupsFromRawClaims(claims.rawClaims)
 	claims.Groups = groups
 
 	// userID claim was not present or was empty in the ID Token
@@ -287,32 +284,34 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	return claims, nil
 }
 
-func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface{}) ([]string, error) {
+func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface{}) []string {
 	groups := []string{}
 
 	rawGroups, ok := rawClaims[p.GroupsClaim].([]interface{})
 	if rawGroups != nil && ok {
 		for _, rawGroup := range rawGroups {
-			formattedGroups := formatGroup(rawGroup)
-			groups = append(groups, formattedGroups...)
+			formattedGroup := formatGroup(rawGroup)
+			if formattedGroup != "" {
+				groups = append(groups, formattedGroup)
+			}
 		}
 	}
 
-	return groups, nil
+	return groups
 
 }
 
-func formatGroup(rawGroup interface{}) []string {
+func formatGroup(rawGroup interface{}) string {
 	group, ok := rawGroup.(string)
 	if !ok {
 		jsonGroup, err := json.Marshal(rawGroup)
 		if err != nil {
 			logger.Errorf("unable to format group of type %s with error %s", reflect.TypeOf(rawGroup), err)
-			return []string{}
+			return ""
 		}
 		group = string(jsonGroup)
 	}
-	return []string{group}
+	return group
 }
 
 type OIDCClaims struct {
