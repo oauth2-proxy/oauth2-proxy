@@ -244,8 +244,7 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 		claims.UserID = fmt.Sprint(userID)
 	}
 
-	groups := p.extractGroupsFromRawClaims(claims.rawClaims)
-	claims.Groups = groups
+	claims.Groups = p.extractGroupsFromRawClaims(claims.rawClaims)
 
 	// userID claim was not present or was empty in the ID Token
 	if claims.UserID == "" {
