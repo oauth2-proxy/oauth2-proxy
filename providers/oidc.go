@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"reflect"
 	"strings"
 	"time"
-
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
@@ -289,10 +288,12 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 	rawGroups, ok := rawClaims[p.GroupsClaim].([]interface{})
 	if rawGroups != nil && ok {
 		for _, rawGroup := range rawGroups {
-			formattedGroup := formatGroup(rawGroup)
-			if formattedGroup != "" {
-				groups = append(groups, formattedGroup)
+			formattedGroup, err := formatGroup(rawGroup)
+			if err != nil {
+				logger.Errorf("unable to format group of type %s with error %s", reflect.TypeOf(rawGroup), err)
+				continue
 			}
+			groups = append(groups, formattedGroup)
 		}
 	}
 
@@ -300,17 +301,16 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 
 }
 
-func formatGroup(rawGroup interface{}) string {
+func formatGroup(rawGroup interface{}) (string, error) {
 	group, ok := rawGroup.(string)
 	if !ok {
 		jsonGroup, err := json.Marshal(rawGroup)
 		if err != nil {
-			logger.Errorf("unable to format group of type %s with error %s", reflect.TypeOf(rawGroup), err)
-			return ""
+			return "", err
 		}
 		group = string(jsonGroup)
 	}
-	return group
+	return group, nil
 }
 
 type OIDCClaims struct {

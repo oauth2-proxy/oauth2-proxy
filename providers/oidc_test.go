@@ -425,7 +425,8 @@ func Test_formatGroup(t *testing.T) {
 
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			formattedGroup := formatGroup(tc.RawGroup)
+			formattedGroup, err := formatGroup(tc.RawGroup)
+			assert.Nil(t, err)
 			assert.Equal(t, tc.ExpectedFormattedGroupValue, formattedGroup)
 		})
 	}
