@@ -2,7 +2,9 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
@@ -285,21 +288,36 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 	rawGroups, ok := rawClaims[p.GroupsClaim].([]interface{})
 	if rawGroups != nil && ok {
 		for _, rawGroup := range rawGroups {
-			group, ok := rawGroup.(string)
-			if ok {
-				groups = append(groups, group)
+			formattedGroup, err := formatGroup(rawGroup)
+			if err != nil {
+				logger.Errorf("unable to format group of type %s with error %s", reflect.TypeOf(rawGroup), err)
+				continue
 			}
+			groups = append(groups, formattedGroup)
 		}
 	}
 
 	return groups
+
+}
+
+func formatGroup(rawGroup interface{}) (string, error) {
+	group, ok := rawGroup.(string)
+	if !ok {
+		jsonGroup, err := json.Marshal(rawGroup)
+		if err != nil {
+			return "", err
+		}
+		group = string(jsonGroup)
+	}
+	return group, nil
 }
 
 type OIDCClaims struct {
 	rawClaims         map[string]interface{}
 	UserID            string
-	Subject           string `json:"sub"`
-	Verified          *bool  `json:"email_verified"`
-	PreferredUsername string `json:"preferred_username"`
-	Groups            []string
+	Subject           string   `json:"sub"`
+	Verified          *bool    `json:"email_verified"`
+	PreferredUsername string   `json:"preferred_username"`
+	Groups            []string `json:"-"`
 }
