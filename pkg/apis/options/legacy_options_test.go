@@ -1,6 +1,7 @@
 package options
 
 import (
+	"encoding/base64"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -256,6 +257,427 @@ var _ = Describe("Legacy Options", func() {
 				upstreamStrings:   []string{validHTTP, validFileWithFragment, validStatic},
 				expectedUpstreams: Upstreams{validHTTPUpstream, validFileWithFragmentUpstream, validStaticUpstream},
 				errMsg:            "",
+			}),
+		)
+	})
+
+	Context("Legacy Headers", func() {
+		const basicAuthSecret = "super-secret-password"
+
+		type legacyHeadersTableInput struct {
+			legacyHeaders           *LegacyHeaders
+			expectedRequestHeaders  []Header
+			expectedResponseHeaders []Header
+		}
+
+		withPreserveRequestValue := func(h Header, preserve bool) Header {
+			h.PreserveRequestValue = preserve
+			return h
+		}
+
+		xForwardedUser := Header{
+			Name:                 "X-Forwarded-User",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "user",
+					},
+				},
+			},
+		}
+
+		xForwardedEmail := Header{
+			Name:                 "X-Forwarded-Email",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "email",
+					},
+				},
+			},
+		}
+
+		xForwardedGroups := Header{
+			Name:                 "X-Forwarded-Groups",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "groups",
+					},
+				},
+			},
+		}
+
+		xForwardedPreferredUsername := Header{
+			Name:                 "X-Forwarded-Preferred-Username",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "preferred_username",
+					},
+				},
+			},
+		}
+
+		basicAuthHeader := Header{
+			Name:                 "Authorization",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "user",
+						BasicAuthPassword: &SecretSource{
+							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
+						},
+					},
+				},
+			},
+		}
+
+		xForwardedUserWithEmail := Header{
+			Name:                 "X-Forwarded-User",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "email",
+					},
+				},
+			},
+		}
+
+		basicAuthHeaderWithEmail := Header{
+			Name:                 "Authorization",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "email",
+						BasicAuthPassword: &SecretSource{
+							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
+						},
+					},
+				},
+			},
+		}
+
+		xAuthRequestUser := Header{
+			Name:                 "X-Auth-Request-User",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "user",
+					},
+				},
+			},
+		}
+
+		xAuthRequestEmail := Header{
+			Name:                 "X-Auth-Request-Email",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "email",
+					},
+				},
+			},
+		}
+
+		xAuthRequestGroups := Header{
+			Name:                 "X-Auth-Request-Groups",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "groups",
+					},
+				},
+			},
+		}
+
+		xForwardedAccessToken := Header{
+			Name:                 "X-Forwarded-Access-Token",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "access_token",
+					},
+				},
+			},
+		}
+
+		xAuthRequestAccessToken := Header{
+			Name:                 "X-Auth-Request-Access-Token",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "access_token",
+					},
+				},
+			},
+		}
+
+		authorizationHeader := Header{
+			Name:                 "Authorization",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim:  "id_token",
+						Prefix: "Bearer ",
+					},
+				},
+			},
+		}
+
+		DescribeTable("should convert to injectRequestHeaders",
+			func(in legacyHeadersTableInput) {
+				requestHeaders, responseHeaders := in.legacyHeaders.convert()
+				Expect(requestHeaders).To(ConsistOf(in.expectedRequestHeaders))
+				Expect(responseHeaders).To(ConsistOf(in.expectedResponseHeaders))
+			},
+			Entry("with all header options off", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   false,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders:  []Header{},
+				expectedResponseHeaders: []Header{},
+			}),
+			Entry("with basic auth enabled", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     true,
+					PassAccessToken:   false,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     true,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    basicAuthSecret,
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedUser,
+					xForwardedEmail,
+					xForwardedGroups,
+					xForwardedPreferredUsername,
+					basicAuthHeader,
+				},
+				expectedResponseHeaders: []Header{
+					withPreserveRequestValue(basicAuthHeader, false),
+				},
+			}),
+			Entry("with basic auth enabled and skipAuthStripHeaders", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     true,
+					PassAccessToken:   false,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     true,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    basicAuthSecret,
+					SkipAuthStripHeaders: true,
+				},
+				expectedRequestHeaders: []Header{
+					withPreserveRequestValue(xForwardedUser, false),
+					withPreserveRequestValue(xForwardedEmail, false),
+					withPreserveRequestValue(xForwardedGroups, false),
+					withPreserveRequestValue(xForwardedPreferredUsername, false),
+					withPreserveRequestValue(basicAuthHeader, false),
+				},
+				expectedResponseHeaders: []Header{
+					withPreserveRequestValue(basicAuthHeader, false),
+				},
+			}),
+			Entry("with basic auth enabled and preferEmailToUser", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     true,
+					PassAccessToken:   false,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     true,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    true,
+					BasicAuthPassword:    basicAuthSecret,
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedUserWithEmail,
+					xForwardedGroups,
+					xForwardedPreferredUsername,
+					basicAuthHeaderWithEmail,
+				},
+				expectedResponseHeaders: []Header{
+					withPreserveRequestValue(basicAuthHeaderWithEmail, false),
+				},
+			}),
+			Entry("with basic auth enabled and passUserHeaders", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     true,
+					PassAccessToken:   false,
+					PassUserHeaders:   true,
+					PassAuthorization: false,
+
+					SetBasicAuth:     true,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    basicAuthSecret,
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedUser,
+					xForwardedEmail,
+					xForwardedGroups,
+					xForwardedPreferredUsername,
+					basicAuthHeader,
+				},
+				expectedResponseHeaders: []Header{
+					withPreserveRequestValue(basicAuthHeader, false),
+				},
+			}),
+			Entry("with passUserHeaders", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   false,
+					PassUserHeaders:   true,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedUser,
+					xForwardedEmail,
+					xForwardedGroups,
+					xForwardedPreferredUsername,
+				},
+				expectedResponseHeaders: []Header{},
+			}),
+			Entry("with setXAuthRequest", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   false,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  true,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders: []Header{},
+				expectedResponseHeaders: []Header{
+					xAuthRequestUser,
+					xAuthRequestEmail,
+					xAuthRequestGroups,
+					withPreserveRequestValue(xForwardedPreferredUsername, false),
+				},
+			}),
+			Entry("with passAccessToken", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   true,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedAccessToken,
+				},
+				expectedResponseHeaders: []Header{},
+			}),
+			Entry("with passAcessToken and setXAuthRequest", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   true,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  true,
+					SetAuthorization: false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedAccessToken,
+				},
+				expectedResponseHeaders: []Header{
+					xAuthRequestUser,
+					xAuthRequestEmail,
+					xAuthRequestGroups,
+					withPreserveRequestValue(xForwardedPreferredUsername, false),
+					xAuthRequestAccessToken,
+				},
+			}),
+			Entry("with authorization headers", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   false,
+					PassUserHeaders:   false,
+					PassAuthorization: true,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: true,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: false,
+				},
+				expectedRequestHeaders: []Header{
+					authorizationHeader,
+				},
+				expectedResponseHeaders: []Header{
+					withPreserveRequestValue(authorizationHeader, false),
+				},
 			}),
 		)
 	})
