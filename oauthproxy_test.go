@@ -2667,3 +2667,32 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 		})
 	}
 }
+
+func Test_extractErrorCode(t *testing.T) {
+	testCases := map[string]struct {
+		RequestURL        string
+		ExpectedErrorCode int
+	}{
+		"Error Code Accept": {
+			RequestURL:        "auth?err_code=202",
+			ExpectedErrorCode: 202,
+		},
+		"No Custom Error Code": {
+			RequestURL:        "auth",
+			ExpectedErrorCode: 401,
+		},
+		"Invalid Error Code": {
+			RequestURL:        "auth?err_code=Test",
+			ExpectedErrorCode: 401,
+		},
+	}
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", tc.RequestURL, nil)
+			errorCode := extractErrorCode(req)
+
+			assert.Equal(t, tc.ExpectedErrorCode, errorCode)
+		})
+	}
+}
