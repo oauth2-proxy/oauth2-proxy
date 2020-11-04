@@ -26,7 +26,7 @@
 - [#754](https://github.com/oauth2-proxy/oauth2-proxy/pull/754) The Azure provider now has token refresh functionality implemented. This means that there won't
   be any redirects in the browser anymore when tokens expire, but instead a token refresh is initiated
   in the background, which leads to new tokens being returned in the cookies.
-- [#754](https://github.com/oauth2-proxy/oauth2-proxy/pull/754) Pleas note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
+  - Please note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
   Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
   to decide if a refresh is required.
 

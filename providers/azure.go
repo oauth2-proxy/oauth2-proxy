@@ -170,7 +170,6 @@ func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.
 	origExpiration := s.ExpiresOn
 
 	err := p.redeemRefreshToken(ctx, s)
-
 	if err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
