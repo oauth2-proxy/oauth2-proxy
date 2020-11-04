@@ -23,9 +23,16 @@
   via the login url. If this option was used in the past, behavior will change with this release as it will
   affect the tokens returned by Azure. In the past, the tokens were always for `https://graph.microsoft.com` (the default)
   and will now be for the configured resource (if it exists, otherwise it will run into errors)
+- [#754](https://github.com/oauth2-proxy/oauth2-proxy/pull/754) The Azure provider now has token refresh functionality implemented. This means that there won't
+  be any redirects in the browser anymore when tokens expire, but instead a token refresh is initiated
+  in the background, which leads to new tokens being returned in the cookies.
+  - Please note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
+  Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
+  to decide if a refresh is required.
 
 ## Changes since v6.1.1
 
+- [#754](https://github.com/oauth2-proxy/oauth2-proxy/pull/754) Azure token refresh (@codablock)
 - [#825](https://github.com/oauth2-proxy/oauth2-proxy/pull/825) Fix code coverage reporting on GitHub actions(@JoelSpeed)
 - [#796](https://github.com/oauth2-proxy/oauth2-proxy/pull/796) Deprecate GetUserName & GetEmailAdress for EnrichSessionState (@NickMeves)
 - [#705](https://github.com/oauth2-proxy/oauth2-proxy/pull/705) Add generic Header injectors for upstream request and response headers (@JoelSpeed)
