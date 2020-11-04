@@ -204,10 +204,12 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 		return
 	}
 
+	now := time.Now()
 	expires := time.Unix(jsonResponse.ExpiresOn, 0)
 	s.AccessToken = jsonResponse.AccessToken
 	s.IDToken = jsonResponse.IDToken
 	s.RefreshToken = jsonResponse.RefreshToken
+	s.CreatedAt = &now
 	s.ExpiresOn = &expires
 	return
 }
