@@ -57,10 +57,10 @@ func NewDiscordProvider(p *ProviderData) *DiscordProvider {
 	return &DiscordProvider{ProviderData: p}
 }
 
-func getDiscordHeader(access_token string) http.Header {
+func getDiscordHeader(accessToken string) http.Header {
 	header := make(http.Header)
 	header.Set("Accept", "application/json")
-	header.Set("Authorization", fmt.Sprintf("Bearer %s", access_token))
+	header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	return header
 }
 
