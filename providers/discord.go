@@ -1,8 +1,8 @@
 package providers
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -16,16 +16,16 @@ type DiscordProvider struct {
 }
 
 type DiscordUserInfo struct {
-	Id            string   `json:"id"`
-	Avatar        string   `json:"avatar"`
-	Username      string   `json:"username"`
-	Discriminator string   `json:"discriminator"`
-	Verified      bool     `json:"verified"`
-	Email         string   `json:"email"`
-	Flags         int      `json:"flags"`
-	Locale        string   `json:"locale"`
-	PremiumType   int      `json:"premium_type"`
-	MfaEnabled    bool     `json:"mfa_enabled"`
+	Id            string `json:"id"`
+	Avatar        string `json:"avatar"`
+	Username      string `json:"username"`
+	Discriminator string `json:"discriminator"`
+	Verified      bool   `json:"verified"`
+	Email         string `json:"email"`
+	Flags         int    `json:"flags"`
+	Locale        string `json:"locale"`
+	PremiumType   int    `json:"premium_type"`
+	MfaEnabled    bool   `json:"mfa_enabled"`
 }
 
 func NewDiscordProvider(p *ProviderData) *DiscordProvider {
@@ -76,8 +76,8 @@ func getUserInfo(p *DiscordProvider, s *sessions.SessionState) (DiscordUserInfo,
 	req.Header = getDiscordHeader(s.AccessToken)
 
 	err = requests.New(p.ProfileURL.String()).
-    Do().
-    UnmarshalInto(&r)
+		Do().
+		UnmarshalInto(&r)
 	if err != nil {
 		return r, err
 	}
