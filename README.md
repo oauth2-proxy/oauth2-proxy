@@ -30,7 +30,8 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 $ cd $GOPATH/src/github.com/oauth2-proxy
 $ git clone https://github.com/oauth2-proxy/oauth2-proxy
 $ cd oauth2-proxy
-$ make build``` which will put the binary named `oauth2-proxy` in `$GOPATH/src/github.com/oauth2-proxy/oauth2-proxy/`
+$ make build```
+which will put the binary named `oauth2-proxy` in `$GOPATH/src/github.com/oauth2-proxy/oauth2-proxy/`
 
     c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, ARMv6 and ARM64 tags available)
 
