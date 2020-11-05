@@ -1,12 +1,7 @@
 ---
-layout: default
-title: Configuration
-permalink: /configuration
-has_children: true
-nav_order: 3
+id: overview
+title: Overview
 ---
-
-## Configuration
 
 `oauth2-proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
 
@@ -16,7 +11,7 @@ To generate a strong cookie secret use `python -c 'import os,base64; print(base6
 
 Every command line argument can be specified in a config file by replacing hyphens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
 
-An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `--config=/etc/oauth2-proxy.cfg`
+An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/contrib/oauth2-proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `--config=/etc/oauth2-proxy.cfg`
 
 ### Command Line Options
 
@@ -112,7 +107,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted | false |
 | `--scope` | string | OAuth scope specification | |
 | `--session-cookie-minimal` | bool | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only) | false |
-| `--session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
+| `--session-store-type` | string | [Session data storage backend](sessions.md); redis or cookie | cookie |
 | `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode). When used with `--pass-access-token`, X-Auth-Request-Access-Token is added to response headers.  | false |
 | `--set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
 | `--set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
@@ -195,7 +190,7 @@ If you require a different format than that, you can configure it with the `--au
 The default format is configured as follows:
 
 ```
-{% raw %}{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}{% endraw %}
+{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
 ```
 
 Available variables for auth logging:
@@ -223,7 +218,7 @@ If you require a different format than that, you can configure it with the `--re
 The default format is configured as follows:
 
 ```
-{% raw %}{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}{% endraw %}
+{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
 ```
 
 Available variables for request logging:
@@ -253,7 +248,7 @@ All other logging that is not covered by the above two types of logging will be 
 If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default format is configured as follows:
 
 ```
-{% raw %}[{{.Timestamp}}] [{{.File}}] {{.Message}}{% endraw %}
+[{{.Timestamp}}] [{{.File}}] {{.Message}}
 ```
 
 Available variables for standard logging:
@@ -264,7 +259,7 @@ Available variables for standard logging:
 | File | main.go:40 | The file and line number of the logging statement. |
 | Message | HTTP: listening on 127.0.0.1:4180 | The details of the log statement. |
 
-## <a name="nginx-auth-request"></a>Configuring for use with the Nginx `auth_request` directive
+## Configuring for use with the Nginx `auth_request` directive
 
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2-proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
@@ -358,5 +353,6 @@ It is recommended to use `--session-store-type=redis` when expecting large sessi
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
 
-### Note on rotated Client Secret
+:::note
 If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.
+:::
