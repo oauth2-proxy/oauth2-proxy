@@ -25,7 +25,11 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
     a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v6.1.1`)
 
-    b. Clone source code and build binary. Make sure you install golang [Instructions Here](https://golang.org/doc/install) and ensure that the $GOPATH environment variable is set correctly [Instructions Here](https://golang.org/doc/gopath_code.html). Then perform the following commands:
+    b. Using the prebuilt docker image quay.io/oauth2-proxy/oauth2-proxy (AMD64, ARMv6 and ARM64 tags available)
+
+    c. Clone source code and build binary. Make sure you install golang [Instructions Here](https://golang.org/doc/install) and ensure that the $GOPATH environment variable is set correctly [Instructions Here](https://golang.org/doc/gopath_code.html). 
+
+Then perform the following commands:
 ```
 $ mkdir -p $GOPATH/src/github.com/oauth2-proxy
 $ cd $GOPATH/src/github.com/oauth2-proxy
@@ -34,8 +38,6 @@ $ cd oauth2-proxy
 $ make build
 ```
 which will put the binary named `oauth2-proxy` in `$GOPATH/src/github.com/oauth2-proxy/oauth2-proxy/`
-
-    c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, ARMv6 and ARM64 tags available)
 
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 
