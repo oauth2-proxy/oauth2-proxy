@@ -1,11 +1,8 @@
 ---
-layout: default
+id: installation
 title: Installation
-permalink: /installation
-nav_order: 1
+slug: /
 ---
-
-## Installation
 
 1.  Choose how to deploy:
 
@@ -22,6 +19,6 @@ $ sha256sum -c sha256sum.txt 2>&1 | grep OK
 oauth2-proxy-x.y.z.linux-amd64: OK
 ```
 
-2.  [Select a Provider and Register an OAuth Application with a Provider](auth-configuration)
-3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](configuration)
-4.  [Configure SSL or Deploy behind a SSL endpoint](tls-configuration) (example provided for Nginx)
+2.  [Select a Provider and Register an OAuth Application with a Provider](configuration/auth.md)
+3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](configuration/overview.md)
+4.  [Configure SSL or Deploy behind a SSL endpoint](configuration/tls.md) (example provided for Nginx)
