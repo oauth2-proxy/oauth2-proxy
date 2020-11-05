@@ -29,15 +29,15 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
     c. Clone source code and build binary. Make sure you install golang [Instructions Here](https://golang.org/doc/install) and ensure that the $GOPATH environment variable is set correctly [Instructions Here](https://golang.org/doc/gopath_code.html). 
 
-Then perform the following commands:
-```
-$ mkdir -p $GOPATH/src/github.com/oauth2-proxy
-$ cd $GOPATH/src/github.com/oauth2-proxy
-$ git clone https://github.com/oauth2-proxy/oauth2-proxy
-$ cd oauth2-proxy
-$ make build
-```
-which will put the binary named `oauth2-proxy` in `$GOPATH/src/github.com/oauth2-proxy/oauth2-proxy/`
+    Then perform the following commands:
+    ```
+    $ mkdir -p $GOPATH/src/github.com/oauth2-proxy
+    $ cd $GOPATH/src/github.com/oauth2-proxy
+    $ git clone https://github.com/oauth2-proxy/oauth2-proxy
+    $ cd oauth2-proxy
+    $ make build
+    ```
+    which will put the binary named `oauth2-proxy` in `$GOPATH/src/github.com/oauth2-proxy/oauth2-proxy/`
 
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 
