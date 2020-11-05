@@ -1,11 +1,7 @@
 ---
-layout: default
+id: tls
 title: TLS Configuration
-permalink: /tls-configuration
-nav_order: 4
 ---
-
-## SSL Configuration
 
 There are two recommended configurations.
 
