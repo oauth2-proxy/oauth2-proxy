@@ -16,7 +16,7 @@ type DiscordProvider struct {
 }
 
 type DiscordUserInfo struct {
-	Id            string `json:"id"`
+	ID            string `json:"id"`
 	Avatar        string `json:"avatar"`
 	Username      string `json:"username"`
 	Discriminator string `json:"discriminator"`
@@ -96,7 +96,7 @@ func (p *DiscordProvider) GetUserName(s *sessions.SessionState) (string, error) 
 	if r.Email == "" {
 		return "", errors.New("no email")
 	}
-	return r.Id, nil
+	return r.ID, nil
 }
 
 func (p *DiscordProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
