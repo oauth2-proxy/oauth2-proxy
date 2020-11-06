@@ -36,9 +36,9 @@ sha256sum -c sha256sum.txt 2>&1 | grep OK
 oauth2-proxy-x.y.z.linux-amd64: OK
 ```
 
-2.  [Select a Provider and Register an OAuth Application with a Provider](https://oauth2-proxy.github.io/oauth2-proxy/auth-configuration)
-3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://oauth2-proxy.github.io/oauth2-proxy/configuration)
-4.  [Configure SSL or Deploy behind a SSL endpoint](https://oauth2-proxy.github.io/oauth2-proxy/tls-configuration) (example provided for Nginx)
+2.  [Select a Provider and Register an OAuth Application with a Provider](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/oauth_provider)
+3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview)
+4.  [Configure SSL or Deploy behind a SSL endpoint](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/tls) (example provided for Nginx)
 
 
 ## Security
@@ -48,7 +48,7 @@ See [open redirect vulnverability](https://github.com/oauth2-proxy/oauth2-proxy/
 
 ## Docs
 
-Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy).
+Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/docs/).
 
 ![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
 
