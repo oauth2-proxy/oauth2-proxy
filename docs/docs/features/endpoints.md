@@ -1,11 +1,7 @@
 ---
-layout: default
+id: endpoints
 title: Endpoints
-permalink: /endpoints
-nav_order: 5
 ---
-
-## Endpoint Documentation
 
 OAuth2 Proxy responds directly to the following endpoints. All other endpoints will be proxied upstream when authenticated. The `/oauth2` prefix can be changed with the `--proxy-prefix` config variable.
 
@@ -16,7 +12,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 - /oauth2/start - a URL that will redirect to start the OAuth cycle
 - /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
 - /oauth2/userinfo - the URL is used to return user's email from the session in JSON format.
-- /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; for use with the [Nginx `auth_request` directive](#nginx-auth-request)
+- /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; for use with the [Nginx `auth_request` directive](../configuration/overview.md#configuring-for-use-with-the-nginx-auth_request-directive)
 
 ### Sign out
 
@@ -36,4 +32,4 @@ X-Auth-Request-Redirect: https://my-oidc-provider/sign_out_page
 
 (The "sign_out_page" should be the [`end_session_endpoint`](https://openid.net/specs/openid-connect-session-1_0.html#rfc.section.2.1) from [the metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) if your OIDC provider supports Session Management and Discovery.)
 
-BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` in the example) must be added to the [`--whitelist-domain`](configuration) configuration option otherwise the redirect will be ignored.
+BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` in the example) must be added to the [`--whitelist-domain`](../configuration/overview) configuration option otherwise the redirect will be ignored.
