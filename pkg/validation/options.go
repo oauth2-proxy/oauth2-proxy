@@ -28,6 +28,8 @@ func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
+	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
+	msgs = append(msgs, prefixValues("injectRespeonseHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -69,10 +71,6 @@ func Validate(o *options.Options) error {
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
 			"\n      use email-domain=* to authorize all email addresses")
-	}
-
-	if o.SetBasicAuth && o.SetAuthorization {
-		msgs = append(msgs, "mutually exclusive: set-basic-auth and set-authorization-header can not both be true")
 	}
 
 	if o.OIDCIssuerURL != "" {
@@ -157,10 +155,6 @@ func Validate(o *options.Options) error {
 				o.Scope += " groups"
 			}
 		}
-	}
-
-	if o.PreferEmailToUser && !o.PassBasicAuth && !o.PassUserHeaders {
-		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
 	}
 
 	if o.SkipJwtBearerTokens {

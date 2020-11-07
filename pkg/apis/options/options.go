@@ -65,22 +65,15 @@ type Options struct {
 	// TODO(JoelSpeed): Rename when legacy config is removed
 	UpstreamServers Upstreams `cfg:",internal"`
 
+	InjectRequestHeaders  []Header `cfg:",internal"`
+	InjectResponseHeaders []Header `cfg:",internal"`
+
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
-	SkipAuthStripHeaders  bool     `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
 	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
 	ExtraJwtIssuers       []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
-	PassBasicAuth         bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
-	SetBasicAuth          bool     `flag:"set-basic-auth" cfg:"set_basic_auth"`
-	PreferEmailToUser     bool     `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
-	BasicAuthPassword     string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
-	PassAccessToken       bool     `flag:"pass-access-token" cfg:"pass_access_token"`
 	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
-	PassUserHeaders       bool     `flag:"pass-user-headers" cfg:"pass_user_headers"`
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
-	SetXAuthRequest       bool     `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
-	SetAuthorization      bool     `flag:"set-authorization-header" cfg:"set_authorization_header"`
-	PassAuthorization     bool     `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 
 	// These options allow for other providers besides Google, with
@@ -151,15 +144,7 @@ func NewOptions() *Options {
 		Cookie:                           cookieDefaults(),
 		Session:                          sessionOptionsDefaults(),
 		AzureTenant:                      "common",
-		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
-		PassBasicAuth:                    true,
-		SetBasicAuth:                     false,
-		PassUserHeaders:                  true,
-		PassAccessToken:                  false,
-		SetAuthorization:                 false,
-		PassAuthorization:                false,
-		PreferEmailToUser:                false,
 		Prompt:                           "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                   "force",
 		UserIDClaim:                      "email",
@@ -183,18 +168,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
-	flagSet.Bool("set-xauthrequest", false, "set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)")
-	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
-	flagSet.Bool("set-basic-auth", false, "set HTTP Basic Auth information in response (useful in Nginx auth_request mode)")
-	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
-	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
-	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
-	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
-	flagSet.Bool("pass-authorization-header", false, "pass the Authorization Header to upstream")
-	flagSet.Bool("set-authorization-header", false, "set Authorization response headers (useful in Nginx auth_request mode)")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
 	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods")
-	flagSet.Bool("skip-auth-strip-headers", false, "strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy for allowlisted requests (`--skip-auth-route`, `--skip-auth-regex`, `--skip-auth-preflight`, `--trusted-ip`)")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
@@ -272,6 +247,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
 	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
+	flagSet.AddFlagSet(legacyHeadersFlagSet())
 
 	return flagSet
 }

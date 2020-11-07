@@ -3,17 +3,14 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"net"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 	"time"
 
-	"github.com/justinas/alice"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 )
 
@@ -63,33 +60,8 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	chain := alice.New()
-
-	if opts.ForceHTTPS {
-		_, httpsPort, err := net.SplitHostPort(opts.HTTPSAddress)
-		if err != nil {
-			logger.Fatalf("FATAL: invalid HTTPS address %q: %v", opts.HTTPAddress, err)
-		}
-		chain = chain.Append(middleware.NewRedirectToHTTPS(httpsPort))
-	}
-
-	healthCheckPaths := []string{opts.PingPath}
-	healthCheckUserAgents := []string{opts.PingUserAgent}
-	if opts.GCPHealthChecks {
-		healthCheckPaths = append(healthCheckPaths, "/liveness_check", "/readiness_check")
-		healthCheckUserAgents = append(healthCheckUserAgents, "GoogleHC/1.0")
-	}
-
-	// To silence logging of health checks, register the health check handler before
-	// the logging handler
-	if opts.Logging.SilencePing {
-		chain = chain.Append(middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents), LoggingHandler)
-	} else {
-		chain = chain.Append(LoggingHandler, middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents))
-	}
-
 	s := &Server{
-		Handler: chain.Then(oauthproxy),
+		Handler: oauthproxy,
 		Opts:    opts,
 		stop:    make(chan struct{}, 1),
 	}
