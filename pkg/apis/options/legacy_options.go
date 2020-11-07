@@ -203,7 +203,10 @@ func (l *LegacyHeaders) getResponseHeaders() []Header {
 	responseHeaders := []Header{}
 
 	if l.SetXAuthRequest {
-		responseHeaders = append(responseHeaders, getXAuthRequestHeaders(l.PassAccessToken)...)
+		responseHeaders = append(responseHeaders, getXAuthRequestHeaders()...)
+		if l.PassAccessToken {
+			responseHeaders = append(responseHeaders, getXAuthRequestAccessTokenHeader())
+		}
 	}
 
 	if l.SetBasicAuth {
@@ -331,7 +334,7 @@ func getPreferredUsernameHeader() Header {
 	}
 }
 
-func getXAuthRequestHeaders(passAccessToken bool) []Header {
+func getXAuthRequestHeaders() []Header {
 	headers := []Header{
 		{
 			Name: "X-Auth-Request-User",
@@ -353,7 +356,16 @@ func getXAuthRequestHeaders(passAccessToken bool) []Header {
 				},
 			},
 		},
-		getPreferredUsernameHeader(),
+		{
+			Name: "X-Auth-Request-Preferred-Username",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "preferred_username",
+					},
+				},
+			},
+		},
 		{
 			Name: "X-Auth-Request-Groups",
 			Values: []HeaderValue{
@@ -366,18 +378,18 @@ func getXAuthRequestHeaders(passAccessToken bool) []Header {
 		},
 	}
 
-	if passAccessToken {
-		headers = append(headers, Header{
-			Name: "X-Auth-Request-Access-Token",
-			Values: []HeaderValue{
-				{
-					ClaimSource: &ClaimSource{
-						Claim: "access_token",
-					},
+	return headers
+}
+
+func getXAuthRequestAccessTokenHeader() Header {
+	return Header{
+		Name: "X-Auth-Request-Access-Token",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim: "access_token",
 				},
 			},
-		})
+		},
 	}
-
-	return headers
 }
