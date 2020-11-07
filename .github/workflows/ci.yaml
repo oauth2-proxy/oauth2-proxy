@@ -33,6 +33,10 @@ jobs:
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
 
+    - name: Verify Code Generation
+      run: |
+        make verify-generate
+
     - name: Lint
       run: |
         make lint
