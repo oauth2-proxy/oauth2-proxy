@@ -31,8 +31,9 @@ func NewLegacyOptions() *LegacyOptions {
 		},
 
 		LegacyHeaders: LegacyHeaders{
-			PassBasicAuth:   true,
-			PassUserHeaders: true,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			SkipAuthStripHeaders: true,
 		},
 
 		Options: *NewOptions(),
