@@ -180,6 +180,11 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 // EnrichSessionState checks the listed Google Groups configured and adds any
 // that the user is a member of to session.Groups.
 func (p *GoogleProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
+	// TODO (@NickMeves) - Move to pure EnrichSessionState logic and stop
+	// reusing legacy `groupValidator`.
+	//
+	// This is called here to get the validator to do the `session.Groups`
+	// populating logic.
 	p.groupValidator(s)
 
 	return nil
@@ -273,6 +278,9 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 		return false, err
 	}
 
+	// TODO (@NickMeves) - Align Group authorization needs with other providers'
+	// behavior in the `RefreshSession` case.
+	//
 	// re-check that the user is in the proper google group(s)
 	if !p.groupValidator(s) {
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
