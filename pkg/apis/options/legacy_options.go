@@ -31,8 +31,9 @@ func NewLegacyOptions() *LegacyOptions {
 		},
 
 		LegacyHeaders: LegacyHeaders{
-			PassBasicAuth:   true,
-			PassUserHeaders: true,
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			SkipAuthStripHeaders: true,
 		},
 
 		Options: *NewOptions(),
@@ -159,7 +160,7 @@ func legacyHeadersFlagSet() *pflag.FlagSet {
 
 	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
-	flagSet.Bool("skip-auth-strip-headers", false, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy for request paths in --skip-auth-regex")
+	flagSet.Bool("skip-auth-strip-headers", true, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy")
 
 	return flagSet
 }
@@ -202,7 +203,10 @@ func (l *LegacyHeaders) getResponseHeaders() []Header {
 	responseHeaders := []Header{}
 
 	if l.SetXAuthRequest {
-		responseHeaders = append(responseHeaders, getXAuthRequestHeaders(l.PassAccessToken)...)
+		responseHeaders = append(responseHeaders, getXAuthRequestHeaders()...)
+		if l.PassAccessToken {
+			responseHeaders = append(responseHeaders, getXAuthRequestAccessTokenHeader())
+		}
 	}
 
 	if l.SetBasicAuth {
@@ -330,7 +334,7 @@ func getPreferredUsernameHeader() Header {
 	}
 }
 
-func getXAuthRequestHeaders(passAccessToken bool) []Header {
+func getXAuthRequestHeaders() []Header {
 	headers := []Header{
 		{
 			Name: "X-Auth-Request-User",
@@ -352,7 +356,16 @@ func getXAuthRequestHeaders(passAccessToken bool) []Header {
 				},
 			},
 		},
-		getPreferredUsernameHeader(),
+		{
+			Name: "X-Auth-Request-Preferred-Username",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "preferred_username",
+					},
+				},
+			},
+		},
 		{
 			Name: "X-Auth-Request-Groups",
 			Values: []HeaderValue{
@@ -365,18 +378,18 @@ func getXAuthRequestHeaders(passAccessToken bool) []Header {
 		},
 	}
 
-	if passAccessToken {
-		headers = append(headers, Header{
-			Name: "X-Auth-Request-Access-Token",
-			Values: []HeaderValue{
-				{
-					ClaimSource: &ClaimSource{
-						Claim: "access_token",
-					},
+	return headers
+}
+
+func getXAuthRequestAccessTokenHeader() Header {
+	return Header{
+		Name: "X-Auth-Request-Access-Token",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim: "access_token",
 				},
 			},
-		})
+		},
 	}
-
-	return headers
 }
