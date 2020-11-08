@@ -48,6 +48,7 @@
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) Validate Redis configuration options at startup (@NickMeves)
 - [#791](https://github.com/oauth2-proxy/oauth2-proxy/pull/791) Remove GetPreferredUsername method from provider interface (@NickMeves)
 - [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
+- [#778](https://github.com/oauth2-proxy/oauth2-proxy/pull/778) Use display-htpasswd-form flag
 - [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Add support to ensure user belongs in required groups when using the OIDC provider (@stefansedich)
 - [#800](https://github.com/oauth2-proxy/oauth2-proxy/pull/800) Fix import path for v7 (@johejo)
 - [#783](https://github.com/oauth2-proxy/oauth2-proxy/pull/783) Update Go to 1.15 (@johejo)
@@ -56,6 +57,7 @@
 - [#750](https://github.com/oauth2-proxy/oauth2-proxy/pull/750) ci: Migrate to Github Actions (@shinebayar-g)
 - [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
 - [#819](https://github.com/oauth2-proxy/oauth2-proxy/pull/819) Improve CI (@johejo)
+
 
 # v6.1.1
 

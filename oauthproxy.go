@@ -222,7 +222,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		AllowedGroups:           opts.AllowedGroups,
 
 		basicAuthValidator:  basicAuthValidator,
-		displayHtpasswdForm: basicAuthValidator != nil,
+		displayHtpasswdForm: basicAuthValidator != nil && opts.DisplayHtpasswdForm,
 		sessionChain:        sessionChain,
 		headersChain:        headersChain,
 		preAuthChain:        preAuthChain,
