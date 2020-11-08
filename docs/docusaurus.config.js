@@ -22,6 +22,11 @@ module.exports = {
           position: 'left',
         },
         {
+          type: 'docsVersionDropdown',
+          position: 'right',
+          dropdownActiveClassDisabled: true,
+        },
+        {
           href: 'https://github.com/oauth2-proxy/oauth2-proxy',
           label: 'GitHub',
           position: 'right',
