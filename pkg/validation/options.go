@@ -9,18 +9,17 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/mbland/hmacauth"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
-	"github.com/oauth2-proxy/oauth2-proxy/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
 // Validate checks that required options are set and validates those that they
@@ -28,6 +27,9 @@ import (
 func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
+	msgs = append(msgs, validateRedisSessionStore(o)...)
+	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
+	msgs = append(msgs, prefixValues("injectRespeonseHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -69,10 +71,6 @@ func Validate(o *options.Options) error {
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
 			"\n      use email-domain=* to authorize all email addresses")
-	}
-
-	if o.SetBasicAuth && o.SetAuthorization {
-		msgs = append(msgs, "mutually exclusive: set-basic-auth and set-authorization-header can not both be true")
 	}
 
 	if o.OIDCIssuerURL != "" {
@@ -159,10 +157,6 @@ func Validate(o *options.Options) error {
 		}
 	}
 
-	if o.PreferEmailToUser && !o.PassBasicAuth && !o.PassUserHeaders {
-		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
-	}
-
 	if o.SkipJwtBearerTokens {
 		// Configure extra issuers
 		if len(o.ExtraJwtIssuers) > 0 {
@@ -183,15 +177,6 @@ func Validate(o *options.Options) error {
 	o.SetRedirectURL(redirectURL)
 
 	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
-
-	for _, u := range o.SkipAuthRegex {
-		compiledRegex, err := regexp.Compile(u)
-		if err != nil {
-			msgs = append(msgs, fmt.Sprintf("error compiling regex=%q %s", u, err))
-			continue
-		}
-		o.SetCompiledRegex(append(o.GetCompiledRegex(), compiledRegex))
-	}
 	msgs = parseProviderInfo(o, msgs)
 
 	if len(o.GoogleGroups) > 0 || o.GoogleAdminEmail != "" || o.GoogleServiceAccountJSON != "" {
@@ -222,18 +207,8 @@ func Validate(o *options.Options) error {
 		})
 	}
 
-	if len(o.TrustedIPs) > 0 && o.ReverseProxy {
-		_, err := fmt.Fprintln(os.Stderr, "WARNING: trusting of IPs with --reverse-proxy poses risks if a header spoofing attack is possible.")
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	for i, ipStr := range o.TrustedIPs {
-		if nil == ip.ParseIPNet(ipStr) {
-			msgs = append(msgs, fmt.Sprintf("trusted_ips[%d] (%s) could not be recognized", i, ipStr))
-		}
-	}
+	// Do this after ReverseProxy validation for TrustedIP coordinated checks
+	msgs = append(msgs, validateAllowlists(o)...)
 
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",
@@ -292,7 +267,6 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
-		p.EmailDomains = o.EmailDomains
 
 		if o.GetOIDCVerifier() != nil {
 			p.Verifier = o.GetOIDCVerifier()

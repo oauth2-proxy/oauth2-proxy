@@ -1,12 +1,7 @@
 ---
-layout: default
-title: Sessions
-permalink: /configuration/sessions
-parent: Configuration
-nav_order: 3
+id: session_storage
+title: Session Storage
 ---
-
-## Sessions
 
 Sessions allow a user's authentication to be tracked between multiple HTTP
 requests to a service.
@@ -38,7 +33,7 @@ users to re-authenticate
 ### Redis Storage
 
 The Redis Storage backend stores sessions, encrypted, in redis. Instead sending all the information
-back the the client for storage, as in the [Cookie storage](cookie-storage), a ticket is sent back
+back the the client for storage, as in the [Cookie storage](#cookie-storage), a ticket is sent back
 to the user as the cookie value instead.
 
 A ticket is composed as the following:
@@ -66,7 +61,7 @@ You may also configure the store for Redis Sentinel. In this case, you will want
 `--redis-use-sentinel=true` flag, as well as configure the flags `--redis-sentinel-master-name`
 and `--redis-sentinel-connection-urls` appropriately.
 
-Redis Cluster is available to be the backend store as well. To leverage it, you will need to set the 
+Redis Cluster is available to be the backend store as well. To leverage it, you will need to set the
 `--redis-use-cluster=true` flag, and configure the flags `--redis-cluster-connection-urls` appropriately.
 
 Note that flags `--redis-use-sentinel=true` and `--redis-use-cluster=true` are mutually exclusive.

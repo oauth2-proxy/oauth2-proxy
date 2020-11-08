@@ -1,12 +1,7 @@
 ---
-layout: default
-title: Configuration
-permalink: /configuration
-has_children: true
-nav_order: 3
+id: overview
+title: Overview
 ---
-
-## Configuration
 
 `oauth2-proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
 
@@ -16,7 +11,7 @@ To generate a strong cookie secret use `python -c 'import os,base64; print(base6
 
 Every command line argument can be specified in a config file by replacing hyphens (-) with underscores (\_). If the argument can be specified multiple times, the config option should be plural (trailing s).
 
-An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `--config=/etc/oauth2-proxy.cfg`
+An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/contrib/oauth2-proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `--config=/etc/oauth2-proxy.cfg`
 
 ### Command Line Options
 
@@ -46,7 +41,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
-| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
+| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
 | `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
@@ -79,7 +74,7 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--oidc-issuer-url` | string | the OpenID Connect issuer URL, e.g. `"https://accounts.google.com"` | |
 | `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `--oidc-groups-claim` | string | which claim contains the user groups | `"groups"` |
-| `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header | false |
+| `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header. When used with `--set-xauthrequest` this adds the X-Auth-Request-Access-Token header to the response | false |
 | `--pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `--pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `--prefer-email-to-user` | bool | Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, e.g. htaccess authentication. Used in conjunction with `--pass-basic-auth` and `--pass-user-headers` | false |
@@ -112,16 +107,17 @@ An example [oauth2-proxy.cfg]({{ site.gitweb }}/contrib/oauth2-proxy.cfg.example
 | `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted | false |
 | `--scope` | string | OAuth scope specification | |
 | `--session-cookie-minimal` | bool | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only) | false |
-| `--session-store-type` | string | [Session data storage backend](configuration/sessions); redis or cookie | cookie |
-| `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode) | false |
+| `--session-store-type` | string | [Session data storage backend](sessions.md); redis or cookie | cookie |
+| `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode). When used with `--pass-access-token`, X-Auth-Request-Access-Token is added to response headers.  | false |
 | `--set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
 | `--set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
 | `--signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
 | `--silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
 | `--skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
-| `--skip-auth-regex` | string | bypass authentication for requests paths that match (may be given multiple times) | |
-| `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy for request paths in `--skip-auth-regex` | false |
-| `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens | false |
+| `--skip-auth-regex` | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times) | |
+| `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods | |
+| `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy | true |
+| `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens (the token must have [`aud`](https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields) that matches this client id or one of the extras from `extra-jwt-issuers`) | false |
 | `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
 | `--skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
 | `--ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |
@@ -194,7 +190,7 @@ If you require a different format than that, you can configure it with the `--au
 The default format is configured as follows:
 
 ```
-{% raw %}{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}{% endraw %}
+{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
 ```
 
 Available variables for auth logging:
@@ -222,7 +218,7 @@ If you require a different format than that, you can configure it with the `--re
 The default format is configured as follows:
 
 ```
-{% raw %}{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}{% endraw %}
+{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
 ```
 
 Available variables for request logging:
@@ -252,7 +248,7 @@ All other logging that is not covered by the above two types of logging will be 
 If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default format is configured as follows:
 
 ```
-{% raw %}[{{.Timestamp}}] [{{.File}}] {{.Message}}{% endraw %}
+[{{.Timestamp}}] [{{.File}}] {{.Message}}
 ```
 
 Available variables for standard logging:
@@ -263,7 +259,7 @@ Available variables for standard logging:
 | File | main.go:40 | The file and line number of the logging statement. |
 | Message | HTTP: listening on 127.0.0.1:4180 | The details of the log statement. |
 
-## <a name="nginx-auth-request"></a>Configuring for use with the Nginx `auth_request` directive
+## Configuring for use with the Nginx `auth_request` directive
 
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2-proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
@@ -357,5 +353,6 @@ It is recommended to use `--session-store-type=redis` when expecting large sessi
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
 
-### Note on rotated Client Secret
+:::note
 If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.
+:::

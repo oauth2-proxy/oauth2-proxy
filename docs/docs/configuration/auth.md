@@ -1,11 +1,7 @@
 ---
-layout: default
-title: Auth Configuration
-permalink: /auth-configuration
-nav_order: 2
+id: oauth_provider
+title: OAuth Provider Configuration
 ---
-
-## OAuth Provider Configuration
 
 You will need to register an OAuth application with a Provider (Google, GitHub or another provider), and configure it with Redirect URI(s) for the domain you intend to run `oauth2-proxy` on.
 
@@ -89,7 +85,7 @@ Note: The user is checked against the group members list on initial authenticati
    --client-secret=<value from step 6>
 ```
 
-Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](configuration/sessions#redis-storage) should resolve this.
+Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) should resolve this.
 
 ### Facebook Auth Provider
 
@@ -151,15 +147,25 @@ The group management in keycloak is using a tree. If you create a group named ad
 
 ### GitLab Auth Provider
 
-Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](https://docs.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes.
+Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](https://docs.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes, and set the redirect url to your application url e.g. https://myapp.com/oauth2/callback.
+
+The following config should be set to ensure that the oauth will work properly. To get a cookie secret follow [these steps](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/configuration/configuration.md#configuration)
+
+```
+    --provider="gitlab"
+    --redirect-url="https://myapp.com/oauth2/callback" // Should be the same as the redirect url for the application in gitlab
+    --client-id=GITLAB_CLIENT_ID
+    --client-secret=GITLAB_CLIENT_SECRET
+    --cookie-secret=COOKIE_SECRET
+```
 
 Restricting by group membership is possible with the following option:
 
-    -gitlab-group="": restrict logins to members of any of these groups (slug), separated by a comma
+    --gitlab-group="mygroup,myothergroup": restrict logins to members of any of these groups (slug), separated by a comma
 
 If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
 
-    -oidc-issuer-url="<your gitlab url>"
+    --oidc-issuer-url="<your gitlab url>"
 
 ### LinkedIn Auth Provider
 
@@ -444,7 +450,7 @@ To authorize by email domain use `--email-domain=yourcompany.com`. To authorize 
 
 ## Adding a new Provider
 
-Follow the examples in the [`providers` package]({{ site.gitweb }}/providers/) to define a new
+Follow the examples in the [`providers` package](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/providers/) to define a new
 `Provider` instance. Add a new `case` to
-[`providers.New()`]({{ site.gitweb }}/providers/providers.go) to allow `oauth2-proxy` to use the
+[`providers.New()`](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/providers/providers.go) to allow `oauth2-proxy` to use the
 new `Provider`.

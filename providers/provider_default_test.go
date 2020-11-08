@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,4 +46,10 @@ func TestAcrValuesConfigured(t *testing.T) {
 
 	result := p.GetLoginURL("https://my.test.app/oauth", "")
 	assert.Contains(t, result, "acr_values=testValue")
+}
+
+func TestEnrichSessionState(t *testing.T) {
+	p := &ProviderData{}
+	s := &sessions.SessionState{}
+	assert.NoError(t, p.EnrichSessionState(context.Background(), s))
 }
