@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ghodss/yaml"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
@@ -21,6 +22,7 @@ func main() {
 	configFlagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ContinueOnError)
 	config := configFlagSet.String("config", "", "path to config file")
 	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
+	convertConfig := configFlagSet.Bool("convert-config-to-alpha", false, "if true, the proxy will load configuration as normal and convert existing configuration to the alpha config structure, and print it to stdout")
 	showVersion := configFlagSet.Bool("version", false, "print version string")
 	configFlagSet.Parse(os.Args[1:])
 
@@ -29,10 +31,21 @@ func main() {
 		return
 	}
 
+	if *convertConfig && *alphaConfig != "" {
+		logger.Fatal("cannot use alpha-config and conver-config-to-alpha together")
+	}
+
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet)
 	if err != nil {
 		logger.Printf("ERROR: %v", err)
 		os.Exit(1)
+	}
+
+	if *convertConfig {
+		if err := printConvertedConfig(opts); err != nil {
+			logger.Fatalf("ERROR: could not convert config: %v", err)
+		}
+		return
 	}
 
 	err = validation.Validate(opts)
@@ -133,4 +146,22 @@ func loadOptions(config string, extraFlags *pflag.FlagSet) (*options.Options, er
 	}
 
 	return opts, nil
+}
+
+// printConvertedConfig extracts alpha options from the loaded configuration
+// and renders these to stdout in YAML format.
+func printConvertedConfig(opts *options.Options) error {
+	alphaConfig := &options.AlphaOptions{}
+	alphaConfig.ExtractFrom(opts)
+
+	data, err := yaml.Marshal(alphaConfig)
+	if err != nil {
+		return fmt.Errorf("unable to marshal config: %v", err)
+	}
+
+	if _, err := os.Stdout.Write(data); err != nil {
+		return fmt.Errorf("unable to write output: %v", err)
+	}
+
+	return nil
 }
