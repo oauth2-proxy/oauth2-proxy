@@ -29,3 +29,11 @@ type AlphaOptions struct {
 	// or from a static secret value.
 	InjectResponseHeaders []Header `json:"injectResponseHeaders,omitempty"`
 }
+
+// MergeInto replaces alpha options in the Options struct with the values
+// from the AlphaOptions
+func (a *AlphaOptions) MergeInto(opts *Options) {
+	opts.UpstreamServers = a.Upstreams
+	opts.InjectRequestHeaders = a.InjectRequestHeaders
+	opts.InjectResponseHeaders = a.InjectResponseHeaders
+}
