@@ -246,8 +246,6 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
-	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
-	flagSet.AddFlagSet(legacyHeadersFlagSet())
 
 	return flagSet
 }

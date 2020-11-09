@@ -39,6 +39,15 @@ func NewLegacyOptions() *LegacyOptions {
 	}
 }
 
+func NewLegacyFlagSet() *pflag.FlagSet {
+	flagSet := NewFlagSet()
+
+	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
+	flagSet.AddFlagSet(legacyHeadersFlagSet())
+
+	return flagSet
+}
+
 func (l *LegacyOptions) ToOptions() (*Options, error) {
 	upstreams, err := l.LegacyUpstreams.convert()
 	if err != nil {

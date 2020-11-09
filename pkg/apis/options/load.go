@@ -1,10 +1,13 @@
 package options
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -131,4 +134,29 @@ func isUnexported(name string) bool {
 
 	first := string(name[0])
 	return first == strings.ToLower(first)
+}
+
+// LoadYAML will load a YAML based configuration file into the options interface provided.
+func LoadYAML(configFileName string, into interface{}) error {
+	v := viper.New()
+	v.SetConfigFile(configFileName)
+	v.SetConfigType("yaml")
+	v.SetTypeByDefaultValue(true)
+
+	if configFileName == "" {
+		return errors.New("no configuration file provided")
+	}
+
+	data, err := ioutil.ReadFile(configFileName)
+	if err != nil {
+		return fmt.Errorf("unable to load config file: %w", err)
+	}
+
+	// UnmarhsalExact will return an error if the config includes options that are
+	// not mapped to felds of the into struct
+	if err := yaml.UnmarshalStrict(data, into, yaml.DisallowUnknownFields); err != nil {
+		return fmt.Errorf("error unmarshalling config: %w", err)
+	}
+
+	return nil
 }

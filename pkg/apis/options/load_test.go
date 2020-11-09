@@ -1,9 +1,11 @@
 package options
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -295,10 +297,187 @@ var _ = Describe("Load", func() {
 				expectedOutput: NewOptions(),
 			}),
 			Entry("with an empty LegacyOptions struct, should return default values", &testOptionsTableInput{
-				flagSet:        NewFlagSet,
+				flagSet:        NewLegacyFlagSet,
 				input:          &LegacyOptions{},
 				expectedOutput: NewLegacyOptions(),
 			}),
 		)
+	})
+})
+
+var _ = Describe("LoadYAML", func() {
+	Context("with a testOptions structure", func() {
+		type TestOptionSubStruct struct {
+			StringSliceOption []string `yaml:"stringSliceOption,omitempty"`
+		}
+
+		type TestOptions struct {
+			StringOption string              `yaml:"stringOption,omitempty"`
+			Sub          TestOptionSubStruct `yaml:"sub,omitempty"`
+
+			// Check that embedded fields can be unmarshalled
+			TestOptionSubStruct `yaml:",inline,squash"`
+		}
+
+		var testOptionsConfigBytesFull = []byte(`
+stringOption: foo
+stringSliceOption:
+- a
+- b
+- c
+sub:
+  stringSliceOption:
+  - d
+  - e
+`)
+
+		type loadYAMLTableInput struct {
+			configFile     []byte
+			input          interface{}
+			expectedErr    error
+			expectedOutput interface{}
+		}
+
+		DescribeTable("LoadYAML",
+			func(in loadYAMLTableInput) {
+				var configFileName string
+
+				if in.configFile != nil {
+					By("Creating a config file")
+					configFile, err := ioutil.TempFile("", "oauth2-proxy-test-config-file")
+					Expect(err).ToNot(HaveOccurred())
+					defer configFile.Close()
+
+					_, err = configFile.Write(in.configFile)
+					Expect(err).ToNot(HaveOccurred())
+					defer os.Remove(configFile.Name())
+
+					configFileName = configFile.Name()
+				}
+
+				var input interface{}
+				if in.input != nil {
+					input = in.input
+				} else {
+					input = &TestOptions{}
+				}
+				err := LoadYAML(configFileName, input)
+				if in.expectedErr != nil {
+					Expect(err).To(MatchError(in.expectedErr.Error()))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+				}
+				Expect(input).To(Equal(in.expectedOutput))
+			},
+			Entry("with a valid input", loadYAMLTableInput{
+				configFile: testOptionsConfigBytesFull,
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "foo",
+					Sub: TestOptionSubStruct{
+						StringSliceOption: []string{"d", "e"},
+					},
+					TestOptionSubStruct: TestOptionSubStruct{
+						StringSliceOption: []string{"a", "b", "c"},
+					},
+				},
+			}),
+			Entry("with no config file", loadYAMLTableInput{
+				configFile:     nil,
+				input:          &TestOptions{},
+				expectedOutput: &TestOptions{},
+				expectedErr:    errors.New("no configuration file provided"),
+			}),
+			Entry("with invalid YAML", loadYAMLTableInput{
+				configFile:     []byte("\tfoo: bar"),
+				input:          &TestOptions{},
+				expectedOutput: &TestOptions{},
+				expectedErr:    errors.New("error unmarshalling config: error converting YAML to JSON: yaml: found character that cannot start any token"),
+			}),
+			Entry("with extra fields in the YAML", loadYAMLTableInput{
+				configFile: append(testOptionsConfigBytesFull, []byte("foo: bar\n")...),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "foo",
+					Sub: TestOptionSubStruct{
+						StringSliceOption: []string{"d", "e"},
+					},
+					TestOptionSubStruct: TestOptionSubStruct{
+						StringSliceOption: []string{"a", "b", "c"},
+					},
+				},
+				expectedErr: errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: unknown field \"foo\""),
+			}),
+		)
+	})
+
+	It("should load a full example AlphaOptions", func() {
+		config := []byte(`
+upstreams:
+- id: httpbin
+  path: /
+  uri: http://httpbin
+  flushInterval: 500ms
+injectRequestHeaders:
+- name: X-Forwarded-User
+  values:
+  - claim: user
+injectResponseHeaders:
+- name: X-Secret
+  values:
+  - value: c2VjcmV0
+`)
+
+		By("Creating a config file")
+		configFile, err := ioutil.TempFile("", "oauth2-proxy-test-alpha-config-file")
+		Expect(err).ToNot(HaveOccurred())
+		defer configFile.Close()
+
+		_, err = configFile.Write(config)
+		Expect(err).ToNot(HaveOccurred())
+		defer os.Remove(configFile.Name())
+
+		configFileName := configFile.Name()
+
+		By("Loading the example config")
+		into := &AlphaOptions{}
+		Expect(LoadYAML(configFileName, into)).To(Succeed())
+
+		flushInterval := Duration(500 * time.Millisecond)
+
+		Expect(into).To(Equal(&AlphaOptions{
+			Upstreams: []Upstream{
+				{
+					ID:            "httpbin",
+					Path:          "/",
+					URI:           "http://httpbin",
+					FlushInterval: &flushInterval,
+				},
+			},
+			InjectRequestHeaders: []Header{
+				{
+					Name: "X-Forwarded-User",
+					Values: []HeaderValue{
+						{
+							ClaimSource: &ClaimSource{
+								Claim: "user",
+							},
+						},
+					},
+				},
+			},
+			InjectResponseHeaders: []Header{
+				{
+					Name: "X-Secret",
+					Values: []HeaderValue{
+						{
+							SecretSource: &SecretSource{
+								Value: []byte("secret"),
+							},
+						},
+					},
+				},
+			},
+		}))
 	})
 })
