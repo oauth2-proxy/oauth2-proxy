@@ -37,3 +37,11 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.InjectRequestHeaders = a.InjectRequestHeaders
 	opts.InjectResponseHeaders = a.InjectResponseHeaders
 }
+
+// ExtractFrom populates the fields in the AlphaOptions with the values from
+// the Options
+func (a *AlphaOptions) ExtractFrom(opts *Options) {
+	a.Upstreams = opts.UpstreamServers
+	a.InjectRequestHeaders = opts.InjectRequestHeaders
+	a.InjectResponseHeaders = opts.InjectResponseHeaders
+}
