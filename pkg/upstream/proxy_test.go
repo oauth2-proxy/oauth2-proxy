@@ -54,6 +54,11 @@ var _ = Describe("Proxy Suite", func() {
 				Static:     true,
 				StaticCode: &ok,
 			},
+			{
+				ID:   "http-backend-with-subpath",
+				Path: "/http-subpath/",
+				URI:  fmt.Sprintf("%s/subpath/", serverAddr),
+			},
 		}
 
 		var err error
@@ -177,6 +182,27 @@ var _ = Describe("Proxy Suite", func() {
 					contentType:              {textPlainUTF8},
 				},
 				raw: "404 page not found\n",
+			},
+		}),
+		Entry("with a request to the HTTP service registered under a subpath", &proxyTableInput{
+			target: "http://example.localhost/http-subpath/1234",
+			response: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					gapUpstream: {"http-backend-with-subpath"},
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method: "GET",
+					URL:    "http://example.localhost/subpath/http-subpath/1234",
+					Header: map[string][]string{
+						"Gap-Auth":      {""},
+						"Gap-Signature": {"sha256 ofB1u6+FhEUbFLc3/uGbJVkl7GaN4egFqVvyO3+2I1w="},
+					},
+					Body:       []byte{},
+					Host:       "example.localhost",
+					RequestURI: "http://example.localhost/subpath/http-subpath/1234",
+				},
 			},
 		}),
 	)

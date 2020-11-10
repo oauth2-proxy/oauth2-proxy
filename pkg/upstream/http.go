@@ -40,9 +40,6 @@ var SignatureHeaders = []string{
 // newHTTPUpstreamProxy creates a new httpUpstreamProxy that can serve requests
 // to a single upstream host.
 func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, errorHandler ProxyErrorHandler) http.Handler {
-	// Set path to empty so that request paths start at the server root
-	u.Path = ""
-
 	// Create a ReverseProxy
 	proxy := newReverseProxy(u, upstream, errorHandler)
 
