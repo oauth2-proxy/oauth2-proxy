@@ -8,11 +8,11 @@ type Upstreams []Upstream
 type Upstream struct {
 	// ID should be a unique identifier for the upstream.
 	// This value is required for all upstreams.
-	ID string `json:"id"`
+	ID string `json:"id,omitempty"`
 
 	// Path is used to map requests to the upstream server.
 	// The closest match will take precedence and all Paths must be unique.
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
 
 	// The URI of the upstream server. This may be an HTTP(S) server of a File
 	// based URL. It may include a path, in which case all requests will be served
@@ -24,19 +24,19 @@ type Upstream struct {
 	// - file://host/path
 	// If the URI's path is "/base" and the incoming request was for "/dir",
 	// the upstream request will be for "/base/dir".
-	URI string `json:"uri"`
+	URI string `json:"uri,omitempty"`
 
 	// InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.
 	// This option is insecure and will allow potential Man-In-The-Middle attacks
 	// betweem OAuth2 Proxy and the usptream server.
 	// Defaults to false.
-	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify"`
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 
 	// Static will make all requests to this upstream have a static response.
 	// The response will have a body of "Authenticated" and a response code
 	// matching StaticCode.
 	// If StaticCode is not set, the response will return a 200 response.
-	Static bool `json:"static"`
+	Static bool `json:"static,omitempty"`
 
 	// StaticCode determines the response code for the Static response.
 	// This option can only be used with Static enabled.
@@ -50,9 +50,9 @@ type Upstream struct {
 	// PassHostHeader determines whether the request host header should be proxied
 	// to the upstream server.
 	// Defaults to true.
-	PassHostHeader *bool `json:"passHostHeader"`
+	PassHostHeader *bool `json:"passHostHeader,omitempty"`
 
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
-	ProxyWebSockets *bool `json:"proxyWebSockets"`
+	ProxyWebSockets *bool `json:"proxyWebSockets,omitempty"`
 }
