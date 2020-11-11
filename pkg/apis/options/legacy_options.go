@@ -84,6 +84,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			u.Path = "/"
 		}
 
+		flushInterval := Duration(l.FlushInterval)
 		upstream := Upstream{
 			ID:                    u.Path,
 			Path:                  u.Path,
@@ -91,7 +92,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			InsecureSkipTLSVerify: l.SSLUpstreamInsecureSkipVerify,
 			PassHostHeader:        &l.PassHostHeader,
 			ProxyWebSockets:       &l.ProxyWebSockets,
-			FlushInterval:         &l.FlushInterval,
+			FlushInterval:         &flushInterval,
 		}
 
 		switch u.Scheme {

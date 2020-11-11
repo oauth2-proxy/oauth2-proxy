@@ -98,7 +98,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// Configure options on the SingleHostReverseProxy
 	if upstream.FlushInterval != nil {
-		proxy.FlushInterval = *upstream.FlushInterval
+		proxy.FlushInterval = upstream.FlushInterval.Duration()
 	} else {
 		proxy.FlushInterval = 1 * time.Second
 	}
