@@ -233,7 +233,13 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
 
-	o.SetProvider(providers.New(o.ProviderType, p))
+	provider := providers.New(o.ProviderType, p)
+	if provider == nil {
+		msgs = append(msgs, fmt.Sprintf("invalid setting: provider '%s' is not available", o.ProviderType))
+		return msgs
+	}
+	o.SetProvider(provider)
+
 	switch p := o.GetProvider().(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.AzureTenant)
