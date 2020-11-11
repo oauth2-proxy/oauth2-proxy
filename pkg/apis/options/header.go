@@ -21,10 +21,10 @@ type Header struct {
 // make up the header value
 type HeaderValue struct {
 	// Allow users to load the value from a secret source
-	*SecretSource
+	SecretSource
 
 	// Allow users to load the value from a session claim
-	*ClaimSource
+	ClaimSource
 }
 
 // ClaimSource allows loading a header value from a claim within the session
@@ -40,5 +40,11 @@ type ClaimSource struct {
 	// BasicAuthPassword converts this claim into a basic auth header.
 	// Note the value of claim will become the basic auth username and the
 	// basicAuthPassword will be used as the password value.
-	BasicAuthPassword *SecretSource
+	BasicAuthPassword SecretSource
+}
+
+// IsZero determines if the ClaimSource is empty.
+// Returns false if any field in the struct is not its zero value.
+func (c ClaimSource) IsZero() bool {
+	return c.Claim == "" && c.Prefix == "" && c.BasicAuthPassword.IsZero()
 }

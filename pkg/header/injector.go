@@ -45,9 +45,9 @@ type valueInjector interface {
 
 func newValueinjector(name string, value options.HeaderValue) (valueInjector, error) {
 	switch {
-	case value.SecretSource != nil && value.ClaimSource == nil:
+	case !value.SecretSource.IsZero() && value.ClaimSource.IsZero():
 		return newSecretInjector(name, value.SecretSource)
-	case value.SecretSource == nil && value.ClaimSource != nil:
+	case value.SecretSource.IsZero() && !value.ClaimSource.IsZero():
 		return newClaimInjector(name, value.ClaimSource)
 	default:
 		return nil, fmt.Errorf("header %q value has multiple entries: only one entry per value is allowed", name)
@@ -66,7 +66,7 @@ func newInjectorFunc(injectFunc func(header http.Header, session *sessionsapi.Se
 	return &injectorFunc{injectFunc: injectFunc}
 }
 
-func newSecretInjector(name string, source *options.SecretSource) (valueInjector, error) {
+func newSecretInjector(name string, source options.SecretSource) (valueInjector, error) {
 	value, err := util.GetSecretValue(source)
 	if err != nil {
 		return nil, fmt.Errorf("error getting secret value: %v", err)
@@ -77,9 +77,9 @@ func newSecretInjector(name string, source *options.SecretSource) (valueInjector
 	}), nil
 }
 
-func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, error) {
+func newClaimInjector(name string, source options.ClaimSource) (valueInjector, error) {
 	switch {
-	case source.BasicAuthPassword != nil:
+	case !source.BasicAuthPassword.IsZero():
 		password, err := util.GetSecretValue(source.BasicAuthPassword)
 		if err != nil {
 			return nil, fmt.Errorf("error loading basicAuthPassword: %v", err)

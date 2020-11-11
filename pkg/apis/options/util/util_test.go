@@ -40,7 +40,7 @@ var _ = Describe("GetSecretValue", func() {
 		// This assertion ensures we are testing the triming
 		Expect(len(originalValue)).To(BeNumerically("<", base64.StdEncoding.DecodedLen(len(b64Value))))
 
-		value, err := GetSecretValue(&options.SecretSource{
+		value, err := GetSecretValue(options.SecretSource{
 			Value: []byte(b64Value),
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -48,7 +48,7 @@ var _ = Describe("GetSecretValue", func() {
 	})
 
 	It("returns the correct value from the environment", func() {
-		value, err := GetSecretValue(&options.SecretSource{
+		value, err := GetSecretValue(options.SecretSource{
 			FromEnv: secretEnvKey,
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -56,7 +56,7 @@ var _ = Describe("GetSecretValue", func() {
 	})
 
 	It("returns the correct value from a file", func() {
-		value, err := GetSecretValue(&options.SecretSource{
+		value, err := GetSecretValue(options.SecretSource{
 			FromFile: path.Join(fileDir, "secret-file"),
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -64,7 +64,7 @@ var _ = Describe("GetSecretValue", func() {
 	})
 
 	It("when the file does not exist", func() {
-		value, err := GetSecretValue(&options.SecretSource{
+		value, err := GetSecretValue(options.SecretSource{
 			FromFile: path.Join(fileDir, "not-exist"),
 		})
 		Expect(err).To(HaveOccurred())
@@ -72,13 +72,13 @@ var _ = Describe("GetSecretValue", func() {
 	})
 
 	It("with no source set", func() {
-		value, err := GetSecretValue(&options.SecretSource{})
+		value, err := GetSecretValue(options.SecretSource{})
 		Expect(err).To(MatchError("secret source is invalid: exactly one entry required, specify either value, fromEnv or fromFile"))
 		Expect(value).To(BeEmpty())
 	})
 
 	It("with multiple sources set", func() {
-		value, err := GetSecretValue(&options.SecretSource{
+		value, err := GetSecretValue(options.SecretSource{
 			FromEnv:  secretEnvKey,
 			FromFile: path.Join(fileDir, "secret-file"),
 		})

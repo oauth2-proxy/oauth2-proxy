@@ -49,7 +49,7 @@ var _ = Describe("Sessions", func() {
 						Name: "X-Access-Token",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: &options.ClaimSource{
+								ClaimSource: options.ClaimSource{
 									Claim: "access_token",
 								},
 							},
@@ -81,7 +81,7 @@ var _ = Describe("Sessions", func() {
 						Name: "X-ID-Token",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: &options.ClaimSource{
+								ClaimSource: options.ClaimSource{
 									Claim: "id_token",
 								},
 							},
@@ -103,7 +103,7 @@ var _ = Describe("Sessions", func() {
 						Name: "X-ID-Token",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: &options.ClaimSource{
+								ClaimSource: options.ClaimSource{
 									Claim: "id_token",
 								},
 							},
@@ -125,7 +125,7 @@ var _ = Describe("Sessions", func() {
 						Name: "X-Access-Token",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: &options.ClaimSource{
+								ClaimSource: options.ClaimSource{
 									Claim: "access_token",
 								},
 							},
@@ -160,7 +160,7 @@ var _ = Describe("Sessions", func() {
 						Name: "X-ID-Token",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: &options.ClaimSource{
+								ClaimSource: options.ClaimSource{
 									Claim: "id_token",
 								},
 							},
@@ -172,7 +172,7 @@ var _ = Describe("Sessions", func() {
 						Name: "X-Access-Token",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: &options.ClaimSource{
+								ClaimSource: options.ClaimSource{
 									Claim: "access_token",
 								},
 							},

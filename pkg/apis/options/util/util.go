@@ -10,7 +10,7 @@ import (
 )
 
 // GetSecretValue returns the value of the Secret from its source
-func GetSecretValue(source *options.SecretSource) ([]byte, error) {
+func GetSecretValue(source options.SecretSource) ([]byte, error) {
 	switch {
 	case len(source.Value) > 0 && source.FromEnv == "" && source.FromFile == "":
 		value := make([]byte, base64.StdEncoding.DecodedLen(len(source.Value)))

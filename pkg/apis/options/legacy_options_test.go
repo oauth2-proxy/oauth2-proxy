@@ -64,7 +64,7 @@ var _ = Describe("Legacy Options", func() {
 					PreserveRequestValue: false,
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "groups",
 							},
 						},
@@ -75,7 +75,7 @@ var _ = Describe("Legacy Options", func() {
 					PreserveRequestValue: false,
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "user",
 							},
 						},
@@ -86,7 +86,7 @@ var _ = Describe("Legacy Options", func() {
 					PreserveRequestValue: false,
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "email",
 							},
 						},
@@ -97,7 +97,7 @@ var _ = Describe("Legacy Options", func() {
 					PreserveRequestValue: false,
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "preferred_username",
 							},
 						},
@@ -280,7 +280,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -292,7 +292,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -304,7 +304,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -316,7 +316,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "preferred_username",
 					},
 				},
@@ -328,9 +328,9 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "user",
-						BasicAuthPassword: &SecretSource{
+						BasicAuthPassword: SecretSource{
 							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
 						},
 					},
@@ -343,7 +343,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -355,7 +355,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "access_token",
 					},
 				},
@@ -367,9 +367,9 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
-						BasicAuthPassword: &SecretSource{
+						BasicAuthPassword: SecretSource{
 							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
 						},
 					},
@@ -382,7 +382,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -394,7 +394,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -406,7 +406,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -418,7 +418,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "preferred_username",
 					},
 				},
@@ -430,7 +430,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "access_token",
 					},
 				},
@@ -442,7 +442,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim:  "id_token",
 						Prefix: "Bearer ",
 					},

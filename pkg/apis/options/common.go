@@ -12,3 +12,9 @@ type SecretSource struct {
 	// FromFile expects a path to a file containing the secret value.
 	FromFile string
 }
+
+// IsZero determines if the SecretSource is empty.
+// Returns false if any field in the struct is not its zero value.
+func (s SecretSource) IsZero() bool {
+	return len(s.Value) == 0 && s.FromEnv == "" && s.FromFile == ""
+}
