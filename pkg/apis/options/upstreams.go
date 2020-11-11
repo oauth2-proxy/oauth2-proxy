@@ -1,7 +1,5 @@
 package options
 
-import "time"
-
 // Upstreams is a collection of definitions for upstream servers.
 type Upstreams []Upstream
 
@@ -47,7 +45,7 @@ type Upstream struct {
 	// FlushInterval is the period between flushing the response buffer when
 	// streaming response from the upstream.
 	// Defaults to 1 second.
-	FlushInterval *time.Duration `json:"flushInterval,omitempty"`
+	FlushInterval *Duration `json:"flushInterval,omitempty"`
 
 	// PassHostHeader determines whether the request host header should be proxied
 	// to the upstream server.
