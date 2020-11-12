@@ -13,8 +13,8 @@ type Provider interface {
 	// DEPRECATED: Migrate to EnrichSessionState
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
-	ValidateGroup(string) bool
 	EnrichSessionState(ctx context.Context, s *sessions.SessionState) error
+	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
 	ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error)

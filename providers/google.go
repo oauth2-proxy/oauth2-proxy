@@ -25,10 +25,16 @@ import (
 // GoogleProvider represents an Google based Identity Provider
 type GoogleProvider struct {
 	*ProviderData
+
 	RedeemRefreshURL *url.URL
-	// GroupValidator is a function that determines if the passed email is in
-	// the configured Google group.
-	GroupValidator func(string) bool
+
+	// groupValidator is a function that determines if the user in the passed
+	// session is a member of any of the configured Google groups.
+	//
+	// This hits the Google API for each group, so it is called on Redeem &
+	// Refresh. `Authorize` uses the results of this saved in `session.Groups`
+	// Since it is called on every request.
+	groupValidator func(*sessions.SessionState) bool
 }
 
 var _ Provider = (*GoogleProvider)(nil)
@@ -84,9 +90,9 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 	})
 	return &GoogleProvider{
 		ProviderData: p,
-		// Set a default GroupValidator to just always return valid (true), it will
+		// Set a default groupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
-		GroupValidator: func(email string) bool {
+		groupValidator: func(*sessions.SessionState) bool {
 			return true
 		},
 	}
@@ -118,14 +124,13 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, ErrMissingCode
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -155,12 +160,13 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 
 	c, err := claimsFromIDToken(jsonResponse.IDToken)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	created := time.Now()
 	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
-	s = &sessions.SessionState{
+
+	return &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
 		CreatedAt:    &created,
@@ -168,18 +174,40 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		RefreshToken: jsonResponse.RefreshToken,
 		Email:        c.Email,
 		User:         c.Subject,
-	}
-	return
+	}, nil
+}
+
+// EnrichSessionState checks the listed Google Groups configured and adds any
+// that the user is a member of to session.Groups.
+func (p *GoogleProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
+	// TODO (@NickMeves) - Move to pure EnrichSessionState logic and stop
+	// reusing legacy `groupValidator`.
+	//
+	// This is called here to get the validator to do the `session.Groups`
+	// populating logic.
+	p.groupValidator(s)
+
+	return nil
 }
 
 // SetGroupRestriction configures the GoogleProvider to restrict access to the
 // specified group(s). AdminEmail has to be an administrative email on the domain that is
 // checked. CredentialsFile is the path to a json file containing a Google service
 // account credentials.
+//
+// TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
 func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
 	adminService := getAdminService(adminEmail, credentialsReader)
-	p.GroupValidator = func(email string) bool {
-		return userInGroup(adminService, groups, email)
+	p.groupValidator = func(s *sessions.SessionState) bool {
+		// Reset our saved Groups in case membership changed
+		// This is used by `Authorize` on every request
+		s.Groups = make([]string, 0, len(groups))
+		for _, group := range groups {
+			if userInGroup(adminService, group, s.Email) {
+				s.Groups = append(s.Groups, group)
+			}
+		}
+		return len(s.Groups) > 0
 	}
 }
 
@@ -203,50 +231,39 @@ func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Serv
 	return adminService
 }
 
-func userInGroup(service *admin.Service, groups []string, email string) bool {
-	for _, group := range groups {
-		// Use the HasMember API to checking for the user's presence in each group or nested subgroups
-		req := service.Members.HasMember(group, email)
+func userInGroup(service *admin.Service, group string, email string) bool {
+	// Use the HasMember API to checking for the user's presence in each group or nested subgroups
+	req := service.Members.HasMember(group, email)
+	r, err := req.Do()
+	if err == nil {
+		return r.IsMember
+	}
+
+	gerr, ok := err.(*googleapi.Error)
+	switch {
+	case ok && gerr.Code == 404:
+		logger.Errorf("error checking membership in group %s: group does not exist", group)
+	case ok && gerr.Code == 400:
+		// It is possible for Members.HasMember to return false even if the email is a group member.
+		// One case that can cause this is if the user email is from a different domain than the group,
+		// e.g. "member@otherdomain.com" in the group "group@mydomain.com" will result in a 400 error
+		// from the HasMember API. In that case, attempt to query the member object directly from the group.
+		req := service.Members.Get(group, email)
 		r, err := req.Do()
 		if err != nil {
-			gerr, ok := err.(*googleapi.Error)
-			switch {
-			case ok && gerr.Code == 404:
-				logger.Errorf("error checking membership in group %s: group does not exist", group)
-			case ok && gerr.Code == 400:
-				// It is possible for Members.HasMember to return false even if the email is a group member.
-				// One case that can cause this is if the user email is from a different domain than the group,
-				// e.g. "member@otherdomain.com" in the group "group@mydomain.com" will result in a 400 error
-				// from the HasMember API. In that case, attempt to query the member object directly from the group.
-				req := service.Members.Get(group, email)
-				r, err := req.Do()
-
-				if err != nil {
-					logger.Errorf("error using get API to check member %s of google group %s: user not in the group", email, group)
-					continue
-				}
-
-				// If the non-domain user is found within the group, still verify that they are "ACTIVE".
-				// Do not count the user as belonging to a group if they have another status ("ARCHIVED", "SUSPENDED", or "UNKNOWN").
-				if r.Status == "ACTIVE" {
-					return true
-				}
-			default:
-				logger.Errorf("error checking group membership: %v", err)
-			}
-			continue
+			logger.Errorf("error using get API to check member %s of google group %s: user not in the group", email, group)
+			return false
 		}
-		if r.IsMember {
+
+		// If the non-domain user is found within the group, still verify that they are "ACTIVE".
+		// Do not count the user as belonging to a group if they have another status ("ARCHIVED", "SUSPENDED", or "UNKNOWN").
+		if r.Status == "ACTIVE" {
 			return true
 		}
+	default:
+		logger.Errorf("error checking group membership: %v", err)
 	}
 	return false
-}
-
-// ValidateGroup validates that the provided email exists in the configured Google
-// group(s).
-func (p *GoogleProvider) ValidateGroup(email string) bool {
-	return p.GroupValidator(email)
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -261,8 +278,11 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 		return false, err
 	}
 
+	// TODO (@NickMeves) - Align Group authorization needs with other providers'
+	// behavior in the `RefreshSession` case.
+	//
 	// re-check that the user is in the proper google group(s)
-	if !p.ValidateGroup(s.Email) {
+	if !p.groupValidator(s) {
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 
