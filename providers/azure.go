@@ -243,7 +243,7 @@ func getEmailFromIDToken(idToken string) (string, error) {
 	jwtData := strings.TrimSuffix(jwt[1], "=")
 	b, err := base64.RawURLEncoding.DecodeString(jwtData)
 	if err != nil {
-		return "", fmt.Errorf("jwt is mailformed: %w", err)
+		return "", fmt.Errorf("jwt is malformed: %w", err)
 	}
 
 	c := struct {

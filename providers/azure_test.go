@@ -226,7 +226,7 @@ func TestAzureProviderGetEmailAddressFromIDTokenWithMalformedJwt(t *testing.T) {
 	session := CreateAuthorizedSession()
 	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwia.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
 	email, err := p.GetEmailAddress(context.Background(), session)
-	assert.Contains(t, err.Error(), "jwt is mailformed: ")
+	assert.Contains(t, err.Error(), "jwt is malformed: ")
 	assert.Equal(t, "", email)
 }
 
