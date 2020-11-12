@@ -43,6 +43,7 @@
 
 ## Changes since v6.1.1
 
+- [#916](https://github.com/oauth2-proxy/oauth2-rpoxy/pull/916) Add AlphaOptions struct to prepare for alpha config loading (@JoelSpeed)
 - [#923](https://github.com/oauth2-proxy/oauth2-proxy/pull/923) Support TLS 1.3 (@aajisaka)
 - [#918](https://github.com/oauth2-proxy/oauth2-proxy/pull/918) Fix log header output (@JoelSpeed)
 - [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Validate provider type on startup.
