@@ -58,17 +58,18 @@ type allowedRoute struct {
 
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
-	CookieSeed     string
-	CookieName     string
-	CSRFCookieName string
-	CookieDomains  []string
-	CookiePath     string
-	CookieSecure   bool
-	CookieHTTPOnly bool
-	CookieExpire   time.Duration
-	CookieRefresh  time.Duration
-	CookieSameSite string
-	Validator      func(string) bool
+	CookieSeed           string
+	CookieName           string
+	CSRFCookieName       string
+	CookieDomains        []string
+	CookiePath           string
+	CookieSecure         bool
+	CookieHTTPOnly       bool
+	CookieExpire         time.Duration
+	CookieRefresh        bool
+	CookieRefreshPercent uint8
+	CookieSameSite       string
+	Validator            func(string) bool
 
 	RobotsPath        string
 	SignInPath        string
@@ -141,11 +142,13 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.GetProvider().Data().ProviderName, opts.ClientID)
 	refresh := "disabled"
-	if opts.Cookie.Refresh != time.Duration(0) {
-		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
+	if opts.Cookie.Refresh {
+		refresh = fmt.Sprintf("enabled, percent %d%%", opts.Cookie.RefreshPercent)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s",
+		opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","),
+		opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -288,10 +291,11 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:           sessionStore,
-		RefreshPeriod:          opts.Cookie.Refresh,
-		RefreshSessionIfNeeded: opts.GetProvider().RefreshSessionIfNeeded,
-		ValidateSessionState:   opts.GetProvider().ValidateSessionState,
+		SessionStore:         sessionStore,
+		Refresh:              opts.Cookie.Refresh,
+		RefreshPercent:       opts.Cookie.RefreshPercent,
+		RefreshSession:       opts.GetProvider().RefreshSession,
+		ValidateSessionState: opts.GetProvider().ValidateSessionState,
 	}))
 
 	return chain
@@ -915,7 +919,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		logger.Errorf("Error with authorization: %v", err)
 	}
 	if p.Validator(session.Email) && authorized {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
+		tokenExpiration := session.AdjustExpirationByRefreshPercent(p.CookieRefreshPercent)
+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s, token expiration on %s", session, tokenExpiration)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)

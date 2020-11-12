@@ -12,11 +12,12 @@ import (
 func validateCookie(o options.Cookie) []string {
 	msgs := validateCookieSecret(o.Secret)
 
-	if o.Refresh >= o.Expire {
-		msgs = append(msgs, fmt.Sprintf(
-			"cookie_refresh (%q) must be less than cookie_expire (%q)",
-			o.Refresh.String(),
-			o.Expire.String()))
+	if o.Refresh {
+		if o.RefreshPercent < 1 || o.RefreshPercent > 100 {
+			msgs = append(msgs, fmt.Sprintf(
+				"cookie_refresh_percent (%d%%) must be between 1% and 100%",
+				o.RefreshPercent))
+		}
 	}
 
 	switch o.SameSite {

@@ -46,6 +46,15 @@ func (s *SessionState) Age() time.Duration {
 	return 0
 }
 
+func (s *SessionState) AdjustExpirationByRefreshPercent(refreshPercent uint8) time.Time {
+	// Recalculate expiration based on refresh percentage
+	originalExpiresOn := s.ExpiresOn
+	newExpiresOn := s.computeSessionExpiryByPercent(s.CreatedAt, originalExpiresOn, refreshPercent)
+	s.ExpiresOn = &newExpiresOn
+
+	return *originalExpiresOn
+}
+
 // String constructs a summary of the session state
 func (s *SessionState) String() string {
 	o := fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s", s.Email, s.User, s.PreferredUsername)
@@ -228,4 +237,8 @@ func (s *SessionState) validate() error {
 	}
 
 	return nil
+}
+
+func (s *SessionState) computeSessionExpiryByPercent(createdAt *time.Time, expiresOn *time.Time, percent uint8) time.Time {
+	return createdAt.Add(time.Duration(expiresOn.Sub(*createdAt).Nanoseconds() / 100 * int64(percent)))
 }
