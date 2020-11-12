@@ -25,7 +25,7 @@ import (
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
-	msgs := validateCookie(o.Cookie)
+	msgs := validateCookie(&o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)

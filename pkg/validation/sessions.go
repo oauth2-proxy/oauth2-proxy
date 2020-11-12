@@ -31,9 +31,9 @@ func validateSessionCookieMinimal(o *options.Options) []string {
 		}
 	}
 
-	if o.Cookie.Refresh != time.Duration(0) {
+	if !o.Cookie.Refresh.IsDisabled() {
 		msgs = append(msgs,
-			"cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set")
+			"set cookie_refresh requires oauth tokens in sessions. session_cookie_minimal cannot be set")
 	}
 	return msgs
 }

@@ -5,18 +5,19 @@ import (
 	"net/http"
 	"sort"
 
+	mw "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 )
 
-func validateCookie(o options.Cookie) []string {
+func validateCookie(o *options.Cookie) []string {
 	msgs := validateCookieSecret(o.Secret)
 
-	if o.Refresh >= o.Expire {
-		msgs = append(msgs, fmt.Sprintf(
-			"cookie_refresh (%q) must be less than cookie_expire (%q)",
-			o.Refresh.String(),
-			o.Expire.String()))
+	ro, err := mw.NewRefreshOption(o.InternalRefresh)
+	if err != nil {
+		msgs = append(msgs, fmt.Sprintf("cookie_refresh: %s", err))
+	} else {
+		o.Refresh = ro
 	}
 
 	switch o.SameSite {

@@ -65,7 +65,7 @@ type OAuthProxy struct {
 	CookieSecure   bool
 	CookieHTTPOnly bool
 	CookieExpire   time.Duration
-	CookieRefresh  time.Duration
+	CookieRefresh  middlewareapi.RefreshOption
 	CookieSameSite string
 	Validator      func(string) bool
 
@@ -137,12 +137,20 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.GetProvider().Data().ProviderName, opts.ClientID)
+
 	refresh := "disabled"
-	if opts.Cookie.Refresh != time.Duration(0) {
-		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
+	cookieRefresh := opts.Cookie.Refresh
+	if !cookieRefresh.IsDisabled() {
+		if cookieRefresh.IsDurationBased() {
+			refresh = fmt.Sprintf("enabled, every %s", *cookieRefresh.RefreshDuration)
+		} else {
+			refresh = fmt.Sprintf("enabled, percent %d%%", cookieRefresh.RefreshPercent)
+		}
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s",
+		opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","),
+		opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -187,7 +195,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		CookieSecure:   opts.Cookie.Secure,
 		CookieHTTPOnly: opts.Cookie.HTTPOnly,
 		CookieExpire:   opts.Cookie.Expire,
-		CookieRefresh:  opts.Cookie.Refresh,
+		CookieRefresh:  *opts.Cookie.Refresh,
 		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
@@ -278,10 +286,10 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:           sessionStore,
-		RefreshPeriod:          opts.Cookie.Refresh,
-		RefreshSessionIfNeeded: opts.GetProvider().RefreshSessionIfNeeded,
-		ValidateSessionState:   opts.GetProvider().ValidateSession,
+		SessionStore:         sessionStore,
+		Refresh:              *opts.Cookie.Refresh,
+		RefreshSession:       opts.GetProvider().RefreshSession,
+		ValidateSessionState: opts.GetProvider().ValidateSession,
 	}))
 
 	return chain

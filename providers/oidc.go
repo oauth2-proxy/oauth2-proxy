@@ -71,20 +71,14 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (s 
 	return
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new Access Token (and optional ID token) if required
-func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
-		return false, nil
-	}
-
+func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) error {
 	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
-		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
+		return fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
 	fmt.Printf("refreshed access token %s (expired on %s)\n", s, s.ExpiresOn)
-	return true, nil
+	return nil
 }
 
 func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
@@ -156,9 +150,11 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 
 	var newSession *sessions.SessionState
 
+	var idTokenExpiry *time.Time
 	if idToken == nil {
 		newSession = &sessions.SessionState{}
 	} else {
+		idTokenExpiry = &idToken.Expiry
 		var err error
 		newSession, err = p.createSessionStateInternal(ctx, idToken, token)
 		if err != nil {
@@ -170,7 +166,8 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 	newSession.AccessToken = token.AccessToken
 	newSession.RefreshToken = token.RefreshToken
 	newSession.CreatedAt = &created
-	newSession.ExpiresOn = &token.Expiry
+	newSession.ExpiresOn = earliestTime(&token.Expiry, idTokenExpiry)
+
 	return newSession, nil
 }
 

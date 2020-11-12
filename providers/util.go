@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 const (
@@ -54,4 +55,12 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	}
 	a.RawQuery = params.Encode()
 	return a
+}
+
+func earliestTime(a *time.Time, b *time.Time) *time.Time {
+	r := a
+	if b != nil && a.After(*b) {
+		r = b
+	}
+	return r
 }
