@@ -3,10 +3,13 @@ package providers
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/bitly/go-simplejson"
@@ -235,11 +238,35 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	return email, err
 }
 
+func getEmailFromIDToken(idToken string) (string, error) {
+	jwt := strings.Split(idToken, ".")
+	jwtData := strings.TrimSuffix(jwt[1], "=")
+	b, err := base64.RawURLEncoding.DecodeString(jwtData)
+	if err != nil {
+		return "", fmt.Errorf("jwt is mailformed: %w", err)
+	}
+
+	c := struct {
+		Email string `json:"email"`
+	}{}
+
+	err = json.Unmarshal(b, &c)
+	if err != nil {
+		return "", fmt.Errorf("unable to unmarshal jwt payload: %w", err)
+	}
+	if c.Email == "" {
+		return "", errors.New("missing email claim from id_token")
+	}
+	return c.Email, nil
+}
+
 // GetEmailAddress returns the Account email address
 func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	var email string
-	var err error
 
+	if s.IDToken != "" {
+		return getEmailFromIDToken(s.IDToken)
+	}
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}

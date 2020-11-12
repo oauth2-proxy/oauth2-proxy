@@ -200,6 +200,46 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	assert.Equal(t, "", email)
 }
 
+func TestAzureProviderGetEmailAddressFromIDToken(t *testing.T) {
+	p := testAzureProvider("")
+
+	session := CreateAuthorizedSession()
+	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJmb29AYmFyLmNvbSIsImlhdCI6MTUxNjIzOTAyMn0.XRuL4Y2VPSToNB8vMvmlB-X3BwahUJzUXNx6vmzODjk"
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "foo@bar.com", email)
+}
+
+func TestAzureProviderGetEmailAddressFromIDTokenWithMissingEmailClaim(t *testing.T) {
+	p := testAzureProvider("")
+
+	session := CreateAuthorizedSession()
+	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, "missing email claim from id_token", err.Error())
+	assert.Equal(t, "", email)
+}
+
+func TestAzureProviderGetEmailAddressFromIDTokenWithMalformedJwt(t *testing.T) {
+	p := testAzureProvider("")
+
+	session := CreateAuthorizedSession()
+	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwia.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Contains(t, err.Error(), "jwt is mailformed: ")
+	assert.Equal(t, "", email)
+}
+
+func TestAzureProviderGetEmailAddressFromIDTokenWithInvalidJwtPayload(t *testing.T) {
+	p := testAzureProvider("")
+
+	session := CreateAuthorizedSession()
+	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Contains(t, err.Error(), "unable to unmarshal jwt payload: ")
+	assert.Equal(t, "", email)
+}
+
 func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
 	b := testAzureBackend(`{ "id_token": "testtoken1234", "expires_on": "1136239445", "refresh_token": "refresh1234" }`)
 	defer b.Close()
