@@ -976,8 +976,10 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 		return nil, err
 	}
 	pcTest.proxy.provider = &TestProvider{
-		ValidToken: opts.providerValidateCookieResponse,
+		ProviderData: &providers.ProviderData{},
+		ValidToken:   opts.providerValidateCookieResponse,
 	}
+	pcTest.proxy.provider.(*TestProvider).SetAllowedGroups(pcTest.opts.AllowedGroups)
 
 	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
 	// access_token validation.
@@ -1284,7 +1286,8 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 	pcTest.proxy.provider = &TestProvider{
-		ValidToken: true,
+		ProviderData: &providers.ProviderData{},
+		ValidToken:   true,
 	}
 
 	pcTest.validateUser = true
@@ -1376,7 +1379,8 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 	pcTest.proxy.provider = &TestProvider{
-		ValidToken: true,
+		ProviderData: &providers.ProviderData{},
+		ValidToken:   true,
 	}
 
 	pcTest.validateUser = true
@@ -1455,7 +1459,8 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 	pcTest.proxy.provider = &TestProvider{
-		ValidToken: true,
+		ProviderData: &providers.ProviderData{},
+		ValidToken:   true,
 	}
 
 	pcTest.validateUser = true

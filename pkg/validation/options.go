@@ -233,7 +233,15 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
 
-	o.SetProvider(providers.New(o.ProviderType, p))
+	p.SetAllowedGroups(o.AllowedGroups)
+
+	provider := providers.New(o.ProviderType, p)
+	if provider == nil {
+		msgs = append(msgs, fmt.Sprintf("invalid setting: provider '%s' is not available", o.ProviderType))
+		return msgs
+	}
+	o.SetProvider(provider)
+
 	switch p := o.GetProvider().(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.AzureTenant)
@@ -249,7 +257,13 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 			if err != nil {
 				msgs = append(msgs, "invalid Google credentials file: "+o.GoogleServiceAccountJSON)
 			} else {
-				p.SetGroupRestriction(o.GoogleGroups, o.GoogleAdminEmail, file)
+				groups := o.AllowedGroups
+				// Backwards compatibility with `--google-group` option
+				if len(o.GoogleGroups) > 0 {
+					groups = o.GoogleGroups
+					p.SetAllowedGroups(groups)
+				}
+				p.SetGroupRestriction(groups, o.GoogleAdminEmail, file)
 			}
 		}
 	case *providers.BitbucketProvider:

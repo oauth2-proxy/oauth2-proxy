@@ -19,18 +19,21 @@ var (
 	// implementation method that doesn't have sensible defaults
 	ErrNotImplemented = errors.New("not implemented")
 
+	// ErrMissingCode is returned when a Redeem method is called with an empty
+	// code
+	ErrMissingCode = errors.New("missing code")
+
 	_ Provider = (*ProviderData)(nil)
 )
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, ErrMissingCode
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -59,24 +62,21 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 	}
 	err = result.UnmarshalInto(&jsonResponse)
 	if err == nil {
-		s = &sessions.SessionState{
+		return &sessions.SessionState{
 			AccessToken: jsonResponse.AccessToken,
-		}
-		return
+		}, nil
 	}
 
-	var v url.Values
-	v, err = url.ParseQuery(string(result.Body()))
+	values, err := url.ParseQuery(string(result.Body()))
 	if err != nil {
-		return
+		return nil, err
 	}
-	if a := v.Get("access_token"); a != "" {
+	if token := values.Get("access_token"); token != "" {
 		created := time.Now()
-		s = &sessions.SessionState{AccessToken: a, CreatedAt: &created}
-	} else {
-		err = fmt.Errorf("no access token found %s", result.Body())
+		return &sessions.SessionState{AccessToken: token, CreatedAt: &created}, nil
 	}
-	return
+
+	return nil, fmt.Errorf("no access token found %s", result.Body())
 }
 
 // GetLoginURL with typical oauth parameters
@@ -92,16 +92,26 @@ func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionSta
 	return "", ErrNotImplemented
 }
 
-// ValidateGroup validates that the provided email exists in the configured provider
-// email group(s).
-func (p *ProviderData) ValidateGroup(_ string) bool {
-	return true
-}
-
 // EnrichSessionState is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
 func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.SessionState) error {
 	return nil
+}
+
+// Authorize performs global authorization on an authenticated session.
+// This is not used for fine-grained per route authorization rules.
+func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (bool, error) {
+	if len(p.AllowedGroups) == 0 {
+		return true, nil
+	}
+
+	for _, group := range s.Groups {
+		if _, ok := p.AllowedGroups[group]; ok {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // ValidateSessionState validates the AccessToken

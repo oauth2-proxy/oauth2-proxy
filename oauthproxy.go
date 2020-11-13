@@ -42,6 +42,9 @@ var (
 	// ErrNeedsLogin means the user should be redirected to the login page
 	ErrNeedsLogin = errors.New("redirect to login page")
 
+	// ErrAccessDenied means the user should receive a 401 Unauthorized response
+	ErrAccessDenied = errors.New("access denied")
+
 	// Used to check final redirects are not susceptible to open redirects.
 	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
 	invalidRedirectRegex = regexp.MustCompile(`[/\\](?:[\s\v]*|\.{1,2})[/\\]`)
@@ -105,7 +108,6 @@ type OAuthProxy struct {
 	trustedIPs              *ip.NetSet
 	Banner                  string
 	Footer                  string
-	AllowedGroups           []string
 
 	sessionChain alice.Chain
 	headersChain alice.Chain
@@ -219,7 +221,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Banner:                  opts.Banner,
 		Footer:                  opts.Footer,
 		SignInMessage:           buildSignInMessage(opts),
-		AllowedGroups:           opts.AllowedGroups,
 
 		basicAuthValidator:  basicAuthValidator,
 		displayHtpasswdForm: basicAuthValidator != nil && opts.DisplayHtpasswdForm,
@@ -396,7 +397,7 @@ func (p *OAuthProxy) GetRedirectURI(host string) string {
 
 func (p *OAuthProxy) redeemCode(ctx context.Context, host, code string) (*sessionsapi.SessionState, error) {
 	if code == "" {
-		return nil, errors.New("missing code")
+		return nil, providers.ErrMissingCode
 	}
 	redirectURI := p.GetRedirectURI(host)
 	s, err := p.provider.Redeem(ctx, redirectURI, code)
@@ -909,11 +910,15 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
+	authorized, err := p.provider.Authorize(req.Context(), session)
+	if err != nil {
+		logger.Errorf("Error with authorization: %v", err)
+	}
+	if p.Validator(session.Email) && authorized {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
-			logger.Printf("Error saving session state for %s: %v", remoteAddr, err)
+			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)
 			p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 			return
 		}
@@ -967,6 +972,9 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 			p.SignInPage(rw, req, http.StatusForbidden)
 		}
 
+	case ErrAccessDenied:
+		p.ErrorPage(rw, http.StatusUnauthorized, "Permission Denied", "Unauthorized")
+
 	default:
 		// unknown error
 		logger.Errorf("Unexpected internal error: %v", err)
@@ -977,7 +985,9 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 }
 
 // getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
-// Returns nil, ErrNeedsLogin if user needs to login.
+// Returns:
+// - `nil, ErrNeedsLogin` if user needs to login.
+// - `nil, ErrAccessDenied` if the authenticated user is not authorized
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
 func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	var session *sessionsapi.SessionState
@@ -991,17 +1001,20 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return nil, ErrNeedsLogin
 	}
 
-	invalidEmail := session != nil && session.Email != "" && !p.Validator(session.Email)
-	invalidGroups := session != nil && !p.validateGroups(session.Groups)
+	invalidEmail := session.Email != "" && !p.Validator(session.Email)
+	authorized, err := p.provider.Authorize(req.Context(), session)
+	if err != nil {
+		logger.Errorf("Error with authorization: %v", err)
+	}
 
-	if invalidEmail || invalidGroups {
-		logger.Printf(session.Email, req, logger.AuthFailure, "Invalid authentication via session: removing session %s", session)
+	if invalidEmail || !authorized {
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authorization via session: removing session %s", session)
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
 		if err != nil {
-			logger.Printf("Error clearing session cookie: %v", err)
+			logger.Errorf("Error clearing session cookie: %v", err)
 		}
-		return nil, ErrNeedsLogin
+		return nil, ErrAccessDenied
 	}
 
 	return session, nil
@@ -1032,24 +1045,4 @@ func isAjax(req *http.Request) bool {
 func (p *OAuthProxy) ErrorJSON(rw http.ResponseWriter, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)
-}
-
-func (p *OAuthProxy) validateGroups(groups []string) bool {
-	if len(p.AllowedGroups) == 0 {
-		return true
-	}
-
-	allowedGroups := map[string]struct{}{}
-
-	for _, group := range p.AllowedGroups {
-		allowedGroups[group] = struct{}{}
-	}
-
-	for _, group := range groups {
-		if _, ok := allowedGroups[group]; ok {
-			return true
-		}
-	}
-
-	return false
 }
