@@ -135,15 +135,22 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 Make sure you set the following to the appropriate url:
 
+```
     -provider=keycloak
     -client-id=<client you have created>
     -client-secret=<your client's secret>
     -login-url="http(s)://<keycloak host>/auth/realms/<your realm>/protocol/openid-connect/auth"
     -redeem-url="http(s)://<keycloak host>/auth/realms/<your realm>/protocol/openid-connect/token"
     -validate-url="http(s)://<keycloak host>/auth/realms/<your realm>/protocol/openid-connect/userinfo"
-    -keycloak-group=<user_group>
+```
 
-The group management in keycloak is using a tree. If you create a group named admin in keycloak you should define the 'keycloak-group' value to /admin.
+To restrict authentication by group membership use the following option:
+
+```
+    -keycloak-group=<user group>
+```
+
+The group management in keycloak is using a tree. If you create a group named `admin` in keycloak you should define the 'keycloak-group' value to `/admin`.
 
 ### GitLab Auth Provider
 
