@@ -26,7 +26,7 @@ import (
 type noOpKeySet struct {
 }
 
-func (noOpKeySet) VerifySignature(ctx context.Context, jwt string) (payload []byte, err error) {
+func (noOpKeySet) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
 	splitStrings := strings.Split(jwt, ".")
 	payloadString := splitStrings[1]
 	return base64.RawURLEncoding.DecodeString(payloadString)
@@ -78,16 +78,14 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		const nonVerifiedToken = validToken
 
 		BeforeEach(func() {
-			verifier = func(ctx context.Context, token string) (interface{}, error) {
-				return oidc.NewVerifier(
-					"https://issuer.example.com",
-					noOpKeySet{},
-					&oidc.Config{
-						ClientID:        "https://test.myapp.com",
-						SkipExpiryCheck: true,
-					},
-				).Verify(ctx, token)
-			}
+			verifier = oidc.NewVerifier(
+				"https://issuer.example.com",
+				noOpKeySet{},
+				&oidc.Config{
+					ClientID:        "https://test.myapp.com",
+					SkipExpiryCheck: true,
+				},
+			).Verify
 		})
 
 		type jwtSessionLoaderTableInput struct {
@@ -110,10 +108,8 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 				rw := httptest.NewRecorder()
 
-				sessionLoaders := []middlewareapi.TokenToSessionLoader{
-					{
-						Verifier: verifier,
-					},
+				sessionLoaders := []middlewareapi.TokenToSessionFunc{
+					middlewareapi.CreateTokenToSessionFunc(verifier),
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -175,24 +171,19 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		const nonVerifiedToken = validToken
 
 		BeforeEach(func() {
-			verifier := func(ctx context.Context, token string) (interface{}, error) {
-				return oidc.NewVerifier(
-					"https://issuer.example.com",
-					noOpKeySet{},
-					&oidc.Config{
-						ClientID:        "https://test.myapp.com",
-						SkipExpiryCheck: true,
-					},
-				).Verify(ctx, token)
-			}
+			verifier := oidc.NewVerifier(
+				"https://issuer.example.com",
+				noOpKeySet{},
+				&oidc.Config{
+					ClientID:        "https://test.myapp.com",
+					SkipExpiryCheck: true,
+				},
+			).Verify
 
 			j = &jwtSessionLoader{
 				jwtRegex: regexp.MustCompile(jwtRegexFormat),
-				sessionLoaders: []middlewareapi.TokenToSessionLoader{
-					{
-						Verifier:       verifier,
-						TokenToSession: createSessionFromToken,
-					},
+				sessionLoaders: []middlewareapi.TokenToSessionFunc{
+					middlewareapi.CreateTokenToSessionFunc(verifier),
 				},
 			}
 		})
@@ -402,7 +393,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		)
 	})
 
-	Context("createSessionFromToken", func() {
+	Context("CreateTokenToSessionFunc", func() {
 		ctx := context.Background()
 		expiresFuture := time.Now().Add(time.Duration(5) * time.Minute)
 		verified := true
@@ -414,7 +405,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			jwt.StandardClaims
 		}
 
-		type createSessionStateTableInput struct {
+		type tokenToSessionTableInput struct {
 			idToken         idTokenClaims
 			expectedErr     error
 			expectedUser    string
@@ -423,8 +414,8 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		}
 
 		DescribeTable("when creating a session from an IDToken",
-			func(in createSessionStateTableInput) {
-				verifier := func(ctx context.Context, token string) (interface{}, error) {
+			func(in tokenToSessionTableInput) {
+				verifier := func(ctx context.Context, token string) (*oidc.IDToken, error) {
 					oidcVerifier := oidc.NewVerifier(
 						"https://issuer.example.com",
 						noOpKeySet{},
@@ -443,7 +434,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rawIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, in.idToken).SignedString(key)
 				Expect(err).ToNot(HaveOccurred())
 
-				session, err := createSessionFromToken(ctx, rawIDToken, verifier)
+				session, err := middlewareapi.CreateTokenToSessionFunc(verifier)(ctx, rawIDToken)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 					Expect(session).To(BeNil())
@@ -459,7 +450,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				Expect(session.RefreshToken).To(BeEmpty())
 				Expect(session.PreferredUsername).To(BeEmpty())
 			},
-			Entry("with no email", createSessionStateTableInput{
+			Entry("with no email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
 					StandardClaims: jwt.StandardClaims{
 						Audience:  "asdf1234",
@@ -476,7 +467,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				expectedEmail:   "123456789",
 				expectedExpires: &expiresFuture,
 			}),
-			Entry("with a verified email", createSessionStateTableInput{
+			Entry("with a verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
 					StandardClaims: jwt.StandardClaims{
 						Audience:  "asdf1234",
@@ -495,7 +486,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				expectedEmail:   "foo@example.com",
 				expectedExpires: &expiresFuture,
 			}),
-			Entry("with a non-verified email", createSessionStateTableInput{
+			Entry("with a non-verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
 					StandardClaims: jwt.StandardClaims{
 						Audience:  "asdf1234",

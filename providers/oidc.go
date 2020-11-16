@@ -11,7 +11,6 @@ import (
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -23,7 +22,6 @@ const emailClaim = "email"
 type OIDCProvider struct {
 	*ProviderData
 
-	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
 	UserIDClaim          string
 	GroupsClaim          string
@@ -176,15 +174,10 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 	return newSession, nil
 }
 
-func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string, verify middleware.VerifyFunc) (*sessions.SessionState, error) {
-	verifiedToken, err := verify(ctx, token)
+func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+	idToken, err := p.Verifier.Verify(ctx, token)
 	if err != nil {
 		return nil, err
-	}
-
-	idToken, ok := verifiedToken.(*oidc.IDToken)
-	if !ok {
-		return nil, fmt.Errorf("failed to create IDToken from bearer token: %s", token)
 	}
 
 	newSession, err := p.createSessionStateInternal(ctx, idToken, nil)

@@ -1,12 +1,10 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"regexp"
 
-	"github.com/coreos/go-oidc"
 	"github.com/justinas/alice"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -16,16 +14,7 @@ import (
 
 const jwtRegexFormat = `^ey[IJ][a-zA-Z0-9_-]*\.ey[IJ][a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
-func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionLoader) alice.Constructor {
-	for i, loader := range sessionLoaders {
-		if loader.TokenToSession == nil {
-			sessionLoaders[i] = middlewareapi.TokenToSessionLoader{
-				Verifier:       loader.Verifier,
-				TokenToSession: createSessionFromToken,
-			}
-		}
-	}
-
+func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alice.Constructor {
 	js := &jwtSessionLoader{
 		jwtRegex:       regexp.MustCompile(jwtRegexFormat),
 		sessionLoaders: sessionLoaders,
@@ -37,7 +26,7 @@ func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionLoader) al
 // Authorization headers.
 type jwtSessionLoader struct {
 	jwtRegex       *regexp.Regexp
-	sessionLoaders []middlewareapi.TokenToSessionLoader
+	sessionLoaders []middlewareapi.TokenToSessionFunc
 }
 
 // loadSession attempts to load a session from a JWT stored in an Authorization
@@ -83,7 +72,7 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 
 	errs := []error{fmt.Errorf("unable to verify jwt token: %q", req.Header.Get("Authorization"))}
 	for _, loader := range j.sessionLoaders {
-		session, err := loader.TokenToSession(req.Context(), token, loader.Verifier)
+		session, err := loader(req.Context(), token)
 		if err == nil {
 			return session, nil
 		} else {
@@ -134,49 +123,4 @@ func (j *jwtSessionLoader) getBasicToken(token string) (string, error) {
 	}
 
 	return "", fmt.Errorf("invalid basic auth token found in authorization header")
-}
-
-// createSessionFromToken is a default implementation for converting
-// a JWT into a session state.
-func createSessionFromToken(ctx context.Context, token string, verify middlewareapi.VerifyFunc) (*sessionsapi.SessionState, error) {
-	var claims struct {
-		Subject           string `json:"sub"`
-		Email             string `json:"email"`
-		Verified          *bool  `json:"email_verified"`
-		PreferredUsername string `json:"preferred_username"`
-	}
-
-	verifiedToken, err := verify(ctx, token)
-	if err != nil {
-		return nil, err
-	}
-
-	idToken, ok := verifiedToken.(*oidc.IDToken)
-	if !ok {
-		return nil, fmt.Errorf("failed to create IDToken from bearer token: %s", token)
-	}
-
-	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
-	}
-
-	if claims.Email == "" {
-		claims.Email = claims.Subject
-	}
-
-	if claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-	}
-
-	newSession := &sessionsapi.SessionState{
-		Email:             claims.Email,
-		User:              claims.Subject,
-		PreferredUsername: claims.PreferredUsername,
-		AccessToken:       token,
-		IDToken:           token,
-		RefreshToken:      "",
-		ExpiresOn:         &idToken.Expiry,
-	}
-
-	return newSession, nil
 }

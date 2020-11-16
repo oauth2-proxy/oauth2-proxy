@@ -233,6 +233,9 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
 
+	// Make the OIDC Verifier accessible to all providers that can support it
+	p.Verifier = o.GetOIDCVerifier()
+
 	p.SetAllowedGroups(o.AllowedGroups)
 
 	provider := providers.New(o.ProviderType, p)
@@ -273,18 +276,14 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.UserIDClaim = o.UserIDClaim
 		p.GroupsClaim = o.OIDCGroupsClaim
-		if o.GetOIDCVerifier() == nil {
+		if p.Verifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
-		} else {
-			p.Verifier = o.GetOIDCVerifier()
 		}
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
 
-		if o.GetOIDCVerifier() != nil {
-			p.Verifier = o.GetOIDCVerifier()
-		} else {
+		if p.Verifier == nil {
 			// Initialize with default verifier for gitlab.com
 			ctx := context.Background()
 

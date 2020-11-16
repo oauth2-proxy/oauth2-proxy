@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/url"
 
+	"github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
@@ -26,6 +27,7 @@ type ProviderData struct {
 	ClientSecretFile string
 	Scope            string
 	Prompt           string
+	Verifier         *oidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume

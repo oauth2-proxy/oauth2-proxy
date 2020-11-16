@@ -144,16 +144,17 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
 			Path:   "/api"},
-		Scope: "openid profile offline_access"}
-
-	p := &OIDCProvider{
-		ProviderData: providerData,
+		Scope: "openid profile offline_access",
 		Verifier: oidc.NewVerifier(
 			"https://issuer.example.com",
 			fakeKeySetStub{},
 			&oidc.Config{ClientID: clientID},
 		),
-		UserIDClaim: "email",
+	}
+
+	p := &OIDCProvider{
+		ProviderData: providerData,
+		UserIDClaim:  "email",
 	}
 
 	return p
@@ -347,18 +348,7 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			assert.NoError(t, err)
 
-			verifyFunc := func(ctx context.Context, token string) (interface{}, error) {
-				keyset := fakeKeySetStub{}
-				verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
-					&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
-
-				idToken, err := verifier.Verify(ctx, token)
-				assert.NoError(t, err)
-
-				return idToken, nil
-			}
-
-			ss, err := provider.CreateSessionFromToken(context.Background(), rawIDToken, verifyFunc)
+			ss, err := provider.CreateSessionFromToken(context.Background(), rawIDToken)
 			assert.NoError(t, err)
 
 			assert.Equal(t, tc.ExpectedUser, ss.User)
