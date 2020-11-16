@@ -264,6 +264,14 @@ Available variables for standard logging:
 | File | main.go:40 | The file and line number of the logging statement. |
 | Message | HTTP: listening on 127.0.0.1:4180 | The details of the log statement. |
 
+## Example configuration for json logging
+
+```cfg
+auth_logging_format = '{"client": "{{.Client}}", "username": "{{.Username}}", "timestamp": "{{.Timestamp}}", "status": {{.Status}}, "message": "{{.Message}}"}'
+request_logging_format = '{"client": "{{.Client}}", "username": "{{.Username}}", "timestamp": "{{.Timestamp}}", "host": "{{.Host}}", "request_method": "{{.RequestMethod}}", "upstream": "{{.Upstream}}", "request_uri": {{.RequestURI}}, "protocol": "{{.Protocol}}", "user_agent": {{.UserAgent}}, "status_code": {{.StatusCode}}, "response_size": {{.ResponseSize}}, "request_duration": {{.RequestDuration}}}'
+standard_logging_format = '{"timestamp": "{{.Timestamp}}", "file": "{{.File}}", "message": "{{.Message}}"}'
+```
+
 ## Configuring for use with the Nginx `auth_request` directive
 
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2-proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
