@@ -122,7 +122,7 @@ func testAzureBackend(payload string) *httptest.Server {
 		}))
 }
 
-func TestAzureProviderGetEmailAddress(t *testing.T) {
+func TestAzureProviderEnrichSessionState(t *testing.T) {
 	b := testAzureBackend(`{ "mail": "user@windows.net" }`)
 	defer b.Close()
 
@@ -130,12 +130,12 @@ func TestAzureProviderGetEmailAddress(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
+func TestAzureProviderEnrichSessionStateMailNull(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": ["user@windows.net", "altuser@windows.net"] }`)
 	defer b.Close()
 
@@ -143,12 +143,12 @@ func TestAzureProviderGetEmailAddressMailNull(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
+func TestAzureProviderEnrichSessionStateGetUserPrincipalName(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": "user@windows.net" }`)
 	defer b.Close()
 
@@ -156,12 +156,12 @@ func TestAzureProviderGetEmailAddressGetUserPrincipalName(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", email)
+	assert.Equal(t, "user@windows.net", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
+func TestAzureProviderEnrichSessionStateFailToEnrichSessionState(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": null }`)
 	defer b.Close()
 
@@ -169,12 +169,12 @@ func TestAzureProviderGetEmailAddressFailToGetEmailAddress(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
+func TestAzureProviderEnrichSessionStateEmptyUserPrincipalName(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": "" }`)
 	defer b.Close()
 
@@ -182,12 +182,12 @@ func TestAzureProviderGetEmailAddressEmptyUserPrincipalName(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
+func TestAzureProviderEnrichSessionStateIncorrectOtherMails(t *testing.T) {
 	b := testAzureBackend(`{ "mail": null, "otherMails": "", "userPrincipalName": null }`)
 	defer b.Close()
 
@@ -195,49 +195,49 @@ func TestAzureProviderGetEmailAddressIncorrectOtherMails(t *testing.T) {
 	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Equal(t, "type assertion to string failed", err.Error())
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressFromIDToken(t *testing.T) {
+func TestAzureProviderEnrichSessionStateFromIDToken(t *testing.T) {
 	p := testAzureProvider("")
 
 	session := CreateAuthorizedSession()
 	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJmb29AYmFyLmNvbSIsImlhdCI6MTUxNjIzOTAyMn0.XRuL4Y2VPSToNB8vMvmlB-X3BwahUJzUXNx6vmzODjk"
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "foo@bar.com", email)
+	assert.Equal(t, "foo@bar.com", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressFromIDTokenWithMissingEmailClaim(t *testing.T) {
+func TestAzureProviderEnrichSessionStateFromIDTokenWithMissingEmailClaim(t *testing.T) {
 	p := testAzureProvider("")
 
 	session := CreateAuthorizedSession()
 	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Equal(t, "missing email claim from id_token", err.Error())
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressFromIDTokenWithMalformedJwt(t *testing.T) {
+func TestAzureProviderEnrichSessionStateFromIDTokenWithMalformedJwt(t *testing.T) {
 	p := testAzureProvider("")
 
 	session := CreateAuthorizedSession()
 	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwia.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Contains(t, err.Error(), "jwt is malformed: ")
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
 
-func TestAzureProviderGetEmailAddressFromIDTokenWithInvalidJwtPayload(t *testing.T) {
+func TestAzureProviderEnrichSessionStateFromIDTokenWithInvalidJwtPayload(t *testing.T) {
 	p := testAzureProvider("")
 
 	session := CreateAuthorizedSession()
 	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSessionState(context.Background(), session)
 	assert.Contains(t, err.Error(), "unable to unmarshal jwt payload: ")
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
 
 func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {

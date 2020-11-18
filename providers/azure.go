@@ -258,15 +258,21 @@ func getEmailFromIDToken(idToken string) (string, error) {
 	return c.Email, nil
 }
 
-// GetEmailAddress returns the Account email address
-func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+// EnrichSessionState finds the email to enrich the session state
+func (p *AzureProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
 	var email string
 
 	if s.IDToken != "" {
-		return getEmailFromIDToken(s.IDToken)
+		email, err := getEmailFromIDToken(s.IDToken)
+		if err != nil {
+			return err
+		}
+		s.Email = email
+		return nil
 	}
+
 	if s.AccessToken == "" {
-		return "", errors.New("missing access token")
+		return errors.New("missing access token")
 	}
 
 	json, err := requests.New(p.ProfileURL.String()).
@@ -275,26 +281,28 @@ func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.Session
 		Do().
 		UnmarshalJSON()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	email, err = getEmailFromJSON(json)
 	if err == nil && email != "" {
-		return email, err
+		s.Email = email
+		return err
 	}
 
 	email, err = json.Get("userPrincipalName").String()
 	if err != nil {
 		logger.Errorf("failed making request %s", err)
-		return "", err
+		return err
 	}
 
 	if email == "" {
 		logger.Errorf("failed to get email address")
-		return "", err
+		return err
 	}
+	s.Email = email
 
-	return email, err
+	return err
 }
 
 func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
