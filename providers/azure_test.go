@@ -210,34 +210,46 @@ func TestAzureProviderEnrichSessionStateFromIDToken(t *testing.T) {
 	assert.Equal(t, "foo@bar.com", session.Email)
 }
 
-func TestAzureProviderEnrichSessionStateFromIDTokenWithMissingEmailClaim(t *testing.T) {
-	p := testAzureProvider("")
+func TestAzureProviderEnrichSessionStateWithIDTokenWithMissingEmailClaim(t *testing.T) {
+	b := testAzureBackend(`{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
 	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
 	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, "missing email claim from id_token", err.Error())
-	assert.Equal(t, "", session.Email)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "user@windows.net", session.Email)
 }
 
-func TestAzureProviderEnrichSessionStateFromIDTokenWithMalformedJwt(t *testing.T) {
-	p := testAzureProvider("")
+func TestAzureProviderEnrichSessionStateWithInvalidBase64EncodedIDToken(t *testing.T) {
+	b := testAzureBackend(`{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
 	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwia.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
 	err := p.EnrichSessionState(context.Background(), session)
-	assert.Contains(t, err.Error(), "jwt is malformed: ")
-	assert.Equal(t, "", session.Email)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "user@windows.net", session.Email)
 }
 
-func TestAzureProviderEnrichSessionStateFromIDTokenWithInvalidJwtPayload(t *testing.T) {
-	p := testAzureProvider("")
+func TestAzureProviderEnrichSessionStateWithInvalidIDToken(t *testing.T) {
+	b := testAzureBackend(`{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`)
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
 
 	session := CreateAuthorizedSession()
 	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
 	err := p.EnrichSessionState(context.Background(), session)
-	assert.Contains(t, err.Error(), "unable to unmarshal jwt payload: ")
-	assert.Equal(t, "", session.Email)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "user@windows.net", session.Email)
 }
 
 func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
