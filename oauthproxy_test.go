@@ -1236,7 +1236,7 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
@@ -1256,7 +1256,7 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
@@ -1275,7 +1275,7 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
 func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
@@ -2698,84 +2698,84 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 		allowedGroups      []string
 		groups             []string
 		querystring        string
-		expectUnauthorized bool
+		expectedStatusCode int
 	}{
 		{
 			name:               "NoAllowedGroups",
 			allowedGroups:      []string{},
 			groups:             []string{},
 			querystring:        "",
-			expectUnauthorized: false,
+			expectedStatusCode: http.StatusAccepted,
 		},
 		{
 			name:               "NoAllowedGroupsUserHasGroups",
 			allowedGroups:      []string{},
 			groups:             []string{"a", "b"},
 			querystring:        "",
-			expectUnauthorized: false,
+			expectedStatusCode: http.StatusAccepted,
 		},
 		{
 			name:               "UserInAllowedGroup",
 			allowedGroups:      []string{"a"},
 			groups:             []string{"a", "b"},
 			querystring:        "",
-			expectUnauthorized: false,
+			expectedStatusCode: http.StatusAccepted,
 		},
 		{
 			name:               "UserNotInAllowedGroup",
 			allowedGroups:      []string{"a"},
 			groups:             []string{"c"},
 			querystring:        "",
-			expectUnauthorized: true,
+			expectedStatusCode: http.StatusUnauthorized,
 		},
 		{
 			name:               "UserInQuerystringGroup",
 			allowedGroups:      []string{"a", "b"},
 			groups:             []string{"a", "c"},
 			querystring:        "?allowed_group=a",
-			expectUnauthorized: false,
+			expectedStatusCode: http.StatusAccepted,
 		},
 		{
 			name:               "UserInOnlyQuerystringGroup",
 			allowedGroups:      []string{},
 			groups:             []string{"a", "c"},
 			querystring:        "?allowed_groups=a,b",
-			expectUnauthorized: false,
+			expectedStatusCode: http.StatusAccepted,
 		},
 		{
 			name:               "UserInMultiParamQuerystringGroup",
 			allowedGroups:      []string{"a", "b"},
 			groups:             []string{"b"},
 			querystring:        "?allowed_group=a&allowed_group=b",
-			expectUnauthorized: false,
+			expectedStatusCode: http.StatusAccepted,
 		},
 		{
 			name:               "UserInDelimitedQuerystringGroup",
 			allowedGroups:      []string{"a", "b", "c"},
 			groups:             []string{"c"},
 			querystring:        "?allowed_groups=a,c",
-			expectUnauthorized: false,
+			expectedStatusCode: http.StatusAccepted,
 		},
 		{
 			name:               "UserNotInQuerystringGroup",
 			allowedGroups:      []string{},
 			groups:             []string{"c"},
 			querystring:        "?allowed_group=a&allowed_group=b",
-			expectUnauthorized: true,
+			expectedStatusCode: http.StatusForbidden,
 		},
 		{
 			name:               "UserInConfigGroupNotInQuerystringGroup",
 			allowedGroups:      []string{"a", "b", "c"},
 			groups:             []string{"c"},
 			querystring:        "?allowed_group=a&allowed_group=b",
-			expectUnauthorized: true,
+			expectedStatusCode: http.StatusForbidden,
 		},
 		{
 			name:               "UserInQuerystringGroupNotInConfigGroup",
 			allowedGroups:      []string{"a", "b"},
 			groups:             []string{"c"},
 			querystring:        "?allowed_groups=b,c",
-			expectUnauthorized: true,
+			expectedStatusCode: http.StatusUnauthorized,
 		},
 	}
 
@@ -2803,11 +2803,7 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 
 			test.proxy.ServeHTTP(test.rw, test.req)
 
-			if tc.expectUnauthorized {
-				assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
-			} else {
-				assert.Equal(t, http.StatusAccepted, test.rw.Code)
-			}
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
 		})
 	}
 }

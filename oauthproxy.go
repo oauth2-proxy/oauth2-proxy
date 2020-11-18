@@ -930,14 +930,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
-		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	// Allow secondary group restrictions based on the `allowed_group` or
 	// `allowed_groups` querystring parameter
 	if !checkAllowedGroups(req, session) {
-		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+		http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
 
