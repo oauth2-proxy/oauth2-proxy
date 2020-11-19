@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 
@@ -13,7 +12,7 @@ const multipleValuesForSecretSource = "multiple values specified for secret sour
 func validateSecretSource(source options.SecretSource) string {
 	switch {
 	case len(source.Value) > 0 && source.FromEnv == "" && source.FromFile == "":
-		return validateSecretSourceValue(source.Value)
+		return ""
 	case len(source.Value) == 0 && source.FromEnv != "" && source.FromFile == "":
 		return validateSecretSourceEnv(source.FromEnv)
 	case len(source.Value) == 0 && source.FromEnv == "" && source.FromFile != "":
@@ -21,14 +20,6 @@ func validateSecretSource(source options.SecretSource) string {
 	default:
 		return multipleValuesForSecretSource
 	}
-}
-
-func validateSecretSourceValue(value []byte) string {
-	dst := make([]byte, len(value))
-	if _, err := base64.StdEncoding.Decode(dst, value); err != nil {
-		return fmt.Sprintf("error decoding secret value: %v", err)
-	}
-	return ""
 }
 
 func validateSecretSourceEnv(key string) string {
