@@ -1,7 +1,6 @@
 package options
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -235,7 +234,7 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 					Claim:  claim,
 					Prefix: "Basic ",
 					BasicAuthPassword: &SecretSource{
-						Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthPassword))),
+						Value: []byte(basicAuthPassword),
 					},
 				},
 			},

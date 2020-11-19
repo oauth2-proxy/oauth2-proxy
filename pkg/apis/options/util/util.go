@@ -1,7 +1,6 @@
 package util
 
 import (
-	"encoding/base64"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -13,9 +12,7 @@ import (
 func GetSecretValue(source *options.SecretSource) ([]byte, error) {
 	switch {
 	case len(source.Value) > 0 && source.FromEnv == "" && source.FromFile == "":
-		value := make([]byte, base64.StdEncoding.DecodedLen(len(source.Value)))
-		decoded, err := base64.StdEncoding.Decode(value, source.Value)
-		return value[:decoded], err
+		return source.Value, nil
 	case len(source.Value) == 0 && source.FromEnv != "" && source.FromFile == "":
 		return []byte(os.Getenv(source.FromEnv)), nil
 	case len(source.Value) == 0 && source.FromEnv == "" && source.FromFile != "":

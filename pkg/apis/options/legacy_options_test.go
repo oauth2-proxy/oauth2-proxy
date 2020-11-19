@@ -1,7 +1,6 @@
 package options
 
 import (
-	"encoding/base64"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -332,7 +331,7 @@ var _ = Describe("Legacy Options", func() {
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
-							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
+							Value: []byte(basicAuthSecret),
 						},
 					},
 				},
@@ -372,7 +371,7 @@ var _ = Describe("Legacy Options", func() {
 						Claim:  "email",
 						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
-							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
+							Value: []byte(basicAuthSecret),
 						},
 					},
 				},
