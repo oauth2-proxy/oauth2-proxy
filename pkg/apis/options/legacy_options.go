@@ -232,7 +232,8 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
-					Claim: claim,
+					Claim:  claim,
+					Prefix: "Basic ",
 					BasicAuthPassword: &SecretSource{
 						Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthPassword))),
 					},

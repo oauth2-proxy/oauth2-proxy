@@ -329,7 +329,8 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim: "user",
+						Claim:  "user",
+						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
 							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
 						},
@@ -368,7 +369,8 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim: "email",
+						Claim:  "email",
+						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
 							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
 						},
