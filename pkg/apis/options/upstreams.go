@@ -1,5 +1,12 @@
 package options
 
+import "time"
+
+const (
+	// DefaultUpstreamFlushInterval is the default value for the Upstream FlushInterval.
+	DefaultUpstreamFlushInterval = 1 * time.Second
+)
+
 // Upstreams is a collection of definitions for upstream servers.
 type Upstreams []Upstream
 
