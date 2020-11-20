@@ -35,7 +35,7 @@ func main() {
 		logger.Fatal("cannot use alpha-config and conver-config-to-alpha together")
 	}
 
-	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet)
+	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
 	if err != nil {
 		logger.Printf("ERROR: %v", err)
 		os.Exit(1)
@@ -81,20 +81,20 @@ func main() {
 // loadConfiguration will load in the user's configuration.
 // It will either load the alpha configuration (if alphaConfig is given)
 // or the legacy configuration.
-func loadConfiguration(config, alphaConfig string, extraFlags *pflag.FlagSet) (*options.Options, error) {
+func loadConfiguration(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
 	if alphaConfig != "" {
 		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
-		return loadAlphaOptions(config, alphaConfig, extraFlags)
+		return loadAlphaOptions(config, alphaConfig, extraFlags, args)
 	}
-	return loadLegacyOptions(config, extraFlags)
+	return loadLegacyOptions(config, extraFlags, args)
 }
 
 // loadLegacyOptions loads the old toml options using the legacy flagset
 // and legacy options struct.
-func loadLegacyOptions(config string, extraFlags *pflag.FlagSet) (*options.Options, error) {
+func loadLegacyOptions(config string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
 	optionsFlagSet := options.NewLegacyFlagSet()
 	optionsFlagSet.AddFlagSet(extraFlags)
-	if err := optionsFlagSet.Parse(os.Args[1:]); err != nil {
+	if err := optionsFlagSet.Parse(args); err != nil {
 		return nil, fmt.Errorf("failed to parse flags: %v", err)
 	}
 
@@ -114,8 +114,8 @@ func loadLegacyOptions(config string, extraFlags *pflag.FlagSet) (*options.Optio
 // loadAlphaOptions loads the old style config excluding options converted to
 // the new alpha format, then merges the alpha options, loaded from YAML,
 // into the core configuration.
-func loadAlphaOptions(config, alphaConfig string, extraFlags *pflag.FlagSet) (*options.Options, error) {
-	opts, err := loadOptions(config, extraFlags)
+func loadAlphaOptions(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
+	opts, err := loadOptions(config, extraFlags, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load core options: %v", err)
 	}
@@ -133,10 +133,10 @@ func loadAlphaOptions(config, alphaConfig string, extraFlags *pflag.FlagSet) (*o
 // core options.Options struct.
 // This means that none of the options that have been converted to alpha config
 // will be loaded using this method.
-func loadOptions(config string, extraFlags *pflag.FlagSet) (*options.Options, error) {
+func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
 	optionsFlagSet := options.NewFlagSet()
 	optionsFlagSet.AddFlagSet(extraFlags)
-	if err := optionsFlagSet.Parse(os.Args[1:]); err != nil {
+	if err := optionsFlagSet.Parse(args); err != nil {
 		return nil, fmt.Errorf("failed to parse flags: %v", err)
 	}
 
