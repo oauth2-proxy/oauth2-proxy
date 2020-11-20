@@ -926,7 +926,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 }
 
 // AuthOnly checks whether the user is currently logged in (both authentication
-// and optional authorization via `allowed_groups` querystring).
+// and optional authorization).
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
@@ -934,9 +934,9 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Allow secondary group restrictions based on the `allowed_group` or
-	// `allowed_groups` querystring parameter
-	if !checkAllowedGroups(req, session) {
+	// Unauthorized cases need to return 403 to prevent infinite redirects with
+	// subrequest architectures
+	if !authOnlyAuthorize(req, session) {
 		http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
@@ -1024,13 +1024,25 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	return session, nil
 }
 
-func checkAllowedGroups(req *http.Request, session *sessionsapi.SessionState) bool {
+// authOnlyAuthorize handles special authorization logic that is only done
+// on the AuthOnly endpoint for use with Nginx subrequest architectures.
+func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
+	// Allow secondary group restrictions based on the `allowed_group` or
+	// `allowed_groups` querystring parameter
+	if !checkAllowedGroups(req, s) {
+		return false
+	}
+
+	return true
+}
+
+func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
 	allowedGroups := extractAllowedGroups(req)
 	if len(allowedGroups) == 0 {
 		return true
 	}
 
-	for _, group := range session.Groups {
+	for _, group := range s.Groups {
 		if _, ok := allowedGroups[group]; ok {
 			return true
 		}
