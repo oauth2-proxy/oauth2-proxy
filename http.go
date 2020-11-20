@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 // Server represents an HTTP server
@@ -64,7 +64,7 @@ func (s *Server) ServeHTTPS() {
 	addr := s.Opts.HTTPSAddress
 	config := &tls.Config{
 		MinVersion: tls.VersionTLS12,
-		MaxVersion: tls.VersionTLS12,
+		MaxVersion: tls.VersionTLS13,
 	}
 	if config.NextProtos == nil {
 		config.NextProtos = []string{"http/1.1"}

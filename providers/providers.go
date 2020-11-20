@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/coreos/go-oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
+	// DEPRECATED: Migrate to EnrichSessionState
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
-	GetUserName(ctx context.Context, s *sessions.SessionState) (string, error)
-	GetPreferredUsername(ctx context.Context, s *sessions.SessionState) (string, error)
 	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
-	ValidateGroup(string) bool
+	EnrichSessionState(ctx context.Context, s *sessions.SessionState) error
+	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
 	ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error)
@@ -46,7 +46,9 @@ func New(provider string, p *ProviderData) Provider {
 		return NewNextcloudProvider(p)
 	case "digitalocean":
 		return NewDigitalOceanProvider(p)
-	default:
+	case "google":
 		return NewGoogleProvider(p)
+	default:
+		return nil
 	}
 }

@@ -10,21 +10,30 @@ import (
 
 	"github.com/coreos/go-oidc"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
-var _ Provider = (*ProviderData)(nil)
+var (
+	// ErrNotImplemented is returned when a provider did not override a default
+	// implementation method that doesn't have sensible defaults
+	ErrNotImplemented = errors.New("not implemented")
+
+	// ErrMissingCode is returned when a Redeem method is called with an empty
+	// code
+	ErrMissingCode = errors.New("missing code")
+
+	_ Provider = (*ProviderData)(nil)
+)
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, ErrMissingCode
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -53,66 +62,56 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (s 
 	}
 	err = result.UnmarshalInto(&jsonResponse)
 	if err == nil {
-		s = &sessions.SessionState{
+		return &sessions.SessionState{
 			AccessToken: jsonResponse.AccessToken,
-		}
-		return
+		}, nil
 	}
 
-	var v url.Values
-	v, err = url.ParseQuery(string(result.Body()))
+	values, err := url.ParseQuery(string(result.Body()))
 	if err != nil {
-		return
+		return nil, err
 	}
-	if a := v.Get("access_token"); a != "" {
+	if token := values.Get("access_token"); token != "" {
 		created := time.Now()
-		s = &sessions.SessionState{AccessToken: a, CreatedAt: &created}
-	} else {
-		err = fmt.Errorf("no access token found %s", result.Body())
+		return &sessions.SessionState{AccessToken: token, CreatedAt: &created}, nil
 	}
-	return
+
+	return nil, fmt.Errorf("no access token found %s", result.Body())
 }
 
 // GetLoginURL with typical oauth parameters
 func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	a := *p.LoginURL
-	params, _ := url.ParseQuery(a.RawQuery)
-	params.Set("redirect_uri", redirectURI)
-	if p.AcrValues != "" {
-		params.Add("acr_values", p.AcrValues)
-	}
-	if p.Prompt != "" {
-		params.Set("prompt", p.Prompt)
-	} else { // Legacy variant of the prompt param:
-		params.Set("approval_prompt", p.ApprovalPrompt)
-	}
-	params.Add("scope", p.Scope)
-	params.Set("client_id", p.ClientID)
-	params.Set("response_type", "code")
-	params.Add("state", state)
-	a.RawQuery = params.Encode()
+	extraParams := url.Values{}
+	a := makeLoginURL(p, redirectURI, state, extraParams)
 	return a.String()
 }
 
 // GetEmailAddress returns the Account email address
-func (p *ProviderData) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
+// DEPRECATED: Migrate to EnrichSessionState
+func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
+	return "", ErrNotImplemented
 }
 
-// GetUserName returns the Account username
-func (p *ProviderData) GetUserName(ctx context.Context, s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
+// EnrichSessionState is called after Redeem to allow providers to enrich session fields
+// such as User, Email, Groups with provider specific API calls.
+func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.SessionState) error {
+	return nil
 }
 
-// GetPreferredUsername returns the Account preferred username
-func (p *ProviderData) GetPreferredUsername(ctx context.Context, s *sessions.SessionState) (string, error) {
-	return "", errors.New("not implemented")
-}
+// Authorize performs global authorization on an authenticated session.
+// This is not used for fine-grained per route authorization rules.
+func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (bool, error) {
+	if len(p.AllowedGroups) == 0 {
+		return true, nil
+	}
 
-// ValidateGroup validates that the provided email exists in the configured provider
-// email group(s).
-func (p *ProviderData) ValidateGroup(email string) bool {
-	return true
+	for _, group := range s.Groups {
+		if _, ok := p.AllowedGroups[group]; ok {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // ValidateSessionState validates the AccessToken
@@ -122,12 +121,12 @@ func (p *ProviderData) ValidateSessionState(ctx context.Context, s *sessions.Ses
 
 // RefreshSessionIfNeeded should refresh the user's session if required and
 // do nothing if a refresh is not required
-func (p *ProviderData) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
+func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.SessionState) (bool, error) {
 	return false, nil
 }
 
 // CreateSessionStateFromBearerToken should be implemented to allow providers
 // to convert ID tokens into sessions
-func (p *ProviderData) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
-	return nil, errors.New("not implemented")
+func (p *ProviderData) CreateSessionStateFromBearerToken(_ context.Context, _ string, _ *oidc.IDToken) (*sessions.SessionState, error) {
+	return nil, ErrNotImplemented
 }

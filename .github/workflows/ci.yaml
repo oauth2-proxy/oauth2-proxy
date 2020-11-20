@@ -1,0 +1,59 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - '**'
+      # - $default-branch
+  pull_request:
+    branches:
+      - '**'
+      # - $default-branch
+
+jobs:
+  build:
+    env:
+      COVER: true
+    runs-on: ubuntu-18.04
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Go 1.15
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.15.x
+      id: go
+
+    - name: Get dependencies
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
+        go mod download
+        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+        chmod +x ./cc-test-reporter
+
+    - name: Lint
+      run: |
+        make lint
+
+    - name: Build
+      run: |
+        make build
+
+    - name: Test
+      env:
+        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
+      run: |
+        ./.github/workflows/test.sh
+
+  docker:
+    runs-on: ubuntu-18.04
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Docker Build
+      run: |
+        make docker

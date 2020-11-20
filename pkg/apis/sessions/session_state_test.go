@@ -4,11 +4,10 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	mathrand "math/rand"
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
@@ -186,6 +185,17 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			IDToken:     "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
 			ExpiresOn:   &expires,
 		},
+		"With groups": {
+			Email:             "username@example.com",
+			User:              "username",
+			PreferredUsername: "preferred.username",
+			AccessToken:       "AccessToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			IDToken:           "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			CreatedAt:         &created,
+			ExpiresOn:         &expires,
+			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			Groups:            []string{"group-a", "group-b"},
+		},
 	}
 
 	for _, secretSize := range []int{16, 24, 32} {
@@ -242,78 +252,6 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 					})
 				}
 			})
-		})
-	}
-}
-
-// TestLegacyV5DecodeSessionState confirms V5 JSON sessions decode
-//
-// TODO: Remove when this is deprecated (likely V7)
-func TestLegacyV5DecodeSessionState(t *testing.T) {
-	testCases, cipher, legacyCipher := CreateLegacyV5TestCases(t)
-
-	for testName, tc := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			// Legacy sessions fail in DecodeSessionState which results in
-			// the fallback to LegacyV5DecodeSessionState
-			_, err := DecodeSessionState([]byte(tc.Input), cipher, false)
-			assert.Error(t, err)
-			_, err = DecodeSessionState([]byte(tc.Input), cipher, true)
-			assert.Error(t, err)
-
-			ss, err := LegacyV5DecodeSessionState(tc.Input, legacyCipher)
-			if tc.Error {
-				assert.Error(t, err)
-				assert.Nil(t, ss)
-				return
-			}
-			assert.NoError(t, err)
-			compareSessionStates(t, tc.Output, ss)
-		})
-	}
-}
-
-// Test_into tests the into helper function used in LegacyV5DecodeSessionState
-//
-// TODO: Remove when this is deprecated (likely V7)
-func Test_into(t *testing.T) {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-	// Test all 3 valid AES sizes
-	for _, secretSize := range []int{16, 24, 32} {
-		t.Run(fmt.Sprintf("%d", secretSize), func(t *testing.T) {
-			secret := make([]byte, secretSize)
-			_, err := io.ReadFull(rand.Reader, secret)
-			assert.Equal(t, nil, err)
-
-			cfb, err := encryption.NewCFBCipher(secret)
-			assert.NoError(t, err)
-			c := encryption.NewBase64Cipher(cfb)
-
-			// Check no errors with empty or nil strings
-			empty := ""
-			assert.Equal(t, nil, into(&empty, c.Encrypt))
-			assert.Equal(t, nil, into(&empty, c.Decrypt))
-			assert.Equal(t, nil, into(nil, c.Encrypt))
-			assert.Equal(t, nil, into(nil, c.Decrypt))
-
-			// Test various sizes tokens might be
-			for _, dataSize := range []int{10, 100, 1000, 5000, 10000} {
-				t.Run(fmt.Sprintf("%d", dataSize), func(t *testing.T) {
-					b := make([]byte, dataSize)
-					for i := range b {
-						b[i] = charset[mathrand.Intn(len(charset))]
-					}
-					data := string(b)
-					originalData := data
-
-					assert.Equal(t, nil, into(&data, c.Encrypt))
-					assert.NotEqual(t, originalData, data)
-
-					assert.Equal(t, nil, into(&data, c.Decrypt))
-					assert.Equal(t, originalData, data)
-				})
-			}
 		})
 	}
 }

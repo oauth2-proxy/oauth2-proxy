@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -13,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 )
 
 // saveFunc performs a persistent store's save functionality using
@@ -123,8 +122,6 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
 // loadSession loads a session from the disk store via the passed loadFunc
 // using the ticket.id as the key. It then decodes the SessionState using
 // ticket.secret to make the AES-GCM cipher.
-//
-// TODO (@NickMeves): Remove legacyV5LoadSession support in V7
 func (t *ticket) loadSession(loader loadFunc) (*sessions.SessionState, error) {
 	ciphertext, err := loader(t.id)
 	if err != nil {
@@ -134,11 +131,8 @@ func (t *ticket) loadSession(loader loadFunc) (*sessions.SessionState, error) {
 	if err != nil {
 		return nil, err
 	}
-	ss, err := sessions.DecodeSessionState(ciphertext, c, false)
-	if err != nil {
-		return t.legacyV5LoadSession(ciphertext)
-	}
-	return ss, nil
+
+	return sessions.DecodeSessionState(ciphertext, c, false)
 }
 
 // clearSession uses the passed clearFunc to delete a session stored with a
@@ -202,29 +196,4 @@ func (t *ticket) makeCipher() (encryption.Cipher, error) {
 		return nil, fmt.Errorf("failed to make an AES-GCM cipher from the ticket secret: %v", err)
 	}
 	return c, nil
-}
-
-// legacyV5LoadSession loads a Redis session created in V5 with historical logic
-//
-// TODO (@NickMeves): Remove in V7
-func (t *ticket) legacyV5LoadSession(resultBytes []byte) (*sessions.SessionState, error) {
-	block, err := aes.NewCipher(t.secret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a legacy AES-CFB cipher from the ticket secret: %v", err)
-	}
-
-	stream := cipher.NewCFBDecrypter(block, t.secret)
-	stream.XORKeyStream(resultBytes, resultBytes)
-
-	cfbCipher, err := encryption.NewCFBCipher(encryption.SecretBytes(t.options.Secret))
-	if err != nil {
-		return nil, err
-	}
-	legacyCipher := encryption.NewBase64Cipher(cfbCipher)
-
-	session, err := sessions.LegacyV5DecodeSessionState(string(resultBytes), legacyCipher)
-	if err != nil {
-		return nil, err
-	}
-	return session, nil
 }

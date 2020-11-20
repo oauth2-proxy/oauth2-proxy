@@ -2,8 +2,6 @@ package encryption
 
 import (
 	"crypto/hmac"
-	// TODO (@NickMeves): Remove SHA1 signed cookie support in V7
-	"crypto/sha1" // #nosec G505
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -95,16 +93,7 @@ func checkSignature(signature string, args ...string) bool {
 	if err != nil {
 		return false
 	}
-	if checkHmac(signature, checkSig) {
-		return true
-	}
-
-	// TODO (@NickMeves): Remove SHA1 signed cookie support in V7
-	legacySig, err := cookieSignature(sha1.New, args...)
-	if err != nil {
-		return false
-	}
-	return checkHmac(signature, legacySig)
+	return checkHmac(signature, checkSig)
 }
 
 func checkHmac(input, expected string) bool {

@@ -3,11 +3,10 @@ package options
 import (
 	"crypto"
 	"net/url"
-	"regexp"
 
 	oidc "github.com/coreos/go-oidc"
-	ipapi "github.com/oauth2-proxy/oauth2-proxy/pkg/apis/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/providers"
+	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/spf13/pflag"
 )
 
@@ -66,21 +65,15 @@ type Options struct {
 	// TODO(JoelSpeed): Rename when legacy config is removed
 	UpstreamServers Upstreams `cfg:",internal"`
 
+	InjectRequestHeaders  []Header `cfg:",internal"`
+	InjectResponseHeaders []Header `cfg:",internal"`
+
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
-	SkipAuthStripHeaders  bool     `flag:"skip-auth-strip-headers" cfg:"skip_auth_strip_headers"`
+	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
 	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
 	ExtraJwtIssuers       []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
-	PassBasicAuth         bool     `flag:"pass-basic-auth" cfg:"pass_basic_auth"`
-	SetBasicAuth          bool     `flag:"set-basic-auth" cfg:"set_basic_auth"`
-	PreferEmailToUser     bool     `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
-	BasicAuthPassword     string   `flag:"basic-auth-password" cfg:"basic_auth_password"`
-	PassAccessToken       bool     `flag:"pass-access-token" cfg:"pass_access_token"`
 	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
-	PassUserHeaders       bool     `flag:"pass-user-headers" cfg:"pass_user_headers"`
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
-	SetXAuthRequest       bool     `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
-	SetAuthorization      bool     `flag:"set-authorization-header" cfg:"set_authorization_header"`
-	PassAuthorization     bool     `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 
 	// These options allow for other providers besides Google, with
@@ -93,6 +86,7 @@ type Options struct {
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
 	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
+	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
@@ -102,6 +96,7 @@ type Options struct {
 	Prompt                             string   `flag:"prompt" cfg:"prompt"`
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
+	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	AcrValues       string `flag:"acr-values" cfg:"acr_values"`
@@ -112,7 +107,6 @@ type Options struct {
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
-	compiledRegex      []*regexp.Regexp
 	provider           providers.Provider
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
@@ -122,7 +116,6 @@ type Options struct {
 
 // Options for Getting internal values
 func (o *Options) GetRedirectURL() *url.URL                        { return o.redirectURL }
-func (o *Options) GetCompiledRegex() []*regexp.Regexp              { return o.compiledRegex }
 func (o *Options) GetProvider() providers.Provider                 { return o.provider }
 func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
 func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
@@ -131,7 +124,6 @@ func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.re
 
 // Options for Setting internal values
 func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
-func (o *Options) SetCompiledRegex(s []*regexp.Regexp)              { o.compiledRegex = s }
 func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
 func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
 func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
@@ -152,21 +144,14 @@ func NewOptions() *Options {
 		Cookie:                           cookieDefaults(),
 		Session:                          sessionOptionsDefaults(),
 		AzureTenant:                      "common",
-		SetXAuthRequest:                  false,
 		SkipAuthPreflight:                false,
-		PassBasicAuth:                    true,
-		SetBasicAuth:                     false,
-		PassUserHeaders:                  true,
-		PassAccessToken:                  false,
-		SetAuthorization:                 false,
-		PassAuthorization:                false,
-		PreferEmailToUser:                false,
 		Prompt:                           "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                   "force",
 		UserIDClaim:                      "email",
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
 		Logging:                          loggingDefaults(),
+		OIDCGroupsClaim:                  "groups",
 	}
 }
 
@@ -183,17 +168,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
-	flagSet.Bool("set-xauthrequest", false, "set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)")
-	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
-	flagSet.Bool("set-basic-auth", false, "set HTTP Basic Auth information in response (useful in Nginx auth_request mode)")
-	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
-	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
-	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
-	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
-	flagSet.Bool("pass-authorization-header", false, "pass the Authorization Header to upstream")
-	flagSet.Bool("set-authorization-header", false, "set Authorization response headers (useful in Nginx auth_request mode)")
-	flagSet.StringSlice("skip-auth-regex", []string{}, "bypass authentication for requests path's that match (may be given multiple times)")
-	flagSet.Bool("skip-auth-strip-headers", false, "strips X-Forwarded-* style authentication headers & Authorization header if they would be set by oauth2-proxy for request paths in --skip-auth-regex")
+	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
+	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
@@ -219,7 +195,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
-	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption or \"htpasswd -B\" for bcrypt encryption")
+	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -B\" for bcrypt encryption")
 	flagSet.Bool("display-htpasswd-form", true, "display username / password login form if an htpasswd file is provided")
 	flagSet.String("custom-templates-dir", "", "path to custom html templates")
 	flagSet.String("banner", "", "custom banner string. Use \"-\" to disable default banner.")
@@ -248,6 +224,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
+	flagSet.String("oidc-groups-claim", "groups", "which claim contains the user groups")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -265,10 +242,12 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
 	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
+	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
 	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
+	flagSet.AddFlagSet(legacyHeadersFlagSet())
 
 	return flagSet
 }

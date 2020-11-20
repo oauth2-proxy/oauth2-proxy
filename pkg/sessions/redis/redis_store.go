@@ -7,11 +7,11 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/go-redis/redis/v7"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/sessions/persistence"
+	"github.com/go-redis/redis/v8"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 )
 
 // SessionStore is an implementation of the persistence.Store
@@ -23,7 +23,7 @@ type SessionStore struct {
 // NewRedisSessionStore initialises a new instance of the SessionStore and wraps
 // it in a persistence.Manager
 func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
-	client, err := newRedisClient(opts.Redis)
+	client, err := NewRedisClient(opts.Redis)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
 	}
@@ -64,9 +64,9 @@ func (store *SessionStore) Clear(ctx context.Context, key string) error {
 	return nil
 }
 
-// newRedisClient makes a redis.Client (either standalone, sentinel aware, or
+// NewRedisClient makes a redis.Client (either standalone, sentinel aware, or
 // redis cluster)
-func newRedisClient(opts options.RedisStoreOptions) (Client, error) {
+func NewRedisClient(opts options.RedisStoreOptions) (Client, error) {
 	if opts.UseSentinel && opts.UseCluster {
 		return nil, fmt.Errorf("options redis-use-sentinel and redis-use-cluster are mutually exclusive")
 	}

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +44,7 @@ func TestNewAzureProvider(t *testing.T) {
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://login.microsoftonline.com/common/oauth2/authorize"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://login.microsoftonline.com/common/oauth2/token"))
 	g.Expect(providerData.ProfileURL.String()).To(Equal("https://graph.microsoft.com/v1.0/me"))
-	g.Expect(providerData.ValidateURL.String()).To(Equal(""))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://graph.microsoft.com/v1.0/me"))
 	g.Expect(providerData.Scope).To(Equal("openid"))
 }
 
@@ -97,7 +99,7 @@ func TestAzureSetTenant(t *testing.T) {
 		p.Data().ProfileURL.String())
 	assert.Equal(t, "https://graph.microsoft.com",
 		p.Data().ProtectedResource.String())
-	assert.Equal(t, "", p.Data().ValidateURL.String())
+	assert.Equal(t, "https://graph.microsoft.com/v1.0/me", p.Data().ValidateURL.String())
 	assert.Equal(t, "openid", p.Data().Scope)
 }
 
@@ -212,4 +214,55 @@ func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
 	assert.Equal(t, "testtoken1234", s.IDToken)
 	assert.Equal(t, timestamp, s.ExpiresOn.UTC())
 	assert.Equal(t, "refresh1234", s.RefreshToken)
+}
+
+func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
+	p := testAzureProvider("")
+	p.ProtectedResource, _ = url.Parse("http://my.resource.test")
+	result := p.GetLoginURL("https://my.test.app/oauth", "")
+	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
+}
+
+func TestAzureProviderGetsTokensInRedeem(t *testing.T) {
+	b := testAzureBackend(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_on": "1136239445", "id_token": "some_id_token" }`)
+	defer b.Close()
+	timestamp, _ := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+	assert.Equal(t, "some_access_token", session.AccessToken)
+	assert.Equal(t, "some_refresh_token", session.RefreshToken)
+	assert.Equal(t, "some_id_token", session.IDToken)
+	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
+}
+
+func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
+	p := testAzureProvider("")
+
+	expires := time.Now().Add(time.Duration(1) * time.Hour)
+	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: &expires}
+	refreshNeeded, err := p.RefreshSessionIfNeeded(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.False(t, refreshNeeded)
+}
+
+func TestAzureProviderRefreshWhenExpired(t *testing.T) {
+	b := testAzureBackend(`{ "access_token": "new_some_access_token", "refresh_token": "new_some_refresh_token", "expires_on": "32693148245", "id_token": "new_some_id_token" }`)
+	defer b.Close()
+	timestamp, _ := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+
+	expires := time.Now().Add(time.Duration(-1) * time.Hour)
+	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: &expires}
+	_, err := p.RefreshSessionIfNeeded(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+	assert.Equal(t, "new_some_access_token", session.AccessToken)
+	assert.Equal(t, "new_some_refresh_token", session.RefreshToken)
+	assert.Equal(t, "new_some_id_token", session.IDToken)
+	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
 }

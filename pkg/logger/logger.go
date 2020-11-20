@@ -12,7 +12,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 )
 
 // AuthStatus defines the different types of auth logging that occur
@@ -162,7 +162,7 @@ func (l *Logger) Output(lvl Level, calldepth int, message string) {
 	if !l.stdEnabled {
 		return
 	}
-	msg := l.formatLogMessage(calldepth, message)
+	msg := l.formatLogMessage(calldepth+1, message)
 
 	var err error
 	switch lvl {
