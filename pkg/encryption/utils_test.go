@@ -94,8 +94,8 @@ func TestSignAndValidate(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.True(t, checkSignature(sha256sig, seed, key, value, epoch))
-	// This should be switched to False after fully deprecating SHA1
-	assert.True(t, checkSignature(sha1sig, seed, key, value, epoch))
+	// We don't validate legacy SHA1 signatures anymore
+	assert.False(t, checkSignature(sha1sig, seed, key, value, epoch))
 
 	assert.False(t, checkSignature(sha256sig, seed, key, "tampered", epoch))
 	assert.False(t, checkSignature(sha1sig, seed, key, "tampered", epoch))

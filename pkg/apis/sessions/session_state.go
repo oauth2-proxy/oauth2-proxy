@@ -2,29 +2,32 @@ package sessions
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"time"
 	"unicode/utf8"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/pierrec/lz4"
 	"github.com/vmihailenco/msgpack/v4"
 )
 
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	AccessToken       string     `json:",omitempty" msgpack:"at,omitempty"`
-	IDToken           string     `json:",omitempty" msgpack:"it,omitempty"`
-	CreatedAt         *time.Time `json:",omitempty" msgpack:"ca,omitempty"`
-	ExpiresOn         *time.Time `json:",omitempty" msgpack:"eo,omitempty"`
-	RefreshToken      string     `json:",omitempty" msgpack:"rt,omitempty"`
-	Email             string     `json:",omitempty" msgpack:"e,omitempty"`
-	User              string     `json:",omitempty" msgpack:"u,omitempty"`
-	PreferredUsername string     `json:",omitempty" msgpack:"pu,omitempty"`
+	CreatedAt *time.Time `msgpack:"ca,omitempty"`
+	ExpiresOn *time.Time `msgpack:"eo,omitempty"`
+
+	AccessToken  string `msgpack:"at,omitempty"`
+	IDToken      string `msgpack:"it,omitempty"`
+	RefreshToken string `msgpack:"rt,omitempty"`
+
+	Email             string   `msgpack:"e,omitempty"`
+	User              string   `msgpack:"u,omitempty"`
+	Groups            []string `msgpack:"g,omitempty"`
+	PreferredUsername string   `msgpack:"pu,omitempty"`
 }
 
 // IsExpired checks whether the session has expired
@@ -61,7 +64,40 @@ func (s *SessionState) String() string {
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
 	}
+	if len(s.Groups) > 0 {
+		o += fmt.Sprintf(" groups:%v", s.Groups)
+	}
 	return o + "}"
+}
+
+func (s *SessionState) GetClaim(claim string) []string {
+	if s == nil {
+		return []string{}
+	}
+	switch claim {
+	case "access_token":
+		return []string{s.AccessToken}
+	case "id_token":
+		return []string{s.IDToken}
+	case "created_at":
+		return []string{s.CreatedAt.String()}
+	case "expires_on":
+		return []string{s.ExpiresOn.String()}
+	case "refresh_token":
+		return []string{s.RefreshToken}
+	case "email":
+		return []string{s.Email}
+	case "user":
+		return []string{s.User}
+	case "groups":
+		groups := make([]string, len(s.Groups))
+		copy(groups, s.Groups)
+		return groups
+	case "preferred_username":
+		return []string{s.PreferredUsername}
+	default:
+		return []string{}
+	}
 }
 
 // EncodeSessionState returns an encrypted, lz4 compressed, MessagePack encoded session
@@ -109,52 +145,6 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 	}
 
 	return &ss, nil
-}
-
-// LegacyV5DecodeSessionState decodes a legacy JSON session cookie string into a SessionState
-func LegacyV5DecodeSessionState(v string, c encryption.Cipher) (*SessionState, error) {
-	var ss SessionState
-	err := json.Unmarshal([]byte(v), &ss)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling session: %w", err)
-	}
-
-	for _, s := range []*string{
-		&ss.User,
-		&ss.Email,
-		&ss.PreferredUsername,
-		&ss.AccessToken,
-		&ss.IDToken,
-		&ss.RefreshToken,
-	} {
-		err := into(s, c.Decrypt)
-		if err != nil {
-			return nil, err
-		}
-	}
-	err = ss.validate()
-	if err != nil {
-		return nil, err
-	}
-
-	return &ss, nil
-}
-
-// codecFunc is a function that takes a []byte and encodes/decodes it
-type codecFunc func([]byte) ([]byte, error)
-
-func into(s *string, f codecFunc) error {
-	// Do not encrypt/decrypt nil or empty strings
-	if s == nil || *s == "" {
-		return nil
-	}
-
-	d, err := f([]byte(*s))
-	if err != nil {
-		return err
-	}
-	*s = string(d)
-	return nil
 }
 
 // lz4Compress compresses with LZ4
@@ -233,7 +223,7 @@ func (s *SessionState) validate() error {
 	}
 
 	empty := new(SessionState)
-	if *s == *empty {
+	if reflect.DeepEqual(*s, *empty) {
 		return errors.New("invalid empty session unmarshalled")
 	}
 

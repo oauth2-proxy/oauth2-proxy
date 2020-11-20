@@ -2,15 +2,18 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
 const emailClaim = "email"
@@ -22,6 +25,7 @@ type OIDCProvider struct {
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
 	UserIDClaim          string
+	GroupsClaim          string
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
@@ -123,6 +127,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		s.IDToken = newSession.IDToken
 		s.Email = newSession.Email
 		s.User = newSession.User
+		s.Groups = newSession.Groups
 		s.PreferredUsername = newSession.PreferredUsername
 	}
 
@@ -204,6 +209,7 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, idToken *
 	newSession.Email = claims.UserID // TODO Rename SessionState.Email to .UserID in the near future
 
 	newSession.User = claims.Subject
+	newSession.Groups = claims.Groups
 	newSession.PreferredUsername = claims.PreferredUsername
 
 	verifyEmail := (p.UserIDClaim == emailClaim) && !p.AllowUnverifiedEmail
@@ -222,6 +228,7 @@ func (p *OIDCProvider) ValidateSessionState(ctx context.Context, s *sessions.Ses
 
 func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.IDToken, token *oauth2.Token) (*OIDCClaims, error) {
 	claims := &OIDCClaims{}
+
 	// Extract default claims.
 	if err := idToken.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
@@ -235,6 +242,8 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	if userID != nil {
 		claims.UserID = fmt.Sprint(userID)
 	}
+
+	claims.Groups = p.extractGroupsFromRawClaims(claims.rawClaims)
 
 	// userID claim was not present or was empty in the ID Token
 	if claims.UserID == "" {
@@ -273,10 +282,42 @@ func (p *OIDCProvider) findClaimsFromIDToken(ctx context.Context, idToken *oidc.
 	return claims, nil
 }
 
+func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface{}) []string {
+	groups := []string{}
+
+	rawGroups, ok := rawClaims[p.GroupsClaim].([]interface{})
+	if rawGroups != nil && ok {
+		for _, rawGroup := range rawGroups {
+			formattedGroup, err := formatGroup(rawGroup)
+			if err != nil {
+				logger.Errorf("unable to format group of type %s with error %s", reflect.TypeOf(rawGroup), err)
+				continue
+			}
+			groups = append(groups, formattedGroup)
+		}
+	}
+
+	return groups
+
+}
+
+func formatGroup(rawGroup interface{}) (string, error) {
+	group, ok := rawGroup.(string)
+	if !ok {
+		jsonGroup, err := json.Marshal(rawGroup)
+		if err != nil {
+			return "", err
+		}
+		group = string(jsonGroup)
+	}
+	return group, nil
+}
+
 type OIDCClaims struct {
 	rawClaims         map[string]interface{}
 	UserID            string
-	Subject           string `json:"sub"`
-	Verified          *bool  `json:"email_verified"`
-	PreferredUsername string `json:"preferred_username"`
+	Subject           string   `json:"sub"`
+	Verified          *bool    `json:"email_verified"`
+	PreferredUsername string   `json:"preferred_username"`
+	Groups            []string `json:"-"`
 }

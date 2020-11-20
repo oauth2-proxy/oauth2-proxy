@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,4 +47,60 @@ func TestAcrValuesConfigured(t *testing.T) {
 
 	result := p.GetLoginURL("https://my.test.app/oauth", "")
 	assert.Contains(t, result, "acr_values=testValue")
+}
+
+func TestEnrichSessionState(t *testing.T) {
+	p := &ProviderData{}
+	s := &sessions.SessionState{}
+	assert.NoError(t, p.EnrichSessionState(context.Background(), s))
+}
+
+func TestProviderDataAuthorize(t *testing.T) {
+	testCases := []struct {
+		name          string
+		allowedGroups []string
+		groups        []string
+		expectedAuthZ bool
+	}{
+		{
+			name:          "NoAllowedGroups",
+			allowedGroups: []string{},
+			groups:        []string{},
+			expectedAuthZ: true,
+		},
+		{
+			name:          "NoAllowedGroupsUserHasGroups",
+			allowedGroups: []string{},
+			groups:        []string{"foo", "bar"},
+			expectedAuthZ: true,
+		},
+		{
+			name:          "UserInAllowedGroup",
+			allowedGroups: []string{"foo"},
+			groups:        []string{"foo", "bar"},
+			expectedAuthZ: true,
+		},
+		{
+			name:          "UserNotInAllowedGroup",
+			allowedGroups: []string{"bar"},
+			groups:        []string{"baz", "foo"},
+			expectedAuthZ: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			session := &sessions.SessionState{
+				Groups: tc.groups,
+			}
+			p := &ProviderData{}
+			p.SetAllowedGroups(tc.allowedGroups)
+
+			authorized, err := p.Authorize(context.Background(), session)
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
+		})
+	}
 }

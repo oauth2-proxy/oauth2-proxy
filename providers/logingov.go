@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"context"
 	"crypto/rsa"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net/url"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"gopkg.in/square/go-jose.v2"
 )
 
@@ -153,10 +152,9 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string) (s *sessions.SessionState, err error) {
+func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
-		err = errors.New("missing code")
-		return
+		return nil, ErrMissingCode
 	}
 
 	claims := &jwt.StandardClaims{
@@ -169,7 +167,7 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
 	ss, err := token.SignedString(p.JWTKey)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := url.Values{}
@@ -199,46 +197,37 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 	// check nonce here
 	err = checkNonce(jsonResponse.IDToken, p)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// Get the email address
 	var email string
 	email, err = emailFromUserInfo(ctx, jsonResponse.AccessToken, p.ProfileURL.String())
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	created := time.Now()
 	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
 
 	// Store the data that we found in the session state
-	s = &sessions.SessionState{
+	return &sessions.SessionState{
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,
 		CreatedAt:   &created,
 		ExpiresOn:   &expires,
 		Email:       email,
-	}
-	return
+	}, nil
 }
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
 func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
-	a := *p.LoginURL
-	params, _ := url.ParseQuery(a.RawQuery)
-	params.Set("redirect_uri", redirectURI)
-	params.Set("approval_prompt", p.ApprovalPrompt)
-	params.Add("scope", p.Scope)
-	params.Set("client_id", p.ClientID)
-	params.Set("response_type", "code")
-	params.Add("state", state)
-	acr := p.AcrValues
-	if acr == "" {
-		acr = "http://idmanagement.gov/ns/assurance/loa/1"
+	extraParams := url.Values{}
+	if p.AcrValues == "" {
+		acr := "http://idmanagement.gov/ns/assurance/loa/1"
+		extraParams.Add("acr_values", acr)
 	}
-	params.Add("acr_values", acr)
-	params.Add("nonce", p.Nonce)
-	a.RawQuery = params.Encode()
+	extraParams.Add("nonce", p.Nonce)
+	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
 	return a.String()
 }

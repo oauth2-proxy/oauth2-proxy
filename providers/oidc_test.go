@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/oauth2"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 const accessToken = "access_token"
@@ -29,10 +29,12 @@ const clientID = "https://test.myapp.com"
 const secret = "secret"
 
 type idTokenClaims struct {
-	Name    string `json:"name,omitempty"`
-	Email   string `json:"email,omitempty"`
-	Phone   string `json:"phone_number,omitempty"`
-	Picture string `json:"picture,omitempty"`
+	Name        string      `json:"name,omitempty"`
+	Email       string      `json:"email,omitempty"`
+	Phone       string      `json:"phone_number,omitempty"`
+	Picture     string      `json:"picture,omitempty"`
+	Groups      interface{} `json:"groups,omitempty"`
+	OtherGroups interface{} `json:"other_groups,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -49,6 +51,31 @@ var defaultIDToken idTokenClaims = idTokenClaims{
 	"janed@me.com",
 	"+4798765432",
 	"http://mugbook.com/janed/me.jpg",
+	[]string{"test:a", "test:b"},
+	[]string{"test:c", "test:d"},
+	jwt.StandardClaims{
+		Audience:  "https://test.myapp.com",
+		ExpiresAt: time.Now().Add(time.Duration(5) * time.Minute).Unix(),
+		Id:        "id-some-id",
+		IssuedAt:  time.Now().Unix(),
+		Issuer:    "https://issuer.example.com",
+		NotBefore: 0,
+		Subject:   "123456789",
+	},
+}
+
+var customGroupClaimIDToken idTokenClaims = idTokenClaims{
+	"Jane Dobbs",
+	"janed@me.com",
+	"+4798765432",
+	"http://mugbook.com/janed/me.jpg",
+	[]map[string]interface{}{
+		{
+			"groupId": "Admin Group Id",
+			"roles":   []string{"Admin"},
+		},
+	},
+	[]string{"test:c", "test:d"},
 	jwt.StandardClaims{
 		Audience:  "https://test.myapp.com",
 		ExpiresAt: time.Now().Add(time.Duration(5) * time.Minute).Unix(),
@@ -65,6 +92,8 @@ var minimalIDToken idTokenClaims = idTokenClaims{
 	"",
 	"",
 	"",
+	[]string{},
+	[]string{},
 	jwt.StandardClaims{
 		Audience:  "https://test.myapp.com",
 		ExpiresAt: time.Now().Add(time.Duration(5) * time.Minute).Unix(),
@@ -273,25 +302,46 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 	const profileURLEmail = "janed@me.com"
 
 	testCases := map[string]struct {
-		IDToken       idTokenClaims
-		ExpectedUser  string
-		ExpectedEmail string
+		IDToken        idTokenClaims
+		GroupsClaim    string
+		ExpectedUser   string
+		ExpectedEmail  string
+		ExpectedGroups interface{}
 	}{
 		"Default IDToken": {
-			IDToken:       defaultIDToken,
-			ExpectedUser:  defaultIDToken.Subject,
-			ExpectedEmail: defaultIDToken.Email,
+			IDToken:        defaultIDToken,
+			GroupsClaim:    "groups",
+			ExpectedUser:   defaultIDToken.Subject,
+			ExpectedEmail:  defaultIDToken.Email,
+			ExpectedGroups: []string{"test:a", "test:b"},
 		},
 		"Minimal IDToken with no email claim": {
-			IDToken:       minimalIDToken,
-			ExpectedUser:  minimalIDToken.Subject,
-			ExpectedEmail: minimalIDToken.Subject,
+			IDToken:        minimalIDToken,
+			GroupsClaim:    "groups",
+			ExpectedUser:   minimalIDToken.Subject,
+			ExpectedEmail:  minimalIDToken.Subject,
+			ExpectedGroups: []string{},
+		},
+		"Custom Groups Claim": {
+			IDToken:        defaultIDToken,
+			GroupsClaim:    "other_groups",
+			ExpectedUser:   defaultIDToken.Subject,
+			ExpectedEmail:  defaultIDToken.Email,
+			ExpectedGroups: []string{"test:c", "test:d"},
+		},
+		"Custom Groups Claim2": {
+			IDToken:        customGroupClaimIDToken,
+			GroupsClaim:    "groups",
+			ExpectedUser:   customGroupClaimIDToken.Subject,
+			ExpectedEmail:  customGroupClaimIDToken.Email,
+			ExpectedGroups: []string{"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}"},
 		},
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			jsonResp := []byte(fmt.Sprintf(`{"email":"%s"}`, profileURLEmail))
 			server, provider := newTestSetup(jsonResp)
+			provider.GroupsClaim = tc.GroupsClaim
 			defer server.Close()
 
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
@@ -311,6 +361,7 @@ func TestCreateSessionStateFromBearerToken(t *testing.T) {
 			assert.Equal(t, tc.ExpectedEmail, ss.Email)
 			assert.Equal(t, rawIDToken, ss.IDToken)
 			assert.Equal(t, rawIDToken, ss.AccessToken)
+			assert.Equal(t, tc.ExpectedGroups, ss.Groups)
 			assert.Equal(t, "", ss.RefreshToken)
 		})
 	}
@@ -351,4 +402,32 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	verifiedIDToken, err = provider.findVerifiedIDToken(context.Background(), newOauth2Token())
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, verifiedIDToken == nil)
+}
+
+func Test_formatGroup(t *testing.T) {
+	testCases := map[string]struct {
+		RawGroup                    interface{}
+		ExpectedFormattedGroupValue string
+	}{
+		"String Group": {
+			RawGroup:                    "group",
+			ExpectedFormattedGroupValue: "group",
+		},
+		"Map Group": {
+			RawGroup:                    map[string]string{"id": "1", "name": "Test"},
+			ExpectedFormattedGroupValue: "{\"id\":\"1\",\"name\":\"Test\"}",
+		},
+		"List Group": {
+			RawGroup:                    []string{"First", "Second"},
+			ExpectedFormattedGroupValue: "[\"First\",\"Second\"]",
+		},
+	}
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			formattedGroup, err := formatGroup(tc.RawGroup)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.ExpectedFormattedGroupValue, formattedGroup)
+		})
+	}
 }

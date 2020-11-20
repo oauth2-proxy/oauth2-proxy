@@ -2,7 +2,6 @@ package validation
 
 import (
 	"crypto"
-	"errors"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -10,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -78,12 +77,19 @@ func TestClientSecretFileOption(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	f.WriteString("testcase")
+	_, err = f.WriteString("testcase")
+	if err != nil {
+		t.Fatalf("failed to write to temp file: %v", err)
+	}
 	if err := f.Close(); err != nil {
 		t.Fatalf("failed to close temp file: %v", err)
 	}
 	clientSecretFileName := f.Name()
-	defer os.Remove(clientSecretFileName)
+	defer func(t *testing.T) {
+		if err := os.Remove(clientSecretFileName); err != nil {
+			t.Fatalf("failed to delete temp file: %v", err)
+		}
+	}(t)
 
 	o := options.NewOptions()
 	o.Cookie.Secret = cookieSecret
@@ -144,41 +150,6 @@ func TestRedirectURL(t *testing.T) {
 	assert.Equal(t, expected, o.GetRedirectURL())
 }
 
-func TestCompiledRegex(t *testing.T) {
-	o := testOptions()
-	regexps := []string{"/foo/.*", "/ba[rz]/quux"}
-	o.SkipAuthRegex = regexps
-	assert.Equal(t, nil, Validate(o))
-	actual := make([]string, 0)
-	for _, regex := range o.GetCompiledRegex() {
-		actual = append(actual, regex.String())
-	}
-	assert.Equal(t, regexps, actual)
-}
-
-func TestCompiledRegexError(t *testing.T) {
-	o := testOptions()
-	o.SkipAuthRegex = []string{"(foobaz", "barquux)"}
-	err := Validate(o)
-	assert.NotEqual(t, nil, err)
-
-	expected := errorMsg([]string{
-		"error compiling regex=\"(foobaz\" error parsing regexp: " +
-			"missing closing ): `(foobaz`",
-		"error compiling regex=\"barquux)\" error parsing regexp: " +
-			"unexpected ): `barquux)`"})
-	assert.Equal(t, expected, err.Error())
-
-	o.SkipAuthRegex = []string{"foobaz", "barquux)"}
-	err = Validate(o)
-	assert.NotEqual(t, nil, err)
-
-	expected = errorMsg([]string{
-		"error compiling regex=\"barquux)\" error parsing regexp: " +
-			"unexpected ): `barquux)`"})
-	assert.Equal(t, expected, err.Error())
-}
-
 func TestDefaultProviderApiSettings(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, Validate(o))
@@ -189,29 +160,6 @@ func TestDefaultProviderApiSettings(t *testing.T) {
 		p.RedeemURL.String())
 	assert.Equal(t, "", p.ProfileURL.String())
 	assert.Equal(t, "profile email", p.Scope)
-}
-
-func TestPassAccessTokenRequiresSpecificCookieSecretLengths(t *testing.T) {
-	o := testOptions()
-	assert.Equal(t, nil, Validate(o))
-
-	assert.Equal(t, false, o.PassAccessToken)
-	o.PassAccessToken = true
-	o.Cookie.Secret = "cookie of invalid length-"
-	assert.NotEqual(t, nil, Validate(o))
-
-	o.PassAccessToken = false
-	o.Cookie.Refresh = time.Duration(24) * time.Hour
-	assert.NotEqual(t, nil, Validate(o))
-
-	o.Cookie.Secret = "16 bytes AES-128"
-	assert.Equal(t, nil, Validate(o))
-
-	o.Cookie.Secret = "24 byte secret AES-192--"
-	assert.Equal(t, nil, Validate(o))
-
-	o.Cookie.Secret = "32 byte secret for AES-256------"
-	assert.Equal(t, nil, Validate(o))
 }
 
 func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
@@ -335,45 +283,6 @@ func TestRealClientIPHeader(t *testing.T) {
 	})
 	assert.Equal(t, expected, err.Error())
 	assert.Nil(t, o.GetRealClientIPParser())
-}
-
-func TestIPCIDRSetOption(t *testing.T) {
-	tests := []struct {
-		name       string
-		trustedIPs []string
-		err        error
-	}{
-		{
-			"TestSomeIPs",
-			[]string{"127.0.0.1", "10.32.0.1/32", "43.36.201.0/24", "::1", "2a12:105:ee7:9234:0:0:0:0/64"},
-			nil,
-		}, {
-			"TestOverlappingIPs",
-			[]string{"135.180.78.199", "135.180.78.199/32", "d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4", "d910:a5a1:16f8:ddf5:e5b9:5cef:a65e:41f4/128"},
-			nil,
-		}, {
-			"TestInvalidIPs",
-			[]string{"[::1]", "alkwlkbn/32"},
-			errors.New(
-				"invalid configuration:\n" +
-					"  trusted_ips[0] ([::1]) could not be recognized\n" +
-					"  trusted_ips[1] (alkwlkbn/32) could not be recognized",
-			),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			o := testOptions()
-			o.TrustedIPs = tt.trustedIPs
-			err := Validate(o)
-			if tt.err == nil {
-				assert.Nil(t, err)
-			} else {
-				assert.Equal(t, tt.err.Error(), err.Error())
-			}
-		})
-	}
 }
 
 func TestProviderCAFilesError(t *testing.T) {

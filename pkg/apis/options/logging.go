@@ -1,7 +1,7 @@
 package options
 
 import (
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/spf13/pflag"
 )
 

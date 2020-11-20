@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	pkgcookies "github.com/oauth2-proxy/oauth2-proxy/pkg/cookies"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/encryption"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	pkgcookies "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 const (
@@ -60,7 +60,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, errors.New("cookie signature not valid")
 	}
 
-	session, err := sessionFromCookie(val, s.CookieCipher)
+	session, err := sessions.DecodeSessionState(val, s.CookieCipher, true)
 	if err != nil {
 		return nil, err
 	}
@@ -96,20 +96,6 @@ func (s *SessionStore) cookieForSession(ss *sessions.SessionState) ([]byte, erro
 	}
 
 	return ss.EncodeSessionState(s.CookieCipher, true)
-}
-
-// sessionFromCookie deserializes a session from a cookie value
-func sessionFromCookie(v []byte, c encryption.Cipher) (s *sessions.SessionState, err error) {
-	ss, err := sessions.DecodeSessionState(v, c, true)
-	// If anything fails (Decrypt, LZ4, MessagePack), try legacy JSON decode
-	// LZ4 will likely fail for wrong header after AES-CFB spits out garbage
-	// data from trying to decrypt JSON it things is ciphertext
-	if err != nil {
-		// Legacy used Base64 + AES CFB
-		legacyCipher := encryption.NewBase64Cipher(c)
-		return sessions.LegacyV5DecodeSessionState(string(v), legacyCipher)
-	}
-	return ss, nil
 }
 
 // setSessionCookie adds the user's session cookie to the response

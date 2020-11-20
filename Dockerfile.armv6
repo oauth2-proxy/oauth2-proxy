@@ -1,8 +1,5 @@
-FROM golang:1.14-buster AS builder
+FROM golang:1.15-buster AS builder
 ARG VERSION
-
-# Download tools
-RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
@@ -23,7 +20,7 @@ COPY . .
 RUN VERSION=${VERSION} GOARCH=arm GOARM=6 make build && touch jwt_signing_key.pem
 
 # Copy binary to alpine
-FROM arm32v6/alpine:3.11
+FROM arm32v6/alpine:3.12
 COPY nsswitch.conf /etc/nsswitch.conf
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy

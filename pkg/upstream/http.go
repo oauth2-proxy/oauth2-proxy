@@ -6,10 +6,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/mbland/hmacauth"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/yhat/wsutil"
 )
 
@@ -98,9 +97,9 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// Configure options on the SingleHostReverseProxy
 	if upstream.FlushInterval != nil {
-		proxy.FlushInterval = *upstream.FlushInterval
+		proxy.FlushInterval = upstream.FlushInterval.Duration()
 	} else {
-		proxy.FlushInterval = 1 * time.Second
+		proxy.FlushInterval = options.DefaultUpstreamFlushInterval
 	}
 
 	// InsecureSkipVerify is a configurable option we allow

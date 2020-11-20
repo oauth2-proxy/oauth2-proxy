@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
 // GitHubProvider represents an GitHub based Identity Provider
@@ -100,6 +100,20 @@ func (p *GitHubProvider) SetRepo(repo, token string) {
 // SetUsers configures allowed usernames
 func (p *GitHubProvider) SetUsers(users []string) {
 	p.Users = users
+}
+
+// EnrichSessionState updates the User & Email after the initial Redeem
+func (p *GitHubProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
+	err := p.getEmail(ctx, s)
+	if err != nil {
+		return err
+	}
+	return p.getUser(ctx, s)
+}
+
+// ValidateSessionState validates the AccessToken
+func (p *GitHubProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
 }
 
 func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, error) {
@@ -364,8 +378,8 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 	return true, nil
 }
 
-// GetEmailAddress returns the Account email address
-func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+// getEmail updates the SessionState Email
+func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState) error {
 
 	var emails []struct {
 		Email    string `json:"email"`
@@ -379,11 +393,11 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 		var err error
 		verifiedUser, err = p.hasUser(ctx, s.AccessToken)
 		if err != nil {
-			return "", err
+			return err
 		}
 		// org and repository options are not configured
 		if !verifiedUser && p.Org == "" && p.Repo == "" {
-			return "", errors.New("missing github user")
+			return errors.New("missing github user")
 		}
 	}
 	// If a user is verified by username options, skip the following restrictions
@@ -391,16 +405,16 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 		if p.Org != "" {
 			if p.Team != "" {
 				if ok, err := p.hasOrgAndTeam(ctx, s.AccessToken); err != nil || !ok {
-					return "", err
+					return err
 				}
 			} else {
 				if ok, err := p.hasOrg(ctx, s.AccessToken); err != nil || !ok {
-					return "", err
+					return err
 				}
 			}
 		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
 			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
-				return "", err
+				return err
 			}
 		}
 	}
@@ -416,24 +430,23 @@ func (p *GitHubProvider) GetEmailAddress(ctx context.Context, s *sessions.Sessio
 		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	returnEmail := ""
 	for _, email := range emails {
 		if email.Verified {
-			returnEmail = email.Email
 			if email.Primary {
-				return returnEmail, nil
+				s.Email = email.Email
+				return nil
 			}
 		}
 	}
 
-	return returnEmail, nil
+	return nil
 }
 
-// GetUserName returns the Account user name
-func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionState) (string, error) {
+// getUser updates the SessionState User
+func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) error {
 	var user struct {
 		Login string `json:"login"`
 		Email string `json:"email"`
@@ -451,22 +464,18 @@ func (p *GitHubProvider) GetUserName(ctx context.Context, s *sessions.SessionSta
 		Do().
 		UnmarshalInto(&user)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// Now that we have the username we can check collaborator status
 	if !p.isVerifiedUser(user.Login) && p.Org == "" && p.Repo != "" && p.Token != "" {
 		if ok, err := p.isCollaborator(ctx, user.Login, p.Token); err != nil || !ok {
-			return "", err
+			return err
 		}
 	}
 
-	return user.Login, nil
-}
-
-// ValidateSessionState validates the AccessToken
-func (p *GitHubProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
-	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
+	s.User = user.Login
+	return nil
 }
 
 // isVerifiedUser
