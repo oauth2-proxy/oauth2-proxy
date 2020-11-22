@@ -404,6 +404,34 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	assert.Equal(t, true, verifiedIDToken == nil)
 }
 
+func Test_formatGroup(t *testing.T) {
+	testCases := map[string]struct {
+		RawGroup                    interface{}
+		ExpectedFormattedGroupValue string
+	}{
+		"String Group": {
+			RawGroup:                    "group",
+			ExpectedFormattedGroupValue: "group",
+		},
+		"Map Group": {
+			RawGroup:                    map[string]string{"id": "1", "name": "Test"},
+			ExpectedFormattedGroupValue: "{\"id\":\"1\",\"name\":\"Test\"}",
+		},
+		"List Group": {
+			RawGroup:                    []string{"First", "Second"},
+			ExpectedFormattedGroupValue: "[\"First\",\"Second\"]",
+		},
+	}
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			formattedGroup, err := formatGroup(tc.RawGroup)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.ExpectedFormattedGroupValue, formattedGroup)
+		})
+	}
+}
+
 func Test_extractRawGroupsFromClaim(t *testing.T) {
 	server, provider := newTestSetup([]byte(""))
 	defer server.Close()

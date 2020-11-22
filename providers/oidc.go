@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
@@ -293,10 +296,12 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 		groups = append(groups, strconv.Itoa(rawGroups))
 	case []interface{}:
 		for _, rawGroup := range rawGroups {
-			group, ok := rawGroup.(string)
-			if ok {
-				groups = append(groups, group)
+			formattedGroup, err := formatGroup(rawGroup)
+			if err != nil {
+				logger.Errorf("unable to format group of type %s with error %s", reflect.TypeOf(rawGroup), err)
+				continue
 			}
+			groups = append(groups, formattedGroup)
 		}
 	}
 	return groups
