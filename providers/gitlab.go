@@ -249,12 +249,7 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 		return fmt.Errorf("user email is not verified")
 	}
 
-	// Check group membership
-	// TODO (@NickMeves) - Refactor to Authorize
-	err = p.verifyGroupMembership(userInfo)
-	if err != nil {
-		return fmt.Errorf("group membership check failed: %v", err)
-	}
+	p.addGroupMembershipToState(ctx, s)
 
 	p.addProjectMembershipToState(ctx, s)
 
@@ -262,6 +257,19 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 	s.Email = userInfo.Email
 
 	return nil
+
+}
+
+// addProjectMembership adds projects into session.Groups
+func (p *GitLabProvider) addGroupMembershipToState(ctx context.Context, s *sessions.SessionState) {
+	if len(p.Groups) == 0 {
+		return
+	}
+
+	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
+	for _, group := range p.Groups {
+		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
+	}
 
 }
 

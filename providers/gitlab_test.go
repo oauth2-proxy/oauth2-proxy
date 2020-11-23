@@ -185,10 +185,6 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				expectedValue: nil,
 				groups:        []string{"foo"},
 			}),
-			Entry("group membership invalid", entitiesTableInput{
-				expectedError: errors.New("group membership check failed: user is not a member of '[baz]'"),
-				groups:        []string{"baz"},
-			}),
 		)
 
 	})
