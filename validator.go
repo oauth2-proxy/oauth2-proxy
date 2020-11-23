@@ -83,7 +83,7 @@ func newValidatorImpl(domains []string, usersFile string,
 			allowAll = true
 			continue
 		}
-		domains[i] = fmt.Sprintf("@%s", strings.ToLower(domain))
+		domains[i] = strings.Replace(strings.ToLower(domain), "*", "[A-Za-z0-9._%+-@]+", -1)
 	}
 
 	validator := func(email string) (valid bool) {
@@ -92,7 +92,8 @@ func newValidatorImpl(domains []string, usersFile string,
 		}
 		email = strings.ToLower(email)
 		for _, domain := range domains {
-			valid = valid || strings.HasSuffix(email, domain)
+			regexValid, _ := regexp.MatchString(domain, email)
+			valid = valid || regexValid || strings.HasSuffix(email, domain)
 		}
 		if !valid {
 			valid = validUsers.IsValid(email)

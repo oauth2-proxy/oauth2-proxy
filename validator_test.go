@@ -209,3 +209,56 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 		t.Error("email added to list should validate")
 	}
 }
+
+func TestValidatorMultipleEmailsRegexMultipleDomains(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	vt.WriteEmails(t, []string{
+		"xyzzy@example.com",
+		"plugh@example.com",
+	})
+	domains := []string{"*example0.com", "*example1.com"}
+	validator := vt.NewValidator(domains, nil)
+
+	if !validator("foo.bar@example0.com") {
+		t.Error("email from first regex domain should validate")
+	}
+	if !validator("baz.quux@example1.com") {
+		t.Error("email from second regex domain should validate")
+	}
+	if !validator("xyzzy@example.com") {
+		t.Error("first email in list should validate")
+	}
+	if !validator("plugh@example.com") {
+		t.Error("second email in list should validate")
+	}
+	if validator("xyzzy.plugh@example.com") {
+		t.Error("email not in list that matches no domains " +
+			"should not validate")
+	}
+}
+
+func TestValidatorRegexMultipleSubDomains(t *testing.T) {
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
+	vt.WriteEmails(t, []string(nil))
+	domains := []string{"*@us.example.com", "*@de.example.com"}
+	validator := vt.NewValidator(domains, nil)
+
+	if !validator("xyzzy@us.example.com") {
+		t.Error("email from first regex domain should validate")
+	}
+	if !validator("xyzzy@de.example.com") {
+		t.Error("email from second regex domain should validate")
+	}
+	if validator("global@au.example.com") {
+		t.Error("email not in list that matches no domains " +
+			"should not validate")
+	}
+	if validator("global@example.com") {
+		t.Error("email not in list that matches no domains " +
+			"should not validate")
+	}
+}
