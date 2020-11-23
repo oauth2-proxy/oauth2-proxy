@@ -159,27 +159,6 @@ func (p *GitLabProvider) getUserInfo(ctx context.Context, s *sessions.SessionSta
 	return &userInfo, nil
 }
 
-func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
-	if len(p.Groups) == 0 {
-		return nil
-	}
-
-	// Collect user group memberships
-	membershipSet := make(map[string]bool)
-	for _, group := range userInfo.Groups {
-		membershipSet[group] = true
-	}
-
-	// Find a valid group that they are a member of
-	for _, validGroup := range p.Groups {
-		if _, ok := membershipSet[validGroup]; ok {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("user is not a member of '%s'", p.Groups)
-}
-
 type gitlabProjectInfo struct {
 	Name              string `json:"name"`
 	Archived          bool   `json:"archived"`
