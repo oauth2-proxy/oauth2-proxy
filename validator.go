@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"unsafe"
