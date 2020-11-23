@@ -450,10 +450,6 @@ func Test_extractRawGroupsFromClaim(t *testing.T) {
 			RawClaims: map[string]interface{}{"groups": "one_group"},
 			Groups:    []string{"one_group"},
 		},
-		"NumberGroup": {
-			RawClaims: map[string]interface{}{"groups": 42},
-			Groups:    []string{"42"},
-		},
 	}
 
 	for testName, tc := range testCases {

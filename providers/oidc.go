@@ -5,16 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
-
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
@@ -292,8 +290,6 @@ func (p *OIDCProvider) extractGroupsFromRawClaims(rawClaims map[string]interface
 		groups = append(groups, rawGroups...)
 	case string:
 		groups = append(groups, rawGroups)
-	case int:
-		groups = append(groups, strconv.Itoa(rawGroups))
 	case []interface{}:
 		for _, rawGroup := range rawGroups {
 			formattedGroup, err := formatGroup(rawGroup)
