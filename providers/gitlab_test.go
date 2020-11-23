@@ -143,7 +143,6 @@ var _ = Describe("Gitlab Provider Tests", func() {
 
 	Context("when filtering on gitlab entities (groups and projects)", func() {
 		type entitiesTableInput struct {
-			expectedError error
 			expectedValue []string
 			projects      []string
 			groups        []string
@@ -163,30 +162,51 @@ var _ = Describe("Gitlab Provider Tests", func() {
 
 				err := p.EnrichSession(context.Background(), session)
 
-				if in.expectedError != nil {
-					Expect(err).To(MatchError(in.expectedError))
-				} else {
-					Expect(err).To(BeNil())
-					Expect(session.Groups).To(Equal(in.expectedValue))
-				}
+				Expect(err).To(BeNil())
+				Expect(session.Groups).To(Equal(in.expectedValue))
 			},
 			Entry("project membership valid", entitiesTableInput{
-				expectedError: nil,
-				expectedValue: []string{"my_group/my_project"},
+				expectedValue: []string{"project:my_group/my_project"},
 				projects:      []string{"my_group/my_project"},
 			}),
 			Entry("project membership invalid", entitiesTableInput{
-				expectedError: nil,
 				expectedValue: nil,
 				projects:      []string{"my_group/my_bad_project"},
 			}),
 			Entry("group membership valid", entitiesTableInput{
-				expectedError: nil,
-				expectedValue: nil,
+				expectedValue: []string{"group:foo"},
 				groups:        []string{"foo"},
 			}),
 		)
 
 	})
 
+	Context("when generating group list from multiple kind", func() {
+		type entitiesTableInput struct {
+			projects []string
+			groups   []string
+		}
+
+		DescribeTable("should prefix entities with group kind", func(in entitiesTableInput) {
+			p.Groups = in.groups
+			p.Projects = in.projects
+
+			all := p.PrefixAllowedGroups()
+
+			Expect(len(all)).To(Equal(len(in.projects) + len(in.groups)))
+		},
+			Entry("simple test case", entitiesTableInput{
+				projects: []string{"my_group/my_project", "my_group/my_other_project"},
+				groups:   []string{"mygroup", "myothergroup"},
+			}),
+			Entry("projects only", entitiesTableInput{
+				projects: []string{"my_group/my_project", "my_group/my_other_project"},
+				groups:   []string{},
+			}),
+			Entry("groups only", entitiesTableInput{
+				projects: []string{},
+				groups:   []string{"mygroup", "myothergroup"},
+			}),
+		)
+	})
 })

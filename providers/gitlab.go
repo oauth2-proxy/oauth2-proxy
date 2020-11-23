@@ -284,7 +284,7 @@ func (p *GitLabProvider) addProjectMembershipToState(ctx context.Context, s *ses
 		project, err := p.getProjectInfo(ctx, s, project)
 		// If no error, it's a member of the project
 		if err == nil && !project.Archived {
-			s.Groups = append(s.Groups, project.PathWithNamespace)
+			s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.PathWithNamespace))
 		}
 
 		if err != nil {
@@ -296,5 +296,20 @@ func (p *GitLabProvider) addProjectMembershipToState(ctx context.Context, s *ses
 		}
 
 	}
+
+}
+
+// PrefixAllowedGroups return a list of allowed groups, prefixed by their `kind` value
+func (p *GitLabProvider) PrefixAllowedGroups() (groups []string) {
+
+	for _, val := range p.Groups {
+		groups = append(groups, fmt.Sprintf("group:%s", val))
+	}
+
+	for _, val := range p.Projects {
+		groups = append(groups, fmt.Sprintf("project:%s", val))
+	}
+
+	return groups
 
 }

@@ -283,8 +283,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
 		p.Projects = o.GitlabProjects
-		// TODO (@NickMeves): merge groups and projects when calling allowed groups - Refactor to Authorize
-		p.SetAllowedGroups(o.GitlabProjects)
+		p.SetAllowedGroups(p.PrefixAllowedGroups())
 		p.SetProjectScope()
 		p.EmailDomains = o.EmailDomains
 
