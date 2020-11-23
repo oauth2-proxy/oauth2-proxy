@@ -3,7 +3,6 @@ package validation
 import (
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
@@ -70,7 +69,7 @@ func validateStaticUpstream(upstream options.Upstream) []string {
 	if upstream.InsecureSkipTLSVerify {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has insecureSkipTLSVerify, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if upstream.FlushInterval != nil && *upstream.FlushInterval != time.Second {
+	if upstream.FlushInterval != nil && upstream.FlushInterval.Duration() != options.DefaultUpstreamFlushInterval {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has flushInterval, but is a static upstream, this will have no effect.", upstream.ID))
 	}
 	if upstream.PassHostHeader != nil {

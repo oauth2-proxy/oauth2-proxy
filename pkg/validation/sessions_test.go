@@ -13,10 +13,9 @@ import (
 
 var _ = Describe("Sessions", func() {
 	const (
-		passAuthorizationMsg = "pass_authorization_header requires oauth tokens in sessions. session_cookie_minimal cannot be set"
-		setAuthorizationMsg  = "set_authorization_header requires oauth tokens in sessions. session_cookie_minimal cannot be set"
-		passAccessTokenMsg   = "pass_access_token requires oauth tokens in sessions. session_cookie_minimal cannot be set"
-		cookieRefreshMsg     = "cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		idTokenConflictMsg     = "id_token claim for header \"X-ID-Token\" requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		accessTokenConflictMsg = "access_token claim for header \"X-Access-Token\" requires oauth tokens in sessions. session_cookie_minimal cannot be set"
+		cookieRefreshMsg       = "cookie_refresh > 0 requires oauth tokens in sessions. session_cookie_minimal cannot be set"
 	)
 
 	type cookieMinimalTableInput struct {
@@ -38,14 +37,25 @@ var _ = Describe("Sessions", func() {
 			},
 			errStrings: []string{},
 		}),
-		Entry("No minimal cookie session & passAuthorization", &cookieMinimalTableInput{
+		Entry("No minimal cookie session & request header has access_token claim", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: false,
 					},
 				},
-				PassAuthorization: true,
+				InjectRequestHeaders: []options.Header{
+					{
+						Name: "X-Access-Token",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "access_token",
+								},
+							},
+						},
+					},
+				},
 			},
 			errStrings: []string{},
 		}),
@@ -59,38 +69,71 @@ var _ = Describe("Sessions", func() {
 			},
 			errStrings: []string{},
 		}),
-		Entry("PassAuthorization conflict", &cookieMinimalTableInput{
+		Entry("Request Header id_token conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: true,
 					},
 				},
-				PassAuthorization: true,
+				InjectRequestHeaders: []options.Header{
+					{
+						Name: "X-ID-Token",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "id_token",
+								},
+							},
+						},
+					},
+				},
 			},
-			errStrings: []string{passAuthorizationMsg},
+			errStrings: []string{idTokenConflictMsg},
 		}),
-		Entry("SetAuthorization conflict", &cookieMinimalTableInput{
+		Entry("Response Header id_token conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: true,
 					},
 				},
-				SetAuthorization: true,
+				InjectResponseHeaders: []options.Header{
+					{
+						Name: "X-ID-Token",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "id_token",
+								},
+							},
+						},
+					},
+				},
 			},
-			errStrings: []string{setAuthorizationMsg},
+			errStrings: []string{idTokenConflictMsg},
 		}),
-		Entry("PassAccessToken conflict", &cookieMinimalTableInput{
+		Entry("Request Header access_token conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: true,
 					},
 				},
-				PassAccessToken: true,
+				InjectRequestHeaders: []options.Header{
+					{
+						Name: "X-Access-Token",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "access_token",
+								},
+							},
+						},
+					},
+				},
 			},
-			errStrings: []string{passAccessTokenMsg},
+			errStrings: []string{accessTokenConflictMsg},
 		}),
 		Entry("CookieRefresh conflict", &cookieMinimalTableInput{
 			opts: &options.Options{
@@ -112,17 +155,39 @@ var _ = Describe("Sessions", func() {
 						Minimal: true,
 					},
 				},
-				PassAuthorization: true,
-				PassAccessToken:   true,
+				InjectResponseHeaders: []options.Header{
+					{
+						Name: "X-ID-Token",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "id_token",
+								},
+							},
+						},
+					},
+				},
+				InjectRequestHeaders: []options.Header{
+					{
+						Name: "X-Access-Token",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "access_token",
+								},
+							},
+						},
+					},
+				},
 			},
-			errStrings: []string{passAuthorizationMsg, passAccessTokenMsg},
+			errStrings: []string{idTokenConflictMsg, accessTokenConflictMsg},
 		}),
 	)
 
 	const (
 		clusterAndSentinelMsg     = "unable to initialize a redis client: options redis-use-sentinel and redis-use-cluster are mutually exclusive"
-		parseWrongSchemeMsg       = "unable to initialize a redis client: unable to parse redis url: invalid redis URL scheme: https"
-		parseWrongFormatMsg       = "unable to initialize a redis client: unable to parse redis url: invalid redis database number: \"wrong\""
+		parseWrongSchemeMsg       = "unable to initialize a redis client: unable to parse redis url: redis: invalid URL scheme: https"
+		parseWrongFormatMsg       = "unable to initialize a redis client: unable to parse redis url: redis: invalid database number: \"wrong\""
 		invalidPasswordSetMsg     = "unable to set a redis initialization key: WRONGPASS invalid username-password pair"
 		invalidPasswordDelMsg     = "unable to delete the redis initialization key: WRONGPASS invalid username-password pair"
 		unreachableRedisSetMsg    = "unable to set a redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"

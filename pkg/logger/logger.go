@@ -162,7 +162,7 @@ func (l *Logger) Output(lvl Level, calldepth int, message string) {
 	if !l.stdEnabled {
 		return
 	}
-	msg := l.formatLogMessage(calldepth, message)
+	msg := l.formatLogMessage(calldepth+1, message)
 
 	var err error
 	switch lvl {

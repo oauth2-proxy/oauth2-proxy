@@ -22,8 +22,8 @@ import (
 
 var _ = Describe("HTTP Upstream Suite", func() {
 
-	const flushInterval5s = 5 * time.Second
-	const flushInterval1s = 1 * time.Second
+	const flushInterval5s = options.Duration(5 * time.Second)
+	const flushInterval1s = options.Duration(1 * time.Second)
 	truth := true
 	falsum := false
 
@@ -52,7 +52,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			rw := httptest.NewRecorder()
 
-			flush := 1 * time.Second
+			flush := options.Duration(1 * time.Second)
 
 			upstream := options.Upstream{
 				ID:                    in.id,
@@ -258,7 +258,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		req := httptest.NewRequest("", "http://example.localhost/foo", nil)
 		rw := httptest.NewRecorder()
 
-		flush := 1 * time.Second
+		flush := options.Duration(1 * time.Second)
 		upstream := options.Upstream{
 			ID:                    "noPassHost",
 			PassHostHeader:        &falsum,
@@ -290,7 +290,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 	type newUpstreamTableInput struct {
 		proxyWebSockets bool
-		flushInterval   time.Duration
+		flushInterval   options.Duration
 		skipVerify      bool
 		sigData         *options.SignatureData
 		errorHandler    func(http.ResponseWriter, *http.Request, error)
@@ -319,7 +319,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			proxy, ok := upstreamProxy.handler.(*httputil.ReverseProxy)
 			Expect(ok).To(BeTrue())
-			Expect(proxy.FlushInterval).To(Equal(in.flushInterval))
+			Expect(proxy.FlushInterval).To(Equal(in.flushInterval.Duration()))
 			Expect(proxy.ErrorHandler != nil).To(Equal(in.errorHandler != nil))
 			if in.skipVerify {
 				Expect(proxy.Transport).To(Equal(&http.Transport{
@@ -370,7 +370,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		var proxyServer *httptest.Server
 
 		BeforeEach(func() {
-			flush := 1 * time.Second
+			flush := options.Duration(1 * time.Second)
 			upstream := options.Upstream{
 				ID:                    "websocketProxy",
 				PassHostHeader:        &truth,

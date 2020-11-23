@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 // Client is wrapper interface for redis.Client and redis.ClusterClient.
@@ -25,15 +25,15 @@ func newClient(c *redis.Client) Client {
 }
 
 func (c *client) Get(ctx context.Context, key string) ([]byte, error) {
-	return c.WithContext(ctx).Get(key).Bytes()
+	return c.Client.Get(ctx, key).Bytes()
 }
 
 func (c *client) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {
-	return c.WithContext(ctx).Set(key, value, expiration).Err()
+	return c.Client.Set(ctx, key, value, expiration).Err()
 }
 
 func (c *client) Del(ctx context.Context, key string) error {
-	return c.WithContext(ctx).Del(key).Err()
+	return c.Client.Del(ctx, key).Err()
 }
 
 var _ Client = (*clusterClient)(nil)
@@ -47,13 +47,13 @@ func newClusterClient(c *redis.ClusterClient) Client {
 }
 
 func (c *clusterClient) Get(ctx context.Context, key string) ([]byte, error) {
-	return c.WithContext(ctx).Get(key).Bytes()
+	return c.ClusterClient.Get(ctx, key).Bytes()
 }
 
 func (c *clusterClient) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {
-	return c.WithContext(ctx).Set(key, value, expiration).Err()
+	return c.ClusterClient.Set(ctx, key, value, expiration).Err()
 }
 
 func (c *clusterClient) Del(ctx context.Context, key string) error {
-	return c.WithContext(ctx).Del(key).Err()
+	return c.ClusterClient.Del(ctx, key).Err()
 }

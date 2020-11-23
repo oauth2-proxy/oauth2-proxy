@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	admin "google.golang.org/api/admin/directory/v1"
@@ -109,21 +110,50 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	assert.Equal(t, "refresh12345", session.RefreshToken)
 }
 
-func TestGoogleProviderValidateGroup(t *testing.T) {
-	p := newGoogleProvider()
-	p.GroupValidator = func(email string) bool {
-		return email == "michael.bland@gsa.gov"
-	}
-	assert.Equal(t, true, p.ValidateGroup("michael.bland@gsa.gov"))
-	p.GroupValidator = func(email string) bool {
-		return email != "michael.bland@gsa.gov"
-	}
-	assert.Equal(t, false, p.ValidateGroup("michael.bland@gsa.gov"))
-}
+func TestGoogleProviderGroupValidator(t *testing.T) {
+	const sessionEmail = "michael.bland@gsa.gov"
 
-func TestGoogleProviderWithoutValidateGroup(t *testing.T) {
-	p := newGoogleProvider()
-	assert.Equal(t, true, p.ValidateGroup("michael.bland@gsa.gov"))
+	testCases := map[string]struct {
+		session       *sessions.SessionState
+		validatorFunc func(*sessions.SessionState) bool
+		expectedAuthZ bool
+	}{
+		"Email is authorized with groupValidator": {
+			session: &sessions.SessionState{
+				Email: sessionEmail,
+			},
+			validatorFunc: func(s *sessions.SessionState) bool {
+				return s.Email == sessionEmail
+			},
+			expectedAuthZ: true,
+		},
+		"Email is denied with groupValidator": {
+			session: &sessions.SessionState{
+				Email: sessionEmail,
+			},
+			validatorFunc: func(s *sessions.SessionState) bool {
+				return s.Email != sessionEmail
+			},
+			expectedAuthZ: false,
+		},
+		"Default does no authorization checks": {
+			session: &sessions.SessionState{
+				Email: sessionEmail,
+			},
+			validatorFunc: nil,
+			expectedAuthZ: true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			p := newGoogleProvider()
+			if tc.validatorFunc != nil {
+				p.groupValidator = tc.validatorFunc
+			}
+			g.Expect(p.groupValidator(tc.session)).To(Equal(tc.expectedAuthZ))
+		})
+	}
 }
 
 //
@@ -196,7 +226,7 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 
 }
 
-func TestGoogleProviderUserInGroup(t *testing.T) {
+func TestGoogleProvider_userInGroup(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/groups/group@example.com/hasMember/member-in-domain@example.com" {
 			fmt.Fprintln(w, `{"isMember": true}`)
@@ -233,18 +263,19 @@ func TestGoogleProviderUserInGroup(t *testing.T) {
 	ctx := context.Background()
 
 	service, err := admin.NewService(ctx, option.WithHTTPClient(client))
+	assert.NoError(t, err)
+
 	service.BasePath = ts.URL
-	assert.Equal(t, nil, err)
 
-	result := userInGroup(service, []string{"group@example.com"}, "member-in-domain@example.com")
+	result := userInGroup(service, "group@example.com", "member-in-domain@example.com")
 	assert.True(t, result)
 
-	result = userInGroup(service, []string{"group@example.com"}, "member-out-of-domain@otherexample.com")
+	result = userInGroup(service, "group@example.com", "member-out-of-domain@otherexample.com")
 	assert.True(t, result)
 
-	result = userInGroup(service, []string{"group@example.com"}, "non-member-in-domain@example.com")
+	result = userInGroup(service, "group@example.com", "non-member-in-domain@example.com")
 	assert.False(t, result)
 
-	result = userInGroup(service, []string{"group@example.com"}, "non-member-out-of-domain@otherexample.com")
+	result = userInGroup(service, "group@example.com", "non-member-out-of-domain@otherexample.com")
 	assert.False(t, result)
 }
