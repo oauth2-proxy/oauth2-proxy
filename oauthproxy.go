@@ -56,6 +56,12 @@ type allowedRoute struct {
 	pathRegex *regexp.Regexp
 }
 
+// allowedHeader manages header + value based allowlists
+type allowedHeader struct {
+	header string
+	value  *regexp.Regexp
+}
+
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
 	CookieSeed     string
@@ -79,6 +85,7 @@ type OAuthProxy struct {
 	UserInfoPath      string
 
 	allowedRoutes           []allowedRoute
+	allowedHeaders          []allowedHeader
 	redirectURL             *url.URL // the url to receive requests at
 	whitelistDomains        []string
 	provider                providers.Provider
@@ -171,6 +178,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
+	allowedHeaders, err := buildHeadersAllowlist(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	preAuthChain, err := buildPreAuthChain(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
@@ -209,6 +221,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		serveMux:                upstreamProxy,
 		redirectURL:             redirectURL,
 		allowedRoutes:           allowedRoutes,
+		allowedHeaders:          allowedHeaders,
 		whitelistDomains:        opts.WhitelistDomains,
 		skipAuthPreflight:       opts.SkipAuthPreflight,
 		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
@@ -374,6 +387,44 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 	}
 
 	return routes, nil
+}
+
+// buildHeadersAllowlist builds an []allowedHeader list from the SkipAuthHeaders and LegacySkipAuthHeaders options
+func buildHeadersAllowlist(opts *options.Options) ([]allowedHeader, error) {
+	var allowedHeaders []allowedHeader
+	appendAllowedHeader := func(allowedHeaders []allowedHeader, header string, value string) ([]allowedHeader, error) {
+		valueRegex, err := regexp.Compile(value)
+		if err != nil {
+			return allowedHeaders, err
+		}
+		allowedHeaders = append(allowedHeaders, allowedHeader{
+			header: header,
+			value:  valueRegex,
+		})
+		return allowedHeaders, nil
+	}
+
+	for _, header := range opts.SkipAuthHeaders {
+		for _, value := range header.Values {
+			var err error
+			if allowedHeaders, err = appendAllowedHeader(allowedHeaders, header.Name, value.Claim); err != nil {
+				return []allowedHeader{}, err
+			}
+		}
+	}
+
+	for _, header := range opts.LegacySkipAuthHeaders {
+		headerParts := strings.SplitN(header, ":", 2)
+		if len(headerParts) != 2 {
+			return []allowedHeader{}, fmt.Errorf("invalid format for LegacySkipAuthHeaders: expected header:value but got \"%s\"", header)
+		}
+		var err error
+		if allowedHeaders, err = appendAllowedHeader(allowedHeaders, headerParts[0], headerParts[1]); err != nil {
+			return []allowedHeader{}, err
+		}
+	}
+
+	return allowedHeaders, nil
 }
 
 // GetRedirectURI returns the redirectURL that the upstream OAuth Provider will
@@ -683,7 +734,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 // IsAllowedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.IsTrustedIP(req)
+	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.isAllowedHeader(req) || p.IsTrustedIP(req)
 }
 
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
@@ -691,6 +742,23 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
 		if (route.method == "" || req.Method == route.method) && route.pathRegex.MatchString(req.URL.Path) {
 			return true
+		}
+	}
+	return false
+}
+
+// isAllowedHeader is used to check if a header that allows the request to proceed without auth is set
+func (p *OAuthProxy) isAllowedHeader(req *http.Request) bool {
+	for header, values := range req.Header {
+		for _, allowedHeader := range p.allowedHeaders {
+			if strings.ToLower(header) != strings.ToLower(allowedHeader.header) {
+				continue
+			}
+			for _, value := range values {
+				if allowedHeader.value.MatchString(value) {
+					return true
+				}
+			}
 		}
 	}
 	return false
@@ -744,7 +812,11 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 	case path == p.RobotsPath:
 		p.RobotsTxt(rw)
 	case p.IsAllowedRequest(req):
-		p.SkipAuthProxy(rw, req)
+		if path == p.AuthOnlyPath {
+			rw.WriteHeader(http.StatusAccepted)
+		} else {
+			p.SkipAuthProxy(rw, req)
+		}
 	case path == p.SignInPath:
 		p.SignIn(rw, req)
 	case path == p.SignOutPath:

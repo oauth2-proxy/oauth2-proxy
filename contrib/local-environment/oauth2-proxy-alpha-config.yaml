@@ -15,3 +15,7 @@ injectRequestHeaders:
 - name: X-Forwarded-Preferred-Username
   values:
   - claim: preferred_username
+skipAuthHeaders:
+- name: X-Secret-Header
+  values:
+  - claim: '^t?opSecret$'

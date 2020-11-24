@@ -28,6 +28,10 @@ type AlphaOptions struct {
 	// Headers may source values from either the authenticated user's session
 	// or from a static secret value.
 	InjectResponseHeaders []Header `json:"injectResponseHeaders,omitempty"`
+
+	// SkipAuthHeaders is used to configure headers that will cause the request to bypass authentication.
+	// Note that configured header values will be compared as regular expressions.
+	SkipAuthHeaders []Header `json:"skipAuthHeaders,omitempty"`
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -36,6 +40,7 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.UpstreamServers = a.Upstreams
 	opts.InjectRequestHeaders = a.InjectRequestHeaders
 	opts.InjectResponseHeaders = a.InjectResponseHeaders
+	opts.SkipAuthHeaders = a.SkipAuthHeaders
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from
@@ -44,4 +49,5 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.Upstreams = opts.UpstreamServers
 	a.InjectRequestHeaders = opts.InjectRequestHeaders
 	a.InjectResponseHeaders = opts.InjectResponseHeaders
+	a.SkipAuthHeaders = opts.SkipAuthHeaders
 }
