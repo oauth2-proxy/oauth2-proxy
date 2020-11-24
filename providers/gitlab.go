@@ -241,10 +241,6 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 
 // addGroupsToSession projects into session.Groups
 func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.SessionState) {
-	if len(p.Groups) == 0 {
-		return
-	}
-
 	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
 	for _, group := range p.Groups {
 		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
@@ -254,10 +250,6 @@ func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.Ses
 
 // addProjectsToSession projects into session.Groups
 func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.SessionState) {
-	if len(p.Projects) == 0 {
-		return
-	}
-
 	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
 	for _, project := range p.Projects {
 		project, err := p.getProjectInfo(ctx, s, project)
