@@ -283,6 +283,10 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
 		p.Projects = o.GitlabProjects
+		err := p.SetProjectAccessLevel(o.GitlabProjectAccessLevel)
+		if err != nil {
+			msgs = append(msgs, "failed to setup gitlab project access level")
+		}
 		p.SetAllowedGroups(p.PrefixAllowedGroups())
 		p.SetProjectScope()
 		p.EmailDomains = o.EmailDomains

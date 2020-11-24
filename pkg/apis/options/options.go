@@ -49,6 +49,7 @@ type Options struct {
 	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
 	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
 	GitlabProjects           []string `flag:"gitlab-project" cfg:"gitlab_projects"`
+	GitlabProjectAccessLevel int      `flag:"gitlab-project-access-level" cfg:"gitlab_project_access_level"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
@@ -190,6 +191,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project`)")
+	flagSet.Int("gitlab-project-access-level", 20, "restrict logins to users with this minimum project access level see https://docs.gitlab.com/ee/api/members.html#valid-access-levels) (default 20)")
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")

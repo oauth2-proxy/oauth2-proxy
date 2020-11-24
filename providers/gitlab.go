@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -18,9 +19,10 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Groups       []string
-	Projects     []string
-	EmailDomains []string
+	Groups             []string
+	Projects           []string
+	projectAccessLevel int
+	EmailDomains       []string
 
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
@@ -77,6 +79,20 @@ func (p *GitLabProvider) SetProjectScope() {
 			p.Scope += " read_api"
 		}
 	}
+}
+
+// SetProjectAccessLevel sets the project access level from the options and check if value is valid
+func (p *GitLabProvider) SetProjectAccessLevel(targetLevel int) error {
+	// see https://docs.gitlab.com/ee/api/members.html#valid-access-levels
+	// 50 is not supported while there is an issue with it on gitlab
+	for _, level := range []int{10, 20, 30, 40} {
+		if level == targetLevel {
+			p.projectAccessLevel = targetLevel
+			return nil
+		}
+	}
+
+	return errors.New("error invalid gitlab project access level specified")
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -159,10 +175,20 @@ func (p *GitLabProvider) getUserInfo(ctx context.Context, s *sessions.SessionSta
 	return &userInfo, nil
 }
 
+type gitlabPermissionAccess struct {
+	AccessLevel int `json:"access_level"`
+}
+
+type gitlabProjectPermission struct {
+	ProjectAccess *gitlabPermissionAccess `json:"project_access"`
+	GroupAccess   *gitlabPermissionAccess `json:"group_access"`
+}
+
 type gitlabProjectInfo struct {
-	Name              string `json:"name"`
-	Archived          bool   `json:"archived"`
-	PathWithNamespace string `json:"path_with_namespace"`
+	Name              string                  `json:"name"`
+	Archived          bool                    `json:"archived"`
+	PathWithNamespace string                  `json:"path_with_namespace"`
+	Permissions       gitlabProjectPermission `json:"permissions"`
 }
 
 func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.SessionState, project string) (*gitlabProjectInfo, error) {
@@ -253,9 +279,20 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
 	for _, project := range p.Projects {
 		project, err := p.getProjectInfo(ctx, s, project)
-		// If no error, it's a member of the project
+
 		if err == nil && !project.Archived {
-			s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.PathWithNamespace))
+			// try first with project access
+			perms := project.Permissions.ProjectAccess
+			if perms == nil {
+				// use group project access as fallback
+				perms = project.Permissions.GroupAccess
+			}
+
+			if perms.AccessLevel >= p.projectAccessLevel {
+				s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.PathWithNamespace))
+			} else {
+				logger.Printf("Warning: user do not have the minimum required access level %s", project.Name)
+			}
 		}
 
 		if err != nil {

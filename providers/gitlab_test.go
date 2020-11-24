@@ -29,6 +29,8 @@ func testGitLabProvider(hostname string) *GitLabProvider {
 		updateURL(p.Data().ValidateURL, hostname)
 	}
 
+	p.SetProjectAccessLevel(10)
+
 	return p
 }
 
@@ -45,9 +47,32 @@ func testGitLabBackend() *httptest.Server {
 		{
 			"name": "MyProject",
 			"archived": false,
-			"path_with_namespace": "my_group/my_project"
+			"path_with_namespace": "my_group/my_project",
+			"permissions": {
+				"project_access": null,
+				"group_access": {
+					"access_level": 30,
+					"notification_level": 3
+				}
+			}
 		}
 	`
+
+	personalProjectInfo := `
+		{
+			"name": "MyPersonalProject",
+			"archived": false,
+			"path_with_namespace": "my_profile/my_personal_project",
+			"permissions": {
+				"project_access": {
+					"access_level": 30,
+					"notification_level": 3
+				},
+				"group_access": null
+			}
+		}
+	`
+
 	authHeader := "Bearer gitlab_access_token"
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -64,6 +89,13 @@ func testGitLabBackend() *httptest.Server {
 				if r.Header["Authorization"][0] == authHeader {
 					w.WriteHeader(200)
 					w.Write([]byte(projectInfo))
+				} else {
+					w.WriteHeader(401)
+				}
+			case "/api/v4/projects/my_profile/my_personal_project":
+				if r.Header["Authorization"][0] == authHeader {
+					w.WriteHeader(200)
+					w.Write([]byte(personalProjectInfo))
 				} else {
 					w.WriteHeader(401)
 				}
@@ -146,6 +178,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			expectedValue []string
 			projects      []string
 			groups        []string
+			levelAccess   int
 		}
 
 		DescribeTable("should return expected results",
@@ -156,6 +189,11 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				p.Projects = in.projects
 				p.SetProjectScope()
 
+				// change default access level if needed
+				if in.levelAccess != 0 {
+					p.SetProjectAccessLevel(in.levelAccess)
+				}
+
 				if len(in.groups) > 0 {
 					p.Groups = in.groups
 				}
@@ -165,9 +203,23 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				Expect(err).To(BeNil())
 				Expect(session.Groups).To(Equal(in.expectedValue))
 			},
-			Entry("project membership valid", entitiesTableInput{
+			Entry("project membership valid on group project", entitiesTableInput{
 				expectedValue: []string{"project:my_group/my_project"},
 				projects:      []string{"my_group/my_project"},
+			}),
+			Entry("project membership invalid on group project, insufficient access level level", entitiesTableInput{
+				expectedValue: nil,
+				projects:      []string{"my_group/my_project"},
+				levelAccess:   40,
+			}),
+			Entry("project membership valid on personnal project", entitiesTableInput{
+				expectedValue: []string{"project:my_profile/my_personal_project"},
+				projects:      []string{"my_profile/my_personal_project"},
+			}),
+			Entry("project membership invalid on personnal project, insufficient access level", entitiesTableInput{
+				expectedValue: nil,
+				projects:      []string{"my_profile/my_personal_project"},
+				levelAccess:   40,
 			}),
 			Entry("project membership invalid", entitiesTableInput{
 				expectedValue: nil,
