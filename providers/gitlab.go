@@ -228,9 +228,9 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 		return fmt.Errorf("user email is not verified")
 	}
 
-	p.addGroupMembershipToState(ctx, s)
+	p.addGroupsToSession(ctx, s)
 
-	p.addProjectMembershipToState(ctx, s)
+	p.addProjectsToSession(ctx, s)
 
 	s.User = userInfo.Username
 	s.Email = userInfo.Email
@@ -239,8 +239,8 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 
 }
 
-// addProjectMembership adds projects into session.Groups
-func (p *GitLabProvider) addGroupMembershipToState(ctx context.Context, s *sessions.SessionState) {
+// addGroupsToSession projects into session.Groups
+func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.SessionState) {
 	if len(p.Groups) == 0 {
 		return
 	}
@@ -252,8 +252,8 @@ func (p *GitLabProvider) addGroupMembershipToState(ctx context.Context, s *sessi
 
 }
 
-// addProjectMembership adds projects into session.Groups
-func (p *GitLabProvider) addProjectMembershipToState(ctx context.Context, s *sessions.SessionState) {
+// addProjectsToSession projects into session.Groups
+func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.SessionState) {
 	if len(p.Projects) == 0 {
 		return
 	}
