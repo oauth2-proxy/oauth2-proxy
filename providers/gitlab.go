@@ -83,6 +83,12 @@ func (p *GitLabProvider) SetProjectScope() {
 
 // SetProjectAccessLevel sets the project access level from the options and check if value is valid
 func (p *GitLabProvider) SetProjectAccessLevel(targetLevel int) error {
+	// set default to 20
+	if targetLevel == 0 {
+		p.projectAccessLevel = 20
+		return nil
+	}
+
 	// see https://docs.gitlab.com/ee/api/members.html#valid-access-levels
 	// 50 is not supported while there is an issue with it on gitlab
 	for _, level := range []int{10, 20, 30, 40} {
