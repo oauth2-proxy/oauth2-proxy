@@ -3,16 +3,14 @@ package providers
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/bitly/go-simplejson"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -236,26 +234,32 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	return email, err
 }
 
+// full claims that can be emitted by AAD are
+// https://docs.microsoft.com/en-us/azure/active-directory/develop/id-tokens
+// only include email here since we only need email extraction
+type aadIDTokenClaims struct {
+	Email string `json:"email,omitempty"`
+}
+
+// Valid is the function validating the claims,
+// required by jwt.Claims interface.
+// returning nil as we only use it to extract claims instead of validating them
+func (aadIDTokenClaims) Valid() error {
+	return nil
+}
+
 func getEmailFromIDToken(idToken string) (string, error) {
-	jwt := strings.Split(idToken, ".")
-	jwtData := strings.TrimSuffix(jwt[1], "=")
-	b, err := base64.RawURLEncoding.DecodeString(jwtData)
-	if err != nil {
-		return "", fmt.Errorf("jwt is malformed: %w", err)
-	}
+	claims := &aadIDTokenClaims{}
+	parser := jwt.Parser{}
 
-	c := struct {
-		Email string `json:"email"`
-	}{}
-
-	err = json.Unmarshal(b, &c)
-	if err != nil {
-		return "", fmt.Errorf("unable to unmarshal jwt payload: %w", err)
+	// ParseUnverified to extract claims without verifying signature
+	if _, _, err := parser.ParseUnverified(idToken, claims); err != nil {
+		return "", err
 	}
-	if c.Email == "" {
+	if claims.Email == "" {
 		return "", errors.New("missing email claim from id_token")
 	}
-	return c.Email, nil
+	return claims.Email, nil
 }
 
 // EnrichSessionState finds the email to enrich the session state
