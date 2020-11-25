@@ -29,8 +29,6 @@ func testGitLabProvider(hostname string) *GitLabProvider {
 		updateURL(p.Data().ValidateURL, hostname)
 	}
 
-	p.SetProjectAccessLevel(10)
-
 	return p
 }
 
@@ -178,7 +176,6 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			expectedValue []string
 			projects      []string
 			groups        []string
-			levelAccess   int
 		}
 
 		DescribeTable("should return expected results",
@@ -186,19 +183,15 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				p.AllowUnverifiedEmail = true
 				session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 
-				p.Projects = in.projects
+				err := p.AddProjects(in.projects)
+				Expect(err).To(BeNil())
 				p.SetProjectScope()
-
-				// change default access level if needed
-				if in.levelAccess != 0 {
-					p.SetProjectAccessLevel(in.levelAccess)
-				}
 
 				if len(in.groups) > 0 {
 					p.Groups = in.groups
 				}
 
-				err := p.EnrichSession(context.Background(), session)
+				err = p.EnrichSession(context.Background(), session)
 
 				Expect(err).To(BeNil())
 				Expect(session.Groups).To(Equal(in.expectedValue))
@@ -209,8 +202,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			}),
 			Entry("project membership invalid on group project, insufficient access level level", entitiesTableInput{
 				expectedValue: nil,
-				projects:      []string{"my_group/my_project"},
-				levelAccess:   40,
+				projects:      []string{"my_group/my_project=40"},
 			}),
 			Entry("project membership valid on personnal project", entitiesTableInput{
 				expectedValue: []string{"project:my_profile/my_personal_project"},
@@ -218,8 +210,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			}),
 			Entry("project membership invalid on personnal project, insufficient access level", entitiesTableInput{
 				expectedValue: nil,
-				projects:      []string{"my_profile/my_personal_project"},
-				levelAccess:   40,
+				projects:      []string{"my_profile/my_personal_project=40"},
 			}),
 			Entry("project membership invalid", entitiesTableInput{
 				expectedValue: nil,
@@ -241,7 +232,8 @@ var _ = Describe("Gitlab Provider Tests", func() {
 
 		DescribeTable("should prefix entities with group kind", func(in entitiesTableInput) {
 			p.Groups = in.groups
-			p.Projects = in.projects
+			err := p.AddProjects(in.projects)
+			Expect(err).To(BeNil())
 
 			all := p.PrefixAllowedGroups()
 

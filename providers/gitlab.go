@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,13 +20,48 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Groups             []string
-	Projects           []string
-	projectAccessLevel int
-	EmailDomains       []string
+	Groups       []string
+	Projects     []*GitlabProject
+	EmailDomains []string
 
 	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
+}
+
+// GitlabProject represents a Gitlab project constraint entity
+type GitlabProject struct {
+	Name        string
+	AccessLevel int
+}
+
+// Creates a new GitlabProject struct from project string formatted as namespace/project=accesslevel
+// if no accesslevel provided, use the default one
+func gitlabProjectFromString(project string) (*GitlabProject, error) {
+	// default access level is 20
+	defaultAccessLevel := 20
+	// see https://docs.gitlab.com/ee/api/members.html#valid-access-levels
+	validAccessLevel := [4]int{10, 20, 30, 40}
+
+	parts := strings.Split(project, "=")
+
+	if len(parts) == 2 {
+		lvl, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return nil, err
+		}
+
+		for _, valid := range validAccessLevel {
+			if lvl == valid {
+				return &GitlabProject{Name: parts[0], AccessLevel: lvl}, err
+			}
+		}
+
+		return nil, errors.New("error invalid gitlab project access level specified")
+
+	}
+
+	return &GitlabProject{Name: project, AccessLevel: defaultAccessLevel}, nil
+
 }
 
 var _ Provider = (*GitLabProvider)(nil)
@@ -79,26 +115,6 @@ func (p *GitLabProvider) SetProjectScope() {
 			p.Scope += " read_api"
 		}
 	}
-}
-
-// SetProjectAccessLevel sets the project access level from the options and check if value is valid
-func (p *GitLabProvider) SetProjectAccessLevel(targetLevel int) error {
-	// set default to 20
-	if targetLevel == 0 {
-		p.projectAccessLevel = 20
-		return nil
-	}
-
-	// see https://docs.gitlab.com/ee/api/members.html#valid-access-levels
-	// 50 is not supported while there is an issue with it on gitlab
-	for _, level := range []int{10, 20, 30, 40} {
-		if level == targetLevel {
-			p.projectAccessLevel = targetLevel
-			return nil
-		}
-	}
-
-	return errors.New("error invalid gitlab project access level specified")
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -219,6 +235,20 @@ func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.Session
 	return &projectInfo, nil
 }
 
+// AddProjects use data from options, transform it into a GitlabProject struct attached to a provider struct
+func (p *GitLabProvider) AddProjects(projects []string) error {
+	for _, project := range projects {
+		gp, err := gitlabProjectFromString(project)
+		if err != nil {
+			return err
+		}
+
+		p.Projects = append(p.Projects, gp)
+	}
+
+	return nil
+}
+
 func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
@@ -284,18 +314,18 @@ func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.Ses
 func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.SessionState) {
 	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
 	for _, project := range p.Projects {
-		project, err := p.getProjectInfo(ctx, s, project)
+		projectInfo, err := p.getProjectInfo(ctx, s, project.Name)
 
-		if err == nil && !project.Archived {
+		if err == nil && !projectInfo.Archived {
 			// try first with project access
-			perms := project.Permissions.ProjectAccess
+			perms := projectInfo.Permissions.ProjectAccess
 			if perms == nil {
 				// use group project access as fallback
-				perms = project.Permissions.GroupAccess
+				perms = projectInfo.Permissions.GroupAccess
 			}
 
-			if perms.AccessLevel >= p.projectAccessLevel {
-				s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.PathWithNamespace))
+			if perms.AccessLevel >= project.AccessLevel {
+				s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.Name))
 			} else {
 				logger.Printf("Warning: user do not have the minimum required access level %s", project.Name)
 			}
@@ -305,7 +335,7 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 			logger.Printf("Warning: project info request failed: %v", err)
 		}
 
-		if project != nil && project.Archived {
+		if projectInfo != nil && projectInfo.Archived {
 			logger.Printf("Warning: project %s is archived", project.Name)
 		}
 
@@ -321,7 +351,7 @@ func (p *GitLabProvider) PrefixAllowedGroups() (groups []string) {
 	}
 
 	for _, val := range p.Projects {
-		groups = append(groups, fmt.Sprintf("project:%s", val))
+		groups = append(groups, fmt.Sprintf("project:%s", val.Name))
 	}
 
 	return groups
