@@ -1124,24 +1124,67 @@ func NewUserInfoEndpointTest() (*ProcessCookieTest, error) {
 }
 
 func TestUserInfoEndpointAccepted(t *testing.T) {
-	test, err := NewUserInfoEndpointTest()
-	if err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		name             string
+		session          *sessions.SessionState
+		expectedResponse string
+	}{
+		{
+			name: "Full session",
+			session: &sessions.SessionState{
+				User:        "john.doe",
+				Email:       "john.doe@example.com",
+				Groups:      []string{"example", "groups"},
+				AccessToken: "my_access_token",
+			},
+			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"]}\n",
+		},
+		{
+			name: "Minimal session",
+			session: &sessions.SessionState{
+				User:   "john.doe",
+				Email:  "john.doe@example.com",
+				Groups: []string{"example", "groups"},
+			},
+			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"]}\n",
+		},
+		{
+			name: "No groups",
+			session: &sessions.SessionState{
+				User:        "john.doe",
+				Email:       "john.doe@example.com",
+				AccessToken: "my_access_token",
+			},
+			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\"}\n",
+		},
+		{
+			name: "With Preferred Username",
+			session: &sessions.SessionState{
+				User:              "john.doe",
+				PreferredUsername: "john",
+				Email:             "john.doe@example.com",
+				Groups:            []string{"example", "groups"},
+				AccessToken:       "my_access_token",
+			},
+			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"],\"preferredUsername\":\"john\"}\n",
+		},
 	}
 
-	startSession := &sessions.SessionState{
-		User:        "john.doe",
-		Email:       "john.doe@example.com",
-		Groups:      []string{"example", "groups"},
-		AccessToken: "my_access_token",
-	}
-	err = test.SaveSession(startSession)
-	assert.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewUserInfoEndpointTest()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = test.SaveSession(tc.session)
+			assert.NoError(t, err)
 
-	test.proxy.ServeHTTP(test.rw, test.req)
-	assert.Equal(t, http.StatusOK, test.rw.Code)
-	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"]}\n", string(bodyBytes))
+			test.proxy.ServeHTTP(test.rw, test.req)
+			assert.Equal(t, http.StatusOK, test.rw.Code)
+			bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+			assert.Equal(t, tc.expectedResponse, string(bodyBytes))
+		})
+	}
 }
 
 func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
