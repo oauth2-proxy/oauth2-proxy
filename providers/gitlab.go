@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -56,7 +55,7 @@ func gitlabProjectFromString(project string) (*GitlabProject, error) {
 			}
 		}
 
-		return nil, errors.New("error invalid gitlab project access level specified")
+		return nil, fmt.Errorf("invalid gitlab project access level specified (%s)", parts[0])
 
 	}
 
@@ -327,16 +326,16 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 			if perms.AccessLevel >= project.AccessLevel {
 				s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.Name))
 			} else {
-				logger.Printf("Warning: user %s do not have the minimum required access level %s", s.Email, project.Name)
+				logger.Errorf("Warning: user %s do not have the minimum required access level %s", s.Email, project.Name)
 			}
 		}
 
 		if err != nil {
-			logger.Printf("Warning: project info request failed: %v", err)
+			logger.Errorf("Warning: project info request failed: %v", err)
 		}
 
 		if projectInfo != nil && projectInfo.Archived {
-			logger.Printf("Warning: project %s is archived", project.Name)
+			logger.Errorf("Warning: project %s is archived", project.Name)
 		}
 
 	}
