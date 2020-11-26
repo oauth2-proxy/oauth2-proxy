@@ -294,12 +294,11 @@ func (p *AzureProvider) EnrichSessionState(ctx context.Context, s *sessions.Sess
 
 	if s.IDToken != "" {
 		email, err := getEmailFromIDToken(s.IDToken)
-		if err != nil || email == "" {
-			logger.Errorf("unable to find email from id_token: %s", err)
-		} else {
+		if err == nil {
 			s.Email = email
 			return nil
 		}
+		logger.Errorf("unable to find email from id_token: %s", err)
 	}
 
 	email, err = getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
