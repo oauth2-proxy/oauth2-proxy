@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -9,7 +10,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"k8s.io/apimachinery/pkg/util/errors"
+	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 const jwtRegexFormat = `^ey[IJ][a-zA-Z0-9_-]*\.ey[IJ][a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
@@ -70,17 +71,18 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 		return nil, err
 	}
 
-	errs := []error{fmt.Errorf("unable to verify jwt token: %q", req.Header.Get("Authorization"))}
+	// This leading error message only occurs if all session loaders fail
+	errs := []error{errors.New("unable to verify bearer token")}
 	for _, loader := range j.sessionLoaders {
 		session, err := loader(req.Context(), token)
-		if err == nil {
-			return session, nil
-		} else {
+		if err != nil {
 			errs = append(errs, err)
+			continue
 		}
+		return session, nil
 	}
 
-	return nil, errors.NewAggregate(errs)
+	return nil, k8serrors.NewAggregate(errs)
 }
 
 // findTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
