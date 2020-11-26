@@ -124,8 +124,7 @@ func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.Ses
 	return false, nil
 }
 
-// CreateSessionStateFromBearerToken should be implemented to allow providers
-// to convert ID tokens into sessions
+// CreateSessionFromToken converts Bearer IDTokens into sessions
 func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	if p.Verifier != nil {
 		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)

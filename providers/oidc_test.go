@@ -299,7 +299,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	assert.Equal(t, refreshToken, existingSession.RefreshToken)
 }
 
-func TestCreateSessionStateFromBearerToken(t *testing.T) {
+func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 	const profileURLEmail = "janed@me.com"
 
 	testCases := map[string]struct {
