@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -123,133 +124,95 @@ func testAzureBackend(payload string) *httptest.Server {
 }
 
 func TestAzureProviderEnrichSessionState(t *testing.T) {
-	b := testAzureBackend(`{ "mail": "user@windows.net" }`)
-	defer b.Close()
+	testCases := []struct {
+		Description             string
+		IDToken                 string
+		PayloadFromAzureBackend string
+		ExpectedEmail           string
+		ExpectedError           error
+	}{
+		{
+			Description:             "EnrichSessionState should return email using mail property from Azure backend",
+			PayloadFromAzureBackend: `{ "mail": "user@windows.net" }`,
+			ExpectedEmail:           "user@windows.net",
+			ExpectedError:           nil,
+		},
+		{
+			Description:             "EnrichSessionState should return email using otherMails property returned from Azure backend",
+			PayloadFromAzureBackend: `{ "mail": null, "otherMails": ["user@windows.net", "altuser@windows.net"] }`,
+			ExpectedEmail:           "user@windows.net",
+			ExpectedError:           nil,
+		},
+		{
+			Description:             "EnrichSessionState should return email using userPrincipalName from Azure backend",
+			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": "user@windows.net" }`,
+			ExpectedEmail:           "user@windows.net",
+			ExpectedError:           nil,
+		},
+		{
+			Description:             "EnrichSessionState should return error when Azure backend doesn't return email information",
+			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": null }`,
+			ExpectedEmail:           "",
+			ExpectedError:           errors.New("type assertion to string failed"),
+		},
+		{
+			Description:             "EnrichSessionState should return empty email when userPrincipalName from Azure backend is empty",
+			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": "" }`,
+			ExpectedEmail:           "",
+			ExpectedError:           nil,
+		},
+		{
+			Description:             "EnrichSessionState should return error when otherMails from Azure backend is not a valid type",
+			PayloadFromAzureBackend: `{ "mail": null, "otherMails": "", "userPrincipalName": null }`,
+			ExpectedEmail:           "",
+			ExpectedError:           errors.New("type assertion to string failed"),
+		},
+		{
+			Description: "EnrichSessionState should return email from id_token",
+			// { "sub": "1234567890", "email": "foo@bar.com", "iat": 1516239022 }
+			IDToken:       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJmb29AYmFyLmNvbSIsImlhdCI6MTUxNjIzOTAyMn0.XRuL4Y2VPSToNB8vMvmlB-X3BwahUJzUXNx6vmzODjk",
+			ExpectedEmail: "foo@bar.com",
+			ExpectedError: nil,
+		},
+		{
+			Description:             "EnrichSessionState should return email from Azure backend when id_token doesn't email claim",
+			PayloadFromAzureBackend: `{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`,
+			// { "sub": "1234567890", "iat": 1516239022 }
+			IDToken:       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc",
+			ExpectedEmail: "user@windows.net",
+			ExpectedError: nil,
+		},
+		{
+			Description:             "EnrichSessionState should return email from Azure backend when id_token is invalid",
+			PayloadFromAzureBackend: `{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`,
+			// this is not a valid id_token
+			IDToken:       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwia.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc",
+			ExpectedEmail: "user@windows.net",
+			ExpectedError: nil,
+		},
+	}
 
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
+	for _, testCase := range testCases {
+		t.Run(testCase.Description, func(t *testing.T) {
+			var (
+				b    *httptest.Server
+				host string
+			)
+			if testCase.PayloadFromAzureBackend != "" {
+				b = testAzureBackend(testCase.PayloadFromAzureBackend)
+				defer b.Close()
 
-	session := CreateAuthorizedSession()
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateMailNull(t *testing.T) {
-	b := testAzureBackend(`{ "mail": null, "otherMails": ["user@windows.net", "altuser@windows.net"] }`)
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session := CreateAuthorizedSession()
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateGetUserPrincipalName(t *testing.T) {
-	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": "user@windows.net" }`)
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session := CreateAuthorizedSession()
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateFailToEnrichSessionState(t *testing.T) {
-	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": null }`)
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session := CreateAuthorizedSession()
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, "type assertion to string failed", err.Error())
-	assert.Equal(t, "", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateEmptyUserPrincipalName(t *testing.T) {
-	b := testAzureBackend(`{ "mail": null, "otherMails": [], "userPrincipalName": "" }`)
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session := CreateAuthorizedSession()
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateIncorrectOtherMails(t *testing.T) {
-	b := testAzureBackend(`{ "mail": null, "otherMails": "", "userPrincipalName": null }`)
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session := CreateAuthorizedSession()
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, "type assertion to string failed", err.Error())
-	assert.Equal(t, "", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateFromIDToken(t *testing.T) {
-	p := testAzureProvider("")
-
-	session := CreateAuthorizedSession()
-	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJmb29AYmFyLmNvbSIsImlhdCI6MTUxNjIzOTAyMn0.XRuL4Y2VPSToNB8vMvmlB-X3BwahUJzUXNx6vmzODjk"
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "foo@bar.com", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateWithIDTokenWithMissingEmailClaim(t *testing.T) {
-	b := testAzureBackend(`{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`)
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session := CreateAuthorizedSession()
-	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateWithInvalidBase64EncodedIDToken(t *testing.T) {
-	b := testAzureBackend(`{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`)
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session := CreateAuthorizedSession()
-	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwia.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", session.Email)
-}
-
-func TestAzureProviderEnrichSessionStateWithInvalidIDToken(t *testing.T) {
-	b := testAzureBackend(`{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`)
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session := CreateAuthorizedSession()
-	session.IDToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc"
-	err := p.EnrichSessionState(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "user@windows.net", session.Email)
+				bURL, _ := url.Parse(b.URL)
+				host = bURL.Host
+			}
+			p := testAzureProvider(host)
+			session := CreateAuthorizedSession()
+			session.IDToken = testCase.IDToken
+			err := p.EnrichSessionState(context.Background(), session)
+			assert.Equal(t, testCase.ExpectedError, err)
+			assert.Equal(t, testCase.ExpectedEmail, session.Email)
+		})
+	}
 }
 
 func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {

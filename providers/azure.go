@@ -231,6 +231,14 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 		err = otherMailsErr
 	}
 
+	if err != nil || email == "" {
+		email, err = json.Get("userPrincipalName").String()
+		if err != nil {
+			logger.Errorf("unable to find userPrincipalName: %s", err)
+			return "", err
+		}
+	}
+
 	return email, err
 }
 
@@ -262,9 +270,27 @@ func getEmailFromIDToken(idToken string) (string, error) {
 	return claims.Email, nil
 }
 
+func getEmailFromProfileAPI(ctx context.Context, accessToken, profileURL string) (string, error) {
+	if accessToken == "" {
+		return "", errors.New("missing access token")
+	}
+
+	json, err := requests.New(profileURL).
+		WithContext(ctx).
+		WithHeaders(makeAzureHeader(accessToken)).
+		Do().
+		UnmarshalJSON()
+	if err != nil {
+		return "", err
+	}
+
+	return getEmailFromJSON(json)
+}
+
 // EnrichSessionState finds the email to enrich the session state
 func (p *AzureProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
 	var email string
+	var err error
 
 	if s.IDToken != "" {
 		email, err := getEmailFromIDToken(s.IDToken)
@@ -276,33 +302,9 @@ func (p *AzureProvider) EnrichSessionState(ctx context.Context, s *sessions.Sess
 		}
 	}
 
-	if s.AccessToken == "" {
-		return errors.New("missing access token")
-	}
-
-	json, err := requests.New(p.ProfileURL.String()).
-		WithContext(ctx).
-		WithHeaders(makeAzureHeader(s.AccessToken)).
-		Do().
-		UnmarshalJSON()
-	if err != nil {
-		return err
-	}
-
-	email, err = getEmailFromJSON(json)
-	if err == nil && email != "" {
-		s.Email = email
-		return err
-	}
-
-	email, err = json.Get("userPrincipalName").String()
-	if err != nil {
-		logger.Errorf("failed making request %s", err)
-		return err
-	}
-
+	email, err = getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
 	if email == "" {
-		logger.Errorf("failed to get email address")
+		logger.Errorf("failed to get email address: %s", err)
 		return err
 	}
 	s.Email = email
