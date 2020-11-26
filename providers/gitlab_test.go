@@ -220,6 +220,11 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				expectedValue: []string{"group:foo"},
 				groups:        []string{"foo"},
 			}),
+			Entry("groups and projects", entitiesTableInput{
+				expectedValue: []string{"group:foo", "group:baz", "project:my_group/my_project", "project:my_profile/my_personal_project"},
+				groups:        []string{"foo", "baz"},
+				projects:      []string{"my_group/my_project", "my_profile/my_personal_project"},
+			}),
 		)
 
 	})
