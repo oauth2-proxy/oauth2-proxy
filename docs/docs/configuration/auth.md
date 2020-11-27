@@ -186,7 +186,14 @@ Take note of your `TenantId` if applicable for your situation. The `TenantId` ca
 
 ### OpenID Connect Provider
 
-OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects. This provider was originally built against CoreOS Dex and we will use it as an example.
+OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects.
+
+This provider was originally built against CoreOS Dex and we will use it as an example.
+The OpenID Connect Provider (OIDC) can also be used to connect to other Identity Providers such as Okta, an example can be found below.
+
+#### Dex
+
+To configure the OIDC provider for Dex, perform the following steps:
 
 1. Download Dex:
 
@@ -234,10 +241,9 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
 
 5. Test the setup by visiting http://127.0.0.1:4180 or http://127.0.0.1:4180/static .
 
-The OpenID Connect Provider (OIDC) can also be used to connect to other Identity Providers such as Okta. To configure the OIDC provider for Okta, perform
-the following steps:
+#### Okta
 
-#### Configuring the OIDC Provider with Okta
+To configure the OIDC provider for Okta, perform the following steps:
 
 1. Log in to Okta using an administrative account. It is suggested you try this in preview first, `example.oktapreview.com`
 2. (OPTIONAL) If you want to configure authorization scopes and claims to be passed on to multiple applications,
@@ -283,7 +289,8 @@ Generate a unique `client_secret` to encrypt the cookie.
 
 Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.cfg`
 
-#### Configuring the OIDC Provider with Okta - localhost
+#### Okta - localhost
+
 1. Signup for developer account: https://developer.okta.com/signup/
 2. Create New `Web` Application: https://${your-okta-domain}/dev/console/apps/new
 3. Example Application Settings for localhost:
