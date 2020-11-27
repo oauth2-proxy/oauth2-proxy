@@ -7,8 +7,13 @@
 - [#936](https://github.com/oauth2-proxy/oauth2-proxy/pull/936) `--user-id-claim` option is deprecated and replaced by `--oidc-email-claim`
 - [#630](https://github.com/oauth2-proxy/oauth2-proxy/pull/630) Gitlab projects needs a Gitlab application with the extra `read_api` enabled
 - [#849](https://github.com/oauth2-proxy/oauth2-proxy/pull/849) `/oauth2/auth` `allowed_groups` querystring parameter can be paired with the `allowed-groups` configuration option.
-  - In this scenario, the user's group must be in both lists to not get a 401 or 403 response code.
   - The `allowed_groups` querystring parameter can specify multiple comma delimited groups.
+  - In this scenario, the user must have a group (from their multiple groups) present in both lists to not get a 401 or 403 response code.
+  - Example:
+    - OAuth2-Proxy globally sets the `allowed_groups` as `engineering`.
+    - An application using Kubernetes ingress uses the `/oauth2/auth` endpoint with `allowed_groups` querystring set to `backend`.
+    - A user must have a session with the groups `["engineering", "backend"]` to pass authorization.
+    - Another user with the groups `["engineering", "frontend"]` would fail the querystring authorization portion.
 - [#905](https://github.com/oauth2-proxy/oauth2-proxy/pull/905) Existing sessions from v6.0.0 or earlier are no longer valid. They will trigger a reauthentication.
 - [#826](https://github.com/oauth2-proxy/oauth2-proxy/pull/826) `skip-auth-strip-headers` now applies to all requests, not just those where authentication would be skipped.
 - [#797](https://github.com/oauth2-proxy/oauth2-proxy/pull/797) The behavior of the Google provider Groups restriction changes with this

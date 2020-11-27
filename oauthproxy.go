@@ -1026,6 +1026,11 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 
 // authOnlyAuthorize handles special authorization logic that is only done
 // on the AuthOnly endpoint for use with Nginx subrequest architectures.
+//
+// TODO (@NickMeves): This method is a placeholder to be extended but currently
+// fails the linter. Remove the nolint when functionality expands.
+//
+//nolint:S1008
 func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
 	// Allow secondary group restrictions based on the `allowed_groups`
 	// querystring parameter
