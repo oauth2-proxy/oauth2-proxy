@@ -2732,7 +2732,14 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 			name:               "UserInQuerystringGroup",
 			allowedGroups:      []string{"a", "b"},
 			groups:             []string{"a", "c"},
-			querystring:        "?allowed_group=a",
+			querystring:        "?allowed_groups=a",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInMultiParamQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"b"},
+			querystring:        "?allowed_groups=a&allowed_groups=b,d",
 			expectedStatusCode: http.StatusAccepted,
 		},
 		{
@@ -2740,13 +2747,6 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 			allowedGroups:      []string{},
 			groups:             []string{"a", "c"},
 			querystring:        "?allowed_groups=a,b",
-			expectedStatusCode: http.StatusAccepted,
-		},
-		{
-			name:               "UserInMultiParamQuerystringGroup",
-			allowedGroups:      []string{"a", "b"},
-			groups:             []string{"b"},
-			querystring:        "?allowed_group=a&allowed_group=b",
 			expectedStatusCode: http.StatusAccepted,
 		},
 		{
@@ -2760,14 +2760,14 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 			name:               "UserNotInQuerystringGroup",
 			allowedGroups:      []string{},
 			groups:             []string{"c"},
-			querystring:        "?allowed_group=a&allowed_group=b",
+			querystring:        "?allowed_groups=a,b",
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{
 			name:               "UserInConfigGroupNotInQuerystringGroup",
 			allowedGroups:      []string{"a", "b", "c"},
 			groups:             []string{"c"},
-			querystring:        "?allowed_group=a&allowed_group=b",
+			querystring:        "?allowed_groups=a,b",
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{

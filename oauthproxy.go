@@ -1027,8 +1027,8 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 // authOnlyAuthorize handles special authorization logic that is only done
 // on the AuthOnly endpoint for use with Nginx subrequest architectures.
 func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
-	// Allow secondary group restrictions based on the `allowed_group` or
-	// `allowed_groups` querystring parameter
+	// Allow secondary group restrictions based on the `allowed_groups`
+	// querystring parameter
 	if !checkAllowedGroups(req, s) {
 		return false
 	}
@@ -1053,19 +1053,13 @@ func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
 
 func extractAllowedGroups(req *http.Request) map[string]struct{} {
 	groups := map[string]struct{}{}
+
 	query := req.URL.Query()
-
-	// multi-key singular support
-	if multiGroups, ok := query["allowed_group"]; ok {
-		for _, group := range multiGroups {
-			groups[group] = struct{}{}
-		}
-	}
-
-	// single key plural comma delimited support
-	for _, group := range strings.Split(query.Get("allowed_groups"), ",") {
-		if group != "" {
-			groups[group] = struct{}{}
+	for _, allowedGroups := range query["allowed_groups"] {
+		for _, group := range strings.Split(allowedGroups, ",") {
+			if group != "" {
+				groups[group] = struct{}{}
+			}
 		}
 	}
 
