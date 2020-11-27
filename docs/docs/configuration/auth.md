@@ -266,22 +266,22 @@ you may wish to configure an authorization server for each application. Otherwis
 * Under **Assignments** select the users or groups you wish to access your application.
 4. Create a configuration file like the following:
 
-```
-provider = "oidc"
-redirect_url = "https://example.corp.com/oauth2/callback"
-oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
-upstreams = [
-    "https://example.corp.com"
-]
-email_domains = [
-    "corp.com"
-]
-client_id = "XXXXX"
-client_secret = "YYYYY"
-pass_access_token = true
-cookie_secret = "ZZZZZ"
-skip_provider_button = true
-```
+    ```
+    provider = "oidc"
+    redirect_url = "https://example.corp.com/oauth2/callback"
+    oidc_issuer_url = "https://corp.okta.com/oauth2/abCd1234"
+    upstreams = [
+        "https://example.corp.com"
+    ]
+    email_domains = [
+        "corp.com"
+    ]
+    client_id = "XXXXX"
+    client_secret = "YYYYY"
+    pass_access_token = true
+    cookie_secret = "ZZZZZ"
+    skip_provider_button = true
+    ```
 
 The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com
 The `client_id` and `client_secret` are configured in the application settings.
@@ -303,25 +303,25 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
 4. Make note of the `Client ID` and `Client secret`, they are needed in a future step
 5. Make note of the **default** Authorization Server Issuer URI from: https://${your-okta-domain}/admin/oauth2/as
 6. Example config file `/etc/localhost.cfg`
-   ```
-   provider = "oidc"
-   redirect_url = "http://localhost:4180/oauth2/callback"
-   oidc_issuer_url = "https://${your-okta-domain}/oauth2/default"
-   upstreams = [
-       "http://0.0.0.0:8080"
-   ]
-   email_domains = [
-       "*"
-   ]
-   client_id = "XXX"
-   client_secret = "YYY"
-   pass_access_token = true
-   cookie_secret = "ZZZ"
-   cookie_secure = false
-   skip_provider_button = true
-   # Note: use the following for testing within a container
-   # http_address = "0.0.0.0:4180"
-   ```
+    ```
+    provider = "oidc"
+    redirect_url = "http://localhost:4180/oauth2/callback"
+    oidc_issuer_url = "https://${your-okta-domain}/oauth2/default"
+    upstreams = [
+        "http://0.0.0.0:8080"
+    ]
+    email_domains = [
+        "*"
+    ]
+    client_id = "XXX"
+    client_secret = "YYY"
+    pass_access_token = true
+    cookie_secret = "ZZZ"
+    cookie_secure = false
+    skip_provider_button = true
+    # Note: use the following for testing within a container
+    # http_address = "0.0.0.0:4180"
+    ```
 7. Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/localhost.cfg`
 
 ### login.gov Provider
