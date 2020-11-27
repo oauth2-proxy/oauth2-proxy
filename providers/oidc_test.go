@@ -154,7 +154,7 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 
 	p := &OIDCProvider{
 		ProviderData: providerData,
-		UserIDClaim:  "email",
+		EmailClaim:   "email",
 	}
 
 	return p
@@ -225,12 +225,262 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 	})
 
 	server, provider := newTestSetup(body)
-	provider.UserIDClaim = "phone_number"
+	provider.EmailClaim = "phone_number"
 	defer server.Close()
 
 	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Phone, session.Email)
+}
+
+func TestOIDCProvider_EnrichSession(t *testing.T) {
+	const (
+		idToken      = "Unchanged ID Token"
+		accessToken  = "Unchanged Access Token"
+		refreshToken = "Unchanged Refresh Token"
+	)
+
+	testCases := map[string]struct {
+		ExistingSession *sessions.SessionState
+		EmailClaim      string
+		GroupsClaim     string
+		ProfileJSON     map[string]interface{}
+		ExpectedError   error
+		ExpectedSession *sessions.SessionState
+	}{
+		"Already Populated": {
+			ExistingSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{"already", "populated"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email":  "new@thing.com",
+				"groups": []string{"new", "thing"},
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{"already", "populated"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Email": {
+			ExistingSession: &sessions.SessionState{
+				User:         "missing.email",
+				Groups:       []string{"already", "populated"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email":  "found@email.com",
+				"groups": []string{"new", "thing"},
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "missing.email",
+				Email:        "found@email.com",
+				Groups:       []string{"already", "populated"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+
+		"Missing Email Only in Profile URL": {
+			ExistingSession: &sessions.SessionState{
+				User:         "missing.email",
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email": "found@email.com",
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "missing.email",
+				Email:        "found@email.com",
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Email with Custom Claim": {
+			ExistingSession: &sessions.SessionState{
+				User:         "missing.email",
+				Groups:       []string{"already", "populated"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "weird",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"weird":  "weird@claim.com",
+				"groups": []string{"new", "thing"},
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "missing.email",
+				Email:        "weird@claim.com",
+				Groups:       []string{"already", "populated"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Email not in Profile URL": {
+			ExistingSession: &sessions.SessionState{
+				User:         "missing.email",
+				Groups:       []string{"already", "populated"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"groups": []string{"new", "thing"},
+			},
+			ExpectedError: errors.New("neither the id_token nor the profileURL set an email"),
+			ExpectedSession: &sessions.SessionState{
+				User:         "missing.email",
+				Groups:       []string{"already", "populated"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Groups": {
+			ExistingSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email":  "new@thing.com",
+				"groups": []string{"new", "thing"},
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{"new", "thing"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Groups with Custom Claim": {
+			ExistingSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       nil,
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "roles",
+			ProfileJSON: map[string]interface{}{
+				"email": "new@thing.com",
+				"roles": []string{"new", "thing", "roles"},
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{"new", "thing", "roles"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Groups String Profile URL Response": {
+			ExistingSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email":  "new@thing.com",
+				"groups": "singleton",
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{"singleton"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Groups in both Claims and Profile URL": {
+			ExistingSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email": "new@thing.com",
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+	}
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			jsonResp, err := json.Marshal(tc.ProfileJSON)
+			assert.NoError(t, err)
+
+			server, provider := newTestSetup(jsonResp)
+			provider.ProfileURL, err = url.Parse(server.URL)
+			assert.NoError(t, err)
+
+			provider.EmailClaim = tc.EmailClaim
+			provider.GroupsClaim = tc.GroupsClaim
+			defer server.Close()
+
+			err = provider.EnrichSession(context.Background(), tc.ExistingSession)
+			assert.Equal(t, tc.ExpectedError, err)
+			assert.Equal(t, *tc.ExpectedSession, *tc.ExistingSession)
+		})
+	}
 }
 
 func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
@@ -361,7 +611,7 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 	}
 }
 
-func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
+func TestOIDCProvider_findVerifiedIDToken(t *testing.T) {
 
 	server, provider := newTestSetup([]byte(""))
 
@@ -396,32 +646,4 @@ func TestOIDCProvider_findVerifiedIdToken(t *testing.T) {
 	verifiedIDToken, err = provider.findVerifiedIDToken(context.Background(), newOauth2Token())
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, verifiedIDToken == nil)
-}
-
-func Test_formatGroup(t *testing.T) {
-	testCases := map[string]struct {
-		RawGroup                    interface{}
-		ExpectedFormattedGroupValue string
-	}{
-		"String Group": {
-			RawGroup:                    "group",
-			ExpectedFormattedGroupValue: "group",
-		},
-		"Map Group": {
-			RawGroup:                    map[string]string{"id": "1", "name": "Test"},
-			ExpectedFormattedGroupValue: "{\"id\":\"1\",\"name\":\"Test\"}",
-		},
-		"List Group": {
-			RawGroup:                    []string{"First", "Second"},
-			ExpectedFormattedGroupValue: "[\"First\",\"Second\"]",
-		},
-	}
-
-	for testName, tc := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			formattedGroup, err := formatGroup(tc.RawGroup)
-			assert.Nil(t, err)
-			assert.Equal(t, tc.ExpectedFormattedGroupValue, formattedGroup)
-		})
-	}
 }

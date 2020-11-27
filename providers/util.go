@@ -1,9 +1,12 @@
 package providers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -54,4 +57,24 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	}
 	a.RawQuery = params.Encode()
 	return a
+}
+
+func getIDToken(token *oauth2.Token) string {
+	idToken, ok := token.Extra("id_token").(string)
+	if !ok {
+		return ""
+	}
+	return idToken
+}
+
+func formatGroup(rawGroup interface{}) (string, error) {
+	group, ok := rawGroup.(string)
+	if !ok {
+		jsonGroup, err := json.Marshal(rawGroup)
+		if err != nil {
+			return "", err
+		}
+		group = string(jsonGroup)
+	}
+	return group, nil
 }

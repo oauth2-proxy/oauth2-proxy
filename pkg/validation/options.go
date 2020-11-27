@@ -274,7 +274,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetRepository(o.BitbucketRepository)
 	case *providers.OIDCProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
-		p.UserIDClaim = o.UserIDClaim
+		p.EmailClaim = o.UserIDClaim
 		p.GroupsClaim = o.OIDCGroupsClaim
 		if p.Verifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
