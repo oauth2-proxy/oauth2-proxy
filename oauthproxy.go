@@ -798,13 +798,19 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
+
 	userInfo := struct {
-		Email             string `json:"email"`
-		PreferredUsername string `json:"preferredUsername,omitempty"`
+		User              string   `json:"user"`
+		Email             string   `json:"email"`
+		Groups            []string `json:"groups,omitempty"`
+		PreferredUsername string   `json:"preferredUsername,omitempty"`
 	}{
+		User:              session.User,
 		Email:             session.Email,
+		Groups:            session.Groups,
 		PreferredUsername: session.PreferredUsername,
 	}
+
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(rw).Encode(userInfo)
