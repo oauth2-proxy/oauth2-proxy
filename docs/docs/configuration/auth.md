@@ -188,20 +188,51 @@ Take note of your `TenantId` if applicable for your situation. The `TenantId` ca
 
 OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects. This provider was originally built against CoreOS Dex and we will use it as an example.
 
-1. Launch a Dex instance using the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md).
-2. Setup oauth2-proxy with the correct provider and using the default ports and callbacks.
-3. Login with the fixture use in the dex guide and run the oauth2-proxy with the following args:
+1. Download Dex:
 
-```
+    ```
+    go get github.com/dexidp/dex
+    ```
+
+    See the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md) for more details.
+
+2. Setup oauth2-proxy with the correct provider and using the default ports and callbacks. Add a configuration block to the `staticClients` section of `examples/config-dev.yaml`:
+
+    ```
+    - id: oauth2-proxy
+    redirectURIs:
+    - 'http://127.0.0.1:4180/oauth2/callback'
+    name: 'oauth2-proxy'
+    secret: proxy
+    ```
+
+3. Launch Dex: from `$GOPATH/github.com/dexidp/dex`, run:
+
+    ```
+    bin/dex serve examples/config-dev.yaml
+    ```
+
+4. In a second terminal, run the oauth2-proxy with the following args:
+
+    ```
     -provider oidc
     -provider-display-name "My OIDC Provider"
     -client-id oauth2-proxy
     -client-secret proxy
     -redirect-url http://127.0.0.1:4180/oauth2/callback
-    -oidc-issuer-url http://127.0.0.1:5556
+    -oidc-issuer-url http://127.0.0.1:5556/dex
     -cookie-secure=false
-    -email-domain example.com
-```
+    -cookie-secret=secret
+    -email-domain kilgore.trout
+    ```
+
+    To serve the current working directory as a web site under the `/static` endpoint, add:
+
+    ```
+    -upstream file://$PWD/#/static/
+    ```
+
+5. Test the setup by visiting http://127.0.0.1:4180 or http://127.0.0.1:4180/static .
 
 The OpenID Connect Provider (OIDC) can also be used to connect to other Identity Providers such as Okta. To configure the OIDC provider for Okta, perform
 the following steps:
