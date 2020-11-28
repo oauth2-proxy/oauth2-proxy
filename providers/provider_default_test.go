@@ -49,10 +49,13 @@ func TestAcrValuesConfigured(t *testing.T) {
 	assert.Contains(t, result, "acr_values=testValue")
 }
 
-func TestEnrichSessionState(t *testing.T) {
+func TestProviderDataEnrichSession(t *testing.T) {
+	g := NewWithT(t)
 	p := &ProviderData{}
 	s := &sessions.SessionState{}
-	assert.NoError(t, p.EnrichSessionState(context.Background(), s))
+
+	err := p.EnrichSession(context.Background(), s)
+	g.Expect(err).ToNot(HaveOccurred())
 }
 
 func TestProviderDataAuthorize(t *testing.T) {

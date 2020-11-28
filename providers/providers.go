@@ -3,7 +3,6 @@ package providers
 import (
 	"context"
 
-	"github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -13,12 +12,12 @@ type Provider interface {
 	// DEPRECATED: Migrate to EnrichSessionState
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
-	EnrichSessionState(ctx context.Context, s *sessions.SessionState) error
+	EnrichSession(ctx context.Context, s *sessions.SessionState) error
 	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
-	ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool
+	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
 	GetLoginURL(redirectURI, finalRedirect string) string
 	RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error)
-	CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error)
+	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
 }
 
 // New provides a new Provider based on the configured provider string

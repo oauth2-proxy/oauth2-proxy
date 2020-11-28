@@ -400,7 +400,7 @@ func (tp *TestProvider) GetEmailAddress(_ context.Context, _ *sessions.SessionSt
 	return tp.EmailAddress, nil
 }
 
-func (tp *TestProvider) ValidateSessionState(_ context.Context, _ *sessions.SessionState) bool {
+func (tp *TestProvider) ValidateSession(_ context.Context, _ *sessions.SessionState) bool {
 	return tp.ValidToken
 }
 

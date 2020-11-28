@@ -1,30 +1,21 @@
 package middleware
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
 
-	"github.com/coreos/go-oidc"
 	"github.com/justinas/alice"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
-const jwtRegexFormat = `^eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
+const jwtRegexFormat = `^ey[IJ][a-zA-Z0-9_-]*\.ey[IJ][a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
-func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionLoader) alice.Constructor {
-	for i, loader := range sessionLoaders {
-		if loader.TokenToSession == nil {
-			sessionLoaders[i] = middlewareapi.TokenToSessionLoader{
-				Verifier:       loader.Verifier,
-				TokenToSession: createSessionStateFromBearerToken,
-			}
-		}
-	}
-
+func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alice.Constructor {
 	js := &jwtSessionLoader{
 		jwtRegex:       regexp.MustCompile(jwtRegexFormat),
 		sessionLoaders: sessionLoaders,
@@ -36,7 +27,7 @@ func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionLoader) al
 // Authorization headers.
 type jwtSessionLoader struct {
 	jwtRegex       *regexp.Regexp
-	sessionLoaders []middlewareapi.TokenToSessionLoader
+	sessionLoaders []middlewareapi.TokenToSessionFunc
 }
 
 // loadSession attempts to load a session from a JWT stored in an Authorization
@@ -75,24 +66,27 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 		return nil, nil
 	}
 
-	rawBearerToken, err := j.findBearerTokenFromHeader(auth)
+	token, err := j.findTokenFromHeader(auth)
 	if err != nil {
 		return nil, err
 	}
 
+	// This leading error message only occurs if all session loaders fail
+	errs := []error{errors.New("unable to verify bearer token")}
 	for _, loader := range j.sessionLoaders {
-		bearerToken, err := loader.Verifier.Verify(req.Context(), rawBearerToken)
-		if err == nil {
-			// The token was verified, convert it to a session
-			return loader.TokenToSession(req.Context(), rawBearerToken, bearerToken)
+		session, err := loader(req.Context(), token)
+		if err != nil {
+			errs = append(errs, err)
+			continue
 		}
+		return session, nil
 	}
 
-	return nil, fmt.Errorf("unable to verify jwt token: %q", req.Header.Get("Authorization"))
+	return nil, k8serrors.NewAggregate(errs)
 }
 
-// findBearerTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
-func (j *jwtSessionLoader) findBearerTokenFromHeader(header string) (string, error) {
+// findTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
+func (j *jwtSessionLoader) findTokenFromHeader(header string) (string, error) {
 	tokenType, token, err := splitAuthHeader(header)
 	if err != nil {
 		return "", err
@@ -131,39 +125,4 @@ func (j *jwtSessionLoader) getBasicToken(token string) (string, error) {
 	}
 
 	return "", fmt.Errorf("invalid basic auth token found in authorization header")
-}
-
-// createSessionStateFromBearerToken is a default implementation for converting
-// a JWT into a session state.
-func createSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessionsapi.SessionState, error) {
-	var claims struct {
-		Subject           string `json:"sub"`
-		Email             string `json:"email"`
-		Verified          *bool  `json:"email_verified"`
-		PreferredUsername string `json:"preferred_username"`
-	}
-
-	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
-	}
-
-	if claims.Email == "" {
-		claims.Email = claims.Subject
-	}
-
-	if claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-	}
-
-	newSession := &sessionsapi.SessionState{
-		Email:             claims.Email,
-		User:              claims.Subject,
-		PreferredUsername: claims.PreferredUsername,
-		AccessToken:       rawIDToken,
-		IDToken:           rawIDToken,
-		RefreshToken:      "",
-		ExpiresOn:         &idToken.Expiry,
-	}
-
-	return newSession, nil
 }

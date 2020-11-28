@@ -64,7 +64,7 @@ func TestGitLabProviderBadToken(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "unexpected_gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Error(t, err)
 }
 
@@ -76,7 +76,7 @@ func TestGitLabProviderUnverifiedEmailDenied(t *testing.T) {
 	p := testGitLabProvider(bURL.Host)
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Error(t, err)
 }
 
@@ -89,7 +89,7 @@ func TestGitLabProviderUnverifiedEmailAllowed(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo@bar.com", session.Email)
 }
@@ -103,7 +103,7 @@ func TestGitLabProviderUsername(t *testing.T) {
 	p.AllowUnverifiedEmail = true
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "FooBar", session.User)
 }
@@ -118,7 +118,7 @@ func TestGitLabProviderGroupMembershipValid(t *testing.T) {
 	p.Groups = []string{"foo"}
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "FooBar", session.User)
 }
@@ -133,6 +133,6 @@ func TestGitLabProviderGroupMembershipMissing(t *testing.T) {
 	p.Groups = []string{"baz"}
 
 	session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-	err := p.EnrichSessionState(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Error(t, err)
 }

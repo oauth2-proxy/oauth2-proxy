@@ -32,7 +32,7 @@ func (tp *ValidateSessionStateTestProvider) GetEmailAddress(ctx context.Context,
 
 // Note that we're testing the internal validateToken() used to implement
 // several Provider's ValidateSessionState() implementations
-func (tp *ValidateSessionStateTestProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+func (tp *ValidateSessionStateTestProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return false
 }
 
