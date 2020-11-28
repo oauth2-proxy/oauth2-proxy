@@ -235,9 +235,16 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 
 	// Make the OIDC options available to all providers that support it
 	p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
-	p.EmailClaim = o.UserIDClaim
+	p.EmailClaim = o.OIDCEmailClaim
 	p.GroupsClaim = o.OIDCGroupsClaim
 	p.Verifier = o.GetOIDCVerifier()
+
+	// TODO (@NickMeves) - Remove This
+	// Backwards Compatibility for Deprecated UserIDClaim option
+	if o.OIDCEmailClaim == providers.OIDCEmailClaim &&
+		o.UserIDClaim != providers.OIDCEmailClaim {
+		p.EmailClaim = o.UserIDClaim
+	}
 
 	p.SetAllowedGroups(o.AllowedGroups)
 
@@ -276,9 +283,6 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetTeam(o.BitbucketTeam)
 		p.SetRepository(o.BitbucketRepository)
 	case *providers.OIDCProvider:
-		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
-		p.EmailClaim = o.UserIDClaim
-		p.GroupsClaim = o.OIDCGroupsClaim
 		if p.Verifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		}

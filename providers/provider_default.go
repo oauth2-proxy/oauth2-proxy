@@ -13,8 +13,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
-const emailClaim = "email"
-
 var (
 	// ErrNotImplemented is returned when a provider did not override a default
 	// implementation method that doesn't have sensible defaults

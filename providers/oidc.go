@@ -42,7 +42,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*s
 	}
 	token, err := c.Exchange(ctx, code)
 	if err != nil {
-		return nil, fmt.Errorf("token exchange failure: %v", err)
+		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
 
 	return p.createSession(ctx, token, false)

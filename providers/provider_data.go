@@ -15,6 +15,11 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	OIDCEmailClaim  = "email"
+	OIDCGroupsClaim = "groups"
+)
+
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
 type ProviderData struct {
@@ -154,7 +159,7 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
-	verifyEmail := (p.EmailClaim == emailClaim) && !p.AllowUnverifiedEmail
+	verifyEmail := (p.EmailClaim == OIDCEmailClaim) && !p.AllowUnverifiedEmail
 	if verifyEmail && claims.Verified != nil && !*claims.Verified {
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
