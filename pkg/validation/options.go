@@ -233,7 +233,10 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
 
-	// Make the OIDC Verifier accessible to all providers that can support it
+	// Make the OIDC options available to all providers that support it
+	p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
+	p.EmailClaim = o.UserIDClaim
+	p.GroupsClaim = o.OIDCGroupsClaim
 	p.Verifier = o.GetOIDCVerifier()
 
 	p.SetAllowedGroups(o.AllowedGroups)

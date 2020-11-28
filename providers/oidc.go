@@ -4,26 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
-	"strings"
 	"time"
 
-	"github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
 )
 
-const emailClaim = "email"
-
 // OIDCProvider represents an OIDC based Identity Provider
 type OIDCProvider struct {
 	*ProviderData
-
-	AllowUnverifiedEmail bool
-	EmailClaim           string
-	GroupsClaim          string
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
@@ -213,7 +204,7 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 // createSession takes an oauth2.Token and creates a SessionState from it.
 // It alters behavior if called from Redeem vs Refresh
 func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {
-	idToken, err := p.findVerifiedIDToken(ctx, token)
+	idToken, err := p.verifyIDToken(ctx, token)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify id_token: %v", err)
 	}
@@ -237,91 +228,4 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.ExpiresOn = &token.Expiry
 
 	return ss, nil
-}
-
-func (p *OIDCProvider) findVerifiedIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
-	rawIDToken := getIDToken(token)
-	if strings.TrimSpace(rawIDToken) != "" {
-		return p.Verifier.Verify(ctx, rawIDToken)
-	}
-	return nil, nil
-}
-
-// buildSessionFromClaims uses IDToken claims to populate a fresh SessionState
-// with non-Token related fields.
-func (p *OIDCProvider) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.SessionState, error) {
-	ss := &sessions.SessionState{}
-
-	if idToken == nil {
-		return ss, nil
-	}
-
-	claims, err := p.getClaims(idToken)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
-	}
-
-	ss.User = claims.Subject
-	ss.Email = claims.Email
-	ss.Groups = claims.Groups
-
-	// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
-	if pref, ok := claims.rawClaims["preferred_username"].(string); ok {
-		ss.PreferredUsername = pref
-	}
-
-	verifyEmail := (p.EmailClaim == emailClaim) && !p.AllowUnverifiedEmail
-	if verifyEmail && claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-	}
-
-	return ss, nil
-}
-
-type OIDCClaims struct {
-	Subject  string   `json:"sub"`
-	Email    string   `json:"-"`
-	Groups   []string `json:"-"`
-	Verified *bool    `json:"email_verified"`
-
-	rawClaims map[string]interface{}
-}
-
-// getClaims extracts IDToken claims into an OIDCClaims
-func (p *OIDCProvider) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
-	claims := &OIDCClaims{}
-
-	// Extract default claims.
-	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
-	}
-	// Extract custom claims.
-	if err := idToken.Claims(&claims.rawClaims); err != nil {
-		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)
-	}
-
-	email := claims.rawClaims[p.EmailClaim]
-	if email != nil {
-		claims.Email = fmt.Sprint(email)
-	}
-	claims.Groups = p.extractGroups(claims.rawClaims)
-
-	return claims, nil
-}
-
-func (p *OIDCProvider) extractGroups(claims map[string]interface{}) []string {
-	groups := []string{}
-	rawGroups, ok := claims[p.GroupsClaim].([]interface{})
-	if rawGroups != nil && ok {
-		for _, rawGroup := range rawGroups {
-			formattedGroup, err := formatGroup(rawGroup)
-			if err != nil {
-				logger.Errorf("Warning: unable to format group of type %s with error %s",
-					reflect.TypeOf(rawGroup), err)
-				continue
-			}
-			groups = append(groups, formattedGroup)
-		}
-	}
-	return groups
 }
