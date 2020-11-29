@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -59,7 +60,7 @@ func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionSta
 	}
 
 	// Try to get missing emails or groups from a profileURL
-	if s.Email == "" || len(s.Groups) == 0 {
+	if s.Email == "" || s.Groups == nil {
 		err := p.callProfileURL(ctx, s)
 		if err != nil {
 			logger.Errorf("Warning: Profile URL request failed: %v", err)
@@ -90,16 +91,15 @@ func (p *OIDCProvider) callProfileURL(ctx context.Context, s *sessions.SessionSt
 		s.Email = email
 	}
 
-	// Handle array & singleton groups cases
 	if len(s.Groups) == 0 {
-		groups, err := respJSON.Get(p.GroupsClaim).StringArray()
-		if err == nil {
-			s.Groups = groups
-		} else {
-			group, err := respJSON.Get(p.GroupsClaim).String()
-			if err == nil {
-				s.Groups = []string{group}
+		for _, group := range coerceArray(respJSON, p.GroupsClaim) {
+			formatted, err := formatGroup(group)
+			if err != nil {
+				logger.Errorf("Warning: unable to format group of type %s with error %s",
+					reflect.TypeOf(group), err)
+				continue
 			}
+			s.Groups = append(s.Groups, formatted)
 		}
 	}
 

@@ -68,7 +68,7 @@ func newOIDCServer(body []byte) (*url.URL, *httptest.Server) {
 	return u, s
 }
 
-func newTestSetup(body []byte) (*httptest.Server, *OIDCProvider) {
+func newTestOIDCSetup(body []byte) (*httptest.Server, *OIDCProvider) {
 	redeemURL, server := newOIDCServer(body)
 	provider := newOIDCProvider(redeemURL)
 	return server, provider
@@ -85,7 +85,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 		IDToken:      idToken,
 	})
 
-	server, provider := newTestSetup(body)
+	server, provider := newTestOIDCSetup(body)
 	defer server.Close()
 
 	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
@@ -108,7 +108,7 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 		IDToken:      idToken,
 	})
 
-	server, provider := newTestSetup(body)
+	server, provider := newTestOIDCSetup(body)
 	provider.EmailClaim = "phone_number"
 	defer server.Close()
 
@@ -247,7 +247,7 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 			ExistingSession: &sessions.SessionState{
 				User:         "already",
 				Email:        "already@populated.com",
-				Groups:       []string{},
+				Groups:       nil,
 				IDToken:      idToken,
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
@@ -263,6 +263,89 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				User:         "already",
 				Email:        "already@populated.com",
 				Groups:       []string{"new", "thing"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Groups with Complex Groups in Profile URL": {
+			ExistingSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       nil,
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email": "new@thing.com",
+				"groups": []map[string]interface{}{
+					{
+						"groupId": "Admin Group Id",
+						"roles":   []string{"Admin"},
+					},
+				},
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Missing Groups with Singleton Complex Group in Profile URL": {
+			ExistingSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       nil,
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email": "new@thing.com",
+				"groups": map[string]interface{}{
+					"groupId": "Admin Group Id",
+					"roles":   []string{"Admin"},
+				},
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}"},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+		},
+		"Empty Groups Claims": {
+			ExistingSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{},
+				IDToken:      idToken,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			},
+			EmailClaim:  "email",
+			GroupsClaim: "groups",
+			ProfileJSON: map[string]interface{}{
+				"email":  "new@thing.com",
+				"groups": []string{"new", "thing"},
+			},
+			ExpectedError: nil,
+			ExpectedSession: &sessions.SessionState{
+				User:         "already",
+				Email:        "already@populated.com",
+				Groups:       []string{},
 				IDToken:      idToken,
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
@@ -297,7 +380,7 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 			ExistingSession: &sessions.SessionState{
 				User:         "already",
 				Email:        "already@populated.com",
-				Groups:       []string{},
+				Groups:       nil,
 				IDToken:      idToken,
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
@@ -346,7 +429,7 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 			jsonResp, err := json.Marshal(tc.ProfileJSON)
 			assert.NoError(t, err)
 
-			server, provider := newTestSetup(jsonResp)
+			server, provider := newTestOIDCSetup(jsonResp)
 			provider.ProfileURL, err = url.Parse(server.URL)
 			assert.NoError(t, err)
 
@@ -371,7 +454,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 		RefreshToken: refreshToken,
 	})
 
-	server, provider := newTestSetup(body)
+	server, provider := newTestOIDCSetup(body)
 	defer server.Close()
 
 	existingSession := &sessions.SessionState{
@@ -405,7 +488,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 		IDToken:      idToken,
 	})
 
-	server, provider := newTestSetup(body)
+	server, provider := newTestOIDCSetup(body)
 	defer server.Close()
 
 	existingSession := &sessions.SessionState{
@@ -433,7 +516,7 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 		GroupsClaim    string
 		ExpectedUser   string
 		ExpectedEmail  string
-		ExpectedGroups interface{}
+		ExpectedGroups []string
 	}{
 		"Default IDToken": {
 			IDToken:        defaultIDToken,
@@ -447,7 +530,7 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 			GroupsClaim:    "groups",
 			ExpectedUser:   "123456789",
 			ExpectedEmail:  "123456789",
-			ExpectedGroups: []string{},
+			ExpectedGroups: nil,
 		},
 		"Custom Groups Claim": {
 			IDToken:        defaultIDToken,
@@ -466,7 +549,7 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			server, provider := newTestSetup([]byte(`{}`))
+			server, provider := newTestOIDCSetup([]byte(`{}`))
 			provider.GroupsClaim = tc.GroupsClaim
 			defer server.Close()
 
@@ -478,9 +561,9 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 
 			assert.Equal(t, tc.ExpectedUser, ss.User)
 			assert.Equal(t, tc.ExpectedEmail, ss.Email)
+			assert.Equal(t, tc.ExpectedGroups, ss.Groups)
 			assert.Equal(t, rawIDToken, ss.IDToken)
 			assert.Equal(t, rawIDToken, ss.AccessToken)
-			assert.Equal(t, tc.ExpectedGroups, ss.Groups)
 			assert.Equal(t, "", ss.RefreshToken)
 		})
 	}

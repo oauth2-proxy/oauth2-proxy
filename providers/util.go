@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/bitly/go-simplejson"
 	"golang.org/x/oauth2"
 )
 
@@ -59,6 +60,8 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	return a
 }
 
+// getIDToken extracts an IDToken stored in the `Extra` fields of an
+// oauth2.Token
 func getIDToken(token *oauth2.Token) string {
 	idToken, ok := token.Extra("id_token").(string)
 	if !ok {
@@ -67,6 +70,8 @@ func getIDToken(token *oauth2.Token) string {
 	return idToken
 }
 
+// formatGroup coerces an OIDC groups claim into a string
+// If it is non-string, marshal it into JSON.
 func formatGroup(rawGroup interface{}) (string, error) {
 	group, ok := rawGroup.(string)
 	if !ok {
@@ -77,4 +82,19 @@ func formatGroup(rawGroup interface{}) (string, error) {
 		group = string(jsonGroup)
 	}
 	return group, nil
+}
+
+// coerceArray extracts a field from simplejson.Json that might be a
+// singleton or a list and coerces it into a list.
+func coerceArray(sj *simplejson.Json, key string) []interface{} {
+	array, err := sj.Get(key).Array()
+	if err == nil {
+		return array
+	}
+
+	single := sj.Get(key).Interface()
+	if single == nil {
+		return nil
+	}
+	return []interface{}{single}
 }

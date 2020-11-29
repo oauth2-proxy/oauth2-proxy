@@ -300,7 +300,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
-				Groups:            []string{},
+				Groups:            nil,
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
@@ -386,12 +386,20 @@ func TestProviderData_extractGroups(t *testing.T) {
 				"Just::A::String",
 			},
 		},
-		"Missing Groups": {
+		"Missing Groups Claim Returns Nil": {
 			Claims: map[string]interface{}{
 				"email": "this@does.not.matter.com",
 			},
 			GroupsClaim:    "groups",
-			ExpectedGroups: []string{},
+			ExpectedGroups: nil,
+		},
+		"Non List Groups": {
+			Claims: map[string]interface{}{
+				"email":  "this@does.not.matter.com",
+				"groups": "singleton",
+			},
+			GroupsClaim:    "groups",
+			ExpectedGroups: []string{"singleton"},
 		},
 	}
 	for testName, tc := range testCases {
@@ -408,7 +416,11 @@ func TestProviderData_extractGroups(t *testing.T) {
 			provider.GroupsClaim = tc.GroupsClaim
 
 			groups := provider.extractGroups(tc.Claims)
-			g.Expect(groups).To(Equal(tc.ExpectedGroups))
+			if tc.ExpectedGroups != nil {
+				g.Expect(groups).To(Equal(tc.ExpectedGroups))
+			} else {
+				g.Expect(groups).To(BeNil())
+			}
 		})
 	}
 }

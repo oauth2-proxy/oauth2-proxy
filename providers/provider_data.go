@@ -189,20 +189,34 @@ func (p *ProviderData) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
 	return claims, nil
 }
 
-// extractGroups extracts groups from a claim to a list in a type safe manner
+// extractGroups extracts groups from a claim to a list in a type safe manner.
+// If the claim isn't present, `nil` is returned. If the groups claim is
+// present but empty, `[]string{}` is returned.
 func (p *ProviderData) extractGroups(claims map[string]interface{}) []string {
+	rawClaim, ok := claims[p.GroupsClaim]
+	if !ok {
+		return nil
+	}
+
+	// Handle traditional list-based groups as well as non-standard singleton
+	// based groups. Both variants support complex objects if needed.
+	var claimGroups []interface{}
+	switch raw := rawClaim.(type) {
+	case []interface{}:
+		claimGroups = raw
+	case interface{}:
+		claimGroups = []interface{}{raw}
+	}
+
 	groups := []string{}
-	rawGroups, ok := claims[p.GroupsClaim].([]interface{})
-	if rawGroups != nil && ok {
-		for _, rawGroup := range rawGroups {
-			formattedGroup, err := formatGroup(rawGroup)
-			if err != nil {
-				logger.Errorf("Warning: unable to format group of type %s with error %s",
-					reflect.TypeOf(rawGroup), err)
-				continue
-			}
-			groups = append(groups, formattedGroup)
+	for _, rawGroup := range claimGroups {
+		formattedGroup, err := formatGroup(rawGroup)
+		if err != nil {
+			logger.Errorf("Warning: unable to format group of type %s with error %s",
+				reflect.TypeOf(rawGroup), err)
+			continue
 		}
+		groups = append(groups, formattedGroup)
 	}
 	return groups
 }
