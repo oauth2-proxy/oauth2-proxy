@@ -241,6 +241,8 @@ To configure the OIDC provider for Dex, perform the following steps:
 
 5. Test the setup by visiting http://127.0.0.1:4180 or http://127.0.0.1:4180/static .
 
+See also https://github.com/oauth2-proxy/oauth2-proxy/blob/master/contrib/local-environment for a self-contained example using Docker, with etcd as storage.
+
 #### Okta
 
 To configure the OIDC provider for Okta, perform the following steps:
