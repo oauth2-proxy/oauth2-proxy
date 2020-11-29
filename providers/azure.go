@@ -279,7 +279,7 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
 	return a.String()
 }
 
-// ValidateSessionState validates the AccessToken
-func (p *AzureProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+// ValidateSession validates the AccessToken
+func (p *AzureProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeAzureHeader(s.AccessToken))
 }

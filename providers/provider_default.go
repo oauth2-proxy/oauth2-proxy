@@ -86,12 +86,12 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 }
 
 // GetEmailAddress returns the Account email address
-// DEPRECATED: Migrate to EnrichSessionState
+// DEPRECATED: Migrate to EnrichSession
 func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", ErrNotImplemented
 }
 
-// EnrichSessionState is called after Redeem to allow providers to enrich session fields
+// EnrichSession is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
 func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState) error {
 	return nil
@@ -113,7 +113,7 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 	return false, nil
 }
 
-// ValidateSessionState validates the AccessToken
+// ValidateSession validates the AccessToken
 func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, nil)
 }
