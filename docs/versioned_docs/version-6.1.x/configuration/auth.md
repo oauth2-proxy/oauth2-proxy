@@ -201,7 +201,13 @@ OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many ma
     -oidc-issuer-url http://127.0.0.1:5556
     -cookie-secure=false
     -email-domain example.com
+    -scope==openid email profile groups
 ```
+
+For Dex and other providers you can ask for other scopes, like groups with `--scope=openid email profile groups`. 
+Please use the exact spelling as other might not work. See https://github.com/oauth2-proxy/oauth2-proxy/issues/860#issuecomment-713484960.
+You might need to ask for "groups" when combining Dex with LDAP back-end to provide authentication to Kubernetes Dashboard for example. 
+
 
 The OpenID Connect Provider (OIDC) can also be used to connect to other Identity Providers such as Okta. To configure the OIDC provider for Okta, perform
 the following steps:
