@@ -102,7 +102,7 @@ func (p *GitHubProvider) SetUsers(users []string) {
 	p.Users = users
 }
 
-// EnrichSessionState updates the User & Email after the initial Redeem
+// EnrichSession updates the User & Email after the initial Redeem
 func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	err := p.getEmail(ctx, s)
 	if err != nil {
@@ -111,7 +111,7 @@ func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 	return p.getUser(ctx, s)
 }
 
-// ValidateSessionState validates the AccessToken
+// ValidateSession validates the AccessToken
 func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
 }

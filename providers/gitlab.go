@@ -187,7 +187,7 @@ func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.T
 	}, nil
 }
 
-// ValidateSessionState checks that the session's IDToken is still valid
+// ValidateSession checks that the session's IDToken is still valid
 func (p *GitLabProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
