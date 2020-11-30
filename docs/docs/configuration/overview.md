@@ -54,7 +54,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--github-token` | string | the token to use when verifying repository collaborators (must have push access to the repository) | |
 | `--github-user` | string \| list | To allow users to login by username even if they do not belong to the specified org and team or collaborators | |
 | `--gitlab-group` | string \| list | restrict logins to members of any of these groups (slug), separated by a comma | |
-| `--gitlab-projects` | string \| list | restrict logins to members of any of these projects (may be given multiple times) formatted as `orgname/repo=accesslevel`. Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent | |
+| `--gitlab-projects` | string \| list | restrict logins to members of any of these projects (may be given multiple times) formatted as `orgname/repo=accesslevel`. Access level should be a value matching [Gitlab access levels](https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent | |
 | `--google-admin-email` | string | the google admin to impersonate for api calls | |
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
 | `--google-service-account-json` | string | the path to the service account json credentials | |
