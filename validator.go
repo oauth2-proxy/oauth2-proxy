@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"io"
 	"os"
-	"regexp"
 	"strings"
 	"sync/atomic"
 	"unsafe"
@@ -83,7 +82,7 @@ func newValidatorImpl(domains []string, usersFile string,
 			allowAll = true
 			continue
 		}
-		domains[i] = strings.Replace(strings.ToLower(domain), "*", "[A-Za-z0-9._%+-@]+", -1)
+		domains[i] = strings.ToLower(domain)
 	}
 
 	validator := func(email string) (valid bool) {
@@ -91,10 +90,7 @@ func newValidatorImpl(domains []string, usersFile string,
 			return
 		}
 		email = strings.ToLower(email)
-		for _, domain := range domains {
-			regexValid, _ := regexp.MatchString(domain, email)
-			valid = valid || regexValid || strings.HasSuffix(email, domain)
-		}
+		valid = isEmailValidWithDomains(email, domains)
 		if !valid {
 			valid = validUsers.IsValid(email)
 		}
@@ -109,4 +105,22 @@ func newValidatorImpl(domains []string, usersFile string,
 // NewValidator constructs a function to validate email addresses
 func NewValidator(domains []string, usersFile string) func(string) bool {
 	return newValidatorImpl(domains, usersFile, nil, func() {})
+}
+
+// isEmailValidWithDomains checks if the authenticated email is validated against the provided domain
+func isEmailValidWithDomains(email string, emailDomains []string) bool {
+	for _, domain := range emailDomains {
+		//allow if the domain is perfect suffix match with the email
+		if strings.HasSuffix(email, "@"+domain) {
+			return true
+		}
+
+		//allow if the domain is prefixed with . and
+		//the last element (split on @) has the suffix as the domain
+		atoms := strings.Split(email, "@")
+		if strings.HasPrefix(domain, ".") && strings.HasSuffix(atoms[len(atoms)-1], domain) {
+			return true
+		}
+	}
+	return false
 }

@@ -2,9 +2,13 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	. "github.com/onsi/gomega"
 )
 
 type ValidatorTest struct {
@@ -210,55 +214,114 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 	}
 }
 
-func TestValidatorMultipleEmailsRegexMultipleDomains(t *testing.T) {
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
+func TestValidatorSubDomains(t *testing.T) {
+	testCases := []struct {
+		name           string
+		allowedEmails  []string
+		allowedDomains []string
+		email          string
+		expectedAuthZ  bool
+	}{
+		{
+			name:           "EmailNotInCorrect1stSubDomainsNotInEmails",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "foo.bar@example0.com",
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "EmailInFirstDomain",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "foo@bar.example0.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailNotInCorrect2ndSubDomainsNotInEmails",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "baz.quux@example1.com",
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "EmailInSecondDomain",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "baz@quux.example1.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailInFirstEmailList",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "xyzzy@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailNotInDomainsNotInEmails",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "xyzzy.plugh@example.com",
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "EmailInLastEmailList",
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
+			allowedDomains: []string{".example0.com", ".example1.com"},
+			email:          "plugh@example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailIn1stSubdomain",
+			allowedEmails:  nil,
+			allowedDomains: []string{"us.example.com", "de.example.com", "example.com"},
+			email:          "xyzzy@us.example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailIn2ndSubdomain",
+			allowedEmails:  nil,
+			allowedDomains: []string{"us.example.com", "de.example.com", "example.com"},
+			email:          "xyzzy@de.example.com",
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailNotInAnySubdomain",
+			allowedEmails:  nil,
+			allowedDomains: []string{"us.example.com", "de.example.com", "example.com"},
+			email:          "global@au.example.com",
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "EmailInLastSubdomain",
+			allowedEmails:  nil,
+			allowedDomains: []string{"us.example.com", "de.example.com", "example.com"},
+			email:          "xyzzy@example.com",
+			expectedAuthZ:  true,
+		},
+	}
 
-	vt.WriteEmails(t, []string{
-		"xyzzy@example.com",
-		"plugh@example.com",
-	})
-	domains := []string{"*example0.com", "*example1.com"}
-	validator := vt.NewValidator(domains, nil)
+	dir, err := ioutil.TempDir("", "emailstest")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
 
-	if !validator("foo.bar@example0.com") {
-		t.Error("email from first regex domain should validate")
-	}
-	if !validator("baz.quux@example1.com") {
-		t.Error("email from second regex domain should validate")
-	}
-	if !validator("xyzzy@example.com") {
-		t.Error("first email in list should validate")
-	}
-	if !validator("plugh@example.com") {
-		t.Error("second email in list should validate")
-	}
-	if validator("xyzzy.plugh@example.com") {
-		t.Error("email not in list that matches no domains " +
-			"should not validate")
-	}
-}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
 
-func TestValidatorRegexMultipleSubDomains(t *testing.T) {
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
+			emailsFile := filepath.Join(dir, "emails")
+			if err := ioutil.WriteFile(emailsFile, []byte(strings.Join(tc.allowedEmails, "\n")), 0666); err != nil {
+				log.Fatal(err)
+			}
 
-	vt.WriteEmails(t, []string(nil))
-	domains := []string{"*@us.example.com", "*@de.example.com"}
-	validator := vt.NewValidator(domains, nil)
+			validator := NewValidator(tc.allowedDomains, emailsFile)
+			authorized := validator(tc.email)
 
-	if !validator("xyzzy@us.example.com") {
-		t.Error("email from first regex domain should validate")
+			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
+		})
 	}
-	if !validator("xyzzy@de.example.com") {
-		t.Error("email from second regex domain should validate")
-	}
-	if validator("global@au.example.com") {
-		t.Error("email not in list that matches no domains " +
-			"should not validate")
-	}
-	if validator("global@example.com") {
-		t.Error("email not in list that matches no domains " +
-			"should not validate")
-	}
+
+	defer os.RemoveAll(dir)
 }
