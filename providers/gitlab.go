@@ -326,7 +326,7 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 			if perms.AccessLevel >= project.AccessLevel {
 				s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.Name))
 			} else {
-				logger.Errorf("Warning: user %s do not have the minimum required access level %s", s.Email, project.Name)
+				logger.Errorf("Warning: user %q does not have the minimum required access level for project %q", s.Email, project.Name)
 			}
 		}
 
