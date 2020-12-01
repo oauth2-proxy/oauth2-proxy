@@ -287,12 +287,12 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 		return fmt.Errorf("user email is not verified")
 	}
 
+	s.User = userInfo.Username
+	s.Email = userInfo.Email
+
 	p.addGroupsToSession(ctx, s)
 
 	p.addProjectsToSession(ctx, s)
-
-	s.User = userInfo.Username
-	s.Email = userInfo.Email
 
 	return nil
 
