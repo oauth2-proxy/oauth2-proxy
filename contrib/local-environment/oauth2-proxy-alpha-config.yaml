@@ -1,0 +1,17 @@
+upstreams:
+  - id: httpbin
+    path: /
+    uri: http://httpbin
+injectRequestHeaders:
+- name: X-Forwarded-Groups
+  values:
+  - claim: groups
+- name: X-Forwarded-User
+  values:
+  -   claim: user
+- name: X-Forwarded-Email
+  values:
+  - claim: email
+- name: X-Forwarded-Preferred-Username
+  values:
+  - claim: preferred_username

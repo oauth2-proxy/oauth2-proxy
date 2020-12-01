@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/url"
 
+	"github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
@@ -26,6 +27,11 @@ type ProviderData struct {
 	ClientSecretFile string
 	Scope            string
 	Prompt           string
+	Verifier         *oidc.IDTokenVerifier
+
+	// Universal Group authorization data structure
+	// any provider can set to consume
+	AllowedGroups map[string]struct{}
 }
 
 // Data returns the ProviderData
@@ -43,6 +49,15 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 		return "", errors.New("could not read client secret file")
 	}
 	return string(fileClientSecret), nil
+}
+
+// SetAllowedGroups organizes a group list into the AllowedGroups map
+// to be consumed by Authorize implementations
+func (p *ProviderData) SetAllowedGroups(groups []string) {
+	p.AllowedGroups = make(map[string]struct{}, len(groups))
+	for _, group := range groups {
+		p.AllowedGroups[group] = struct{}{}
+	}
 }
 
 type providerDefaults struct {

@@ -22,7 +22,6 @@ const emailClaim = "email"
 type OIDCProvider struct {
 	*ProviderData
 
-	Verifier             *oidc.IDTokenVerifier
 	AllowUnverifiedEmail bool
 	UserIDClaim          string
 	GroupsClaim          string
@@ -175,14 +174,19 @@ func (p *OIDCProvider) createSessionState(ctx context.Context, token *oauth2.Tok
 	return newSession, nil
 }
 
-func (p *OIDCProvider) CreateSessionStateFromBearerToken(ctx context.Context, rawIDToken string, idToken *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+	idToken, err := p.Verifier.Verify(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
 	newSession, err := p.createSessionStateInternal(ctx, idToken, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	newSession.AccessToken = rawIDToken
-	newSession.IDToken = rawIDToken
+	newSession.AccessToken = token
+	newSession.IDToken = token
 	newSession.RefreshToken = ""
 	newSession.ExpiresOn = &idToken.Expiry
 
@@ -221,7 +225,7 @@ func (p *OIDCProvider) createSessionStateInternal(ctx context.Context, idToken *
 }
 
 // ValidateSessionState checks that the session's IDToken is still valid
-func (p *OIDCProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
 }

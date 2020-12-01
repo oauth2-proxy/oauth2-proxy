@@ -4,6 +4,13 @@
 
 ## Important Notes
 
+- [#905](https://github.com/oauth2-proxy/oauth2-proxy/pull/905) Existing sessions from v6.0.0 or earlier are no longer valid. They will trigger a reauthentication.
+- [#826](https://github.com/oauth2-proxy/oauth2-proxy/pull/826) `skip-auth-strip-headers` now applies to all requests, not just those where authentication would be skipped.
+- [#797](https://github.com/oauth2-proxy/oauth2-proxy/pull/797) The behavior of the Google provider Groups restriction changes with this
+  - Either `--google-group` or the new `--allowed-group` will work for Google now (`--google-group` will be used if both are set)
+  - Group membership lists will be passed to the backend with the `X-Forwarded-Groups` header
+  - If you change the list of allowed groups, existing sessions that now don't have a valid group will be logged out immediately.
+      - Previously, group membership was only checked on session creation and refresh.
 - [#789](https://github.com/oauth2-proxy/oauth2-proxy/pull/789) `--skip-auth-route` is (almost) backwards compatible with `--skip-auth-regex`
   - We are marking `--skip-auth-regex` as DEPRECATED and will remove it in the next major version.
   - If your regex contains an `=` and you want it for all methods, you will need to add a leading `=` (this is the area where `--skip-auth-regex` doesn't port perfectly)
@@ -15,6 +22,10 @@
 
 ## Breaking Changes
 
+- [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Specifying a non-existent provider will cause OAuth2-Proxy to fail on startup instead of defaulting to "google".
+- [#797](https://github.com/oauth2-proxy/oauth2-proxy/pull/797) Security changes to Google provider group authorization flow
+  - If you change the list of allowed groups, existing sessions that now don't have a valid group will be logged out immediately.
+    - Previously, group membership was only checked on session creation and refresh.
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) When a Redis session store is configured, OAuth2-Proxy will fail to start up unless connection and health checks to Redis pass
 - [#800](https://github.com/oauth2-proxy/oauth2-proxy/pull/800) Fix import path for v7. The import path has changed to support the go get installation.
   - You can now `go get github.com/oauth2-proxy/oauth2-proxy/v7` to get the latest `v7` version of OAuth2 Proxy
@@ -23,9 +34,31 @@
   via the login url. If this option was used in the past, behavior will change with this release as it will
   affect the tokens returned by Azure. In the past, the tokens were always for `https://graph.microsoft.com` (the default)
   and will now be for the configured resource (if it exists, otherwise it will run into errors)
+- [#754](https://github.com/oauth2-proxy/oauth2-proxy/pull/754) The Azure provider now has token refresh functionality implemented. This means that there won't
+  be any redirects in the browser anymore when tokens expire, but instead a token refresh is initiated
+  in the background, which leads to new tokens being returned in the cookies.
+  - Please note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
+  Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
+  to decide if a refresh is required.
 
 ## Changes since v6.1.1
 
+- [#907](https://github.com/oauth2-proxy/oauth2-proxy/pull/907) Introduce alpha configuration option to enable testing of structured configuration (@JoelSpeed)
+- [#938](https://github.com/oauth2-proxy/oauth2-proxy/pull/938) Cleanup missed provider renaming refactor methods (@NickMeves)
+- [#925](https://github.com/oauth2-proxy/oauth2-proxy/pull/925) Fix basic auth legacy header conversion (@JoelSpeed)
+- [#916](https://github.com/oauth2-proxy/oauth2-proxy/pull/916) Add AlphaOptions struct to prepare for alpha config loading (@JoelSpeed)
+- [#923](https://github.com/oauth2-proxy/oauth2-proxy/pull/923) Support TLS 1.3 (@aajisaka)
+- [#918](https://github.com/oauth2-proxy/oauth2-proxy/pull/918) Fix log header output (@JoelSpeed)
+- [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Validate provider type on startup.
+- [#869](https://github.com/oauth2-proxy/oauth2-proxy/pull/869) Streamline provider interface method names and signatures (@NickMeves)
+- [#906](https://github.com/oauth2-proxy/oauth2-proxy/pull/906) Set up v6.1.x versioned documentation as default documentation (@JoelSpeed)
+- [#905](https://github.com/oauth2-proxy/oauth2-proxy/pull/905) Remove v5 legacy sessions support (@NickMeves)
+- [#904](https://github.com/oauth2-proxy/oauth2-proxy/pull/904) Set `skip-auth-strip-headers` to `true` by default (@NickMeves)
+- [#826](https://github.com/oauth2-proxy/oauth2-proxy/pull/826) Integrate new header injectors into project (@JoelSpeed)
+- [#797](https://github.com/oauth2-proxy/oauth2-proxy/pull/797) Create universal Authorization behavior across providers (@NickMeves)
+- [#898](https://github.com/oauth2-proxy/oauth2-proxy/pull/898) Migrate documentation to Docusaurus (@JoelSpeed)
+- [#754](https://github.com/oauth2-proxy/oauth2-proxy/pull/754) Azure token refresh (@codablock)
+- [#850](https://github.com/oauth2-proxy/oauth2-proxy/pull/850) Increase session fields in `/oauth2/userinfo` endpoint (@NickMeves)
 - [#825](https://github.com/oauth2-proxy/oauth2-proxy/pull/825) Fix code coverage reporting on GitHub actions(@JoelSpeed)
 - [#796](https://github.com/oauth2-proxy/oauth2-proxy/pull/796) Deprecate GetUserName & GetEmailAdress for EnrichSessionState (@NickMeves)
 - [#705](https://github.com/oauth2-proxy/oauth2-proxy/pull/705) Add generic Header injectors for upstream request and response headers (@JoelSpeed)
@@ -35,6 +68,7 @@
 - [#722](https://github.com/oauth2-proxy/oauth2-proxy/pull/722) Validate Redis configuration options at startup (@NickMeves)
 - [#791](https://github.com/oauth2-proxy/oauth2-proxy/pull/791) Remove GetPreferredUsername method from provider interface (@NickMeves)
 - [#764](https://github.com/oauth2-proxy/oauth2-proxy/pull/764) Document bcrypt encryption for htpasswd (and hide SHA) (@lentzi90)
+- [#778](https://github.com/oauth2-proxy/oauth2-proxy/pull/778) Use display-htpasswd-form flag
 - [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Add support to ensure user belongs in required groups when using the OIDC provider (@stefansedich)
 - [#800](https://github.com/oauth2-proxy/oauth2-proxy/pull/800) Fix import path for v7 (@johejo)
 - [#783](https://github.com/oauth2-proxy/oauth2-proxy/pull/783) Update Go to 1.15 (@johejo)
@@ -43,6 +77,7 @@
 - [#750](https://github.com/oauth2-proxy/oauth2-proxy/pull/750) ci: Migrate to Github Actions (@shinebayar-g)
 - [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
 - [#819](https://github.com/oauth2-proxy/oauth2-proxy/pull/819) Improve CI (@johejo)
+
 
 # v6.1.1
 

@@ -94,6 +94,6 @@ func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 }
 
 // ValidateSessionState validates the AccessToken
-func (p *LinkedInProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+func (p *LinkedInProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeLinkedInHeader(s.AccessToken))
 }

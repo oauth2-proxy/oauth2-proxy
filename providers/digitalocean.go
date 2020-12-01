@@ -82,7 +82,7 @@ func (p *DigitalOceanProvider) GetEmailAddress(ctx context.Context, s *sessions.
 	return email, nil
 }
 
-// ValidateSessionState validates the AccessToken
-func (p *DigitalOceanProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+// ValidateSession validates the AccessToken
+func (p *DigitalOceanProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }

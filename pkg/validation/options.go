@@ -28,6 +28,8 @@ func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
+	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
+	msgs = append(msgs, prefixValues("injectRespeonseHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -69,10 +71,6 @@ func Validate(o *options.Options) error {
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
 			"\n      use email-domain=* to authorize all email addresses")
-	}
-
-	if o.SetBasicAuth && o.SetAuthorization {
-		msgs = append(msgs, "mutually exclusive: set-basic-auth and set-authorization-header can not both be true")
 	}
 
 	if o.OIDCIssuerURL != "" {
@@ -159,10 +157,6 @@ func Validate(o *options.Options) error {
 		}
 	}
 
-	if o.PreferEmailToUser && !o.PassBasicAuth && !o.PassUserHeaders {
-		msgs = append(msgs, "PreferEmailToUser should only be used with PassBasicAuth or PassUserHeaders")
-	}
-
 	if o.SkipJwtBearerTokens {
 		// Configure extra issuers
 		if len(o.ExtraJwtIssuers) > 0 {
@@ -239,7 +233,18 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
 
-	o.SetProvider(providers.New(o.ProviderType, p))
+	// Make the OIDC Verifier accessible to all providers that can support it
+	p.Verifier = o.GetOIDCVerifier()
+
+	p.SetAllowedGroups(o.AllowedGroups)
+
+	provider := providers.New(o.ProviderType, p)
+	if provider == nil {
+		msgs = append(msgs, fmt.Sprintf("invalid setting: provider '%s' is not available", o.ProviderType))
+		return msgs
+	}
+	o.SetProvider(provider)
+
 	switch p := o.GetProvider().(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.AzureTenant)
@@ -255,7 +260,13 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 			if err != nil {
 				msgs = append(msgs, "invalid Google credentials file: "+o.GoogleServiceAccountJSON)
 			} else {
-				p.SetGroupRestriction(o.GoogleGroups, o.GoogleAdminEmail, file)
+				groups := o.AllowedGroups
+				// Backwards compatibility with `--google-group` option
+				if len(o.GoogleGroups) > 0 {
+					groups = o.GoogleGroups
+					p.SetAllowedGroups(groups)
+				}
+				p.SetGroupRestriction(groups, o.GoogleAdminEmail, file)
 			}
 		}
 	case *providers.BitbucketProvider:
@@ -265,18 +276,14 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.UserIDClaim = o.UserIDClaim
 		p.GroupsClaim = o.OIDCGroupsClaim
-		if o.GetOIDCVerifier() == nil {
+		if p.Verifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
-		} else {
-			p.Verifier = o.GetOIDCVerifier()
 		}
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
 
-		if o.GetOIDCVerifier() != nil {
-			p.Verifier = o.GetOIDCVerifier()
-		} else {
+		if p.Verifier == nil {
 			// Initialize with default verifier for gitlab.com
 			ctx := context.Background()
 

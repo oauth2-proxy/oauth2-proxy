@@ -162,29 +162,6 @@ func TestDefaultProviderApiSettings(t *testing.T) {
 	assert.Equal(t, "profile email", p.Scope)
 }
 
-func TestPassAccessTokenRequiresSpecificCookieSecretLengths(t *testing.T) {
-	o := testOptions()
-	assert.Equal(t, nil, Validate(o))
-
-	assert.Equal(t, false, o.PassAccessToken)
-	o.PassAccessToken = true
-	o.Cookie.Secret = "cookie of invalid length-"
-	assert.NotEqual(t, nil, Validate(o))
-
-	o.PassAccessToken = false
-	o.Cookie.Refresh = time.Duration(24) * time.Hour
-	assert.NotEqual(t, nil, Validate(o))
-
-	o.Cookie.Secret = "16 bytes AES-128"
-	assert.Equal(t, nil, Validate(o))
-
-	o.Cookie.Secret = "24 byte secret AES-192--"
-	assert.Equal(t, nil, Validate(o))
-
-	o.Cookie.Secret = "32 byte secret for AES-256------"
-	assert.Equal(t, nil, Validate(o))
-}
-
 func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, Validate(o))
