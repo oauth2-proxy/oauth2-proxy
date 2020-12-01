@@ -206,12 +206,15 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {
 	idToken, err := p.verifyIDToken(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify id_token: %v", err)
-	}
-
-	// IDToken is mandatory in Redeem but optional in Refresh
-	if idToken == nil && !refresh {
-		return nil, errors.New("token response did not contain an id_token")
+		switch err {
+		case ErrMissingIDToken:
+			// IDToken is mandatory in Redeem but optional in Refresh
+			if !refresh {
+				return nil, errors.New("token response did not contain an id_token")
+			}
+		default:
+			return nil, fmt.Errorf("could not verify id_token: %v", err)
+		}
 	}
 
 	ss, err := p.buildSessionFromClaims(idToken)

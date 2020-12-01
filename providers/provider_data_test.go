@@ -137,23 +137,33 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 
 	testCases := map[string]struct {
 		IDToken       *idTokenClaims
+		Verifier      bool
 		ExpectIDToken bool
 		ExpectedError error
 	}{
 		"Valid ID Token": {
 			IDToken:       &defaultIDToken,
+			Verifier:      true,
 			ExpectIDToken: true,
 			ExpectedError: nil,
 		},
 		"Invalid ID Token": {
 			IDToken:       &failureIDToken,
+			Verifier:      true,
 			ExpectIDToken: false,
 			ExpectedError: errors.New("failed to verify signature: the validation failed for subject [123456789]"),
 		},
 		"Missing ID Token": {
 			IDToken:       nil,
+			Verifier:      true,
 			ExpectIDToken: false,
-			ExpectedError: nil,
+			ExpectedError: ErrMissingIDToken,
+		},
+		"OIDC Verifier not Configured": {
+			IDToken:       &defaultIDToken,
+			Verifier:      false,
+			ExpectIDToken: false,
+			ExpectedError: ErrMissingOIDCVerifier,
 		},
 	}
 
@@ -170,12 +180,13 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 				})
 			}
 
-			provider := &ProviderData{
-				Verifier: oidc.NewVerifier(
+			provider := &ProviderData{}
+			if tc.Verifier {
+				provider.Verifier = oidc.NewVerifier(
 					oidcIssuer,
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
-				),
+				)
 			}
 			verified, err := provider.verifyIDToken(context.Background(), token)
 			if err != nil {
