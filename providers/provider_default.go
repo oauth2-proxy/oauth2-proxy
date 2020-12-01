@@ -8,8 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/coreos/go-oidc"
-
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
@@ -87,14 +86,14 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 }
 
 // GetEmailAddress returns the Account email address
-// DEPRECATED: Migrate to EnrichSessionState
+// DEPRECATED: Migrate to EnrichSession
 func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", ErrNotImplemented
 }
 
-// EnrichSessionState is called after Redeem to allow providers to enrich session fields
+// EnrichSession is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
-func (p *ProviderData) EnrichSessionState(_ context.Context, _ *sessions.SessionState) error {
+func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState) error {
 	return nil
 }
 
@@ -114,8 +113,8 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 	return false, nil
 }
 
-// ValidateSessionState validates the AccessToken
-func (p *ProviderData) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+// ValidateSession validates the AccessToken
+func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, nil)
 }
 
@@ -125,8 +124,10 @@ func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.Ses
 	return false, nil
 }
 
-// CreateSessionStateFromBearerToken should be implemented to allow providers
-// to convert ID tokens into sessions
-func (p *ProviderData) CreateSessionStateFromBearerToken(_ context.Context, _ string, _ *oidc.IDToken) (*sessions.SessionState, error) {
+// CreateSessionFromToken converts Bearer IDTokens into sessions
+func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+	if p.Verifier != nil {
+		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)
+	}
 	return nil, ErrNotImplemented
 }

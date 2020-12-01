@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/go-oidc"
 	"github.com/justinas/alice"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -78,36 +77,34 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	allowedRoutes           []allowedRoute
-	redirectURL             *url.URL // the url to receive requests at
-	whitelistDomains        []string
-	provider                providers.Provider
-	providerNameOverride    string
-	sessionStore            sessionsapi.SessionStore
-	ProxyPrefix             string
-	SignInMessage           string
-	basicAuthValidator      basic.Validator
-	displayHtpasswdForm     bool
-	serveMux                http.Handler
-	SetXAuthRequest         bool
-	PassBasicAuth           bool
-	SetBasicAuth            bool
-	SkipProviderButton      bool
-	PassUserHeaders         bool
-	BasicAuthPassword       string
-	PassAccessToken         bool
-	SetAuthorization        bool
-	PassAuthorization       bool
-	PreferEmailToUser       bool
-	skipAuthPreflight       bool
-	skipJwtBearerTokens     bool
-	mainJwtBearerVerifier   *oidc.IDTokenVerifier
-	extraJwtBearerVerifiers []*oidc.IDTokenVerifier
-	templates               *template.Template
-	realClientIPParser      ipapi.RealClientIPParser
-	trustedIPs              *ip.NetSet
-	Banner                  string
-	Footer                  string
+	allowedRoutes        []allowedRoute
+	redirectURL          *url.URL // the url to receive requests at
+	whitelistDomains     []string
+	provider             providers.Provider
+	providerNameOverride string
+	sessionStore         sessionsapi.SessionStore
+	ProxyPrefix          string
+	SignInMessage        string
+	basicAuthValidator   basic.Validator
+	displayHtpasswdForm  bool
+	serveMux             http.Handler
+	SetXAuthRequest      bool
+	PassBasicAuth        bool
+	SetBasicAuth         bool
+	SkipProviderButton   bool
+	PassUserHeaders      bool
+	BasicAuthPassword    string
+	PassAccessToken      bool
+	SetAuthorization     bool
+	PassAuthorization    bool
+	PreferEmailToUser    bool
+	skipAuthPreflight    bool
+	skipJwtBearerTokens  bool
+	templates            *template.Template
+	realClientIPParser   ipapi.RealClientIPParser
+	trustedIPs           *ip.NetSet
+	Banner               string
+	Footer               string
 
 	sessionChain alice.Chain
 	headersChain alice.Chain
@@ -202,25 +199,23 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
-		ProxyPrefix:             opts.ProxyPrefix,
-		provider:                opts.GetProvider(),
-		providerNameOverride:    opts.ProviderName,
-		sessionStore:            sessionStore,
-		serveMux:                upstreamProxy,
-		redirectURL:             redirectURL,
-		allowedRoutes:           allowedRoutes,
-		whitelistDomains:        opts.WhitelistDomains,
-		skipAuthPreflight:       opts.SkipAuthPreflight,
-		skipJwtBearerTokens:     opts.SkipJwtBearerTokens,
-		mainJwtBearerVerifier:   opts.GetOIDCVerifier(),
-		extraJwtBearerVerifiers: opts.GetJWTBearerVerifiers(),
-		realClientIPParser:      opts.GetRealClientIPParser(),
-		SkipProviderButton:      opts.SkipProviderButton,
-		templates:               templates,
-		trustedIPs:              trustedIPs,
-		Banner:                  opts.Banner,
-		Footer:                  opts.Footer,
-		SignInMessage:           buildSignInMessage(opts),
+		ProxyPrefix:          opts.ProxyPrefix,
+		provider:             opts.GetProvider(),
+		providerNameOverride: opts.ProviderName,
+		sessionStore:         sessionStore,
+		serveMux:             upstreamProxy,
+		redirectURL:          redirectURL,
+		allowedRoutes:        allowedRoutes,
+		whitelistDomains:     opts.WhitelistDomains,
+		skipAuthPreflight:    opts.SkipAuthPreflight,
+		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
+		realClientIPParser:   opts.GetRealClientIPParser(),
+		SkipProviderButton:   opts.SkipProviderButton,
+		templates:            templates,
+		trustedIPs:           trustedIPs,
+		Banner:               opts.Banner,
+		Footer:               opts.Footer,
+		SignInMessage:        buildSignInMessage(opts),
 
 		basicAuthValidator:  basicAuthValidator,
 		displayHtpasswdForm: basicAuthValidator != nil && opts.DisplayHtpasswdForm,
@@ -266,18 +261,13 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	chain := alice.New()
 
 	if opts.SkipJwtBearerTokens {
-		sessionLoaders := []middlewareapi.TokenToSessionLoader{}
-		if opts.GetOIDCVerifier() != nil {
-			sessionLoaders = append(sessionLoaders, middlewareapi.TokenToSessionLoader{
-				Verifier:       opts.GetOIDCVerifier(),
-				TokenToSession: opts.GetProvider().CreateSessionStateFromBearerToken,
-			})
+		sessionLoaders := []middlewareapi.TokenToSessionFunc{
+			opts.GetProvider().CreateSessionFromToken,
 		}
 
 		for _, verifier := range opts.GetJWTBearerVerifiers() {
-			sessionLoaders = append(sessionLoaders, middlewareapi.TokenToSessionLoader{
-				Verifier: verifier,
-			})
+			sessionLoaders = append(sessionLoaders,
+				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
 		}
 
 		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders))
@@ -291,7 +281,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 		SessionStore:           sessionStore,
 		RefreshPeriod:          opts.Cookie.Refresh,
 		RefreshSessionIfNeeded: opts.GetProvider().RefreshSessionIfNeeded,
-		ValidateSessionState:   opts.GetProvider().ValidateSessionState,
+		ValidateSessionState:   opts.GetProvider().ValidateSession,
 	}))
 
 	return chain
@@ -416,7 +406,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 		}
 	}
 
-	return p.provider.EnrichSessionState(ctx, s)
+	return p.provider.EnrichSession(ctx, s)
 }
 
 // MakeCSRFCookie creates a cookie for CSRF
@@ -798,13 +788,19 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
+
 	userInfo := struct {
-		Email             string `json:"email"`
-		PreferredUsername string `json:"preferredUsername,omitempty"`
+		User              string   `json:"user"`
+		Email             string   `json:"email"`
+		Groups            []string `json:"groups,omitempty"`
+		PreferredUsername string   `json:"preferredUsername,omitempty"`
 	}{
+		User:              session.User,
 		Email:             session.Email,
+		Groups:            session.Groups,
 		PreferredUsername: session.PreferredUsername,
 	}
+
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(rw).Encode(userInfo)

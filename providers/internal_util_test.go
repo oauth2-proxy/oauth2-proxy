@@ -20,30 +20,30 @@ func updateURL(url *url.URL, hostname string) {
 	url.Host = hostname
 }
 
-type ValidateSessionStateTestProvider struct {
+type ValidateSessionTestProvider struct {
 	*ProviderData
 }
 
-var _ Provider = (*ValidateSessionStateTestProvider)(nil)
+var _ Provider = (*ValidateSessionTestProvider)(nil)
 
-func (tp *ValidateSessionStateTestProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+func (tp *ValidateSessionTestProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
 // Note that we're testing the internal validateToken() used to implement
-// several Provider's ValidateSessionState() implementations
-func (tp *ValidateSessionStateTestProvider) ValidateSessionState(ctx context.Context, s *sessions.SessionState) bool {
+// several Provider's ValidateSession() implementations
+func (tp *ValidateSessionTestProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return false
 }
 
 type ValidateSessionStateTest struct {
 	backend      *httptest.Server
 	responseCode int
-	provider     *ValidateSessionStateTestProvider
+	provider     *ValidateSessionTestProvider
 	header       http.Header
 }
 
-func NewValidateSessionStateTest() *ValidateSessionStateTest {
+func NewValidateSessionTest() *ValidateSessionStateTest {
 	var vtTest ValidateSessionStateTest
 
 	vtTest.backend = httptest.NewServer(
@@ -73,7 +73,7 @@ func NewValidateSessionStateTest() *ValidateSessionStateTest {
 
 		}))
 	backendURL, _ := url.Parse(vtTest.backend.URL)
-	vtTest.provider = &ValidateSessionStateTestProvider{
+	vtTest.provider = &ValidateSessionTestProvider{
 		ProviderData: &ProviderData{
 			ValidateURL: &url.URL{
 				Scheme: "http",
@@ -90,14 +90,14 @@ func (vtTest *ValidateSessionStateTest) Close() {
 	vtTest.backend.Close()
 }
 
-func TestValidateSessionStateValidToken(t *testing.T) {
-	vtTest := NewValidateSessionStateTest()
+func TestValidateSessionValidToken(t *testing.T) {
+	vtTest := NewValidateSessionTest()
 	defer vtTest.Close()
 	assert.Equal(t, true, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
-func TestValidateSessionStateValidTokenWithHeaders(t *testing.T) {
-	vtTest := NewValidateSessionStateTest()
+func TestValidateSessionValidTokenWithHeaders(t *testing.T) {
+	vtTest := NewValidateSessionTest()
 	defer vtTest.Close()
 	vtTest.header = make(http.Header)
 	vtTest.header.Set("Authorization", "Bearer foobar")
@@ -105,28 +105,28 @@ func TestValidateSessionStateValidTokenWithHeaders(t *testing.T) {
 		validateToken(context.Background(), vtTest.provider, "foobar", vtTest.header))
 }
 
-func TestValidateSessionStateEmptyToken(t *testing.T) {
-	vtTest := NewValidateSessionStateTest()
+func TestValidateSessionEmptyToken(t *testing.T) {
+	vtTest := NewValidateSessionTest()
 	defer vtTest.Close()
 	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "", nil))
 }
 
-func TestValidateSessionStateEmptyValidateURL(t *testing.T) {
-	vtTest := NewValidateSessionStateTest()
+func TestValidateSessionEmptyValidateURL(t *testing.T) {
+	vtTest := NewValidateSessionTest()
 	defer vtTest.Close()
 	vtTest.provider.Data().ValidateURL = nil
 	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
-func TestValidateSessionStateRequestNetworkFailure(t *testing.T) {
-	vtTest := NewValidateSessionStateTest()
+func TestValidateSessionRequestNetworkFailure(t *testing.T) {
+	vtTest := NewValidateSessionTest()
 	// Close immediately to simulate a network failure
 	vtTest.Close()
 	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
-func TestValidateSessionStateExpiredToken(t *testing.T) {
-	vtTest := NewValidateSessionStateTest()
+func TestValidateSessionExpiredToken(t *testing.T) {
+	vtTest := NewValidateSessionTest()
 	defer vtTest.Close()
 	vtTest.responseCode = 401
 	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))

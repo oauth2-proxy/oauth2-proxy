@@ -27,7 +27,7 @@ func NewLegacyOptions() *LegacyOptions {
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
-			FlushInterval:   time.Duration(1) * time.Second,
+			FlushInterval:   DefaultUpstreamFlushInterval,
 		},
 
 		LegacyHeaders: LegacyHeaders{
@@ -62,7 +62,7 @@ type LegacyUpstreams struct {
 func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("upstreams", pflag.ExitOnError)
 
-	flagSet.Duration("flush-interval", time.Duration(1)*time.Second, "period between response flushing when streaming responses")
+	flagSet.Duration("flush-interval", DefaultUpstreamFlushInterval, "period between response flushing when streaming responses")
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
@@ -84,6 +84,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			u.Path = "/"
 		}
 
+		flushInterval := Duration(l.FlushInterval)
 		upstream := Upstream{
 			ID:                    u.Path,
 			Path:                  u.Path,
@@ -91,7 +92,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			InsecureSkipTLSVerify: l.SSLUpstreamInsecureSkipVerify,
 			PassHostHeader:        &l.PassHostHeader,
 			ProxyWebSockets:       &l.ProxyWebSockets,
-			FlushInterval:         &l.FlushInterval,
+			FlushInterval:         &flushInterval,
 		}
 
 		switch u.Scheme {
@@ -231,7 +232,8 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
-					Claim: claim,
+					Claim:  claim,
+					Prefix: "Basic ",
 					BasicAuthPassword: &SecretSource{
 						Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthPassword))),
 					},

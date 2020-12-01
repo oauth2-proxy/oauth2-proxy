@@ -17,8 +17,8 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts := NewLegacyOptions()
 
 			// Set upstreams and related options to test their conversion
-			flushInterval := 5 * time.Second
-			legacyOpts.LegacyUpstreams.FlushInterval = flushInterval
+			flushInterval := Duration(5 * time.Second)
+			legacyOpts.LegacyUpstreams.FlushInterval = time.Duration(flushInterval)
 			legacyOpts.LegacyUpstreams.PassHostHeader = true
 			legacyOpts.LegacyUpstreams.ProxyWebSockets = true
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
@@ -124,7 +124,7 @@ var _ = Describe("Legacy Options", func() {
 		skipVerify := true
 		passHostHeader := false
 		proxyWebSockets := true
-		flushInterval := 5 * time.Second
+		flushInterval := Duration(5 * time.Second)
 
 		// Test cases and expected outcomes
 		validHTTP := "http://foo.bar/baz"
@@ -199,7 +199,7 @@ var _ = Describe("Legacy Options", func() {
 					SSLUpstreamInsecureSkipVerify: skipVerify,
 					PassHostHeader:                passHostHeader,
 					ProxyWebSockets:               proxyWebSockets,
-					FlushInterval:                 flushInterval,
+					FlushInterval:                 time.Duration(flushInterval),
 				}
 
 				upstreams, err := legacyUpstreams.convert()
@@ -329,7 +329,8 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim: "user",
+						Claim:  "user",
+						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
 							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
 						},
@@ -368,7 +369,8 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim: "email",
+						Claim:  "email",
+						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
 							Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthSecret))),
 						},
