@@ -148,7 +148,7 @@ var _ = Describe("Headers", func() {
 							ClaimSource: &options.ClaimSource{
 								Claim: "user",
 								BasicAuthPassword: &options.SecretSource{
-									Value: []byte("secret"),
+									FromEnv: "UNKNOWN_ENV",
 								},
 							},
 						},
@@ -157,7 +157,7 @@ var _ = Describe("Headers", func() {
 				validHeader1,
 			},
 			expectedMsgs: []string{
-				"invalid header \"With-Invalid-Basic-Auth\": invalid values: invalid basicAuthPassword: error decoding secret value: illegal base64 data at input byte 4",
+				"invalid header \"With-Invalid-Basic-Auth\": invalid values: invalid basicAuthPassword: error loading secret from environent: no value for for key \"UNKNOWN_ENV\"",
 			},
 		}),
 	)
