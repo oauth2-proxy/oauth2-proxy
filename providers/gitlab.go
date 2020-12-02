@@ -314,7 +314,6 @@ func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.Ses
 	for _, group := range p.Groups {
 		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
 	}
-
 }
 
 // addProjectsToSession projects into session.Groups
@@ -360,5 +359,4 @@ func (p *GitLabProvider) PrefixAllowedGroups() (groups []string) {
 	}
 
 	return groups
-
 }
