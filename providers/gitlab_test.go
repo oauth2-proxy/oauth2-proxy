@@ -71,6 +71,21 @@ func testGitLabBackend() *httptest.Server {
 		}
 	`
 
+	archivedProjectInfo := `
+		{
+			"name": "MyArchivedProject",
+			"archived": true,
+			"path_with_namespace": "my_group/my_archived_project",
+			"permissions": {
+				"project_access": {
+					"access_level": 30,
+					"notification_level": 3
+				},
+				"group_access": null
+			}
+		}
+	`
+
 	authHeader := "Bearer gitlab_access_token"
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -87,6 +102,13 @@ func testGitLabBackend() *httptest.Server {
 				if r.Header["Authorization"][0] == authHeader {
 					w.WriteHeader(200)
 					w.Write([]byte(projectInfo))
+				} else {
+					w.WriteHeader(401)
+				}
+			case "/api/v4/projects/my_group/my_archived_project":
+				if r.Header["Authorization"][0] == authHeader {
+					w.WriteHeader(200)
+					w.Write([]byte(archivedProjectInfo))
 				} else {
 					w.WriteHeader(401)
 				}
@@ -224,6 +246,11 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				expectedValue: []string{"group:foo", "group:baz", "project:my_group/my_project", "project:my_profile/my_personal_project"},
 				groups:        []string{"foo", "baz"},
 				projects:      []string{"my_group/my_project", "my_profile/my_personal_project"},
+			}),
+			Entry("archived projects", entitiesTableInput{
+				expectedValue: nil,
+				groups:        []string{},
+				projects:      []string{"my_group/my_archived_project"},
 			}),
 		)
 
