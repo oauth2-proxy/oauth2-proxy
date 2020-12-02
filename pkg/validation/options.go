@@ -288,7 +288,6 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		}
 		p.SetAllowedGroups(p.PrefixAllowedGroups())
 		p.SetProjectScope()
-		p.EmailDomains = o.EmailDomains
 
 		if p.Verifier == nil {
 			// Initialize with default verifier for gitlab.com
