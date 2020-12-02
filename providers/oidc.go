@@ -49,7 +49,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*s
 	return p.createSession(ctx, token, false)
 }
 
-// EnrichSessionState is called after Redeem to allow providers to enrich session fields
+// EnrichSession is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
 func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	if p.ProfileURL.String() == "" {
@@ -61,7 +61,7 @@ func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionSta
 
 	// Try to get missing emails or groups from a profileURL
 	if s.Email == "" || s.Groups == nil {
-		err := p.callProfileURL(ctx, s)
+		err := p.enrichFromProfileURL(ctx, s)
 		if err != nil {
 			logger.Errorf("Warning: Profile URL request failed: %v", err)
 		}
@@ -74,9 +74,9 @@ func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionSta
 	return nil
 }
 
-// callProfileURL enriches a session's Email & Groups via the JSON response of
+// enrichFromProfileURL enriches a session's Email & Groups via the JSON response of
 // an OIDC profile URL
-func (p *OIDCProvider) callProfileURL(ctx context.Context, s *sessions.SessionState) error {
+func (p *OIDCProvider) enrichFromProfileURL(ctx context.Context, s *sessions.SessionState) error {
 	respJSON, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
 		WithHeaders(makeOIDCHeader(s.AccessToken)).
@@ -91,22 +91,23 @@ func (p *OIDCProvider) callProfileURL(ctx context.Context, s *sessions.SessionSt
 		s.Email = email
 	}
 
-	if len(s.Groups) == 0 {
-		for _, group := range coerceArray(respJSON, p.GroupsClaim) {
-			formatted, err := formatGroup(group)
-			if err != nil {
-				logger.Errorf("Warning: unable to format group of type %s with error %s",
-					reflect.TypeOf(group), err)
-				continue
-			}
-			s.Groups = append(s.Groups, formatted)
+	if len(s.Groups) > 0 {
+		return nil
+	}
+	for _, group := range coerceArray(respJSON, p.GroupsClaim) {
+		formatted, err := formatGroup(group)
+		if err != nil {
+			logger.Errorf("Warning: unable to format group of type %s with error %s",
+				reflect.TypeOf(group), err)
+			continue
 		}
+		s.Groups = append(s.Groups, formatted)
 	}
 
 	return nil
 }
 
-// ValidateSessionState checks that the session's IDToken is still valid
+// ValidateSession checks that the session's IDToken is still valid
 func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil

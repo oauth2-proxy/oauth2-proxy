@@ -287,7 +287,6 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		}
 	case *providers.GitLabProvider:
-		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
 		err := p.AddProjects(o.GitlabProjects)
 		if err != nil {

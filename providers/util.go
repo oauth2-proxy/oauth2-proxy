@@ -73,15 +73,15 @@ func getIDToken(token *oauth2.Token) string {
 // formatGroup coerces an OIDC groups claim into a string
 // If it is non-string, marshal it into JSON.
 func formatGroup(rawGroup interface{}) (string, error) {
-	group, ok := rawGroup.(string)
-	if !ok {
-		jsonGroup, err := json.Marshal(rawGroup)
-		if err != nil {
-			return "", err
-		}
-		group = string(jsonGroup)
+	if group, ok := rawGroup.(string); ok {
+		return group, nil
 	}
-	return group, nil
+
+	jsonGroup, err := json.Marshal(rawGroup)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonGroup), nil
 }
 
 // coerceArray extracts a field from simplejson.Json that might be a

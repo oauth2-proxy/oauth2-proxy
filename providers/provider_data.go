@@ -128,13 +128,13 @@ type OIDCClaims struct {
 
 func (p *ProviderData) verifyIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
 	rawIDToken := getIDToken(token)
-	if strings.TrimSpace(rawIDToken) != "" {
-		if p.Verifier == nil {
-			return nil, ErrMissingOIDCVerifier
-		}
-		return p.Verifier.Verify(ctx, rawIDToken)
+	if strings.TrimSpace(rawIDToken) == "" {
+		return nil, ErrMissingIDToken
 	}
-	return nil, ErrMissingIDToken
+	if p.Verifier == nil {
+		return nil, ErrMissingOIDCVerifier
+	}
+	return p.Verifier.Verify(ctx, rawIDToken)
 }
 
 // buildSessionFromClaims uses IDToken claims to populate a fresh SessionState
