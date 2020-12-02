@@ -31,9 +31,9 @@ type GitlabProject struct {
 	AccessLevel int
 }
 
-// gitlabProjectFromString Creates a new GitlabProject struct from project string formatted as namespace/project=accesslevel
+// newGitlabProject Creates a new GitlabProject struct from project string formatted as namespace/project=accesslevel
 // if no accesslevel provided, use the default one
-func gitlabProjectFromString(project string) (*GitlabProject, error) {
+func newGitlabproject(project string) (*GitlabProject, error) {
 	// default access level is 20
 	defaultAccessLevel := 20
 	// see https://docs.gitlab.com/ee/api/members.html#valid-access-levels
@@ -235,7 +235,7 @@ func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.Session
 // AddProjects use data from options, transform it into a GitlabProject struct attached to a provider struct
 func (p *GitLabProvider) AddProjects(projects []string) error {
 	for _, project := range projects {
-		gp, err := gitlabProjectFromString(project)
+		gp, err := newGitlabproject(project)
 		if err != nil {
 			return err
 		}
