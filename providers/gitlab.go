@@ -323,6 +323,10 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 	for _, project := range p.Projects {
 		projectInfo, err := p.getProjectInfo(ctx, s, project.Name)
 
+		if err != nil {
+			logger.Errorf("Warning: project info request failed: %v", err)
+		}
+
 		if err == nil && !projectInfo.Archived {
 			// try first with project access
 			perms := projectInfo.Permissions.ProjectAccess
@@ -336,13 +340,7 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 			} else {
 				logger.Errorf("Warning: user %q does not have the minimum required access level for project %q", s.Email, project.Name)
 			}
-		}
-
-		if err != nil {
-			logger.Errorf("Warning: project info request failed: %v", err)
-		}
-
-		if projectInfo != nil && projectInfo.Archived {
+		} else {
 			logger.Errorf("Warning: project %s is archived", project.Name)
 		}
 
