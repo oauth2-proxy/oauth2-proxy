@@ -350,7 +350,7 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 
 }
 
-// PrefixAllowedGroups return a list of allowed groups, prefixed by their `kind` value
+// PrefixAllowedGroups returns a list of allowed groups, prefixed by their `kind` value
 func (p *GitLabProvider) PrefixAllowedGroups() (groups []string) {
 
 	for _, val := range p.Groups {
