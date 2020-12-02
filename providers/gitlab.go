@@ -31,7 +31,7 @@ type GitlabProject struct {
 	AccessLevel int
 }
 
-// Creates a new GitlabProject struct from project string formatted as namespace/project=accesslevel
+// gitlabProjectFromString Creates a new GitlabProject struct from project string formatted as namespace/project=accesslevel
 // if no accesslevel provided, use the default one
 func gitlabProjectFromString(project string) (*GitlabProject, error) {
 	// default access level is 20
