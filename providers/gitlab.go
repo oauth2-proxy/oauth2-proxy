@@ -242,7 +242,7 @@ func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.Session
 	return &projectInfo, nil
 }
 
-// AddProjects use data from options, transform it into a GitlabProject struct attached to a provider struct
+// AddProjects adds Gitlab projects from options to GitlabProvider struct
 func (p *GitLabProvider) AddProjects(projects []string) error {
 	for _, project := range projects {
 		gp, err := newGitlabproject(project)
