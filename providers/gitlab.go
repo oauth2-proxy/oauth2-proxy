@@ -114,9 +114,13 @@ func (p *GitLabProvider) Redeem(ctx context.Context, redirectURL, code string) (
 // SetProjectScope ensure read_api is added to scope when filtering on projects
 func (p *GitLabProvider) SetProjectScope() {
 	if len(p.Projects) > 0 {
-		if !strings.Contains(p.Scope, "read_api") {
-			p.Scope += " read_api"
+		for _, val := range strings.Split(p.Scope, " ") {
+			if val == "read_api" {
+				return
+			}
+
 		}
+		p.Scope += " read_api"
 	}
 }
 
