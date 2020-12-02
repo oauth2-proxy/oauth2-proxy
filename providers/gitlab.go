@@ -49,7 +49,10 @@ func newGitlabproject(project string) (*GitlabProject, error) {
 
 		for _, valid := range validAccessLevel {
 			if lvl == valid {
-				return &GitlabProject{Name: parts[0], AccessLevel: lvl}, err
+				return &GitlabProject{
+						Name:        parts[0],
+						AccessLevel: lvl},
+					err
 			}
 		}
 
@@ -57,7 +60,10 @@ func newGitlabproject(project string) (*GitlabProject, error) {
 
 	}
 
-	return &GitlabProject{Name: project, AccessLevel: defaultAccessLevel}, nil
+	return &GitlabProject{
+			Name:        project,
+			AccessLevel: defaultAccessLevel},
+		nil
 
 }
 
