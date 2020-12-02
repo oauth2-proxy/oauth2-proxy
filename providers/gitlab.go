@@ -325,10 +325,10 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 
 		if err != nil {
 			logger.Errorf("Warning: project info request failed: %v", err)
+			continue
 		}
 
-		if err == nil && !projectInfo.Archived {
-			// try first with project access
+		if !projectInfo.Archived {
 			perms := projectInfo.Permissions.ProjectAccess
 			if perms == nil {
 				// use group project access as fallback
