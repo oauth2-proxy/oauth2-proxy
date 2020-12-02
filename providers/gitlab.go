@@ -39,7 +39,7 @@ func newGitlabproject(project string) (*GitlabProject, error) {
 	// see https://docs.gitlab.com/ee/api/members.html#valid-access-levels
 	validAccessLevel := [4]int{10, 20, 30, 40}
 
-	parts := strings.Split(project, "=")
+	parts := strings.SplitN(project, "=", 2)
 
 	if len(parts) == 2 {
 		lvl, err := strconv.Atoi(parts[1])
