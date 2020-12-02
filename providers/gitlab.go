@@ -284,7 +284,7 @@ func (p *GitLabProvider) ValidateSession(ctx context.Context, s *sessions.Sessio
 	return err == nil
 }
 
-// EnrichSession with value from the Gitlab context
+// EnrichSession adds values and data from the Gitlab endpoint to current session
 func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Retrieve user info
 	userInfo, err := p.getUserInfo(ctx, s)
