@@ -316,7 +316,8 @@ func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.Ses
 	}
 }
 
-// addProjectsToSession projects into session.Groups
+// addProjectsToSession adds projects matching user access requirements into the session state groups list
+// This method prefix projects names with `project` to specify group kind
 func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.SessionState) {
 	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
 	for _, project := range p.Projects {
