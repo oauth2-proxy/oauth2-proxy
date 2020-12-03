@@ -157,7 +157,6 @@ var _ = Describe("Gitlab Provider Tests", func() {
 		type emailsTableInput struct {
 			expectedError        error
 			expectedValue        string
-			domains              []string
 			allowUnverifiedEmail bool
 		}
 
@@ -165,12 +164,6 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			func(in emailsTableInput) {
 				p.AllowUnverifiedEmail = in.allowUnverifiedEmail
 				session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
-
-				if in.domains != nil {
-					if len(in.domains) >= 1 {
-						p.EmailDomains = in.domains
-					}
-				}
 
 				err := p.EnrichSession(context.Background(), session)
 

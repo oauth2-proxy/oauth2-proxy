@@ -18,9 +18,8 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Groups       []string
-	Projects     []*GitlabProject
-	EmailDomains []string
+	Groups   []string
+	Projects []*GitlabProject
 
 	AllowUnverifiedEmail bool
 }
