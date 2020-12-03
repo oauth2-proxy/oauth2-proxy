@@ -248,6 +248,28 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	switch p := o.GetProvider().(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.AzureTenant)
+		if p.Verifier == nil {
+			ctx := context.Background()
+			tenant := o.AzureTenant
+			// In Azure, id_token issuer is dependent on the token endpoint
+			// for v1 endpoint such as https://login.microsoftonline.com/{tenantid}
+			// the token issuer will be https://sts.windows.net/{tenantid}/
+			// for v2 endpoint such as https://login.microsoftonline.com/{tenantid}/v2.0
+			// the token issuer will be https://login.microsoftonline.com/{tenantid}/v2.0
+			// in this project, since azure provider defaults to v1 endpoint, the v1 issuer is chosen
+			oidcURL := fmt.Sprintf("https://sts.windows.net/%s/", tenant)
+			provider, err := oidc.NewProvider(ctx, oidcURL)
+			if err != nil {
+				if tenant == "" || tenant == "common" {
+					msgs = append(msgs, "azure provider requires to configure azure tenant to correcly configure oidc provider")
+				}
+				msgs = append(msgs, fmt.Sprintf("failed to initialize azure oidc provider %s: %s", oidcURL, err))
+			} else {
+				p.Verifier = provider.Verifier(&oidc.Config{
+					ClientID: o.ClientID,
+				})
+			}
+		}
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.GitHubOrg, o.GitHubTeam)
 		p.SetRepo(o.GitHubRepo, o.GitHubToken)

@@ -2,18 +2,43 @@ package providers
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	oidc "github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
+
+type fakeAzureKeySetStub struct{}
+
+func (fakeAzureKeySetStub) VerifySignature(_ context.Context, jwt string) (payload []byte, err error) {
+	decodeString, err := base64.RawURLEncoding.DecodeString(strings.Split(jwt, ".")[1])
+	if err != nil {
+		return nil, err
+	}
+	return decodeString, nil
+}
+
+type azureIDTokenClaims struct {
+	Email string `json:"email"`
+}
+
+type azureOAuthPayload struct {
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	ExpiresOn    int64  `json:"expires_on,omitempty,string"`
+	IDToken      string `json:"id_token,omitempty"`
+}
 
 func testAzureProvider(hostname string) *AzureProvider {
 	p := NewAzureProvider(
@@ -24,7 +49,18 @@ func testAzureProvider(hostname string) *AzureProvider {
 			ProfileURL:        &url.URL{},
 			ValidateURL:       &url.URL{},
 			ProtectedResource: &url.URL{},
-			Scope:             ""})
+			Scope:             "",
+			Verifier: oidc.NewVerifier(
+				"https://issuer.example.com",
+				fakeAzureKeySetStub{},
+				&oidc.Config{
+					ClientID:          clientID,
+					SkipClientIDCheck: true,
+					SkipIssuerCheck:   true,
+					SkipExpiryCheck:   true,
+				},
+			),
+		})
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
@@ -126,69 +162,44 @@ func testAzureBackend(payload string) *httptest.Server {
 func TestAzureProviderEnrichSessionState(t *testing.T) {
 	testCases := []struct {
 		Description             string
-		IDToken                 string
+		Email                   string
 		PayloadFromAzureBackend string
 		ExpectedEmail           string
 		ExpectedError           error
 	}{
 		{
-			Description:             "EnrichSessionState should return email using mail property from Azure backend",
+			Description:             "should return email using mail property from Azure backend",
 			PayloadFromAzureBackend: `{ "mail": "user@windows.net" }`,
 			ExpectedEmail:           "user@windows.net",
-			ExpectedError:           nil,
 		},
 		{
-			Description:             "EnrichSessionState should return email using otherMails property returned from Azure backend",
+			Description:             "should return email using otherMails property returned from Azure backend",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": ["user@windows.net", "altuser@windows.net"] }`,
 			ExpectedEmail:           "user@windows.net",
-			ExpectedError:           nil,
 		},
 		{
-			Description:             "EnrichSessionState should return email using userPrincipalName from Azure backend",
+			Description:             "should return email using userPrincipalName from Azure backend",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": "user@windows.net" }`,
 			ExpectedEmail:           "user@windows.net",
-			ExpectedError:           nil,
 		},
 		{
-			Description:             "EnrichSessionState should return error when Azure backend doesn't return email information",
+			Description:             "should return error when Azure backend doesn't return email information",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": null }`,
-			ExpectedEmail:           "",
 			ExpectedError:           errors.New("type assertion to string failed"),
 		},
 		{
-			Description:             "EnrichSessionState should return empty email when userPrincipalName from Azure backend is empty",
+			Description:             "should return empty email when userPrincipalName from Azure backend is empty",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": "" }`,
-			ExpectedEmail:           "",
-			ExpectedError:           nil,
 		},
 		{
-			Description:             "EnrichSessionState should return error when otherMails from Azure backend is not a valid type",
+			Description:             "should return error when otherMails from Azure backend is not a valid type",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": "", "userPrincipalName": null }`,
-			ExpectedEmail:           "",
 			ExpectedError:           errors.New("type assertion to string failed"),
 		},
 		{
-			Description: "EnrichSessionState should return email from id_token",
-			// { "sub": "1234567890", "email": "foo@bar.com", "iat": 1516239022 }
-			IDToken:       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJmb29AYmFyLmNvbSIsImlhdCI6MTUxNjIzOTAyMn0.XRuL4Y2VPSToNB8vMvmlB-X3BwahUJzUXNx6vmzODjk",
-			ExpectedEmail: "foo@bar.com",
-			ExpectedError: nil,
-		},
-		{
-			Description:             "EnrichSessionState should return email from Azure backend when id_token doesn't email claim",
-			PayloadFromAzureBackend: `{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`,
-			// { "sub": "1234567890", "iat": 1516239022 }
-			IDToken:       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc",
+			Description:   "should not query profile api when email is already set in session",
+			Email:         "user@windows.net",
 			ExpectedEmail: "user@windows.net",
-			ExpectedError: nil,
-		},
-		{
-			Description:             "EnrichSessionState should return email from Azure backend when id_token is invalid",
-			PayloadFromAzureBackend: `{ "mail": "user@windows.net", "otherMails": [], "userPrincipalName": "" }`,
-			// this is not a valid id_token
-			IDToken:       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwia.L8i6g3PfcHlioHCCPURC9pmXT7gdJpx3kOoyAfNUwCc",
-			ExpectedEmail: "user@windows.net",
-			ExpectedError: nil,
 		},
 	}
 
@@ -207,7 +218,7 @@ func TestAzureProviderEnrichSessionState(t *testing.T) {
 			}
 			p := testAzureProvider(host)
 			session := CreateAuthorizedSession()
-			session.IDToken = testCase.IDToken
+			session.Email = testCase.Email
 			err := p.EnrichSessionState(context.Background(), session)
 			assert.Equal(t, testCase.ExpectedError, err)
 			assert.Equal(t, testCase.ExpectedEmail, session.Email)
@@ -215,20 +226,66 @@ func TestAzureProviderEnrichSessionState(t *testing.T) {
 	}
 }
 
-func TestAzureProviderRedeemReturnsIdToken(t *testing.T) {
-	b := testAzureBackend(`{ "id_token": "testtoken1234", "expires_on": "1136239445", "refresh_token": "refresh1234" }`)
-	defer b.Close()
-	timestamp, err := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
-	assert.Equal(t, nil, err)
+func TestAzureProviderRedeem(t *testing.T) {
+	testCases := []struct {
+		Name         string
+		RefreshToken string
+		AccessToken  string
+		ExpiresOn    string
+		Email        string
+		IDToken      *idTokenClaims
+	}{
+		{
+			Name:         "with id_token returned",
+			Email:        "foo@example.com",
+			RefreshToken: "some_refresh_token",
+			AccessToken:  "some_access_token",
+			ExpiresOn:    "2006-01-02T22:04:05Z",
+		},
+		{
+			Name:         "without id_token returned",
+			RefreshToken: "some_refresh_token",
+			AccessToken:  "some_access_token",
+			ExpiresOn:    "2006-01-02T22:04:05Z",
+		},
+	}
 
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-	p.Data().RedeemURL.Path = "/common/oauth2/token"
-	s, err := p.Redeem(context.Background(), "https://localhost", "1234")
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "testtoken1234", s.IDToken)
-	assert.Equal(t, timestamp, s.ExpiresOn.UTC())
-	assert.Equal(t, "refresh1234", s.RefreshToken)
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			var idTokenString string
+			if testCase.Email != "" {
+				var err error
+				idToken := idTokenClaims{Email: testCase.Email}
+				idTokenString, err = newSignedTestIDToken(idToken)
+				assert.NoError(t, err)
+			}
+			timestamp, err := time.Parse(time.RFC3339, testCase.ExpiresOn)
+			assert.NoError(t, err)
+			payload := azureOAuthPayload{
+				IDToken:      idTokenString,
+				RefreshToken: testCase.RefreshToken,
+				AccessToken:  testCase.AccessToken,
+				ExpiresOn:    timestamp.Unix(),
+			}
+
+			payloadBytes, err := json.Marshal(payload)
+			assert.NoError(t, err)
+
+			b := testAzureBackend(string(payloadBytes))
+			defer b.Close()
+
+			bURL, _ := url.Parse(b.URL)
+			p := testAzureProvider(bURL.Host)
+			p.Data().RedeemURL.Path = "/common/oauth2/token"
+			s, err := p.Redeem(context.Background(), "https://localhost", "1234")
+			assert.Equal(t, nil, err)
+			assert.Equal(t, idTokenString, s.IDToken)
+			assert.Equal(t, timestamp, s.ExpiresOn.UTC())
+			assert.Equal(t, testCase.RefreshToken, s.RefreshToken)
+			assert.Equal(t, testCase.AccessToken, s.AccessToken)
+			assert.Equal(t, testCase.Email, s.Email)
+		})
+	}
 }
 
 func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
@@ -236,22 +293,6 @@ func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
 	p.ProtectedResource, _ = url.Parse("http://my.resource.test")
 	result := p.GetLoginURL("https://my.test.app/oauth", "")
 	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
-}
-
-func TestAzureProviderGetsTokensInRedeem(t *testing.T) {
-	b := testAzureBackend(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_on": "1136239445", "id_token": "some_id_token" }`)
-	defer b.Close()
-	timestamp, _ := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
-	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
-
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
-	assert.Equal(t, nil, err)
-	assert.NotEqual(t, session, nil)
-	assert.Equal(t, "some_access_token", session.AccessToken)
-	assert.Equal(t, "some_refresh_token", session.RefreshToken)
-	assert.Equal(t, "some_id_token", session.IDToken)
-	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
 }
 
 func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
@@ -265,19 +306,35 @@ func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
 }
 
 func TestAzureProviderRefreshWhenExpired(t *testing.T) {
-	b := testAzureBackend(`{ "access_token": "new_some_access_token", "refresh_token": "new_some_refresh_token", "expires_on": "32693148245", "id_token": "new_some_id_token" }`)
+	email := "foo@example.com"
+	idToken := idTokenClaims{Email: email}
+	idTokenString, err := newSignedTestIDToken(idToken)
+	assert.NoError(t, err)
+	timestamp, err := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
+	assert.NoError(t, err)
+	payload := azureOAuthPayload{
+		IDToken:      idTokenString,
+		RefreshToken: "new_some_refresh_token",
+		AccessToken:  "new_some_access_token",
+		ExpiresOn:    timestamp.Unix(),
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	assert.NoError(t, err)
+	b := testAzureBackend(string(payloadBytes))
 	defer b.Close()
-	timestamp, _ := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
 	expires := time.Now().Add(time.Duration(-1) * time.Hour)
 	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: &expires}
-	_, err := p.RefreshSessionIfNeeded(context.Background(), session)
+	refreshNeeded, err := p.RefreshSessionIfNeeded(context.Background(), session)
 	assert.Equal(t, nil, err)
+	assert.True(t, refreshNeeded)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "new_some_access_token", session.AccessToken)
 	assert.Equal(t, "new_some_refresh_token", session.RefreshToken)
-	assert.Equal(t, "new_some_id_token", session.IDToken)
+	assert.Equal(t, idTokenString, session.IDToken)
+	assert.Equal(t, email, session.Email)
 	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
 }

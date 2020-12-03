@@ -2,6 +2,7 @@ package validation
 
 import (
 	"crypto"
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -296,4 +298,66 @@ func TestProviderCAFilesError(t *testing.T) {
 	err = Validate(o)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unable to load provider CA file(s)")
+}
+
+func TestAzureProviderOptions(t *testing.T) {
+	testCases := []struct {
+		Name            string
+		TenantID        string
+		Issuer          string
+		ExpectedBaseURL string
+	}{
+		{
+			Name:            "test with default oidc issuer",
+			TenantID:        "72f988bf-86f1-41af-91ab-2d7cd011db47",
+			Issuer:          "",
+			ExpectedBaseURL: "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2",
+		},
+		{
+			Name:            "test with v2 oidc issuer",
+			TenantID:        "72f988bf-86f1-41af-91ab-2d7cd011db47",
+			Issuer:          "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0",
+			ExpectedBaseURL: "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/oauth2/v2.0",
+		},
+		{
+			Name:     "test with empty tenant ID",
+			TenantID: "",
+		},
+		{
+			Name:     "test with tenant ID as common",
+			TenantID: "common",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			o := options.NewOptions()
+			o.OIDCIssuerURL = testCase.Issuer
+			o.Cookie.Secret = cookieSecret
+			o.ProviderType = "azure"
+			o.AzureTenant = testCase.TenantID
+			o.ClientID = clientID
+			o.ClientSecret = clientSecret
+			o.EmailDomains = []string{"*"}
+			err := Validate(o)
+			provider := o.GetProvider()
+			if testCase.TenantID == "" || testCase.TenantID == "common" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "azure provider requires to configure azure tenant to correcly configure oidc provider")
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, provider)
+				assert.NotNil(t, provider.Data())
+				assert.Equal(t, "Azure", provider.Data().ProviderName)
+				assert.NotNil(t, provider.Data().Verifier)
+				assert.Equal(t, fmt.Sprintf("%s/authorize", testCase.ExpectedBaseURL), provider.Data().LoginURL.String())
+				assert.Equal(t, fmt.Sprintf("%s/token", testCase.ExpectedBaseURL), provider.Data().RedeemURL.String())
+				assert.Equal(t, "https://graph.microsoft.com/v1.0/me", provider.Data().ProfileURL.String())
+
+				azureProvider := provider.(*providers.AzureProvider)
+				assert.NotNil(t, azureProvider)
+				assert.Equal(t, testCase.TenantID, azureProvider.Tenant)
+			}
+		})
+	}
 }

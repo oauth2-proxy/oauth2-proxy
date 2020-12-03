@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -150,13 +149,39 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 	created := time.Now()
 	expires := time.Unix(jsonResponse.ExpiresOn, 0)
 
-	return &sessions.SessionState{
+	session := &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
 		CreatedAt:    &created,
 		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
-	}, nil
+	}
+
+	// the presence of id_token depends on the configuration
+	if session.IDToken != "" {
+		email, err := p.verifyIDTokenAndExtractEmail(ctx, session.IDToken)
+		if err != nil {
+			return nil, err
+		}
+		session.Email = email
+	}
+
+	return session, nil
+}
+
+func (p *AzureProvider) verifyIDTokenAndExtractEmail(ctx context.Context, rawIDToken string) (string, error) {
+	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		return "", err
+	}
+	var idTokenClaims struct {
+		Email string `json:"email,omitempty"`
+	}
+	if err := idToken.Claims(&idTokenClaims); err != nil {
+		return "", err
+	}
+
+	return idTokenClaims.Email, nil
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -210,6 +235,16 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	s.RefreshToken = jsonResponse.RefreshToken
 	s.CreatedAt = &now
 	s.ExpiresOn = &expires
+
+	// the presence of id_token depends on the configuration
+	if s.IDToken != "" {
+		email, err := p.verifyIDTokenAndExtractEmail(ctx, s.IDToken)
+		if err != nil {
+			return err
+		}
+		s.Email = email
+	}
+
 	return
 }
 
@@ -242,34 +277,6 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	return email, err
 }
 
-// full claims that can be emitted by AAD are
-// https://docs.microsoft.com/en-us/azure/active-directory/develop/id-tokens
-// only include email here since we only need email extraction
-type aadIDTokenClaims struct {
-	Email string `json:"email,omitempty"`
-}
-
-// Valid is the function validating the claims,
-// required by jwt.Claims interface.
-// returning nil as we only use it to extract claims instead of validating them
-func (aadIDTokenClaims) Valid() error {
-	return nil
-}
-
-func getEmailFromIDToken(idToken string) (string, error) {
-	claims := &aadIDTokenClaims{}
-	parser := jwt.Parser{}
-
-	// ParseUnverified to extract claims without verifying signature
-	if _, _, err := parser.ParseUnverified(idToken, claims); err != nil {
-		return "", err
-	}
-	if claims.Email == "" {
-		return "", errors.New("missing email claim from id_token")
-	}
-	return claims.Email, nil
-}
-
 func getEmailFromProfileAPI(ctx context.Context, accessToken, profileURL string) (string, error) {
 	if accessToken == "" {
 		return "", errors.New("missing access token")
@@ -292,13 +299,8 @@ func (p *AzureProvider) EnrichSessionState(ctx context.Context, s *sessions.Sess
 	var email string
 	var err error
 
-	if s.IDToken != "" {
-		email, err := getEmailFromIDToken(s.IDToken)
-		if err == nil {
-			s.Email = email
-			return nil
-		}
-		logger.Errorf("unable to find email from id_token: %s", err)
+	if s.Email != "" {
+		return nil
 	}
 
 	email, err = getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
