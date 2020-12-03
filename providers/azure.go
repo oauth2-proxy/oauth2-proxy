@@ -107,17 +107,16 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
-// Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, error) {
+	params := url.Values{}
 	if code == "" {
-		return nil, ErrMissingCode
+		return params, ErrMissingCode
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return nil, err
+		return params, err
 	}
 
-	params := url.Values{}
 	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", clientSecret)
@@ -125,6 +124,15 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 	params.Add("grant_type", "authorization_code")
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
+	}
+	return params, nil
+}
+
+// Redeem exchanges the OAuth2 authentication token for an ID token
+func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+	params, err := p.prepareRedeem(redirectURL, code)
+	if err != nil {
+		return nil, err
 	}
 
 	// blindly try json and x-www-form-urlencoded

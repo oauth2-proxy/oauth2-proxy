@@ -29,10 +29,6 @@ func (fakeAzureKeySetStub) VerifySignature(_ context.Context, jwt string) (paylo
 	return decodeString, nil
 }
 
-type azureIDTokenClaims struct {
-	Email string `json:"email"`
-}
-
 type azureOAuthPayload struct {
 	AccessToken  string `json:"access_token,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
