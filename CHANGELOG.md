@@ -43,6 +43,7 @@
 
 ## Changes since v6.1.1
 
+- [#944](https://github.com/oauth2-proxy/oauth2-proxy/pull/944) Use alpine:3.12.1 as base image to avoid CVE-2020-28928 (@PascalBourdier)
 - [#907](https://github.com/oauth2-proxy/oauth2-proxy/pull/907) Introduce alpha configuration option to enable testing of structured configuration (@JoelSpeed)
 - [#938](https://github.com/oauth2-proxy/oauth2-proxy/pull/938) Cleanup missed provider renaming refactor methods (@NickMeves)
 - [#925](https://github.com/oauth2-proxy/oauth2-proxy/pull/925) Fix basic auth legacy header conversion (@JoelSpeed)
