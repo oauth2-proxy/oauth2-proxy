@@ -54,7 +54,7 @@ Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/doc
 
 ## Getting Involved
 
-If you would like to reach out to the maintainers, come talk to us in the `#oauth2_proxy` channel in the [Gophers slack](http://gophers.slack.com/).
+If you would like to reach out to the maintainers, come talk to us in the `#oauth2-proxy` channel in the [Gophers slack](http://gophers.slack.com/).
 
 ## Contributing
 
