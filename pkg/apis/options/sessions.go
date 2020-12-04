@@ -41,7 +41,7 @@ type RedisStoreOptions struct {
 
 // DynamoDBStoreOptions contains configuration options for the DynamoDbSessionStore.
 type DynamoDBStoreOptions struct {
-	TableName string `flag:"dynamodb-table-name" cfg:"dynamodb_table_name"`
+	TableName string `flag:"dynamo-table-name" cfg:"dynamo_table_name"`
 }
 
 func sessionOptionsDefaults() SessionOptions {

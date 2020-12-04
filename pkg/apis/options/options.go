@@ -216,7 +216,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-cluster")
 
-	flagSet.String("dynamodb-table-name", "", "DynamoDb table to store session state in")
+	flagSet.String("dynamo-table-name", "", "DynamoDb table to store session state in")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")

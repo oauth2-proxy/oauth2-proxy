@@ -3,12 +3,11 @@ package dynamodb
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	dynamo "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -36,14 +35,14 @@ type SessionStore struct {
 type DynamoSessionItem struct {
 	SessionKey string
 	Value      []byte
-	Expiry     string
+	Expiry     int64
 }
 
 var now = time.Now
 
 func NewDynamoDBSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
+	sess, err := awssession.NewSessionWithOptions(awssession.Options{
+		SharedConfigState: awssession.SharedConfigEnable,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to dynamodb: %v", err)
@@ -61,11 +60,11 @@ func newSessionStore(client GetPutDeleteWithContext, tableName string) persisten
 	return ss
 }
 
-func (store *SessionStore) Save(ctx context.Context, key string, bytes []byte, duration time.Duration) error {
+func (store *SessionStore) Save(ctx context.Context, key string, value []byte, duration time.Duration) error {
 	av, err := dynamodbattribute.MarshalMap(DynamoSessionItem{
 		SessionKey: key,
-		Value:      bytes,
-		Expiry:     strconv.FormatInt(time.Now().Add(duration).Unix(), 10),
+		Value:      value,
+		Expiry:     time.Now().Add(duration).Unix(),
 	})
 	if err != nil {
 		return fmt.Errorf("error saving dynamodb session: %v", err)
@@ -107,13 +106,8 @@ func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error)
 	return item.Value, nil
 }
 
-func validateSession(timestamp string) error {
-	t, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse timestamp")
-	}
-
-	if now().Unix() > t {
+func validateSession(timestamp int64) error {
+	if now().Unix() > timestamp {
 		return fmt.Errorf("error loading dynamodb session, session expired")
 	}
 

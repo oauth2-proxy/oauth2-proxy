@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	dynamo "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -48,8 +48,8 @@ func validateDynamoDBSessionStore(o *options.Options) []string {
 		return []string{}
 	}
 
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
+	sess, err := awssession.NewSessionWithOptions(awssession.Options{
+		SharedConfigState: awssession.SharedConfigEnable,
 	})
 	if err != nil {
 		return []string{fmt.Sprintf("unable to create dynamoDB client: %v", err)}
@@ -71,7 +71,7 @@ func sendDynamoDBConnectionTest(service *dynamo.DynamoDB, tableName string, key 
 	av, err := dynamodbattribute.MarshalMap(dynamodb.DynamoSessionItem{
 		SessionKey: key,
 		Value:      []byte(nonce),
-		Expiry:     "",
+		Expiry:     nil,
 	})
 	if err != nil {
 		msgs = append(msgs, fmt.Sprintf("error saving dynamodb initialisation key: %v", err))

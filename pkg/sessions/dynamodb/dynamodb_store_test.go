@@ -75,7 +75,7 @@ var _ = Describe("DynamoDB Session Store", func() {
 	})
 
 	AfterEach(func() {
-
+		localDynamo = nil
 	})
 
 	tests.RunSessionStoreTests(
