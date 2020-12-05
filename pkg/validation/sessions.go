@@ -98,16 +98,12 @@ func sendDynamoDBConnectionTest(service *dynamo.DynamoDB, tableName string, key 
 	})
 	if err != nil {
 		msgs = append(msgs, fmt.Sprintf("error reading dynamodb initialisation key: %v", err))
-		return msgs
 	}
 
 	item := dynamodb.DynamoSessionItem{}
 	if err := dynamodbattribute.UnmarshalMap(result.Item, &item); err != nil {
 		msgs = append(msgs, fmt.Sprintf("error reading dynamodb initialisation key: %v", err))
-		return msgs
-	}
-
-	if string(item.Value) != nonce {
+	} else if string(item.Value) != nonce {
 		msgs = append(msgs, "the retrieved dynamodb initialization key did not match the value we set")
 	}
 

@@ -17,9 +17,9 @@ import (
 
 const SessionKeyName = "SessionKey"
 
-// GetPutDeleteWithContext is a subset of the dynamodbiface.DynamoDBAPI interface that defines only the operations
+// Client is a subset of the dynamodbiface.DynamoDBAPI interface that defines only the operations
 // we need. This is useful for testing as it enables us to provide a custom client that doesn't have to implement the full interface.
-type GetPutDeleteWithContext interface {
+type Client interface {
 	GetItemWithContext(aws.Context, *dynamo.GetItemInput, ...request.Option) (*dynamo.GetItemOutput, error)
 	PutItemWithContext(aws.Context, *dynamo.PutItemInput, ...request.Option) (*dynamo.PutItemOutput, error)
 	DeleteItemWithContext(aws.Context, *dynamo.DeleteItemInput, ...request.Option) (*dynamo.DeleteItemOutput, error)
@@ -28,7 +28,7 @@ type GetPutDeleteWithContext interface {
 // SessionStore is an implementation of the persistence.Store
 // interface that stores sessions in dynamoDB
 type SessionStore struct {
-	dynamoService GetPutDeleteWithContext
+	dynamoService Client
 	tableName     string
 }
 
@@ -51,7 +51,7 @@ func NewDynamoDBSessionStore(opts *options.SessionOptions, cookieOpts *options.C
 	return persistence.NewManager(newSessionStore(dynamo.New(sess), opts.DynamoDB.TableName), cookieOpts), nil
 }
 
-func newSessionStore(client GetPutDeleteWithContext, tableName string) persistence.Store {
+func newSessionStore(client Client, tableName string) persistence.Store {
 	ss := &SessionStore{
 		dynamoService: client,
 		tableName:     tableName,
