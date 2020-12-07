@@ -51,8 +51,9 @@ func NewLegacyOptions() *LegacyOptions {
 			ProviderType:    "google",
 			AzureTenant:     "common",
 			ApprovalPrompt:  "force",
-			UserIDClaim:     "email",
 			OIDCGroupsClaim: "groups",
+			OIDCEmailClaim:  "email",
+			UserIDClaim:     "email",
 		},
 
 		Options: *NewOptions(),
@@ -493,6 +494,7 @@ type LegacyProvider struct {
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
 	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
+	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
@@ -631,10 +633,11 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		SkipOIDCDiscovery:                  l.SkipOIDCDiscovery,
 		OIDCJwksURL:                        l.OIDCJwksURL,
 		UserIDClaim:                        l.UserIDClaim,
+		OIDCEmailClaim:                     l.OIDCEmailClaim,
 		OIDCGroupsClaim:                    l.OIDCGroupsClaim,
 	}
 
-	// This part is out of the switch section because azure has a default tenant
+	// This part is out of the switch section beacuse azure has a defualt tenant
 	// that needs to be added from legacy options
 	provider.AzureConfig = AzureOptions{
 		AzureTenant: l.AzureTenant,
@@ -655,7 +658,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 	case "gitlab":
 		provider.GitLabConfig = GitLabOptions{
-			GitLabGroup: l.GitLabGroup,
+			GitLabGroup:    l.GitLabGroup,
+			GitLabProjects: l.GitLabProjects,
 		}
 	case "login.gov":
 		provider.LoginGovConfig = LoginGovOptions{

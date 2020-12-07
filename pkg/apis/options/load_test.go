@@ -49,6 +49,7 @@ var _ = Describe("Load", func() {
 			AzureTenant:     "common",
 			ApprovalPrompt:  "force",
 			UserIDClaim:     "email",
+			OIDCEmailClaim:  "email",
 			OIDCGroupsClaim: "groups",
 		},
 

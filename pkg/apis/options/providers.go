@@ -1,5 +1,7 @@
 package options
 
+import "github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+
 // Providers is a collection of definitions for providers.
 type Providers []Provider
 
@@ -166,10 +168,11 @@ func providerDefaults() Providers {
 				AzureTenant: "common",
 			},
 			OIDCConfig: OIDCOptions{
-				UserIDClaim:                      "email",
+				UserIDClaim:                      providers.OIDCEmailClaim,
 				InsecureOIDCAllowUnverifiedEmail: false,
 				SkipOIDCDiscovery:                false,
-				OIDCGroupsClaim:                  "groups",
+				OIDCEmailClaim:                   providers.OIDCEmailClaim,
+				OIDCGroupsClaim:                  providers.OIDCGroupsClaim,
 			},
 		},
 	}
