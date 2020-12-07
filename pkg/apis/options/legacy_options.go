@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/spf13/pflag"
 )
 
@@ -20,6 +21,9 @@ type LegacyOptions struct {
 
 	// Legacy options for the server address and TLS
 	LegacyServer LegacyServer `cfg:",squash"`
+
+	// Legacy options for single provider
+	LegacyProvider LegacyProvider `cfg:",squash"`
 
 	Options Options `cfg:",squash"`
 }
@@ -43,6 +47,14 @@ func NewLegacyOptions() *LegacyOptions {
 			HTTPSAddress: ":443",
 		},
 
+		LegacyProvider: LegacyProvider{
+			ProviderType:    "google",
+			AzureTenant:     "common",
+			ApprovalPrompt:  "force",
+			UserIDClaim:     "email",
+			OIDCGroupsClaim: "groups",
+		},
+
 		Options: *NewOptions(),
 	}
 }
@@ -53,6 +65,7 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
 	flagSet.AddFlagSet(legacyHeadersFlagSet())
 	flagSet.AddFlagSet(legacyServerFlagset())
+	flagSet.AddFlagSet(legacyProviderFlagSet())
 
 	return flagSet
 }
@@ -65,9 +78,16 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 	l.Options.UpstreamServers = upstreams
 
 	l.Options.InjectRequestHeaders, l.Options.InjectResponseHeaders = l.LegacyHeaders.convert()
+
 	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
 
 	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
+
+	providers, err := l.LegacyProvider.convert()
+	if err != nil {
+		return nil, fmt.Errorf("error converting provider: %v", err)
+	}
+	l.Options.Providers = providers
 
 	return &l.Options, nil
 }
@@ -443,6 +463,105 @@ func legacyServerFlagset() *pflag.FlagSet {
 	return flagSet
 }
 
+type LegacyProvider struct {
+	ClientID         string `flag:"client-id" cfg:"client_id"`
+	ClientSecret     string `flag:"client-secret" cfg:"client_secret"`
+	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file"`
+
+	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
+	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
+	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
+	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
+	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
+	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
+	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
+	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
+	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
+	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
+	GitLabProjects           []string `flag:"gitlab-project" cfg:"gitlab_projects"`
+	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
+	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
+	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
+
+	// These options allow for other providers besides Google, with
+	// potential overrides.
+	ProviderType                       string   `flag:"provider" cfg:"provider"`
+	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
+	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
+	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
+	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
+	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
+	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
+	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
+	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
+	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
+	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
+	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
+	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
+	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
+	Scope                              string   `flag:"scope" cfg:"scope"`
+	Prompt                             string   `flag:"prompt" cfg:"prompt"`
+	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
+	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
+	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
+
+	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
+	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
+	JWTKeyFile string `flag:"jwt-key-file" cfg:"jwt_key_file"`
+	PubJWKURL  string `flag:"pubjwk-url" cfg:"pubjwk_url"`
+}
+
+func legacyProviderFlagSet() *pflag.FlagSet {
+	flagSet := pflag.NewFlagSet("provider", pflag.ExitOnError)
+
+	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
+	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
+	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
+	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
+	flagSet.String("github-org", "", "restrict logins to members of this organisation")
+	flagSet.String("github-team", "", "restrict logins to members of this team")
+	flagSet.String("github-repo", "", "restrict logins to collaborators of this repository")
+	flagSet.String("github-token", "", "the token to use when verifying repository collaborators (must have push access to the repository)")
+	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
+	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
+	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project=accesslevel`). Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent")
+	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
+	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
+	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
+	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
+	flagSet.String("client-secret", "", "the OAuth Client Secret")
+	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
+
+	flagSet.String("provider", "google", "OAuth provider")
+	flagSet.String("provider-display-name", "", "Provider display name")
+	flagSet.StringSlice("provider-ca-file", []string{}, "One or more paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead.")
+	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
+	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
+	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
+	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
+	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
+	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-email-claim", providers.OIDCEmailClaim, "which OIDC claim contains the user's email")
+	flagSet.String("login-url", "", "Authentication endpoint")
+	flagSet.String("redeem-url", "", "Token redemption endpoint")
+	flagSet.String("profile-url", "", "Profile access endpoint")
+	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
+	flagSet.String("validate-url", "", "Access token validation endpoint")
+	flagSet.String("scope", "", "OAuth scope specification")
+	flagSet.String("prompt", "", "OIDC prompt")
+	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
+
+	flagSet.String("acr-values", "", "acr values string:  optional")
+	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
+	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
+	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
+
+	flagSet.String("user-id-claim", providers.OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
+	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
+
+	return flagSet
+}
+
 func (l LegacyServer) convert() (Server, Server) {
 	appServer := Server{
 		BindAddress:       l.HTTPAddress,
@@ -481,4 +600,91 @@ func (l LegacyServer) convert() (Server, Server) {
 	}
 
 	return appServer, metricsServer
+}
+
+func (l *LegacyProvider) convert() (Providers, error) {
+	providers := Providers{}
+
+	provider := Provider{
+		ClientID:          l.ClientID,
+		ClientSecret:      l.ClientSecret,
+		ClientSecretFile:  l.ClientSecretFile,
+		ProviderType:      l.ProviderType,
+		ProviderCAFiles:   l.ProviderCAFiles,
+		LoginURL:          l.LoginURL,
+		RedeemURL:         l.RedeemURL,
+		ProfileURL:        l.ProfileURL,
+		ProtectedResource: l.ProtectedResource,
+		ValidateURL:       l.ValidateURL,
+		Scope:             l.Scope,
+		Prompt:            l.Prompt,
+		ApprovalPrompt:    l.ApprovalPrompt,
+		AllowedGroups:     l.AllowedGroups,
+		AcrValues:         l.AcrValues,
+	}
+
+	// This part is out of the switch section for all providers that support OIDC
+	provider.OIDCConfig = OIDCOptions{
+		OIDCIssuerURL:                      l.OIDCIssuerURL,
+		InsecureOIDCAllowUnverifiedEmail:   l.InsecureOIDCAllowUnverifiedEmail,
+		InsecureOIDCSkipIssuerVerification: l.InsecureOIDCSkipIssuerVerification,
+		SkipOIDCDiscovery:                  l.SkipOIDCDiscovery,
+		OIDCJwksURL:                        l.OIDCJwksURL,
+		UserIDClaim:                        l.UserIDClaim,
+		OIDCGroupsClaim:                    l.OIDCGroupsClaim,
+	}
+
+	// This part is out of the switch section beacuse azure has a defualt tenant
+	// that needs to be added from legacy options
+	provider.AzureConfig = AzureOptions{
+		AzureTenant: l.AzureTenant,
+	}
+
+	switch provider.ProviderType {
+	case "github":
+		provider.GitHubConfig = GitHubOptions{
+			GitHubOrg:   l.GitHubOrg,
+			GitHubTeam:  l.GitHubTeam,
+			GitHubRepo:  l.GitHubRepo,
+			GitHubToken: l.GitHubToken,
+			GitHubUsers: l.GitHubUsers,
+		}
+	case "keycloak":
+		provider.KeycloakConfig = KeycloakOptions{
+			KeycloakGroups: l.KeycloakGroups,
+		}
+	case "gitlab":
+		provider.GitLabConfig = GitLabOptions{
+			GitLabGroup: l.GitLabGroup,
+		}
+	case "login.gov":
+		provider.LoginGovConfig = LoginGovOptions{
+			JWTKey:     l.JWTKey,
+			JWTKeyFile: l.JWTKeyFile,
+			PubJWKURL:  l.PubJWKURL,
+		}
+	case "bitbucket":
+		provider.BitbucketConfig = BitbucketOptions{
+			BitbucketTeam:       l.BitbucketTeam,
+			BitbucketRepository: l.BitbucketRepository,
+		}
+	case "google":
+		provider.GoogleConfig = GoogleOptions{
+			GoogleGroups:             l.GoogleGroups,
+			GoogleAdminEmail:         l.GoogleAdminEmail,
+			GoogleServiceAccountJSON: l.GoogleServiceAccountJSON,
+		}
+	}
+
+	if l.ProviderName != "" {
+		provider.ProviderID = l.ProviderName
+		provider.ProviderName = l.ProviderName
+	} else {
+		// TODO (yanasega): should set a better defualt id value
+		provider.ProviderID = l.ProviderType + "_" + l.ClientID
+	}
+
+	providers = append(providers, provider)
+
+	return providers, nil
 }

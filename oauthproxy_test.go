@@ -981,7 +981,7 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 		ProviderData: &providers.ProviderData{},
 		ValidToken:   opts.providerValidateCookieResponse,
 	}
-	pcTest.proxy.provider.(*TestProvider).SetAllowedGroups(pcTest.opts.AllowedGroups)
+	pcTest.proxy.provider.(*TestProvider).SetAllowedGroups(pcTest.opts.Providers[0].AllowedGroups)
 
 	pcTest.rw = httptest.NewRecorder()
 	pcTest.req, _ = http.NewRequest("GET", "/", strings.NewReader(""))
@@ -1322,7 +1322,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 			},
 		},
 	}
-	pcTest.opts.AllowedGroups = []string{"oauth_groups"}
+	pcTest.opts.Providers[0].AllowedGroups = []string{"oauth_groups"}
 	err := validation.Validate(pcTest.opts)
 	assert.NoError(t, err)
 
@@ -2292,8 +2292,9 @@ func Test_noCacheHeaders(t *testing.T) {
 func baseTestOptions() *options.Options {
 	opts := options.NewOptions()
 	opts.Cookie.Secret = rawCookieSecret
-	opts.ClientID = clientID
-	opts.ClientSecret = clientSecret
+	opts.Providers[0].ProviderID = "providerID"
+	opts.Providers[0].ClientID = clientID
+	opts.Providers[0].ClientSecret = clientSecret
 	opts.EmailDomains = []string{"*"}
 
 	// Default injected headers for legacy configuration
@@ -2786,7 +2787,7 @@ func TestProxyAllowedGroups(t *testing.T) {
 			t.Cleanup(upstreamServer.Close)
 
 			test, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
-				opts.AllowedGroups = tt.allowedGroups
+				opts.Providers[0].AllowedGroups = tt.allowedGroups
 				opts.UpstreamServers = options.Upstreams{
 					{
 						ID:   upstreamServer.URL,
@@ -2915,7 +2916,7 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 			}
 
 			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {
-				opts.AllowedGroups = tc.allowedGroups
+				opts.Providers[0].AllowedGroups = tc.allowedGroups
 			})
 			if err != nil {
 				t.Fatal(err)

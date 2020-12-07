@@ -22,6 +22,7 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts.LegacyUpstreams.ProxyWebSockets = true
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
 			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file:///var/lib/website#/bar", "static://204"}
+			legacyOpts.LegacyProvider.ClientID = "oauth-proxy"
 
 			truth := true
 			staticCode := 204
@@ -109,6 +110,9 @@ var _ = Describe("Legacy Options", func() {
 			opts.Server = Server{
 				BindAddress: "127.0.0.1:4180",
 			}
+
+			opts.Providers[0].ClientID = "oauth-proxy"
+			opts.Providers[0].ProviderID = "google_oauth-proxy"
 
 			converted, err := legacyOpts.ToOptions()
 			Expect(err).ToNot(HaveOccurred())
@@ -850,6 +854,88 @@ var _ = Describe("Legacy Options", func() {
 				},
 			}),
 		)
+	})
 
+	Context("Legacy Providers", func() {
+		type convertProvidersTableInput struct {
+			legacyProvider    LegacyProvider
+			expectedProviders Providers
+			errMsg            string
+		}
+
+		// Non defaults for these options
+		clientID := "abcd"
+
+		defaultProvider := Provider{
+			ProviderID:   "google_" + clientID,
+			ClientID:     clientID,
+			ProviderType: "google",
+		}
+		defaultLegacyProvider := LegacyProvider{
+			ClientID:     clientID,
+			ProviderType: "google",
+		}
+
+		displayNameProvider := Provider{
+			ProviderID:   "displayName",
+			ProviderName: "displayName",
+			ClientID:     clientID,
+			ProviderType: "google",
+		}
+
+		displayNameLegacyProvider := LegacyProvider{
+			ClientID:     clientID,
+			ProviderName: "displayName",
+			ProviderType: "google",
+		}
+
+		internalConfigProvider := Provider{
+			ProviderID:   "google_" + clientID,
+			ClientID:     clientID,
+			ProviderType: "google",
+			GoogleConfig: GoogleOptions{
+				GoogleAdminEmail:         "email@email.com",
+				GoogleServiceAccountJSON: "test.json",
+				GoogleGroups:             []string{"1", "2"},
+			},
+		}
+
+		internalConfigLegacyProvider := LegacyProvider{
+			ClientID:                 clientID,
+			ProviderType:             "google",
+			GoogleAdminEmail:         "email@email.com",
+			GoogleServiceAccountJSON: "test.json",
+			GoogleGroups:             []string{"1", "2"},
+		}
+		DescribeTable("convertLegacyProviders",
+			func(o *convertProvidersTableInput) {
+
+				providers, err := o.legacyProvider.convert()
+
+				if o.errMsg != "" {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(o.errMsg))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				Expect(providers).To(ConsistOf(o.expectedProviders))
+			},
+			Entry("with default provider", &convertProvidersTableInput{
+				legacyProvider:    defaultLegacyProvider,
+				expectedProviders: Providers{defaultProvider},
+				errMsg:            "",
+			}),
+			Entry("with provider display name", &convertProvidersTableInput{
+				legacyProvider:    displayNameLegacyProvider,
+				expectedProviders: Providers{displayNameProvider},
+				errMsg:            "",
+			}),
+			Entry("with internal provider config", &convertProvidersTableInput{
+				legacyProvider:    internalConfigLegacyProvider,
+				expectedProviders: Providers{internalConfigProvider},
+				errMsg:            "",
+			}),
+		)
 	})
 })

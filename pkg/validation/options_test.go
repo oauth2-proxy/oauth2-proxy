@@ -27,8 +27,9 @@ func testOptions() *options.Options {
 		URI:  "http://127.0.0.1:8080/",
 	})
 	o.Cookie.Secret = cookieSecret
-	o.ClientID = clientID
-	o.ClientSecret = clientSecret
+	o.Providers[0].ProviderID = "providerID"
+	o.Providers[0].ClientID = clientID
+	o.Providers[0].ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
 	return o
 }
@@ -48,7 +49,8 @@ func TestNewOptions(t *testing.T) {
 
 	expected := errorMsg([]string{
 		"missing setting: cookie-secret",
-		"missing setting: client-id",
+		"provider has empty id: ids are required for all providers",
+		"provider missing setting: client-id",
 		"missing setting: client-secret or client-secret-file"})
 	assert.Equal(t, expected, err.Error())
 }
@@ -56,8 +58,9 @@ func TestNewOptions(t *testing.T) {
 func TestClientSecretFileOptionFails(t *testing.T) {
 	o := options.NewOptions()
 	o.Cookie.Secret = cookieSecret
-	o.ClientID = clientID
-	o.ClientSecretFile = clientSecret
+	o.Providers[0].ProviderID = "providerID"
+	o.Providers[0].ClientID = clientID
+	o.Providers[0].ClientSecretFile = clientSecret
 	o.EmailDomains = []string{"*"}
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
@@ -93,8 +96,9 @@ func TestClientSecretFileOption(t *testing.T) {
 
 	o := options.NewOptions()
 	o.Cookie.Secret = cookieSecret
-	o.ClientID = clientID
-	o.ClientSecretFile = clientSecretFileName
+	o.Providers[0].ProviderID = "providerID"
+	o.Providers[0].ClientID = clientID
+	o.Providers[0].ClientSecretFile = clientSecretFileName
 	o.EmailDomains = []string{"*"}
 	err = Validate(o)
 	assert.Equal(t, nil, err)
@@ -110,7 +114,7 @@ func TestClientSecretFileOption(t *testing.T) {
 
 func TestGoogleGroupOptions(t *testing.T) {
 	o := testOptions()
-	o.GoogleGroups = []string{"googlegroup"}
+	o.Providers[0].GoogleConfig.GoogleGroups = []string{"googlegroup"}
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
@@ -122,9 +126,9 @@ func TestGoogleGroupOptions(t *testing.T) {
 
 func TestGoogleGroupInvalidFile(t *testing.T) {
 	o := testOptions()
-	o.GoogleGroups = []string{"test_group"}
-	o.GoogleAdminEmail = "admin@example.com"
-	o.GoogleServiceAccountJSON = "file_doesnt_exist.json"
+	o.Providers[0].GoogleConfig.GoogleGroups = []string{"test_group"}
+	o.Providers[0].GoogleConfig.GoogleAdminEmail = "admin@example.com"
+	o.Providers[0].GoogleConfig.GoogleServiceAccountJSON = "file_doesnt_exist.json"
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
@@ -225,17 +229,17 @@ func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 
 func TestSkipOIDCDiscovery(t *testing.T) {
 	o := testOptions()
-	o.ProviderType = "oidc"
-	o.OIDCIssuerURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/v2.0/"
-	o.SkipOIDCDiscovery = true
+	o.Providers[0].ProviderType = "oidc"
+	o.Providers[0].OIDCConfig.OIDCIssuerURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/v2.0/"
+	o.Providers[0].OIDCConfig.SkipOIDCDiscovery = true
 
 	err := Validate(o)
 	assert.Equal(t, "invalid configuration:\n"+
 		"  missing setting: login-url\n  missing setting: redeem-url\n  missing setting: oidc-jwks-url", err.Error())
 
-	o.LoginURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/authorize?p=b2c_1_sign_in"
-	o.RedeemURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/token?p=b2c_1_sign_in"
-	o.OIDCJwksURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/discovery/v2.0/keys"
+	o.Providers[0].LoginURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/authorize?p=b2c_1_sign_in"
+	o.Providers[0].RedeemURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/token?p=b2c_1_sign_in"
+	o.Providers[0].OIDCConfig.OIDCJwksURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/discovery/v2.0/keys"
 
 	assert.Equal(t, nil, Validate(o))
 }
@@ -292,7 +296,7 @@ func TestProviderCAFilesError(t *testing.T) {
 	assert.NoError(t, os.Remove(file.Name()))
 
 	o := testOptions()
-	o.ProviderCAFiles = append(o.ProviderCAFiles, file.Name())
+	o.Providers[0].ProviderCAFiles = append(o.Providers[0].ProviderCAFiles, file.Name())
 	err = Validate(o)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unable to load provider CA file(s)")
