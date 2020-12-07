@@ -33,7 +33,7 @@ func validateMultipleProviders(o *options.Options) []string {
 		providerIDs[provider.ProviderID] = ""
 
 		if provider.ClientID == "" {
-			msgs = append(msgs, fmt.Sprintf("provider missing setting: client-id"))
+			msgs = append(msgs, "provider missing setting: client-id")
 		}
 
 		// login.gov uses a signed JWT to authenticate, not a client-secret

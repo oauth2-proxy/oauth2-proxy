@@ -634,7 +634,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		OIDCGroupsClaim:                    l.OIDCGroupsClaim,
 	}
 
-	// This part is out of the switch section beacuse azure has a defualt tenant
+	// This part is out of the switch section beacuse azure has a default tenant
 	// that needs to be added from legacy options
 	provider.AzureConfig = AzureOptions{
 		AzureTenant: l.AzureTenant,
@@ -680,7 +680,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		provider.ProviderID = l.ProviderName
 		provider.ProviderName = l.ProviderName
 	} else {
-		// TODO (yanasega): should set a better defualt id value
+		// TODO (yanasega): should set a better default id value
 		provider.ProviderID = l.ProviderType + "_" + l.ClientID
 	}
 
