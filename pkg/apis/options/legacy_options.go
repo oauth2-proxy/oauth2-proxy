@@ -637,7 +637,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		OIDCGroupsClaim:                    l.OIDCGroupsClaim,
 	}
 
-	// This part is out of the switch section beacuse azure has a default tenant
+	// This part is out of the switch section because azure has a default tenant
 	// that needs to be added from legacy options
 	provider.AzureConfig = AzureOptions{
 		AzureTenant: l.AzureTenant,
