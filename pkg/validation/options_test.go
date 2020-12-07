@@ -17,6 +17,7 @@ const (
 	cookieSecret = "secretthirtytwobytes+abcdefghijk"
 	clientID     = "bazquux"
 	clientSecret = "xyzzyplugh"
+	providerID   = "providerID"
 )
 
 func testOptions() *options.Options {
@@ -27,7 +28,7 @@ func testOptions() *options.Options {
 		URI:  "http://127.0.0.1:8080/",
 	})
 	o.Cookie.Secret = cookieSecret
-	o.Providers[0].ProviderID = "providerID"
+	o.Providers[0].ProviderID = providerID
 	o.Providers[0].ClientID = clientID
 	o.Providers[0].ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
@@ -58,7 +59,7 @@ func TestNewOptions(t *testing.T) {
 func TestClientSecretFileOptionFails(t *testing.T) {
 	o := options.NewOptions()
 	o.Cookie.Secret = cookieSecret
-	o.Providers[0].ProviderID = "providerID"
+	o.Providers[0].ProviderID = providerID
 	o.Providers[0].ClientID = clientID
 	o.Providers[0].ClientSecretFile = clientSecret
 	o.EmailDomains = []string{"*"}
@@ -96,7 +97,7 @@ func TestClientSecretFileOption(t *testing.T) {
 
 	o := options.NewOptions()
 	o.Cookie.Secret = cookieSecret
-	o.Providers[0].ProviderID = "providerID"
+	o.Providers[0].ProviderID = providerID
 	o.Providers[0].ClientID = clientID
 	o.Providers[0].ClientSecretFile = clientSecretFileName
 	o.EmailDomains = []string{"*"}
