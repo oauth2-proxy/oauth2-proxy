@@ -2,16 +2,19 @@ package providers
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/pkg/requests"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 type KeycloakProvider struct {
 	*ProviderData
 	Group string
+	Roles []string
 }
 
 var _ Provider = (*KeycloakProvider)(nil)
@@ -63,12 +66,17 @@ func (p *KeycloakProvider) SetGroup(group string) {
 	p.Group = group
 }
 
+func (p *KeycloakProvider) SetRoles(roles []string) {
+	p.Roles = roles
+}
+
 func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
 		UnmarshalJSON()
+
 	if err != nil {
 		logger.Errorf("failed making request %s", err)
 		return "", err
@@ -92,6 +100,57 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 		if !found {
 			logger.Printf("group not found, access denied")
 			return "", nil
+		}
+	}
+
+	if len(p.Roles) > 0 {
+		claims := make(map[string]interface{})
+
+		// Decode JWT token without verifying the signature
+		token, err := jwt.ParseSigned(s.AccessToken)
+
+		if err != nil {
+			logger.Printf("failed to parse token %s", err)
+			return "", nil
+		}
+
+		// Parse claims
+		if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
+			logger.Printf("failed to parse claims %s", err)
+		}
+
+		var roleList []string
+
+		if realmRoles, found := claims["realm_access"].(map[string]interface{}); found {
+			if roles, found := realmRoles["roles"]; found {
+				for _, r := range roles.([]interface{}) {
+					roleList = append(roleList, fmt.Sprintf("%s", r))
+				}
+			}
+		}
+
+		if clientRoles, found := claims["resource_access"].(map[string]interface{}); found {
+			for name, list := range clientRoles {
+				scopes := list.(map[string]interface{})
+				if roles, found := scopes["roles"]; found {
+					for _, r := range roles.([]interface{}) {
+						roleList = append(roleList, fmt.Sprintf("%s:%s", name, r))
+					}
+				}
+			}
+		}
+
+		roleSet := make(map[string]bool)
+
+		for _, role := range roleList {
+			roleSet[role] = true
+		}
+
+		for _, role := range p.Roles {
+			if !roleSet[role] {
+				logger.Printf("one or more roles not found, access denied")
+				return "", nil
+			}
 		}
 	}
 

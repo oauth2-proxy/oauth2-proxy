@@ -142,8 +142,11 @@ Make sure you set the following to the appropriate url:
     -redeem-url="http(s)://<keycloak host>/realms/<your realm>/protocol/openid-connect/token"
     -validate-url="http(s)://<keycloak host>/realms/<your realm>/protocol/openid-connect/userinfo"
     -keycloak-group=<user_group>
+    -keycloak-roles=<user_roles>
 
 The group management in keycloak is using a tree. If you create a group named admin in keycloak you should define the 'keycloak-group' value to /admin.
+
+You can restrict logins to users with specific roles by passing a comma-separated list of roles to 'keycloak-roles', the users must have all of the specified roles in order to be granted access. Both realm and client roles can be used, client roles should be in the following format 'client:role'.
 
 ### GitLab Auth Provider
 

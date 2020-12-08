@@ -254,6 +254,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetUsers(o.GitHubUsers)
 	case *providers.KeycloakProvider:
 		p.SetGroup(o.KeycloakGroup)
+		p.SetRoles(o.KeycloakRoles)
 	case *providers.GoogleProvider:
 		if o.GoogleServiceAccountJSON != "" {
 			file, err := os.Open(o.GoogleServiceAccountJSON)
