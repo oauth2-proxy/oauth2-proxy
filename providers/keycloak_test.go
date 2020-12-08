@@ -109,7 +109,7 @@ func TestKeycloakProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestKeycloakProviderGetEmailAddress(t *testing.T) {
+func TestKeycloakProviderEmailAddress(t *testing.T) {
 	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\"}")
 	defer b.Close()
 
@@ -117,12 +117,12 @@ func TestKeycloakProviderGetEmailAddress(t *testing.T) {
 	p := testKeycloakProvider(bURL.Host, "", []string{})
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
+func TestKeycloakProviderGroups(t *testing.T) {
 	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
 	defer b.Close()
 
@@ -130,12 +130,12 @@ func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
 	p := testKeycloakProvider(bURL.Host, "test-grp1", []string{})
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.ElementsMatch(t, []string{"group:test-grp1", "group:test-grp2"}, session.Groups)
 }
 
-func TestKeycloakProviderGetEmailAddressAndRealmRole(t *testing.T) {
+func TestKeycloakProviderRoles(t *testing.T) {
 	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\"}")
 	defer b.Close()
 
@@ -143,27 +143,59 @@ func TestKeycloakProviderGetEmailAddressAndRealmRole(t *testing.T) {
 	p := testKeycloakProvider(bURL.Host, "", []string{"test-realmrole1"})
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	// Using roles extracted from default token in providers/auth_test.go
+	assert.ElementsMatch(t, []string{"role:test-realmrole1", "role:test-realmrole2", "role:client:test-clientrole1", "role:client:test-clientrole2"}, session.Groups)
 }
 
-func TestKeycloakProviderGetEmailAddressAndClientRole(t *testing.T) {
+func TestKeycloakProviderEmailAddressAndGroup(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "test-grp1", []string{})
+
+	session := CreateAuthorizedSession()
+	err := p.EnrichSession(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.ElementsMatch(t, []string{"group:test-grp1", "group:test-grp2"}, session.Groups)
+}
+
+func TestKeycloakProviderEmailAddressAndRoles(t *testing.T) {
 	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\"}")
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "", []string{"client:test-clientrole1"})
+	p := testKeycloakProvider(bURL.Host, "", []string{"test-realmrole1"})
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	// Using roles extracted from default token in providers/auth_test.go
+	assert.ElementsMatch(t, []string{"role:test-realmrole1", "role:test-realmrole2", "role:client:test-clientrole1", "role:client:test-clientrole2"}, session.Groups)
+}
+
+func TestKeycloakProviderEmailAddressAndGroupsAndRoles(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "test-grp1", []string{"client:test-clientrole1"})
+
+	session := CreateAuthorizedSession()
+	err := p.EnrichSession(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	// Using roles extracted from default token in providers/auth_test.go
+	assert.ElementsMatch(t, []string{"group:test-grp1", "group:test-grp2", "role:test-realmrole1", "role:test-realmrole2", "role:client:test-clientrole1", "role:client:test-clientrole2"}, session.Groups)
 }
 
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
-func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
+func TestKeycloakProviderFailedRequest(t *testing.T) {
 	b := testKeycloakBackend("unused payload")
 	defer b.Close()
 
@@ -174,12 +206,12 @@ func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
 
-func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
+func TestKeycloakProviderEmailNotPresentInPayload(t *testing.T) {
 	b := testKeycloakBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
@@ -187,7 +219,51 @@ func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	p := testKeycloakProvider(bURL.Host, "", []string{})
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
+}
+
+func TestKeycloakProviderPrefixAllowedGroups(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "test-grp1", []string{"test-realmrole1", "client:test-clientrole1"})
+
+	allowedGroups := p.PrefixAllowedGroups()
+	assert.ElementsMatch(t, []string{"group:test-grp1", "role:test-realmrole1", "role:client:test-clientrole1"}, allowedGroups)
+}
+
+func TestKeycloakProviderPrefixAllowedGroupsNoGroup(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "", []string{"test-realmrole1", "client:test-clientrole1"})
+
+	allowedGroups := p.PrefixAllowedGroups()
+	assert.ElementsMatch(t, []string{"role:test-realmrole1", "role:client:test-clientrole1"}, allowedGroups)
+}
+
+func TestKeycloakProviderPrefixAllowedGroupsNoRoles(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "test-grp1", []string{})
+
+	allowedGroups := p.PrefixAllowedGroups()
+	assert.ElementsMatch(t, []string{"group:test-grp1"}, allowedGroups)
+}
+
+func TestKeycloakProviderPrefixAllowedGroupsEmpty(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\", \"groups\": [\"test-grp1\", \"test-grp2\"]}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "", []string{})
+
+	allowedGroups := p.PrefixAllowedGroups()
+	assert.Empty(t, allowedGroups)
 }
