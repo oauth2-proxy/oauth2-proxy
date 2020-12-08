@@ -70,6 +70,31 @@ func (p *KeycloakProvider) SetRoles(roles []string) {
 	p.Roles = roles
 }
 
+func ExtractRolesFromClaims(claims map[string]interface{}) []string {
+	var roleList []string
+
+	if realmRoles, found := claims["realm_access"].(map[string]interface{}); found {
+		if roles, found := realmRoles["roles"]; found {
+			for _, r := range roles.([]interface{}) {
+				roleList = append(roleList, fmt.Sprintf("%s", r))
+			}
+		}
+	}
+
+	if clientRoles, found := claims["resource_access"].(map[string]interface{}); found {
+		for name, list := range clientRoles {
+			scopes := list.(map[string]interface{})
+			if roles, found := scopes["roles"]; found {
+				for _, r := range roles.([]interface{}) {
+					roleList = append(roleList, fmt.Sprintf("%s:%s", name, r))
+				}
+			}
+		}
+	}
+
+	return roleList
+}
+
 func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
@@ -119,38 +144,11 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 			logger.Printf("failed to parse claims %s", err)
 		}
 
-		var roleList []string
+		var roles = ExtractRolesFromClaims(claims)
 
-		if realmRoles, found := claims["realm_access"].(map[string]interface{}); found {
-			if roles, found := realmRoles["roles"]; found {
-				for _, r := range roles.([]interface{}) {
-					roleList = append(roleList, fmt.Sprintf("%s", r))
-				}
-			}
-		}
-
-		if clientRoles, found := claims["resource_access"].(map[string]interface{}); found {
-			for name, list := range clientRoles {
-				scopes := list.(map[string]interface{})
-				if roles, found := scopes["roles"]; found {
-					for _, r := range roles.([]interface{}) {
-						roleList = append(roleList, fmt.Sprintf("%s:%s", name, r))
-					}
-				}
-			}
-		}
-
-		roleSet := make(map[string]bool)
-
-		for _, role := range roleList {
-			roleSet[role] = true
-		}
-
-		for _, role := range p.Roles {
-			if !roleSet[role] {
-				logger.Printf("one or more roles not found, access denied")
-				return "", nil
-			}
+		if isSubarray(roles, p.Roles) != true {
+			logger.Printf("one or more roles not found, access denied")
+			return "", nil
 		}
 	}
 
