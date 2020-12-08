@@ -70,7 +70,7 @@ func (p *KeycloakProvider) SetRoles(roles []string) {
 	p.Roles = roles
 }
 
-func ExtractRolesFromClaims(claims map[string]interface{}) []string {
+func extractRolesFromClaims(claims map[string]interface{}) []string {
 	var roleList []string
 
 	if realmRoles, found := claims["realm_access"].(map[string]interface{}); found {
@@ -107,7 +107,7 @@ func getRoles(accessToken string) ([]string, error) {
 	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		logger.Printf("failed to parse claims %s", err)
 	}
-	var roles = ExtractRolesFromClaims(claims)
+	var roles = extractRolesFromClaims(claims)
 	return roles, nil
 }
 
