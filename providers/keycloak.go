@@ -146,7 +146,7 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 
 		var roles = ExtractRolesFromClaims(claims)
 
-		if isSubarray(roles, p.Roles) != true {
+		if !isSubarray(roles, p.Roles) {
 			logger.Printf("one or more roles not found, access denied")
 			return "", nil
 		}
