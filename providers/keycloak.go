@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -70,11 +71,15 @@ func (p *KeycloakProvider) SetRoles(roles []string) {
 	p.Roles = roles
 }
 
-func extractRolesFromClaims(claims map[string]interface{}) []string {
+func extractRolesFromClaims(claims map[string]interface{}) ([]string, error) {
 	var roleList []string
 
 	if realmRoles, found := claims["realm_access"].(map[string]interface{}); found {
 		if roles, found := realmRoles["roles"]; found {
+			_, ok := roles.([]interface{})
+			if !ok {
+				return nil, errors.New("error parsing realm roles from claims")
+			}
 			for _, r := range roles.([]interface{}) {
 				roleList = append(roleList, fmt.Sprintf("%s", r))
 			}
@@ -83,7 +88,10 @@ func extractRolesFromClaims(claims map[string]interface{}) []string {
 
 	if clientRoles, found := claims["resource_access"].(map[string]interface{}); found {
 		for name, list := range clientRoles {
-			scopes := list.(map[string]interface{})
+			scopes, ok := list.(map[string]interface{})
+			if !ok {
+				return nil, errors.New("error parsing client roles from claims")
+			}
 			if roles, found := scopes["roles"]; found {
 				for _, r := range roles.([]interface{}) {
 					roleList = append(roleList, fmt.Sprintf("%s:%s", name, r))
@@ -92,7 +100,7 @@ func extractRolesFromClaims(claims map[string]interface{}) []string {
 		}
 	}
 
-	return roleList
+	return roleList, nil
 }
 
 func getRoles(accessToken string) ([]string, error) {
@@ -107,7 +115,10 @@ func getRoles(accessToken string) ([]string, error) {
 	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		logger.Printf("failed to parse claims %s", err)
 	}
-	roles := extractRolesFromClaims(claims)
+	roles, err := extractRolesFromClaims(claims)
+	if err != nil {
+		logger.Printf("failed to extract roles %s", err)
+	}
 	return roles, nil
 }
 
