@@ -160,8 +160,8 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 			logger.Printf("failed to get roles %s", err)
 			return "", err
 		}
-		if !isSubarray(roles, p.Roles) {
-			logger.Printf("one or more roles not found, access denied")
+		if !commonElementExists(roles, p.Roles) {
+			logger.Printf("role not found, access denied")
 			return "", nil
 		}
 	}

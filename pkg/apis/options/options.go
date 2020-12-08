@@ -181,7 +181,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
 	flagSet.String("keycloak-group", "", "restrict login to members of this group.")
-	flagSet.StringSlice("keycloak-roles", []string{}, "restrict login to members with these roles")
+	flagSet.StringSlice("keycloak-roles", []string{}, "restrict login to members with at least one of these roles")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")

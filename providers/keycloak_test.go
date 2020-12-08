@@ -140,7 +140,7 @@ func TestKeycloakProviderGetEmailAddressAndRealmRole(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "", []string{"test-realmrole1", "test-realmrole2"})
+	p := testKeycloakProvider(bURL.Host, "", []string{"test-realmrole1"})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
@@ -153,7 +153,7 @@ func TestKeycloakProviderGetEmailAddressAndClientRole(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "", []string{"client:test-clientrole1", "client:test-clientrole2"})
+	p := testKeycloakProvider(bURL.Host, "", []string{"client:test-clientrole1"})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
