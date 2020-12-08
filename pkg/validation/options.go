@@ -246,6 +246,8 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	o.SetProvider(provider)
 
 	switch p := o.GetProvider().(type) {
+	case *providers.AtlassianProvider:
+		p.SetGroups(o.AtlassianGroups)
 	case *providers.AzureProvider:
 		p.Configure(o.AzureTenant)
 	case *providers.GitHubProvider:
