@@ -107,7 +107,7 @@ func getRoles(accessToken string) ([]string, error) {
 	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
 		logger.Printf("failed to parse claims %s", err)
 	}
-	var roles = extractRolesFromClaims(claims)
+	roles := extractRolesFromClaims(claims)
 	return roles, nil
 }
 
