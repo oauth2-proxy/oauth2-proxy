@@ -54,15 +54,16 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	}
 	a.RawQuery = params.Encode()
 	return a
+}
 
 // Return true if secondArray is a subset of firstArray
 func isSubarray(firstArray, secondArray []string) bool {
-	arraySet := make(map[string]bool)
+	arraySet := make(map[string]struct{})
 	for _, value := range firstArray {
-		arraySet[value] = true
+		arraySet[value] = struct{}{}
 	}
 	for _, value := range secondArray {
-		if !arraySet[value] {
+		if _, found := arraySet[value]; !found {
 			return false
 		}
 	}
