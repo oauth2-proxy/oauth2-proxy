@@ -117,7 +117,6 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
 		UnmarshalJSON()
-
 	if err != nil {
 		logger.Errorf("failed making request %s", err)
 		return "", err
