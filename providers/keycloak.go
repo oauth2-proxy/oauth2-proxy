@@ -95,6 +95,22 @@ func ExtractRolesFromClaims(claims map[string]interface{}) []string {
 	return roleList
 }
 
+func getRoles(accessToken string) ([]string, error) {
+	claims := make(map[string]interface{})
+	// Decode JWT token without verifying the signature
+	token, err := jwt.ParseSigned(accessToken)
+	if err != nil {
+		logger.Printf("failed to parse token %s", err)
+		return nil, err
+	}
+	// Parse claims
+	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
+		logger.Printf("failed to parse claims %s", err)
+	}
+	var roles = ExtractRolesFromClaims(claims)
+	return roles, nil
+}
+
 func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
@@ -129,23 +145,11 @@ func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	}
 
 	if len(p.Roles) > 0 {
-		claims := make(map[string]interface{})
-
-		// Decode JWT token without verifying the signature
-		token, err := jwt.ParseSigned(s.AccessToken)
-
+		roles, err := getRoles(s.AccessToken)
 		if err != nil {
-			logger.Printf("failed to parse token %s", err)
-			return "", nil
+			logger.Printf("failed to get roles %s", err)
+			return "", err
 		}
-
-		// Parse claims
-		if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
-			logger.Printf("failed to parse claims %s", err)
-		}
-
-		var roles = ExtractRolesFromClaims(claims)
-
 		if !isSubarray(roles, p.Roles) {
 			logger.Printf("one or more roles not found, access denied")
 			return "", nil
