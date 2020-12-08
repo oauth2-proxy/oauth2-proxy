@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testKeycloakProvider(hostname, group string) *KeycloakProvider {
+func testKeycloakProvider(hostname, group string, roles []string) *KeycloakProvider {
 	p := NewKeycloakProvider(
 		&ProviderData{
 			ProviderName: "",
@@ -24,6 +24,10 @@ func testKeycloakProvider(hostname, group string) *KeycloakProvider {
 
 	if group != "" {
 		p.SetGroup(group)
+	}
+
+	if len(roles) > 0 {
+		p.SetRoles(roles)
 	}
 
 	if hostname != "" {
@@ -53,7 +57,7 @@ func testKeycloakBackend(payload string) *httptest.Server {
 }
 
 func TestKeycloakProviderDefaults(t *testing.T) {
-	p := testKeycloakProvider("", "")
+	p := testKeycloakProvider("", "", []string{})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Keycloak", p.Data().ProviderName)
 	assert.Equal(t, "https://keycloak.org/oauth/authorize",
@@ -110,7 +114,7 @@ func TestKeycloakProviderGetEmailAddress(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, "", []string{})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
@@ -123,7 +127,33 @@ func TestKeycloakProviderGetEmailAddressAndGroup(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "test-grp1")
+	p := testKeycloakProvider(bURL.Host, "test-grp1", []string{})
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestKeycloakProviderGetEmailAddressAndRealmRole(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\"}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "", []string{"test-realmrole1", "test-realmrole2"})
+
+	session := CreateAuthorizedSession()
+	email, err := p.GetEmailAddress(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", email)
+}
+
+func TestKeycloakProviderGetEmailAddressAndClientRole(t *testing.T) {
+	b := testKeycloakBackend("{\"email\": \"michael.bland@gsa.gov\"}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testKeycloakProvider(bURL.Host, "", []string{"client:test-clientrole1", "client:test-clientrole2"})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
@@ -138,7 +168,7 @@ func TestKeycloakProviderGetEmailAddressFailedRequest(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, "", []string{})
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -154,7 +184,7 @@ func TestKeycloakProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testKeycloakProvider(bURL.Host, "")
+	p := testKeycloakProvider(bURL.Host, "", []string{})
 
 	session := CreateAuthorizedSession()
 	email, err := p.GetEmailAddress(context.Background(), session)
