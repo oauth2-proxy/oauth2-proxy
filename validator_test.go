@@ -1,11 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -302,30 +299,19 @@ func TestValidatorSubDomains(t *testing.T) {
 		},
 	}
 
+	vt := NewValidatorTest(t)
+	defer vt.TearDown()
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			// Make a TempFile prefix somehow based on the testcase name
-			dir, err := ioutil.TempDir("", fmt.Sprintf("%s_", tc.name))
-			defer os.Remove(dir)
-			g.Expect(err).ToNot(HaveOccurred())
+			vt.WriteEmails(t, tc.allowedEmails)
+			validator := vt.NewValidator(tc.allowedDomains, nil)
 
-			defer func(t *testing.T) {
-				if err := os.RemoveAll(dir); err != nil {
-					t.Fatal(err)
-				}
-			}(t)
-
-			emailsFile := filepath.Join(dir, "emails")
-			if err := ioutil.WriteFile(emailsFile, []byte(strings.Join(tc.allowedEmails, "\n")), 0666); err != nil {
-				log.Fatal(err)
-			}
-
-			validator := NewValidator(tc.allowedDomains, emailsFile)
 			authorized := validator(tc.email)
-
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
+
 		})
 	}
 }
