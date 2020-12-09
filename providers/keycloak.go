@@ -71,38 +71,6 @@ func (p *KeycloakProvider) SetRoles(roles []string) {
 	p.Roles = roles
 }
 
-func extractRolesFromClaims(claims map[string]interface{}) ([]string, error) {
-	var roleList []string
-
-	if realmRoles, found := claims["realm_access"].(map[string]interface{}); found {
-		if roles, found := realmRoles["roles"]; found {
-			_, ok := roles.([]interface{})
-			if !ok {
-				return nil, errors.New("error parsing realm roles from claims")
-			}
-			for _, r := range roles.([]interface{}) {
-				roleList = append(roleList, fmt.Sprintf("%s", r))
-			}
-		}
-	}
-
-	if clientRoles, found := claims["resource_access"].(map[string]interface{}); found {
-		for name, list := range clientRoles {
-			scopes, ok := list.(map[string]interface{})
-			if !ok {
-				return nil, errors.New("error parsing client roles from claims")
-			}
-			if roles, found := scopes["roles"]; found {
-				for _, r := range roles.([]interface{}) {
-					roleList = append(roleList, fmt.Sprintf("%s:%s", name, r))
-				}
-			}
-		}
-	}
-
-	return roleList, nil
-}
-
 type keycloakUserInfo struct {
 	Email  string   `json:"email"`
 	Groups []string `json:"groups"`
@@ -122,22 +90,48 @@ func (p *KeycloakProvider) getUserInfo(ctx context.Context, s *sessions.SessionS
 	return &userInfo, nil
 }
 
+func getClientRoles(resourceAccess map[string]interface{}) ([]string, error) {
+	var clientRoles []string
+	for name, list := range resourceAccess {
+		scopes, ok := list.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("error parsing client roles from claims")
+		}
+		if roles, found := scopes["roles"]; found {
+			for _, r := range roles.([]interface{}) {
+				clientRoles = append(clientRoles, fmt.Sprintf("%s:%s", name, r))
+			}
+		}
+	}
+	return clientRoles, nil
+}
+
+type realmAccess struct {
+	Roles []string `json:"roles"`
+}
+
+type customClaims struct {
+	RealmAccess    realmAccess            `json:"realm_access"`
+	ResourceAccess map[string]interface{} `json:"resource_access"`
+}
+
 func (p *KeycloakProvider) getRoles(s *sessions.SessionState) ([]string, error) {
-	claims := make(map[string]interface{})
 	// Decode JWT token without verifying the signature
 	token, err := jwt.ParseSigned(s.AccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %v", err)
 	}
+	standardClaims := jwt.Claims{}
+	customClaims := customClaims{}
 	// Parse claims
-	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
+	if err := token.UnsafeClaimsWithoutVerification(&standardClaims, &customClaims); err != nil {
 		logger.Printf("failed to parse claims: %s", err)
 	}
-	roles, err := extractRolesFromClaims(claims)
+	clientRoles, err := getClientRoles(customClaims.ResourceAccess)
 	if err != nil {
-		logger.Printf("failed to extract roles: %s", err)
+		logger.Printf("failed to extract client roles: %s", err)
 	}
-	return roles, nil
+	return append(customClaims.RealmAccess.Roles, clientRoles...), nil
 }
 
 func (p *KeycloakProvider) addGroupsToSession(s *sessions.SessionState, groups []string) error {
