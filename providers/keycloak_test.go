@@ -220,7 +220,7 @@ func TestKeycloakProviderEmailNotPresentInPayload(t *testing.T) {
 
 	session := CreateAuthorizedSession()
 	err := p.EnrichSession(context.Background(), session)
-	assert.NotEqual(t, nil, err)
+	assert.Equal(t, nil, err)
 	assert.Equal(t, "", session.Email)
 }
 
