@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -104,36 +103,23 @@ func extractRolesFromClaims(claims map[string]interface{}) ([]string, error) {
 	return roleList, nil
 }
 
-func (p *KeycloakProvider) getUserInfo(ctx context.Context, s *sessions.SessionState) (*simplejson.Json, error) {
-	userInfo, err := requests.New(p.ValidateURL.String()).
+type keycloakUserInfo struct {
+	Email  string   `json:"email"`
+	Groups []string `json:"groups"`
+}
+
+func (p *KeycloakProvider) getUserInfo(ctx context.Context, s *sessions.SessionState) (*keycloakUserInfo, error) {
+	var userInfo keycloakUserInfo
+	err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
-		UnmarshalJSON()
+		UnmarshalInto(&userInfo)
 	if err != nil {
 		logger.Errorf("failed making request %s", err)
 		return nil, fmt.Errorf("error getting user info: %v", err)
 	}
-	return userInfo, nil
-}
-
-func (p *KeycloakProvider) getEmailAddress(userInfo *simplejson.Json) (string, error) {
-	var email, err = userInfo.Get("email").String()
-	if err != nil {
-		return "", fmt.Errorf("error getting email address: %v", err)
-	}
-	return email, nil
-}
-
-func (p *KeycloakProvider) getGroups(userInfo *simplejson.Json) ([]string, error) {
-	if g, ok := userInfo.CheckGet("groups"); ok {
-		groups, err := g.StringArray()
-		if err != nil {
-			return []string{}, fmt.Errorf("error getting groups: %v", err)
-		}
-		return groups, nil
-	}
-	return []string{}, nil
+	return &userInfo, nil
 }
 
 func (p *KeycloakProvider) getRoles(s *sessions.SessionState) ([]string, error) {
@@ -154,11 +140,7 @@ func (p *KeycloakProvider) getRoles(s *sessions.SessionState) ([]string, error) 
 	return roles, nil
 }
 
-func (p *KeycloakProvider) addGroupsToSession(s *sessions.SessionState, userInfo *simplejson.Json) error {
-	groups, err := p.getGroups(userInfo)
-	if err != nil {
-		return err
-	}
+func (p *KeycloakProvider) addGroupsToSession(s *sessions.SessionState, groups []string) error {
 	for _, group := range groups {
 		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
 	}
@@ -182,15 +164,10 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 		return err
 	}
 
-	if s.Email == "" {
-		s.Email, err = p.getEmailAddress(userInfo)
-		if err != nil {
-			return err
-		}
-	}
+	s.Email = userInfo.Email
 
 	if p.Group != "" {
-		err := p.addGroupsToSession(s, userInfo)
+		err := p.addGroupsToSession(s, userInfo.Groups)
 		if err != nil {
 			return err
 		}
