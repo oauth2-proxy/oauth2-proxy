@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -301,15 +302,20 @@ func TestValidatorSubDomains(t *testing.T) {
 		},
 	}
 
-	dir, err := ioutil.TempDir("", "emailstest")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
+
+			// Make a TempFile prefix somehow based on the testcase name
+			dir, err := ioutil.TempDir("", fmt.Sprintf("%s_", tc.name))
+			defer os.Remove(dir)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			defer func(t *testing.T) {
+				if err := os.RemoveAll(dir); err != nil {
+					t.Fatal(err)
+				}
+			}(t)
 
 			emailsFile := filepath.Join(dir, "emails")
 			if err := ioutil.WriteFile(emailsFile, []byte(strings.Join(tc.allowedEmails, "\n")), 0666); err != nil {
@@ -322,6 +328,4 @@ func TestValidatorSubDomains(t *testing.T) {
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})
 	}
-
-	defer os.RemoveAll(dir)
 }
