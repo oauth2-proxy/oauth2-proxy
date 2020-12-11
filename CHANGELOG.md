@@ -44,6 +44,7 @@
 
 ## Changes since v6.1.1
 
+- [#951](https://github.com/oauth2-proxy/oauth2-proxy/pull/951) Update github.com/vmihailenco/msgpack to v5 (@johejo)
 - [#630](https://github.com/oauth2-proxy/oauth2-proxy/pull/630) Add support for Gitlab project based authentication (@factorysh)
 - [#907](https://github.com/oauth2-proxy/oauth2-proxy/pull/907) Introduce alpha configuration option to enable testing of structured configuration (@JoelSpeed)
 - [#938](https://github.com/oauth2-proxy/oauth2-proxy/pull/938) Cleanup missed provider renaming refactor methods (@NickMeves)
