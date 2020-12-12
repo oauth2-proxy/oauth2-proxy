@@ -7,20 +7,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
 	keycloakAccessToken  = "eyJKeycloak.eyJAccess.Token"
 	keycloakUserinfoPath = "/api/v3/user"
 
-	// Userinfo Test Cases
+	// Userinfo Test Cases querystring toggles
 	tcUIStandard      = "userinfo-standard"
 	tcUIFail          = "userinfo-fail"
 	tcUISingleGroup   = "userinfo-single-group"
@@ -111,139 +109,125 @@ func testKeycloakBackend() *httptest.Server {
 }
 
 var _ = Describe("Keycloak Provider Tests", func() {
-	var p *KeycloakProvider
-	var b *httptest.Server
+	Context("New Provider Init", func() {
+		It("uses defaults", func() {
+			providerData := NewKeycloakProvider(&ProviderData{}).Data()
+			Expect(providerData.ProviderName).To(Equal("Keycloak"))
+			Expect(providerData.LoginURL.String()).To(Equal("https://keycloak.org/oauth/authorize"))
+			Expect(providerData.RedeemURL.String()).To(Equal("https://keycloak.org/oauth/token"))
+			Expect(providerData.ProfileURL.String()).To(Equal(""))
+			Expect(providerData.ValidateURL.String()).To(Equal("https://keycloak.org/api/v3/user"))
+			Expect(providerData.Scope).To(Equal("api"))
+		})
 
-	BeforeEach(func() {
-		b = testKeycloakBackend()
+		It("overrides defaults", func() {
+			p := NewKeycloakProvider(
+				&ProviderData{
+					LoginURL: &url.URL{
+						Scheme: "https",
+						Host:   "example.com",
+						Path:   "/oauth/auth"},
+					RedeemURL: &url.URL{
+						Scheme: "https",
+						Host:   "example.com",
+						Path:   "/oauth/token"},
+					ValidateURL: &url.URL{
+						Scheme: "https",
+						Host:   "example.com",
+						Path:   "/api/v3/user"},
+					Scope: "profile"})
+			providerData := p.Data()
 
-		var err error
-		p, err = testKeycloakProvider(b)
-		Expect(err).To(BeNil())
+			Expect(providerData.ProviderName).To(Equal("Keycloak"))
+			Expect(providerData.LoginURL.String()).To(Equal("https://example.com/oauth/auth"))
+			Expect(providerData.RedeemURL.String()).To(Equal("https://example.com/oauth/token"))
+			Expect(providerData.ProfileURL.String()).To(Equal(""))
+			Expect(providerData.ValidateURL.String()).To(Equal("https://example.com/api/v3/user"))
+			Expect(providerData.Scope).To(Equal("profile"))
+		})
 	})
 
-	AfterEach(func() {
-		b.Close()
-	})
+	Context("With a test HTTP Server & Provider", func() {
+		var p *KeycloakProvider
+		var b *httptest.Server
 
-	Context("EnrichSession", func() {
-		type enrichSessionTableInput struct {
-			testcase       string
-			expectedError  error
-			expectedEmail  string
-			expectedGroups []string
-		}
+		BeforeEach(func() {
+			b = testKeycloakBackend()
 
-		DescribeTable("should return expected results",
-			func(in enrichSessionTableInput) {
-				var err error
-				p.ValidateURL, err = url.Parse(
-					fmt.Sprintf("%s%s?testcase=%s", b.URL, keycloakUserinfoPath, in.testcase),
-				)
-				Expect(err).To(BeNil())
+			var err error
+			p, err = testKeycloakProvider(b)
+			Expect(err).To(BeNil())
+		})
 
-				session := &sessions.SessionState{AccessToken: keycloakAccessToken}
-				err = p.EnrichSession(context.Background(), session)
+		AfterEach(func() {
+			b.Close()
+		})
 
-				if in.expectedError != nil {
-					Expect(err).To(Equal(in.expectedError))
-				} else {
+		Context("EnrichSession", func() {
+			type enrichSessionTableInput struct {
+				testcase       string
+				expectedError  error
+				expectedEmail  string
+				expectedGroups []string
+			}
+
+			DescribeTable("should return expected results",
+				func(in enrichSessionTableInput) {
+					var err error
+					p.ValidateURL, err = url.Parse(
+						fmt.Sprintf("%s%s?testcase=%s", b.URL, keycloakUserinfoPath, in.testcase),
+					)
 					Expect(err).To(BeNil())
-				}
 
-				Expect(session.Email).To(Equal(in.expectedEmail))
+					session := &sessions.SessionState{AccessToken: keycloakAccessToken}
+					err = p.EnrichSession(context.Background(), session)
 
-				if in.expectedGroups != nil {
-					Expect(session.Groups).To(Equal(in.expectedGroups))
-				} else {
-					Expect(session.Groups).To(BeNil())
-				}
-			},
-			Entry("email and multiple groups", enrichSessionTableInput{
-				testcase:       tcUIStandard,
-				expectedError:  nil,
-				expectedEmail:  "michael.bland@gsa.gov",
-				expectedGroups: []string{"test-grp1", "test-grp2"},
-			}),
-			Entry("email and single group", enrichSessionTableInput{
-				testcase:       tcUISingleGroup,
-				expectedError:  nil,
-				expectedEmail:  "michael.bland@gsa.gov",
-				expectedGroups: []string{"test-grp1"},
-			}),
-			Entry("email and no groups", enrichSessionTableInput{
-				testcase:       tcUIMissingGroups,
-				expectedError:  nil,
-				expectedEmail:  "michael.bland@gsa.gov",
-				expectedGroups: nil,
-			}),
-			Entry("missing email", enrichSessionTableInput{
-				testcase: tcUIMissingEmail,
-				expectedError: errors.New(
-					"unable to extract email from userinfo endpoint: type assertion to string failed"),
-				expectedEmail:  "",
-				expectedGroups: []string{"test-grp1", "test-grp2"},
-			}),
-			Entry("request failure", enrichSessionTableInput{
-				testcase:       tcUIFail,
-				expectedError:  errors.New(`unexpected status "500": `),
-				expectedEmail:  "",
-				expectedGroups: nil,
-			}),
-		)
+					if in.expectedError != nil {
+						Expect(err).To(Equal(in.expectedError))
+					} else {
+						Expect(err).To(BeNil())
+					}
+
+					Expect(session.Email).To(Equal(in.expectedEmail))
+
+					if in.expectedGroups != nil {
+						Expect(session.Groups).To(Equal(in.expectedGroups))
+					} else {
+						Expect(session.Groups).To(BeNil())
+					}
+				},
+				Entry("email and multiple groups", enrichSessionTableInput{
+					testcase:       tcUIStandard,
+					expectedError:  nil,
+					expectedEmail:  "michael.bland@gsa.gov",
+					expectedGroups: []string{"test-grp1", "test-grp2"},
+				}),
+				Entry("email and single group", enrichSessionTableInput{
+					testcase:       tcUISingleGroup,
+					expectedError:  nil,
+					expectedEmail:  "michael.bland@gsa.gov",
+					expectedGroups: []string{"test-grp1"},
+				}),
+				Entry("email and no groups", enrichSessionTableInput{
+					testcase:       tcUIMissingGroups,
+					expectedError:  nil,
+					expectedEmail:  "michael.bland@gsa.gov",
+					expectedGroups: nil,
+				}),
+				Entry("missing email", enrichSessionTableInput{
+					testcase: tcUIMissingEmail,
+					expectedError: errors.New(
+						"unable to extract email from userinfo endpoint: type assertion to string failed"),
+					expectedEmail:  "",
+					expectedGroups: []string{"test-grp1", "test-grp2"},
+				}),
+				Entry("request failure", enrichSessionTableInput{
+					testcase:       tcUIFail,
+					expectedError:  errors.New(`unexpected status "500": `),
+					expectedEmail:  "",
+					expectedGroups: nil,
+				}),
+			)
+		})
 	})
 })
-
-func TestKeycloakProviderDefaults(t *testing.T) {
-	p, err := testKeycloakProvider(nil)
-	assert.NoError(t, err)
-	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "Keycloak", p.Data().ProviderName)
-	assert.Equal(t, "https://keycloak.org/oauth/authorize",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://keycloak.org/oauth/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://keycloak.org/api/v3/user",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "api", p.Data().Scope)
-}
-
-func TestNewKeycloakProvider(t *testing.T) {
-	g := NewWithT(t)
-
-	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewKeycloakProvider(&ProviderData{}).Data()
-	g.Expect(providerData.ProviderName).To(Equal("Keycloak"))
-	g.Expect(providerData.LoginURL.String()).To(Equal("https://keycloak.org/oauth/authorize"))
-	g.Expect(providerData.RedeemURL.String()).To(Equal("https://keycloak.org/oauth/token"))
-	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
-	g.Expect(providerData.ValidateURL.String()).To(Equal("https://keycloak.org/api/v3/user"))
-	g.Expect(providerData.Scope).To(Equal("api"))
-}
-
-func TestKeycloakProviderOverrides(t *testing.T) {
-	p := NewKeycloakProvider(
-		&ProviderData{
-			LoginURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/oauth/auth"},
-			RedeemURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/oauth/token"},
-			ValidateURL: &url.URL{
-				Scheme: "https",
-				Host:   "example.com",
-				Path:   "/api/v3/user"},
-			Scope: "profile"})
-	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "Keycloak", p.Data().ProviderName)
-	assert.Equal(t, "https://example.com/oauth/auth",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://example.com/oauth/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://example.com/api/v3/user",
-		p.Data().ValidateURL.String())
-	assert.Equal(t, "profile", p.Data().Scope)
-}
