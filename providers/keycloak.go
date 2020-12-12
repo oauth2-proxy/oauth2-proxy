@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -11,7 +12,6 @@ import (
 
 type KeycloakProvider struct {
 	*ProviderData
-	Group string
 }
 
 var _ Provider = (*KeycloakProvider)(nil)
@@ -59,41 +59,33 @@ func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 	return &KeycloakProvider{ProviderData: p}
 }
 
-func (p *KeycloakProvider) SetGroup(group string) {
-	p.Group = group
-}
-
-func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
 		UnmarshalJSON()
 	if err != nil {
-		logger.Errorf("failed making request %s", err)
-		return "", err
+		logger.Errorf("failed making request %v", err)
+		return err
 	}
 
-	if p.Group != "" {
-		var groups, err = json.Get("groups").Array()
-		if err != nil {
-			logger.Printf("groups not found %s", err)
-			return "", err
-		}
-
-		var found = false
-		for i := range groups {
-			if groups[i].(string) == p.Group {
-				found = true
-				break
+	groups, err := json.Get("groups").StringArray()
+	if err != nil {
+		logger.Errorf("Warning: unable to extract groups from userinfo endpoint: %v", err)
+	} else {
+		for _, group := range groups {
+			if group != "" {
+				s.Groups = append(s.Groups, group)
 			}
 		}
-
-		if !found {
-			logger.Printf("group not found, access denied")
-			return "", nil
-		}
 	}
 
-	return json.Get("email").String()
+	email, err := json.Get("email").String()
+	if err != nil {
+		return fmt.Errorf("unable to extract email from userinfo endpoint: %v", err)
+	}
+	s.Email = email
+
+	return nil
 }
