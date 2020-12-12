@@ -80,9 +80,7 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 	}
 
 	groups, err := json.Get("groups").StringArray()
-	if err != nil {
-		logger.Errorf("Warning: unable to extract groups from userinfo endpoint: %v", err)
-	} else {
+	if err == nil {
 		for _, group := range groups {
 			if group != "" {
 				s.Groups = append(s.Groups, group)
