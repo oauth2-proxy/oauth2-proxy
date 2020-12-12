@@ -29,7 +29,7 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
-	msgs = append(msgs, prefixValues("injectRespeonseHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
+	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
