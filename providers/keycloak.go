@@ -47,6 +47,7 @@ var (
 	}
 )
 
+// NewKeycloakProvider creates a KeyCloakProvider using the passed ProviderData
 func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        keycloakProviderName,
@@ -59,8 +60,16 @@ func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 	return &KeycloakProvider{ProviderData: p}
 }
 
+// EnrichSession uses the Keycloak userinfo endpoint to populate the session's
+// email and groups.
 func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	json, err := requests.New(p.ValidateURL.String()).
+	// Fallback to ValidateURL if ProfileURL not set for legacy compatibility
+	userinfoURL := p.ValidateURL.String()
+	if p.ProfileURL != nil {
+		userinfoURL = p.ProfileURL.String()
+	}
+
+	json, err := requests.New(userinfoURL).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().

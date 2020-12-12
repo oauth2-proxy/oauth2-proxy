@@ -131,6 +131,10 @@ var _ = Describe("Keycloak Provider Tests", func() {
 						Scheme: "https",
 						Host:   "example.com",
 						Path:   "/oauth/token"},
+					ProfileURL: &url.URL{
+						Scheme: "https",
+						Host:   "example.com",
+						Path:   "/api/v3/user"},
 					ValidateURL: &url.URL{
 						Scheme: "https",
 						Host:   "example.com",
@@ -141,7 +145,7 @@ var _ = Describe("Keycloak Provider Tests", func() {
 			Expect(providerData.ProviderName).To(Equal("Keycloak"))
 			Expect(providerData.LoginURL.String()).To(Equal("https://example.com/oauth/auth"))
 			Expect(providerData.RedeemURL.String()).To(Equal("https://example.com/oauth/token"))
-			Expect(providerData.ProfileURL.String()).To(Equal(""))
+			Expect(providerData.ProfileURL.String()).To(Equal("https://example.com/api/v3/user"))
 			Expect(providerData.ValidateURL.String()).To(Equal("https://example.com/api/v3/user"))
 			Expect(providerData.Scope).To(Equal("profile"))
 		})
@@ -174,7 +178,7 @@ var _ = Describe("Keycloak Provider Tests", func() {
 			DescribeTable("should return expected results",
 				func(in enrichSessionTableInput) {
 					var err error
-					p.ValidateURL, err = url.Parse(
+					p.ProfileURL, err = url.Parse(
 						fmt.Sprintf("%s%s?testcase=%s", b.URL, keycloakUserinfoPath, in.testcase),
 					)
 					Expect(err).To(BeNil())
