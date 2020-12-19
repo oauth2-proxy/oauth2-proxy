@@ -49,14 +49,14 @@ var _ = Describe("Injector Suite", func() {
 				},
 				expectedErr: nil,
 			}),
-			Entry("with a static valued header from base64", newInjectorTableInput{
+			Entry("with a static valued header from string", newInjectorTableInput{
 				headers: []options.Header{
 					{
 						Name: "Secret",
 						Values: []options.HeaderValue{
 							{
 								SecretSource: &options.SecretSource{
-									Value: []byte(base64.StdEncoding.EncodeToString([]byte("super-secret"))),
+									Value: []byte("super-secret"),
 								},
 							},
 						},
@@ -200,7 +200,7 @@ var _ = Describe("Injector Suite", func() {
 								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
-										Value: []byte(base64.StdEncoding.EncodeToString([]byte("basic-password"))),
+										Value: []byte("basic-password"),
 									},
 								},
 							},
@@ -349,7 +349,7 @@ var _ = Describe("Injector Suite", func() {
 								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
-										Value: []byte(base64.StdEncoding.EncodeToString([]byte("basic-password"))),
+										Value: []byte("basic-password"),
 									},
 								},
 							},
@@ -380,17 +380,17 @@ var _ = Describe("Injector Suite", func() {
 						Values: []options.HeaderValue{
 							{
 								SecretSource: &options.SecretSource{
-									Value: []byte(base64.StdEncoding.EncodeToString([]byte("major=1"))),
+									Value: []byte("major=1"),
 								},
 							},
 							{
 								SecretSource: &options.SecretSource{
-									Value: []byte(base64.StdEncoding.EncodeToString([]byte("minor=2"))),
+									Value: []byte("minor=2"),
 								},
 							},
 							{
 								SecretSource: &options.SecretSource{
-									Value: []byte(base64.StdEncoding.EncodeToString([]byte("patch=3"))),
+									Value: []byte("patch=3"),
 								},
 							},
 						},

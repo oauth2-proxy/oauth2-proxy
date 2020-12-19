@@ -3,10 +3,13 @@ package providers
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
-	oidc "github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
 )
@@ -15,9 +18,52 @@ import (
 type GitLabProvider struct {
 	*ProviderData
 
-	Groups               []string
-	Verifier             *oidc.IDTokenVerifier
+	Groups   []string
+	Projects []*GitlabProject
+
 	AllowUnverifiedEmail bool
+}
+
+// GitlabProject represents a Gitlab project constraint entity
+type GitlabProject struct {
+	Name        string
+	AccessLevel int
+}
+
+// newGitlabProject Creates a new GitlabProject struct from project string formatted as namespace/project=accesslevel
+// if no accesslevel provided, use the default one
+func newGitlabproject(project string) (*GitlabProject, error) {
+	// default access level is 20
+	defaultAccessLevel := 20
+	// see https://docs.gitlab.com/ee/api/members.html#valid-access-levels
+	validAccessLevel := [4]int{10, 20, 30, 40}
+
+	parts := strings.SplitN(project, "=", 2)
+
+	if len(parts) == 2 {
+		lvl, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return nil, err
+		}
+
+		for _, valid := range validAccessLevel {
+			if lvl == valid {
+				return &GitlabProject{
+						Name:        parts[0],
+						AccessLevel: lvl},
+					err
+			}
+		}
+
+		return nil, fmt.Errorf("invalid gitlab project access level specified (%s)", parts[0])
+
+	}
+
+	return &GitlabProject{
+			Name:        project,
+			AccessLevel: defaultAccessLevel},
+		nil
+
 }
 
 var _ Provider = (*GitLabProvider)(nil)
@@ -62,6 +108,19 @@ func (p *GitLabProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		return nil, fmt.Errorf("unable to update session: %v", err)
 	}
 	return
+}
+
+// SetProjectScope ensure read_api is added to scope when filtering on projects
+func (p *GitLabProvider) SetProjectScope() {
+	if len(p.Projects) > 0 {
+		for _, val := range strings.Split(p.Scope, " ") {
+			if val == "read_api" {
+				return
+			}
+
+		}
+		p.Scope += " read_api"
+	}
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -144,25 +203,56 @@ func (p *GitLabProvider) getUserInfo(ctx context.Context, s *sessions.SessionSta
 	return &userInfo, nil
 }
 
-func (p *GitLabProvider) verifyGroupMembership(userInfo *gitlabUserInfo) error {
-	if len(p.Groups) == 0 {
-		return nil
+type gitlabPermissionAccess struct {
+	AccessLevel int `json:"access_level"`
+}
+
+type gitlabProjectPermission struct {
+	ProjectAccess *gitlabPermissionAccess `json:"project_access"`
+	GroupAccess   *gitlabPermissionAccess `json:"group_access"`
+}
+
+type gitlabProjectInfo struct {
+	Name              string                  `json:"name"`
+	Archived          bool                    `json:"archived"`
+	PathWithNamespace string                  `json:"path_with_namespace"`
+	Permissions       gitlabProjectPermission `json:"permissions"`
+}
+
+func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.SessionState, project string) (*gitlabProjectInfo, error) {
+	var projectInfo gitlabProjectInfo
+
+	endpointURL := &url.URL{
+		Scheme: p.LoginURL.Scheme,
+		Host:   p.LoginURL.Host,
+		Path:   "/api/v4/projects/",
 	}
 
-	// Collect user group memberships
-	membershipSet := make(map[string]bool)
-	for _, group := range userInfo.Groups {
-		membershipSet[group] = true
+	err := requests.New(fmt.Sprintf("%s%s", endpointURL.String(), url.QueryEscape(project))).
+		WithContext(ctx).
+		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		Do().
+		UnmarshalInto(&projectInfo)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project info: %v", err)
 	}
 
-	// Find a valid group that they are a member of
-	for _, validGroup := range p.Groups {
-		if _, ok := membershipSet[validGroup]; ok {
-			return nil
+	return &projectInfo, nil
+}
+
+// AddProjects adds Gitlab projects from options to GitlabProvider struct
+func (p *GitLabProvider) AddProjects(projects []string) error {
+	for _, project := range projects {
+		gp, err := newGitlabproject(project)
+		if err != nil {
+			return err
 		}
+
+		p.Projects = append(p.Projects, gp)
 	}
 
-	return fmt.Errorf("user is not a member of '%s'", p.Groups)
+	return nil
 }
 
 func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
@@ -187,13 +277,13 @@ func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.T
 	}, nil
 }
 
-// ValidateSessionState checks that the session's IDToken is still valid
+// ValidateSession checks that the session's IDToken is still valid
 func (p *GitLabProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	return err == nil
 }
 
-// GetEmailAddress returns the Account email address
+// EnrichSession adds values and data from the Gitlab endpoint to current session
 func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Retrieve user info
 	userInfo, err := p.getUserInfo(ctx, s)
@@ -206,15 +296,67 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 		return fmt.Errorf("user email is not verified")
 	}
 
-	// Check group membership
-	// TODO (@NickMeves) - Refactor to Authorize
-	err = p.verifyGroupMembership(userInfo)
-	if err != nil {
-		return fmt.Errorf("group membership check failed: %v", err)
-	}
-
 	s.User = userInfo.Username
 	s.Email = userInfo.Email
 
+	p.addGroupsToSession(ctx, s)
+
+	p.addProjectsToSession(ctx, s)
+
 	return nil
+
+}
+
+// addGroupsToSession projects into session.Groups
+func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.SessionState) {
+	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
+	for _, group := range p.Groups {
+		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
+	}
+}
+
+// addProjectsToSession adds projects matching user access requirements into the session state groups list
+// This method prefix projects names with `project` to specify group kind
+func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.SessionState) {
+	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
+	for _, project := range p.Projects {
+		projectInfo, err := p.getProjectInfo(ctx, s, project.Name)
+
+		if err != nil {
+			logger.Errorf("Warning: project info request failed: %v", err)
+			continue
+		}
+
+		if !projectInfo.Archived {
+			perms := projectInfo.Permissions.ProjectAccess
+			if perms == nil {
+				// use group project access as fallback
+				perms = projectInfo.Permissions.GroupAccess
+			}
+
+			if perms.AccessLevel >= project.AccessLevel {
+				s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.Name))
+			} else {
+				logger.Errorf("Warning: user %q does not have the minimum required access level for project %q", s.Email, project.Name)
+			}
+		} else {
+			logger.Errorf("Warning: project %s is archived", project.Name)
+		}
+
+	}
+
+}
+
+// PrefixAllowedGroups returns a list of allowed groups, prefixed by their `kind` value
+func (p *GitLabProvider) PrefixAllowedGroups() (groups []string) {
+
+	for _, val := range p.Groups {
+		groups = append(groups, fmt.Sprintf("group:%s", val))
+	}
+
+	for _, val := range p.Projects {
+		groups = append(groups, fmt.Sprintf("project:%s", val.Name))
+	}
+
+	return groups
 }

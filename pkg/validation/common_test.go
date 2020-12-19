@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"encoding/base64"
 	"io/ioutil"
 	"os"
 
@@ -17,7 +16,7 @@ var _ = Describe("Common", func() {
 	var validSecretSourceFile string
 
 	BeforeEach(func() {
-		validSecretSourceValue = []byte(base64.StdEncoding.EncodeToString([]byte("This is a secret source value")))
+		validSecretSourceValue = []byte("This is a secret source value")
 		Expect(os.Setenv(validSecretSourceEnv, "This is a secret source env")).To(Succeed())
 		tmp, err := ioutil.TempFile("", "oauth2-proxy-secret-source-test")
 		Expect(err).ToNot(HaveOccurred())
@@ -109,14 +108,6 @@ var _ = Describe("Common", func() {
 				}
 			},
 			expectedMsg: "",
-		}),
-		Entry("with an invalid Value", validateSecretSourceTableInput{
-			source: func() options.SecretSource {
-				return options.SecretSource{
-					Value: []byte("Invalid Base64 Value"),
-				}
-			},
-			expectedMsg: "error decoding secret value: illegal base64 data at input byte 7",
 		}),
 		Entry("with an invalid FromEnv", validateSecretSourceTableInput{
 			source: func() options.SecretSource {
