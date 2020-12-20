@@ -236,7 +236,7 @@ func joinCookies(cookies []*http.Cookie) (*http.Cookie, error) {
 	for i := 1; i < len(cookies); i++ {
 		c.Value += cookies[i].Value
 	}
-	c.Name = strings.TrimRight(c.Name, "_0")
+	c.Name = strings.TrimSuffix(c.Name, "_0")
 	return c, nil
 }
 

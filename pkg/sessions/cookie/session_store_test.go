@@ -147,16 +147,25 @@ func Test_splitCookie_joinCookies(t *testing.T) {
 	}
 	value := strings.Repeat(string(v), 1000)
 
-	for _, nameSize := range []int{1, 10, 50, 100, 200, 254} {
-		t.Run(fmt.Sprintf("%d length cookie name", nameSize), func(t *testing.T) {
-			cookie := &http.Cookie{
-				Name:  strings.Repeat("n", nameSize),
-				Value: value,
-			}
-			splitCookies := splitCookie(cookie)
-			joinedCookie, err := joinCookies(splitCookies)
-			assert.NoError(t, err)
-			assert.Equal(t, *cookie, *joinedCookie)
-		})
+	nameSizes := []int{1, 10, 50, 100, 200, 254}
+	nameSuffixes := []string{"", "_", "__", "__0"}
+	for _, nameSize := range nameSizes {
+		for _, nameSuffix := range nameSuffixes {
+			testName := fmt.Sprintf("%d length cookie name with \"%s\" suffix ", nameSize, nameSuffix)
+			t.Run(testName, func(t *testing.T) {
+				adjustedNameSize := nameSize
+				if adjustedNameSize+len(nameSuffix) > 254 {
+					adjustedNameSize -= len(nameSuffix)
+				}
+				cookie := &http.Cookie{
+					Name:  strings.Repeat("n", adjustedNameSize) + nameSuffix,
+					Value: value,
+				}
+				splitCookies := splitCookie(cookie)
+				joinedCookie, err := joinCookies(splitCookies)
+				assert.NoError(t, err)
+				assert.Equal(t, *cookie, *joinedCookie)
+			})
+		}
 	}
 }
