@@ -29,7 +29,7 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
-	msgs = append(msgs, prefixValues("injectRespeonseHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
+	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -282,6 +282,12 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.GitLabProvider:
 		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
+		err := p.AddProjects(o.GitlabProjects)
+		if err != nil {
+			msgs = append(msgs, "failed to setup gitlab project access level")
+		}
+		p.SetAllowedGroups(p.PrefixAllowedGroups())
+		p.SetProjectScope()
 
 		if p.Verifier == nil {
 			// Initialize with default verifier for gitlab.com
