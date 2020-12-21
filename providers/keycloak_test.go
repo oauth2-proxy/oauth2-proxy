@@ -17,13 +17,6 @@ import (
 const (
 	keycloakAccessToken  = "eyJKeycloak.eyJAccess.Token"
 	keycloakUserinfoPath = "/api/v3/user"
-
-	// Userinfo Test Cases querystring toggles
-	tcUIStandard      = "userinfo-standard"
-	tcUIFail          = "userinfo-fail"
-	tcUISingleGroup   = "userinfo-single-group"
-	tcUIMissingEmail  = "userinfo-missing-email"
-	tcUIMissingGroups = "userinfo-missing-groups"
 )
 
 func testKeycloakProvider(backend *httptest.Server) (*KeycloakProvider, error) {
@@ -50,62 +43,6 @@ func testKeycloakProvider(backend *httptest.Server) (*KeycloakProvider, error) {
 	}
 
 	return p, nil
-}
-
-func testKeycloakBackend() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != keycloakUserinfoPath {
-				w.WriteHeader(404)
-			}
-
-			var err error
-			switch r.URL.Query().Get("testcase") {
-			case tcUIStandard:
-				w.WriteHeader(200)
-				_, err = w.Write([]byte(`
-					{
-						"email": "michael.bland@gsa.gov",
-						"groups": [
-							"test-grp1",
-							"test-grp2"
-						]
-					}
-				`))
-			case tcUIFail:
-				w.WriteHeader(500)
-			case tcUISingleGroup:
-				w.WriteHeader(200)
-				_, err = w.Write([]byte(`
-					{
-						"email": "michael.bland@gsa.gov",
-						"groups": ["test-grp1"]
-					}
-				`))
-			case tcUIMissingEmail:
-				w.WriteHeader(200)
-				_, err = w.Write([]byte(`
-					{
-						"groups": [
-							"test-grp1",
-							"test-grp2"
-						]
-					}
-				`))
-			case tcUIMissingGroups:
-				w.WriteHeader(200)
-				_, err = w.Write([]byte(`
-					{
-						"email": "michael.bland@gsa.gov"
-					}
-				`))
-			default:
-				w.WriteHeader(404)
-			}
-			if err != nil {
-				panic(err)
-			}
-		}))
 }
 
 var _ = Describe("Keycloak Provider Tests", func() {
@@ -151,87 +88,123 @@ var _ = Describe("Keycloak Provider Tests", func() {
 		})
 	})
 
-	Context("With a test HTTP Server & Provider", func() {
-		var p *KeycloakProvider
-		var b *httptest.Server
+	Context("EnrichSession", func() {
+		type enrichSessionTableInput struct {
+			backendHandler http.HandlerFunc
+			expectedError  error
+			expectedEmail  string
+			expectedGroups []string
+		}
 
-		BeforeEach(func() {
-			b = testKeycloakBackend()
+		DescribeTable("should return expected results",
+			func(in enrichSessionTableInput) {
+				backend := httptest.NewServer(in.backendHandler)
+				p, err := testKeycloakProvider(backend)
+				Expect(err).To(BeNil())
 
-			var err error
-			p, err = testKeycloakProvider(b)
-			Expect(err).To(BeNil())
-		})
+				p.ProfileURL, err = url.Parse(
+					fmt.Sprintf("%s%s", backend.URL, keycloakUserinfoPath),
+				)
+				Expect(err).To(BeNil())
 
-		AfterEach(func() {
-			b.Close()
-		})
+				session := &sessions.SessionState{AccessToken: keycloakAccessToken}
+				err = p.EnrichSession(context.Background(), session)
 
-		Context("EnrichSession", func() {
-			type enrichSessionTableInput struct {
-				testcase       string
-				expectedError  error
-				expectedEmail  string
-				expectedGroups []string
-			}
-
-			DescribeTable("should return expected results",
-				func(in enrichSessionTableInput) {
-					var err error
-					p.ProfileURL, err = url.Parse(
-						fmt.Sprintf("%s%s?testcase=%s", b.URL, keycloakUserinfoPath, in.testcase),
-					)
+				if in.expectedError != nil {
+					Expect(err).To(Equal(in.expectedError))
+				} else {
 					Expect(err).To(BeNil())
+				}
 
-					session := &sessions.SessionState{AccessToken: keycloakAccessToken}
-					err = p.EnrichSession(context.Background(), session)
+				Expect(session.Email).To(Equal(in.expectedEmail))
 
-					if in.expectedError != nil {
-						Expect(err).To(Equal(in.expectedError))
-					} else {
-						Expect(err).To(BeNil())
-					}
-
-					Expect(session.Email).To(Equal(in.expectedEmail))
-
-					if in.expectedGroups != nil {
-						Expect(session.Groups).To(Equal(in.expectedGroups))
-					} else {
-						Expect(session.Groups).To(BeNil())
+				if in.expectedGroups != nil {
+					Expect(session.Groups).To(Equal(in.expectedGroups))
+				} else {
+					Expect(session.Groups).To(BeNil())
+				}
+			},
+			Entry("email and multiple groups", enrichSessionTableInput{
+				backendHandler: func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(200)
+					_, err := w.Write([]byte(`
+						{
+							"email": "michael.bland@gsa.gov",
+							"groups": [
+								"test-grp1",
+								"test-grp2"
+							]
+						}
+					`))
+					if err != nil {
+						panic(err)
 					}
 				},
-				Entry("email and multiple groups", enrichSessionTableInput{
-					testcase:       tcUIStandard,
-					expectedError:  nil,
-					expectedEmail:  "michael.bland@gsa.gov",
-					expectedGroups: []string{"test-grp1", "test-grp2"},
-				}),
-				Entry("email and single group", enrichSessionTableInput{
-					testcase:       tcUISingleGroup,
-					expectedError:  nil,
-					expectedEmail:  "michael.bland@gsa.gov",
-					expectedGroups: []string{"test-grp1"},
-				}),
-				Entry("email and no groups", enrichSessionTableInput{
-					testcase:       tcUIMissingGroups,
-					expectedError:  nil,
-					expectedEmail:  "michael.bland@gsa.gov",
-					expectedGroups: nil,
-				}),
-				Entry("missing email", enrichSessionTableInput{
-					testcase: tcUIMissingEmail,
-					expectedError: errors.New(
-						"unable to extract email from userinfo endpoint: type assertion to string failed"),
-					expectedEmail:  "",
-					expectedGroups: []string{"test-grp1", "test-grp2"},
-				}),
-				Entry("request failure", enrichSessionTableInput{
-					testcase:       tcUIFail,
-					expectedError:  errors.New(`unexpected status "500": `),
-					expectedEmail:  "",
-					expectedGroups: nil,
-				}),
-			)
-		})
+				expectedError:  nil,
+				expectedEmail:  "michael.bland@gsa.gov",
+				expectedGroups: []string{"test-grp1", "test-grp2"},
+			}),
+			Entry("email and single group", enrichSessionTableInput{
+				backendHandler: func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(200)
+					_, err := w.Write([]byte(`
+						{
+							"email": "michael.bland@gsa.gov",
+							"groups": ["test-grp1"]
+						}
+					`))
+					if err != nil {
+						panic(err)
+					}
+				},
+				expectedError:  nil,
+				expectedEmail:  "michael.bland@gsa.gov",
+				expectedGroups: []string{"test-grp1"},
+			}),
+			Entry("email and no groups", enrichSessionTableInput{
+				backendHandler: func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(200)
+					_, err := w.Write([]byte(`
+						{
+							"email": "michael.bland@gsa.gov"
+						}
+					`))
+					if err != nil {
+						panic(err)
+					}
+				},
+				expectedError:  nil,
+				expectedEmail:  "michael.bland@gsa.gov",
+				expectedGroups: nil,
+			}),
+			Entry("missing email", enrichSessionTableInput{
+				backendHandler: func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(200)
+					_, err := w.Write([]byte(`
+						{
+							"groups": [
+								"test-grp1",
+								"test-grp2"
+							]
+						}
+					`))
+					if err != nil {
+						panic(err)
+					}
+				},
+				expectedError: errors.New(
+					"unable to extract email from userinfo endpoint: type assertion to string failed"),
+				expectedEmail:  "",
+				expectedGroups: []string{"test-grp1", "test-grp2"},
+			}),
+			Entry("request failure", enrichSessionTableInput{
+				backendHandler: func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(500)
+				},
+				expectedError:  errors.New(`unexpected status "500": `),
+				expectedEmail:  "",
+				expectedGroups: nil,
+			}),
+		)
 	})
 })
