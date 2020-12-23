@@ -115,6 +115,7 @@ func TestClientSecretFileOption(t *testing.T) {
 
 func TestGoogleAdminEmailOptions(t *testing.T) {
 	o := testOptions()
+	o.Providers[0].GoogleConfig.GoogleGroups = []string{"test_group"}
 	o.Providers[0].GoogleConfig.GoogleAdminEmail = "test@gmail.com"
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
@@ -126,6 +127,7 @@ func TestGoogleAdminEmailOptions(t *testing.T) {
 
 func TestGoogleServiceAccountJSONOptions(t *testing.T) {
 	o := testOptions()
+	o.Providers[0].GoogleConfig.GoogleGroups = []string{"test_group"}
 	o.Providers[0].GoogleConfig.GoogleServiceAccountJSON = "file_doesnt_exist.json"
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)

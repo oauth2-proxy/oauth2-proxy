@@ -20,7 +20,7 @@ func validateProviders(o *options.Options) []string {
 		msgs = append(msgs, "SkipProviderButton and multiple providers are mutually exclusive")
 	}
 
-	providerIDs := make(map[string]struct{})
+	providerIDs := make(map[string]string)
 
 	for _, provider := range o.Providers {
 		msgs = append(msgs, validateProvider(provider, providerIDs)...)
@@ -29,7 +29,7 @@ func validateProviders(o *options.Options) []string {
 	return msgs
 }
 
-func validateProvider(provider options.Provider, providerIDs map[string]struct{}) []string {
+func validateProvider(provider options.Provider, providerIDs map[string]string) []string {
 	msgs := []string{}
 
 	if provider.ProviderID == "" {
@@ -40,7 +40,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 	if _, ok := providerIDs[provider.ProviderID]; ok {
 		msgs = append(msgs, fmt.Sprintf("multiple providers found with id %s: provider ids must be unique", provider.ProviderID))
 	}
-	providerIDs[provider.ProviderID] = struct{}{}
+	providerIDs[provider.ProviderID] = ""
 
 	if provider.ClientID == "" {
 		msgs = append(msgs, "provider missing setting: client-id")
@@ -66,8 +66,12 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 
 func validateGoogleConfig(provider options.Provider) []string {
 	msgs := []string{}
-	if provider.GoogleConfig.GoogleAdminEmail != "" ||
+	if len(provider.GoogleConfig.GoogleGroups) > 0 ||
+		provider.GoogleConfig.GoogleAdminEmail != "" ||
 		provider.GoogleConfig.GoogleServiceAccountJSON != "" {
+		if len(provider.GoogleConfig.GoogleGroups) < 1 {
+			msgs = append(msgs, "missing setting: google-group")
+		}
 		if provider.GoogleConfig.GoogleAdminEmail == "" {
 			msgs = append(msgs, "missing setting: google-admin-email")
 		}
