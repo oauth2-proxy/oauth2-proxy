@@ -64,12 +64,12 @@ func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 // email and groups.
 func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Fallback to ValidateURL if ProfileURL not set for legacy compatibility
-	userinfoURL := p.ValidateURL.String()
-	if p.ProfileURL != nil {
-		userinfoURL = p.ProfileURL.String()
+	profileURL := p.ValidateURL.String()
+	if p.ProfileURL.String() != "" {
+		profileURL = p.ProfileURL.String()
 	}
 
-	json, err := requests.New(userinfoURL).
+	json, err := requests.New(profileURL).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
