@@ -38,7 +38,7 @@ type Provider struct {
 	ProviderID string `json:"providerID,omitempty"`
 	// ProviderType is the OAuth provider
 	// must be set from the supported providers group,
-	// otherwise 'Google' is set as defualt
+	// otherwise 'Google' is set as default
 	ProviderType string `json:"provider,omitempty"`
 	// ProviderName is the providers display name
 	// if set, it will be shown to the users in the login page.
@@ -78,7 +78,7 @@ type KeycloakOptions struct {
 
 type AzureOptions struct {
 	// AzureTenant directs to a tenant-specific or common (tenant-independent) endpoint
-	// Defualt value is 'commmon'
+	// Default value is 'commmon'
 	AzureTenant string `json:"azureTenant,omitempty"`
 }
 
@@ -125,25 +125,25 @@ type OIDCOptions struct {
 	// ie: https://accounts.google.com
 	OIDCIssuerURL string `json:"oidcIssuerURL,omitempty"`
 	// InsecureOIDCAllowUnverifiedEmail preventes failur if an email address in an id_token is not verified
-	// defualt set to 'false'
+	// default set to 'false'
 	InsecureOIDCAllowUnverifiedEmail bool `json:"insecureOidcAllowUnverifiedEmail,omitempty"`
 	// InsecureOIDCSkipIssuerVerification skips verification if issuer matches OIDC discovery URL
-	// defualt set to 'false'
+	// default set to 'false'
 	InsecureOIDCSkipIssuerVerification bool `json:"insecureOidcSkipIssuerVerification,omitempty"`
 	// SkipOIDCDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
-	// defualt set to 'false'
+	// default set to 'false'
 	SkipOIDCDiscovery bool `json:"skipOidcDiscovery,omitempty"`
 	// OIDCJwksURL is the OpenID Connect JWKS URL
 	// ie: https://www.googleapis.com/oauth2/v3/certs
 	OIDCJwksURL string `json:"oidcJwksURL,omitempty"`
 	// OIDCGroupsClaim indicates which claim contains the user groups
-	// defualt set to 'groups'
+	// default set to 'groups'
 	OIDCGroupsClaim string `json:"oidcGroupsClaim,omitempty"`
 	// OIDCEmailClaim indicates which claim contains the user email
 	// defualt set to 'email'
 	OIDCEmailClaim string `json:"oidcEmailClaim,omitempty,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
-	// defualt set to 'email'
+	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
 }
 
