@@ -7,60 +7,76 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
-// validateMultipleProviders is the initial validation migration for multiple providrers
-// It currently includes only logic which can verify the providers one by one and does not break the valdation pipe
-func validateMultipleProviders(o *options.Options) []string {
+// validateProviders is the initial validation migration for multiple providrers
+// It currently includes only logic that can verify the providers one by one and does not break the valdation pipe
+func validateProviders(o *options.Options) []string {
 	msgs := []string{}
 
+	// validate general multiple provider configuration
 	if len(o.Providers) == 0 {
-		msgs = append(msgs, "at least one providers has to be defined")
+		msgs = append(msgs, "at least one provider has to be defined")
 	}
-
 	if o.SkipProviderButton && len(o.Providers) > 1 {
 		msgs = append(msgs, "SkipProviderButton and multiple providers are mutually exclusive")
 	}
 
 	providerIDs := make(map[string]string)
+
 	for _, provider := range o.Providers {
-		if provider.ProviderID == "" {
-			msgs = append(msgs, "provider has empty id: ids are required for all providers")
-		}
+		msgs = append(msgs, validateProvider(provider, providerIDs)...)
+	}
 
-		// Ensure provider IDs are unique
-		if _, ok := providerIDs[provider.ProviderID]; ok {
-			msgs = append(msgs, fmt.Sprintf("multiple providers found with id %s: provider ids must be unique", provider.ProviderID))
-		}
-		providerIDs[provider.ProviderID] = ""
+	return msgs
+}
 
-		if provider.ClientID == "" {
-			msgs = append(msgs, "provider missing setting: client-id")
-		}
+func validateProvider(provider options.Provider, providerIDs map[string]string) []string {
+	msgs := []string{}
 
-		// login.gov uses a signed JWT to authenticate, not a client-secret
-		if o.Providers[0].ProviderType != "login.gov" {
-			if o.Providers[0].ClientSecret == "" && o.Providers[0].ClientSecretFile == "" {
-				msgs = append(msgs, "missing setting: client-secret or client-secret-file")
-			}
-			if o.Providers[0].ClientSecret == "" && o.Providers[0].ClientSecretFile != "" {
-				_, err := ioutil.ReadFile(o.Providers[0].ClientSecretFile)
-				if err != nil {
-					msgs = append(msgs, "could not read client secret file: "+o.Providers[0].ClientSecretFile)
-				}
+	if provider.ProviderID == "" {
+		msgs = append(msgs, "provider has empty id: ids are required for all providers")
+	}
+
+	// Ensure provider IDs are unique
+	if _, ok := providerIDs[provider.ProviderID]; ok {
+		msgs = append(msgs, fmt.Sprintf("multiple providers found with id %s: provider ids must be unique", provider.ProviderID))
+	}
+	providerIDs[provider.ProviderID] = ""
+
+	if provider.ClientID == "" {
+		msgs = append(msgs, "provider missing setting: client-id")
+	}
+
+	// login.gov uses a signed JWT to authenticate, not a client-secret
+	if provider.ProviderType != "login.gov" {
+		if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
+			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
+		}
+		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
+			_, err := ioutil.ReadFile(provider.ClientSecretFile)
+			if err != nil {
+				msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
 			}
 		}
+	}
 
-		if len(o.Providers[0].GoogleConfig.GoogleGroups) > 0 ||
-			o.Providers[0].GoogleConfig.GoogleAdminEmail != "" ||
-			o.Providers[0].GoogleConfig.GoogleServiceAccountJSON != "" {
-			if len(o.Providers[0].GoogleConfig.GoogleGroups) < 1 {
-				msgs = append(msgs, "missing setting: google-group")
-			}
-			if o.Providers[0].GoogleConfig.GoogleAdminEmail == "" {
-				msgs = append(msgs, "missing setting: google-admin-email")
-			}
-			if o.Providers[0].GoogleConfig.GoogleServiceAccountJSON == "" {
-				msgs = append(msgs, "missing setting: google-service-account-json")
-			}
+	msgs = append(msgs, validateGoogleConfig(provider)...)
+
+	return msgs
+}
+
+func validateGoogleConfig(provider options.Provider) []string {
+	msgs := []string{}
+	if len(provider.GoogleConfig.GoogleGroups) > 0 ||
+		provider.GoogleConfig.GoogleAdminEmail != "" ||
+		provider.GoogleConfig.GoogleServiceAccountJSON != "" {
+		if len(provider.GoogleConfig.GoogleGroups) < 1 {
+			msgs = append(msgs, "missing setting: google-group")
+		}
+		if provider.GoogleConfig.GoogleAdminEmail == "" {
+			msgs = append(msgs, "missing setting: google-admin-email")
+		}
+		if provider.GoogleConfig.GoogleServiceAccountJSON == "" {
+			msgs = append(msgs, "missing setting: google-service-account-json")
 		}
 	}
 	return msgs

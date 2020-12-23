@@ -31,14 +31,14 @@ var _ = Describe("Providers", func() {
 		ClientSecret: "ClientSecret",
 	}
 
-	missingProvider := "at least one providers has to be defined"
+	missingProvider := "at least one provider has to be defined"
 	emptyIDMsg := "provider has empty id: ids are required for all providers"
 	duplicateProviderIDMsg := "multiple providers found with id ProviderID: provider ids must be unique"
 	skipButtonAndMultipleProvidersMsg := "SkipProviderButton and multiple providers are mutually exclusive"
 
 	DescribeTable("validateProviders",
 		func(o *validateProvidersTableInput) {
-			Expect(validateMultipleProviders(o.options)).To(ConsistOf(o.errStrings))
+			Expect(validateProviders(o.options)).To(ConsistOf(o.errStrings))
 		},
 		Entry("with no providers", &validateProvidersTableInput{
 			options:    &options.Options{},
