@@ -20,7 +20,7 @@ func validateProviders(o *options.Options) []string {
 		msgs = append(msgs, "SkipProviderButton and multiple providers are mutually exclusive")
 	}
 
-	providerIDs := make(map[string]string)
+	providerIDs := make(map[string]struct{})
 
 	for _, provider := range o.Providers {
 		msgs = append(msgs, validateProvider(provider, providerIDs)...)
@@ -29,7 +29,7 @@ func validateProviders(o *options.Options) []string {
 	return msgs
 }
 
-func validateProvider(provider options.Provider, providerIDs map[string]string) []string {
+func validateProvider(provider options.Provider, providerIDs map[string]struct{}) []string {
 	msgs := []string{}
 
 	if provider.ProviderID == "" {
@@ -40,7 +40,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]string) 
 	if _, ok := providerIDs[provider.ProviderID]; ok {
 		msgs = append(msgs, fmt.Sprintf("multiple providers found with id %s: provider ids must be unique", provider.ProviderID))
 	}
-	providerIDs[provider.ProviderID] = ""
+	providerIDs[provider.ProviderID] = struct{}{}
 
 	if provider.ClientID == "" {
 		msgs = append(msgs, "provider missing setting: client-id")
