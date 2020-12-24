@@ -8,6 +8,10 @@ import (
 // The RequestScope is used to pass information between different middlewares
 // within the chain.
 type RequestScope struct {
+	// ReverseProxy tracks whether OAuth2-Proxy is operating in reverse proxy
+	// mode and if request `X-Forwarded-*` headers should be trusted
+	ReverseProxy bool
+
 	// Session details the authenticated users information (if it exists).
 	Session *sessions.SessionState
 

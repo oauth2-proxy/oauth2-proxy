@@ -231,7 +231,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
 func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
-	chain := alice.New(middleware.NewScope())
+	chain := alice.New(middleware.NewScope(opts))
 
 	if opts.ForceHTTPS {
 		_, httpsPort, err := net.SplitHostPort(opts.HTTPSAddress)

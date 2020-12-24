@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 )
 
 func GetCertPool(paths []string) (*x509.CertPool, error) {
@@ -28,16 +30,17 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 // GetRequestProto return the request host header or X-Forwarded-Proto if present
 func GetRequestProto(req *http.Request) string {
 	proto := req.Header.Get("X-Forwarded-Proto")
-	if proto == "" {
+	if !isProxied(req) || proto == "" {
 		proto = req.URL.Scheme
 	}
 	return proto
 }
 
 // GetRequestHost return the request host header or X-Forwarded-Host if present
+// and reverse proxy mode is enabled.
 func GetRequestHost(req *http.Request) string {
 	host := req.Header.Get("X-Forwarded-Host")
-	if host == "" {
+	if !isProxied(req) || host == "" {
 		host = req.Host
 	}
 	return host
@@ -46,9 +49,14 @@ func GetRequestHost(req *http.Request) string {
 // GetRequestURI return the request host header or X-Forwarded-Uri if present
 func GetRequestURI(req *http.Request) string {
 	uri := req.Header.Get("X-Forwarded-Uri")
-	if uri == "" {
+	if !isProxied(req) || uri == "" {
 		// Use RequestURI to preserve ?query
 		uri = req.URL.RequestURI()
 	}
 	return uri
+}
+
+func isProxied(req *http.Request) bool {
+	scope := middleware.GetRequestScope(req)
+	return scope.ReverseProxy
 }
