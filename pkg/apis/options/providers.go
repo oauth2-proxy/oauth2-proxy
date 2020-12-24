@@ -124,7 +124,7 @@ type OIDCOptions struct {
 	// OIDCIssuerURL is the OpenID Connect issuer URL
 	// eg: https://accounts.google.com
 	OIDCIssuerURL string `json:"oidcIssuerURL,omitempty"`
-	// InsecureOIDCAllowUnverifiedEmail preventes failur if an email address in an id_token is not verified
+	// InsecureOIDCAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified
 	// default set to 'false'
 	InsecureOIDCAllowUnverifiedEmail bool `json:"insecureOidcAllowUnverifiedEmail,omitempty"`
 	// InsecureOIDCSkipIssuerVerification skips verification of the issuer matching the OIDC discovery URL
