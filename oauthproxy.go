@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -744,21 +745,30 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 // OAuthStart starts the OAuth2 authentication flow
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	prepareNoCache(rw)
-	nonce, err := encryption.Nonce()
-	if err != nil {
-		logger.Errorf("Error obtaining nonce: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
+
+	// nonces holds the OAuth state CSRF nonce & the OIDC nonce
+	nonces := []string{"", ""}
+	for i := range nonces {
+		var err error
+		nonces[i], err = encryption.Nonce()
+		if err != nil {
+			logger.Errorf("Error obtaining nonce: %v", err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
-	p.SetCSRFCookie(rw, req, nonce)
+
+	p.SetCSRFCookie(rw, req, strings.Join(nonces, ":"))
 	redirect, err := p.getAppRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	redirectURI := p.getOAuthRedirectURI(req)
-	http.Redirect(rw, req, p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonce, redirect)), http.StatusFound)
+	loginURL := p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", nonces[0], redirect), nonces[1])
+	http.Redirect(rw, req, loginURL, http.StatusFound)
 }
 
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
@@ -802,20 +812,30 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, "State paremeter did not have expected length", "Login Failed: Invalid State after login.")
 		return
 	}
-	nonce := state[0]
+	stateNonce := state[0]
 	redirect := state[1]
-	c, err := req.Cookie(p.CSRFCookieName)
+	csrf, err := req.Cookie(p.CSRFCookieName)
 	if err != nil {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
 	p.ClearCSRFCookie(rw, req)
-	if c.Value != nonce {
+	csrfNonces := strings.Split(csrf.Value, ":")
+	if len(csrfNonces) != 2 {
+		logger.Error("Error while parsing CSRF cookie: invalid length")
+		p.ErrorPage(rw, req, http.StatusInternalServerError, "CSRF parameter did not have expected length")
+		return
+	}
+
+	if hmac.Equal([]byte(csrfNonces[0]), []byte(stateNonce)) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
 		p.ErrorPage(rw, req, http.StatusForbidden, "CSRF token mismatch, potential attack", "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
+
+	session.Nonce = csrfNonces[1]
+	p.provider.ValidateSession(req.Context(), session)
 
 	if !p.IsValidRedirect(redirect) {
 		redirect = "/"

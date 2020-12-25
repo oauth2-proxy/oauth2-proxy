@@ -24,6 +24,8 @@ type SessionState struct {
 	IDToken      string `msgpack:"it,omitempty"`
 	RefreshToken string `msgpack:"rt,omitempty"`
 
+	Nonce string `msgpack:"n,omitempty"`
+
 	Email             string   `msgpack:"e,omitempty"`
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`

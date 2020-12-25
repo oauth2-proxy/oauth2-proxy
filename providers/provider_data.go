@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"crypto/hmac"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -122,6 +123,7 @@ type OIDCClaims struct {
 	Email    string   `json:"-"`
 	Groups   []string `json:"-"`
 	Verified *bool    `json:"email_verified"`
+	Nonce    string   `json:"nonce"`
 
 	raw map[string]interface{}
 }
@@ -190,6 +192,18 @@ func (p *ProviderData) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
 	claims.Groups = p.extractGroups(claims.raw)
 
 	return claims, nil
+}
+
+// checkNonce compares the session's nonce with the IDToken's nonce claim
+func (p *ProviderData) checkNonce(s *sessions.SessionState, idToken *oidc.IDToken) error {
+	claims, err := p.getClaims(idToken)
+	if err != nil {
+		return fmt.Errorf("id_token claims extraction failed: %v", err)
+	}
+	if !hmac.Equal([]byte(s.Nonce), []byte(claims.Nonce)) {
+		return errors.New("id_token nonce claim does not match the session nonce")
+	}
+	return nil
 }
 
 // extractGroups extracts groups from a claim to a list in a type safe manner.
