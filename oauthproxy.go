@@ -744,7 +744,7 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 	case path == p.OAuthCallbackPath:
 		p.OAuthCallback(rw, req)
 	case path == p.AuthOnlyPath:
-		p.AuthenticateOnly(rw, req)
+		p.AuthOnly(rw, req)
 	case path == p.UserInfoPath:
 		p.UserInfo(rw, req)
 	default:
@@ -925,11 +925,19 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// AuthenticateOnly checks whether the user is currently logged in
-func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
+// AuthOnly checks whether the user is currently logged in (both authentication
+// and optional authorization).
+func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
-		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	// Unauthorized cases need to return 403 to prevent infinite redirects with
+	// subrequest architectures
+	if !authOnlyAuthorize(req, session) {
+		http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
 
@@ -1014,6 +1022,53 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	return session, nil
+}
+
+// authOnlyAuthorize handles special authorization logic that is only done
+// on the AuthOnly endpoint for use with Nginx subrequest architectures.
+//
+// TODO (@NickMeves): This method is a placeholder to be extended but currently
+// fails the linter. Remove the nolint when functionality expands.
+//
+//nolint:S1008
+func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
+	// Allow secondary group restrictions based on the `allowed_groups`
+	// querystring parameter
+	if !checkAllowedGroups(req, s) {
+		return false
+	}
+
+	return true
+}
+
+func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
+	allowedGroups := extractAllowedGroups(req)
+	if len(allowedGroups) == 0 {
+		return true
+	}
+
+	for _, group := range s.Groups {
+		if _, ok := allowedGroups[group]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func extractAllowedGroups(req *http.Request) map[string]struct{} {
+	groups := map[string]struct{}{}
+
+	query := req.URL.Query()
+	for _, allowedGroups := range query["allowed_groups"] {
+		for _, group := range strings.Split(allowedGroups, ",") {
+			if group != "" {
+				groups[group] = struct{}{}
+			}
+		}
+	}
+
+	return groups
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
