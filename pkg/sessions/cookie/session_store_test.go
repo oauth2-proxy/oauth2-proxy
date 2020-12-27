@@ -148,10 +148,10 @@ func Test_splitCookie_joinCookies(t *testing.T) {
 	value := strings.Repeat(string(v), 1000)
 
 	nameSizes := []int{1, 10, 50, 100, 200, 254}
-	nameSuffixes := []string{"", "_", "__", "__0"}
+	nameSuffixes := []string{"", "_", "_0", "__", "__0"}
 	for _, nameSize := range nameSizes {
 		for _, nameSuffix := range nameSuffixes {
-			testName := fmt.Sprintf("%d length cookie name with \"%s\" suffix ", nameSize, nameSuffix)
+			testName := fmt.Sprintf("%d length cookie name with \"%s\" suffix", nameSize, nameSuffix)
 			t.Run(testName, func(t *testing.T) {
 				adjustedNameSize := nameSize
 				if adjustedNameSize+len(nameSuffix) > 254 {
