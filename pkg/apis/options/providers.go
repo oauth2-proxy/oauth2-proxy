@@ -127,7 +127,11 @@ type OIDCOptions struct {
 	// InsecureOIDCAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified
 	// default set to 'false'
 	InsecureOIDCAllowUnverifiedEmail bool `json:"insecureOidcAllowUnverifiedEmail,omitempty"`
+<<<<<<< HEAD
 	// InsecureOIDCSkipIssuerVerification skips verification of the issuer matching the OIDC discovery URL
+=======
+	// InsecureOIDCSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
+>>>>>>> Update pkg/apis/options/providers.go
 	// default set to 'false'
 	InsecureOIDCSkipIssuerVerification bool `json:"insecureOidcSkipIssuerVerification,omitempty"`
 	// SkipOIDCDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
