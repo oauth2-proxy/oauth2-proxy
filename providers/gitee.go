@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"net/url"
 	"path"
@@ -24,7 +25,7 @@ var _ Provider = (*GiteeProvider)(nil)
 
 const (
 	giteeProviderName = "Gitee"
-	giteeDefaultScope = ""
+	giteeDefaultScope = "user_info emails"
 )
 
 var (
@@ -54,7 +55,6 @@ var (
 	}
 )
 
-
 //NewGiteeProvider  initiates a new GiteeProvider
 func NewGiteeProvider(p *ProviderData) *GiteeProvider {
 	p.setProviderDefaults(providerDefaults{
@@ -73,7 +73,6 @@ func NewGiteeProvider(p *ProviderData) *GiteeProvider {
 func (p *GiteeProvider) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", nil
 }
-
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
 func (p *GiteeProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
@@ -111,7 +110,7 @@ func (p *GiteeProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 		ExpiresIn    int64  `json:"expires_in"`
 		RefreshToken string `json:"refresh_token"`
 		Scope        string `json:"scope"`
-		CreatedAt     int64  `json:"created_at"`
+		CreatedAt    int64  `json:"created_at"`
 	}
 	err = result.UnmarshalInto(&jsonResponse)
 	if err != nil {
@@ -134,7 +133,8 @@ func (p *GiteeProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 func (p *GiteeProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	err := p.getEmail(ctx, s)
 	if err != nil {
-		return err
+		p.Scope = giteeDefaultScope
+		logger.Errorln(err)
 	}
 	return p.getUser(ctx, s)
 }
@@ -149,12 +149,12 @@ func (p *GiteeProvider) getEmail(ctx context.Context, s *sessions.SessionState) 
 	// if need check use ,add this place in the code
 
 	//get email by token
-	params :=url.Values{}
+	params := url.Values{}
 	params.Add("access_token", s.AccessToken)
 	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/emails"),
+		Scheme:   p.ValidateURL.Scheme,
+		Host:     p.ValidateURL.Host,
+		Path:     path.Join(p.ValidateURL.Path, "/emails"),
 		RawQuery: params.Encode(),
 	}
 	err := requests.New(endpoint.String()).
@@ -181,15 +181,16 @@ func (p *GiteeProvider) getEmail(ctx context.Context, s *sessions.SessionState) 
 // Obtain the information of authorized users
 func (p *GiteeProvider) getUser(ctx context.Context, s *sessions.SessionState) error {
 	var user struct {
-		ID   int64 `json:"id"`
+		ID    int64  `json:"id"`
 		Login string `json:"login"`
+		Email string `json:"email"`
 	}
-	params :=url.Values{}
+	params := url.Values{}
 	params.Add("access_token", s.AccessToken)
 	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/user"),
+		Scheme:   p.ValidateURL.Scheme,
+		Host:     p.ValidateURL.Host,
+		Path:     path.Join(p.ValidateURL.Path, "/user"),
 		RawQuery: params.Encode(),
 	}
 	err := requests.New(endpoint.String()).
@@ -202,12 +203,15 @@ func (p *GiteeProvider) getUser(ctx context.Context, s *sessions.SessionState) e
 	}
 	// determine whether user is belong to org add code on this place
 	s.User = user.Login
+	if s.Email == "" {
+		s.Email = user.Email
+	}
 	return nil
 }
 
 //RefreshSessionIfNeeded  checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *GiteeProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error){
+func (p *GiteeProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
 		return false, nil
 	}
@@ -224,8 +228,8 @@ func (p *GiteeProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.
 
 func (p *GiteeProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	params := url.Values{}
-	params.Add("refresh_token",s.RefreshToken)
-	params.Add("grant_type","refresh_token")
+	params.Add("refresh_token", s.RefreshToken)
+	params.Add("grant_type", "refresh_token")
 	result := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
@@ -246,7 +250,7 @@ func (p *GiteeProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	}
 	err := result.UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return  err
+		return err
 	}
 	expiresTime := jsonResponse.CreateAt + jsonResponse.ExpiresIn
 	expiresOn := time.Unix(expiresTime, 0)
