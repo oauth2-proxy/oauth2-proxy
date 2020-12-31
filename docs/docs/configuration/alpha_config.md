@@ -264,6 +264,7 @@ make up the header value
 | `issuerURL` | _string_ | IssuerURL is the OpenID Connect issuer URL<br/>eg: https://accounts.google.com |
 | `insecureAllowUnverifiedEmail` | _bool_ | InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified<br/>default set to 'false' |
 | `insecureSkipIssuerVerification` | _bool_ | InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL<br/>default set to 'false' |
+| `insecureSkipNonce` | _bool_ | InsecureSkipNonce skips verifying the ID Token's nonce claim |
 | `skipDiscovery` | _bool_ | SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints<br/>default set to 'false' |
 | `jwksURL` | _string_ | JwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
