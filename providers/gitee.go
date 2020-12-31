@@ -183,6 +183,7 @@ func (p *GiteeProvider) getUser(ctx context.Context, s *sessions.SessionState) e
 	var user struct {
 		ID    int64  `json:"id"`
 		Login string `json:"login"`
+		Name  string `json:"name"`
 		Email string `json:"email"`
 	}
 	params := url.Values{}
@@ -203,6 +204,7 @@ func (p *GiteeProvider) getUser(ctx context.Context, s *sessions.SessionState) e
 	}
 	// determine whether user is belong to org add code on this place
 	s.User = user.Login
+	s.PreferredUsername = user.Name
 	if s.Email == "" {
 		s.Email = user.Email
 	}
