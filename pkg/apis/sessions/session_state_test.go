@@ -153,7 +153,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			CreatedAt:         &created,
 			ExpiresOn:         &expires,
 			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
-			Nonce:             "abcdef1234567890abcdef1234567890",
+			Nonce:             []byte("abcdef1234567890abcdef1234567890"),
 		},
 		"No ExpiresOn": {
 			Email:             "username@example.com",
@@ -163,7 +163,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			IDToken:           "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
 			CreatedAt:         &created,
 			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
-			Nonce:             "abcdef1234567890abcdef1234567890",
+			Nonce:             []byte("abcdef1234567890abcdef1234567890"),
 		},
 		"No PreferredUsername": {
 			Email:        "username@example.com",
@@ -173,7 +173,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			CreatedAt:    &created,
 			ExpiresOn:    &expires,
 			RefreshToken: "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
-			Nonce:        "abcdef1234567890abcdef1234567890",
+			Nonce:        []byte("abcdef1234567890abcdef1234567890"),
 		},
 		"Minimal session": {
 			User:         "username",
@@ -197,7 +197,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			CreatedAt:         &created,
 			ExpiresOn:         &expires,
 			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
-			Nonce:             "abcdef1234567890abcdef1234567890",
+			Nonce:             []byte("abcdef1234567890abcdef1234567890"),
 			Groups:            []string{"group-a", "group-b"},
 		},
 	}

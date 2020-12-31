@@ -24,7 +24,7 @@ type SessionState struct {
 	IDToken      string `msgpack:"it,omitempty"`
 	RefreshToken string `msgpack:"rt,omitempty"`
 
-	Nonce string `msgpack:"n,omitempty"`
+	Nonce []byte `msgpack:"n,omitempty"`
 
 	Email             string   `msgpack:"e,omitempty"`
 	User              string   `msgpack:"u,omitempty"`
@@ -100,6 +100,11 @@ func (s *SessionState) GetClaim(claim string) []string {
 	default:
 		return []string{}
 	}
+}
+
+// CheckNonce compares the Nonce against a potential hash of it
+func (s *SessionState) CheckNonce(hashed string) bool {
+	return encryption.CheckNonce(s.Nonce, hashed)
 }
 
 // EncodeSessionState returns an encrypted, lz4 compressed, MessagePack encoded session

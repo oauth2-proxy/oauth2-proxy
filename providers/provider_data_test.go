@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"strings"
 	"testing"
 	"time"
@@ -54,7 +55,7 @@ var (
 		Groups:         []string{"test:a", "test:b"},
 		Roles:          []string{"test:c", "test:d"},
 		Verified:       &verified,
-		Nonce:          oidcNonce,
+		Nonce:          encryption.HashNonce([]byte(oidcNonce)),
 		StandardClaims: standardClaims,
 	}
 
@@ -359,14 +360,14 @@ func TestProviderData_checkNonce(t *testing.T) {
 	}{
 		"Nonces match": {
 			Session: &sessions.SessionState{
-				Nonce: oidcNonce,
+				Nonce: []byte(oidcNonce),
 			},
 			IDToken:       defaultIDToken,
 			ExpectedError: nil,
 		},
 		"Nonces do not match": {
 			Session: &sessions.SessionState{
-				Nonce: "WrongWrongWrong",
+				Nonce: []byte("WrongWrongWrong"),
 			},
 			IDToken:       defaultIDToken,
 			ExpectedError: errors.New("id_token nonce claim does not match the session nonce"),
@@ -374,7 +375,7 @@ func TestProviderData_checkNonce(t *testing.T) {
 
 		"Missing nonce claim": {
 			Session: &sessions.SessionState{
-				Nonce: oidcNonce,
+				Nonce: []byte(oidcNonce),
 			},
 			IDToken:       minimalIDToken,
 			ExpectedError: errors.New("id_token nonce claim does not match the session nonce"),

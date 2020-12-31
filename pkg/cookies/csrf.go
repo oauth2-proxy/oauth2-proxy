@@ -1,7 +1,6 @@
 package cookies
 
 import (
-	"crypto/hmac"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,15 +16,15 @@ var now = time.Now
 // CSRF manages various nonces stored in the CSRF cookie during the initial
 // authentication flows.
 type CSRF struct {
-	// State holds the OAuth2 csrfState parameter's csrfNonce component set in the
+	// State holds the OAuth2 state parameter's nonce component set in the
 	// initial authentication request and mirrored back in the callback
 	// redirect from the IdP for CSRF protection.
-	State string `msgpack:"s,omitempty"`
+	State []byte `msgpack:"s,omitempty"`
 
-	// Nonce holds the OIDC csrfNonce parameter used in the initial authentication
-	// and then set in all subsequent OIDC ID Tokens as the csrfNonce claim. This is
-	// used to mitigate reply attacks.
-	Nonce string `msgpack:"n,omitempty"`
+	// Nonce holds the OIDC nonce parameter used in the initial authentication
+	// and then set in all subsequent OIDC ID Tokens as the nonce claim. This
+	// is used to mitigate reply attacks.
+	Nonce []byte `msgpack:"n,omitempty"`
 
 	cookieOpts *options.Cookie
 }
@@ -42,22 +41,31 @@ func NewCSRF(opts *options.Cookie) (*CSRF, error) {
 	}
 
 	return &CSRF{
-		State:      state,
-		Nonce:      nonce,
+		State: state,
+		Nonce: nonce,
+
 		cookieOpts: opts,
 	}, nil
 }
 
-// CheckState compares OAuth2 csrfState nonces in a constant time manner to protect
-// against timing attacks
-func (c CSRF) CheckState(other string) bool {
-	return hmac.Equal([]byte(c.State), []byte(other))
+// HashState returns the hash of the OAuth state nonce
+func (c CSRF) HashState() string {
+	return encryption.HashNonce(c.State)
 }
 
-// CheckNonce compares OIDC nonces in a constant time manner to protect
-// against timing attacks
-func (c CSRF) CheckNonce(other string) bool {
-	return hmac.Equal([]byte(c.Nonce), []byte(other))
+// HashNonce returns the hash of the OIDC nonce
+func (c CSRF) HashNonce() string {
+	return encryption.HashNonce(c.Nonce)
+}
+
+// CheckNonce compares the OAuth state nonce against a potential hash of it
+func (c CSRF) CheckState(hashed string) bool {
+	return encryption.CheckNonce(c.State, hashed)
+}
+
+// CheckNonce compares the OIDC nonce against a potential hash of it
+func (c CSRF) CheckNonce(hashed string) bool {
+	return encryption.CheckNonce(c.Nonce, hashed)
 }
 
 // SetCookie encodes the CSRF to a signed cookie and sets it on the ResponseWriter

@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"crypto/hmac"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -200,7 +199,7 @@ func (p *ProviderData) checkNonce(s *sessions.SessionState, idToken *oidc.IDToke
 	if err != nil {
 		return fmt.Errorf("id_token claims extraction failed: %v", err)
 	}
-	if !hmac.Equal([]byte(s.Nonce), []byte(claims.Nonce)) {
+	if !s.CheckNonce(claims.Nonce) {
 		return errors.New("id_token nonce claim does not match the session nonce")
 	}
 	return nil

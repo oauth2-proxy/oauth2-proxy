@@ -17,7 +17,6 @@ var _ = Describe("CSRF Cookie Tests", func() {
 	var (
 		csrf       *CSRF
 		cookieOpts *options.Cookie
-		err        error
 	)
 
 	BeforeEach(func() {
@@ -31,6 +30,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			HTTPOnly: true,
 		}
 
+		var err error
 		csrf, err = NewCSRF(cookieOpts)
 		Expect(err).ToNot(HaveOccurred())
 	})
@@ -44,12 +44,15 @@ var _ = Describe("CSRF Cookie Tests", func() {
 	})
 
 	Context("CheckState and CheckNonce", func() {
-		It("checks equality", func() {
-			csrf.State = csrfState
-			csrf.Nonce = csrfNonce
+		It("checks that hashed versions match", func() {
+			csrf.State = []byte(csrfState)
+			csrf.Nonce = []byte(csrfNonce)
 
-			Expect(csrf.CheckState(csrfState)).To(BeTrue())
-			Expect(csrf.CheckNonce(csrfNonce)).To(BeTrue())
+			stateHashed := encryption.HashNonce([]byte(csrfState))
+			nonceHashed := encryption.HashNonce([]byte(csrfNonce))
+
+			Expect(csrf.CheckState(stateHashed)).To(BeTrue())
+			Expect(csrf.CheckNonce(nonceHashed)).To(BeTrue())
 
 			Expect(csrf.CheckState(csrfNonce)).To(BeFalse())
 			Expect(csrf.CheckNonce(csrfState)).To(BeFalse())
@@ -68,8 +71,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 	Context("EncodeCookie and DecodeCSRFCookie", func() {
 		It("encodes and decodes to the same nonces", func() {
-			csrf.State = csrfState
-			csrf.Nonce = csrfNonce
+			csrf.State = []byte(csrfState)
+			csrf.Nonce = []byte(csrfNonce)
 
 			encoded, err := csrf.EncodeCookie()
 			Expect(err).ToNot(HaveOccurred())
@@ -82,8 +85,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(decoded).ToNot(BeNil())
-			Expect(decoded.State).To(Equal(csrfState))
-			Expect(decoded.Nonce).To(Equal(csrfNonce))
+			Expect(decoded.State).To(Equal([]byte(csrfState)))
+			Expect(decoded.Nonce).To(Equal([]byte(csrfNonce)))
 		})
 
 		It("signs the encoded cookie value", func() {
@@ -123,9 +126,6 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		Context("SetCookie", func() {
 			It("adds the encoded CSRF cookie to a ResponseWriter", func() {
-				csrf.State = csrfState
-				csrf.Nonce = csrfNonce
-
 				rw := httptest.NewRecorder()
 
 				expectedValue, err := csrf.EncodeCookie()

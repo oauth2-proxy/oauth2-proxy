@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -82,8 +83,9 @@ func TestOIDCProviderGetLoginURL(t *testing.T) {
 	}
 	provider := newOIDCProvider(serverURL)
 
-	nonce, err := encryption.Nonce()
+	n, err := encryption.Nonce()
 	assert.NoError(t, err)
+	nonce := base64.RawURLEncoding.EncodeToString(n)
 
 	// SkipNonce defaults to true
 	skipNonce := provider.GetLoginURL("http://redirect/", "", nonce)

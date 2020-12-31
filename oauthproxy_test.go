@@ -23,6 +23,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
@@ -701,8 +702,13 @@ func (patTest *PassAccessTokenTest) Close() {
 
 func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie string) {
 	rw := httptest.NewRecorder()
-	req, err := http.NewRequest("GET", "/oauth2/callback?code=callback_code&state=nonce:",
-		strings.NewReader(""))
+
+	state := []byte("nonce")
+	req, err := http.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf("/oauth2/callback?code=callback_code&state=%s:", encryption.HashNonce(state)),
+		strings.NewReader(""),
+	)
 	if err != nil {
 		return 0, ""
 	}
@@ -711,7 +717,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 	if err != nil {
 		panic(err)
 	}
-	csrf.State = "nonce"
+	csrf.State = state
 	val, err := csrf.EncodeCookie()
 	if err != nil {
 		panic(err)
