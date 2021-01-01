@@ -36,7 +36,7 @@ type Options struct {
 	TLSKeyFile         string   `flag:"tls-key-file" cfg:"tls_key_file"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
-	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group"`
+	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
 	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
 	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
@@ -181,7 +181,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
-	flagSet.String("keycloak-group", "", "restrict login to members of this group.")
+	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")

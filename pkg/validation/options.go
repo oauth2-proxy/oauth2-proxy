@@ -263,7 +263,10 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetRepo(o.GitHubRepo, o.GitHubToken)
 		p.SetUsers(o.GitHubUsers)
 	case *providers.KeycloakProvider:
-		p.SetGroup(o.KeycloakGroup)
+		// Backwards compatibility with `--keycloak-group` option
+		if len(o.KeycloakGroups) > 0 {
+			p.SetAllowedGroups(o.KeycloakGroups)
+		}
 	case *providers.GoogleProvider:
 		if o.GoogleServiceAccountJSON != "" {
 			file, err := os.Open(o.GoogleServiceAccountJSON)
