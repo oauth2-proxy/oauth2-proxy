@@ -110,28 +110,38 @@ func (c CSRF) ClearCookie(rw http.ResponseWriter, req *http.Request) {
 	))
 }
 
-// EncodeCookie MessagePack encodes the CSRF and then creates a signed
-// cookie value
+// EncodeCookie MessagePack encodes and encrypts the CSRF and then creates a
+// signed cookie value
 func (c CSRF) EncodeCookie() (string, error) {
 	packed, err := msgpack.Marshal(c)
 	if err != nil {
 		return "", fmt.Errorf("error marshalling CSRF to msgpack: %v", err)
 	}
 
-	return encryption.SignedValue(c.cookieOpts.Secret, c.CookieName(), packed, now())
+	encrypted, err := encrypt(packed, c.cookieOpts)
+	if err != nil {
+		return "", err
+	}
+
+	return encryption.SignedValue(c.cookieOpts.Secret, c.CookieName(), encrypted, now())
 }
 
-// DecodeCSRFCookie validates the signature and decodes a CSRF cookie into
-// a CSRF struct
+// DecodeCSRFCookie validates the signature then decrypts and decodes a CSRF
+// cookie into a CSRF struct
 func DecodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*CSRF, error) {
 	val, _, ok := encryption.Validate(cookie, opts.Secret, opts.Expire)
 	if !ok {
 		return nil, errors.New("CSRF cookie failed validation")
 	}
 
+	decrypted, err := decrypt(val, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	// Valid cookie, Unmarshal the CSRF
 	csrf := &CSRF{cookieOpts: opts}
-	err := msgpack.Unmarshal(val, csrf)
+	err = msgpack.Unmarshal(decrypted, csrf)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling data to CSRF: %v", err)
 	}
@@ -147,4 +157,24 @@ func (c CSRF) CookieName() string {
 
 func csrfCookieName(opts *options.Cookie) string {
 	return fmt.Sprintf("%v_csrf", opts.Name)
+}
+
+func encrypt(data []byte, opts *options.Cookie) ([]byte, error) {
+	cipher, err := makeCipher(opts)
+	if err != nil {
+		return nil, err
+	}
+	return cipher.Encrypt(data)
+}
+
+func decrypt(data []byte, opts *options.Cookie) ([]byte, error) {
+	cipher, err := makeCipher(opts)
+	if err != nil {
+		return nil, err
+	}
+	return cipher.Decrypt(data)
+}
+
+func makeCipher(opts *options.Cookie) (encryption.Cipher, error) {
+	return encryption.NewCFBCipher([]byte(opts.Secret))
 }

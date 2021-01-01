@@ -128,17 +128,15 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			It("adds the encoded CSRF cookie to a ResponseWriter", func() {
 				rw := httptest.NewRecorder()
 
-				expectedValue, err := csrf.EncodeCookie()
+				err := csrf.SetCookie(rw, req)
 				Expect(err).ToNot(HaveOccurred())
 
-				err = csrf.SetCookie(rw, req)
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
+				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
+					fmt.Sprintf("%s=", csrf.CookieName()),
+				))
+				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
-						"%s=%s; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure; SameSite",
-						csrf.CookieName(),
-						expectedValue,
+						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure; SameSite",
 						cookiePath,
 						cookieDomain,
 						testCookieExpires(now().Add(cookieOpts.Expire)),

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/coreos/go-oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	. "github.com/onsi/gomega"
 	"golang.org/x/oauth2"
 )
