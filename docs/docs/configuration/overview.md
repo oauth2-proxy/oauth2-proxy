@@ -106,7 +106,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `--resource` | string | The resource that is protected (Azure AD only) | |
-| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted | false |
+| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-{Proto,Host,Uri} headers to be used on redirect selection | false |
 | `--scope` | string | OAuth scope specification | |
 | `--session-cookie-minimal` | bool | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only) | false |
 | `--session-store-type` | string | [Session data storage backend](sessions.md); redis or cookie | cookie |
@@ -353,6 +353,73 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
+
+## Configuring for use with the Traefik (v2) `ForwardAuth` middleware
+
+**This option requires `--reverse-proxy` option to be set.**
+
+The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
+
+```yaml
+http:
+  routers:
+    a-service:
+      rule: "Host(`a-service.example.com`)"
+      service: a-service-backend
+      middlewares:
+        - oauth-errors
+        - oauth-auth
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    oauth:
+      rule: "Host(`a-service.example.com`, `oauth.example.com`) && PathPrefix(`/oauth2/`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+
+  services:
+    a-service-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.2:7555
+    oauth-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.1:4180
+
+  middlewares:
+    auth-headers:
+      headers:
+        sslRedirect: true
+        stsSeconds: 315360000
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        sslHost: example.com
+        stsIncludeSubdomains: true
+        stsPreload: true
+        frameDeny: true
+    oauth-auth:
+      forwardAuth:
+        address: https://oauth.example.com/oauth2/auth
+        trustForwardHeader: true
+    oauth-errors:
+      errors:
+        status:
+          - "401-403"
+        service: oauth-backend
+        query: "/oauth2/sign_in"
+```
 
 :::note
 If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.
