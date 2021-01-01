@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,8 +16,9 @@ import (
 
 var _ = Describe("CSRF Cookie Tests", func() {
 	var (
-		csrf       *CSRF
-		cookieOpts *options.Cookie
+		cookieOpts  *options.Cookie
+		publicCSRF  CSRF
+		privateCSRF *csrf
 	)
 
 	BeforeEach(func() {
@@ -31,65 +33,69 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		}
 
 		var err error
-		csrf, err = NewCSRF(cookieOpts)
+		publicCSRF, err = NewCSRF(cookieOpts)
 		Expect(err).ToNot(HaveOccurred())
+
+		privateCSRF = publicCSRF.(*csrf)
 	})
 
 	Context("NewCSRF", func() {
 		It("makes unique nonces for OAuth and OIDC", func() {
-			Expect(csrf.OAuthState).ToNot(BeEmpty())
-			Expect(csrf.OIDCNonce).ToNot(BeEmpty())
-			Expect(csrf.OAuthState).ToNot(Equal(csrf.OIDCNonce))
+			Expect(privateCSRF.OAuthState).ToNot(BeEmpty())
+			Expect(privateCSRF.OIDCNonce).ToNot(BeEmpty())
+			Expect(privateCSRF.OAuthState).ToNot(Equal(privateCSRF.OIDCNonce))
 		})
 
 		It("makes unique nonces between multiple CSRFs", func() {
 			other, err := NewCSRF(cookieOpts)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(csrf.OAuthState).ToNot(Equal(other.OAuthState))
-			Expect(csrf.OIDCNonce).ToNot(Equal(other.OIDCNonce))
+			Expect(privateCSRF.OAuthState).ToNot(Equal(other.(*csrf).OAuthState))
+			Expect(privateCSRF.OIDCNonce).ToNot(Equal(other.(*csrf).OIDCNonce))
 		})
 	})
 
 	Context("CheckOAuthState and CheckOIDCNonce", func() {
 		It("checks that hashed versions match", func() {
-			csrf.OAuthState = []byte(csrfState)
-			csrf.OIDCNonce = []byte(csrfNonce)
+			privateCSRF.OAuthState = []byte(csrfState)
+			privateCSRF.OIDCNonce = []byte(csrfNonce)
 
 			stateHashed := encryption.HashNonce([]byte(csrfState))
 			nonceHashed := encryption.HashNonce([]byte(csrfNonce))
 
-			Expect(csrf.CheckOAuthState(stateHashed)).To(BeTrue())
-			Expect(csrf.CheckOIDCNonce(nonceHashed)).To(BeTrue())
+			Expect(publicCSRF.CheckOAuthState(stateHashed)).To(BeTrue())
+			Expect(publicCSRF.CheckOIDCNonce(nonceHashed)).To(BeTrue())
 
-			Expect(csrf.CheckOAuthState(csrfNonce)).To(BeFalse())
-			Expect(csrf.CheckOIDCNonce(csrfState)).To(BeFalse())
-			Expect(csrf.CheckOAuthState(csrfState + csrfNonce)).To(BeFalse())
-			Expect(csrf.CheckOIDCNonce(csrfNonce + csrfState)).To(BeFalse())
-			Expect(csrf.CheckOAuthState("")).To(BeFalse())
-			Expect(csrf.CheckOIDCNonce("")).To(BeFalse())
+			Expect(publicCSRF.CheckOAuthState(csrfNonce)).To(BeFalse())
+			Expect(publicCSRF.CheckOIDCNonce(csrfState)).To(BeFalse())
+			Expect(publicCSRF.CheckOAuthState(csrfState + csrfNonce)).To(BeFalse())
+			Expect(publicCSRF.CheckOIDCNonce(csrfNonce + csrfState)).To(BeFalse())
+			Expect(publicCSRF.CheckOAuthState("")).To(BeFalse())
+			Expect(publicCSRF.CheckOIDCNonce("")).To(BeFalse())
 		})
 	})
 
-	Context("CookieName", func() {
-		It("has the cookie options name as a base", func() {
-			Expect(csrf.CookieName()).To(ContainSubstring(cookieName))
+	Context("SetSessionNonce", func() {
+		It("sets the session.Nonce", func() {
+			session := &sessions.SessionState{}
+			publicCSRF.SetSessionNonce(session)
+			Expect(session.Nonce).To(Equal(privateCSRF.OIDCNonce))
 		})
 	})
 
-	Context("EncodeCookie and DecodeCSRFCookie", func() {
+	Context("encodeCookie and decodeCSRFCookie", func() {
 		It("encodes and decodes to the same nonces", func() {
-			csrf.OAuthState = []byte(csrfState)
-			csrf.OIDCNonce = []byte(csrfNonce)
+			privateCSRF.OAuthState = []byte(csrfState)
+			privateCSRF.OIDCNonce = []byte(csrfNonce)
 
-			encoded, err := csrf.EncodeCookie()
+			encoded, err := privateCSRF.encodeCookie()
 			Expect(err).ToNot(HaveOccurred())
 
 			cookie := &http.Cookie{
-				Name:  csrf.CookieName(),
+				Name:  privateCSRF.cookieName(),
 				Value: encoded,
 			}
-			decoded, err := DecodeCSRFCookie(cookie, cookieOpts)
+			decoded, err := decodeCSRFCookie(cookie, cookieOpts)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(decoded).ToNot(BeNil())
@@ -98,11 +104,11 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		})
 
 		It("signs the encoded cookie value", func() {
-			encoded, err := csrf.EncodeCookie()
+			encoded, err := privateCSRF.encodeCookie()
 			Expect(err).ToNot(HaveOccurred())
 
 			cookie := &http.Cookie{
-				Name:  csrf.CookieName(),
+				Name:  privateCSRF.cookieName(),
 				Value: encoded,
 			}
 
@@ -136,11 +142,11 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			It("adds the encoded CSRF cookie to a ResponseWriter", func() {
 				rw := httptest.NewRecorder()
 
-				err := csrf.SetCookie(rw, req)
+				_, err := publicCSRF.SetCookie(rw, req)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
-					fmt.Sprintf("%s=", csrf.CookieName()),
+					fmt.Sprintf("%s=", privateCSRF.cookieName()),
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
@@ -157,17 +163,23 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			It("sets a cookie with an empty value in the past", func() {
 				rw := httptest.NewRecorder()
 
-				csrf.ClearCookie(rw, req)
+				publicCSRF.ClearCookie(rw, req)
 
 				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
 					fmt.Sprintf(
 						"%s=; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure; SameSite",
-						csrf.CookieName(),
+						privateCSRF.cookieName(),
 						cookiePath,
 						cookieDomain,
 						testCookieExpires(now().Add(time.Hour*-1)),
 					),
 				))
+			})
+		})
+
+		Context("cookieName", func() {
+			It("has the cookie options name as a base", func() {
+				Expect(privateCSRF.cookieName()).To(ContainSubstring(cookieName))
 			})
 		})
 	})

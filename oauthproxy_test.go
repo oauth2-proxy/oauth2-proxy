@@ -23,7 +23,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
@@ -703,29 +702,26 @@ func (patTest *PassAccessTokenTest) Close() {
 func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie string) {
 	rw := httptest.NewRecorder()
 
-	state := []byte("nonce")
+	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions)
+	if err != nil {
+		panic(err)
+	}
+
 	req, err := http.NewRequest(
 		http.MethodGet,
-		fmt.Sprintf("/oauth2/callback?code=callback_code&state=%s:", encryption.HashNonce(state)),
+		fmt.Sprintf("/oauth2/callback?code=callback_code&state=%s", encodeState(csrf, "%2F")),
 		strings.NewReader(""),
 	)
 	if err != nil {
 		return 0, ""
 	}
 
-	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions)
+	// rw is a dummy here, we just want the csrfCookie to add to our req
+	csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), req)
 	if err != nil {
 		panic(err)
 	}
-	csrf.OAuthState = state
-	val, err := csrf.EncodeCookie()
-	if err != nil {
-		panic(err)
-	}
-	req.AddCookie(&http.Cookie{
-		Name:  csrf.CookieName(),
-		Value: val,
-	})
+	req.AddCookie(csrfCookie)
 
 	patTest.proxy.ServeHTTP(rw, req)
 
