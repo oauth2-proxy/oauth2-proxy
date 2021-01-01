@@ -699,18 +699,21 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	redirect, err := p.getAppRedirect(req)
+	appRedirect, err := p.getAppRedirect(req)
 	if err != nil {
-		logger.Errorf("Error obtaining redirect: %v", err)
+		logger.Errorf("Error obtaining application redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	redirectURI := p.getOAuthRedirectURI(req)
-	loginURL := p.provider.GetLoginURL(redirectURI, fmt.Sprintf("%v:%v", csrf.HashState(), redirect), csrf.HashNonce())
+	callbackRedirect := p.getOAuthRedirectURI(req)
+	loginURL := p.provider.GetLoginURL(
+		callbackRedirect,
+		encodeState(csrf, appRedirect),
+		csrf.HashOIDCNonce(),
+	)
 
-	err = csrf.SetCookie(rw, req)
-	if err != nil {
+	if err := csrf.SetCookie(rw, req); err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
@@ -763,27 +766,24 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf.ClearCookie(rw, req)
 
-	state := strings.SplitN(req.Form.Get("state"), ":", 2)
-	if len(state) != 2 {
-		logger.Error("Error while parsing OAuth2 state: invalid length")
-		p.ErrorPage(rw, req, http.StatusInternalServerError, "CSRF parameter did not have expected length")
+	nonce, appRedirect, err := decodeState(req)
+	if err != nil {
+		logger.Errorf("Error while parsing OAuth2 state: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	hashedState := state[0]
-	redirect := state[1]
-
-	if !csrf.CheckState(hashedState) {
+	if !csrf.CheckOAuthState(nonce) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
 		p.ErrorPage(rw, req, http.StatusForbidden, "CSRF token mismatch, potential attack", "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
 
-	session.Nonce = csrf.Nonce
+	session.Nonce = csrf.OIDCNonce
 	p.provider.ValidateSession(req.Context(), session)
 
-	if !p.IsValidRedirect(redirect) {
-		redirect = "/"
+	if !p.IsValidRedirect(appRedirect) {
+		appRedirect = "/"
 	}
 
 	// set cookie, or deny
@@ -799,7 +799,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
-		http.Redirect(rw, req, redirect, http.StatusFound)
+		http.Redirect(rw, req, appRedirect, http.StatusFound)
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, req, http.StatusForbidden, "Invalid session: unauthorized")
@@ -1170,6 +1170,22 @@ func extractAllowedGroups(req *http.Request) map[string]struct{} {
 	}
 
 	return groups
+}
+
+// encodedState builds the OAuth state param out of our nonce and
+// original application redirect
+func encodeState(csrf *cookies.CSRF, redirect string) string {
+	return fmt.Sprintf("%v:%v", csrf.HashOAuthState(), redirect)
+}
+
+// decodeState splits the reflected OAuth state response back into
+// the nonce and original application redirect
+func decodeState(req *http.Request) (string, string, error) {
+	state := strings.SplitN(req.Form.Get("state"), ":", 2)
+	if len(state) != 2 {
+		return "", "", errors.New("invalid length")
+	}
+	return state[0], state[1], nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying

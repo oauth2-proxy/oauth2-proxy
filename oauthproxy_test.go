@@ -717,7 +717,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 	if err != nil {
 		panic(err)
 	}
-	csrf.State = state
+	csrf.OAuthState = state
 	val, err := csrf.EncodeCookie()
 	if err != nil {
 		panic(err)

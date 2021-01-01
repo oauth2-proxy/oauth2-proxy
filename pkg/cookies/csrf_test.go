@@ -36,30 +36,38 @@ var _ = Describe("CSRF Cookie Tests", func() {
 	})
 
 	Context("NewCSRF", func() {
-		It("makes unique nonces", func() {
-			Expect(csrf.State).ToNot(BeEmpty())
-			Expect(csrf.Nonce).ToNot(BeEmpty())
-			Expect(csrf.State).ToNot(Equal(csrf.Nonce))
+		It("makes unique nonces for OAuth and OIDC", func() {
+			Expect(csrf.OAuthState).ToNot(BeEmpty())
+			Expect(csrf.OIDCNonce).ToNot(BeEmpty())
+			Expect(csrf.OAuthState).ToNot(Equal(csrf.OIDCNonce))
+		})
+
+		It("makes unique nonces between multiple CSRFs", func() {
+			other, err := NewCSRF(cookieOpts)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(csrf.OAuthState).ToNot(Equal(other.OAuthState))
+			Expect(csrf.OIDCNonce).ToNot(Equal(other.OIDCNonce))
 		})
 	})
 
-	Context("CheckState and CheckNonce", func() {
+	Context("CheckOAuthState and CheckOIDCNonce", func() {
 		It("checks that hashed versions match", func() {
-			csrf.State = []byte(csrfState)
-			csrf.Nonce = []byte(csrfNonce)
+			csrf.OAuthState = []byte(csrfState)
+			csrf.OIDCNonce = []byte(csrfNonce)
 
 			stateHashed := encryption.HashNonce([]byte(csrfState))
 			nonceHashed := encryption.HashNonce([]byte(csrfNonce))
 
-			Expect(csrf.CheckState(stateHashed)).To(BeTrue())
-			Expect(csrf.CheckNonce(nonceHashed)).To(BeTrue())
+			Expect(csrf.CheckOAuthState(stateHashed)).To(BeTrue())
+			Expect(csrf.CheckOIDCNonce(nonceHashed)).To(BeTrue())
 
-			Expect(csrf.CheckState(csrfNonce)).To(BeFalse())
-			Expect(csrf.CheckNonce(csrfState)).To(BeFalse())
-			Expect(csrf.CheckState(csrfState + csrfNonce)).To(BeFalse())
-			Expect(csrf.CheckNonce(csrfNonce + csrfState)).To(BeFalse())
-			Expect(csrf.CheckState("")).To(BeFalse())
-			Expect(csrf.CheckNonce("")).To(BeFalse())
+			Expect(csrf.CheckOAuthState(csrfNonce)).To(BeFalse())
+			Expect(csrf.CheckOIDCNonce(csrfState)).To(BeFalse())
+			Expect(csrf.CheckOAuthState(csrfState + csrfNonce)).To(BeFalse())
+			Expect(csrf.CheckOIDCNonce(csrfNonce + csrfState)).To(BeFalse())
+			Expect(csrf.CheckOAuthState("")).To(BeFalse())
+			Expect(csrf.CheckOIDCNonce("")).To(BeFalse())
 		})
 	})
 
@@ -71,8 +79,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 	Context("EncodeCookie and DecodeCSRFCookie", func() {
 		It("encodes and decodes to the same nonces", func() {
-			csrf.State = []byte(csrfState)
-			csrf.Nonce = []byte(csrfNonce)
+			csrf.OAuthState = []byte(csrfState)
+			csrf.OIDCNonce = []byte(csrfNonce)
 
 			encoded, err := csrf.EncodeCookie()
 			Expect(err).ToNot(HaveOccurred())
@@ -85,8 +93,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(decoded).ToNot(BeNil())
-			Expect(decoded.State).To(Equal([]byte(csrfState)))
-			Expect(decoded.Nonce).To(Equal([]byte(csrfNonce)))
+			Expect(decoded.OAuthState).To(Equal([]byte(csrfState)))
+			Expect(decoded.OIDCNonce).To(Equal([]byte(csrfNonce)))
 		})
 
 		It("signs the encoded cookie value", func() {

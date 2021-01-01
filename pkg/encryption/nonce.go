@@ -19,6 +19,10 @@ func Nonce() ([]byte, error) {
 }
 
 // HashNonce returns the BLAKE2b 256-bit hash of a nonce
+// NOTE: Error checking (G104) is purposefully skipped:
+// - `blake2b.New256` has no error path with a nil signing key
+// - `hash.Hash` interface's `Write` has an error signature, but
+//   `blake2b.digest.Write` does not use it.
 /* #nosec G104 */
 func HashNonce(nonce []byte) string {
 	hasher, _ := blake2b.New256(nil)
