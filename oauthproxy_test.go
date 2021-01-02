@@ -415,8 +415,9 @@ func Test_redeemCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = proxy.redeemCode(context.Background(), "www.example.com", "")
-	assert.Error(t, err)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	_, err = proxy.redeemCode(req)
+	assert.Equal(t, providers.ErrMissingCode, err)
 }
 
 func Test_enrichSession(t *testing.T) {
@@ -1749,7 +1750,7 @@ func TestRequestSignature(t *testing.T) {
 	}
 }
 
-func TestGetRedirect(t *testing.T) {
+func Test_getAppRedirect(t *testing.T) {
 	opts := baseTestOptions()
 	opts.WhitelistDomains = append(opts.WhitelistDomains, ".example.com", ".example.com:8443")
 	err := validation.Validate(opts)
@@ -1900,7 +1901,7 @@ func TestGetRedirect(t *testing.T) {
 			req = middleware.AddRequestScope(req, &middleware.RequestScope{
 				ReverseProxy: tt.reverseProxy,
 			})
-			redirect, err := proxy.GetAppRedirect(req)
+			redirect, err := proxy.getAppRedirect(req)
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedRedirect, redirect)
