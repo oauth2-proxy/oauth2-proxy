@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/bitly/go-simplejson"
+
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
@@ -16,7 +18,6 @@ type GrafanaProvider struct {
 
 var _ Provider = (*GrafanaProvider)(nil)
 
-// https://?access_type=online&client_id=a339e72afa3a51a5be00&redirect_uri=https://labbbles.grafana.net/login/grafana_com&response_type=code&scope=user:email&state=xjV-CQTPhUZsfWjYKUzhiGC-4xOWPfG_FV6QxC7ZNRo=
 const (
 	GrafanaProviderName = "Grafana"
 	grafanaDefaultScope = "user:email"
@@ -55,19 +56,49 @@ func NewGrafanaProvider(p *ProviderData) *GrafanaProvider {
 	return &GrafanaProvider{ProviderData: p}
 }
 
-
-// GetEmailAddress returns the Account email address
-func (p *GrafanaProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+func (p *GrafanaProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	json, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
 		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalJSON()
-
 	if err != nil {
-		return "", fmt.Errorf("error making request: %v", err)
+		return fmt.Errorf("error making request: %w", err)
+	}
+
+	email, err := p.getEmail(json)
+	if err != nil {
+		return fmt.Errorf("failed to get email: %w", err)
+	}
+	s.Email = email
+
+	username, err := p.getUser(json)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+	s.PreferredUsername = username
+
+	return nil
+}
+
+func (p *GrafanaProvider) getUser(json *simplejson.Json) (string, error) {
+	return json.Get("username").String()
+}
+
+func (p *GrafanaProvider) getEmail(json *simplejson.Json) (string, error) {
+	emailConfirmed, err := json.Get("emailConfirmed").Int()
+	if err != nil {
+		return "", fmt.Errorf("error confirming email: %w", err)
+	}
+
+	if emailConfirmed != 1 {
+		return "", fmt.Errorf("skipping unconfirmed email for user")
 	}
 
 	email, err := json.Get("email").String()
-	return email, err
+	if err != nil {
+		return "", fmt.Errorf("could not verify email: %w", err)
+	}
+
+	return email, nil
 }
