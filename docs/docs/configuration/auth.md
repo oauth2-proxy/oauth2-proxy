@@ -10,6 +10,7 @@ Valid providers are :
 - [Google](#google-auth-provider) _default_
 - [Azure](#azure-auth-provider)
 - [Facebook](#facebook-auth-provider)
+- [Grafana](#grafana-auth-provider)
 - [GitHub](#github-auth-provider)
 - [Keycloak](#keycloak-auth-provider)
 - [GitLab](#gitlab-auth-provider)
@@ -91,6 +92,15 @@ Note: When using the Azure Auth provider with nginx and the cookie session store
 
 1.  Create a new FB App from <https://developers.facebook.com/>
 2.  Under FB Login, set your Valid OAuth redirect URIs to `https://internal.yourcompany.com/oauth2/callback`
+
+### Grafana Auth Provider
+1. Create an OAuth Client for your Grafana organisation
+    - Under _"Security"_ > _"OAuth Clients"_ on your organisation dashboard, click **"+ Add OAuth Client Application"**
+    - Enter your name and description. For the URL, enter your configured return URL to `https://internal.yourcompany.com/oauth2/callback`
+    
+The Grafana auth provider supports email domain authentication through the `--email-domain` flag.
+
+Support for authorizing a user by their Grafana Cloud Organization membership is currently not supported.
 
 ### GitHub Auth Provider
 
