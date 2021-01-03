@@ -82,7 +82,12 @@ func (p *GrafanaProvider) EnrichSession(ctx context.Context, s *sessions.Session
 }
 
 func (p *GrafanaProvider) getUser(json *simplejson.Json) (string, error) {
-	return json.Get("username").String()
+	u, found := json.CheckGet("username")
+	if !found {
+		return "", nil
+	}
+
+	return u.String()
 }
 
 func (p *GrafanaProvider) getEmail(json *simplejson.Json) (string, error) {

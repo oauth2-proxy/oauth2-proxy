@@ -95,9 +95,9 @@ func TestGrafanaProviderGetEmailAddress(t *testing.T) {
 	p.ValidateURL.Path = grafanaUserPath
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "foo@bar.com", email)
+	assert.Equal(t, "foo@bar.com", session.Email)
 }
 
 // Note that trying to trigger the "failed building request" case is not
@@ -117,9 +117,9 @@ func TestGrafanaProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
 
 func TestGrafanaProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
@@ -134,7 +134,7 @@ func TestGrafanaProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
 	p.ValidateURL.Path = grafanaUserPath
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
 }
