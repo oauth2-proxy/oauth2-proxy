@@ -1750,6 +1750,8 @@ func TestRequestSignature(t *testing.T) {
 
 func TestGetRedirect(t *testing.T) {
 	opts := baseTestOptions()
+	opts.WhitelistDomains = append(opts.WhitelistDomains, ".example.com")
+	opts.WhitelistDomains = append(opts.WhitelistDomains, ".example.com:8443")
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 	require.NotEmpty(t, opts.ProxyPrefix)
@@ -1761,27 +1763,145 @@ func TestGetRedirect(t *testing.T) {
 	tests := []struct {
 		name             string
 		url              string
+		headers          map[string]string
+		reverseProxy     bool
 		expectedRedirect string
 	}{
 		{
 			name:             "request outside of ProxyPrefix redirects to original URL",
 			url:              "/foo/bar",
+			headers:          nil,
+			reverseProxy:     false,
 			expectedRedirect: "/foo/bar",
 		},
 		{
 			name:             "request with query preserves query",
 			url:              "/foo?bar",
+			headers:          nil,
+			reverseProxy:     false,
 			expectedRedirect: "/foo?bar",
 		},
 		{
 			name:             "request under ProxyPrefix redirects to root",
 			url:              proxy.ProxyPrefix + "/foo/bar",
+			headers:          nil,
+			reverseProxy:     false,
 			expectedRedirect: "/",
+		},
+		{
+			name: "proxied request outside of ProxyPrefix redirects to proxied URL",
+			url:  "https://oauth.example.com/foo/bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   "/foo/bar",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/foo/bar",
+		},
+		{
+			name: "non-proxied request with spoofed proxy headers wouldn't redirect",
+			url:  "https://oauth.example.com/foo?bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   "/foo/bar",
+			},
+			reverseProxy:     false,
+			expectedRedirect: "/foo?bar",
+		},
+		{
+			name: "proxied request under ProxyPrefix redirects to root",
+			url:  "https://oauth.example.com" + proxy.ProxyPrefix + "/foo/bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   proxy.ProxyPrefix + "/foo/bar",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/",
+		},
+		{
+			name: "proxied request with port under ProxyPrefix redirects to root",
+			url:  "https://oauth.example.com" + proxy.ProxyPrefix + "/foo/bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com:8443",
+				"X-Forwarded-Uri":   proxy.ProxyPrefix + "/foo/bar",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com:8443/",
+		},
+		{
+			name: "proxied request with missing uri header would still redirect to desired redirect",
+			url:  "https://oauth.example.com/foo?bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/foo?bar",
+		},
+		{
+			name:             "request with headers proxy not being set (and reverse proxy enabled) would still redirect to desired redirect",
+			url:              "https://oauth.example.com/foo?bar",
+			headers:          nil,
+			reverseProxy:     true,
+			expectedRedirect: "/foo?bar",
+		},
+		{
+			name: "proxied request with X-Auth-Request-Redirect being set outside of ProxyPrefix redirects to proxied URL",
+			url:  "https://oauth.example.com/foo/bar",
+			headers: map[string]string{
+				"X-Auth-Request-Redirect": "https://a-service.example.com/foo/bar",
+				"X-Forwarded-Proto":       "",
+				"X-Forwarded-Host":        "",
+				"X-Forwarded-Uri":         "",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/foo/bar",
+		},
+		{
+			name:             "proxied request with rd query string redirects to proxied URL",
+			url:              "https://oauth.example.com/foo/bar?rd=https%3A%2F%2Fa%2Dservice%2Eexample%2Ecom%2Ffoo%2Fbar",
+			headers:          nil,
+			reverseProxy:     false,
+			expectedRedirect: "https://a-service.example.com/foo/bar",
+		},
+		{
+			name: "proxied request with rd query string and all headers set (and reverse proxy not enabled) redirects to proxied URL on rd query string",
+			url:  "https://oauth.example.com/foo/bar?rd=https%3A%2F%2Fa%2Dservice%2Eexample%2Ecom%2Ffoo%2Fjazz",
+			headers: map[string]string{
+				"X-Auth-Request-Redirect": "https://a-service.example.com/foo/baz",
+				"X-Forwarded-Proto":       "http",
+				"X-Forwarded-Host":        "another-service.example.com",
+				"X-Forwarded-Uri":         "/seasons/greetings",
+			},
+			reverseProxy:     false,
+			expectedRedirect: "https://a-service.example.com/foo/jazz",
+		},
+		{
+			name: "proxied request with rd query string and some headers set redirects to proxied URL on rd query string",
+			url:  "https://oauth.example.com/foo/bar?rd=https%3A%2F%2Fa%2Dservice%2Eexample%2Ecom%2Ffoo%2Fbaz",
+			headers: map[string]string{
+				"X-Auth-Request-Redirect": "",
+				"X-Forwarded-Proto":       "https",
+				"X-Forwarded-Host":        "another-service.example.com",
+				"X-Forwarded-Uri":         "/seasons/greetings",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/foo/baz",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", tt.url, nil)
+			for header, value := range tt.headers {
+				if value != "" {
+					req.Header.Add(header, value)
+				}
+			}
+			proxy.ReverseProxy = tt.reverseProxy
 			redirect, err := proxy.GetRedirect(req)
 
 			assert.NoError(t, err)

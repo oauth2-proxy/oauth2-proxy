@@ -98,6 +98,7 @@ type OAuthProxy struct {
 	SetAuthorization     bool
 	PassAuthorization    bool
 	PreferEmailToUser    bool
+	ReverseProxy         bool
 	skipAuthPreflight    bool
 	skipJwtBearerTokens  bool
 	templates            *template.Template
@@ -200,6 +201,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
 		ProxyPrefix:          opts.ProxyPrefix,
+		ReverseProxy:         opts.ReverseProxy,
 		provider:             opts.GetProvider(),
 		providerNameOverride: opts.ProviderName,
 		sessionStore:         sessionStore,
@@ -578,15 +580,34 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	if req.Form.Get("rd") != "" {
 		redirect = req.Form.Get("rd")
 	}
+	// Quirk: On reverse proxies that doesn't have support for
+	// "X-Auth-Request-Redirect" header or dynamic header/query string
+	// manipulation (like Traefik v1 and v2), we can try if the header
+	// X-Forwarded-Host exists or not.
+	if redirect == "" && isForwardedRequest(req, p.ReverseProxy) {
+		redirect = p.getRedirectFromForwardHeaders(req)
+	}
 	if !p.IsValidRedirect(redirect) {
 		// Use RequestURI to preserve ?query
 		redirect = req.URL.RequestURI()
-		if strings.HasPrefix(redirect, p.ProxyPrefix) {
+
+		if strings.HasPrefix(redirect, fmt.Sprintf("%s/", p.ProxyPrefix)) {
 			redirect = "/"
 		}
 	}
 
 	return
+}
+
+// getRedirectFromForwardHeaders returns the redirect URL based on X-Forwarded-{Proto,Host,Uri} headers
+func (p *OAuthProxy) getRedirectFromForwardHeaders(req *http.Request) string {
+	uri := util.GetRequestURI(req)
+
+	if strings.HasPrefix(uri, fmt.Sprintf("%s/", p.ProxyPrefix)) {
+		uri = "/"
+	}
+
+	return fmt.Sprintf("%s://%s%s", util.GetRequestProto(req), util.GetRequestHost(req), uri)
 }
 
 // splitHostPort separates host and port. If the port is not valid, it returns
@@ -684,6 +705,12 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 		}
 	}
 	return false
+}
+
+// isForwardedRequest is used to check if X-Forwarded-Host header exists or not
+func isForwardedRequest(req *http.Request, reverseProxy bool) bool {
+	isForwarded := req.Host != util.GetRequestHost(req)
+	return isForwarded && reverseProxy
 }
 
 // See https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=en

@@ -110,3 +110,29 @@ func TestGetRequestHost(t *testing.T) {
 	extHost := GetRequestHost(proxyReq)
 	g.Expect(extHost).To(Equal("external.example.com"))
 }
+
+func TestGetRequestProto(t *testing.T) {
+	g := NewWithT(t)
+
+	req := httptest.NewRequest("GET", "https://example.com", nil)
+	proto := GetRequestProto(req)
+	g.Expect(proto).To(Equal("https"))
+
+	proxyReq := httptest.NewRequest("GET", "https://internal.example.com", nil)
+	proxyReq.Header.Add("X-Forwarded-Proto", "http")
+	extProto := GetRequestProto(proxyReq)
+	g.Expect(extProto).To(Equal("http"))
+}
+
+func TestGetRequestURI(t *testing.T) {
+	g := NewWithT(t)
+
+	req := httptest.NewRequest("GET", "https://example.com/ping", nil)
+	uri := GetRequestURI(req)
+	g.Expect(uri).To(Equal("/ping"))
+
+	proxyReq := httptest.NewRequest("GET", "http://internal.example.com/bong", nil)
+	proxyReq.Header.Add("X-Forwarded-Uri", "/ping")
+	extURI := GetRequestURI(proxyReq)
+	g.Expect(extURI).To(Equal("/ping"))
+}
