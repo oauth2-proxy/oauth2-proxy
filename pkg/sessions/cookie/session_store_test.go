@@ -183,7 +183,7 @@ func Test_joinCookies_withUnderlineSuffix(t *testing.T) {
 			SplitOrder: []int{1, 3, 0, 2, 4},
 		},
 		"Arbitrary order split with \"_1\" suffix": {
-			CookieName: "_cookie_name_0",
+			CookieName: "_cookie_name_1",
 			SplitOrder: []int{4, 1, 3, 0, 2},
 		},
 		"Arbitrary order split with \"__\" suffix": {
