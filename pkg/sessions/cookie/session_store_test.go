@@ -147,25 +147,65 @@ func Test_splitCookie_joinCookies(t *testing.T) {
 	}
 	value := strings.Repeat(string(v), 1000)
 
-	nameSizes := []int{1, 10, 50, 100, 200, 254}
-	nameSuffixes := []string{"", "_", "_0", "__", "__0"}
-	for _, nameSize := range nameSizes {
-		for _, nameSuffix := range nameSuffixes {
-			testName := fmt.Sprintf("%d length cookie name with \"%s\" suffix", nameSize, nameSuffix)
-			t.Run(testName, func(t *testing.T) {
-				adjustedNameSize := nameSize
-				if adjustedNameSize+len(nameSuffix) > 254 {
-					adjustedNameSize -= len(nameSuffix)
-				}
+	for _, nameSize := range []int{1, 10, 50, 100, 200, 254} {
+		t.Run(fmt.Sprintf("%d length cookie name", nameSize), func(t *testing.T) {
+			cookie := &http.Cookie{
+				Name:  strings.Repeat("n", nameSize),
+				Value: value,
+			}
+			splitCookies := splitCookie(cookie)
+			joinedCookie, err := joinCookies(splitCookies, cookie.Name)
+			assert.NoError(t, err)
+			assert.Equal(t, *cookie, *joinedCookie)
+		})
+	}
+}
+
+func Test_joinCookies_withUnderlineSuffix(t *testing.T) {
+	testCases := map[string]struct {
+		CookieName string
+		SplitOrder []int
+	}{
+		"Ascending order split with \"_\" suffix": {
+			CookieName: "_cookie_name_",
+			SplitOrder: []int{0, 1, 2, 3, 4},
+		},
+		"Descending order split with \"_\" suffix": {
+			CookieName: "_cookie_name_",
+			SplitOrder: []int{4, 3, 2, 1, 0},
+		},
+		"Arbitrary order split with \"_\" suffix": {
+			CookieName: "_cookie_name_",
+			SplitOrder: []int{3, 1, 2, 0, 4},
+		},
+		"Arbitrary order split with \"_0\" suffix": {
+			CookieName: "_cookie_name_0",
+			SplitOrder: []int{1, 3, 0, 2, 4},
+		},
+		"Arbitrary order split with \"_1\" suffix": {
+			CookieName: "_cookie_name_0",
+			SplitOrder: []int{4, 1, 3, 0, 2},
+		},
+		"Arbitrary order split with \"__\" suffix": {
+			CookieName: "_cookie_name__",
+			SplitOrder: []int{1, 0, 4, 3, 2},
+		},
+	}
+
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			cookieName := testCase.CookieName
+			var splitCookies []*http.Cookie
+			for _, splitSuffix := range testCase.SplitOrder {
 				cookie := &http.Cookie{
-					Name:  strings.Repeat("n", adjustedNameSize) + nameSuffix,
-					Value: value,
+					Name:  splitCookieName(cookieName, splitSuffix),
+					Value: strings.Repeat("v", 1000),
 				}
-				splitCookies := splitCookie(cookie)
-				joinedCookie, err := joinCookies(splitCookies)
-				assert.NoError(t, err)
-				assert.Equal(t, *cookie, *joinedCookie)
-			})
-		}
+				splitCookies = append(splitCookies, cookie)
+			}
+			joinedCookie, err := joinCookies(splitCookies, cookieName)
+			assert.NoError(t, err)
+			assert.Equal(t, cookieName, joinedCookie.Name)
+		})
 	}
 }
