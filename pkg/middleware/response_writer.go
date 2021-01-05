@@ -5,8 +5,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"reflect"
-	"time"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 )
@@ -14,18 +12,13 @@ import (
 type responseWriter struct {
 	http.ResponseWriter
 
-	middlewareapi.ResponseTimer
-	middlewareapi.ResponseMetadata
-
 	status int
 	size   int
 }
 
 func NewResponseWriter(rw http.ResponseWriter) middlewareapi.ResponseWriter {
 	return &responseWriter{
-		ResponseWriter:   rw,
-		ResponseTimer:    &timer{},
-		ResponseMetadata: &metadata{},
+		ResponseWriter: rw,
 	}
 }
 
@@ -72,45 +65,4 @@ func (r *responseWriter) Status() int {
 // Size returns the response size
 func (r *responseWriter) Size() int {
 	return r.size
-}
-
-type timer struct {
-	start *time.Time
-}
-
-func (t *timer) Start() {
-	now := time.Now()
-	t.start = &now
-}
-
-func (t *timer) Duration() (time.Duration, error) {
-	if t.start == nil {
-		return time.Second * 0, errors.New("timer not started")
-	}
-	return time.Since(*t.start), nil
-}
-
-type metadata struct {
-	data map[interface{}]interface{}
-}
-
-func (m metadata) SetMetadata(key interface{}, value interface{}) {
-	if key == nil {
-		panic("nil key")
-	}
-	if !reflect.TypeOf(key).Comparable() {
-		panic("key is not comparable")
-	}
-
-	if m.data == nil {
-		m.data = make(map[interface{}]interface{})
-	}
-	m.data[key] = value
-}
-
-func (m metadata) GetMetadata(key interface{}) interface{} {
-	if val, ok := m.data[key]; ok {
-		return val
-	}
-	return nil
 }

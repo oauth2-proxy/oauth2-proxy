@@ -3,6 +3,9 @@ package upstream
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 )
 
 const defaultStaticResponseCode = 200
@@ -24,9 +27,14 @@ type staticResponseHandler struct {
 
 // ServeHTTP serves a static response.
 func (s *staticResponseHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("GAP-Upstream-Address", s.upstream)
+	scope := middleware.GetRequestScope(req)
+	scope.Upstream = s.upstream
+
 	rw.WriteHeader(s.code)
-	fmt.Fprintf(rw, "Authenticated")
+	_, err := fmt.Fprintf(rw, "Authenticated")
+	if err != nil {
+		logger.Errorf("Error writing static response: %v", err)
+	}
 }
 
 // derefStaticCode returns the derefenced value, or the default if the value is nil

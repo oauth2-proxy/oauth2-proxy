@@ -2,6 +2,7 @@ package upstream
 
 import (
 	"crypto/tls"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -76,7 +77,10 @@ type httpUpstreamProxy struct {
 // ServeHTTP proxies requests to the upstream provider while signing the
 // request headers
 func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("GAP-Upstream-Address", h.upstream)
+	scope := middleware.GetRequestScope(req)
+	scope.Upstream = h.upstream
+
+	// TODO (@NickMeves) - Deprecate GAP-Signature & remove GAP-Auth
 	if h.auth != nil {
 		req.Header.Set("GAP-Auth", rw.Header().Get("GAP-Auth"))
 		h.auth.SignRequest(req)
