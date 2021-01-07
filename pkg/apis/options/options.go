@@ -22,6 +22,7 @@ type Options struct {
 	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
 	PingPath           string   `flag:"ping-path" cfg:"ping_path"`
 	PingUserAgent      string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
+	MetricsAddress     string   `flag:"metrics-address" cfg:"metrics_address"`
 	HTTPAddress        string   `flag:"http-address" cfg:"http_address"`
 	HTTPSAddress       string   `flag:"https-address" cfg:"https_address"`
 	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
@@ -132,14 +133,14 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClie
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:        "/oauth2",
-		ProviderType:       "google",
-		PingPath:           "/ping",
-		HTTPAddress:        "127.0.0.1:4180",
-		HTTPSAddress:       ":443",
-		RealClientIPHeader: "X-Real-IP",
-		ForceHTTPS:         false,
-
+		ProxyPrefix:                      "/oauth2",
+		ProviderType:                     "google",
+		MetricsAddress:                   "",
+		PingPath:                         "/ping",
+		HTTPAddress:                      "127.0.0.1:4180",
+		HTTPSAddress:                     ":443",
+		RealClientIPHeader:               "X-Real-IP",
+		ForceHTTPS:                       false,
 		Cookie:                           cookieDefaults(),
 		Session:                          sessionOptionsDefaults(),
 		Templates:                        templatesDefaults(),
@@ -201,6 +202,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
+	flagSet.String("metrics-address", "", "the address /metrics will be served on (e.g. \":9100\")")
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
 	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")

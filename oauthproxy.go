@@ -254,6 +254,8 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 		chain = chain.Append(LoggingHandler, middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents))
 	}
 
+	chain = chain.Append(middleware.NewRequestMetricsWithDefaultRegistry())
+
 	return chain, nil
 }
 

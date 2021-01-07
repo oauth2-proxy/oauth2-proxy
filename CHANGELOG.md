@@ -12,6 +12,7 @@
 - [#1029](https://github.com/oauth2-proxy/oauth2-proxy/pull/1029) Refactor error page rendering and allow debug messages on error (@JoelSpeed)
 - [#1028](https://github.com/oauth2-proxy/oauth2-proxy/pull/1028) Refactor templates, update theme and provide styled error pages (@JoelSpeed)
 - [#1039](https://github.com/oauth2-proxy/oauth2-proxy/pull/1039) Ensure errors in tests are logged to the GinkgoWriter (@JoelSpeed)
+- [#980](https://github.com/oauth2-proxy/oauth2-proxy/pull/1039) Add Prometheus metrics endpoint
 
 # V7.0.1
 
