@@ -60,6 +60,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -s` for SHA encryption | |
 | `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients | `"127.0.0.1:4180"` |
 | `--https-address` | string | `<addr>:<port>` to listen on for HTTPS clients | `":443"` |
+| `--keycloak-group` | string | restrict logins to members of this keycloak group. | |
 | `--logging-compress` | bool | Should rotated log files be compressed using gzip | false |
 | `--logging-filename` | string | File to log requests to, empty for `stdout` | `""` (stdout) |
 | `--logging-local-time` | bool | Use local time in log files and backup filenames instead of UTC | true (local time) |
@@ -82,7 +83,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--profile-url` | string | Profile access endpoint | |
 | `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `--provider` | string | OAuth provider | google |
-| `--provider-ca-file` |  string \| list |  Paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead. |
+| `--provider-ca-files` |  string \| list |  Paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead. |
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |
@@ -124,7 +125,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
 | `--tls-cert-file` | string | path to certificate file | |
 | `--tls-key-file` | string | path to private key file | |
-| `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
+| `--upstreams` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
 | `--user-id-claim` | string | which claim contains the user ID | \["email"\] |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
