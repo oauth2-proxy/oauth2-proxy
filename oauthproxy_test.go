@@ -1970,6 +1970,13 @@ func TestAjaxUnauthorizedRequest2(t *testing.T) {
 	testAjaxUnauthorizedRequest(t, header)
 }
 
+func TestAjaxUnauthorizedRequestAccept1(t *testing.T) {
+	header := make(http.Header)
+	header.Add("Accept", "application/json, text/plain, */*")
+
+	testAjaxUnauthorizedRequest(t, header)
+}
+
 func TestAjaxForbiddendRequest(t *testing.T) {
 	test, err := newAjaxRequestTest()
 	if err != nil {

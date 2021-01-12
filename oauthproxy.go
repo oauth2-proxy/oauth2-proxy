@@ -1111,9 +1111,17 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 func isAjax(req *http.Request) bool {
 	acceptValues := req.Header.Values("Accept")
 	const ajaxReq = applicationJSON
-	for _, v := range acceptValues {
-		if v == ajaxReq {
-			return true
+	// Iterate over multiple Accept headers, i.e.
+	// Accept: application/json
+	// Accept: text/plain
+	for _, mimeTypes := range acceptValues {
+		// Iterate over multiple mimetypes in a single header, i.e.
+		// Accept: application/json, text/plain, */*
+		for _, mimeType := range strings.Split(mimeTypes, ",") {
+			mimeType = strings.TrimSpace(mimeType)
+			if mimeType == ajaxReq {
+				return true
+			}
 		}
 	}
 	return false
