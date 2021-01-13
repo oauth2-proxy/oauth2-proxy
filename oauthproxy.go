@@ -98,6 +98,7 @@ type OAuthProxy struct {
 	SetAuthorization     bool
 	PassAuthorization    bool
 	PreferEmailToUser    bool
+	ReverseProxy         bool
 	skipAuthPreflight    bool
 	skipJwtBearerTokens  bool
 	templates            *template.Template
@@ -200,6 +201,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
 		ProxyPrefix:          opts.ProxyPrefix,
+		ReverseProxy:         opts.ReverseProxy,
 		provider:             opts.GetProvider(),
 		providerNameOverride: opts.ProviderName,
 		sessionStore:         sessionStore,
@@ -578,15 +580,34 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	if req.Form.Get("rd") != "" {
 		redirect = req.Form.Get("rd")
 	}
+	// Quirk: On reverse proxies that doesn't have support for
+	// "X-Auth-Request-Redirect" header or dynamic header/query string
+	// manipulation (like Traefik v1 and v2), we can try if the header
+	// X-Forwarded-Host exists or not.
+	if redirect == "" && isForwardedRequest(req, p.ReverseProxy) {
+		redirect = p.getRedirectFromForwardHeaders(req)
+	}
 	if !p.IsValidRedirect(redirect) {
 		// Use RequestURI to preserve ?query
 		redirect = req.URL.RequestURI()
-		if strings.HasPrefix(redirect, p.ProxyPrefix) {
+
+		if strings.HasPrefix(redirect, fmt.Sprintf("%s/", p.ProxyPrefix)) {
 			redirect = "/"
 		}
 	}
 
 	return
+}
+
+// getRedirectFromForwardHeaders returns the redirect URL based on X-Forwarded-{Proto,Host,Uri} headers
+func (p *OAuthProxy) getRedirectFromForwardHeaders(req *http.Request) string {
+	uri := util.GetRequestURI(req)
+
+	if strings.HasPrefix(uri, fmt.Sprintf("%s/", p.ProxyPrefix)) {
+		uri = "/"
+	}
+
+	return fmt.Sprintf("%s://%s%s", util.GetRequestProto(req), util.GetRequestHost(req), uri)
 }
 
 // splitHostPort separates host and port. If the port is not valid, it returns
@@ -686,6 +707,12 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	return false
 }
 
+// isForwardedRequest is used to check if X-Forwarded-Host header exists or not
+func isForwardedRequest(req *http.Request, reverseProxy bool) bool {
+	isForwarded := req.Host != util.GetRequestHost(req)
+	return isForwarded && reverseProxy
+}
+
 // See https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=en
 var noCacheHeaders = map[string]string{
 	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
@@ -744,7 +771,7 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 	case path == p.OAuthCallbackPath:
 		p.OAuthCallback(rw, req)
 	case path == p.AuthOnlyPath:
-		p.AuthenticateOnly(rw, req)
+		p.AuthOnly(rw, req)
 	case path == p.UserInfoPath:
 		p.UserInfo(rw, req)
 	default:
@@ -925,11 +952,19 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// AuthenticateOnly checks whether the user is currently logged in
-func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
+// AuthOnly checks whether the user is currently logged in (both authentication
+// and optional authorization).
+func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
-		http.Error(rw, "unauthorized request", http.StatusUnauthorized)
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	// Unauthorized cases need to return 403 to prevent infinite redirects with
+	// subrequest architectures
+	if !authOnlyAuthorize(req, session) {
+		http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
 
@@ -1016,6 +1051,53 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	return session, nil
 }
 
+// authOnlyAuthorize handles special authorization logic that is only done
+// on the AuthOnly endpoint for use with Nginx subrequest architectures.
+//
+// TODO (@NickMeves): This method is a placeholder to be extended but currently
+// fails the linter. Remove the nolint when functionality expands.
+//
+//nolint:S1008
+func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
+	// Allow secondary group restrictions based on the `allowed_groups`
+	// querystring parameter
+	if !checkAllowedGroups(req, s) {
+		return false
+	}
+
+	return true
+}
+
+func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
+	allowedGroups := extractAllowedGroups(req)
+	if len(allowedGroups) == 0 {
+		return true
+	}
+
+	for _, group := range s.Groups {
+		if _, ok := allowedGroups[group]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func extractAllowedGroups(req *http.Request) map[string]struct{} {
+	groups := map[string]struct{}{}
+
+	query := req.URL.Query()
+	for _, allowedGroups := range query["allowed_groups"] {
+		for _, group := range strings.Split(allowedGroups, ",") {
+			if group != "" {
+				groups[group] = struct{}{}
+			}
+		}
+	}
+
+	return groups
+}
+
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
 func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
 	if session.Email == "" {
@@ -1029,9 +1111,17 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, req *http.Req
 func isAjax(req *http.Request) bool {
 	acceptValues := req.Header.Values("Accept")
 	const ajaxReq = applicationJSON
-	for _, v := range acceptValues {
-		if v == ajaxReq {
-			return true
+	// Iterate over multiple Accept headers, i.e.
+	// Accept: application/json
+	// Accept: text/plain
+	for _, mimeTypes := range acceptValues {
+		// Iterate over multiple mimetypes in a single header, i.e.
+		// Accept: application/json, text/plain, */*
+		for _, mimeType := range strings.Split(mimeTypes, ",") {
+			mimeType = strings.TrimSpace(mimeType)
+			if mimeType == ajaxReq {
+				return true
+			}
 		}
 	}
 	return false

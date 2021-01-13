@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"golang.org/x/oauth2"
 )
 
-func TestMakeAuhtorizationHeader(t *testing.T) {
+func Test_makeAuthorizationHeader(t *testing.T) {
 	testCases := []struct {
 		name         string
 		prefix       string
@@ -61,6 +62,52 @@ func TestMakeAuhtorizationHeader(t *testing.T) {
 			for k, v := range tc.extraHeaders {
 				g.Expect(header.Get(k)).To(Equal(v))
 			}
+		})
+	}
+}
+
+func Test_getIDToken(t *testing.T) {
+	const idToken = "eyJfoobar.eyJfoobar.12345asdf"
+	g := NewWithT(t)
+
+	token := &oauth2.Token{}
+	g.Expect(getIDToken(token)).To(Equal(""))
+
+	extraToken := token.WithExtra(map[string]interface{}{
+		"id_token": idToken,
+	})
+	g.Expect(getIDToken(extraToken)).To(Equal(idToken))
+}
+
+func Test_formatGroup(t *testing.T) {
+	testCases := map[string]struct {
+		rawGroup interface{}
+		expected string
+	}{
+		"String Group": {
+			rawGroup: "group",
+			expected: "group",
+		},
+		"Numeric Group": {
+			rawGroup: 123,
+			expected: "123",
+		},
+		"Map Group": {
+			rawGroup: map[string]string{"id": "1", "name": "Test"},
+			expected: "{\"id\":\"1\",\"name\":\"Test\"}",
+		},
+		"List Group": {
+			rawGroup: []string{"First", "Second"},
+			expected: "[\"First\",\"Second\"]",
+		},
+	}
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			g := NewWithT(t)
+			formattedGroup, err := formatGroup(tc.rawGroup)
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(formattedGroup).To(Equal(tc.expected))
 		})
 	}
 }

@@ -36,7 +36,7 @@ type Options struct {
 	TLSKeyFile         string   `flag:"tls-key-file" cfg:"tls_key_file"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
-	KeycloakGroup            string   `flag:"keycloak-group" cfg:"keycloak_group"`
+	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
 	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
 	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
@@ -48,6 +48,7 @@ type Options struct {
 	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
 	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
 	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
+	GitlabProjects           []string `flag:"gitlab-project" cfg:"gitlab_projects"`
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
@@ -86,6 +87,7 @@ type Options struct {
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
 	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
+	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
@@ -147,11 +149,12 @@ func NewOptions() *Options {
 		SkipAuthPreflight:                false,
 		Prompt:                           "", // Change to "login" when ApprovalPrompt officially deprecated
 		ApprovalPrompt:                   "force",
-		UserIDClaim:                      "email",
 		InsecureOIDCAllowUnverifiedEmail: false,
 		SkipOIDCDiscovery:                false,
 		Logging:                          loggingDefaults(),
-		OIDCGroupsClaim:                  "groups",
+		UserIDClaim:                      providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
+		OIDCEmailClaim:                   providers.OIDCEmailClaim,
+		OIDCGroupsClaim:                  providers.OIDCGroupsClaim,
 	}
 }
 
@@ -178,7 +181,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
-	flagSet.String("keycloak-group", "", "restrict login to members of this group.")
+	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
@@ -188,6 +191,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("github-token", "", "the token to use when verifying repository collaborators (must have push access to the repository)")
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
+	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project=accesslevel`). Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent")
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
@@ -224,7 +228,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
-	flagSet.String("oidc-groups-claim", "groups", "which claim contains the user groups")
+	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-email-claim", providers.OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -241,7 +246,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
-	flagSet.String("user-id-claim", "email", "which claim contains the user ID")
+	flagSet.String("user-id-claim", providers.OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 
 	flagSet.AddFlagSet(cookieFlagSet())

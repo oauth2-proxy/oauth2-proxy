@@ -4,24 +4,40 @@
 
 ## Important Notes
 
+- [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Keycloak will now use `--profile-url` if set for the userinfo endpoint
+  instead of `--validate-url`. `--validate-url` will still work for backwards compatibility.
+- [#957](https://github.com/oauth2-proxy/oauth2-proxy/pull/957) To use X-Forwarded-{Proto,Host,Uri} on redirect detection, `--reverse-proxy` must be `true`.
+- [#936](https://github.com/oauth2-proxy/oauth2-proxy/pull/936) `--user-id-claim` option is deprecated and replaced by `--oidc-email-claim`
+- [#630](https://github.com/oauth2-proxy/oauth2-proxy/pull/630) Gitlab projects needs a Gitlab application with the extra `read_api` enabled
+- [#849](https://github.com/oauth2-proxy/oauth2-proxy/pull/849) `/oauth2/auth` `allowed_groups` querystring parameter can be paired with the `allowed-groups` configuration option.
+  - The `allowed_groups` querystring parameter can specify multiple comma delimited groups.
+  - In this scenario, the user must have a group (from their multiple groups) present in both lists to not get a 401 or 403 response code.
+  - Example:
+    - OAuth2-Proxy globally sets the `allowed_groups` as `engineering`.
+    - An application using Kubernetes ingress uses the `/oauth2/auth` endpoint with `allowed_groups` querystring set to `backend`.
+    - A user must have a session with the groups `["engineering", "backend"]` to pass authorization.
+    - Another user with the groups `["engineering", "frontend"]` would fail the querystring authorization portion.
 - [#905](https://github.com/oauth2-proxy/oauth2-proxy/pull/905) Existing sessions from v6.0.0 or earlier are no longer valid. They will trigger a reauthentication.
 - [#826](https://github.com/oauth2-proxy/oauth2-proxy/pull/826) `skip-auth-strip-headers` now applies to all requests, not just those where authentication would be skipped.
 - [#797](https://github.com/oauth2-proxy/oauth2-proxy/pull/797) The behavior of the Google provider Groups restriction changes with this
   - Either `--google-group` or the new `--allowed-group` will work for Google now (`--google-group` will be used if both are set)
   - Group membership lists will be passed to the backend with the `X-Forwarded-Groups` header
   - If you change the list of allowed groups, existing sessions that now don't have a valid group will be logged out immediately.
-      - Previously, group membership was only checked on session creation and refresh.
+    - Previously, group membership was only checked on session creation and refresh.
 - [#789](https://github.com/oauth2-proxy/oauth2-proxy/pull/789) `--skip-auth-route` is (almost) backwards compatible with `--skip-auth-regex`
   - We are marking `--skip-auth-regex` as DEPRECATED and will remove it in the next major version.
   - If your regex contains an `=` and you want it for all methods, you will need to add a leading `=` (this is the area where `--skip-auth-regex` doesn't port perfectly)
 - [#575](https://github.com/oauth2-proxy/oauth2-proxy/pull/575) Sessions from v5.1.1 or earlier will no longer validate since they were not signed with SHA1.
   - Sessions from v6.0.0 or later had a graceful conversion to SHA256 that resulted in no reauthentication
   - Upgrading from v5.1.1 or earlier will result in a reauthentication
-- [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Ensure you have configured oauth2-proxy to use the `groups` scope. The user may be logged out initially as they may not currently have the `groups` claim however after going back through login process wil be authenticated.
+- [#616](https://github.com/oauth2-proxy/oauth2-proxy/pull/616) Ensure you have configured oauth2-proxy to use the `groups` scope.
+  - The user may be logged out initially as they may not currently have the `groups` claim however after going back through login process wil be authenticated.
 - [#839](https://github.com/oauth2-proxy/oauth2-proxy/pull/839) Enables complex data structures for group claim entries, which are output as Json by default.
 
 ## Breaking Changes
 
+- [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) In config files & envvar configs, `keycloak_group` is now the plural `keycloak_groups`.
+  Flag configs are still `--keycloak-group` but it can be passed multiple times.
 - [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Specifying a non-existent provider will cause OAuth2-Proxy to fail on startup instead of defaulting to "google".
 - [#797](https://github.com/oauth2-proxy/oauth2-proxy/pull/797) Security changes to Google provider group authorization flow
   - If you change the list of allowed groups, existing sessions that now don't have a valid group will be logged out immediately.
@@ -38,19 +54,26 @@
   be any redirects in the browser anymore when tokens expire, but instead a token refresh is initiated
   in the background, which leads to new tokens being returned in the cookies.
   - Please note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
-  Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
-  to decide if a refresh is required.
+    Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
+    to decide if a refresh is required.
 
 ## Changes since v6.1.1
 
+- [#970](https://github.com/oauth2-proxy/oauth2-proxy/pull/970) Fix joined cookie name for those containing underline in the suffix (@peppered)
+- [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Migrate Keycloak to EnrichSession & support multiple groups for authorization (@NickMeves)
+- [#957](https://github.com/oauth2-proxy/oauth2-proxy/pull/957) Use X-Forwarded-{Proto,Host,Uri} on redirect as last resort (@linuxgemini)
+- [#630](https://github.com/oauth2-proxy/oauth2-proxy/pull/630) Add support for Gitlab project based authentication (@factorysh)
 - [#907](https://github.com/oauth2-proxy/oauth2-proxy/pull/907) Introduce alpha configuration option to enable testing of structured configuration (@JoelSpeed)
 - [#938](https://github.com/oauth2-proxy/oauth2-proxy/pull/938) Cleanup missed provider renaming refactor methods (@NickMeves)
+- [#816](https://github.com/oauth2-proxy/oauth2-proxy/pull/816) (via [#936](https://github.com/oauth2-proxy/oauth2-proxy/pull/936)) Support non-list group claims (@loafoe)
+- [#936](https://github.com/oauth2-proxy/oauth2-proxy/pull/936) Refactor OIDC Provider and support groups from Profile URL (@NickMeves)
+- [#869](https://github.com/oauth2-proxy/oauth2-proxy/pull/869) Streamline provider interface method names and signatures (@NickMeves)
+- [#849](https://github.com/oauth2-proxy/oauth2-proxy/pull/849) Support group authorization on `oauth2/auth` endpoint via `allowed_groups` querystring (@NickMeves)
 - [#925](https://github.com/oauth2-proxy/oauth2-proxy/pull/925) Fix basic auth legacy header conversion (@JoelSpeed)
 - [#916](https://github.com/oauth2-proxy/oauth2-proxy/pull/916) Add AlphaOptions struct to prepare for alpha config loading (@JoelSpeed)
 - [#923](https://github.com/oauth2-proxy/oauth2-proxy/pull/923) Support TLS 1.3 (@aajisaka)
 - [#918](https://github.com/oauth2-proxy/oauth2-proxy/pull/918) Fix log header output (@JoelSpeed)
 - [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Validate provider type on startup.
-- [#869](https://github.com/oauth2-proxy/oauth2-proxy/pull/869) Streamline provider interface method names and signatures (@NickMeves)
 - [#906](https://github.com/oauth2-proxy/oauth2-proxy/pull/906) Set up v6.1.x versioned documentation as default documentation (@JoelSpeed)
 - [#905](https://github.com/oauth2-proxy/oauth2-proxy/pull/905) Remove v5 legacy sessions support (@NickMeves)
 - [#904](https://github.com/oauth2-proxy/oauth2-proxy/pull/904) Set `skip-auth-strip-headers` to `true` by default (@NickMeves)
@@ -77,7 +100,7 @@
 - [#750](https://github.com/oauth2-proxy/oauth2-proxy/pull/750) ci: Migrate to Github Actions (@shinebayar-g)
 - [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
 - [#819](https://github.com/oauth2-proxy/oauth2-proxy/pull/819) Improve CI (@johejo)
-
+- [#989](https://github.com/oauth2-proxy/oauth2-proxy/pull/989) Adapt isAjax to support mimetype lists (@rassie)
 
 # v6.1.1
 
@@ -180,7 +203,7 @@ N/A
 - [#440](https://github.com/oauth2-proxy/oauth2-proxy/pull/440) Switch Azure AD Graph API to Microsoft Graph API
   - The Azure AD Graph API has been [deprecated](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-graph-api) and is being replaced by the Microsoft Graph API.
     If your application relies on the access token being passed to it to access the Azure AD Graph API, you should migrate your application to use the Microsoft Graph API.
-    Existing behaviour can be retained by setting  `-resource=https://graph.windows.net`.
+    Existing behaviour can be retained by setting `-resource=https://graph.windows.net`.
 - [#484](https://github.com/oauth2-proxy/oauth2-proxy/pull/484) Configuration loading has been replaced with Viper and PFlag
   - Flags now require a `--` prefix before the option
   - Previously flags allowed either `-` or `--` to prefix the option name
@@ -201,7 +224,7 @@ N/A
 - [#556](https://github.com/oauth2-proxy/oauth2-proxy/pull/556) Remove unintentional auto-padding of secrets that were too short
   - Previously, after cookie-secrets were opportunistically base64 decoded to raw bytes,
     they were padded to have a length divisible by 4.
-  - This led to wrong sized secrets being valid AES lengths of 16, 24, or 32  bytes. Or it led to confusing errors
+  - This led to wrong sized secrets being valid AES lengths of 16, 24, or 32 bytes. Or it led to confusing errors
     reporting an invalid length of 20 or 28 when the user input cookie-secret was not that length.
   - Now we will only base64 decode a cookie-secret to raw bytes if it is 16, 24, or 32 bytes long. Otherwise, we will convert
     the direct cookie-secret to bytes without silent padding added.
@@ -306,15 +329,18 @@ N/A
 # v5.1.0
 
 ## Release Highlights
+
 - Bump to Go 1.14
 - Reduced number of Google API requests for group validation
 - Support for Redis Cluster
 - Support for overriding hosts in hosts file
 
 ## Important Notes
+
 - [#335] The session expiry for the OIDC provider is now taken from the Token Response (expires_in) rather than from the id_token (exp)
 
 ## Breaking Changes
+
 N/A
 
 ## Changes since v5.0.0
@@ -338,13 +364,15 @@ N/A
 # v5.0.0
 
 ## Release Highlights
+
 - Disabled CGO (binaries will work regardless og glibc/musl)
 - Allow whitelisted redirect ports
 - Nextcloud provider support added
 - DigitalOcean provider support added
 
 ## Important Notes
-- (Security) Fix for [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-qqxw-m5fj-f7gv)..  a bad actor using `/\` in redirect URIs can redirect a session to another domain
+
+- (Security) Fix for [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-qqxw-m5fj-f7gv).. a bad actor using `/\` in redirect URIs can redirect a session to another domain
 
 ## Breaking Changes
 
@@ -365,6 +393,7 @@ N/A
 # v4.1.0
 
 ## Release Highlights
+
 - Added Keycloak provider
 - Build on Go 1.13
 - Upgrade Docker image to use Debian Buster
@@ -373,12 +402,15 @@ N/A
 - Added support for GitHub teams
 
 ## Important Notes
+
 N/A
 
 ## Breaking Changes
+
 N/A
 
 ## Changes since v4.0.0
+
 - [#292](https://github.com/oauth2-proxy/oauth2-proxy/pull/292) Added bash >= 4.0 dependency to configure script (@jmfrank63)
 - [#227](https://github.com/oauth2-proxy/oauth2-proxy/pull/227) Add Keycloak provider (@Ofinka)
 - [#259](https://github.com/oauth2-proxy/oauth2-proxy/pull/259) Redirect to HTTPS (@jmickey)
@@ -401,6 +433,7 @@ N/A
 # v4.0.0
 
 ## Release Highlights
+
 - Documentation is now on a [microsite](https://oauth2-proxy.github.io/oauth2-proxy/)
 - Health check logging can now be disabled for quieter logs
 - Authorization Header JWTs can now be verified by the proxy to skip authentication for machine users
@@ -408,29 +441,30 @@ N/A
 - Logging overhaul allows customisable logging formats
 
 ## Important Notes
+
 - This release includes a number of breaking changes that will require users to
-reconfigure their proxies. Please read the Breaking Changes below thoroughly.
+  reconfigure their proxies. Please read the Breaking Changes below thoroughly.
 
 ## Breaking Changes
 
 - [#231](https://github.com/oauth2-proxy/oauth2-proxy/pull/231) Rework GitLab provider
   - This PR changes the configuration options for the GitLab provider to use
-  a self-hosted instance. You now need to specify a `-oidc-issuer-url` rather than
-  explicit `-login-url`, `-redeem-url` and `-validate-url` parameters.
+    a self-hosted instance. You now need to specify a `-oidc-issuer-url` rather than
+    explicit `-login-url`, `-redeem-url` and `-validate-url` parameters.
 - [#186](https://github.com/oauth2-proxy/oauth2-proxy/pull/186) Make config consistent
   - This PR changes configuration options so that all flags have a config counterpart
-  of the same name but with underscores (`_`) in place of hyphens (`-`).
-  This change affects the following flags:
+    of the same name but with underscores (`_`) in place of hyphens (`-`).
+    This change affects the following flags:
   - The `--tls-key` flag is now `--tls-key-file` to be consistent with existing
-  file flags and the existing config and environment settings
+    file flags and the existing config and environment settings
   - The `--tls-cert` flag is now `--tls-cert-file` to be consistent with existing
-  file flags and the existing config and environment settings
-  This change affects the following existing configuration options:
+    file flags and the existing config and environment settings
+    This change affects the following existing configuration options:
   - The `proxy-prefix` option is now `proxy_prefix`.
-  This PR changes environment variables so that all flags have an environment
-  counterpart of the same name but capitalised, with underscores (`_`) in place
-  of hyphens (`-`) and with the prefix `OAUTH2_PROXY_`.
-  This change affects the following existing environment variables:
+    This PR changes environment variables so that all flags have an environment
+    counterpart of the same name but capitalised, with underscores (`_`) in place
+    of hyphens (`-`) and with the prefix `OAUTH2_PROXY_`.
+    This change affects the following existing environment variables:
   - The `OAUTH2_SKIP_OIDC_DISCOVERY` environment variable is now `OAUTH2_PROXY_SKIP_OIDC_DISCOVERY`.
   - The `OAUTH2_OIDC_JWKS_URL` environment variable is now `OAUTH2_PROXY_OIDC_JWKS_URL`.
 - [#146](https://github.com/oauth2-proxy/oauth2-proxy/pull/146) Use full email address as `User` if the auth response did not contain a `User` field
@@ -456,7 +490,7 @@ reconfigure their proxies. Please read the Breaking Changes below thoroughly.
 - [#65](https://github.com/oauth2-proxy/oauth2-proxy/pull/65) Improvements to authenticate requests with a JWT bearer token in the `Authorization` header via
   the `-skip-jwt-bearer-token` options. (@brianv0)
   - Additional verifiers can be configured via the `-extra-jwt-issuers` flag if the JWT issuers is either an OpenID provider or has a JWKS URL
-  (e.g. `https://example.com/.well-known/jwks.json`).
+    (e.g. `https://example.com/.well-known/jwks.json`).
 - [#180](https://github.com/oauth2-proxy/oauth2-proxy/pull/180) Minor refactor of core proxying path (@aeijdenberg).
 - [#175](https://github.com/oauth2-proxy/oauth2-proxy/pull/175) Bump go-oidc to v2.0.0 (@aeijdenberg).
   - Includes fix for potential signature checking issue when OIDC discovery is skipped.
@@ -514,6 +548,7 @@ reconfigure their proxies. Please read the Breaking Changes below thoroughly.
 # v3.2.0
 
 ## Release highlights
+
 - Internal restructure of session state storage to use JSON rather than proprietary scheme
 - Added health check options for running on GCP behind a load balancer
 - Improved support for protecting websockets
@@ -521,9 +556,10 @@ reconfigure their proxies. Please read the Breaking Changes below thoroughly.
 - Allow manual configuration of OIDC providers
 
 ## Important notes
+
 - Dockerfile user is now non-root, this may break your existing deployment
 - In the OIDC provider, when no email is returned, the ID Token subject will be used
-instead of returning an error
+  instead of returning an error
 - GitHub user emails must now be primary and verified before authenticating
 
 ## Changes since v3.1.0
