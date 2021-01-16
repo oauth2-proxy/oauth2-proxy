@@ -20,5 +20,11 @@ module.exports = {
       collapsed: false,
       items: ['features/endpoints', 'features/request_signatures'],
     },
+    {
+      type: 'category',
+      label: 'Community',
+      collapsed: false,
+      items: ['community/security'],
+    },
   ],
 };
