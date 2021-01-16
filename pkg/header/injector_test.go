@@ -264,7 +264,7 @@ var _ = Describe("Injector Suite", func() {
 					User: "user-123",
 				},
 				expectedHeaders: http.Header{
-					"X-Auth-Request-User": []string{"user", "user-123"},
+					"X-Auth-Request-User": []string{"user,user-123"},
 				},
 				expectedErr: nil,
 			}),
@@ -340,6 +340,57 @@ var _ = Describe("Injector Suite", func() {
 				expectedHeaders: nil,
 				expectedErr:     errors.New("error building injector for header \"X-Auth-Request-Authorization\": error loading basicAuthPassword: secret source is invalid: exactly one entry required, specify either value, fromEnv or fromFile"),
 			}),
+			Entry("with single claim no prefix", newInjectorTableInput{
+				headers: []options.Header{
+					{
+						Name: "X-Auth-Request-Groups",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "groups",
+								},
+							},
+						},
+					},
+				},
+				initialHeaders: http.Header{
+					"X-Auth-Request-User": []string{"user"},
+				},
+				session: &sessionsapi.SessionState{
+					Groups: []string{"group1"},
+				},
+				expectedHeaders: http.Header{
+					"X-Auth-Request-User":   []string{"user"},
+					"X-Auth-Request-Groups": []string{"group1"},
+				},
+				expectedErr: nil,
+			}),
+			Entry("with multiple claims and prefix", newInjectorTableInput{
+				headers: []options.Header{
+					{
+						Name: "X-Auth-Request-Groups",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim:  "groups",
+									Prefix: "claim-",
+								},
+							},
+						},
+					},
+				},
+				initialHeaders: http.Header{
+					"X-Auth-Request-User": []string{"user"},
+				},
+				session: &sessionsapi.SessionState{
+					Groups: []string{"group1", "group2", "group3"},
+				},
+				expectedHeaders: http.Header{
+					"X-Auth-Request-User":   []string{"user"},
+					"X-Auth-Request-Groups": []string{"claim-group1,claim-group2,claim-group3"},
+				},
+				expectedErr: nil,
+			}),
 			Entry("with a mix of configured headers", newInjectorTableInput{
 				headers: []options.Header{
 					{
@@ -361,6 +412,16 @@ var _ = Describe("Injector Suite", func() {
 							{
 								ClaimSource: &options.ClaimSource{
 									Claim: "user",
+								},
+							},
+						},
+					},
+					{
+						Name: "X-Auth-Request-Groups",
+						Values: []options.HeaderValue{
+							{
+								ClaimSource: &options.ClaimSource{
+									Claim: "groups",
 								},
 							},
 						},
@@ -400,13 +461,15 @@ var _ = Describe("Injector Suite", func() {
 					"foo": []string{"bar", "baz"},
 				},
 				session: &sessionsapi.SessionState{
-					User:  "user-123",
-					Email: "user@example.com",
+					User:   "user-123",
+					Email:  "user@example.com",
+					Groups: []string{"group1", "group2"},
 				},
 				expectedHeaders: http.Header{
 					"foo":                          []string{"bar", "baz"},
 					"X-Auth-Request-Authorization": []string{"Basic " + base64.StdEncoding.EncodeToString([]byte("user-123:basic-password"))},
 					"X-Auth-Request-User":          []string{"user-123"},
+					"X-Auth-Request-Groups":        []string{"group1,group2"},
 					"X-Auth-Request-Email":         []string{"user@example.com"},
 					"X-Auth-Request-Version-Info":  []string{"major=1", "minor=2", "patch=3"},
 				},
