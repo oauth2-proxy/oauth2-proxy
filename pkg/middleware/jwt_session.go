@@ -37,7 +37,7 @@ type jwtSessionLoader struct {
 // If a session was loaded by a previous handler, it will not be replaced.
 func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		scope := GetRequestScope(req)
+		scope := middlewareapi.GetRequestScope(req)
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
 		if scope.Session != nil {

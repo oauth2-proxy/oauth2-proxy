@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/justinas/alice"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -23,7 +24,7 @@ func NewBasicAuthSessionLoader(validator basic.Validator) alice.Constructor {
 // If a session was loaded by a previous handler, it will not be replaced.
 func loadBasicAuthSession(validator basic.Validator, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		scope := GetRequestScope(req)
+		scope := middlewareapi.GetRequestScope(req)
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
 		if scope.Session != nil {
