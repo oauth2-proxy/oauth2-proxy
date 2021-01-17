@@ -581,7 +581,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 	const emailAddress = "john.doe@example.com"
 	const userName = "9fcab5c9b889a557"
 
-	groups := []string{"a", "b"}
+	groups := []string{"a,b"}
 	created := time.Now()
 	session := &sessions.SessionState{
 		User:        userName,
