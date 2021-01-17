@@ -45,9 +45,9 @@ func updateHeaderWithClaimValues(header *http.Header, name string, claimValues [
 		return
 	}
 	nonEmptyValues := make([]string, 0)
-	existingValue := header.Get(name)
-	if existingValue != "" {
-		nonEmptyValues = append(nonEmptyValues, existingValue)
+	existingValues := header.Values(name)
+	if len(existingValues) > 0 {
+		nonEmptyValues = append(nonEmptyValues, strings.Join(existingValues, ","))
 	}
 	for _, claim := range claimValues {
 		if claim != "" {

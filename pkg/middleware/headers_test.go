@@ -135,7 +135,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
@@ -301,7 +301,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
@@ -326,7 +326,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
