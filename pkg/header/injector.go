@@ -3,11 +3,12 @@ package header
 import (
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"net/http"
-	"strings"
 )
 
 type Injector interface {
