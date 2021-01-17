@@ -250,9 +250,15 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	// To silence logging of health checks, register the health check handler before
 	// the logging handler
 	if opts.Logging.SilencePing {
-		chain = chain.Append(middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents), LoggingHandler)
+		chain = chain.Append(
+			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+			middleware.NewRequestLogger(),
+		)
 	} else {
-		chain = chain.Append(LoggingHandler, middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents))
+		chain = chain.Append(
+			middleware.NewRequestLogger(),
+			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+		)
 	}
 
 	chain = chain.Append(middleware.NewRequestMetricsWithDefaultRegistry())
@@ -480,7 +486,9 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	p.preAuthChain.Then(http.HandlerFunc(p.serveHTTP)).ServeHTTP(rw, req)
+	p.preAuthChain.
+		Then(http.HandlerFunc(p.serveHTTP)).
+		ServeHTTP(middleware.NewResponseWriter(rw), req)
 }
 
 func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
