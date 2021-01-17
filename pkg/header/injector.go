@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/util"
@@ -38,26 +37,6 @@ func NewInjector(headers []options.Header) (Injector, error) {
 	}
 
 	return &injector{valueInjectors: injectors}, nil
-}
-
-func updateHeaderWithClaimValues(header *http.Header, name string, claimValues []string, prefix string) {
-	if len(claimValues) == 0 {
-		return
-	}
-	nonEmptyValues := make([]string, 0)
-	existingValues := header.Values(name)
-	if len(existingValues) > 0 {
-		nonEmptyValues = append(nonEmptyValues, strings.Join(existingValues, ","))
-	}
-	for _, claim := range claimValues {
-		if claim != "" {
-			nonEmptyValues = append(nonEmptyValues, prefix+claim)
-		}
-	}
-	if len(nonEmptyValues) > 0 {
-		header.Set(name, strings.Join(nonEmptyValues, ","))
-	}
-
 }
 
 type valueInjector interface {
@@ -115,10 +94,25 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 				header.Add(name, "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 			}
 		}), nil
+	case source.Prefix != "":
+		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
+			claimValues := session.GetClaim(source.Claim)
+			for _, claim := range claimValues {
+				if claim == "" {
+					continue
+				}
+				header.Add(name, source.Prefix+claim)
+			}
+		}), nil
 	default:
 		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
 			claimValues := session.GetClaim(source.Claim)
-			updateHeaderWithClaimValues(&header, name, claimValues, source.Prefix)
+			for _, claim := range claimValues {
+				if claim == "" {
+					continue
+				}
+				header.Add(name, claim)
+			}
 		}), nil
 	}
 }

@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/justinas/alice"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -39,6 +40,14 @@ func newStripHeaders(headers []options.Header) alice.Constructor {
 	}
 }
 
+func flattenHeaders(headers http.Header) {
+	for name, values := range headers {
+		if values != nil {
+			headers.Set(name, strings.Join(values, ","))
+		}
+	}
+}
+
 func stripHeaders(headers []string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		for _, header := range headers {
@@ -66,6 +75,7 @@ func injectRequestHeaders(injector header.Injector, next http.Handler) http.Hand
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
 		injector.Inject(req.Header, scope.Session)
+		flattenHeaders(req.Header)
 		next.ServeHTTP(rw, req)
 	})
 }
@@ -97,6 +107,7 @@ func injectResponseHeaders(injector header.Injector, next http.Handler) http.Han
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
 		injector.Inject(rw.Header(), scope.Session)
+		flattenHeaders(req.Header)
 		next.ServeHTTP(rw, req)
 	})
 }
