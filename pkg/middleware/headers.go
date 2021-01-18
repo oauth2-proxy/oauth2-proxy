@@ -42,7 +42,7 @@ func newStripHeaders(headers []options.Header) alice.Constructor {
 
 func flattenHeaders(headers http.Header) {
 	for name, values := range headers {
-		if values != nil {
+		if len(values) > 1 {
 			headers.Set(name, strings.Join(values, ","))
 		}
 	}
