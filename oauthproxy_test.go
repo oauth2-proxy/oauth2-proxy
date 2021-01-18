@@ -581,7 +581,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 	const emailAddress = "john.doe@example.com"
 	const userName = "9fcab5c9b889a557"
 
-	groups := []string{"a,b"}
+	groups := []string{"a", "b"}
 	created := time.Now()
 	session := &sessions.SessionState{
 		User:        userName,
@@ -610,7 +610,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 	rw = httptest.NewRecorder()
 	proxy.ServeHTTP(rw, req)
 
-	assert.Equal(t, groups, req.Header["X-Forwarded-Groups"])
+	assert.Equal(t, []string{"a,b"}, req.Header["X-Forwarded-Groups"])
 }
 
 type PassAccessTokenTest struct {
