@@ -66,12 +66,8 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 
 func validateGoogleConfig(provider options.Provider) []string {
 	msgs := []string{}
-	if len(provider.GoogleConfig.GoogleGroups) > 0 ||
-		provider.GoogleConfig.GoogleAdminEmail != "" ||
+	if provider.GoogleConfig.GoogleAdminEmail != "" ||
 		provider.GoogleConfig.GoogleServiceAccountJSON != "" {
-		if len(provider.GoogleConfig.GoogleGroups) < 1 {
-			msgs = append(msgs, "missing setting: google-group")
-		}
 		if provider.GoogleConfig.GoogleAdminEmail == "" {
 			msgs = append(msgs, "missing setting: google-admin-email")
 		}

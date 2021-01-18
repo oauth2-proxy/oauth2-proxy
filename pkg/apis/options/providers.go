@@ -122,7 +122,7 @@ type GoogleOptions struct {
 
 type OIDCOptions struct {
 	// OIDCIssuerURL is the OpenID Connect issuer URL
-	// ie: https://accounts.google.com
+	// eg: https://accounts.google.com
 	OIDCIssuerURL string `json:"oidcIssuerURL,omitempty"`
 	// InsecureOIDCAllowUnverifiedEmail preventes failur if an email address in an id_token is not verified
 	// default set to 'false'
@@ -134,7 +134,7 @@ type OIDCOptions struct {
 	// default set to 'false'
 	SkipOIDCDiscovery bool `json:"skipOidcDiscovery,omitempty"`
 	// OIDCJwksURL is the OpenID Connect JWKS URL
-	// ie: https://www.googleapis.com/oauth2/v3/certs
+	// eg: https://www.googleapis.com/oauth2/v3/certs
 	OIDCJwksURL string `json:"oidcJwksURL,omitempty"`
 	// OIDCGroupsClaim indicates which claim contains the user groups
 	// default set to 'groups'
