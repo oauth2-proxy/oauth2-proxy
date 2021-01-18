@@ -103,8 +103,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// Set up the request with the authorization header and a request scope
 				req := httptest.NewRequest("", "/", nil)
 				req.Header.Set("Authorization", in.authorizationHeader)
-				contextWithScope := context.WithValue(req.Context(), requestScopeKey, scope)
-				req = req.WithContext(contextWithScope)
+				req = middlewareapi.AddRequestScope(req, scope)
 
 				rw := httptest.NewRecorder()
 
@@ -116,7 +115,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				// from the scope
 				var gotSession *sessionsapi.SessionState
 				handler := NewJwtSessionLoader(sessionLoaders)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					gotSession = r.Context().Value(requestScopeKey).(*middlewareapi.RequestScope).Session
+					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/justinas/alice"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/header"
 )
@@ -70,7 +71,7 @@ func newRequestHeaderInjector(headers []options.Header) (alice.Constructor, erro
 
 func injectRequestHeaders(injector header.Injector, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		scope := GetRequestScope(req)
+		scope := middlewareapi.GetRequestScope(req)
 
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
@@ -102,7 +103,7 @@ func newResponseHeaderInjector(headers []options.Header) (alice.Constructor, err
 
 func injectResponseHeaders(injector header.Injector, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		scope := GetRequestScope(req)
+		scope := middlewareapi.GetRequestScope(req)
 
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.

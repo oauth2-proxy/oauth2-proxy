@@ -9,14 +9,14 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
 // MakeCookie constructs a cookie from the given parameters,
 // discovering the domain from the request if not specified.
 func MakeCookie(req *http.Request, name string, value string, path string, domain string, httpOnly bool, secure bool, expiration time.Duration, now time.Time, sameSite http.SameSite) *http.Cookie {
 	if domain != "" {
-		host := util.GetRequestHost(req)
+		host := requestutil.GetRequestHost(req)
 		if h, _, err := net.SplitHostPort(host); err == nil {
 			host = h
 		}
@@ -48,7 +48,7 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, cookieO
 	// If nothing matches, create the cookie with the shortest domain
 	defaultDomain := ""
 	if len(cookieOpts.Domains) > 0 {
-		logger.Errorf("Warning: request host %q did not match any of the specific cookie domains of %q", util.GetRequestHost(req), strings.Join(cookieOpts.Domains, ","))
+		logger.Errorf("Warning: request host %q did not match any of the specific cookie domains of %q", requestutil.GetRequestHost(req), strings.Join(cookieOpts.Domains, ","))
 		defaultDomain = cookieOpts.Domains[len(cookieOpts.Domains)-1]
 	}
 	return MakeCookie(req, name, value, cookieOpts.Path, defaultDomain, cookieOpts.HTTPOnly, cookieOpts.Secure, expiration, now, ParseSameSite(cookieOpts.SameSite))
@@ -57,7 +57,7 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, cookieO
 // GetCookieDomain returns the correct cookie domain given a list of domains
 // by checking the X-Fowarded-Host and host header of an an http request
 func GetCookieDomain(req *http.Request, cookieDomains []string) string {
-	host := util.GetRequestHost(req)
+	host := requestutil.GetRequestHost(req)
 	for _, domain := range cookieDomains {
 		if strings.HasSuffix(host, domain) {
 			return domain
