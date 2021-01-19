@@ -34,6 +34,7 @@ func loggingFlagSet() *pflag.FlagSet {
 
 	flagSet.Bool("auth-logging", true, "Log authentication attempts")
 	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")
+	flagSet.Bool("sensible-logging", false, "Log sensible data")
 	flagSet.Bool("standard-logging", true, "Log standard runtime information")
 	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
 	flagSet.Bool("request-logging", true, "Log HTTP requests")
