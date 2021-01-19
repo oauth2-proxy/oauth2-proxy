@@ -11,6 +11,7 @@ type Logging struct {
 	AuthFormat      string         `flag:"auth-logging-format" cfg:"auth_logging_format"`
 	RequestEnabled  bool           `flag:"request-logging" cfg:"request_logging"`
 	RequestFormat   string         `flag:"request-logging-format" cfg:"request_logging_format"`
+	SensEnabled     bool           `flag:"sensible-logging" cfg:"sensible_logging"`
 	StandardEnabled bool           `flag:"standard-logging" cfg:"standard_logging"`
 	StandardFormat  string         `flag:"standard-logging-format" cfg:"standard_logging_format"`
 	ErrToInfo       bool           `flag:"errors-to-info-log" cfg:"errors_to_info_log"`
@@ -63,6 +64,7 @@ func loggingDefaults() Logging {
 		AuthFormat:      logger.DefaultAuthLoggingFormat,
 		RequestEnabled:  true,
 		RequestFormat:   logger.DefaultRequestLoggingFormat,
+		SensEnabled:     false,
 		StandardEnabled: true,
 		StandardFormat:  logger.DefaultStandardLoggingFormat,
 		ErrToInfo:       false,

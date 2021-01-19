@@ -101,6 +101,7 @@ type Logger struct {
 	errWriter      io.Writer
 	stdEnabled     bool
 	authEnabled    bool
+	sensEnabled    bool
 	reqEnabled     bool
 	getClientFunc  GetClientFunc
 	excludePaths   map[string]struct{}
@@ -117,6 +118,7 @@ func New(flag int) *Logger {
 		flag:           flag,
 		stdEnabled:     true,
 		authEnabled:    true,
+		sensEnabled:    false,
 		reqEnabled:     true,
 		getClientFunc:  func(r *http.Request) string { return r.RemoteAddr },
 		excludePaths:   nil,
@@ -174,6 +176,13 @@ func (l *Logger) Output(lvl Level, calldepth int, message string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (l *Logger) PrintSensf(format string, v ...interface{}) {
+	if !l.sensEnabled {
+		return
+	}
+	std.Output(DEFAULT, 2, fmt.Sprintf(format, v...))
 }
 
 // PrintAuthf writes auth info to the logger. Requires an http.Request to
@@ -329,6 +338,13 @@ func (l *Logger) SetStandardEnabled(e bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.stdEnabled = e
+}
+
+// SetStandardEnabled enables or disables standard logging.
+func (l *Logger) SetSensEnabled(e bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.sensEnabled = e
 }
 
 // SetErrToInfo enables or disables error logging to error writer instead of the default.
@@ -551,6 +567,12 @@ func Panicln(v ...interface{}) {
 	s := fmt.Sprintln(v...)
 	std.Output(ERROR, 2, s)
 	panic(s)
+}
+
+// PrintSensf is used to write sensible details to the standard logger like session data.
+// Arguments are handled in the manner of fmt.Printf.
+func PrintSensf(format string, a ...interface{}) {
+	std.PrintSensf(format, a...)
 }
 
 // PrintAuthf writes authentication details to the standard logger.

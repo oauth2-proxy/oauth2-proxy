@@ -291,7 +291,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	s.AccessToken = newToken
 	s.IDToken = newIDToken
 	s.ExpiresOn = &expires
-	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
+	logger.PrintSensf("refreshed access token %s (expired on %s)", s, origExpiration)
 	return true, nil
 }
 
