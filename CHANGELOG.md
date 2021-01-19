@@ -63,6 +63,7 @@
   - Please note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
     Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
     to decide if a refresh is required.
+- [#1001](https://github.com/oauth2-proxy/oauth2-proxy/pull/1001) By default, logging of sensible user data when refresh the session state is disabled. If you still want to see all logs, you have to set `sensible-logging` to `true`.
 
 ## Changes since v6.1.1
 
