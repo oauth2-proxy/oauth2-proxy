@@ -119,7 +119,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 		return nil
 	}
 
-	logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, s.refreshPeriod)
+	logger.PrintSensf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, s.refreshPeriod)
 	refreshed, err := s.refreshSessionWithProvider(rw, req, session)
 	if err != nil {
 		return err
