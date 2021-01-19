@@ -195,7 +195,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 
 	now := time.Now()
 
-	if username == "" {
+	if username == "" || !l.sensEnabled {
 		username = "-"
 	}
 
@@ -251,6 +251,10 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		if name := url.User.Username(); name != "" {
 			username = name
 		}
+	}
+
+	if !l.sensEnabled {
+		username = "-"
 	}
 
 	client := l.getClientFunc(req)
