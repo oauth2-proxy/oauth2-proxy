@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"time"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -17,9 +18,104 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type TestLock struct {
+	Locked            bool
+	WasObtained       bool
+	WasRefreshed      bool
+	WasReleased       bool
+	PeekedCount       int
+	LockedOnPeekCount int
+	ObtainError       error
+	PeekError         error
+	RefreshError      error
+	ReleaseError      error
+}
+
+func (l *TestLock) Obtain(_ context.Context, _ time.Duration) error {
+	if l.ObtainError != nil {
+		return l.ObtainError
+	}
+	l.Locked = true
+	l.WasObtained = true
+	return nil
+}
+
+func (l *TestLock) Peek(_ context.Context) (bool, error) {
+	if l.PeekError != nil {
+		return false, l.PeekError
+	}
+	locked := l.Locked
+	l.Locked = false
+	l.PeekedCount++
+	// mainly used to test case when peek initially returns false,
+	// but when trying to obtain lock, it returns true.
+	if l.LockedOnPeekCount == l.PeekedCount {
+		return true, nil
+	}
+	return locked, nil
+}
+
+func (l *TestLock) Refresh(_ context.Context, _ time.Duration) error {
+	if l.RefreshError != nil {
+		return l.ReleaseError
+	}
+	l.WasRefreshed = true
+	return nil
+}
+
+func (l *TestLock) Release(_ context.Context) error {
+	if l.ReleaseError != nil {
+		return l.ReleaseError
+	}
+	l.Locked = false
+	l.WasReleased = true
+	return nil
+}
+
+type LockConc struct {
+	mu          sync.Mutex
+	lock        bool
+	disablePeek bool
+}
+
+func (l *LockConc) Obtain(_ context.Context, _ time.Duration) error {
+	l.mu.Lock()
+	if l.lock {
+		l.mu.Unlock()
+		return sessionsapi.ErrLockNotObtained
+	}
+	l.lock = true
+	l.mu.Unlock()
+	return nil
+}
+
+func (l *LockConc) Peek(_ context.Context) (bool, error) {
+	var response bool
+	l.mu.Lock()
+	if l.disablePeek {
+		response = false
+	} else {
+		response = l.lock
+	}
+	l.mu.Unlock()
+	return response, nil
+}
+
+func (l *LockConc) Refresh(_ context.Context, _ time.Duration) error {
+	return nil
+}
+
+func (l *LockConc) Release(_ context.Context) error {
+	l.mu.Lock()
+	l.lock = false
+	l.mu.Unlock()
+	return nil
+}
+
 var _ = Describe("Stored Session Suite", func() {
 	const (
 		refresh        = "Refresh"
+		refreshed      = "Refreshed"
 		noRefresh      = "NoRefresh"
 		notImplemented = "NotImplemented"
 	)
@@ -34,7 +130,7 @@ var _ = Describe("Stored Session Suite", func() {
 		var defaultRefreshFunc = func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 			switch ss.RefreshToken {
 			case refresh:
-				ss.RefreshToken = "Refreshed"
+				ss.RefreshToken = refreshed
 				return true, nil
 			case noRefresh:
 				return false, nil
@@ -181,6 +277,7 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: noRefresh,
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
+					Lock:         &sessionsapi.NoOpLock{},
 				},
 				store:           defaultSessionStore,
 				refreshPeriod:   1 * time.Minute,
@@ -222,6 +319,7 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: "Refreshed",
 					CreatedAt:    &now,
 					ExpiresOn:    &createdFuture,
+					Lock:         &sessionsapi.NoOpLock{},
 				},
 				store:           defaultSessionStore,
 				refreshPeriod:   1 * time.Minute,
@@ -237,6 +335,7 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: "RefreshError",
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
+					Lock:         &sessionsapi.NoOpLock{},
 				},
 				store:           defaultSessionStore,
 				refreshPeriod:   1 * time.Minute,
@@ -266,15 +365,109 @@ var _ = Describe("Stored Session Suite", func() {
 				validateSession: defaultValidateFunc,
 			}),
 		)
+
+		type storedSessionLoaderConcurrentTableInput struct {
+			existingSession *sessionsapi.SessionState
+			refreshPeriod   time.Duration
+			numConcReqs     int
+		}
+
+		DescribeTable("when serving concurrent requests",
+			func(in storedSessionLoaderConcurrentTableInput) {
+				lockConc := &LockConc{}
+
+				refreshedChan := make(chan bool, in.numConcReqs)
+				for i := 0; i < in.numConcReqs; i++ {
+					go func(refreshedChan chan bool, lockConc sessionsapi.Lock) {
+						existingSession := *in.existingSession // deep copy existingSession state
+						existingSession.Lock = lockConc
+						store := &fakeSessionStore{
+							LoadFunc: func(req *http.Request) (*sessionsapi.SessionState, error) {
+								return &existingSession, nil
+							},
+							SaveFunc: func(http.ResponseWriter, *http.Request, *sessionsapi.SessionState) error {
+								return nil
+							},
+						}
+
+						scope := &middlewareapi.RequestScope{
+							Session: nil,
+						}
+
+						// Set up the request with the request header and a request scope
+						req := httptest.NewRequest("", "/", nil)
+						req = middlewareapi.AddRequestScope(req, scope)
+
+						rw := httptest.NewRecorder()
+
+						sessionRefreshed := false
+						opts := &StoredSessionLoaderOptions{
+							SessionStore:  store,
+							RefreshPeriod: in.refreshPeriod,
+							RefreshSession: func(ctx context.Context, s *sessionsapi.SessionState) (bool, error) {
+								time.Sleep(10 * time.Millisecond)
+								sessionRefreshed = true
+								return true, nil
+							},
+							ValidateSession: func(context.Context, *sessionsapi.SessionState) bool {
+								return true
+							},
+						}
+
+						handler := NewStoredSessionLoader(opts)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+						handler.ServeHTTP(rw, req)
+
+						refreshedChan <- sessionRefreshed
+					}(refreshedChan, lockConc)
+				}
+				var refreshedSlice []bool
+				for i := 0; i < in.numConcReqs; i++ {
+					refreshedSlice = append(refreshedSlice, <-refreshedChan)
+				}
+				sessionRefreshedCount := 0
+				for _, sessionRefreshed := range refreshedSlice {
+					if sessionRefreshed {
+						sessionRefreshedCount++
+					}
+				}
+				Expect(sessionRefreshedCount).To(Equal(1))
+			},
+			Entry("with two concurrent requests", storedSessionLoaderConcurrentTableInput{
+				existingSession: &sessionsapi.SessionState{
+					RefreshToken: refresh,
+					CreatedAt:    &createdPast,
+				},
+				numConcReqs:   2,
+				refreshPeriod: 1 * time.Minute,
+			}),
+			Entry("with 5 concurrent requests", storedSessionLoaderConcurrentTableInput{
+				existingSession: &sessionsapi.SessionState{
+					RefreshToken: refresh,
+					CreatedAt:    &createdPast,
+				},
+				numConcReqs:   5,
+				refreshPeriod: 1 * time.Minute,
+			}),
+			Entry("with one request", storedSessionLoaderConcurrentTableInput{
+				existingSession: &sessionsapi.SessionState{
+					RefreshToken: refresh,
+					CreatedAt:    &createdPast,
+				},
+				numConcReqs:   1,
+				refreshPeriod: 1 * time.Minute,
+			}),
+		)
 	})
 
 	Context("refreshSessionIfNeeded", func() {
 		type refreshSessionIfNeededTableInput struct {
-			refreshPeriod   time.Duration
-			session         *sessionsapi.SessionState
-			expectedErr     error
-			expectRefreshed bool
-			expectValidated bool
+			refreshPeriod     time.Duration
+			sessionStored     bool
+			session           *sessionsapi.SessionState
+			expectedErr       error
+			expectRefreshed   bool
+			expectValidated   bool
+			expectedLockState TestLock
 		}
 
 		createdPast := time.Now().Add(-5 * time.Minute)
@@ -285,9 +478,18 @@ var _ = Describe("Stored Session Suite", func() {
 				refreshed := false
 				validated := false
 
+				store := &fakeSessionStore{}
+				if in.sessionStored {
+					store = &fakeSessionStore{
+						LoadFunc: func(req *http.Request) (*sessionsapi.SessionState, error) {
+							return in.session, nil
+						},
+					}
+				}
+
 				s := &storedSessionLoader{
 					refreshPeriod: in.refreshPeriod,
-					store:         &fakeSessionStore{},
+					store:         store,
 					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 						refreshed = true
 						switch ss.RefreshToken {
@@ -316,46 +518,117 @@ var _ = Describe("Stored Session Suite", func() {
 				}
 				Expect(refreshed).To(Equal(in.expectRefreshed))
 				Expect(validated).To(Equal(in.expectValidated))
+				testLock, ok := in.session.Lock.(*TestLock)
+				Expect(ok).To(Equal(true))
+
+				Expect(testLock).To(Equal(&in.expectedLockState))
 			},
 			Entry("when the refresh period is 0, and the session does not need refreshing", refreshSessionIfNeededTableInput{
 				refreshPeriod: time.Duration(0),
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					CreatedAt:    &createdFuture,
+					Lock:         &TestLock{},
 				},
-				expectedErr:     nil,
-				expectRefreshed: false,
-				expectValidated: false,
+				expectedErr:       nil,
+				expectRefreshed:   false,
+				expectValidated:   false,
+				expectedLockState: TestLock{},
 			}),
 			Entry("when the refresh period is 0, and the session needs refreshing", refreshSessionIfNeededTableInput{
 				refreshPeriod: time.Duration(0),
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					CreatedAt:    &createdPast,
+					Lock:         &TestLock{},
 				},
-				expectedErr:     nil,
-				expectRefreshed: false,
-				expectValidated: false,
+				expectedErr:       nil,
+				expectRefreshed:   false,
+				expectValidated:   false,
+				expectedLockState: TestLock{},
 			}),
 			Entry("when the session does not need refreshing", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					CreatedAt:    &createdFuture,
+					Lock:         &TestLock{},
 				},
-				expectedErr:     nil,
-				expectRefreshed: false,
-				expectValidated: false,
+				expectedErr:       nil,
+				expectRefreshed:   false,
+				expectValidated:   false,
+				expectedLockState: TestLock{},
 			}),
 			Entry("when the session is refreshed by the provider", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					CreatedAt:    &createdPast,
+					Lock:         &TestLock{},
 				},
 				expectedErr:     nil,
 				expectRefreshed: true,
 				expectValidated: true,
+				expectedLockState: TestLock{
+					Locked:      false,
+					WasObtained: true,
+					WasReleased: true,
+					PeekedCount: 1,
+				},
+			}),
+			Entry("when the session is locked and instead loaded from storage", refreshSessionIfNeededTableInput{
+				refreshPeriod: 1 * time.Minute,
+				session: &sessionsapi.SessionState{
+					RefreshToken: noRefresh,
+					CreatedAt:    &createdPast,
+					Lock: &TestLock{
+						Locked: true,
+					},
+				},
+				sessionStored:   true,
+				expectedErr:     nil,
+				expectRefreshed: false,
+				expectValidated: true,
+				expectedLockState: TestLock{
+					Locked:      false,
+					PeekedCount: 2,
+				},
+			}),
+			Entry("when obtaining lock failed, but concurrent request refreshed", refreshSessionIfNeededTableInput{
+				refreshPeriod: 1 * time.Minute,
+				session: &sessionsapi.SessionState{
+					RefreshToken: noRefresh,
+					CreatedAt:    &createdPast,
+					Lock: &TestLock{
+						ObtainError:       errors.New("not able to obtain lock"),
+						LockedOnPeekCount: 2,
+					},
+				},
+				expectedErr:     nil,
+				expectRefreshed: false,
+				expectValidated: true,
+				expectedLockState: TestLock{
+					PeekedCount:       3,
+					LockedOnPeekCount: 2,
+					ObtainError:       errors.New("not able to obtain lock"),
+				},
+			}),
+			Entry("when obtaining lock failed", refreshSessionIfNeededTableInput{
+				refreshPeriod: 1 * time.Minute,
+				session: &sessionsapi.SessionState{
+					RefreshToken: noRefresh,
+					CreatedAt:    &createdPast,
+					Lock: &TestLock{
+						ObtainError: errors.New("not able to obtain lock"),
+					},
+				},
+				expectedErr:     nil,
+				expectRefreshed: false,
+				expectValidated: true,
+				expectedLockState: TestLock{
+					PeekedCount: 2,
+					ObtainError: errors.New("not able to obtain lock"),
+				},
 			}),
 			Entry("when the session is not refreshed by the provider", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
@@ -363,42 +636,53 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: noRefresh,
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
+					Lock:         &TestLock{},
 				},
 				expectedErr:     nil,
 				expectRefreshed: true,
 				expectValidated: true,
+				expectedLockState: TestLock{
+					Locked:      false,
+					WasObtained: true,
+					WasReleased: true,
+					PeekedCount: 1,
+				},
 			}),
-			Entry("when the provider doesn't implement refresh but validation succeeds", refreshSessionIfNeededTableInput{
+			Entry("when the provider doesn't implement refresh", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					RefreshToken: notImplemented,
 					CreatedAt:    &createdPast,
+					Lock:         &TestLock{},
 				},
 				expectedErr:     nil,
 				expectRefreshed: true,
 				expectValidated: true,
-			}),
-			Entry("when the provider refresh fails but validation succeeds", refreshSessionIfNeededTableInput{
-				refreshPeriod: 1 * time.Minute,
-				session: &sessionsapi.SessionState{
-					RefreshToken: "RefreshError",
-					CreatedAt:    &createdPast,
+				expectedLockState: TestLock{
+					Locked:      false,
+					WasObtained: true,
+					WasReleased: true,
+					PeekedCount: 1,
 				},
-				expectedErr:     nil,
-				expectRefreshed: true,
-				expectValidated: true,
 			}),
-			Entry("when the session is not refreshed by the provider and validation fails", refreshSessionIfNeededTableInput{
+			Entry("when the session is not refreshed by the provider", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					AccessToken:  "Invalid",
 					RefreshToken: noRefresh,
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
+					Lock:         &TestLock{},
 				},
 				expectedErr:     errors.New("session is invalid"),
 				expectRefreshed: true,
 				expectValidated: true,
+				expectedLockState: TestLock{
+					Locked:      false,
+					WasObtained: true,
+					WasReleased: true,
+					PeekedCount: 1,
+				},
 			}),
 		)
 	})
