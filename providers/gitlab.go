@@ -20,8 +20,6 @@ type GitLabProvider struct {
 
 	Groups   []string
 	Projects []*GitlabProject
-
-	AllowUnverifiedEmail bool
 }
 
 // GitlabProject represents a Gitlab project constraint entity
@@ -103,7 +101,7 @@ func (p *GitLabProvider) Redeem(ctx context.Context, redirectURL, code string) (
 	if err != nil {
 		return nil, fmt.Errorf("token exchange: %v", err)
 	}
-	s, err = p.createSessionState(ctx, token)
+	s, err = p.createSession(ctx, token)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update session: %v", err)
 	}
@@ -162,7 +160,7 @@ func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.Ses
 	if err != nil {
 		return fmt.Errorf("failed to get token: %v", err)
 	}
-	newSession, err := p.createSessionState(ctx, token)
+	newSession, err := p.createSession(ctx, token)
 	if err != nil {
 		return fmt.Errorf("unable to update session: %v", err)
 	}
@@ -255,22 +253,21 @@ func (p *GitLabProvider) AddProjects(projects []string) error {
 	return nil
 }
 
-func (p *GitLabProvider) createSessionState(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
-	rawIDToken, ok := token.Extra("id_token").(string)
-	if !ok {
-		return nil, fmt.Errorf("token response did not contain an id_token")
-	}
-
-	// Parse and verify ID Token payload.
-	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
+func (p *GitLabProvider) createSession(ctx context.Context, token *oauth2.Token) (*sessions.SessionState, error) {
+	idToken, err := p.verifyIDToken(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify id_token: %v", err)
+		switch err {
+		case ErrMissingIDToken:
+			return nil, fmt.Errorf("token response did not contain an id_token")
+		default:
+			return nil, fmt.Errorf("could not verify id_token: %v", err)
+		}
 	}
 
 	created := time.Now()
 	return &sessions.SessionState{
 		AccessToken:  token.AccessToken,
-		IDToken:      rawIDToken,
+		IDToken:      getIDToken(token),
 		RefreshToken: token.RefreshToken,
 		CreatedAt:    &created,
 		ExpiresOn:    &idToken.Expiry,

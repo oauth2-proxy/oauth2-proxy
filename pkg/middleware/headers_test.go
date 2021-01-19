@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
@@ -31,8 +30,7 @@ var _ = Describe("Headers Suite", func() {
 
 			// Set up the request with a request scope
 			req := httptest.NewRequest("", "/", nil)
-			contextWithScope := context.WithValue(req.Context(), requestScopeKey, scope)
-			req = req.WithContext(contextWithScope)
+			req = middlewareapi.AddRequestScope(req, scope)
 			req.Header = in.initialHeaders.Clone()
 
 			rw := httptest.NewRecorder()
@@ -218,8 +216,7 @@ var _ = Describe("Headers Suite", func() {
 
 			// Set up the request with a request scope
 			req := httptest.NewRequest("", "/", nil)
-			contextWithScope := context.WithValue(req.Context(), requestScopeKey, scope)
-			req = req.WithContext(contextWithScope)
+			req = middlewareapi.AddRequestScope(req, scope)
 
 			rw := httptest.NewRecorder()
 			for key, values := range in.initialHeaders {

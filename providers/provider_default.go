@@ -22,6 +22,14 @@ var (
 	// code
 	ErrMissingCode = errors.New("missing code")
 
+	// ErrMissingIDToken is returned when an oidc.Token does not contain the
+	// extra `id_token` field for an IDToken.
+	ErrMissingIDToken = errors.New("missing id_token")
+
+	// ErrMissingOIDCVerifier is returned when a provider didn't set `Verifier`
+	// but an attempt to call `Verifier.Verify` was about to be made.
+	ErrMissingOIDCVerifier = errors.New("oidc verifier is not configured")
+
 	_ Provider = (*ProviderData)(nil)
 )
 

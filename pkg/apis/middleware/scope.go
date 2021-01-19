@@ -1,13 +1,26 @@
 package middleware
 
 import (
+	"context"
+	"net/http"
+
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
+
+type scopeKey string
+
+// RequestScopeKey uses a typed string to reduce likelihood of clashing
+// with other context keys
+const RequestScopeKey scopeKey = "request-scope"
 
 // RequestScope contains information regarding the request that is being made.
 // The RequestScope is used to pass information between different middlewares
 // within the chain.
 type RequestScope struct {
+	// ReverseProxy tracks whether OAuth2-Proxy is operating in reverse proxy
+	// mode and if request `X-Forwarded-*` headers should be trusted
+	ReverseProxy bool
+
 	// Session details the authenticated users information (if it exists).
 	Session *sessions.SessionState
 
@@ -21,4 +34,20 @@ type RequestScope struct {
 	// SessionRevalidated indicates whether the session has been revalidated since
 	// it was loaded or not.
 	SessionRevalidated bool
+}
+
+// GetRequestScope returns the current request scope from the given request
+func GetRequestScope(req *http.Request) *RequestScope {
+	scope := req.Context().Value(RequestScopeKey)
+	if scope == nil {
+		return nil
+	}
+
+	return scope.(*RequestScope)
+}
+
+// AddRequestScope adds a RequestScope to a request
+func AddRequestScope(req *http.Request, scope *RequestScope) *http.Request {
+	ctx := context.WithValue(req.Context(), RequestScopeKey, scope)
+	return req.WithContext(ctx)
 }

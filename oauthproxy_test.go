@@ -19,6 +19,7 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/mbland/hmacauth"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -414,8 +415,9 @@ func Test_redeemCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = proxy.redeemCode(context.Background(), "www.example.com", "")
-	assert.Error(t, err)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	_, err = proxy.redeemCode(req)
+	assert.Equal(t, providers.ErrMissingCode, err)
 }
 
 func Test_enrichSession(t *testing.T) {
@@ -1197,18 +1199,20 @@ func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 }
 
-func NewAuthOnlyEndpointTest(modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
+func NewAuthOnlyEndpointTest(querystring string, modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
 	pcTest, err := NewProcessCookieTestWithOptionsModifiers(modifiers...)
 	if err != nil {
 		return nil, err
 	}
-	pcTest.req, _ = http.NewRequest("GET",
-		pcTest.opts.ProxyPrefix+"/auth", nil)
+	pcTest.req, _ = http.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/auth%s", pcTest.opts.ProxyPrefix, querystring),
+		nil)
 	return pcTest, nil
 }
 
 func TestAuthOnlyEndpointAccepted(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1226,7 +1230,7 @@ func TestAuthOnlyEndpointAccepted(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1234,11 +1238,11 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	if err != nil {
@@ -1254,11 +1258,11 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest()
+	test, err := NewAuthOnlyEndpointTest("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1273,7 +1277,7 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
-	assert.Equal(t, "unauthorized request\n", string(bodyBytes))
+	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
 func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
@@ -1746,8 +1750,9 @@ func TestRequestSignature(t *testing.T) {
 	}
 }
 
-func TestGetRedirect(t *testing.T) {
+func Test_getAppRedirect(t *testing.T) {
 	opts := baseTestOptions()
+	opts.WhitelistDomains = append(opts.WhitelistDomains, ".example.com", ".example.com:8443")
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 	require.NotEmpty(t, opts.ProxyPrefix)
@@ -1759,28 +1764,144 @@ func TestGetRedirect(t *testing.T) {
 	tests := []struct {
 		name             string
 		url              string
+		headers          map[string]string
+		reverseProxy     bool
 		expectedRedirect string
 	}{
 		{
 			name:             "request outside of ProxyPrefix redirects to original URL",
 			url:              "/foo/bar",
+			headers:          nil,
+			reverseProxy:     false,
 			expectedRedirect: "/foo/bar",
 		},
 		{
 			name:             "request with query preserves query",
 			url:              "/foo?bar",
+			headers:          nil,
+			reverseProxy:     false,
 			expectedRedirect: "/foo?bar",
 		},
 		{
 			name:             "request under ProxyPrefix redirects to root",
 			url:              proxy.ProxyPrefix + "/foo/bar",
+			headers:          nil,
+			reverseProxy:     false,
 			expectedRedirect: "/",
+		},
+		{
+			name: "proxied request outside of ProxyPrefix redirects to proxied URL",
+			url:  "https://oauth.example.com/foo/bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   "/foo/bar",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/foo/bar",
+		},
+		{
+			name: "non-proxied request with spoofed proxy headers wouldn't redirect",
+			url:  "https://oauth.example.com/foo?bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   "/foo/bar",
+			},
+			reverseProxy:     false,
+			expectedRedirect: "/foo?bar",
+		},
+		{
+			name: "proxied request under ProxyPrefix redirects to root",
+			url:  "https://oauth.example.com" + proxy.ProxyPrefix + "/foo/bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   proxy.ProxyPrefix + "/foo/bar",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/",
+		},
+		{
+			name: "proxied request with port under ProxyPrefix redirects to root",
+			url:  "https://oauth.example.com" + proxy.ProxyPrefix + "/foo/bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com:8443",
+				"X-Forwarded-Uri":   proxy.ProxyPrefix + "/foo/bar",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com:8443/",
+		},
+		{
+			name: "proxied request with missing uri header would still redirect to desired redirect",
+			url:  "https://oauth.example.com/foo?bar",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/foo?bar",
+		},
+		{
+			name:             "request with headers proxy not being set (and reverse proxy enabled) would still redirect to desired redirect",
+			url:              "https://oauth.example.com/foo?bar",
+			headers:          nil,
+			reverseProxy:     true,
+			expectedRedirect: "/foo?bar",
+		},
+		{
+			name: "proxied request with X-Auth-Request-Redirect being set outside of ProxyPrefix redirects to proxied URL",
+			url:  "https://oauth.example.com/foo/bar",
+			headers: map[string]string{
+				"X-Auth-Request-Redirect": "https://a-service.example.com/foo/bar",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/foo/bar",
+		},
+		{
+			name:             "proxied request with rd query string redirects to proxied URL",
+			url:              "https://oauth.example.com/foo/bar?rd=https%3A%2F%2Fa%2Dservice%2Eexample%2Ecom%2Ffoo%2Fbar",
+			headers:          nil,
+			reverseProxy:     false,
+			expectedRedirect: "https://a-service.example.com/foo/bar",
+		},
+		{
+			name: "proxied request with rd query string and all headers set (and reverse proxy not enabled) redirects to proxied URL on rd query string",
+			url:  "https://oauth.example.com/foo/bar?rd=https%3A%2F%2Fa%2Dservice%2Eexample%2Ecom%2Ffoo%2Fjazz",
+			headers: map[string]string{
+				"X-Auth-Request-Redirect": "https://a-service.example.com/foo/baz",
+				"X-Forwarded-Proto":       "http",
+				"X-Forwarded-Host":        "another-service.example.com",
+				"X-Forwarded-Uri":         "/seasons/greetings",
+			},
+			reverseProxy:     false,
+			expectedRedirect: "https://a-service.example.com/foo/jazz",
+		},
+		{
+			name: "proxied request with rd query string and some headers set redirects to proxied URL on rd query string",
+			url:  "https://oauth.example.com/foo/bar?rd=https%3A%2F%2Fa%2Dservice%2Eexample%2Ecom%2Ffoo%2Fbaz",
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "another-service.example.com",
+				"X-Forwarded-Uri":   "/seasons/greetings",
+			},
+			reverseProxy:     true,
+			expectedRedirect: "https://a-service.example.com/foo/baz",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", tt.url, nil)
-			redirect, err := proxy.GetRedirect(req)
+			for header, value := range tt.headers {
+				if value != "" {
+					req.Header.Add(header, value)
+				}
+			}
+			req = middleware.AddRequestScope(req, &middleware.RequestScope{
+				ReverseProxy: tt.reverseProxy,
+			})
+			redirect, err := proxy.getAppRedirect(req)
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedRedirect, redirect)
@@ -1844,6 +1965,13 @@ func TestAjaxUnauthorizedRequest1(t *testing.T) {
 func TestAjaxUnauthorizedRequest2(t *testing.T) {
 	header := make(http.Header)
 	header.Add("Accept", applicationJSON)
+
+	testAjaxUnauthorizedRequest(t, header)
+}
+
+func TestAjaxUnauthorizedRequestAccept1(t *testing.T) {
+	header := make(http.Header)
+	header.Add("Accept", "application/json, text/plain, */*")
 
 	testAjaxUnauthorizedRequest(t, header)
 }
@@ -1960,7 +2088,7 @@ func TestGetJwtSession(t *testing.T) {
 	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
 		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
 
-	test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.InjectRequestHeaders = []options.Header{
 			{
 				Name: "Authorization",
@@ -2028,7 +2156,6 @@ func TestGetJwtSession(t *testing.T) {
 				},
 			},
 		}
-
 		opts.SkipJwtBearerTokens = true
 		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), verifier))
 	})
@@ -2692,32 +2819,106 @@ func TestProxyAllowedGroups(t *testing.T) {
 }
 
 func TestAuthOnlyAllowedGroups(t *testing.T) {
-	tests := []struct {
+	testCases := []struct {
 		name               string
 		allowedGroups      []string
 		groups             []string
-		expectUnauthorized bool
+		querystring        string
+		expectedStatusCode int
 	}{
-		{"NoAllowedGroups", []string{}, []string{}, false},
-		{"NoAllowedGroupsUserHasGroups", []string{}, []string{"a", "b"}, false},
-		{"UserInAllowedGroup", []string{"a"}, []string{"a", "b"}, false},
-		{"UserNotInAllowedGroup", []string{"a"}, []string{"c"}, true},
+		{
+			name:               "NoAllowedGroups",
+			allowedGroups:      []string{},
+			groups:             []string{},
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "NoAllowedGroupsUserHasGroups",
+			allowedGroups:      []string{},
+			groups:             []string{"a", "b"},
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInAllowedGroup",
+			allowedGroups:      []string{"a"},
+			groups:             []string{"a", "b"},
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserNotInAllowedGroup",
+			allowedGroups:      []string{"a"},
+			groups:             []string{"c"},
+			querystring:        "",
+			expectedStatusCode: http.StatusUnauthorized,
+		},
+		{
+			name:               "UserInQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"a", "c"},
+			querystring:        "?allowed_groups=a",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInMultiParamQuerystringGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"b"},
+			querystring:        "?allowed_groups=a&allowed_groups=b,d",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInOnlyQuerystringGroup",
+			allowedGroups:      []string{},
+			groups:             []string{"a", "c"},
+			querystring:        "?allowed_groups=a,b",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInDelimitedQuerystringGroup",
+			allowedGroups:      []string{"a", "b", "c"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,c",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserNotInQuerystringGroup",
+			allowedGroups:      []string{},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,b",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserInConfigGroupNotInQuerystringGroup",
+			allowedGroups:      []string{"a", "b", "c"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=a,b",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserInQuerystringGroupNotInConfigGroup",
+			allowedGroups:      []string{"a", "b"},
+			groups:             []string{"c"},
+			querystring:        "?allowed_groups=b,c",
+			expectedStatusCode: http.StatusUnauthorized,
+		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			emailAddress := "test"
 			created := time.Now()
 
 			session := &sessions.SessionState{
-				Groups:      tt.groups,
+				Groups:      tc.groups,
 				Email:       emailAddress,
 				AccessToken: "oauth_token",
 				CreatedAt:   &created,
 			}
 
-			test, err := NewAuthOnlyEndpointTest(func(opts *options.Options) {
-				opts.AllowedGroups = tt.allowedGroups
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {
+				opts.AllowedGroups = tc.allowedGroups
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -2728,11 +2929,7 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 
 			test.proxy.ServeHTTP(test.rw, test.req)
 
-			if tt.expectUnauthorized {
-				assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
-			} else {
-				assert.Equal(t, http.StatusAccepted, test.rw.Code)
-			}
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
 		})
 	}
 }
