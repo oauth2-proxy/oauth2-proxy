@@ -69,6 +69,14 @@ docker-push-all: docker-push
 	docker push $(REGISTRY)/oauth2-proxy:latest-armv6
 	docker push $(REGISTRY)/oauth2-proxy:${VERSION}-armv6
 
+.PHONY: generate
+generate:
+	go generate ./pkg/...
+
+.PHONY: verify-generate
+verify-generate: generate
+	git diff --exit-code
+
 .PHONY: test
 test: lint
 	GO111MODULE=on $(GO) test $(TESTCOVER) -v -race ./...
