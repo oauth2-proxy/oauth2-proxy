@@ -63,6 +63,7 @@
   - Please note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
     Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
     to decide if a refresh is required.
+- [#1002](https://github.com/oauth2-proxy/oauth2-proxy/pull/1002) Use logger for logging refreshed session in azure and gitlab provider.
 
 ## Changes since v6.1.1
 
