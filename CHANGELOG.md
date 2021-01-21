@@ -3,7 +3,8 @@
 ## Release Highlights
 
 ## Important Notes
-
+- [#799](https://github.com/oauth2-proxy/oauth2-proxy/pull/799) Use comma separated multiple values for header. Now multi-values headers like 
+  X-Auth-Request-Groups are represented as a common separated string instead of multiple headers with different value.
 - [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Redirect URL generation will attempt secondary strategies
   in the priority chain if any fail the `IsValidRedirect` security check. Previously any failures fell back to `/`.
 - [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Keycloak will now use `--profile-url` if set for the userinfo endpoint
