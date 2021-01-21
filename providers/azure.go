@@ -172,7 +172,7 @@ func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
-	fmt.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
+	logger.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
 	return true, nil
 }
 
