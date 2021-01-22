@@ -67,6 +67,7 @@
 
 ## Changes since v6.1.1
 
+- [#799](https://github.com/oauth2-proxy/oauth2-proxy/pull/799) Use comma separated multiple values for header (@lilida)
 - [#903](https://github.com/oauth2-proxy/oauth2-proxy/pull/903) Add docs and generated reference for Alpha configuration (@JoelSpeed)
 - [#995](https://github.com/oauth2-proxy/oauth2-proxy/pull/995) Add Security Policy (@JoelSpeed)
 - [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Require `--reverse-proxy` true to trust `X-Forwareded-*` type headers (@NickMeves)

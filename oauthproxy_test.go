@@ -612,7 +612,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 	rw = httptest.NewRecorder()
 	proxy.ServeHTTP(rw, req)
 
-	assert.Equal(t, groups, req.Header["X-Forwarded-Groups"])
+	assert.Equal(t, []string{"a,b"}, req.Header["X-Forwarded-Groups"])
 }
 
 type PassAccessTokenTest struct {
