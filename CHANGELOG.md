@@ -4,6 +4,21 @@
 
 ## Important Notes
 
+## Breaking Changes
+
+## Changes since v7.0.0
+
+# V7.0.0
+
+## Release Highlights
+
+- Major internal improvements to provider interfaces
+- Added group authorization support
+- Improved support for external auth for Traefik
+- Introduced alpha configuration format to allow users to trial new configuration format and alpha features
+
+## Important Notes
+
 - [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Redirect URL generation will attempt secondary strategies
   in the priority chain if any fail the `IsValidRedirect` security check. Previously any failures fell back to `/`.
 - [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Keycloak will now use `--profile-url` if set for the userinfo endpoint
@@ -63,10 +78,10 @@
   - Please note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
     Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
     to decide if a refresh is required.
-- [#1002](https://github.com/oauth2-proxy/oauth2-proxy/pull/1002) Use logger for logging refreshed session in azure and gitlab provider.
 
 ## Changes since v6.1.1
 
+- [#1002](https://github.com/oauth2-proxy/oauth2-proxy/pull/1002) Use logger for logging refreshed session in azure and gitlab provider (@Bibob7)
 - [#799](https://github.com/oauth2-proxy/oauth2-proxy/pull/799) Use comma separated multiple values for header (@lilida)
 - [#903](https://github.com/oauth2-proxy/oauth2-proxy/pull/903) Add docs and generated reference for Alpha configuration (@JoelSpeed)
 - [#995](https://github.com/oauth2-proxy/oauth2-proxy/pull/995) Add Security Policy (@JoelSpeed)
@@ -85,7 +100,7 @@
 - [#916](https://github.com/oauth2-proxy/oauth2-proxy/pull/916) Add AlphaOptions struct to prepare for alpha config loading (@JoelSpeed)
 - [#923](https://github.com/oauth2-proxy/oauth2-proxy/pull/923) Support TLS 1.3 (@aajisaka)
 - [#918](https://github.com/oauth2-proxy/oauth2-proxy/pull/918) Fix log header output (@JoelSpeed)
-- [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Validate provider type on startup.
+- [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Validate provider type on startup. (@arcivanov)
 - [#906](https://github.com/oauth2-proxy/oauth2-proxy/pull/906) Set up v6.1.x versioned documentation as default documentation (@JoelSpeed)
 - [#905](https://github.com/oauth2-proxy/oauth2-proxy/pull/905) Remove v5 legacy sessions support (@NickMeves)
 - [#904](https://github.com/oauth2-proxy/oauth2-proxy/pull/904) Set `skip-auth-strip-headers` to `true` by default (@NickMeves)
