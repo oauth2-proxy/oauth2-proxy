@@ -16,6 +16,10 @@
 - Added group authorization support
 - Improved support for external auth for Traefik
 - Introduced alpha configuration format to allow users to trial new configuration format and alpha features
+- GitLab provider now supports restricting to members of a project
+- Keycloak provider now supports restricting users to members of a set of groups
+- (Alpha) Flexible header configuration allowing user defined mapping of session claims to header values
+
 
 ## Important Notes
 
