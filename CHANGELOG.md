@@ -3,8 +3,6 @@
 ## Release Highlights
 
 ## Important Notes
-- [#799](https://github.com/oauth2-proxy/oauth2-proxy/pull/799) Use comma separated multiple values for header. Now multi-values headers like 
-  X-Auth-Request-Groups are represented as a common separated string instead of multiple headers with different value.
 - [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Redirect URL generation will attempt secondary strategies
   in the priority chain if any fail the `IsValidRedirect` security check. Previously any failures fell back to `/`.
 - [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Keycloak will now use `--profile-url` if set for the userinfo endpoint
@@ -66,7 +64,7 @@
     to decide if a refresh is required.
 
 ## Changes since v6.1.1
-
+- [#799](https://github.com/oauth2-proxy/oauth2-proxy/pull/799) Use comma separated multiple values for header (@lilida)
 - [#903](https://github.com/oauth2-proxy/oauth2-proxy/pull/903) Add docs and generated reference for Alpha configuration (@JoelSpeed)
 - [#995](https://github.com/oauth2-proxy/oauth2-proxy/pull/995) Add Security Policy (@JoelSpeed)
 - [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Require `--reverse-proxy` true to trust `X-Forwareded-*` type headers (@NickMeves)
