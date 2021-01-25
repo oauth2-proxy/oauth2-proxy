@@ -487,7 +487,7 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 		p.OAuthStart(rw, req)
 	case path == p.OAuthCallbackPath:
 		p.OAuthCallback(rw, req)
-	case path == p.AuthOnlyPath:
+	case strings.HasPrefix(path, p.AuthOnlyPath):
 		p.AuthOnly(rw, req)
 	case path == p.UserInfoPath:
 		p.UserInfo(rw, req)
