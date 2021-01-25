@@ -445,6 +445,13 @@ func TestValidatorSubDomains(t *testing.T) {
 			email:          "xyzzy@example.com",
 			expectedAuthZ:  true,
 		},
+		{
+			name:           "EmailDomainNotCompletelyMatch",
+			allowedEmails:  nil,
+			allowedDomains: []string{".example.com", ".example1.com"},
+			email:          "something@fooexample.com",
+			expectedAuthZ:  false,
+		},
 	}
 
 	vt := NewValidatorTest(t)
