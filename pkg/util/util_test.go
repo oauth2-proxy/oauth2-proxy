@@ -4,11 +4,9 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"io/ioutil"
-	"net/http/httptest"
 	"os"
 	"testing"
 
-	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -96,17 +94,4 @@ func TestGetCertPool(t *testing.T) {
 
 	expectedSubjects := []string{testCA1Subj, testCA2Subj}
 	assert.Equal(t, expectedSubjects, got)
-}
-
-func TestGetRequestHost(t *testing.T) {
-	g := NewWithT(t)
-
-	req := httptest.NewRequest("GET", "https://example.com", nil)
-	host := GetRequestHost(req)
-	g.Expect(host).To(Equal("example.com"))
-
-	proxyReq := httptest.NewRequest("GET", "http://internal.example.com", nil)
-	proxyReq.Header.Add("X-Forwarded-Host", "external.example.com")
-	extHost := GetRequestHost(proxyReq)
-	g.Expect(extHost).To(Equal("external.example.com"))
 }

@@ -1,12 +1,23 @@
 package providers
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/url"
+	"reflect"
+	"strings"
 
 	"github.com/coreos/go-oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"golang.org/x/oauth2"
+)
+
+const (
+	OIDCEmailClaim  = "email"
+	OIDCGroupsClaim = "groups"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -27,7 +38,12 @@ type ProviderData struct {
 	ClientSecretFile string
 	Scope            string
 	Prompt           string
-	Verifier         *oidc.IDTokenVerifier
+
+	// Common OIDC options for any OIDC-based providers to consume
+	AllowUnverifiedEmail bool
+	EmailClaim           string
+	GroupsClaim          string
+	Verifier             *oidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
@@ -93,4 +109,117 @@ func defaultURL(u *url.URL, d *url.URL) *url.URL {
 		return d
 	}
 	return &url.URL{}
+}
+
+// ****************************************************************************
+// These private OIDC helper methods are available to any providers that are
+// OIDC compliant
+// ****************************************************************************
+
+// OIDCClaims is a struct to unmarshal the OIDC claims from an ID Token payload
+type OIDCClaims struct {
+	Subject  string   `json:"sub"`
+	Email    string   `json:"-"`
+	Groups   []string `json:"-"`
+	Verified *bool    `json:"email_verified"`
+
+	raw map[string]interface{}
+}
+
+func (p *ProviderData) verifyIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
+	rawIDToken := getIDToken(token)
+	if strings.TrimSpace(rawIDToken) == "" {
+		return nil, ErrMissingIDToken
+	}
+	if p.Verifier == nil {
+		return nil, ErrMissingOIDCVerifier
+	}
+	return p.Verifier.Verify(ctx, rawIDToken)
+}
+
+// buildSessionFromClaims uses IDToken claims to populate a fresh SessionState
+// with non-Token related fields.
+func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.SessionState, error) {
+	ss := &sessions.SessionState{}
+
+	if idToken == nil {
+		return ss, nil
+	}
+
+	claims, err := p.getClaims(idToken)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
+	}
+
+	ss.User = claims.Subject
+	ss.Email = claims.Email
+	ss.Groups = claims.Groups
+
+	// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
+	if pref, ok := claims.raw["preferred_username"].(string); ok {
+		ss.PreferredUsername = pref
+	}
+
+	// `email_verified` must be present and explicitly set to `false` to be
+	// considered unverified.
+	verifyEmail := (p.EmailClaim == OIDCEmailClaim) && !p.AllowUnverifiedEmail
+	if verifyEmail && claims.Verified != nil && !*claims.Verified {
+		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	}
+
+	return ss, nil
+}
+
+// getClaims extracts IDToken claims into an OIDCClaims
+func (p *ProviderData) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
+	claims := &OIDCClaims{}
+
+	// Extract default claims.
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
+	}
+	// Extract custom claims.
+	if err := idToken.Claims(&claims.raw); err != nil {
+		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)
+	}
+
+	email := claims.raw[p.EmailClaim]
+	if email != nil {
+		claims.Email = fmt.Sprint(email)
+	}
+	claims.Groups = p.extractGroups(claims.raw)
+
+	return claims, nil
+}
+
+// extractGroups extracts groups from a claim to a list in a type safe manner.
+// If the claim isn't present, `nil` is returned. If the groups claim is
+// present but empty, `[]string{}` is returned.
+func (p *ProviderData) extractGroups(claims map[string]interface{}) []string {
+	rawClaim, ok := claims[p.GroupsClaim]
+	if !ok {
+		return nil
+	}
+
+	// Handle traditional list-based groups as well as non-standard singleton
+	// based groups. Both variants support complex objects if needed.
+	var claimGroups []interface{}
+	switch raw := rawClaim.(type) {
+	case []interface{}:
+		claimGroups = raw
+	case interface{}:
+		claimGroups = []interface{}{raw}
+	}
+
+	groups := []string{}
+	for _, rawGroup := range claimGroups {
+		formattedGroup, err := formatGroup(rawGroup)
+		if err != nil {
+			logger.Errorf("Warning: unable to format group of type %s with error %s",
+				reflect.TypeOf(rawGroup), err)
+			continue
+		}
+		groups = append(groups, formattedGroup)
+	}
+	return groups
 }

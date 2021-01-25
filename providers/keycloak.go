@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -11,7 +12,6 @@ import (
 
 type KeycloakProvider struct {
 	*ProviderData
-	Group string
 }
 
 var _ Provider = (*KeycloakProvider)(nil)
@@ -47,6 +47,7 @@ var (
 	}
 )
 
+// NewKeycloakProvider creates a KeyCloakProvider using the passed ProviderData
 func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        keycloakProviderName,
@@ -59,41 +60,39 @@ func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 	return &KeycloakProvider{ProviderData: p}
 }
 
-func (p *KeycloakProvider) SetGroup(group string) {
-	p.Group = group
-}
+// EnrichSession uses the Keycloak userinfo endpoint to populate the session's
+// email and groups.
+func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+	// Fallback to ValidateURL if ProfileURL not set for legacy compatibility
+	profileURL := p.ValidateURL.String()
+	if p.ProfileURL.String() != "" {
+		profileURL = p.ProfileURL.String()
+	}
 
-func (p *KeycloakProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
-	json, err := requests.New(p.ValidateURL.String()).
+	json, err := requests.New(profileURL).
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
 		UnmarshalJSON()
 	if err != nil {
-		logger.Errorf("failed making request %s", err)
-		return "", err
+		logger.Errorf("failed making request %v", err)
+		return err
 	}
 
-	if p.Group != "" {
-		var groups, err = json.Get("groups").Array()
-		if err != nil {
-			logger.Printf("groups not found %s", err)
-			return "", err
-		}
-
-		var found = false
-		for i := range groups {
-			if groups[i].(string) == p.Group {
-				found = true
-				break
+	groups, err := json.Get("groups").StringArray()
+	if err == nil {
+		for _, group := range groups {
+			if group != "" {
+				s.Groups = append(s.Groups, group)
 			}
 		}
-
-		if !found {
-			logger.Printf("group not found, access denied")
-			return "", nil
-		}
 	}
 
-	return json.Get("email").String()
+	email, err := json.Get("email").String()
+	if err != nil {
+		return fmt.Errorf("unable to extract email from userinfo endpoint: %v", err)
+	}
+	s.Email = email
+
+	return nil
 }
