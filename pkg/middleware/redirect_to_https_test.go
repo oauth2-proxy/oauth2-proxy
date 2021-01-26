@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -21,6 +22,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 		requestString    string
 		useTLS           bool
 		headers          map[string]string
+		reverseProxy     bool
 		expectedStatus   int
 		expectedBody     string
 		expectedLocation string
@@ -35,6 +37,10 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			if in.useTLS {
 				req.TLS = &tls.ConnectionState{}
 			}
+			scope := &middlewareapi.RequestScope{
+				ReverseProxy: in.reverseProxy,
+			}
+			req = middlewareapi.AddRequestScope(req, scope)
 
 			rw := httptest.NewRecorder()
 
@@ -52,6 +58,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			requestString:    "http://example.com",
 			useTLS:           false,
 			headers:          map[string]string{},
+			reverseProxy:     false,
 			expectedStatus:   308,
 			expectedBody:     permanentRedirectBody("https://example.com"),
 			expectedLocation: "https://example.com",
@@ -60,6 +67,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			requestString:  "https://example.com",
 			useTLS:         true,
 			headers:        map[string]string{},
+			reverseProxy:   false,
 			expectedStatus: 200,
 			expectedBody:   "test",
 		}),
@@ -69,8 +77,20 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "HTTPS",
 			},
+			reverseProxy:   true,
 			expectedStatus: 200,
 			expectedBody:   "test",
+		}),
+		Entry("without TLS and X-Forwarded-Proto=HTTPS but ReverseProxy not set", &requestTableInput{
+			requestString: "http://example.com",
+			useTLS:        false,
+			headers: map[string]string{
+				"X-Forwarded-Proto": "HTTPS",
+			},
+			reverseProxy:     false,
+			expectedStatus:   308,
+			expectedBody:     permanentRedirectBody("https://example.com"),
+			expectedLocation: "https://example.com",
 		}),
 		Entry("with TLS and X-Forwarded-Proto=HTTPS", &requestTableInput{
 			requestString: "https://example.com",
@@ -78,6 +98,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "HTTPS",
 			},
+			reverseProxy:   true,
 			expectedStatus: 200,
 			expectedBody:   "test",
 		}),
@@ -87,6 +108,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "https",
 			},
+			reverseProxy:   true,
 			expectedStatus: 200,
 			expectedBody:   "test",
 		}),
@@ -96,6 +118,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "https",
 			},
+			reverseProxy:   true,
 			expectedStatus: 200,
 			expectedBody:   "test",
 		}),
@@ -105,6 +128,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "HTTP",
 			},
+			reverseProxy:     true,
 			expectedStatus:   308,
 			expectedBody:     permanentRedirectBody("https://example.com"),
 			expectedLocation: "https://example.com",
@@ -115,6 +139,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "HTTP",
 			},
+			reverseProxy:     true,
 			expectedStatus:   308,
 			expectedBody:     permanentRedirectBody("https://example.com"),
 			expectedLocation: "https://example.com",
@@ -125,6 +150,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "http",
 			},
+			reverseProxy:     true,
 			expectedStatus:   308,
 			expectedBody:     permanentRedirectBody("https://example.com"),
 			expectedLocation: "https://example.com",
@@ -135,6 +161,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			headers: map[string]string{
 				"X-Forwarded-Proto": "http",
 			},
+			reverseProxy:     true,
 			expectedStatus:   308,
 			expectedBody:     permanentRedirectBody("https://example.com"),
 			expectedLocation: "https://example.com",
@@ -143,6 +170,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			requestString:    "http://example.com:8080",
 			useTLS:           false,
 			headers:          map[string]string{},
+			reverseProxy:     false,
 			expectedStatus:   308,
 			expectedBody:     permanentRedirectBody("https://example.com:8443"),
 			expectedLocation: "https://example.com:8443",
@@ -151,6 +179,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			requestString:  "https://example.com:8443",
 			useTLS:         true,
 			headers:        map[string]string{},
+			reverseProxy:   false,
 			expectedStatus: 200,
 			expectedBody:   "test",
 		}),
@@ -161,6 +190,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 			requestString:    "/",
 			useTLS:           false,
 			expectedStatus:   308,
+			reverseProxy:     false,
 			expectedBody:     permanentRedirectBody("https://example.com/"),
 			expectedLocation: "https://example.com/",
 		}),
@@ -171,6 +201,7 @@ var _ = Describe("RedirectToHTTPS suite", func() {
 				"X-Forwarded-Proto": "HTTP",
 				"X-Forwarded-Host":  "external.example.com",
 			},
+			reverseProxy:     true,
 			expectedStatus:   308,
 			expectedBody:     permanentRedirectBody("https://external.example.com"),
 			expectedLocation: "https://external.example.com",

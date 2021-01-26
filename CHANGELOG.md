@@ -4,6 +4,8 @@
 
 ## Important Notes
 
+- [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Redirect URL generation will attempt secondary strategies
+  in the priority chain if any fail the `IsValidRedirect` security check. Previously any failures fell back to `/`.
 - [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Keycloak will now use `--profile-url` if set for the userinfo endpoint
   instead of `--validate-url`. `--validate-url` will still work for backwards compatibility.
 - [#957](https://github.com/oauth2-proxy/oauth2-proxy/pull/957) To use X-Forwarded-{Proto,Host,Uri} on redirect detection, `--reverse-proxy` must be `true`.
@@ -36,6 +38,11 @@
 
 ## Breaking Changes
 
+- [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) `--reverse-proxy` must be true to trust `X-Forwarded-*` headers as canonical.
+  These are used throughout the application in redirect URLs, cookie domains and host logging logic. These are the headers:
+  - `X-Forwarded-Proto` instead of `req.URL.Scheme`
+  - `X-Forwarded-Host` instead of `req.Host`
+  - `X-Forwarded-Uri` instead of `req.URL.RequestURI()`
 - [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) In config files & envvar configs, `keycloak_group` is now the plural `keycloak_groups`.
   Flag configs are still `--keycloak-group` but it can be passed multiple times.
 - [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Specifying a non-existent provider will cause OAuth2-Proxy to fail on startup instead of defaulting to "google".
@@ -56,9 +63,14 @@
   - Please note that `--cookie-refresh` must be 0 (the default) or equal to the token lifespan configured in Azure AD to make
     Azure token refresh reliable. Setting this value to 0 means that it relies on the provider implementation
     to decide if a refresh is required.
+- [#1002](https://github.com/oauth2-proxy/oauth2-proxy/pull/1002) Use logger for logging refreshed session in azure and gitlab provider.
 
 ## Changes since v6.1.1
 
+- [#799](https://github.com/oauth2-proxy/oauth2-proxy/pull/799) Use comma separated multiple values for header (@lilida)
+- [#903](https://github.com/oauth2-proxy/oauth2-proxy/pull/903) Add docs and generated reference for Alpha configuration (@JoelSpeed)
+- [#995](https://github.com/oauth2-proxy/oauth2-proxy/pull/995) Add Security Policy (@JoelSpeed)
+- [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Require `--reverse-proxy` true to trust `X-Forwareded-*` type headers (@NickMeves)
 - [#970](https://github.com/oauth2-proxy/oauth2-proxy/pull/970) Fix joined cookie name for those containing underline in the suffix (@peppered)
 - [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Migrate Keycloak to EnrichSession & support multiple groups for authorization (@NickMeves)
 - [#957](https://github.com/oauth2-proxy/oauth2-proxy/pull/957) Use X-Forwarded-{Proto,Host,Uri} on redirect as last resort (@linuxgemini)

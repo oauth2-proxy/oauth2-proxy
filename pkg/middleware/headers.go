@@ -3,8 +3,10 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/justinas/alice"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/header"
 )
@@ -39,6 +41,14 @@ func newStripHeaders(headers []options.Header) alice.Constructor {
 	}
 }
 
+func flattenHeaders(headers http.Header) {
+	for name, values := range headers {
+		if len(values) > 1 {
+			headers.Set(name, strings.Join(values, ","))
+		}
+	}
+}
+
 func stripHeaders(headers []string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		for _, header := range headers {
@@ -61,11 +71,12 @@ func newRequestHeaderInjector(headers []options.Header) (alice.Constructor, erro
 
 func injectRequestHeaders(injector header.Injector, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		scope := GetRequestScope(req)
+		scope := middlewareapi.GetRequestScope(req)
 
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
 		injector.Inject(req.Header, scope.Session)
+		flattenHeaders(req.Header)
 		next.ServeHTTP(rw, req)
 	})
 }
@@ -92,11 +103,12 @@ func newResponseHeaderInjector(headers []options.Header) (alice.Constructor, err
 
 func injectResponseHeaders(injector header.Injector, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		scope := GetRequestScope(req)
+		scope := middlewareapi.GetRequestScope(req)
 
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
 		injector.Inject(rw.Header(), scope.Session)
+		flattenHeaders(req.Header)
 		next.ServeHTTP(rw, req)
 	})
 }
