@@ -238,6 +238,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.EmailClaim = o.OIDCEmailClaim
 	p.GroupsClaim = o.OIDCGroupsClaim
 	p.Verifier = o.GetOIDCVerifier()
+	p.JWTBearerVerifiers = o.GetJWTBearerVerifiers()
 
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option

@@ -181,9 +181,18 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	idToken, err := p.Verifier.Verify(ctx, token)
 	if err != nil {
-		return nil, err
+		for _, jwtBearerVerifier := range p.JWTBearerVerifiers {
+			if idToken2, err2 := jwtBearerVerifier.Verify(ctx, token); err2 == nil {
+				idToken = idToken2
+				err = nil
+				break
+			}
+		}
 	}
 
+	if err != nil {
+		return nil, err
+	}
 	ss, err := p.buildSessionFromClaims(idToken)
 	if err != nil {
 		return nil, err

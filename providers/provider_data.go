@@ -44,6 +44,7 @@ type ProviderData struct {
 	EmailClaim           string
 	GroupsClaim          string
 	Verifier             *oidc.IDTokenVerifier
+	JWTBearerVerifiers   []*oidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
