@@ -165,8 +165,9 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 		RefreshToken: jsonResponse.RefreshToken,
 	}
 
-	// the presence of id_token depends on the configuration
-	if session.IDToken != "" {
+	// the presence of id_token depends on the configuration and
+	// verification of id_token requires oidc configuration
+	if session.IDToken != "" && p.Verifier != nil {
 		email, err := p.verifyIDTokenAndExtractEmail(ctx, session.IDToken)
 		if err != nil {
 			return nil, err
@@ -244,8 +245,9 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	s.CreatedAt = &now
 	s.ExpiresOn = &expires
 
-	// the presence of id_token depends on the configuration
-	if s.IDToken != "" {
+	// the presence of id_token depends on the configuration and
+	// verification of id_token requires oidc configuration
+	if s.IDToken != "" && p.Verifier != nil {
 		email, err := p.verifyIDTokenAndExtractEmail(ctx, s.IDToken)
 		if err != nil {
 			return err
@@ -304,14 +306,11 @@ func getEmailFromProfileAPI(ctx context.Context, accessToken, profileURL string)
 
 // EnrichSessionState finds the email to enrich the session state
 func (p *AzureProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
-	var email string
-	var err error
-
 	if s.Email != "" {
 		return nil
 	}
 
-	email, err = getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
+	email, err := getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
 	if email == "" {
 		logger.Errorf("failed to get email address: %s", err)
 		return err
