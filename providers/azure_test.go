@@ -50,7 +50,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 				"https://issuer.example.com",
 				fakeAzureKeySetStub{},
 				&oidc.Config{
-					ClientID:          clientID,
+					ClientID:          "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
 					SkipClientIDCheck: true,
 					SkipIssuerCheck:   true,
 					SkipExpiryCheck:   true,
