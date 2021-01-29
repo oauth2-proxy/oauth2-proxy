@@ -113,6 +113,7 @@
 - [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
 - [#819](https://github.com/oauth2-proxy/oauth2-proxy/pull/819) Improve CI (@johejo)
 - [#989](https://github.com/oauth2-proxy/oauth2-proxy/pull/989) Adapt isAjax to support mimetype lists (@rassie)
+- [#1013](https://github.com/oauth2-proxy/oauth2-proxy/pull/1013) Update alpine version to 3.13 (@nishanth-pinnapareddy)
 
 # v6.1.1
 
