@@ -41,7 +41,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
-| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
+| `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`). If the IDP does not support the `.well-known` URL convention, a JWKS URI for the issuer can optionally be specified by adding it in between the issuer and audience fields, e.g. `issuer=jwksURI=audience` | |
 | `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
