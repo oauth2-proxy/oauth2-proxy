@@ -298,6 +298,11 @@ func TestIsValidRedirect(t *testing.T) {
 			Redirect:       "/\t/\t\\evil.com",
 			ExpectedResult: false,
 		},
+		{
+			Desc:           "openRedirectPartialSubdomain",
+			Redirect:       "http://evilbar.foo",
+			ExpectedResult: false,
+		},
 	}
 
 	for _, tc := range testCases {
