@@ -1,0 +1,65 @@
+{
+  "version-7.0.x/docs": [
+    {
+      "type": "doc",
+      "id": "version-7.0.x/installation"
+    },
+    {
+      "type": "doc",
+      "id": "version-7.0.x/behaviour"
+    },
+    {
+      "collapsed": false,
+      "type": "category",
+      "label": "Configuration",
+      "items": [
+        {
+          "type": "doc",
+          "id": "version-7.0.x/configuration/overview"
+        },
+        {
+          "type": "doc",
+          "id": "version-7.0.x/configuration/oauth_provider"
+        },
+        {
+          "type": "doc",
+          "id": "version-7.0.x/configuration/session_storage"
+        },
+        {
+          "type": "doc",
+          "id": "version-7.0.x/configuration/tls"
+        },
+        {
+          "type": "doc",
+          "id": "version-7.0.x/configuration/alpha-config"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "type": "category",
+      "label": "Features",
+      "items": [
+        {
+          "type": "doc",
+          "id": "version-7.0.x/features/endpoints"
+        },
+        {
+          "type": "doc",
+          "id": "version-7.0.x/features/request_signatures"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "type": "category",
+      "label": "Community",
+      "items": [
+        {
+          "type": "doc",
+          "id": "version-7.0.x/community/security"
+        }
+      ]
+    }
+  ]
+}
