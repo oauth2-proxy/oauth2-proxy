@@ -55,11 +55,11 @@ var _ = Describe("Headers Suite", func() {
 		Entry("with no configured headers", headersTableInput{
 			headers: []options.Header{},
 			initialHeaders: http.Header{
-				"foo": []string{"bar", "baz"},
+				"Foo": []string{"bar", "baz"},
 			},
 			session: &sessionsapi.SessionState{},
 			expectedHeaders: http.Header{
-				"foo": []string{"bar", "baz"},
+				"Foo": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),
@@ -77,13 +77,13 @@ var _ = Describe("Headers Suite", func() {
 				},
 			},
 			initialHeaders: http.Header{
-				"foo": []string{"bar", "baz"},
+				"Foo": []string{"bar", "baz"},
 			},
 			session: &sessionsapi.SessionState{
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"foo":   []string{"bar", "baz"},
+				"Foo":   []string{"bar,baz"},
 				"Claim": []string{"IDToken-1234"},
 			},
 			expectedErr: "",
@@ -133,7 +133,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
@@ -176,7 +176,7 @@ var _ = Describe("Headers Suite", func() {
 			},
 			session: nil,
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz"},
+				"Claim": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),

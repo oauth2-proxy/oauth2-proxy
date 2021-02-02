@@ -298,6 +298,11 @@ func TestIsValidRedirect(t *testing.T) {
 			Redirect:       "/\t/\t\\evil.com",
 			ExpectedResult: false,
 		},
+		{
+			Desc:           "openRedirectPartialSubdomain",
+			Redirect:       "http://evilbar.foo",
+			ExpectedResult: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -612,7 +617,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 	rw = httptest.NewRecorder()
 	proxy.ServeHTTP(rw, req)
 
-	assert.Equal(t, groups, req.Header["X-Forwarded-Groups"])
+	assert.Equal(t, []string{"a,b"}, req.Header["X-Forwarded-Groups"])
 }
 
 type PassAccessTokenTest struct {
