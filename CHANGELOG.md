@@ -8,6 +8,8 @@
 
 ## Changes since v7.0.0
 
+- [#1020](https://github.com/oauth2-proxy/oauth2-proxy/pull/1020) Flatten array-based response headers (@NickMeves)
+
 # V7.0.0
 
 ## Release Highlights
