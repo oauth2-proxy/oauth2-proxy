@@ -2938,3 +2938,57 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthOnlyRedirectSignIn(t *testing.T) {
+	testCases := []struct {
+		name               string
+		querystring        string
+		expectedStatusCode int
+	}{
+		{
+			name:               "RedirectSignInTrueExpectOauthRedirect",
+			querystring:        "?redirect_signin=true",
+			expectedStatusCode: http.StatusFound,
+		},
+		{
+			name:               "RedirectSignInFalse",
+			querystring:        "?redirect_signin=false",
+			expectedStatusCode: http.StatusUnauthorized,
+		},
+		{
+			name:               "RedirectSignNotSpecified",
+			querystring:        "",
+			expectedStatusCode: http.StatusUnauthorized,
+		},
+		{
+			name:               "RedirectSignGarbageValue",
+			querystring:        "?redirect_signin=unexpected_string_input",
+			expectedStatusCode: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			emailAddress := "authOnlyRedirectTestUser"
+			created := time.Now().Add(time.Duration(25) * time.Hour * -1)
+
+			session := &sessions.SessionState{
+				Email:       emailAddress,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			test, err := NewAuthOnlyEndpointTest(tc.querystring)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = test.SaveSession(session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}

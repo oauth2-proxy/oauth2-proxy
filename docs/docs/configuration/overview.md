@@ -364,6 +364,8 @@ You have to substitute *name* with the actual cookie name you configured via --c
 
 The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
 
+### ForwardAuth with 401 errors middleware
+
 ```yaml
 http:
   routers:
@@ -423,6 +425,88 @@ http:
           - "401-403"
         service: oauth-backend
         query: "/oauth2/sign_in"
+```
+
+### ForwardAuth middleware with redirect_signin
+
+`redirect_signin` query string boolean parameter usage example on `/oauth2/auth` endpoint below and uses [Traefik IngressRoute CRD](https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-ingressroute) kubernetes provider configuration and Traefik Middlewares
+
+```yaml
+  a-service:
+    routes:
+      - kind: Rule
+        match: Host(`a-service.example.com`) && PathPrefix(`/`)
+        middlewares:
+        - name: oauth-auth-redirect # redirects all unauthenticated to oauth2 signin
+        services:
+        - name: a-service-backend
+          port: 80
+      - kind: Rule
+        match: Host(`a-service.example.com`) && PathPrefix(`/no-auto-redirect`)
+        middlewares:
+        - name: oauth-auth-wo-redirect # unauthenticated session will return a 401
+        services:
+        - name: a-service-backend
+          port: 80
+      - kind: Rule
+        match: Host(`a-service.example.com`) && PathPrefix(`/oauth2`) # Make oauth2-proxy handle all /oauth2 calls on a-service.example.com
+        middlewares:
+        - name: auth-headers
+        services:
+        - name: oauth-proxy-backend
+          port: 80
+  b-service:
+    routes:
+      - kind: Rule
+        match: Host(`b-service.example.com`) && PathPrefix(`/`)
+        middlewares:
+        - name: oauth-auth-redirect # redirects all unauthenticated to oauth2 signin
+        services:
+        - name: b-service-backend
+          port: 80
+      - kind: Rule
+        match: Host(`b-service.example.com`) && PathPrefix(`/oauth2`) # Make oauth2-proxy handle all /oauth2 calls on a-service.example.com
+        middlewares:
+        - name: auth-headers
+        services:
+        - name: oauth-proxy-backend
+          port: 80
+  oauth-proxy:
+    routes:
+      - kind: Rule
+        match: Host(`oauth-proxy.example.com`) && PathPrefix(`/`)
+        middlewares:
+        - name: auth-headers
+        services:
+        - name: oauth-proxy-backend
+          port: 80
+
+  middlewares:
+    oauth-auth-wo-redirect:
+      forwardAuth:
+        address: 'https://oauth-proxy.example.com/oauth2/auth'
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization
+    oauth-auth-redirect:
+      forwardAuth:
+        address: 'https://oauth-proxy.example.com/oauth2/auth?redirect_signin=true'
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization
+    auth-headers:
+      headers:
+        sslRedirect: true
+        stsSeconds: 315360000
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        sslHost: example.com
+        stsIncludeSubdomains: true
+        stsPreload: true
+        frameDeny: true
 ```
 
 :::note
