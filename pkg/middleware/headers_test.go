@@ -249,7 +249,7 @@ var _ = Describe("Headers Suite", func() {
 			},
 			session: &sessionsapi.SessionState{},
 			expectedHeaders: http.Header{
-				"Foo": []string{"bar", "baz"},
+				"Foo": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),
@@ -273,7 +273,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Foo":   []string{"bar", "baz"},
+				"Foo":   []string{"bar,baz"},
 				"Claim": []string{"IDToken-1234"},
 			},
 			expectedErr: "",
@@ -298,7 +298,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
@@ -323,7 +323,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
@@ -345,7 +345,7 @@ var _ = Describe("Headers Suite", func() {
 			},
 			session: nil,
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz"},
+				"Claim": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),
@@ -368,7 +368,7 @@ var _ = Describe("Headers Suite", func() {
 			},
 			session: nil,
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz"},
+				"Claim": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),
