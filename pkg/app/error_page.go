@@ -54,3 +54,11 @@ func (e *ErrorPage) Render(rw http.ResponseWriter, status int, redirectURL strin
 		http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }
+
+// ProxyErrorHandler is used by the upstream ReverseProxy to render error pages
+// when there are issues with upstream servers.
+// It is expected to always render a bad gateway error.
+func (e *ErrorPage) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
+	logger.Errorf("Error proxying to upstream server: %v", proxyErr)
+	e.Render(rw, http.StatusBadGateway, "", "Error proxying to upstream server")
+}

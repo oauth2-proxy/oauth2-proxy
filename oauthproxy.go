@@ -122,8 +122,15 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	if err != nil {
 		return nil, fmt.Errorf("error loading templates: %v", err)
 	}
-	proxyErrorHandler := upstream.NewProxyErrorHandler(templates.Lookup("error.html"), opts.ProxyPrefix)
-	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), proxyErrorHandler)
+
+	errorPage := &app.ErrorPage{
+		Template:    templates.Lookup("error.html"),
+		ProxyPrefix: opts.ProxyPrefix,
+		Footer:      opts.Templates.Footer,
+		Version:     VERSION,
+	}
+
+	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), errorPage.ProxyErrorHandler)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
 	}
@@ -225,12 +232,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		sessionChain:        sessionChain,
 		headersChain:        headersChain,
 		preAuthChain:        preAuthChain,
-		errorPage: &app.ErrorPage{
-			Template:    templates.Lookup("error.html"),
-			ProxyPrefix: opts.ProxyPrefix,
-			Footer:      opts.Templates.Footer,
-			Version:     VERSION,
-		},
+		errorPage:           errorPage,
 	}, nil
 }
 
