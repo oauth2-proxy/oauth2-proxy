@@ -116,7 +116,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
-	templates := loadTemplates(opts.CustomTemplatesDir)
+	templates := loadTemplates(opts.Templates.Path)
 	proxyErrorHandler := upstream.NewProxyErrorHandler(templates.Lookup("error.html"), opts.ProxyPrefix)
 	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), proxyErrorHandler)
 	if err != nil {
@@ -211,12 +211,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		SkipProviderButton:   opts.SkipProviderButton,
 		templates:            templates,
 		trustedIPs:           trustedIPs,
-		Banner:               opts.Banner,
-		Footer:               opts.Footer,
+		Banner:               opts.Templates.Banner,
+		Footer:               opts.Templates.Footer,
 		SignInMessage:        buildSignInMessage(opts),
 
 		basicAuthValidator:  basicAuthValidator,
-		displayHtpasswdForm: basicAuthValidator != nil && opts.DisplayHtpasswdForm,
+		displayHtpasswdForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 		sessionChain:        sessionChain,
 		headersChain:        headersChain,
 		preAuthChain:        preAuthChain,
@@ -301,11 +301,11 @@ func buildHeadersChain(opts *options.Options) (alice.Chain, error) {
 
 func buildSignInMessage(opts *options.Options) string {
 	var msg string
-	if len(opts.Banner) >= 1 {
-		if opts.Banner == "-" {
+	if len(opts.Templates.Banner) >= 1 {
+		if opts.Templates.Banner == "-" {
 			msg = ""
 		} else {
-			msg = opts.Banner
+			msg = opts.Templates.Banner
 		}
 	} else if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
 		if len(opts.EmailDomains) > 1 {
