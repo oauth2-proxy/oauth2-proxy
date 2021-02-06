@@ -37,6 +37,8 @@ func New(provider string, p *ProviderData) Provider {
 		return NewGitLabProvider(p)
 	case "oidc":
 		return NewOIDCProvider(p)
+	case "globus":
+		return NewGlobusProvider(p)
 	case "login.gov":
 		return NewLoginGovProvider(p)
 	case "bitbucket":
