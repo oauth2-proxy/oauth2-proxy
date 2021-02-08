@@ -131,6 +131,7 @@ func (s *storedSessionLoader) tryToGetValidatedSession(rw http.ResponseWriter, r
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
+
 	return session, nil
 }
 
