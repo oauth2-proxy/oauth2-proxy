@@ -1,10 +1,14 @@
 package options
 
+import "time"
+
 // SessionOptions contains configuration options for the SessionStore providers.
 type SessionOptions struct {
-	Type   string             `flag:"session-store-type" cfg:"session_store_type"`
-	Cookie CookieStoreOptions `cfg:",squash"`
-	Redis  RedisStoreOptions  `cfg:",squash"`
+	Type       string             `flag:"session-store-type" cfg:"session_store_type"`
+	Retry      int                `flag:"session-retry-attempts" cfg:"session_retry_attempts"`
+	RetryDelay time.Duration      `flag:"session-retry-delay" cfg:"session_retry_delay"`
+	Cookie     CookieStoreOptions `cfg:",squash"`
+	Redis      RedisStoreOptions  `cfg:",squash"`
 }
 
 // CookieSessionStoreType is used to indicate the CookieSessionStore should be

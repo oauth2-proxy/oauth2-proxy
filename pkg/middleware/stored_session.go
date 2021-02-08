@@ -23,6 +23,12 @@ type StoredSessionLoaderOptions struct {
 	// How often should sessions be refreshed
 	RefreshPeriod time.Duration
 
+	// Number of retries the loader should do for validating the session.
+	RetryAttempts int
+
+	// Waiting time between retries to load session state
+	RetryDelay time.Duration
+
 	// Provider based sesssion refreshing
 	RefreshSessionIfNeeded func(context.Context, *sessionsapi.SessionState) (bool, error)
 
@@ -40,6 +46,8 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 	ss := &storedSessionLoader{
 		store:                              opts.SessionStore,
 		refreshPeriod:                      opts.RefreshPeriod,
+		retryAttempts:                      opts.RetryAttempts,
+		retryDelay:                         opts.RetryDelay,
 		refreshSessionWithProviderIfNeeded: opts.RefreshSessionIfNeeded,
 		validateSessionState:               opts.ValidateSessionState,
 	}
@@ -51,6 +59,8 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 type storedSessionLoader struct {
 	store                              sessionsapi.SessionStore
 	refreshPeriod                      time.Duration
+	retryAttempts                      int
+	retryDelay                         time.Duration
 	refreshSessionWithProviderIfNeeded func(context.Context, *sessionsapi.SessionState) (bool, error)
 	validateSessionState               func(context.Context, *sessionsapi.SessionState) bool
 }
@@ -89,6 +99,25 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 // getValidatedSession is responsible for loading a session and making sure
 // that is is valid.
 func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
+	var session *sessionsapi.SessionState
+	var err error
+	failed := false
+	attempts := 1 + s.retryAttempts
+	for i := 0; i < attempts; i++ {
+		session, err = s.tryToGetValidatedSession(rw, req)
+		if err == nil {
+			if failed {
+				logger.Printf("Previously invalid session is now valid due to retry. (Retries: %d) \n", i)
+			}
+			break
+		}
+		time.Sleep(s.retryDelay)
+		failed = true
+	}
+	return session, err
+}
+
+func (s *storedSessionLoader) tryToGetValidatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	session, err := s.store.Load(req)
 	if err != nil {
 		return nil, err
@@ -102,7 +131,6 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
-
 	return session, nil
 }
 

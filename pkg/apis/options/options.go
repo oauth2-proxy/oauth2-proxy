@@ -3,6 +3,7 @@ package options
 import (
 	"crypto"
 	"net/url"
+	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
@@ -208,6 +209,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
+	flagSet.Int("session-retry-attempts", 0, "number of possible retry attempts for validating session")
+	flagSet.Duration("session-retry-delay", time.Duration(0), "delay between retries attempts to session store configured by `--session-retry-attempts`")
 	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
 	flagSet.String("redis-password", "", "Redis password. Applicable for all Redis configurations. Will override any password set in `--redis-connection-url`")
