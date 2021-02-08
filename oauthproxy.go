@@ -821,25 +821,12 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
 		if authOnlyRedirectSignIn(req) {
-			logger.Printf("Initiating AuthOnly SignIn Redirect")
 			if isAjax(req) {
 				// no point redirecting an AJAX request
 				p.errorJSON(rw, http.StatusUnauthorized)
 				return
 			}
 
-			// Option-1: request response is rendered
-			// No duplication of code to get App redirects and relies on SignIn method
-			// p.SignIn(rw, req)
-
-			// Option-2: request response is rendered, but code from `SignIn` method is partially duplicated
-			// if p.SkipProviderButton {
-			// 	p.OAuthStart(rw, req)
-			// } else {
-			// 	p.SignInPage(rw, req, http.StatusForbidden)
-			// }
-
-			// Option-3: Uses HTTP redirect instead of calling SignIn/OauthStart methods
 			// Orignal request URI is captured and added using `rd` parameter in the redirect
 			// to ensure a redirect to the original URL will still happen after OAuth/Signin process
 			redirect, err := p.getAppRedirect(req)
@@ -848,9 +835,8 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 				p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
 				return
 			}
-			logger.Printf("redirect: %s", redirect)
 
-			redirectPath := fmt.Sprintf("%s?rd=%s", p.SignOutPath, redirect)
+			redirectPath := fmt.Sprintf("%s?rd=%s", p.SignInPath, redirect)
 			if p.SkipProviderButton {
 				redirectPath = fmt.Sprintf("%s?rd=%s", p.OAuthStartPath, redirect)
 			}
