@@ -429,73 +429,60 @@ http:
 
 ### ForwardAuth middleware with redirect_signin
 
-`redirect_signin` query string boolean parameter usage example on `/oauth2/auth` endpoint below and uses [Traefik IngressRoute CRD](https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/#kind-ingressroute) kubernetes provider configuration and Traefik Middlewares
+`redirect_signin` query string boolean parameter usage example on `/oauth2/auth` endpoint without the need for Traefik `errors` middleware using Dynamic File (YAML) Configuration
 
 ```yaml
-  a-service:
-    routes:
-      - kind: Rule
-        match: Host(`a-service.example.com`) && PathPrefix(`/`)
-        middlewares:
-        - name: oauth-auth-redirect # redirects all unauthenticated to oauth2 signin
-        services:
-        - name: a-service-backend
-          port: 80
-      - kind: Rule
-        match: Host(`a-service.example.com`) && PathPrefix(`/no-auto-redirect`)
-        middlewares:
-        - name: oauth-auth-wo-redirect # unauthenticated session will return a 401
-        services:
-        - name: a-service-backend
-          port: 80
-      - kind: Rule
-        match: Host(`a-service.example.com`) && PathPrefix(`/oauth2`) # Make oauth2-proxy handle all /oauth2 calls on a-service.example.com
-        middlewares:
-        - name: auth-headers
-        services:
-        - name: oauth-proxy-backend
-          port: 80
-  b-service:
-    routes:
-      - kind: Rule
-        match: Host(`b-service.example.com`) && PathPrefix(`/`)
-        middlewares:
-        - name: oauth-auth-redirect # redirects all unauthenticated to oauth2 signin
-        services:
-        - name: b-service-backend
-          port: 80
-      - kind: Rule
-        match: Host(`b-service.example.com`) && PathPrefix(`/oauth2`) # Make oauth2-proxy handle all /oauth2 calls on a-service.example.com
-        middlewares:
-        - name: auth-headers
-        services:
-        - name: oauth-proxy-backend
-          port: 80
-  oauth-proxy:
-    routes:
-      - kind: Rule
-        match: Host(`oauth-proxy.example.com`) && PathPrefix(`/`)
-        middlewares:
-        - name: auth-headers
-        services:
-        - name: oauth-proxy-backend
-          port: 80
+http:
+  routers:
+    a-service-route-1:
+      rule: "Host(`a-service.example.com`, `b-service.example.com`) && PathPrefix(`/`)"
+      service: a-service-backend
+      middlewares:
+        - oauth-auth-redirect # redirects all unauthenticated to oauth2 signin
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    a-service-route-2:
+      rule: "Host(`a-service.example.com`) && PathPrefix(`/no-auto-redirect`)"
+      service: a-service-backend
+      middlewares:
+        - oauth-auth-wo-redirect # unauthenticated session will return a 401
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    oauth:
+      rule: "Host(`a-service.example.com`, `b-service.example.com`, `oauth.example.com`) && PathPrefix(`/oauth2/`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+
+  services:
+    a-service-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.2:7555
+    b-service-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.3:7555
+    oauth-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.1:4180
 
   middlewares:
-    oauth-auth-wo-redirect:
-      forwardAuth:
-        address: 'https://oauth-proxy.example.com/oauth2/auth'
-        trustForwardHeader: true
-        authResponseHeaders:
-          - X-Auth-Request-Access-Token
-          - Authorization
-    oauth-auth-redirect:
-      forwardAuth:
-        address: 'https://oauth-proxy.example.com/oauth2/auth?redirect_signin=true'
-        trustForwardHeader: true
-        authResponseHeaders:
-          - X-Auth-Request-Access-Token
-          - Authorization
     auth-headers:
       headers:
         sslRedirect: true
@@ -507,6 +494,20 @@ http:
         stsIncludeSubdomains: true
         stsPreload: true
         frameDeny: true
+    oauth-auth-redirect:
+      forwardAuth:
+        address: https://oauth.example.com/oauth2/auth?redirect_signin=true
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization
+    oauth-auth-wo-redirect:
+      forwardAuth:
+        address: https://oauth.example.com/oauth2/auth
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization
 ```
 
 :::note

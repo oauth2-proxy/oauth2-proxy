@@ -2943,27 +2943,74 @@ func TestAuthOnlyRedirectSignIn(t *testing.T) {
 	testCases := []struct {
 		name               string
 		querystring        string
+		headers            map[string]string
+		whitelistDomains   []string
+		reverseProxy       bool
 		expectedStatusCode int
+		expectedRedirect   string
 	}{
 		{
-			name:               "RedirectSignInTrueExpectOauthRedirect",
-			querystring:        "?redirect_signin=true",
+			name:             "RedirectSignInTrueExpectOauthRedirect",
+			querystring:      "?redirect_signin=true",
+			whitelistDomains: []string{".example.com"},
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   "/foo/bar",
+			},
+			reverseProxy:       true,
+			expectedRedirect:   "/oauth2/sign_in?rd=https://a-service.example.com/foo/bar",
+			expectedStatusCode: http.StatusFound,
+		},
+		{
+			name:             "RedirectSignInTrueReverseProxyFalse",
+			querystring:      "?redirect_signin=true",
+			whitelistDomains: []string{".example.com"},
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   "/foo/bar",
+			},
+			reverseProxy:       false,
+			expectedRedirect:   "/oauth2/sign_in?rd=/",
+			expectedStatusCode: http.StatusFound,
+		},
+		{
+			name:             "RedirectSignInTrueNonWhitelistedDomain",
+			querystring:      "?redirect_signin=true",
+			whitelistDomains: []string{},
+			headers: map[string]string{
+				"X-Forwarded-Proto": "https",
+				"X-Forwarded-Host":  "a-service.example.com",
+				"X-Forwarded-Uri":   "/foo/bar",
+			},
+			reverseProxy:       true,
+			expectedRedirect:   "/oauth2/sign_in?rd=/foo/bar",
 			expectedStatusCode: http.StatusFound,
 		},
 		{
 			name:               "RedirectSignInFalse",
 			querystring:        "?redirect_signin=false",
 			expectedStatusCode: http.StatusUnauthorized,
+			headers:            map[string]string{},
+			reverseProxy:       true,
+			expectedRedirect:   "",
 		},
 		{
 			name:               "RedirectSignNotSpecified",
 			querystring:        "",
 			expectedStatusCode: http.StatusUnauthorized,
+			headers:            map[string]string{},
+			reverseProxy:       true,
+			expectedRedirect:   "",
 		},
 		{
 			name:               "RedirectSignGarbageValue",
 			querystring:        "?redirect_signin=unexpected_string_input",
 			expectedStatusCode: http.StatusUnauthorized,
+			headers:            map[string]string{},
+			reverseProxy:       true,
+			expectedRedirect:   "",
 		},
 	}
 
@@ -2978,9 +3025,18 @@ func TestAuthOnlyRedirectSignIn(t *testing.T) {
 				CreatedAt:   &created,
 			}
 
-			test, err := NewAuthOnlyEndpointTest(tc.querystring)
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {
+				opts.ReverseProxy = tc.reverseProxy
+				opts.WhitelistDomains = tc.whitelistDomains
+			})
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			for header, value := range tc.headers {
+				if value != "" {
+					test.req.Header.Add(header, value)
+				}
 			}
 
 			err = test.SaveSession(session)
@@ -2988,6 +3044,7 @@ func TestAuthOnlyRedirectSignIn(t *testing.T) {
 
 			test.proxy.ServeHTTP(test.rw, test.req)
 
+			assert.Equal(t, tc.expectedRedirect, test.rw.Header().Get("Location"))
 			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
 		})
 	}
