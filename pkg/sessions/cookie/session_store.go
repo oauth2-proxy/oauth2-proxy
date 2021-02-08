@@ -66,6 +66,10 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 	return session, nil
 }
 
+func (s *SessionStore) Lock(req *http.Request, expirationTime time.Duration) error {
+	return nil
+}
+
 // Clear clears any saved session information by writing a cookie to
 // clear the session
 func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {

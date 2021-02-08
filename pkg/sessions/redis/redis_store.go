@@ -54,6 +54,15 @@ func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error)
 	return value, nil
 }
 
+// Lock sessions.SessionState information from a persistence
+func (store *SessionStore) Lock(ctx context.Context, key string, expiration time.Duration) error {
+	err := store.Client.Lock(ctx, key, expiration)
+	if err != nil {
+		return fmt.Errorf("error setting redis lock: %v", err)
+	}
+	return nil
+}
+
 // Clear clears any saved session information for a given persistence cookie
 // from redis, and then clears the session
 func (store *SessionStore) Clear(ctx context.Context, key string) error {

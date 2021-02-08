@@ -65,6 +65,19 @@ func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 	})
 }
 
+// Lock reads sessions.SessionState in a session store. It will
+// use the session ticket from the http.Request's cookie.
+func (m *Manager) Lock(req *http.Request, expiration time.Duration) error {
+	tckt, err := decodeTicketFromRequest(req, m.Options)
+	if err != nil {
+		return err
+	}
+
+	return tckt.lockSession(func(key string) error {
+		return m.Store.Lock(req.Context(), key, expiration)
+	})
+}
+
 // Clear clears any saved session information for a given ticket cookie.
 // Then it clears all session data for that ticket in the Store.
 func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {

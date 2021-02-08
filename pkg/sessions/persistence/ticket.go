@@ -26,6 +26,10 @@ type saveFunc func(string, []byte, time.Duration) error
 // string key and returning the stored value as []byte
 type loadFunc func(string) ([]byte, error)
 
+// lockFunc performs a lock on a persistent store using a
+// string key
+type lockFunc func(string) error
+
 // clearFunc performs a persistent store's clear functionality using
 // a string key for the target of the deletion.
 type clearFunc func(string) error
@@ -133,6 +137,17 @@ func (t *ticket) loadSession(loader loadFunc) (*sessions.SessionState, error) {
 	}
 
 	return sessions.DecodeSessionState(ciphertext, c, false)
+}
+
+// lockSession loads a session from the disk store via the passed loadFunc
+// using the ticket.id as the key. It then decodes the SessionState using
+// ticket.secret to make the AES-GCM cipher.
+func (t *ticket) lockSession(loader lockFunc) error {
+	err := loader(t.id)
+	if err != nil {
+		return fmt.Errorf("failed to lock the session state with the ticket: %v", err)
+	}
+	return nil
 }
 
 // clearSession uses the passed clearFunc to delete a session stored with a

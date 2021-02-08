@@ -11,5 +11,6 @@ import (
 type Store interface {
 	Save(context.Context, string, []byte, time.Duration) error
 	Load(context.Context, string) ([]byte, error)
+	Lock(context.Context, string, time.Duration) error
 	Clear(context.Context, string) error
 }
