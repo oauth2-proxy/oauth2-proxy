@@ -836,11 +836,8 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 				return
 			}
 
+			// SignIn has the check on SkipProviderButton to do either SigninPage or OauthStart
 			redirectPath := fmt.Sprintf("%s?rd=%s", p.SignInPath, redirect)
-			if p.SkipProviderButton {
-				redirectPath = fmt.Sprintf("%s?rd=%s", p.OAuthStartPath, redirect)
-			}
-
 			http.Redirect(rw, req, redirectPath, http.StatusFound)
 			return
 		}
@@ -1208,7 +1205,7 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 }
 
 // authOnlyRedirectSignIn handles QS 'redirect_signin' parsing on the
-// AuthOnly endpoint to determine redirect to SignInPage/OauthStart
+// AuthOnly endpoint to redirect to `/oauth2/sign_in` endpoint
 func authOnlyRedirectSignIn(req *http.Request) bool {
 	query := req.URL.Query()
 	redirectSignIn, err := strconv.ParseBool(query.Get("redirect_signin"))
