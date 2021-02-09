@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -29,6 +30,9 @@ var _ = Describe("Cookie Tests", func() {
 
 				if in.xForwardedHost != "" {
 					req.Header.Add("X-Forwarded-Host", in.xForwardedHost)
+					req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
+						ReverseProxy: true,
+					})
 				}
 
 				Expect(GetCookieDomain(req, in.cookieDomains)).To(Equal(in.expectedOutput))
