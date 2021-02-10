@@ -437,21 +437,23 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 		}
 		redirectHostname := redirectURL.Hostname()
 
-		for _, domain := range p.whitelistDomains {
-			domainHostname, domainPort := splitHostPort(strings.TrimLeft(domain, "."))
-			if domainHostname == "" {
+		for _, allowedDomain := range p.whitelistDomains {
+			allowedHost, allowedPort := splitHostPort(allowedDomain)
+			if allowedHost == "" {
 				continue
 			}
 
-			if (redirectHostname == domainHostname) || (strings.HasPrefix(domain, ".") && strings.HasSuffix(redirectHostname, domainHostname)) {
+			if redirectHostname == strings.TrimPrefix(allowedHost, ".") ||
+				(strings.HasPrefix(allowedHost, ".") &&
+					strings.HasSuffix(redirectHostname, allowedHost)) {
 				// the domain names match, now validate the ports
 				// if the whitelisted domain's port is '*', allow all ports
 				// if the whitelisted domain contains a specific port, only allow that port
 				// if the whitelisted domain doesn't contain a port at all, only allow empty redirect ports ie http and https
 				redirectPort := redirectURL.Port()
-				if (domainPort == "*") ||
-					(domainPort == redirectPort) ||
-					(domainPort == "" && redirectPort == "") {
+				if allowedPort == "*" ||
+					allowedPort == redirectPort ||
+					(allowedPort == "" && redirectPort == "") {
 					return true
 				}
 			}
