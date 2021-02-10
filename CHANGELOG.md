@@ -8,6 +8,8 @@
 
 ## Changes since v7.0.1
 
+- [#1039](https://github.com/oauth2-proxy/oauth2-proxy/pull/1039) Ensure errors in tests are logged to the GinkgoWriter (@JoelSpeed)
+
 # V7.0.1
 
 ## Release Highlights
