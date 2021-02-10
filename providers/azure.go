@@ -174,7 +174,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 
 	email, err := getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
 	if email == "" || err != nil {
-		err = fmt.Errorf("unable to get email address: %w", err)
+		err = fmt.Errorf("unable to get email address: %v", err)
 		logger.Errorf("%s", err)
 		return err
 	}

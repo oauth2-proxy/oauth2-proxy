@@ -183,17 +183,17 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 		{
 			Description:             "should return error when Azure backend doesn't return email information",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": null }`,
-			ExpectedError:           fmt.Errorf("unable to get email address: %w", errors.New("type assertion to string failed")),
+			ExpectedError:           fmt.Errorf("unable to get email address: %v", errors.New("type assertion to string failed")),
 		},
 		{
 			Description:             "should return specific error when unable to get email",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": "" }`,
-			ExpectedError:           fmt.Errorf("unable to get email address: %w", nil),
+			ExpectedError:           fmt.Errorf("unable to get email address: %v", nil),
 		},
 		{
 			Description:             "should return error when otherMails from Azure backend is not a valid type",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": "", "userPrincipalName": null }`,
-			ExpectedError:           fmt.Errorf("unable to get email address: %w", errors.New("type assertion to string failed")),
+			ExpectedError:           fmt.Errorf("unable to get email address: %v", errors.New("type assertion to string failed")),
 		},
 		{
 			Description:   "should not query profile api when email is already set in session",
