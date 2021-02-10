@@ -1,11 +1,21 @@
 package app
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
+
+// errorMessages are default error messages for each of the the different
+// http status codes expected to be rendered in the error page.
+var errorMessages = map[int]string{
+	http.StatusInternalServerError: "Oops! Something went wrong. For more information contact your server administrator.",
+	http.StatusNotFound:            "We could not find the resource you were looking for.",
+	http.StatusForbidden:           "You do not have permission to access this resource.",
+	http.StatusUnauthorized:        "You need to be logged in to access this resource.",
+}
 
 // ErrorPage is used to render error pages.
 type ErrorPage struct {
@@ -21,12 +31,16 @@ type ErrorPage struct {
 
 	// Version is the OAuth2 Proxy version to be used in the default footer.
 	Version string
+
+	// Debug determines whether errors pages should be rendered with detailed
+	// errors.
+	Debug bool
 }
 
 // Render writes an error page to the given response writer.
 // It uses the passed redirectURL to give users the option to go back to where
 // they originally came from or try signing in again.
-func (e *ErrorPage) Render(rw http.ResponseWriter, status int, redirectURL string, appError string) {
+func (e *ErrorPage) Render(rw http.ResponseWriter, status int, redirectURL string, appError string, messages ...interface{}) {
 	rw.WriteHeader(status)
 
 	// We allow unescaped template.HTML since it is user configured options
@@ -41,7 +55,7 @@ func (e *ErrorPage) Render(rw http.ResponseWriter, status int, redirectURL strin
 		Version     string
 	}{
 		Title:       http.StatusText(status),
-		Message:     appError,
+		Message:     e.getMessage(status, appError, messages...),
 		ProxyPrefix: e.ProxyPrefix,
 		StatusCode:  status,
 		Redirect:    redirectURL,
@@ -60,5 +74,24 @@ func (e *ErrorPage) Render(rw http.ResponseWriter, status int, redirectURL strin
 // It is expected to always render a bad gateway error.
 func (e *ErrorPage) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
 	logger.Errorf("Error proxying to upstream server: %v", proxyErr)
-	e.Render(rw, http.StatusBadGateway, "", "Error proxying to upstream server")
+	e.Render(rw, http.StatusBadGateway, "", proxyErr.Error(), "There was a problem connecting to the upstream server.")
+}
+
+// getMessage creates the message for the template parameters.
+// If the ErrorPage.Debug is enabled, the application error takes precedence.
+// Otherwise, any messages will be used.
+// The first message is expected to be a format string.
+// If no messages are supplied, a default error message will be used.
+func (e *ErrorPage) getMessage(status int, appError string, messages ...interface{}) string {
+	if e.Debug {
+		return appError
+	}
+	if len(messages) > 0 {
+		format := fmt.Sprintf("%v", messages[0])
+		return fmt.Sprintf(format, messages[1:]...)
+	}
+	if msg, ok := errorMessages[status]; ok {
+		return msg
+	}
+	return "Unknown error"
 }

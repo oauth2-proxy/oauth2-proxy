@@ -22,6 +22,12 @@ type Templates struct {
 	// password form if a static passwords file (htpasswd file) has been
 	// configured.
 	DisplayLoginForm bool `flag:"display-htpasswd-form" cfg:"display_htpasswd_form"`
+
+	// Debug renders detailed errors when an error page is shown.
+	// It is not advised to use this in production as errors may contain sensitive
+	// information.
+	// Use only for diagnosing backend errors.
+	Debug bool `flag:"show-debug-on-error" cfg:"show-debug-on-error"`
 }
 
 func templatesFlagSet() *pflag.FlagSet {
@@ -31,6 +37,7 @@ func templatesFlagSet() *pflag.FlagSet {
 	flagSet.String("banner", "", "custom banner string. Use \"-\" to disable default banner.")
 	flagSet.String("footer", "", "custom footer string. Use \"-\" to disable default footer.")
 	flagSet.Bool("display-htpasswd-form", true, "display username / password login form if an htpasswd file is provided")
+	flagSet.Bool("show-debug-on-error", false, "show detailed error information on error pages (WARNING: this may contain sensitive information - do not use in production)")
 
 	return flagSet
 }
