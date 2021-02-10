@@ -6,10 +6,27 @@
 
 ## Breaking Changes
 
+## Changes since v7.0.1
+
+# V7.0.1
+
+## Release Highlights
+
+- Fixed a bug that meant that flag ordering mattered
+- Fixed a bug where response headers for groups were not being flattened
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.0.0
 
 - [#1020](https://github.com/oauth2-proxy/oauth2-proxy/pull/1020) Flatten array-based response headers (@NickMeves)
-- [#1026](https://github.com/oauth2-proxy/oauth2-proxy/pull/1026) Ensure config flags get parsed correctly when other flags preceed them (@JoelSpeed)
+- [#1026](https://github.com/oauth2-proxy/oauth2-proxy/pull/1026) Ensure config flags get parsed correctly when other flags precede them (@JoelSpeed)
 
 # V7.0.0
 
