@@ -107,25 +107,13 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
-func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, error) {
-	params := url.Values{}
-	if code == "" {
-		return params, ErrMissingCode
-	}
-	clientSecret, err := p.GetClientSecret()
-	if err != nil {
-		return params, err
-	}
-
-	params.Add("redirect_uri", redirectURL)
-	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", clientSecret)
-	params.Add("code", code)
-	params.Add("grant_type", "authorization_code")
+func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
+	extraParams := url.Values{}
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		params.Add("resource", p.ProtectedResource.String())
+		extraParams.Add("resource", p.ProtectedResource.String())
 	}
-	return params, nil
+	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
+	return a.String()
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
@@ -178,19 +166,55 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 	return session, nil
 }
 
+// EnrichSession finds the email to enrich the session state
+func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+	if s.Email != "" {
+		return nil
+	}
+
+	email, err := getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
+	if email == "" || err != nil {
+		err = fmt.Errorf("unable to get email address: %w", err)
+		logger.Errorf("%s", err)
+		return err
+	}
+	s.Email = email
+
+	return nil
+}
+
+func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, error) {
+	params := url.Values{}
+	if code == "" {
+		return params, ErrMissingCode
+	}
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return params, err
+	}
+
+	params.Add("redirect_uri", redirectURL)
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", clientSecret)
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		params.Add("resource", p.ProtectedResource.String())
+	}
+	return params, nil
+}
+
 func (p *AzureProvider) verifyIDTokenAndExtractEmail(ctx context.Context, rawIDToken string) (string, error) {
 	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		return "", err
 	}
-	var idTokenClaims struct {
-		Email string `json:"email,omitempty"`
-	}
-	if err := idToken.Claims(&idTokenClaims); err != nil {
+	claims, err := p.getClaims(idToken)
+	if err != nil {
 		return "", err
 	}
 
-	return idTokenClaims.Email, nil
+	return claims.Email, nil
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -302,31 +326,6 @@ func getEmailFromProfileAPI(ctx context.Context, accessToken, profileURL string)
 	}
 
 	return getEmailFromJSON(json)
-}
-
-// EnrichSessionState finds the email to enrich the session state
-func (p *AzureProvider) EnrichSessionState(ctx context.Context, s *sessions.SessionState) error {
-	if s.Email != "" {
-		return nil
-	}
-
-	email, err := getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
-	if email == "" {
-		logger.Errorf("failed to get email address: %s", err)
-		return err
-	}
-	s.Email = email
-
-	return err
-}
-
-func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
-	extraParams := url.Values{}
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		extraParams.Add("resource", p.ProtectedResource.String())
-	}
-	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
-	return a.String()
 }
 
 // ValidateSession validates the AccessToken

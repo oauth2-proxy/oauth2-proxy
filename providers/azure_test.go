@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -46,6 +47,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 			ValidateURL:       &url.URL{},
 			ProtectedResource: &url.URL{},
 			Scope:             "",
+			EmailClaim:        "email",
 			Verifier: oidc.NewVerifier(
 				"https://issuer.example.com",
 				fakeAzureKeySetStub{},
@@ -155,7 +157,7 @@ func testAzureBackend(payload string) *httptest.Server {
 		}))
 }
 
-func TestAzureProviderEnrichSessionState(t *testing.T) {
+func TestAzureProviderEnrichSession(t *testing.T) {
 	testCases := []struct {
 		Description             string
 		Email                   string
@@ -181,16 +183,17 @@ func TestAzureProviderEnrichSessionState(t *testing.T) {
 		{
 			Description:             "should return error when Azure backend doesn't return email information",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": null }`,
-			ExpectedError:           errors.New("type assertion to string failed"),
+			ExpectedError:           fmt.Errorf("unable to get email address: %w", errors.New("type assertion to string failed")),
 		},
 		{
-			Description:             "should return empty email when userPrincipalName from Azure backend is empty",
+			Description:             "should return specific error when unable to get email",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": "" }`,
+			ExpectedError:           fmt.Errorf("unable to get email address: %w", nil),
 		},
 		{
 			Description:             "should return error when otherMails from Azure backend is not a valid type",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": "", "userPrincipalName": null }`,
-			ExpectedError:           errors.New("type assertion to string failed"),
+			ExpectedError:           fmt.Errorf("unable to get email address: %w", errors.New("type assertion to string failed")),
 		},
 		{
 			Description:   "should not query profile api when email is already set in session",
@@ -215,7 +218,7 @@ func TestAzureProviderEnrichSessionState(t *testing.T) {
 			p := testAzureProvider(host)
 			session := CreateAuthorizedSession()
 			session.Email = testCase.Email
-			err := p.EnrichSessionState(context.Background(), session)
+			err := p.EnrichSession(context.Background(), session)
 			assert.Equal(t, testCase.ExpectedError, err)
 			assert.Equal(t, testCase.ExpectedEmail, session.Email)
 		})
