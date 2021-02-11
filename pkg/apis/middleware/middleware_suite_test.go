@@ -13,6 +13,7 @@ import (
 // this functionality
 func TestMiddlewareSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Middleware API")

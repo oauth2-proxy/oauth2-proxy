@@ -10,6 +10,7 @@ import (
 
 func TestValidationSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Validation Suite")
