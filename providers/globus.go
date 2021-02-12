@@ -1,6 +1,7 @@
 package providers
 
 import (
+        "context"
         "bytes"
         "encoding/json"
         "errors"
@@ -9,6 +10,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+
+        "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 type GlobusProvider struct {
@@ -62,7 +65,7 @@ func NewGlobusProvider(p *ProviderData) *GlobusProvider {
 	return &GlobusProvider{ProviderData: p}
 }
 
-func (p *GlobusProvider) GetEmailAddress(s *SessionState) (string, error) {
+func (p *GlobusProvider) GetEmailAddress(c context.Context, s *sessions.SessionState) (string, error) {
 	var userinfo struct {
 		Email             string `json:"email"`
 		Name              string `json:"name"`
@@ -96,7 +99,7 @@ func (p *GlobusProvider) GetEmailAddress(s *SessionState) (string, error) {
 	return userinfo.Email, nil
 }
 
-func (p *GlobusProvider) Redeem(redirectURL, code string) (s *SessionState, err error) {
+func (p *GlobusProvider) Redeem(c context.Context, redirectURL string, code string) (s *sessions.SessionState, err error) {
 	if code == "" {
 		err = errors.New("missing code")
 		return
@@ -148,9 +151,9 @@ func (p *GlobusProvider) Redeem(redirectURL, code string) (s *SessionState, err 
 		fmt.Printf("Found access tokens: %s\n", otherTokens)
 
 
-                s = &SessionState{
+                s = &sessions.SessionState{
                         AccessToken: globusTokens.AccessToken,
-                        OtherTokens: otherTokens,
+                        // OtherTokens: otherTokens,
                 }
 		return
         }
@@ -162,7 +165,7 @@ func (p *GlobusProvider) Redeem(redirectURL, code string) (s *SessionState, err 
 	}
 	if a := v.Get("access_token"); a != "" {
 		fmt.Printf("using existing access token\n")
-		s = &SessionState{AccessToken: a}
+		s = &sessions.SessionState{AccessToken: a}
 	} else {
 		err = fmt.Errorf("no access token found %s", body)
 	}
