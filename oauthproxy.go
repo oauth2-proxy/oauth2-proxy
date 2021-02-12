@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"net"
 	"net/http"
 	"net/url"
@@ -76,39 +75,34 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	allowedRoutes        []allowedRoute
-	redirectURL          *url.URL // the url to receive requests at
-	whitelistDomains     []string
-	provider             providers.Provider
-	providerNameOverride string
-	sessionStore         sessionsapi.SessionStore
-	ProxyPrefix          string
-	SignInMessage        string
-	basicAuthValidator   basic.Validator
-	displayHtpasswdForm  bool
-	serveMux             http.Handler
-	SetXAuthRequest      bool
-	PassBasicAuth        bool
-	SetBasicAuth         bool
-	SkipProviderButton   bool
-	PassUserHeaders      bool
-	BasicAuthPassword    string
-	PassAccessToken      bool
-	SetAuthorization     bool
-	PassAuthorization    bool
-	PreferEmailToUser    bool
-	skipAuthPreflight    bool
-	skipJwtBearerTokens  bool
-	templates            *template.Template
-	realClientIPParser   ipapi.RealClientIPParser
-	trustedIPs           *ip.NetSet
-	Banner               string
-	Footer               string
+	allowedRoutes       []allowedRoute
+	redirectURL         *url.URL // the url to receive requests at
+	whitelistDomains    []string
+	provider            providers.Provider
+	sessionStore        sessionsapi.SessionStore
+	ProxyPrefix         string
+	basicAuthValidator  basic.Validator
+	serveMux            http.Handler
+	SetXAuthRequest     bool
+	PassBasicAuth       bool
+	SetBasicAuth        bool
+	SkipProviderButton  bool
+	PassUserHeaders     bool
+	BasicAuthPassword   string
+	PassAccessToken     bool
+	SetAuthorization    bool
+	PassAuthorization   bool
+	PreferEmailToUser   bool
+	skipAuthPreflight   bool
+	skipJwtBearerTokens bool
+	realClientIPParser  ipapi.RealClientIPParser
+	trustedIPs          *ip.NetSet
 
 	sessionChain alice.Chain
 	headersChain alice.Chain
 	preAuthChain alice.Chain
 	errorPage    *app.ErrorPage
+	signInPage   *app.SignInPage
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -174,6 +168,17 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
+	signInPage := &app.SignInPage{
+		Template:         templates.Lookup("sign_in.html"),
+		ErrorPage:        errorPage,
+		ProxyPrefix:      opts.ProxyPrefix,
+		ProviderName:     buildProviderName(opts.GetProvider(), opts.ProviderName),
+		SignInMessage:    buildSignInMessage(opts),
+		Footer:           opts.Templates.Footer,
+		Version:          VERSION,
+		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+	}
+
 	allowedRoutes, err := buildRoutesAllowlist(opts)
 	if err != nil {
 		return nil, err
@@ -210,30 +215,25 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
-		ProxyPrefix:          opts.ProxyPrefix,
-		provider:             opts.GetProvider(),
-		providerNameOverride: opts.ProviderName,
-		sessionStore:         sessionStore,
-		serveMux:             upstreamProxy,
-		redirectURL:          redirectURL,
-		allowedRoutes:        allowedRoutes,
-		whitelistDomains:     opts.WhitelistDomains,
-		skipAuthPreflight:    opts.SkipAuthPreflight,
-		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
-		realClientIPParser:   opts.GetRealClientIPParser(),
-		SkipProviderButton:   opts.SkipProviderButton,
-		templates:            templates,
-		trustedIPs:           trustedIPs,
-		Banner:               opts.Templates.Banner,
-		Footer:               opts.Templates.Footer,
-		SignInMessage:        buildSignInMessage(opts),
+		ProxyPrefix:         opts.ProxyPrefix,
+		provider:            opts.GetProvider(),
+		sessionStore:        sessionStore,
+		serveMux:            upstreamProxy,
+		redirectURL:         redirectURL,
+		allowedRoutes:       allowedRoutes,
+		whitelistDomains:    opts.WhitelistDomains,
+		skipAuthPreflight:   opts.SkipAuthPreflight,
+		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
+		realClientIPParser:  opts.GetRealClientIPParser(),
+		SkipProviderButton:  opts.SkipProviderButton,
+		trustedIPs:          trustedIPs,
 
-		basicAuthValidator:  basicAuthValidator,
-		displayHtpasswdForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
-		sessionChain:        sessionChain,
-		headersChain:        headersChain,
-		preAuthChain:        preAuthChain,
-		errorPage:           errorPage,
+		basicAuthValidator: basicAuthValidator,
+		sessionChain:       sessionChain,
+		headersChain:       headersChain,
+		preAuthChain:       preAuthChain,
+		errorPage:          errorPage,
+		signInPage:         signInPage,
 	}, nil
 }
 
@@ -329,6 +329,13 @@ func buildSignInMessage(opts *options.Options) string {
 		}
 	}
 	return msg
+}
+
+func buildProviderName(p providers.Provider, override string) string {
+	if override != "" {
+		return override
+	}
+	return p.Data().ProviderName
 }
 
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
@@ -594,33 +601,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
-	// We allow unescaped template.HTML since it is user configured options
-	/* #nosec G203 */
-	t := struct {
-		ProviderName  string
-		SignInMessage template.HTML
-		CustomLogin   bool
-		Redirect      string
-		Version       string
-		ProxyPrefix   string
-		Footer        template.HTML
-	}{
-		ProviderName:  p.provider.Data().ProviderName,
-		SignInMessage: template.HTML(p.SignInMessage),
-		CustomLogin:   p.displayHtpasswdForm,
-		Redirect:      redirectURL,
-		Version:       VERSION,
-		ProxyPrefix:   p.ProxyPrefix,
-		Footer:        template.HTML(p.Footer),
-	}
-	if p.providerNameOverride != "" {
-		t.ProviderName = p.providerNameOverride
-	}
-	err = p.templates.ExecuteTemplate(rw, "sign_in.html", t)
-	if err != nil {
-		logger.Printf("Error rendering sign_in.html template: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-	}
+	p.signInPage.Render(rw, redirectURL)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
