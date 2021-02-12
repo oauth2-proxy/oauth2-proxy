@@ -17,30 +17,30 @@ var errorMessages = map[int]string{
 	http.StatusUnauthorized:        "You need to be logged in to access this resource.",
 }
 
-// ErrorPage is used to render error pages.
-type ErrorPage struct {
-	// Template is the error page HTML template.
-	Template *template.Template
+// errorPageWriter is used to render error pages.
+type errorPageWriter struct {
+	// template is the error page HTML template.
+	template *template.Template
 
-	// ProxyPrefix is the prefix under which OAuth2 Proxy pages are served.
-	ProxyPrefix string
+	// proxyPrefix is the prefix under which OAuth2 Proxy pages are served.
+	proxyPrefix string
 
-	// Footer is the footer to be displayed at the bottom of the page.
+	// footer is the footer to be displayed at the bottom of the page.
 	// If not set, a default footer will be used.
-	Footer string
+	footer string
 
-	// Version is the OAuth2 Proxy version to be used in the default footer.
-	Version string
+	// version is the OAuth2 Proxy version to be used in the default footer.
+	version string
 
-	// Debug determines whether errors pages should be rendered with detailed
+	// debug determines whether errors pages should be rendered with detailed
 	// errors.
-	Debug bool
+	debug bool
 }
 
-// Render writes an error page to the given response writer.
+// WriteErrorPage writes an error page to the given response writer.
 // It uses the passed redirectURL to give users the option to go back to where
 // they originally came from or try signing in again.
-func (e *ErrorPage) Render(rw http.ResponseWriter, status int, redirectURL string, appError string, messages ...interface{}) {
+func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, status int, redirectURL string, appError string, messages ...interface{}) {
 	rw.WriteHeader(status)
 
 	// We allow unescaped template.HTML since it is user configured options
@@ -56,14 +56,14 @@ func (e *ErrorPage) Render(rw http.ResponseWriter, status int, redirectURL strin
 	}{
 		Title:       http.StatusText(status),
 		Message:     e.getMessage(status, appError, messages...),
-		ProxyPrefix: e.ProxyPrefix,
+		ProxyPrefix: e.proxyPrefix,
 		StatusCode:  status,
 		Redirect:    redirectURL,
-		Footer:      template.HTML(e.Footer),
-		Version:     e.Version,
+		Footer:      template.HTML(e.footer),
+		Version:     e.version,
 	}
 
-	if err := e.Template.Execute(rw, data); err != nil {
+	if err := e.template.Execute(rw, data); err != nil {
 		logger.Printf("Error rendering error template: %v", err)
 		http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
@@ -72,18 +72,18 @@ func (e *ErrorPage) Render(rw http.ResponseWriter, status int, redirectURL strin
 // ProxyErrorHandler is used by the upstream ReverseProxy to render error pages
 // when there are issues with upstream servers.
 // It is expected to always render a bad gateway error.
-func (e *ErrorPage) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
+func (e *errorPageWriter) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
 	logger.Errorf("Error proxying to upstream server: %v", proxyErr)
-	e.Render(rw, http.StatusBadGateway, "", proxyErr.Error(), "There was a problem connecting to the upstream server.")
+	e.WriteErrorPage(rw, http.StatusBadGateway, "", proxyErr.Error(), "There was a problem connecting to the upstream server.")
 }
 
 // getMessage creates the message for the template parameters.
-// If the ErrorPage.Debug is enabled, the application error takes precedence.
+// If the errorPagewriter.Debug is enabled, the application error takes precedence.
 // Otherwise, any messages will be used.
 // The first message is expected to be a format string.
 // If no messages are supplied, a default error message will be used.
-func (e *ErrorPage) getMessage(status int, appError string, messages ...interface{}) string {
-	if e.Debug {
+func (e *errorPageWriter) getMessage(status int, appError string, messages ...interface{}) string {
+	if e.debug {
 		return appError
 	}
 	if len(messages) > 0 {

@@ -9,35 +9,35 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("SignIn Page", func() {
-	var signInPage *SignInPage
+var _ = Describe("SignIn Page Writer", func() {
+	var signInPage *signInPageWriter
 
 	BeforeEach(func() {
 		errorTmpl, err := template.New("").Parse("{{.Title}}")
 		Expect(err).ToNot(HaveOccurred())
-		errorPage := &ErrorPage{
-			Template: errorTmpl,
+		errorPage := &errorPageWriter{
+			template: errorTmpl,
 		}
 
 		tmpl, err := template.New("").Parse("{{.ProxyPrefix}} {{.ProviderName}} {{.SignInMessage}} {{.Footer}} {{.Version}} {{.Redirect}} {{.CustomLogin}}")
 		Expect(err).ToNot(HaveOccurred())
 
-		signInPage = &SignInPage{
-			Template:         tmpl,
-			ErrorPage:        errorPage,
-			ProxyPrefix:      "/prefix/",
-			ProviderName:     "My Provider",
-			SignInMessage:    "Sign In Here",
-			Footer:           "Custom Footer Text",
-			Version:          "v0.0.0-test",
-			DisplayLoginForm: true,
+		signInPage = &signInPageWriter{
+			template:         tmpl,
+			errorPageWriter:  errorPage,
+			proxyPrefix:      "/prefix/",
+			providerName:     "My Provider",
+			signInMessage:    "Sign In Here",
+			footer:           "Custom Footer Text",
+			version:          "v0.0.0-test",
+			displayLoginForm: true,
 		}
 	})
 
-	Context("Render", func() {
+	Context("WriteSignInPage", func() {
 		It("Writes the template to the response writer", func() {
 			recorder := httptest.NewRecorder()
-			signInPage.Render(recorder, "/redirect")
+			signInPage.WriteSignInPage(recorder, "/redirect")
 
 			body, err := ioutil.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
@@ -48,10 +48,10 @@ var _ = Describe("SignIn Page", func() {
 			// Overwrite the template with something bad
 			tmpl, err := template.New("").Parse("{{.Unknown}}")
 			Expect(err).ToNot(HaveOccurred())
-			signInPage.Template = tmpl
+			signInPage.template = tmpl
 
 			recorder := httptest.NewRecorder()
-			signInPage.Render(recorder, "/redirect")
+			signInPage.WriteSignInPage(recorder, "/redirect")
 
 			body, err := ioutil.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())

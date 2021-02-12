@@ -206,10 +206,10 @@ const (
 {{end}}`
 )
 
-// LoadTemplates adds the Sign In and Error templates from the custom template
+// loadTemplates adds the Sign In and Error templates from the custom template
 // directory, or uses the defaults if they do not exist or the custom directory
 // is not provided.
-func LoadTemplates(customDir string) (*template.Template, error) {
+func loadTemplates(customDir string) (*template.Template, error) {
 	t := template.New("").Funcs(template.FuncMap{
 		"ToUpper": strings.ToUpper,
 		"ToLower": strings.ToLower,

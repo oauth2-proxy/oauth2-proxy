@@ -101,8 +101,7 @@ type OAuthProxy struct {
 	sessionChain alice.Chain
 	headersChain alice.Chain
 	preAuthChain alice.Chain
-	errorPage    *app.ErrorPage
-	signInPage   *app.SignInPage
+	pageWriter   app.PageWriter
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -112,20 +111,31 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
-	templates, err := app.LoadTemplates(opts.Templates.Path)
+	var basicAuthValidator basic.Validator
+	if opts.HtpasswdFile != "" {
+		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
+		var err error
+		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
+		}
+	}
+
+	pageWriter, err := app.NewPageWriter(app.PageWriterOpts{
+		TemplatesPath:    opts.Templates.Path,
+		ProxyPrefix:      opts.ProxyPrefix,
+		Footer:           opts.Templates.Footer,
+		Version:          VERSION,
+		Debug:            opts.Templates.Debug,
+		ProviderName:     buildProviderName(opts.GetProvider(), opts.ProviderName),
+		SignInMessage:    buildSignInMessage(opts),
+		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("error loading templates: %v", err)
+		return nil, fmt.Errorf("error initialising page writer: %v", err)
 	}
 
-	errorPage := &app.ErrorPage{
-		Template:    templates.Lookup("error.html"),
-		ProxyPrefix: opts.ProxyPrefix,
-		Footer:      opts.Templates.Footer,
-		Version:     VERSION,
-		Debug:       opts.Templates.Debug,
-	}
-
-	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), errorPage.ProxyErrorHandler)
+	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), pageWriter.ProxyErrorHandler)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
 	}
@@ -156,27 +166,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		} else {
 			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
 		}
-	}
-
-	var basicAuthValidator basic.Validator
-	if opts.HtpasswdFile != "" {
-		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
-		var err error
-		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
-		}
-	}
-
-	signInPage := &app.SignInPage{
-		Template:         templates.Lookup("sign_in.html"),
-		ErrorPage:        errorPage,
-		ProxyPrefix:      opts.ProxyPrefix,
-		ProviderName:     buildProviderName(opts.GetProvider(), opts.ProviderName),
-		SignInMessage:    buildSignInMessage(opts),
-		Footer:           opts.Templates.Footer,
-		Version:          VERSION,
-		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	}
 
 	allowedRoutes, err := buildRoutesAllowlist(opts)
@@ -232,8 +221,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		sessionChain:       sessionChain,
 		headersChain:       headersChain,
 		preAuthChain:       preAuthChain,
-		errorPage:          errorPage,
-		signInPage:         signInPage,
+		pageWriter:         pageWriter,
 	}, nil
 }
 
@@ -540,7 +528,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
-	p.errorPage.Render(rw, code, redirectURL, appError, messages...)
+	p.pageWriter.WriteErrorPage(rw, code, redirectURL, appError, messages...)
 }
 
 // IsAllowedRequest is used to check if auth should be skipped for this request
@@ -601,7 +589,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
-	p.signInPage.Render(rw, redirectURL)
+	p.pageWriter.WriteSignInPage(rw, redirectURL)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
