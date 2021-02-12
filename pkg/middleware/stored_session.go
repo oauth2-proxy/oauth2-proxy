@@ -132,7 +132,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	return nil
 }
 
-// refreshSessionWithProvider attempts to refresh the sessinon with the provider
+// refreshSessionWithProvider attempts to refresh the session with the provider
 // and will save the session if it was updated.
 func (s *storedSessionLoader) refreshSessionWithProvider(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) (bool, error) {
 	refreshed, err := s.refreshSessionWithProviderIfNeeded(req.Context(), session)
