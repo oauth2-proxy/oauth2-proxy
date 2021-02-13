@@ -79,6 +79,7 @@ const (
   		</div>
       {{ end }}
 
+      {{ if .Redirect }}
       <hr>
 
       <div class="columns">
@@ -94,6 +95,7 @@ const (
           </form>
         </div>
       </div>
+      {{ end }}
 
     </div>
   </section>

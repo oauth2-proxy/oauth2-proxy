@@ -2,7 +2,6 @@ package upstream
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/url"
 
@@ -70,25 +69,4 @@ func (m *multiUpstreamProxy) registerFileServer(upstream options.Upstream, u *ur
 func (m *multiUpstreamProxy) registerHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, errorHandler ProxyErrorHandler) {
 	logger.Printf("mapping path %q => upstream %q", upstream.Path, upstream.URI)
 	m.serveMux.Handle(upstream.Path, newHTTPUpstreamProxy(upstream, u, sigData, errorHandler))
-}
-
-// NewProxyErrorHandler creates a ProxyErrorHandler using the template given.
-func NewProxyErrorHandler(errorTemplate *template.Template, proxyPrefix string) ProxyErrorHandler {
-	return func(rw http.ResponseWriter, req *http.Request, proxyErr error) {
-		logger.Errorf("Error proxying to upstream server: %v", proxyErr)
-		rw.WriteHeader(http.StatusBadGateway)
-		data := struct {
-			Title       string
-			Message     string
-			ProxyPrefix string
-		}{
-			Title:       "Bad Gateway",
-			Message:     "Error proxying to upstream server",
-			ProxyPrefix: proxyPrefix,
-		}
-		err := errorTemplate.Execute(rw, data)
-		if err != nil {
-			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
-		}
-	}
 }
