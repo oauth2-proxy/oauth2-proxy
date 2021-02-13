@@ -1,4 +1,4 @@
-package app
+package pagewriter
 
 import (
 	"io/ioutil"
@@ -10,13 +10,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("PageWriter", func() {
-	Context("NewPageWriter", func() {
-		var writer PageWriter
-		var opts PageWriterOpts
+var _ = Describe("Writer", func() {
+	Context("NewWriter", func() {
+		var writer Writer
+		var opts Opts
 
 		BeforeEach(func() {
-			opts = PageWriterOpts{
+			opts = Opts{
 				TemplatesPath:    "",
 				ProxyPrefix:      "/prefix",
 				Footer:           "<Footer>",
@@ -31,7 +31,7 @@ var _ = Describe("PageWriter", func() {
 		Context("With no custom templates", func() {
 			BeforeEach(func() {
 				var err error
-				writer, err = NewPageWriter(opts)
+				writer, err = NewWriter(opts)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -70,7 +70,7 @@ var _ = Describe("PageWriter", func() {
 
 				opts.TemplatesPath = customDir
 
-				writer, err = NewPageWriter(opts)
+				writer, err = NewWriter(opts)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -117,7 +117,7 @@ var _ = Describe("PageWriter", func() {
 			})
 
 			It("Should return an error", func() {
-				writer, err := NewPageWriter(opts)
+				writer, err := NewWriter(opts)
 				Expect(err).To(MatchError(ContainSubstring("template: sign_in.html:1: function \"Custom\" not defined")))
 				Expect(writer).To(BeNil())
 			})

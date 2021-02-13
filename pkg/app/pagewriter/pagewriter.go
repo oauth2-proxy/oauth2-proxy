@@ -1,29 +1,29 @@
-package app
+package pagewriter
 
 import (
 	"fmt"
 	"net/http"
 )
 
-// PageWriter is an interface for rendering html templates for both sign-in and
+// Writer is an interface for rendering html templates for both sign-in and
 // error pages.
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
-type PageWriter interface {
+type Writer interface {
 	WriteSignInPage(rw http.ResponseWriter, redirectURL string)
 	WriteErrorPage(rw http.ResponseWriter, status int, redirectURL string, appError string, messages ...interface{})
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 }
 
-// pageWriter implements the PageWriter interface
+// pageWriter implements the Writer interface
 type pageWriter struct {
 	*errorPageWriter
 	*signInPageWriter
 }
 
-// PageWriterOpts contains all options required to configure the template
+// Opts contains all options required to configure the template
 // rendering within OAuth2 Proxy.
-type PageWriterOpts struct {
+type Opts struct {
 	// TemplatesPath is the path from which to load custom templates for the sign-in and error pages.
 	TemplatesPath string
 
@@ -51,9 +51,9 @@ type PageWriterOpts struct {
 	SignInMessage string
 }
 
-// NewPageWriter constructs a PageWriter from the options given to allow
+// NewWriter constructs a Writer from the options given to allow
 // rendering of sign-in and error pages.
-func NewPageWriter(opts PageWriterOpts) (PageWriter, error) {
+func NewWriter(opts Opts) (Writer, error) {
 	templates, err := loadTemplates(opts.TemplatesPath)
 	if err != nil {
 		return nil, fmt.Errorf("error loading templates: %v", err)
