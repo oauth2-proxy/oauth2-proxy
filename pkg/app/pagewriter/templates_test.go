@@ -1,4 +1,4 @@
-package app
+package pagewriter
 
 import (
 	"bytes"
@@ -21,16 +21,16 @@ var _ = Describe("Templates", func() {
 
 		templateHTML := `{{.TestString}} {{.TestString | ToLower}} {{.TestString | ToUpper}}`
 		signInFile := filepath.Join(customDir, signInTemplateName)
-		Expect(ioutil.WriteFile(signInFile, []byte(templateHTML), 0666)).To(Succeed())
+		Expect(ioutil.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
 		errorFile := filepath.Join(customDir, errorTemplateName)
-		Expect(ioutil.WriteFile(errorFile, []byte(templateHTML), 0666)).To(Succeed())
+		Expect(ioutil.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(customDir)).To(Succeed())
 	})
 
-	Context("LoadTemplates", func() {
+	Context("loadTemplates", func() {
 		var data interface{}
 		var t *template.Template
 
@@ -73,7 +73,7 @@ var _ = Describe("Templates", func() {
 		Context("With no custom directory", func() {
 			BeforeEach(func() {
 				var err error
-				t, err = LoadTemplates("")
+				t, err = loadTemplates("")
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -94,7 +94,7 @@ var _ = Describe("Templates", func() {
 			Context("With both templates", func() {
 				BeforeEach(func() {
 					var err error
-					t, err = LoadTemplates(customDir)
+					t, err = loadTemplates(customDir)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -116,7 +116,7 @@ var _ = Describe("Templates", func() {
 					Expect(os.Remove(filepath.Join(customDir, errorTemplateName))).To(Succeed())
 
 					var err error
-					t, err = LoadTemplates(customDir)
+					t, err = loadTemplates(customDir)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -138,7 +138,7 @@ var _ = Describe("Templates", func() {
 					Expect(os.Remove(filepath.Join(customDir, signInTemplateName))).To(Succeed())
 
 					var err error
-					t, err = LoadTemplates(customDir)
+					t, err = loadTemplates(customDir)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -158,11 +158,11 @@ var _ = Describe("Templates", func() {
 			Context("With an invalid sign_in template", func() {
 				BeforeEach(func() {
 					signInFile := filepath.Join(customDir, signInTemplateName)
-					Expect(ioutil.WriteFile(signInFile, []byte("{{"), 0666))
+					Expect(ioutil.WriteFile(signInFile, []byte("{{"), 0600))
 				})
 
 				It("Should return an error when loading templates", func() {
-					t, err := LoadTemplates(customDir)
+					t, err := loadTemplates(customDir)
 					Expect(err).To(MatchError(HavePrefix("could not add Sign In template:")))
 					Expect(t).To(BeNil())
 				})
@@ -171,11 +171,11 @@ var _ = Describe("Templates", func() {
 			Context("With an invalid error template", func() {
 				BeforeEach(func() {
 					errorFile := filepath.Join(customDir, errorTemplateName)
-					Expect(ioutil.WriteFile(errorFile, []byte("{{"), 0666))
+					Expect(ioutil.WriteFile(errorFile, []byte("{{"), 0600))
 				})
 
 				It("Should return an error when loading templates", func() {
-					t, err := LoadTemplates(customDir)
+					t, err := loadTemplates(customDir)
 					Expect(err).To(MatchError(HavePrefix("could not add Error template:")))
 					Expect(t).To(BeNil())
 				})

@@ -1,4 +1,4 @@
-package app
+package pagewriter
 
 import (
 	"errors"
@@ -10,25 +10,25 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Error Page", func() {
-	var errorPage *ErrorPage
+var _ = Describe("Error Page Writer", func() {
+	var errorPage *errorPageWriter
 
 	BeforeEach(func() {
 		tmpl, err := template.New("").Parse("{{.Title}} {{.Message}} {{.ProxyPrefix}} {{.StatusCode}} {{.Redirect}} {{.Footer}} {{.Version}}")
 		Expect(err).ToNot(HaveOccurred())
 
-		errorPage = &ErrorPage{
-			Template:    tmpl,
-			ProxyPrefix: "/prefix/",
-			Footer:      "Custom Footer Text",
-			Version:     "v0.0.0-test",
+		errorPage = &errorPageWriter{
+			template:    tmpl,
+			proxyPrefix: "/prefix/",
+			footer:      "Custom Footer Text",
+			version:     "v0.0.0-test",
 		}
 	})
 
-	Context("Render", func() {
+	Context("WriteErrorPage", func() {
 		It("Writes the template to the response writer", func() {
 			recorder := httptest.NewRecorder()
-			errorPage.Render(recorder, 403, "/redirect", "Access Denied")
+			errorPage.WriteErrorPage(recorder, 403, "/redirect", "Access Denied")
 
 			body, err := ioutil.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
@@ -37,7 +37,7 @@ var _ = Describe("Error Page", func() {
 
 		It("With a different code, uses the stock message for the correct code", func() {
 			recorder := httptest.NewRecorder()
-			errorPage.Render(recorder, 500, "/redirect", "Access Denied")
+			errorPage.WriteErrorPage(recorder, 500, "/redirect", "Access Denied")
 
 			body, err := ioutil.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
@@ -46,7 +46,7 @@ var _ = Describe("Error Page", func() {
 
 		It("With a message override, uses the message", func() {
 			recorder := httptest.NewRecorder()
-			errorPage.Render(recorder, 403, "/redirect", "Access Denied", "An extra message: %s", "with more context.")
+			errorPage.WriteErrorPage(recorder, 403, "/redirect", "Access Denied", "An extra message: %s", "with more context.")
 
 			body, err := ioutil.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
@@ -71,14 +71,14 @@ var _ = Describe("Error Page", func() {
 			tmpl, err := template.New("").Parse("{{.Message}}")
 			Expect(err).ToNot(HaveOccurred())
 
-			errorPage.Template = tmpl
-			errorPage.Debug = true
+			errorPage.template = tmpl
+			errorPage.debug = true
 		})
 
-		Context("Render", func() {
+		Context("WriteErrorPage", func() {
 			It("Writes the detailed error in place of the message", func() {
 				recorder := httptest.NewRecorder()
-				errorPage.Render(recorder, 403, "/redirect", "Debug error")
+				errorPage.WriteErrorPage(recorder, 403, "/redirect", "Debug error")
 
 				body, err := ioutil.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())

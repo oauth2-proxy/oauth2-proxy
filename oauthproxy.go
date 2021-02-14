@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,7 +17,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
@@ -76,39 +75,33 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	allowedRoutes        []allowedRoute
-	redirectURL          *url.URL // the url to receive requests at
-	whitelistDomains     []string
-	provider             providers.Provider
-	providerNameOverride string
-	sessionStore         sessionsapi.SessionStore
-	ProxyPrefix          string
-	SignInMessage        string
-	basicAuthValidator   basic.Validator
-	displayHtpasswdForm  bool
-	serveMux             http.Handler
-	SetXAuthRequest      bool
-	PassBasicAuth        bool
-	SetBasicAuth         bool
-	SkipProviderButton   bool
-	PassUserHeaders      bool
-	BasicAuthPassword    string
-	PassAccessToken      bool
-	SetAuthorization     bool
-	PassAuthorization    bool
-	PreferEmailToUser    bool
-	skipAuthPreflight    bool
-	skipJwtBearerTokens  bool
-	templates            *template.Template
-	realClientIPParser   ipapi.RealClientIPParser
-	trustedIPs           *ip.NetSet
-	Banner               string
-	Footer               string
+	allowedRoutes       []allowedRoute
+	redirectURL         *url.URL // the url to receive requests at
+	whitelistDomains    []string
+	provider            providers.Provider
+	sessionStore        sessionsapi.SessionStore
+	ProxyPrefix         string
+	basicAuthValidator  basic.Validator
+	serveMux            http.Handler
+	SetXAuthRequest     bool
+	PassBasicAuth       bool
+	SetBasicAuth        bool
+	SkipProviderButton  bool
+	PassUserHeaders     bool
+	BasicAuthPassword   string
+	PassAccessToken     bool
+	SetAuthorization    bool
+	PassAuthorization   bool
+	PreferEmailToUser   bool
+	skipAuthPreflight   bool
+	skipJwtBearerTokens bool
+	realClientIPParser  ipapi.RealClientIPParser
+	trustedIPs          *ip.NetSet
 
 	sessionChain alice.Chain
 	headersChain alice.Chain
 	preAuthChain alice.Chain
-	errorPage    *app.ErrorPage
+	pageWriter   pagewriter.Writer
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -118,20 +111,31 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
-	templates, err := app.LoadTemplates(opts.Templates.Path)
+	var basicAuthValidator basic.Validator
+	if opts.HtpasswdFile != "" {
+		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
+		var err error
+		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
+		}
+	}
+
+	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
+		TemplatesPath:    opts.Templates.Path,
+		ProxyPrefix:      opts.ProxyPrefix,
+		Footer:           opts.Templates.Footer,
+		Version:          VERSION,
+		Debug:            opts.Templates.Debug,
+		ProviderName:     buildProviderName(opts.GetProvider(), opts.ProviderName),
+		SignInMessage:    buildSignInMessage(opts),
+		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("error loading templates: %v", err)
+		return nil, fmt.Errorf("error initialising page writer: %v", err)
 	}
 
-	errorPage := &app.ErrorPage{
-		Template:    templates.Lookup("error.html"),
-		ProxyPrefix: opts.ProxyPrefix,
-		Footer:      opts.Templates.Footer,
-		Version:     VERSION,
-		Debug:       opts.Templates.Debug,
-	}
-
-	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), errorPage.ProxyErrorHandler)
+	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), pageWriter.ProxyErrorHandler)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
 	}
@@ -161,16 +165,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 			trustedIPs.AddIPNet(*ipNet)
 		} else {
 			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
-		}
-	}
-
-	var basicAuthValidator basic.Validator
-	if opts.HtpasswdFile != "" {
-		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
-		var err error
-		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
 		}
 	}
 
@@ -210,30 +204,24 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
-		ProxyPrefix:          opts.ProxyPrefix,
-		provider:             opts.GetProvider(),
-		providerNameOverride: opts.ProviderName,
-		sessionStore:         sessionStore,
-		serveMux:             upstreamProxy,
-		redirectURL:          redirectURL,
-		allowedRoutes:        allowedRoutes,
-		whitelistDomains:     opts.WhitelistDomains,
-		skipAuthPreflight:    opts.SkipAuthPreflight,
-		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
-		realClientIPParser:   opts.GetRealClientIPParser(),
-		SkipProviderButton:   opts.SkipProviderButton,
-		templates:            templates,
-		trustedIPs:           trustedIPs,
-		Banner:               opts.Templates.Banner,
-		Footer:               opts.Templates.Footer,
-		SignInMessage:        buildSignInMessage(opts),
+		ProxyPrefix:         opts.ProxyPrefix,
+		provider:            opts.GetProvider(),
+		sessionStore:        sessionStore,
+		serveMux:            upstreamProxy,
+		redirectURL:         redirectURL,
+		allowedRoutes:       allowedRoutes,
+		whitelistDomains:    opts.WhitelistDomains,
+		skipAuthPreflight:   opts.SkipAuthPreflight,
+		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
+		realClientIPParser:  opts.GetRealClientIPParser(),
+		SkipProviderButton:  opts.SkipProviderButton,
+		trustedIPs:          trustedIPs,
 
-		basicAuthValidator:  basicAuthValidator,
-		displayHtpasswdForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
-		sessionChain:        sessionChain,
-		headersChain:        headersChain,
-		preAuthChain:        preAuthChain,
-		errorPage:           errorPage,
+		basicAuthValidator: basicAuthValidator,
+		sessionChain:       sessionChain,
+		headersChain:       headersChain,
+		preAuthChain:       preAuthChain,
+		pageWriter:         pageWriter,
 	}, nil
 }
 
@@ -329,6 +317,13 @@ func buildSignInMessage(opts *options.Options) string {
 		}
 	}
 	return msg
+}
+
+func buildProviderName(p providers.Provider, override string) string {
+	if override != "" {
+		return override
+	}
+	return p.Data().ProviderName
 }
 
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
@@ -533,7 +528,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
-	p.errorPage.Render(rw, code, redirectURL, appError, messages...)
+	p.pageWriter.WriteErrorPage(rw, code, redirectURL, appError, messages...)
 }
 
 // IsAllowedRequest is used to check if auth should be skipped for this request
@@ -594,33 +589,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
-	// We allow unescaped template.HTML since it is user configured options
-	/* #nosec G203 */
-	t := struct {
-		ProviderName  string
-		SignInMessage template.HTML
-		CustomLogin   bool
-		Redirect      string
-		Version       string
-		ProxyPrefix   string
-		Footer        template.HTML
-	}{
-		ProviderName:  p.provider.Data().ProviderName,
-		SignInMessage: template.HTML(p.SignInMessage),
-		CustomLogin:   p.displayHtpasswdForm,
-		Redirect:      redirectURL,
-		Version:       VERSION,
-		ProxyPrefix:   p.ProxyPrefix,
-		Footer:        template.HTML(p.Footer),
-	}
-	if p.providerNameOverride != "" {
-		t.ProviderName = p.providerNameOverride
-	}
-	err = p.templates.ExecuteTemplate(rw, "sign_in.html", t)
-	if err != nil {
-		logger.Printf("Error rendering sign_in.html template: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-	}
+	p.pageWriter.WriteSignInPage(rw, redirectURL)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
