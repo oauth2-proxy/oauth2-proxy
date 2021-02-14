@@ -13,8 +13,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 - /oauth2/start - a URL that will redirect to start the OAuth cycle
 - /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
 - /oauth2/userinfo - the URL is used to return user's email from the session in JSON format.
-- /oauth2/auth - only returns a 202 Accepted response or a 401 Unauthorized response; supports [Nginx `auth_request` directive](../configuration/overview.md#configuring-for-use-with-the-nginx-auth_request-directive) and [Traefik (v2) `ForwardAuth` middleware](../configuration/overview.md#configuring-for-use-with-the-traefik-v2-forwardauth-middleware)
-  - Query String `redirect_signin` - accepts a boolean value to trigger OAuth process on unauthenticated sessions, useful to support reverse proxies that do not support scripting/dynamic variable injection (such as Traefik)
+- /oauth2/auth - returns a 202 Accepted response or a 401 Unauthorized response based on whether the session is authenticated or not.
 
 ### Sign out
 

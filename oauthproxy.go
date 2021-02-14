@@ -820,28 +820,29 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
-		if authOnlyRedirectSignIn(req) {
-			if isAjax(req) {
-				// no point redirecting an AJAX request
-				p.errorJSON(rw, http.StatusUnauthorized)
-				return
-			}
-
-			// Orignal request URI is captured and added using `rd` parameter in the redirect
-			// to ensure a redirect to the original URL will still happen after OAuth/Signin process
-			redirect, err := p.getAppRedirect(req)
-			if err != nil {
-				logger.Errorf("Error obtaining redirect: %v", err)
-				p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
-				return
-			}
-
-			// SignIn has the check on SkipProviderButton to do either SigninPage or OauthStart
-			redirectPath := fmt.Sprintf("%s?rd=%s", p.SignInPath, redirect)
-			http.Redirect(rw, req, redirectPath, http.StatusFound)
+		if !authOnlyRedirectSignIn(req) {
+			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+
+		if isAjax(req) {
+			// no point redirecting an AJAX request
+			p.errorJSON(rw, http.StatusUnauthorized)
+			return
+		}
+
+		// Original request URI is captured and added using `rd` parameter in the redirect
+		// to ensure a redirect to the original URL will still happen after OAuth/Signin process
+		redirect, err := p.getAppRedirect(req)
+		if err != nil {
+			logger.Errorf("Error obtaining redirect: %v", err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, "Internal Server Error", err.Error())
+			return
+		}
+
+		// SignIn has the check on SkipProviderButton to do either SigninPage or OauthStart
+		redirectPath := fmt.Sprintf("%s?rd=%s", p.SignInPath, redirect)
+		http.Redirect(rw, req, redirectPath, http.StatusFound)
 		return
 	}
 
