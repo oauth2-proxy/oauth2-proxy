@@ -458,8 +458,19 @@ http:
           - main: "example.com"
             sans:
               - "*.example.com"
-    oauth:
-      rule: "Host(`a-service.example.com`, `b-service.example.com`, `oauth.example.com`) && PathPrefix(`/oauth2/`)"
+    services-oauth2-route:
+      rule: "Host(`a-service.example.com`, `b-service.example.com`) && PathPrefix(`/oauth2/`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    oauth2-proxy-route:
+      rule: "Host(`oauth.example.com`) && PathPrefix(`/`)"
       middlewares:
         - auth-headers
       service: oauth-backend
