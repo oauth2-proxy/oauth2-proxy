@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -820,29 +819,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
-		if !authOnlyRedirectSignIn(req) {
-			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-
-		if isAjax(req) {
-			// no point redirecting an AJAX request
-			p.errorJSON(rw, http.StatusUnauthorized)
-			return
-		}
-
-		// Original request URI is captured and added using `rd` parameter in the redirect
-		// to ensure a redirect to the original URL will still happen after OAuth/Signin process
-		redirect, err := p.getAppRedirect(req)
-		if err != nil {
-			logger.Errorf("Error obtaining redirect: %v", err)
-			p.ErrorPage(rw, req, http.StatusInternalServerError, "Internal Server Error", err.Error())
-			return
-		}
-
-		// SignIn has the check on SkipProviderButton to do either SigninPage or OauthStart
-		redirectPath := fmt.Sprintf("%s?rd=%s", p.SignInPath, redirect)
-		http.Redirect(rw, req, redirectPath, http.StatusFound)
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -1203,16 +1180,4 @@ func isAjax(req *http.Request) bool {
 func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)
-}
-
-// authOnlyRedirectSignIn handles QS 'redirect_signin' parsing on the
-// AuthOnly endpoint to redirect to `/oauth2/sign_in` endpoint
-func authOnlyRedirectSignIn(req *http.Request) bool {
-	query := req.URL.Query()
-	redirectSignIn, err := strconv.ParseBool(query.Get("redirect_signin"))
-	if err != nil {
-		return false
-	}
-
-	return redirectSignIn
 }

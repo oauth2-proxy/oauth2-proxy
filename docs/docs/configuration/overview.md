@@ -362,9 +362,9 @@ You have to substitute *name* with the actual cookie name you configured via --c
 
 **This option requires `--reverse-proxy` option to be set.**
 
-The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
-
 ### ForwardAuth with 401 errors middleware
+
+The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
 
 ```yaml
 http:
@@ -427,9 +427,13 @@ http:
         query: "/oauth2/sign_in"
 ```
 
-### ForwardAuth middleware with redirect_signin
+### ForwardAuth with static upstreams configuration
 
-`redirect_signin` query string boolean parameter usage example on `/oauth2/auth` endpoint without the need for Traefik `errors` middleware using Dynamic File (YAML) Configuration
+Redirect to sign_in functionality provided without the use of `errors` middleware with [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) pointing to oauth2-proxy service's `/` endpoint
+
+**Following options need to be set on `oauth2-proxy`:**
+- `--upstream=static://202`: Configures a static response for authenticated sessions
+- `--reverseproxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
 
 ```yaml
 http:
@@ -496,7 +500,7 @@ http:
         frameDeny: true
     oauth-auth-redirect:
       forwardAuth:
-        address: https://oauth.example.com/oauth2/auth?redirect_signin=true
+        address: https://oauth.example.com/
         trustForwardHeader: true
         authResponseHeaders:
           - X-Auth-Request-Access-Token
