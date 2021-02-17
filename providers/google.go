@@ -251,7 +251,10 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 		req := service.Members.Get(group, email)
 		r, err := req.Do()
 		if err != nil {
-			logger.Errorf("error using get API to check member %s of google group %s: user not in the group", email, group)
+			logger.Errorf(
+				logger.SprintSensDataAlt(
+					fmt.Sprintf("error using get API to check member %s of google group %s: user not in the group", email, group),
+					"error using get API to check member of google group: user not in the group"))
 			return false
 		}
 
@@ -283,7 +286,9 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	//
 	// re-check that the user is in the proper google group(s)
 	if !p.groupValidator(s) {
-		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
+		return false, fmt.Errorf(logger.SprintSensDataAlt(
+			fmt.Sprintf("%s is no longer in the group(s)", s.Email),
+			"email values is no longer in the group(s)"))
 	}
 
 	origExpiration := s.ExpiresOn
@@ -291,7 +296,10 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	s.AccessToken = newToken
 	s.IDToken = newIDToken
 	s.ExpiresOn = &expires
-	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
+	logger.Print(
+		logger.SprintSensDataAlt(
+			fmt.Sprintf("refreshed access token %s (expired on %s)", s, origExpiration),
+			fmt.Sprintf("refreshed acces token expired on %s", origExpiration)))
 	return true, nil
 }
 

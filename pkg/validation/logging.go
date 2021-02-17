@@ -45,6 +45,7 @@ func configureLogger(o options.Logging, msgs []string) []string {
 
 	// Pass configuration values to the standard logger
 	logger.SetStandardEnabled(o.StandardEnabled)
+	logger.SetSensEnabled(o.SensitiveEnabled)
 	logger.SetErrToInfo(o.ErrToInfo)
 	logger.SetAuthEnabled(o.AuthEnabled)
 	logger.SetReqEnabled(o.RequestEnabled)

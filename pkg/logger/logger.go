@@ -563,3 +563,32 @@ func PrintAuthf(username string, req *http.Request, status AuthStatus, format st
 func PrintReq(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) {
 	std.PrintReq(username, upstream, req, url, ts, status, size)
 }
+
+type SensitiveDataWrapper struct {
+	sensEnabled bool
+}
+
+var sensDataWrap = SensitiveDataWrapper{
+	sensEnabled: false,
+}
+
+// SetSensEnabled enables or disables sensitive data wrapping.
+func (w *SensitiveDataWrapper) SetSensEnabled(e bool) {
+	w.sensEnabled = e
+}
+
+// SetSensEnabled enables or disables sensitive data wrapping.
+func SetSensEnabled(e bool) {
+	sensDataWrap.SetSensEnabled(e)
+}
+
+func (w *SensitiveDataWrapper) sPrintSensDataAlt(m string, alt string) string {
+	if !w.sensEnabled {
+		return alt
+	}
+	return m
+}
+
+func SprintSensDataAlt(m string, alt string) string {
+	return sensDataWrap.sPrintSensDataAlt(alt, m)
+}
