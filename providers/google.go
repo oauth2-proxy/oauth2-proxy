@@ -299,7 +299,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	logger.Print(
 		logger.SprintSensDataAlt(
 			fmt.Sprintf("refreshed access token %s (expired on %s)", s, origExpiration),
-			fmt.Sprintf("refreshed acces token expired on %s", origExpiration)))
+			fmt.Sprintf("refreshed access token expired on %s", origExpiration)))
 	return true, nil
 }
 
