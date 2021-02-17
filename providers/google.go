@@ -286,7 +286,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	//
 	// re-check that the user is in the proper google group(s)
 	if !p.groupValidator(s) {
-		return false, fmt.Errorf(logger.SprintSensDataAlt(
+		return false, errors.New(logger.SprintSensDataAlt(
 			fmt.Sprintf("%s is no longer in the group(s)", s.Email),
 			"email values is no longer in the group(s)"))
 	}
