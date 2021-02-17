@@ -17,6 +17,7 @@ var (
 
 func TestHeaderSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Header")

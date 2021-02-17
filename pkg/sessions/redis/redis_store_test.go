@@ -33,6 +33,7 @@ func (l *wrappedRedisLogger) Printf(_ context.Context, format string, v ...inter
 
 func TestSessionStore(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 
 	redisLogger := &wrappedRedisLogger{Logger: log.New(os.Stderr, "redis: ", log.LstdFlags|log.Lshortfile)}
 	redisLogger.SetOutput(GinkgoWriter)

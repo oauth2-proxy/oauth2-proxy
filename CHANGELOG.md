@@ -6,10 +6,34 @@
 
 ## Breaking Changes
 
+## Changes since v7.0.1
+
+- [#1043](https://github.com/oauth2-proxy/oauth2-proxy/pull/1043) Refactor Sign In Page rendering and capture all page rendering code in pagewriter package (@JoelSpeed)
+- [#1029](https://github.com/oauth2-proxy/oauth2-proxy/pull/1029) Refactor error page rendering and allow debug messages on error (@JoelSpeed)
+- [#1028](https://github.com/oauth2-proxy/oauth2-proxy/pull/1028) Refactor templates, update theme and provide styled error pages (@JoelSpeed)
+- [#1039](https://github.com/oauth2-proxy/oauth2-proxy/pull/1039) Ensure errors in tests are logged to the GinkgoWriter (@JoelSpeed)
+- [#980](https://github.com/oauth2-proxy/oauth2-proxy/pull/980) Add Prometheus metrics endpoint
+- [#1023](https://github.com/oauth2-proxy/oauth2-proxy/pull/1023) Update docs on Traefik ForwardAuth support without the use of Traefik 'errors' middleware
+
+# V7.0.1
+
+## Release Highlights
+
+- Fixed a bug that meant that flag ordering mattered
+- Fixed a bug where response headers for groups were not being flattened
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.0.0
 
 - [#1020](https://github.com/oauth2-proxy/oauth2-proxy/pull/1020) Flatten array-based response headers (@NickMeves)
-- [#1026](https://github.com/oauth2-proxy/oauth2-proxy/pull/1026) Ensure config flags get parsed correctly when other flags preceed them (@JoelSpeed)
+- [#1026](https://github.com/oauth2-proxy/oauth2-proxy/pull/1026) Ensure config flags get parsed correctly when other flags precede them (@JoelSpeed)
 
 # V7.0.0
 
