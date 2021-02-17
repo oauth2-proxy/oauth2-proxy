@@ -8,6 +8,9 @@
 
 ## Changes since v7.0.0
 
+- [#1020](https://github.com/oauth2-proxy/oauth2-proxy/pull/1020) Flatten array-based response headers (@NickMeves)
+- [#1026](https://github.com/oauth2-proxy/oauth2-proxy/pull/1026) Ensure config flags get parsed correctly when other flags preceed them (@JoelSpeed)
+
 # V7.0.0
 
 ## Release Highlights
