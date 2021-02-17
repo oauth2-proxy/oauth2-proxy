@@ -27,7 +27,7 @@
 #logging_max_age = 7
 #logging_local_time = true
 #logging_compress = false
-#sensible_logging = false
+#sensitive_logging = false
 #standard_logging = true
 #standard_logging_format = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
 #request_logging = true
