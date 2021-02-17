@@ -76,7 +76,7 @@ func ParseSameSite(v string) http.SameSite {
 	case "none":
 		return http.SameSiteNoneMode
 	case "":
-		return http.SameSiteDefaultMode
+		return 0
 	default:
 		panic(fmt.Sprintf("Invalid value for SameSite: %s", v))
 	}
