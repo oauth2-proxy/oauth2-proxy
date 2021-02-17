@@ -14,7 +14,7 @@ jobs:
   build:
     env:
       COVER: true
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
 
     - name: Check out code
@@ -28,7 +28,7 @@ jobs:
 
     - name: Get dependencies
       run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.36.0
         go mod download
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
@@ -52,7 +52,7 @@ jobs:
         ./.github/workflows/test.sh
 
   docker:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
 
     - name: Check out code
