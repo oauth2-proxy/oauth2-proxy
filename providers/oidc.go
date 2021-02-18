@@ -125,9 +125,7 @@ func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.S
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
-	logger.Print(logger.SprintSensDataAlt(
-		fmt.Sprintf("refreshed session: %s", s),
-		"refreshed session"))
+	logger.Printf("refreshed session: %s", logger.WrapSensData(s))
 	return true, nil
 }
 

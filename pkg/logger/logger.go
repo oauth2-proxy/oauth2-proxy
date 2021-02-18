@@ -582,13 +582,24 @@ func SetSensEnabled(e bool) {
 	sensDataWrap.SetSensEnabled(e)
 }
 
-func (w *SensitiveDataWrapper) sPrintSensDataAlt(m string, alt string) string {
+func (w *SensitiveDataWrapper) wrapSensData(d interface{}) interface{} {
+	if !w.sensEnabled {
+		return "censored"
+	}
+	return d
+}
+
+func (w *SensitiveDataWrapper) wrapSensDataAlt(d interface{}, alt interface{}) interface{} {
 	if !w.sensEnabled {
 		return alt
 	}
-	return m
+	return d
 }
 
-func SprintSensDataAlt(m string, alt string) string {
-	return sensDataWrap.sPrintSensDataAlt(alt, m)
+func WrapSensData(d interface{}) interface{} {
+	return sensDataWrap.wrapSensData(d)
+}
+
+func WrapSensDataAlt(d interface{}, alt string) interface{} {
+	return sensDataWrap.wrapSensDataAlt(d, alt)
 }
