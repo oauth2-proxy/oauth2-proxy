@@ -1,4 +1,4 @@
-package validation
+package pagewriter
 
 import (
 	"testing"
@@ -8,10 +8,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestValidationSuite(t *testing.T) {
+func TestOptionsSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
 	logger.SetErrOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Validation Suite")
+	RunSpecs(t, "App Suite")
 }

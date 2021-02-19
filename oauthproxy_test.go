@@ -2815,7 +2815,7 @@ func TestProxyAllowedGroups(t *testing.T) {
 			test.proxy.ServeHTTP(test.rw, test.req)
 
 			if tt.expectUnauthorized {
-				assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+				assert.Equal(t, http.StatusForbidden, test.rw.Code)
 			} else {
 				assert.Equal(t, http.StatusOK, test.rw.Code)
 			}

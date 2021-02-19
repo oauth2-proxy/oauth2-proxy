@@ -10,6 +10,7 @@ import (
 
 func TestOptionsSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Options Suite")
