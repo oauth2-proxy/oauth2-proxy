@@ -153,15 +153,11 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 		RefreshToken: jsonResponse.RefreshToken,
 	}
 
-	// the presence of id_token depends on the configuration and
-	// verification of id_token requires oidc configuration
-	if session.IDToken != "" && p.Verifier != nil {
-		email, err := p.verifyIDTokenAndExtractEmail(ctx, session.IDToken)
-		if err != nil {
-			return nil, err
-		}
-		session.Email = email
+	email, err := p.verifyIDTokenAndExtractEmail(ctx, session.IDToken)
+	if err != nil {
+		return nil, err
 	}
+	session.Email = email
 
 	return session, nil
 }
@@ -174,7 +170,11 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 
 	email, err := getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
 	if email == "" || err != nil {
-		err = fmt.Errorf("unable to get email address: %v", err)
+		if err != nil {
+			err = fmt.Errorf("unable to get email address, error: %v", err)
+		} else {
+			err = errors.New("unable to get email address")
+		}
 		logger.Errorf("%s", err)
 		return err
 	}
@@ -205,6 +205,12 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 }
 
 func (p *AzureProvider) verifyIDTokenAndExtractEmail(ctx context.Context, rawIDToken string) (string, error) {
+	// the presence of id_token depends on the configuration and
+	// verification of id_token requires oidc configuration
+	if rawIDToken == "" || p.Verifier == nil {
+		return "", nil
+	}
+
 	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		return "", err
@@ -269,15 +275,11 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	s.CreatedAt = &now
 	s.ExpiresOn = &expires
 
-	// the presence of id_token depends on the configuration and
-	// verification of id_token requires oidc configuration
-	if s.IDToken != "" && p.Verifier != nil {
-		email, err := p.verifyIDTokenAndExtractEmail(ctx, s.IDToken)
-		if err != nil {
-			return err
-		}
-		s.Email = email
+	email, err := p.verifyIDTokenAndExtractEmail(ctx, s.IDToken)
+	if err != nil {
+		return err
 	}
+	s.Email = email
 
 	return
 }
