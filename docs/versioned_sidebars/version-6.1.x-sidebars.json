@@ -45,6 +45,17 @@
           "id": "version-6.1.x/features/request_signatures"
         }
       ]
+    },
+    {
+      "collapsed": false,
+      "type": "category",
+      "label": "Community",
+      "items": [
+        {
+          "type": "doc",
+          "id": "version-6.1.x/community/security"
+        }
+      ]
     }
   ]
 }

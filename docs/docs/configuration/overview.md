@@ -5,6 +5,8 @@ title: Overview
 
 `oauth2-proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
 
+### Generating a Cookie Secret
+
 To generate a strong cookie secret use `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(16)).decode())'`
 
 ### Config File
@@ -54,6 +56,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--github-token` | string | the token to use when verifying repository collaborators (must have push access to the repository) | |
 | `--github-user` | string \| list | To allow users to login by username even if they do not belong to the specified org and team or collaborators | |
 | `--gitlab-group` | string \| list | restrict logins to members of any of these groups (slug), separated by a comma | |
+| `--gitlab-projects` | string \| list | restrict logins to members of any of these projects (may be given multiple times) formatted as `orgname/repo=accesslevel`. Access level should be a value matching [Gitlab access levels](https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent | |
 | `--google-admin-email` | string | the google admin to impersonate for api calls | |
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
 | `--google-service-account-json` | string | the path to the service account json credentials | |
@@ -73,7 +76,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
 | `--oidc-issuer-url` | string | the OpenID Connect issuer URL, e.g. `"https://accounts.google.com"` | |
 | `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
-| `--oidc-groups-claim` | string | which claim contains the user groups | `"groups"` |
+| `--oidc-email-claim` | string | which OIDC claim contains the user's email | `"email"` |
+| `--oidc-groups-claim` | string | which OIDC claim contains the user groups | `"groups"` |
 | `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header. When used with `--set-xauthrequest` this adds the X-Auth-Request-Access-Token header to the response | false |
 | `--pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `--pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
@@ -87,6 +91,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |
+| `--metrics-address` | string | the address prometheus metrics will be scraped from | `""` |
 | `--proxy-prefix` | string | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`) | `"/oauth2"` |
 | `--proxy-websockets` | bool | enables WebSocket proxying | true |
 | `--pubjwk-url` | string | JWK pubkey access endpoint: required by login.gov | |
@@ -104,13 +109,14 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `--resource` | string | The resource that is protected (Azure AD only) | |
-| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted | false |
+| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-{Proto,Host,Uri} headers to be used on redirect selection | false |
 | `--scope` | string | OAuth scope specification | |
 | `--session-cookie-minimal` | bool | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only) | false |
 | `--session-store-type` | string | [Session data storage backend](sessions.md); redis or cookie | cookie |
 | `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode). When used with `--pass-access-token`, X-Auth-Request-Access-Token is added to response headers.  | false |
 | `--set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
 | `--set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
+| `--show-debug-on-error` | bool | show detailed error information on error pages (WARNING: this may contain sensitive information - do not use in production) | false |
 | `--signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
 | `--silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
 | `--skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
@@ -127,7 +133,6 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--tls-cert-file` | string | path to certificate file | |
 | `--tls-key-file` | string | path to private key file | |
 | `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
-| `--user-id-claim` | string | which claim contains the user ID | \["email"\] |
 | `--allowed-group` | string \| list | restrict logins to members of this group (may be given multiple times) | |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
@@ -352,6 +357,173 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
+
+## Configuring for use with the Traefik (v2) `ForwardAuth` middleware
+
+**This option requires `--reverse-proxy` option to be set.**
+
+### ForwardAuth with 401 errors middleware
+
+The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
+
+```yaml
+http:
+  routers:
+    a-service:
+      rule: "Host(`a-service.example.com`)"
+      service: a-service-backend
+      middlewares:
+        - oauth-errors
+        - oauth-auth
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    oauth:
+      rule: "Host(`a-service.example.com`, `oauth.example.com`) && PathPrefix(`/oauth2/`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+
+  services:
+    a-service-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.2:7555
+    oauth-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.1:4180
+
+  middlewares:
+    auth-headers:
+      headers:
+        sslRedirect: true
+        stsSeconds: 315360000
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        sslHost: example.com
+        stsIncludeSubdomains: true
+        stsPreload: true
+        frameDeny: true
+    oauth-auth:
+      forwardAuth:
+        address: https://oauth.example.com/oauth2/auth
+        trustForwardHeader: true
+    oauth-errors:
+      errors:
+        status:
+          - "401-403"
+        service: oauth-backend
+        query: "/oauth2/sign_in"
+```
+
+### ForwardAuth with static upstreams configuration
+
+Redirect to sign_in functionality provided without the use of `errors` middleware with [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) pointing to oauth2-proxy service's `/` endpoint
+
+**Following options need to be set on `oauth2-proxy`:**
+- `--upstream=static://202`: Configures a static response for authenticated sessions
+- `--reverseproxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
+
+```yaml
+http:
+  routers:
+    a-service-route-1:
+      rule: "Host(`a-service.example.com`, `b-service.example.com`) && PathPrefix(`/`)"
+      service: a-service-backend
+      middlewares:
+        - oauth-auth-redirect # redirects all unauthenticated to oauth2 signin
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    a-service-route-2:
+      rule: "Host(`a-service.example.com`) && PathPrefix(`/no-auto-redirect`)"
+      service: a-service-backend
+      middlewares:
+        - oauth-auth-wo-redirect # unauthenticated session will return a 401
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    services-oauth2-route:
+      rule: "Host(`a-service.example.com`, `b-service.example.com`) && PathPrefix(`/oauth2/`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+    oauth2-proxy-route:
+      rule: "Host(`oauth.example.com`) && PathPrefix(`/`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+      tls:
+        certResolver: default
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
+
+  services:
+    a-service-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.2:7555
+    b-service-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.3:7555
+    oauth-backend:
+      loadBalancer:
+        servers:
+          - url: http://172.16.0.1:4180
+
+  middlewares:
+    auth-headers:
+      headers:
+        sslRedirect: true
+        stsSeconds: 315360000
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        sslHost: example.com
+        stsIncludeSubdomains: true
+        stsPreload: true
+        frameDeny: true
+    oauth-auth-redirect:
+      forwardAuth:
+        address: https://oauth.example.com/
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization
+    oauth-auth-wo-redirect:
+      forwardAuth:
+        address: https://oauth.example.com/oauth2/auth
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization
+```
 
 :::note
 If you set up your OAuth2 provider to rotate your client secret, you can use the `client-secret-file` option to reload the secret when it is updated.

@@ -1,7 +1,6 @@
 package util
 
 import (
-	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"path"
@@ -31,20 +30,12 @@ var _ = Describe("GetSecretValue", func() {
 		os.RemoveAll(fileDir)
 	})
 
-	It("returns the correct value from base64", func() {
-		originalValue := []byte("secret-value-1")
-		b64Value := base64.StdEncoding.EncodeToString((originalValue))
-
-		// Once encoded, the originalValue could have a decoded length longer than
-		// its actual length, ensure we trim this.
-		// This assertion ensures we are testing the triming
-		Expect(len(originalValue)).To(BeNumerically("<", base64.StdEncoding.DecodedLen(len(b64Value))))
-
+	It("returns the correct value from the string value", func() {
 		value, err := GetSecretValue(&options.SecretSource{
-			Value: []byte(b64Value),
+			Value: []byte("secret-value-1"),
 		})
 		Expect(err).ToNot(HaveOccurred())
-		Expect(value).To(Equal(originalValue))
+		Expect(string(value)).To(Equal("secret-value-1"))
 	})
 
 	It("returns the correct value from the environment", func() {

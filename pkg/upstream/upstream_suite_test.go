@@ -26,6 +26,7 @@ var (
 
 func TestUpstreamSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 	log.SetOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)

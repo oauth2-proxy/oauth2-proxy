@@ -23,7 +23,7 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v6.1.1`)
+    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.0.1`)
 
     b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy` which will put the binary in `$GOROOT/bin`
 
@@ -54,7 +54,7 @@ Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/doc
 
 ## Getting Involved
 
-If you would like to reach out to the maintainers, come talk to us in the `#oauth2_proxy` channel in the [Gophers slack](http://gophers.slack.com/).
+If you would like to reach out to the maintainers, come talk to us in the `#oauth2-proxy` channel in the [Gophers slack](http://gophers.slack.com/).
 
 ## Contributing
 

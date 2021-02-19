@@ -6,6 +6,14 @@ up:
 %:
 	docker-compose $*
 
+.PHONY: alpha-config-up
+alpha-config-up:
+	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml up -d
+
+.PHONY: alpha-config-%
+alpha-config-%:
+	docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml $*
+
 .PHONY: nginx-up
 nginx-up:
 	docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml up -d

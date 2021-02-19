@@ -1,7 +1,6 @@
 package options
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -38,6 +37,15 @@ func NewLegacyOptions() *LegacyOptions {
 
 		Options: *NewOptions(),
 	}
+}
+
+func NewLegacyFlagSet() *pflag.FlagSet {
+	flagSet := NewFlagSet()
+
+	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
+	flagSet.AddFlagSet(legacyHeadersFlagSet())
+
+	return flagSet
 }
 
 func (l *LegacyOptions) ToOptions() (*Options, error) {
@@ -235,7 +243,7 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 					Claim:  claim,
 					Prefix: "Basic ",
 					BasicAuthPassword: &SecretSource{
-						Value: []byte(base64.StdEncoding.EncodeToString([]byte(basicAuthPassword))),
+						Value: []byte(basicAuthPassword),
 					},
 				},
 			},

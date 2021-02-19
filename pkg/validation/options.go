@@ -29,7 +29,7 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
-	msgs = append(msgs, prefixValues("injectRespeonseHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
+	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -41,10 +41,10 @@ func Validate(o *options.Options) error {
 	} else if len(o.ProviderCAFiles) > 0 {
 		pool, err := util.GetCertPool(o.ProviderCAFiles)
 		if err == nil {
-			transport := &http.Transport{
-				TLSClientConfig: &tls.Config{
-					RootCAs: pool,
-				},
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{
+				RootCAs:    pool,
+				MinVersion: tls.VersionTLS12,
 			}
 
 			http.DefaultClient = &http.Client{Transport: transport}
@@ -233,8 +233,18 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.ValidateURL, msgs = parseURL(o.ValidateURL, "validate", msgs)
 	p.ProtectedResource, msgs = parseURL(o.ProtectedResource, "resource", msgs)
 
-	// Make the OIDC Verifier accessible to all providers that can support it
+	// Make the OIDC options available to all providers that support it
+	p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
+	p.EmailClaim = o.OIDCEmailClaim
+	p.GroupsClaim = o.OIDCGroupsClaim
 	p.Verifier = o.GetOIDCVerifier()
+
+	// TODO (@NickMeves) - Remove This
+	// Backwards Compatibility for Deprecated UserIDClaim option
+	if o.OIDCEmailClaim == providers.OIDCEmailClaim &&
+		o.UserIDClaim != providers.OIDCEmailClaim {
+		p.EmailClaim = o.UserIDClaim
+	}
 
 	p.SetAllowedGroups(o.AllowedGroups)
 
@@ -255,7 +265,10 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetRepo(o.GitHubRepo, o.GitHubToken)
 		p.SetUsers(o.GitHubUsers)
 	case *providers.KeycloakProvider:
-		p.SetGroup(o.KeycloakGroup)
+		// Backwards compatibility with `--keycloak-group` option
+		if len(o.KeycloakGroups) > 0 {
+			p.SetAllowedGroups(o.KeycloakGroups)
+		}
 	case *providers.GoogleProvider:
 		if o.GoogleServiceAccountJSON != "" {
 			file, err := os.Open(o.GoogleServiceAccountJSON)
@@ -275,15 +288,17 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetTeam(o.BitbucketTeam)
 		p.SetRepository(o.BitbucketRepository)
 	case *providers.OIDCProvider:
-		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
-		p.UserIDClaim = o.UserIDClaim
-		p.GroupsClaim = o.OIDCGroupsClaim
 		if p.Verifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		}
 	case *providers.GitLabProvider:
-		p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 		p.Groups = o.GitLabGroup
+		err := p.AddProjects(o.GitlabProjects)
+		if err != nil {
+			msgs = append(msgs, "failed to setup gitlab project access level")
+		}
+		p.SetAllowedGroups(p.PrefixAllowedGroups())
+		p.SetProjectScope()
 
 		if p.Verifier == nil {
 			// Initialize with default verifier for gitlab.com

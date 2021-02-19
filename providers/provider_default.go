@@ -22,6 +22,14 @@ var (
 	// code
 	ErrMissingCode = errors.New("missing code")
 
+	// ErrMissingIDToken is returned when an oidc.Token does not contain the
+	// extra `id_token` field for an IDToken.
+	ErrMissingIDToken = errors.New("missing id_token")
+
+	// ErrMissingOIDCVerifier is returned when a provider didn't set `Verifier`
+	// but an attempt to call `Verifier.Verify` was about to be made.
+	ErrMissingOIDCVerifier = errors.New("oidc verifier is not configured")
+
 	_ Provider = (*ProviderData)(nil)
 )
 
@@ -86,12 +94,12 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 }
 
 // GetEmailAddress returns the Account email address
-// DEPRECATED: Migrate to EnrichSessionState
+// Deprecated: Migrate to EnrichSession
 func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", ErrNotImplemented
 }
 
-// EnrichSessionState is called after Redeem to allow providers to enrich session fields
+// EnrichSession is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
 func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState) error {
 	return nil
@@ -113,7 +121,7 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 	return false, nil
 }
 
-// ValidateSessionState validates the AccessToken
+// ValidateSession validates the AccessToken
 func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, nil)
 }
