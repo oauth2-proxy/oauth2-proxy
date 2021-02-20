@@ -62,4 +62,9 @@ type Upstream struct {
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
 	ProxyWebSockets *bool `json:"proxyWebSockets,omitempty"`
+
+	// TrimPath will remove the path mapping from the path
+	// in the request send to the upstream.
+	// Defaults to false.
+	TrimPath bool `json:"trimPath,omitempty"`
 }

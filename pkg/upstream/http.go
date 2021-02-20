@@ -44,7 +44,8 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 	u.Path = ""
 
 	// Create a ReverseProxy
-	proxy := newReverseProxy(u, upstream, errorHandler)
+	var proxy http.Handler
+	proxy = newReverseProxy(u, upstream, errorHandler)
 
 	// Set up a WebSocket proxy if required
 	var wsProxy http.Handler
@@ -52,16 +53,28 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 		wsProxy = newWebSocketReverseProxy(u, upstream.InsecureSkipTLSVerify)
 	}
 
-	var auth hmacauth.HmacAuth
+	if upstream.TrimPath {
+		prefix := strings.TrimSuffix(upstream.Path, "/")
+		proxy = TrimRequestURIPath(prefix, proxy)
+
+		if wsProxy != nil {
+			wsProxy = TrimRequestURIPath(prefix, wsProxy)
+		}
+	}
+
 	if sigData != nil {
-		auth = hmacauth.NewHmacAuth(sigData.Hash, []byte(sigData.Key), SignatureHeader, SignatureHeaders)
+		auth := hmacauth.NewHmacAuth(sigData.Hash, []byte(sigData.Key), SignatureHeader, SignatureHeaders)
+		proxy = SignRequest(auth, proxy)
+
+		if wsProxy != nil {
+			wsProxy = SignRequest(auth, wsProxy)
+		}
 	}
 
 	return &httpUpstreamProxy{
 		upstream:  upstream.ID,
 		handler:   proxy,
 		wsHandler: wsProxy,
-		auth:      auth,
 	}
 }
 
@@ -70,17 +83,13 @@ type httpUpstreamProxy struct {
 	upstream  string
 	handler   http.Handler
 	wsHandler http.Handler
-	auth      hmacauth.HmacAuth
 }
 
 // ServeHTTP proxies requests to the upstream provider while signing the
 // request headers
 func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("GAP-Upstream-Address", h.upstream)
-	if h.auth != nil {
-		req.Header.Set("GAP-Auth", rw.Header().Get("GAP-Auth"))
-		h.auth.SignRequest(req)
-	}
+
 	if h.wsHandler != nil && strings.EqualFold(req.Header.Get("Connection"), "upgrade") && req.Header.Get("Upgrade") == "websocket" {
 		h.wsHandler.ServeHTTP(rw, req)
 	} else {

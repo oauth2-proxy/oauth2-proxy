@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -312,19 +313,21 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			upstreamProxy, ok := handler.(*httpUpstreamProxy)
 			Expect(ok).To(BeTrue())
 
-			Expect(upstreamProxy.auth != nil).To(Equal(in.sigData != nil))
 			Expect(upstreamProxy.wsHandler != nil).To(Equal(in.proxyWebSockets))
 			Expect(upstreamProxy.upstream).To(Equal(upstream.ID))
 			Expect(upstreamProxy.handler).ToNot(BeNil())
 
-			proxy, ok := upstreamProxy.handler.(*httputil.ReverseProxy)
-			Expect(ok).To(BeTrue())
-			Expect(proxy.FlushInterval).To(Equal(in.flushInterval.Duration()))
-			Expect(proxy.ErrorHandler != nil).To(Equal(in.errorHandler != nil))
-			if in.skipVerify {
-				Expect(proxy.Transport).To(Equal(&http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}))
+			// upstreamProxy.handler is wrapped in another handler when signing requests
+			if in.sigData == nil {
+				proxy, ok := upstreamProxy.handler.(*httputil.ReverseProxy)
+				Expect(ok).To(BeTrue())
+				Expect(proxy.FlushInterval).To(Equal(in.flushInterval.Duration()))
+				Expect(proxy.ErrorHandler != nil).To(Equal(in.errorHandler != nil))
+				if in.skipVerify {
+					Expect(proxy.Transport).To(Equal(&http.Transport{
+						TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+					}))
+				}
 			}
 		},
 		Entry("with proxy websockets", &newUpstreamTableInput{
@@ -417,4 +420,68 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			Expect(response.Header.Get(gapUpstream)).To(Equal("websocketProxy"))
 		})
 	})
+
+	type trimPathUpstreamTableInput struct {
+		target  string
+		prefix  string
+		wantURL string
+	}
+
+	DescribeTable("HTTP upstream with path trimming enabled",
+		func(in *trimPathUpstreamTableInput) {
+			req := httptest.NewRequest("", in.target, nil)
+			rw := httptest.NewRecorder()
+
+			upstream := options.Upstream{
+				ID:       "pathTrimmingProxy",
+				Path:     in.prefix,
+				TrimPath: true,
+			}
+
+			u, err := url.Parse(serverAddr)
+			Expect(err).ToNot(HaveOccurred())
+
+			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
+			handler.ServeHTTP(rw, req)
+
+			resp := rw.Result()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(resp.Header.Get(gapUpstream)).To(Equal("pathTrimmingProxy"))
+
+			body, err := ioutil.ReadAll(resp.Body)
+			Expect(err).ToNot(HaveOccurred())
+
+			request := testHTTPRequest{}
+			Expect(json.Unmarshal(body, &request)).To(Succeed())
+
+			Expect(request.URL).To(Equal(in.wantURL))
+		},
+		Entry("with ascii prefix", &trimPathUpstreamTableInput{
+			target:  "http://example.localhost/prefix/resource",
+			prefix:  "/prefix/",
+			wantURL: "http://example.localhost/resource",
+		}),
+		Entry("with encoded path", &trimPathUpstreamTableInput{
+			target:  "http://example.localhost/prefix/re%2Fsource",
+			prefix:  "/prefix/",
+			wantURL: "http://example.localhost/re%2Fsource",
+		}),
+		// this test case should not (tm) occur as ServerMux does not route
+		// requests to this handler
+		Entry("without trailing slash prefix", &trimPathUpstreamTableInput{
+			target:  "http://example.localhost/prefixresource",
+			prefix:  "/prefix",
+			wantURL: "http://example.localhost/prefixresource",
+		}),
+		Entry("with non-trailing slash in target", &trimPathUpstreamTableInput{
+			target:  "http://example.localhost/prefix",
+			prefix:  "/prefix/",
+			wantURL: "http://example.localhost/",
+		}),
+		Entry("with root prefix", &trimPathUpstreamTableInput{
+			target:  "http://example.localhost/prefix/resource",
+			prefix:  "/",
+			wantURL: "http://example.localhost/prefix/resource",
+		}),
+	)
 })

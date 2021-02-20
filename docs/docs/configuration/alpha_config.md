@@ -201,6 +201,7 @@ Requests will be proxied to this upstream if the path matches the request path.
 | `flushInterval` | _[Duration](#duration)_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
 | `passHostHeader` | _bool_ | PassHostHeader determines whether the request host header should be proxied<br/>to the upstream server.<br/>Defaults to true. |
 | `proxyWebSockets` | _bool_ | ProxyWebSockets enables proxying of websockets to upstream servers<br/>Defaults to true. |
+| `trimPath` | _bool_ | TrimPath will remove the path mapping from the path<br/>in the request send to the upstream.<br/>Defaults to false. |
 
 ### Upstreams
 

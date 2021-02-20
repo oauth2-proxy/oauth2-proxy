@@ -8,6 +8,7 @@
 
 ## Changes since v7.0.1
 
+- [#1058](https://github.com/oauth2-proxy/oauth2-proxy/pull/1058) Add support for removal of mapped path from upstream requests
 - [#1054](https://github.com/oauth2-proxy/oauth2-proxy/pull/1054) Update to Go 1.16 (@JoelSpeed)
 - [#1052](https://github.com/oauth2-proxy/oauth2-proxy/pull/1052) Update golangci-lint to latest version (v1.36.0) (@JoelSpeed)
 - [#1043](https://github.com/oauth2-proxy/oauth2-proxy/pull/1043) Refactor Sign In Page rendering and capture all page rendering code in pagewriter package (@JoelSpeed)
