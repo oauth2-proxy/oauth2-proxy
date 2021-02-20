@@ -150,7 +150,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
-						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure; SameSite",
+						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
 						cookiePath,
 						cookieDomain,
 						testCookieExpires(now().Add(cookieOpts.Expire)),
@@ -167,7 +167,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 				Expect(rw.Header().Get("Set-Cookie")).To(Equal(
 					fmt.Sprintf(
-						"%s=; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure; SameSite",
+						"%s=; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
 						privateCSRF.cookieName(),
 						cookiePath,
 						cookieDomain,
