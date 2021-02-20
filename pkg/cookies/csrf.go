@@ -195,5 +195,5 @@ func decrypt(data []byte, opts *options.Cookie) ([]byte, error) {
 }
 
 func makeCipher(opts *options.Cookie) (encryption.Cipher, error) {
-	return encryption.NewCFBCipher([]byte(opts.Secret))
+	return encryption.NewCFBCipher(encryption.SecretBytes(opts.Secret))
 }
