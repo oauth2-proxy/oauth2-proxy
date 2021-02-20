@@ -36,7 +36,7 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 		SameSite: ParseSameSite(opts.SameSite),
 	}
 
-	WarnInvalidDomain(c, req)
+	warnInvalidDomain(c, req)
 
 	return c
 }
@@ -69,9 +69,9 @@ func ParseSameSite(v string) http.SameSite {
 	}
 }
 
-// WarnInvalidDomain logs a warning if the request host and cookie domain are
+// warnInvalidDomain logs a warning if the request host and cookie domain are
 // mismatched.
-func WarnInvalidDomain(c *http.Cookie, req *http.Request) {
+func warnInvalidDomain(c *http.Cookie, req *http.Request) {
 	if c.Domain == "" {
 		return
 	}

@@ -709,7 +709,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf, appRedirect),
+		encodeState(csrf.HashOAuthState(), appRedirect),
 		csrf.HashOIDCNonce(),
 	)
 
@@ -1174,8 +1174,8 @@ func extractAllowedGroups(req *http.Request) map[string]struct{} {
 
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(csrf cookies.CSRF, redirect string) string {
-	return fmt.Sprintf("%v:%v", csrf.HashOAuthState(), redirect)
+func encodeState(nonce string, redirect string) string {
+	return fmt.Sprintf("%v:%v", nonce, redirect)
 }
 
 // decodeState splits the reflected OAuth state response back into

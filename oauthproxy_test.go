@@ -709,7 +709,10 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 
 	req, err := http.NewRequest(
 		http.MethodGet,
-		fmt.Sprintf("/oauth2/callback?code=callback_code&state=%s", encodeState(csrf, "%2F")),
+		fmt.Sprintf(
+			"/oauth2/callback?code=callback_code&state=%s",
+			encodeState(csrf.HashOAuthState(), "%2F"),
+		),
 		strings.NewReader(""),
 	)
 	if err != nil {
