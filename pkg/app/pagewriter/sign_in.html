@@ -1,0 +1,89 @@
+{{define "sign_in.html"}}
+<!DOCTYPE html>
+<html lang="en" charset="utf-8">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Sign In</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+
+    <style>
+      body {
+        height: 100vh;
+      }
+      .sign-in-box {
+        max-width: 400px;
+        margin: 1.25rem auto;
+      }
+      footer a {
+        text-decoration: underline;
+      }
+    </style>
+
+    <script>
+      if (window.location.hash) {
+        (function() {
+          var inputs = document.getElementsByName('rd');
+          for (var i = 0; i < inputs.length; i++) {
+            // Add hash, but make sure it is only added once
+            var idx = inputs[i].value.indexOf('#');
+            if (idx >= 0) {
+              // Remove existing hash from URL
+              inputs[i].value = inputs[i].value.substr(0, idx);
+            }
+            inputs[i].value += window.location.hash;
+          }
+        })();
+      }
+    </script>
+  </head>
+  <body class="has-background-light">
+  <section class="section">
+    <div class="box block sign-in-box has-text-centered">
+      <form method="GET" action="{{.ProxyPrefix}}/start">
+        <input type="hidden" name="rd" value="{{.Redirect}}">
+          {{ if .SignInMessage }}
+          <p class="block">{{.SignInMessage}}</p>
+          {{ end}}
+          <button type="submit" class="button block is-primary">Sign in with {{.ProviderName}}</button>
+      </form>
+
+      {{ if .CustomLogin }}
+      <hr>
+
+      <form method="POST" action="{{.ProxyPrefix}}/sign_in" class="block">
+        <input type="hidden" name="rd" value="{{.Redirect}}">
+
+        <div class="field">
+          <label class="label" for="username">Username</label>
+          <div class="control">
+            <input class="input" type="email" placeholder="e.g. userx@example.com"  name="username" id="username">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="password">Password</label>
+          <div class="control">
+            <input class="input" type="password" placeholder="********" name="password" id="password">
+          </div>
+        </div>
+        <button class="button is-primary">Sign in</button>
+        {{ end }}
+    </form>
+    </div>
+  </section>
+
+  <footer class="footer has-text-grey has-background-light is-size-7">
+    <div class="content has-text-centered">
+    	{{ if eq .Footer "-" }}
+    	{{ else if eq .Footer ""}}
+    	<p>Secured with <a href="https://github.com/oauth2-proxy/oauth2-proxy#oauth2_proxy" class="has-text-grey">OAuth2 Proxy</a> version {{.Version}}</p>
+    	{{ else }}
+    	<p>{{.Footer}}</p>
+    	{{ end }}
+    </div>
+	</footer>
+
+  </body>
+</html>
+{{end}}

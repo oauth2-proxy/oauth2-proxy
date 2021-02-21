@@ -641,7 +641,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-//UserInfo endpoint outputs session email and preferred username in JSON format
+// UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
 	session, err := p.getAuthenticatedSession(rw, req)
@@ -805,6 +805,8 @@ func (p *OAuthProxy) redeemCode(req *http.Request) (*sessionsapi.SessionState, e
 func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
 	var err error
 	if s.Email == "" {
+		// TODO(@NickMeves): Remove once all provider are updated to implement EnrichSession
+		// nolint:staticcheck
 		s.Email, err = p.provider.GetEmailAddress(ctx, s)
 		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 			return err
@@ -1106,7 +1108,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 // TODO (@NickMeves): This method is a placeholder to be extended but currently
 // fails the linter. Remove the nolint when functionality expands.
 //
-//nolint:S1008
+//nolint:gosimple
 func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
 	// Allow secondary group restrictions based on the `allowed_groups`
 	// querystring parameter
