@@ -58,6 +58,12 @@ var _ = Describe("Proxy Suite", func() {
 				Static:     true,
 				StaticCode: &ok,
 			},
+			{
+				ID:            "backend-with-rewrite-prefix",
+				Path:          "^/rewrite-prefix/(.*)",
+				RewriteTarget: "/different/backend/path/$1",
+				URI:           serverAddr,
+			},
 		}
 
 		var err error
@@ -186,6 +192,48 @@ var _ = Describe("Proxy Suite", func() {
 				},
 				raw: "404 page not found\n",
 			},
+		}),
+		Entry("with a request to the rewrite prefix server", &proxyTableInput{
+			target: "http://example.localhost/rewrite-prefix/1234",
+			response: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method: "GET",
+					URL:    "http://example.localhost/different/backend/path/1234",
+					Header: map[string][]string{
+						"Gap-Auth":      {""},
+						"Gap-Signature": {"sha256 jeAeM7wHSj2ab/l9YPvtTJ9l/8q1tpY2V/iwXF48bgw="},
+					},
+					Body:       []byte{},
+					Host:       "example.localhost",
+					RequestURI: "http://example.localhost/different/backend/path/1234",
+				},
+			},
+			upstream: "backend-with-rewrite-prefix",
+		}),
+		Entry("with a request to a subpath of the rewrite prefix server", &proxyTableInput{
+			target: "http://example.localhost/rewrite-prefix/1234/abc",
+			response: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method: "GET",
+					URL:    "http://example.localhost/different/backend/path/1234/abc",
+					Header: map[string][]string{
+						"Gap-Auth":      {""},
+						"Gap-Signature": {"sha256 rAkAc9gp7EndoOppJuvbuPnYuBcqrTkBnQx6iPS8xTA="},
+					},
+					Body:       []byte{},
+					Host:       "example.localhost",
+					RequestURI: "http://example.localhost/different/backend/path/1234/abc",
+				},
+			},
+			upstream: "backend-with-rewrite-prefix",
 		}),
 	)
 })
