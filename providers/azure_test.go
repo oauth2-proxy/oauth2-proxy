@@ -384,7 +384,6 @@ func TestAzureProviderRefreshWhenExpired(t *testing.T) {
 	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
 }
 
-
 func TestAzureProviderGetGroupsEmpty(t *testing.T) {
 	b := testAzureBackend(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_on": "1136239445", "id_token": "some_id_token" }`)
 	defer b.Close()

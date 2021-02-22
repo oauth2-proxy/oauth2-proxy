@@ -375,13 +375,13 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 		logger.Errorf("IDToken is not a valid jwd")
 		return nil
 	}
-	claimsJson, err := base64.RawStdEncoding.DecodeString(jwtParts[1])
+	claimsJSON, err := base64.RawStdEncoding.DecodeString(jwtParts[1])
 	if err != nil {
 		logger.Errorf("Failed to decode jwt %v", err)
 		return nil
 	}
 	claims := AzureClaims{}
-	err = json.Unmarshal(claimsJson, &claims)
+	err = json.Unmarshal(claimsJSON, &claims)
 	if err != nil {
 		logger.Errorf("Failed to decode jwt into json %v", err)
 		return nil

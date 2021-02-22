@@ -71,13 +71,13 @@ presented to the oauth2-proxy
 ## Configuring this for new Provider
 
 Check the existing implementation in 
-* [`azure.go`](../providers/azure.go)
+* [`azure.go`](/providers/azure.go)
   Using the
   ```go
   EnrichSession(ctx context.Context, s *sessions.SessionState) error;
   ```
   method to extract the `groups` claim from the `id_token` returned by azure
-* [`oidc.go`](../providers/oidc.go)
+* [`oidc.go`](/providers/oidc.go)
   Using a separate implementation
   ```go
   createSessionState(ctx context.Context, token *oauth2.Token, idToken *oidc.IDToken) (*sessions.SessionState, error);
