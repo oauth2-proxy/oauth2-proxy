@@ -54,16 +54,17 @@ func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error)
 	return value, nil
 }
 
-// ReleaseLock sessions.SessionState information from a persistence
+// Load reads sessions.SessionState information from a persistence
+// cookie within the HTTP request object and locks it on redis
 func (store *SessionStore) LoadWithLock(ctx context.Context, key string) ([]byte, error) {
 	value, err := store.Client.Get(ctx, key)
 	if err != nil {
 		return nil, fmt.Errorf("error loading redis session: %v", err)
 	}
 
-	err = store.Client.Lock(ctx, key, 200*time.Millisecond)
+	err = store.Client.Lock(ctx, key, 300*time.Millisecond)
 	if err != nil {
-		return nil, fmt.Errorf("error setting redis locks: %v", err)
+		return nil, fmt.Errorf("error setting redis lock: %v", err)
 	}
 	return value, nil
 }

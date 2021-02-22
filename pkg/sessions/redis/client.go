@@ -51,7 +51,7 @@ func (c *client) Get(ctx context.Context, key string) ([]byte, error) {
 
 func (c *client) Lock(ctx context.Context, key string, expiration time.Duration) error {
 	if c.locks[key] != nil {
-		return fmt.Errorf("locks for key %s already exists", key)
+		return fmt.Errorf("lock for key %s already exists", key)
 	}
 	lock, err := c.locker.Obtain(ctx, key, expiration, nil)
 	if err != nil {
@@ -65,23 +65,13 @@ func (c *client) Unlock(ctx context.Context, key string) error {
 	if c.locks[key] == nil {
 		return nil
 	}
-	return c.locks[key].Release(ctx)
+	err := c.locks[key].Release(ctx)
+	delete(c.locks, key)
+	return err
 }
 
 func (c *client) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {
-	err := c.Client.Set(ctx, key, value, expiration).Err()
-	if err != nil {
-		return err
-	}
-	if c.locks[key] == nil {
-		return nil
-	}
-	err = c.locks[key].Release(ctx)
-	if err != nil {
-		return err
-	}
-	c.locks = nil
-	return nil
+	return c.Client.Set(ctx, key, value, expiration).Err()
 }
 
 func (c *client) Del(ctx context.Context, key string) error {
@@ -105,12 +95,23 @@ func newClusterClient(c *redis.ClusterClient) Client {
 }
 
 func (c *clusterClient) Get(ctx context.Context, key string) ([]byte, error) {
+	if c.locks[key] != nil {
+		for {
+			ttl, err := c.locks[key].TTL(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if ttl <= 0 {
+				break
+			}
+		}
+	}
 	return c.ClusterClient.Get(ctx, key).Bytes()
 }
 
 func (c *clusterClient) Lock(ctx context.Context, key string, expiration time.Duration) error {
 	if c.locks[key] != nil {
-		return fmt.Errorf("locks for key %s already exists", key)
+		return fmt.Errorf("lock for key %s already exists", key)
 	}
 	lock, err := c.locker.Obtain(ctx, key, expiration, nil)
 	if err != nil {
@@ -124,7 +125,9 @@ func (c *clusterClient) Unlock(ctx context.Context, key string) error {
 	if c.locks[key] == nil {
 		return nil
 	}
-	return c.locks[key].Release(ctx)
+	err := c.locks[key].Release(ctx)
+	delete(c.locks, key)
+	return err
 }
 
 func (c *clusterClient) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {

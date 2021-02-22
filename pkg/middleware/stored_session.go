@@ -108,6 +108,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 	}
 
 	session, err = s.store.LoadWithLock(req)
+	defer s.store.ReleaseLock(req)
 	if err != nil {
 		return nil, err
 	}
@@ -117,12 +118,10 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 	}
 
 	if !s.isSessionRefreshNeeded(session) {
-		_ = s.store.ReleaseLock(req)
 		return session, nil
 	}
 	logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, s.refreshPeriod)
 	refreshed, err := s.refreshSession(rw, req, session)
-	_ = s.store.ReleaseLock(req)
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
