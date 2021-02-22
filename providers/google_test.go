@@ -43,7 +43,7 @@ func TestNewGoogleProvider(t *testing.T) {
 	providerData := NewGoogleProvider(&ProviderData{}).Data()
 	g.Expect(providerData.ProviderName).To(Equal("Google"))
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://accounts.google.com/o/oauth2/auth?access_type=offline"))
-	g.Expect(providerData.RedeemURL.String()).To(Equal("https://www.googleapis.com/oauth2/v3/token"))
+	g.Expect(providerData.RedeemURL.String()).To(Equal("https://oauth2.googleapis.com/token"))
 	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
 	g.Expect(providerData.ValidateURL.String()).To(Equal("https://www.googleapis.com/oauth2/v1/tokeninfo"))
 	g.Expect(providerData.Scope).To(Equal("profile email"))

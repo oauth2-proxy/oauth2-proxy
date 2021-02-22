@@ -62,11 +62,11 @@ var (
 	}
 
 	// Default Redeem URL for Google.
-	// Pre-parsed URL of https://www.googleapis.com/oauth2/v3/token.
+	// Pre-parsed URL of https://oauth2.googleapis.com/token.
 	googleDefaultRedeemURL = &url.URL{
 		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/oauth2/v3/token",
+		Host:   "oauth2.googleapis.com",
+		Path:   "/token",
 	}
 
 	// Default Validation URL for Google.
