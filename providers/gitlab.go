@@ -123,7 +123,7 @@ func (p *GitLabProvider) SetProjectScope() {
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
+func (p *GitLabProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
 		return false, nil
 	}
@@ -137,6 +137,11 @@ func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 
 	logger.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
 	return true, nil
+}
+
+// IsRefreshNeeded checks if the session has expired
+func (p *GitLabProvider) IsRefreshNeeded(s *sessions.SessionState) bool {
+	return !(s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "")
 }
 
 func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {

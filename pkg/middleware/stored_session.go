@@ -24,10 +24,13 @@ type StoredSessionLoaderOptions struct {
 	RefreshPeriod time.Duration
 
 	// Provider based sesssion refreshing
-	RefreshSessionIfNeeded func(context.Context, *sessionsapi.SessionState) (bool, error)
+	RefreshSession func(context.Context, *sessionsapi.SessionState) (bool, error)
+
+	// Provider based session refresh check
+	IsRefreshNeeded func(*sessionsapi.SessionState) bool
 
 	// Provider based session validation.
-	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
+	// If the session is older than `RefreshPeriod` but the provider doesn't
 	// refresh it, we must re-validate using this validation.
 	ValidateSessionState func(context.Context, *sessionsapi.SessionState) bool
 }
@@ -38,10 +41,11 @@ type StoredSessionLoaderOptions struct {
 // If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
 	ss := &storedSessionLoader{
-		store:                              opts.SessionStore,
-		refreshPeriod:                      opts.RefreshPeriod,
-		refreshSessionWithProviderIfNeeded: opts.RefreshSessionIfNeeded,
-		validateSessionState:               opts.ValidateSessionState,
+		store:                       opts.SessionStore,
+		refreshPeriod:               opts.RefreshPeriod,
+		refreshSessionWithProvider:  opts.RefreshSession,
+		isRefreshNeededWithProvider: opts.IsRefreshNeeded,
+		validateSessionState:        opts.ValidateSessionState,
 	}
 	return ss.loadSession
 }
@@ -49,10 +53,11 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 // storedSessionLoader is responsible for loading sessions from cookie
 // identified sessions in the session store.
 type storedSessionLoader struct {
-	store                              sessionsapi.SessionStore
-	refreshPeriod                      time.Duration
-	refreshSessionWithProviderIfNeeded func(context.Context, *sessionsapi.SessionState) (bool, error)
-	validateSessionState               func(context.Context, *sessionsapi.SessionState) bool
+	store                       sessionsapi.SessionStore
+	refreshPeriod               time.Duration
+	refreshSessionWithProvider  func(context.Context, *sessionsapi.SessionState) (bool, error)
+	isRefreshNeededWithProvider func(*sessionsapi.SessionState) bool
+	validateSessionState        func(context.Context, *sessionsapi.SessionState) bool
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -98,44 +103,54 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 		return nil, nil
 	}
 
-	err = s.refreshSessionIfNeeded(rw, req, session)
+	if !s.isSessionRefreshNeeded(session) {
+		return session, nil
+	}
+
+	session, err = s.store.LoadWithLock(req)
+	if err != nil {
+		return nil, err
+	}
+	if session == nil {
+		// No session was found in the storage, nothing more to do
+		return nil, nil
+	}
+
+	if !s.isSessionRefreshNeeded(session) {
+		_ = s.store.ReleaseLock(req)
+		return session, nil
+	}
+	logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, s.refreshPeriod)
+	refreshed, err := s.refreshSession(rw, req, session)
+	_ = s.store.ReleaseLock(req)
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
 
+	if refreshed {
+		return session, nil
+	}
+
+	// Session wasn't refreshed, so make sure it's still valid
+	err = s.validateSession(req.Context(), session)
+	if err != nil {
+		return nil, err
+	}
 	return session, nil
 }
 
-// refreshSessionIfNeeded will attempt to refresh a session if the session
-// is older than the refresh period.
-// It is assumed that if the provider refreshes the session, the session is now
-// valid.
-// If the session requires refreshing but the provider does not refresh it,
-// we must validate the session to ensure that the returned session is still
-// valid.
-func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	if s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod {
-		// Refresh is disabled or the session is not old enough, do nothing
-		return nil
+// isSessionRefreshNeeded will check if the session need to be refreshed
+func (s *storedSessionLoader) isSessionRefreshNeeded(session *sessionsapi.SessionState) bool {
+	if s.refreshPeriod > time.Duration(0) && session.Age() >= s.refreshPeriod {
+		return s.isRefreshNeededWithProvider(session)
 	}
-
-	logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, s.refreshPeriod)
-	refreshed, err := s.refreshSessionWithProvider(rw, req, session)
-	if err != nil {
-		return err
-	}
-
-	if !refreshed {
-		// Session wasn't refreshed, so make sure it's still valid
-		return s.validateSession(req.Context(), session)
-	}
-	return nil
+	return false
 }
 
-// refreshSessionWithProvider attempts to refresh the sessinon with the provider
+// refreshSession attempts to refresh the sessinon with the provider
 // and will save the session if it was updated.
-func (s *storedSessionLoader) refreshSessionWithProvider(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) (bool, error) {
-	refreshed, err := s.refreshSessionWithProviderIfNeeded(req.Context(), session)
+func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) (bool, error) {
+	refreshed, err := s.refreshSessionWithProvider(req.Context(), session)
 	if err != nil {
 		return false, fmt.Errorf("error refreshing access token: %v", err)
 	}

@@ -65,16 +65,28 @@ func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 	})
 }
 
-// Lock reads sessions.SessionState in a session store. It will
+// Load reads sessions.SessionState information from a session store. It will
 // use the session ticket from the http.Request's cookie.
-func (m *Manager) Lock(req *http.Request, expiration time.Duration) error {
+func (m *Manager) LoadWithLock(req *http.Request) (*sessions.SessionState, error) {
+	tckt, err := decodeTicketFromRequest(req, m.Options)
+	if err != nil {
+		return nil, err
+	}
+
+	return tckt.loadSession(func(key string) ([]byte, error) {
+		return m.Store.LoadWithLock(req.Context(), key)
+	})
+}
+
+// Release the session lock
+func (m *Manager) ReleaseLock(req *http.Request) error {
 	tckt, err := decodeTicketFromRequest(req, m.Options)
 	if err != nil {
 		return err
 	}
 
-	return tckt.lockSession(func(key string) error {
-		return m.Store.Lock(req.Context(), key, expiration)
+	return tckt.releaseSession(func(key string) error {
+		return m.Store.ReleaseLock(req.Context(), key)
 	})
 }
 

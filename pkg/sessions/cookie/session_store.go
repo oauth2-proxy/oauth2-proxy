@@ -66,7 +66,14 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 	return session, nil
 }
 
-func (s *SessionStore) Lock(req *http.Request, expirationTime time.Duration) error {
+// Load reads sessions.SessionState information from Cookies within the
+// HTTP request object
+func (s *SessionStore) LoadWithLock(req *http.Request) (*sessions.SessionState, error) {
+	return s.Load(req)
+}
+
+// Release the session lock
+func (s *SessionStore) ReleaseLock(req *http.Request) error {
 	return nil
 }
 

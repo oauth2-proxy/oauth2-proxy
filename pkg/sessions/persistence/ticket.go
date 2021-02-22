@@ -139,13 +139,11 @@ func (t *ticket) loadSession(loader loadFunc) (*sessions.SessionState, error) {
 	return sessions.DecodeSessionState(ciphertext, c, false)
 }
 
-// lockSession loads a session from the disk store via the passed loadFunc
-// using the ticket.id as the key. It then decodes the SessionState using
-// ticket.secret to make the AES-GCM cipher.
-func (t *ticket) lockSession(loader lockFunc) error {
+// releaseSession releases a potential locked session
+func (t *ticket) releaseSession(loader lockFunc) error {
 	err := loader(t.id)
 	if err != nil {
-		return fmt.Errorf("failed to lock the session state with the ticket: %v", err)
+		return fmt.Errorf("failed to release session state with the ticket: %v", err)
 	}
 	return nil
 }

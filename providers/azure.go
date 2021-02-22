@@ -160,8 +160,8 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+func (p *AzureProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil {
 		return false, nil
 	}
 
@@ -174,6 +174,11 @@ func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.
 
 	logger.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
 	return true, nil
+}
+
+// IsRefreshNeeded checks if the session has expired
+func (p *AzureProvider) IsRefreshNeeded(s *sessions.SessionState) bool {
+	return !(s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "")
 }
 
 func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {

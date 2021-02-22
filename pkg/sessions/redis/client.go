@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/bsm/redislock"
@@ -12,6 +13,7 @@ import (
 type Client interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Lock(ctx context.Context, key string, expiration time.Duration) error
+	Unlock(ctx context.Context, key string) error
 	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
 	Del(ctx context.Context, key string) error
 }
@@ -21,20 +23,21 @@ var _ Client = (*client)(nil)
 type client struct {
 	*redis.Client
 	locker *redislock.Client
-	lock   *redislock.Lock
+	locks  map[string]*redislock.Lock
 }
 
 func newClient(c *redis.Client) Client {
 	return &client{
 		Client: c,
 		locker: redislock.New(c),
+		locks:  map[string]*redislock.Lock{},
 	}
 }
 
 func (c *client) Get(ctx context.Context, key string) ([]byte, error) {
-	if c.lock != nil {
+	if c.locks[key] != nil {
 		for {
-			ttl, err := c.lock.TTL(ctx)
+			ttl, err := c.locks[key].TTL(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -47,12 +50,22 @@ func (c *client) Get(ctx context.Context, key string) ([]byte, error) {
 }
 
 func (c *client) Lock(ctx context.Context, key string, expiration time.Duration) error {
+	if c.locks[key] != nil {
+		return fmt.Errorf("locks for key %s already exists", key)
+	}
 	lock, err := c.locker.Obtain(ctx, key, expiration, nil)
 	if err != nil {
 		return err
 	}
-	c.lock = lock
+	c.locks[key] = lock
 	return nil
+}
+
+func (c *client) Unlock(ctx context.Context, key string) error {
+	if c.locks[key] == nil {
+		return nil
+	}
+	return c.locks[key].Release(ctx)
 }
 
 func (c *client) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {
@@ -60,14 +73,14 @@ func (c *client) Set(ctx context.Context, key string, value []byte, expiration t
 	if err != nil {
 		return err
 	}
-	if c.lock == nil {
+	if c.locks[key] == nil {
 		return nil
 	}
-	err = c.lock.Release(ctx)
+	err = c.locks[key].Release(ctx)
 	if err != nil {
 		return err
 	}
-	c.lock = nil
+	c.locks = nil
 	return nil
 }
 
@@ -80,13 +93,14 @@ var _ Client = (*clusterClient)(nil)
 type clusterClient struct {
 	*redis.ClusterClient
 	locker *redislock.Client
-	lock   *redislock.Lock
+	locks  map[string]*redislock.Lock
 }
 
 func newClusterClient(c *redis.ClusterClient) Client {
 	return &clusterClient{
 		ClusterClient: c,
 		locker:        redislock.New(c),
+		locks:         map[string]*redislock.Lock{},
 	}
 }
 
@@ -95,12 +109,22 @@ func (c *clusterClient) Get(ctx context.Context, key string) ([]byte, error) {
 }
 
 func (c *clusterClient) Lock(ctx context.Context, key string, expiration time.Duration) error {
+	if c.locks[key] != nil {
+		return fmt.Errorf("locks for key %s already exists", key)
+	}
 	lock, err := c.locker.Obtain(ctx, key, expiration, nil)
 	if err != nil {
 		return err
 	}
-	c.lock = lock
+	c.locks[key] = lock
 	return nil
+}
+
+func (c *clusterClient) Unlock(ctx context.Context, key string) error {
+	if c.locks[key] == nil {
+		return nil
+	}
+	return c.locks[key].Release(ctx)
 }
 
 func (c *clusterClient) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {
