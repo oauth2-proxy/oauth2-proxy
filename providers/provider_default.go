@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"net/url"
 	"time"
 
@@ -119,9 +118,6 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 		}
 	}
 
-	logger.Errorf("" +
-		"None of the users groups '%v' are allowed for this resource.\n" +
-		"Allowed groups are '%v'", s.Groups, p.AllowedGroups)
 	return false, nil
 }
 
