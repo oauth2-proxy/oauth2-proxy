@@ -370,16 +370,11 @@ func (p *AzureProvider) ValidateSession(ctx context.Context, s *sessions.Session
 }
 
 func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if s.IDToken == "" {
-		logger.Errorf("IDToken is empty")
-		return nil
-	}
 	jwtParts := strings.Split(s.IDToken, ".")
 	if len(jwtParts) != 3 {
 		logger.Errorf("IDToken is not a valid jwd")
 		return nil
 	}
-	logger.Errorf("Decoding token %v", jwtParts[1])
 	claimsJson, err := base64.RawStdEncoding.DecodeString(jwtParts[1])
 	if err != nil {
 		logger.Errorf("Failed to decode jwt %v", err)
