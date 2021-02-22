@@ -3,10 +3,13 @@ package providers
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/bitly/go-simplejson"
@@ -364,4 +367,34 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 // ValidateSession validates the AccessToken
 func (p *AzureProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeAzureHeader(s.AccessToken))
+}
+
+func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+	if s.IDToken == "" {
+		logger.Errorf("IDToken is empty")
+		return nil
+	}
+	jwtParts := strings.Split(s.IDToken, ".")
+	if len(jwtParts) != 3 {
+		logger.Errorf("IDToken is not a valid jwd")
+		return nil
+	}
+	logger.Errorf("Decoding token %v", jwtParts[1])
+	claimsJson, err := base64.RawStdEncoding.DecodeString(jwtParts[1])
+	if err != nil {
+		logger.Errorf("Failed to decode jwt %v", err)
+		return nil
+	}
+	claims := AzureClaims{}
+	err = json.Unmarshal(claimsJson, &claims)
+	if err != nil {
+		logger.Errorf("Failed to decode jwt into json %v", err)
+		return nil
+	}
+	s.Groups = claims.Groups
+	return nil
+}
+
+type AzureClaims struct {
+	Groups []string `json:"groups,omitempty"`
 }

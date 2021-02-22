@@ -383,3 +383,85 @@ func TestAzureProviderRefreshWhenExpired(t *testing.T) {
 	assert.Equal(t, email, session.Email)
 	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
 }
+
+
+func TestAzureProviderGetGroupsEmpty(t *testing.T) {
+	b := testAzureBackend(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_on": "1136239445", "id_token": "some_id_token" }`)
+	defer b.Close()
+	timestamp, _ := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+
+	err = p.EnrichSession(context.Background(), session)
+	assert.Equal(t, nil, err)
+
+	groups := session.Groups
+
+	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
+
+	assert.Equal(t, "some_id_token", session.IDToken)
+	assert.Equal(t, 0, len(groups))
+}
+
+func TestAzureProviderGetGroupsFromJWT(t *testing.T) {
+	/**
+	This jwt id_token
+	'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdWQiLCJpc3MiOiJpc3MiLCJpYXQiOjE2MDczMzI1MzksIm5iZiI6MTYwNzMzMjUzOSwiZXhwIjoxNjA3MzM2Mjg1LCJhbXIiOlsibWZhIl0sImZhbWlseV9uYW1lIjoiVXNlciIsImdpdmVuX25hbWUiOiJUZXN0IiwiZ3JvdXBzIjpbInVzZXJfZ3JvdXAiXSwiaXBhZGRyIjoiMTkyLjE2OC4xNy41IiwibmFtZSI6IlRlc3QgVXNlciAoQUQpIiwib2lkIjoib2JqZWN0X2lkIiwicmgiOiJyaCIsInN1YiI6InN1YnNjcmlwdGlvbiIsInRpZCI6InRlbmFudF9pZCIsInVuaXF1ZV9uYW1lIjoidGVzdHVzZXJAb2F1dGgyLmNvbSIsInVwbiI6InRlc3R1c2VyQG9hdXRoMi5jb20iLCJ1dGkiOiJ1dGkiLCJ2ZXIiOiIxLjAiLCJqdGkiOiI4ZTA3MDhlNS1jODg3LTRhZWUtYjdjMS04YjAzOThhODUxMWIifQ.aReJV2o8ukOCC_ddQDj3e0olZ9fGyT5aTNKPLAb8rGw'
+
+	contains
+	'''
+	{
+	  "aud": "aud",
+	  "iss": "iss",
+	  "iat": 1607332539,
+	  "nbf": 1607332539,
+	  "exp": 1607332565,
+	  "amr": [
+	    "mfa"
+	  ],
+	  "family_name": "User",
+	  "given_name": "Test",
+	  "groups": [
+	    "user_group"
+	  ],
+	  "ipaddr": "192.168.17.5",
+	  "name": "Test User (AD)",
+	  "oid": "object_id",
+	  "rh": "rh",
+	  "sub": "subscription",
+	  "tid": "tenant_id",
+	  "unique_name": "testuser@oauth2.com",
+	  "upn": "testuser@oauth2.com",
+	  "uti": "uti",
+	  "ver": "1.0"
+	}
+	'''
+
+	using the secret 'secret'
+	*/
+	idToken := "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdWQiLCJpc3MiOiJpc3MiLCJpYXQiOjE2MDczMzI1MzksIm5iZiI6MTYwNzMzMjUzOSwiZXhwIjoxNjA3MzM2Mjg1LCJhbXIiOlsibWZhIl0sImZhbWlseV9uYW1lIjoiVXNlciIsImdpdmVuX25hbWUiOiJUZXN0IiwiZ3JvdXBzIjpbInVzZXJfZ3JvdXAiXSwiaXBhZGRyIjoiMTkyLjE2OC4xNy41IiwibmFtZSI6IlRlc3QgVXNlciAoQUQpIiwib2lkIjoib2JqZWN0X2lkIiwicmgiOiJyaCIsInN1YiI6InN1YnNjcmlwdGlvbiIsInRpZCI6InRlbmFudF9pZCIsInVuaXF1ZV9uYW1lIjoidGVzdHVzZXJAb2F1dGgyLmNvbSIsInVwbiI6InRlc3R1c2VyQG9hdXRoMi5jb20iLCJ1dGkiOiJ1dGkiLCJ2ZXIiOiIxLjAiLCJqdGkiOiI4ZTA3MDhlNS1jODg3LTRhZWUtYjdjMS04YjAzOThhODUxMWIifQ.aReJV2o8ukOCC_ddQDj3e0olZ9fGyT5aTNKPLAb8rGw"
+	b := testAzureBackend(fmt.Sprintf(`{ "access_token": "some_access_token", "refresh_token": "some_refresh_token", "expires_on": "1136239445", "id_token": "%s" }`, idToken))
+	defer b.Close()
+	timestamp, _ := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+
+	err = p.EnrichSession(context.Background(), session)
+	assert.Equal(t, nil, err)
+
+	groups := session.Groups
+
+	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
+
+	assert.Equal(t, idToken, session.IDToken)
+	assert.Equal(t, 1, len(groups))
+	assert.Equal(t, "user_group", groups[0])
+}
