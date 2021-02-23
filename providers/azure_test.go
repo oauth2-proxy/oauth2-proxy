@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/coreos/go-oidc"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,7 +13,8 @@ import (
 	"testing"
 	"time"
 
-	oidc "github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc"
+
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 
 	. "github.com/onsi/gomega"
