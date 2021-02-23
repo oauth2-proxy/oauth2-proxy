@@ -26,6 +26,7 @@ var _ = Describe("Basic Auth Session Suite", func() {
 
 		type basicAuthSessionLoaderTableInput struct {
 			authorizationHeader string
+			sessionGroups       []string
 			existingSession     *sessionsapi.SessionState
 			expectedSession     *sessionsapi.SessionState
 		}
@@ -54,7 +55,7 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewBasicAuthSessionLoader(validator)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handler := NewBasicAuthSessionLoader(validator, in.sessionGroups)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
@@ -110,6 +111,12 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				authorizationHeader: "Basic YWRtaW46QWRtMW4xc3RyJHQwcg==",
 				existingSession:     nil,
 				expectedSession:     &sessionsapi.SessionState{User: "admin"},
+			}),
+			Entry("Basic with groups", basicAuthSessionLoaderTableInput{
+				authorizationHeader: "Basic YWRtaW46QWRtMW4xc3RyJHQwcg==",
+				sessionGroups:       []string{"a", "b"},
+				existingSession:     nil,
+				expectedSession:     &sessionsapi.SessionState{User: "admin", Groups: []string{"a", "b"}},
 			}),
 		)
 	})

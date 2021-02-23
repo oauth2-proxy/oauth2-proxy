@@ -26,6 +26,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `--azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
 | `--basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
+| `--basic-auth-session-group` | string \| list | the groups to be set on all basic auth sessions | |
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
 | `--client-secret` | string | the OAuth Client Secret | |
 | `--client-secret-file` | string | the file with OAuth Client Secret | |
