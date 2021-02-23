@@ -20,6 +20,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | Option | Type | Description | Default |
 | ------ | ---- | ----------- | ------- |
 | `--acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
+| `--add-headers-to-skipped` | bool | normally the various `--pass-*` options only pass request headers through to backend routes that require authentication - skipped routes do not receive the user information even if there is a valid cookie or JWT. Setting this option `true` causes `--pass-*` options to apply to all routes including skipped ones. | false |
 | `--approval-prompt` | string | OAuth approval_prompt | `"force"` |
 | `--auth-logging` | bool | Log authentication attempts | true |
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
