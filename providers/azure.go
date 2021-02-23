@@ -3,13 +3,10 @@ package providers
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/bitly/go-simplejson"
@@ -370,26 +367,23 @@ func (p *AzureProvider) ValidateSession(ctx context.Context, s *sessions.Session
 }
 
 func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	jwtParts := strings.Split(s.IDToken, ".")
-	if len(jwtParts) != 3 {
-		logger.Errorf("IDToken is not a valid jwd")
+	if p.Verifier == nil {
+		logger.Errorf("Verifier is empty can not verify id token and extract claims")
 		return nil
 	}
-	claimsJSON, err := base64.RawStdEncoding.DecodeString(jwtParts[1])
+	// verify jwt
+	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
 	if err != nil {
-		logger.Errorf("Failed to decode jwt %v", err)
+		logger.Errorf("id_token is not valid (failed to verify)")
 		return nil
 	}
-	claims := AzureClaims{}
-	err = json.Unmarshal(claimsJSON, &claims)
+	// extract claims
+	claims, err := p.getClaims(idToken)
 	if err != nil {
-		logger.Errorf("Failed to decode jwt into json %v", err)
+		logger.Errorf("Failed to decode claims of id_token")
 		return nil
 	}
+	// set claims for session
 	s.Groups = claims.Groups
 	return nil
-}
-
-type AzureClaims struct {
-	Groups []string `json:"groups,omitempty"`
 }
