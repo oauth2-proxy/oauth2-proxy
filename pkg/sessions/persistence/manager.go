@@ -85,7 +85,7 @@ func (m *Manager) ReleaseLock(req *http.Request) error {
 		return err
 	}
 
-	return tckt.releaseSession(func(key string) error {
+	return tckt.releaseSessionLock(func(key string) error {
 		return m.Store.ReleaseLock(req.Context(), key)
 	})
 }
