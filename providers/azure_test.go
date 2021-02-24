@@ -227,43 +227,59 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 
 func TestAzureProviderRedeem(t *testing.T) {
 	testCases := []struct {
-		Name         string
-		RefreshToken string
-		AccessToken  string
-		ExpiresOn    string
-		Email        string
-		IDToken      *idTokenClaims
+		Name                 string
+		RefreshToken         string
+		ExpiresOn            string
+		EmailFromIDToken     string
+		EmailFromAccessToken string
+		IsIDTokenMalformed   bool
 	}{
+		//{
+		//	Name:             "with id_token returned",
+		//	EmailFromIDToken: "foo1@example.com",
+		//	RefreshToken:     "some_refresh_token",
+		//	ExpiresOn:        "2006-01-02T22:04:05Z",
+		//},
+		//{
+		//	Name:                 "without id_token returned, fallback to access token",
+		//	EmailFromAccessToken: "foo2@example.com",
+		//	RefreshToken:         "some_refresh_token",
+		//	ExpiresOn:            "2006-01-02T22:04:05Z",
+		//},
 		{
-			Name:         "with id_token returned",
-			Email:        "foo@example.com",
-			RefreshToken: "some_refresh_token",
-			AccessToken:  "some_access_token",
-			ExpiresOn:    "2006-01-02T22:04:05Z",
-		},
-		{
-			Name:         "without id_token returned",
-			RefreshToken: "some_refresh_token",
-			AccessToken:  "some_access_token",
-			ExpiresOn:    "2006-01-02T22:04:05Z",
+			Name:                 "id_token malformed, fallback to access token",
+			EmailFromAccessToken: "foo3@example.com",
+			RefreshToken:         "some_refresh_token",
+			ExpiresOn:            "2006-01-02T22:04:05Z",
+			IsIDTokenMalformed:   true,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.Name, func(t *testing.T) {
-			var idTokenString string
-			if testCase.Email != "" {
+			idTokenString := ""
+			accessTokenString := ""
+			if testCase.EmailFromIDToken != "" {
 				var err error
-				idToken := idTokenClaims{Email: testCase.Email}
-				idTokenString, err = newSignedTestIDToken(idToken)
+				token := idTokenClaims{Email: testCase.EmailFromIDToken}
+				idTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
+			}
+			if testCase.EmailFromAccessToken != "" {
+				var err error
+				token := idTokenClaims{Email: testCase.EmailFromAccessToken}
+				accessTokenString, err = newSignedTestIDToken(token)
+				assert.NoError(t, err)
+			}
+			if testCase.IsIDTokenMalformed {
+				idTokenString = "this is a malformed id_token"
 			}
 			timestamp, err := time.Parse(time.RFC3339, testCase.ExpiresOn)
 			assert.NoError(t, err)
 			payload := azureOAuthPayload{
 				IDToken:      idTokenString,
 				RefreshToken: testCase.RefreshToken,
-				AccessToken:  testCase.AccessToken,
+				AccessToken:  accessTokenString,
 				ExpiresOn:    timestamp.Unix(),
 			}
 
@@ -279,10 +295,14 @@ func TestAzureProviderRedeem(t *testing.T) {
 			s, err := p.Redeem(context.Background(), "https://localhost", "1234")
 			assert.Equal(t, nil, err)
 			assert.Equal(t, idTokenString, s.IDToken)
+			assert.Equal(t, accessTokenString, s.AccessToken)
 			assert.Equal(t, timestamp, s.ExpiresOn.UTC())
 			assert.Equal(t, testCase.RefreshToken, s.RefreshToken)
-			assert.Equal(t, testCase.AccessToken, s.AccessToken)
-			assert.Equal(t, testCase.Email, s.Email)
+			if testCase.EmailFromIDToken != "" {
+				assert.Equal(t, testCase.EmailFromIDToken, s.Email)
+			} else {
+				assert.Equal(t, testCase.EmailFromAccessToken, s.Email)
+			}
 		})
 	}
 }

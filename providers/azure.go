@@ -153,7 +153,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 		RefreshToken: jsonResponse.RefreshToken,
 	}
 
-	email, err := p.verifyIDTokenAndExtractEmail(ctx, session.IDToken)
+	email, err := p.verifyTokensAndExtractEmail(ctx, session.IDToken, session.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -204,23 +204,43 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 	return params, nil
 }
 
-func (p *AzureProvider) verifyIDTokenAndExtractEmail(ctx context.Context, rawIDToken string) (string, error) {
-	// the presence of id_token depends on the configuration and
-	// verification of id_token requires oidc configuration
-	if rawIDToken == "" || p.Verifier == nil {
+// verifyTokensAndExtractEmail tries to extract email claim from id_token first
+// and falls back to access token due to
+// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
+// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
+func (p *AzureProvider) verifyTokensAndExtractEmail(ctx context.Context, idToken, accessToken string) (string, error) {
+	email := ""
+	if p.Verifier == nil {
 		return "", nil
 	}
 
-	idToken, err := p.Verifier.Verify(ctx, rawIDToken)
-	if err != nil {
-		return "", err
-	}
-	claims, err := p.getClaims(idToken)
-	if err != nil {
-		return "", err
+	if idToken != "" {
+		token, err := p.Verifier.Verify(ctx, idToken)
+		// due to issues mentioned above, id_token may not be signed by AAD
+		if err == nil {
+			claims, err := p.getClaims(token)
+			if err != nil {
+				return "", fmt.Errorf("failed to get claims from id_token: %s", err)
+			}
+			email = claims.Email
+		} else {
+			logger.Printf("unable to verify id_token: %v", err)
+		}
 	}
 
-	return claims.Email, nil
+	if email == "" && accessToken != "" {
+		token, err := p.Verifier.Verify(ctx, accessToken)
+		if err != nil {
+			return "", fmt.Errorf("failed to verify access token: %s", err)
+		}
+		claims, err := p.getClaims(token)
+		if err != nil {
+			return "", fmt.Errorf("failed to get claims from access token: %s", err)
+		}
+		email = claims.Email
+	}
+
+	return email, nil
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -275,7 +295,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	s.CreatedAt = &now
 	s.ExpiresOn = &expires
 
-	email, err := p.verifyIDTokenAndExtractEmail(ctx, s.IDToken)
+	email, err := p.verifyTokensAndExtractEmail(ctx, s.IDToken, s.AccessToken)
 	if err != nil {
 		return err
 	}
