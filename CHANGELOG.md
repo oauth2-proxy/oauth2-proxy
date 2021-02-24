@@ -82,6 +82,7 @@ N/A
 - [#980](https://github.com/oauth2-proxy/oauth2-proxy/pull/980) Add Prometheus metrics endpoint (@neuralsandwich)
 - [#1023](https://github.com/oauth2-proxy/oauth2-proxy/pull/1023) Update docs on Traefik ForwardAuth support without the use of Traefik 'errors' middleware (@pcneo83)
 - [#1091](https://github.com/oauth2-proxy/oauth2-proxy/pull/1091) Add an example with Traefik (configuration without Traefik 'errors' middleware) (@fcollonval)
+- [#1066](https://github.com/oauth2-proxy/oauth2-proxy/pull/1066) Add ID Token Claims to the OIDC Provider
 
 # V7.0.1
 

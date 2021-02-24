@@ -568,3 +568,19 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 		})
 	}
 }
+
+func TestOIDCGetLoginURL(t *testing.T) {
+	tokenClaims := []string{"group", "affiliation"}
+	server, provider := newTestOIDCSetup([]byte(``))
+	defer server.Close()
+	result := provider.GetLoginURL("", "")
+	for _, claim := range tokenClaims {
+		assert.NotContains(t, result, claim)
+	}
+
+	provider.TokenClaims = tokenClaims
+	result = provider.GetLoginURL("", "")
+	for _, claim := range tokenClaims {
+		assert.Contains(t, result, claim)
+	}
+}

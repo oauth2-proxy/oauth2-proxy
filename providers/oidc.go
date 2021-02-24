@@ -2,8 +2,10 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"time"
 
@@ -232,4 +234,34 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.ExpiresOn = &token.Expiry
 
 	return ss, nil
+}
+
+func (p *OIDCProvider) GetLoginURL(redirectURI, state string) string {
+	s := makeLoginURL(p.ProviderData, redirectURI, state, p.makeIDTokenClaims())
+	return s.String()
+}
+
+func (p *OIDCProvider) makeIDTokenClaims() url.Values {
+	idTokenClaimsParam := url.Values{}
+	if len(p.TokenClaims) == 0 {
+		return idTokenClaimsParam
+	}
+	type essential struct {
+		Essential bool `json:"essential"`
+	}
+	idTokenClaims := &struct {
+		IDToken map[string]essential `json:"id_token"`
+	}{
+		make(map[string]essential),
+	}
+	for _, claim := range p.TokenClaims {
+		idTokenClaims.IDToken[claim] = essential{true}
+	}
+	js, err := json.Marshal(idTokenClaims)
+	if err != nil {
+		logger.Errorf("Warning: Unable to marshal ID Token Claims: %v", err)
+		return idTokenClaimsParam
+	}
+	idTokenClaimsParam.Add("claims", string(js))
+	return idTokenClaimsParam
 }
