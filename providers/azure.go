@@ -219,10 +219,11 @@ func (p *AzureProvider) verifyTokensAndExtractEmail(ctx context.Context, idToken
 		// due to issues mentioned above, id_token may not be signed by AAD
 		if err == nil {
 			claims, err := p.getClaims(token)
-			if err != nil {
-				return "", fmt.Errorf("failed to get claims from id_token: %s", err)
+			if err == nil {
+				email = claims.Email
+			} else {
+				logger.Printf("unable to get claims from id_token: %v", err)
 			}
-			email = claims.Email
 		} else {
 			logger.Printf("unable to verify id_token: %v", err)
 		}

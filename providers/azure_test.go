@@ -234,18 +234,18 @@ func TestAzureProviderRedeem(t *testing.T) {
 		EmailFromAccessToken string
 		IsIDTokenMalformed   bool
 	}{
-		//{
-		//	Name:             "with id_token returned",
-		//	EmailFromIDToken: "foo1@example.com",
-		//	RefreshToken:     "some_refresh_token",
-		//	ExpiresOn:        "2006-01-02T22:04:05Z",
-		//},
-		//{
-		//	Name:                 "without id_token returned, fallback to access token",
-		//	EmailFromAccessToken: "foo2@example.com",
-		//	RefreshToken:         "some_refresh_token",
-		//	ExpiresOn:            "2006-01-02T22:04:05Z",
-		//},
+		{
+			Name:             "with id_token returned",
+			EmailFromIDToken: "foo1@example.com",
+			RefreshToken:     "some_refresh_token",
+			ExpiresOn:        "2006-01-02T22:04:05Z",
+		},
+		{
+			Name:                 "without id_token returned, fallback to access token",
+			EmailFromAccessToken: "foo2@example.com",
+			RefreshToken:         "some_refresh_token",
+			ExpiresOn:            "2006-01-02T22:04:05Z",
+		},
 		{
 			Name:                 "id_token malformed, fallback to access token",
 			EmailFromAccessToken: "foo3@example.com",
