@@ -26,7 +26,6 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `--azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
 | `--basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
-| `--basic-auth-session-group` | string \| list | the groups to be set on all basic auth sessions | |
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
 | `--client-secret` | string | the OAuth Client Secret | |
 | `--client-secret-file` | string | the file with OAuth Client Secret | |
@@ -63,6 +62,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
 | `--google-service-account-json` | string | the path to the service account json credentials | |
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption | |
+| `--htpasswd-user-group` | string \| list | the groups to be set on sessions for htpasswd users | |
 | `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients | `"127.0.0.1:4180"` |
 | `--https-address` | string | `<addr>:<port>` to listen on for HTTPS clients | `":443"` |
 | `--logging-compress` | bool | Should rotated log files be compressed using gzip | false |
