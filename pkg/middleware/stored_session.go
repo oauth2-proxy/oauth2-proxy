@@ -94,24 +94,16 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 // getValidatedSession is responsible for loading a session and making sure
 // that is is valid.
 func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
-	session, err := s.store.Load(req)
-	if err != nil {
-		return nil, err
-	}
-	if session == nil {
-		// No session was found in the storage, nothing more to do
-		return nil, nil
-	}
-
-	if !s.isSessionRefreshNeeded(session) {
+	session, err := s.loadRefreshedSession(req, 1)
+	if session != nil {
 		return session, nil
 	}
 
 	session, err = s.store.LoadWithLock(req)
-	defer s.store.ReleaseLock(req)
 	if err != nil {
-		return nil, err
+		return s.loadRefreshedSession(req, 10)
 	}
+	defer s.store.ReleaseLock(req)
 	if session == nil {
 		// No session was found in the storage, nothing more to do
 		return nil, nil
@@ -136,6 +128,25 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 		return nil, err
 	}
 	return session, nil
+}
+
+func (s *storedSessionLoader) loadRefreshedSession(req *http.Request, maxAttempts int) (*sessionsapi.SessionState, error) {
+	for i := 0; i < maxAttempts; i++ {
+		session, err := s.store.Load(req)
+		if err != nil {
+			return nil, err
+		}
+		if session == nil {
+			// No session was found in the storage, nothing more to do
+			return nil, nil
+		}
+
+		if s.isSessionRefreshNeeded(session) {
+			return session, nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return nil, nil
 }
 
 // isSessionRefreshNeeded will check if the session need to be refreshed
