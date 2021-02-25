@@ -277,7 +277,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	}
 
 	if validator != nil {
-		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator))
+		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups))
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
