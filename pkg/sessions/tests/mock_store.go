@@ -15,15 +15,17 @@ type entry struct {
 // MockStore is a generic in-memory implementation of persistence.Store
 // for mocking in tests
 type MockStore struct {
-	cache   map[string]entry
-	elapsed time.Duration
+	cache      map[string]entry
+	locksCache map[string]string
+	elapsed    time.Duration
 }
 
 // NewMockStore creates a MockStore
 func NewMockStore() *MockStore {
 	return &MockStore{
-		cache:   map[string]entry{},
-		elapsed: 0 * time.Second,
+		cache:      map[string]entry{},
+		locksCache: map[string]string{},
+		elapsed:    0 * time.Second,
 	}
 }
 
@@ -44,6 +46,23 @@ func (s *MockStore) Load(_ context.Context, key string) ([]byte, error) {
 		return nil, fmt.Errorf("key not found: %s", key)
 	}
 	return entry.data, nil
+}
+
+// Load gets data from the memory cache via a key and locks it
+func (s *MockStore) LoadWithLock(_ context.Context, key string) ([]byte, error) {
+	entry, ok := s.cache[key]
+	if !ok || entry.expiration <= s.elapsed {
+		delete(s.cache, key)
+		return nil, fmt.Errorf("key not found: %s", key)
+	}
+	s.locksCache[key] = "lock"
+	return entry.data, nil
+}
+
+// Releases a previously set lock
+func (s *MockStore) ReleaseLock(_ context.Context, key string) error {
+	delete(s.locksCache, key)
+	return nil
 }
 
 // Clear deletes an entry from the memory cache
