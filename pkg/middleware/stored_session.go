@@ -141,7 +141,7 @@ func (s *storedSessionLoader) loadRefreshedSession(req *http.Request, maxAttempt
 			return nil, nil
 		}
 
-		if s.isSessionRefreshNeeded(session) {
+		if !s.isSessionRefreshNeeded(session) {
 			return session, nil
 		}
 		time.Sleep(100 * time.Millisecond)
