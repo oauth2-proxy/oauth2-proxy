@@ -35,17 +35,6 @@ func newClient(c *redis.Client) Client {
 }
 
 func (c *client) Get(ctx context.Context, key string) ([]byte, error) {
-	if c.locks[key] != nil {
-		for {
-			ttl, err := c.locks[key].TTL(ctx)
-			if err != nil {
-				return nil, err
-			}
-			if ttl <= 0 {
-				break
-			}
-		}
-	}
 	return c.Client.Get(ctx, key).Bytes()
 }
 
@@ -95,17 +84,6 @@ func newClusterClient(c *redis.ClusterClient) Client {
 }
 
 func (c *clusterClient) Get(ctx context.Context, key string) ([]byte, error) {
-	if c.locks[key] != nil {
-		for {
-			ttl, err := c.locks[key].TTL(ctx)
-			if err != nil {
-				return nil, err
-			}
-			if ttl <= 0 {
-				break
-			}
-		}
-	}
 	return c.ClusterClient.Get(ctx, key).Bytes()
 }
 
