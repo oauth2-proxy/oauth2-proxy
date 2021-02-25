@@ -21,6 +21,7 @@ var (
 
 func TestRequetsSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 	log.SetOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)

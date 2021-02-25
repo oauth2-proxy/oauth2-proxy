@@ -94,7 +94,7 @@ func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
 }
 
 // GetEmailAddress returns the Account email address
-// DEPRECATED: Migrate to EnrichSession
+// Deprecated: Migrate to EnrichSession
 func (p *ProviderData) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", ErrNotImplemented
 }

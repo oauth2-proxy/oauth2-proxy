@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -12,6 +14,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/spf13/pflag"
 )
@@ -20,6 +23,11 @@ func main() {
 	logger.SetFlags(logger.Lshortfile)
 
 	configFlagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ContinueOnError)
+
+	// Because we parse early to determine alpha vs legacy config, we have to
+	// ignore any unknown flags for now
+	configFlagSet.ParseErrorsWhitelist.UnknownFlags = true
+
 	config := configFlagSet.String("config", "", "path to config file")
 	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
 	convertConfig := configFlagSet.Bool("convert-config-to-alpha", false, "if true, the proxy will load configuration as normal and convert existing configuration to the alpha config structure, and print it to stdout")
@@ -37,8 +45,7 @@ func main() {
 
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
 	if err != nil {
-		logger.Printf("ERROR: %v", err)
-		os.Exit(1)
+		logger.Fatalf("ERROR: %v", err)
 	}
 
 	if *convertConfig {
@@ -48,34 +55,66 @@ func main() {
 		return
 	}
 
-	err = validation.Validate(opts)
-	if err != nil {
-		logger.Printf("%s", err)
-		os.Exit(1)
+	if err = validation.Validate(opts); err != nil {
+		logger.Fatalf("%s", err)
 	}
 
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 	oauthproxy, err := NewOAuthProxy(opts, validator)
 	if err != nil {
-		logger.Errorf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
-		os.Exit(1)
+		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
 
 	rand.Seed(time.Now().UnixNano())
 
+	oauthProxyStop := make(chan struct{}, 1)
+	metricsStop := startMetricsServer(opts.MetricsAddress, oauthProxyStop)
+
 	s := &Server{
 		Handler: oauthproxy,
 		Opts:    opts,
-		stop:    make(chan struct{}, 1),
+		stop:    oauthProxyStop,
 	}
 	// Observe signals in background goroutine.
 	go func() {
 		sigint := make(chan os.Signal, 1)
 		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
 		<-sigint
-		s.stop <- struct{}{} // notify having caught signal
+		s.stop <- struct{}{} // notify having caught signal stop oauthproxy
+		close(metricsStop)   // and the metrics endpoint
 	}()
 	s.ListenAndServe()
+}
+
+// startMetricsServer will start the metrics server on the specified address.
+// It always return a channel to signal stop even when it does not run.
+func startMetricsServer(address string, oauthProxyStop chan struct{}) chan struct{} {
+	stop := make(chan struct{}, 1)
+
+	// Attempt to setup the metrics endpoint if we have an address
+	if address != "" {
+		s := &http.Server{Addr: address, Handler: middleware.DefaultMetricsHandler}
+		go func() {
+			// ListenAndServe always returns a non-nil error. After Shutdown or
+			// Close, the returned error is ErrServerClosed
+			if err := s.ListenAndServe(); err != http.ErrServerClosed {
+				logger.Println(err)
+				// Stop the metrics shutdown go routine
+				close(stop)
+				// Stop the oauthproxy server, we have encounter an unexpected error
+				close(oauthProxyStop)
+			}
+		}()
+
+		go func() {
+			<-stop
+			if err := s.Shutdown(context.Background()); err != nil {
+				logger.Print(err)
+			}
+		}()
+	}
+
+	return stop
 }
 
 // loadConfiguration will load in the user's configuration.

@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/http/httptest"
 
@@ -20,9 +19,10 @@ var _ = Describe("Proxy Suite", func() {
 	BeforeEach(func() {
 		sigData := &options.SignatureData{Hash: crypto.SHA256, Key: "secret"}
 
-		tmpl, err := template.New("").Parse("{{ .Title }}\n{{ .Message }}\n{{ .ProxyPrefix }}")
-		Expect(err).ToNot(HaveOccurred())
-		errorHandler := NewProxyErrorHandler(tmpl, "prefix")
+		errorHandler := func(rw http.ResponseWriter, _ *http.Request, _ error) {
+			rw.WriteHeader(502)
+			rw.Write([]byte("Proxy Error"))
+		}
 
 		ok := http.StatusOK
 
@@ -56,6 +56,7 @@ var _ = Describe("Proxy Suite", func() {
 			},
 		}
 
+		var err error
 		upstreamServer, err = NewProxy(upstreams, sigData, errorHandler)
 		Expect(err).ToNot(HaveOccurred())
 	})
@@ -143,7 +144,7 @@ var _ = Describe("Proxy Suite", func() {
 					gapUpstream: {"bad-http-backend"},
 				},
 				// This tests the error handler
-				raw: "Bad Gateway\nError proxying to upstream server\nprefix",
+				raw: "Proxy Error",
 			},
 		}),
 		Entry("with a request to the to an unregistered path", &proxyTableInput{
