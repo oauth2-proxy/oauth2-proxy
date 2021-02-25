@@ -45,6 +45,7 @@ var _ = Describe("Templates", func() {
 				SignInMessage string
 				ProviderName  string
 				CustomLogin   bool
+				LogoData      string
 
 				// For default error template
 				StatusCode int
@@ -61,6 +62,7 @@ var _ = Describe("Templates", func() {
 				SignInMessage: "<sign-in-message>",
 				ProviderName:  "<provider-name>",
 				CustomLogin:   false,
+				LogoData:      "<logo>",
 
 				StatusCode: 404,
 				Title:      "<title>",
