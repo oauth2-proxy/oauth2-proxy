@@ -44,7 +44,7 @@ func loadBasicAuthSession(validator basic.Validator, next http.Handler) http.Han
 	})
 }
 
-// getBasicSession attempt to load a basic session from the request.
+// getBasicSession attempts to load a basic session from the request.
 // If the credentials in the request exist within the htpasswdMap,
 // a new session will be created.
 func getBasicSession(validator basic.Validator, req *http.Request) (*sessionsapi.SessionState, error) {
