@@ -914,9 +914,8 @@ func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
 	// set the "session optional" flag on this request
 	middlewareapi.GetRequestScope(req).SessionRequired = false
 	if p.addHeadersToSkipped {
-		session, err := p.getAuthenticatedSession(rw, req)
-		if err == nil {
-			// we are authenticated
+		session := p.tryGetSession(rw, req)
+		if session != nil {
 			p.addHeadersForProxying(rw, session)
 		}
 	}
@@ -1150,18 +1149,27 @@ func validOptionalPort(port string) bool {
 	return true
 }
 
-// getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
-// Returns:
-// - `nil, ErrNeedsLogin` if user needs to login.
-// - `nil, ErrAccessDenied` if the authenticated user is not authorized
+// tryGetSession attempts to load the current session, returning a session object if there is one, or nil if the
+// user is not authenticated.  This does not perform authorization checks.
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
-func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
+func (p *OAuthProxy) tryGetSession(rw http.ResponseWriter, req *http.Request) *sessionsapi.SessionState {
 	var session *sessionsapi.SessionState
 
 	getSession := p.sessionChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		session = middlewareapi.GetRequestScope(req).Session
 	}))
 	getSession.ServeHTTP(rw, req)
+
+	return session
+}
+
+// getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
+// Returns:
+// - `nil, ErrNeedsLogin` if user needs to login.
+// - `nil, ErrAccessDenied` if the authenticated user is not authorized
+// Set-Cookie headers may be set on the response as a side-effect of calling this method.
+func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
+	session := p.tryGetSession(rw, req)
 
 	if session == nil {
 		return nil, ErrNeedsLogin
