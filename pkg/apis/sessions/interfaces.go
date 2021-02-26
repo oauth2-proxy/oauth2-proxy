@@ -1,8 +1,9 @@
 package sessions
 
 import (
-	"github.com/pkg/errors"
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
 var ErrNotLockable = errors.New("not able to lock session state")
