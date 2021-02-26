@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/coreos/go-oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -444,7 +445,7 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 	}
 }
 
-func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
+func TestOIDCProviderRefreshSessionWithoutIdToken(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(redeemTokenResponse{
@@ -467,9 +468,8 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 		User:         "11223344",
 	}
 
-	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
+	err := provider.RefreshSession(context.Background(), existingSession)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, refreshed, true)
 	assert.Equal(t, "janedoe@example.com", existingSession.Email)
 	assert.Equal(t, accessToken, existingSession.AccessToken)
 	assert.Equal(t, idToken, existingSession.IDToken)
@@ -477,7 +477,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 	assert.Equal(t, "11223344", existingSession.User)
 }
 
-func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
+func TestOIDCProviderRefreshSessionWithIdToken(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(redeemTokenResponse{
@@ -500,14 +500,48 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 		Email:        "changeit",
 		User:         "changeit",
 	}
-	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
+	err := provider.RefreshSession(context.Background(), existingSession)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, refreshed, true)
 	assert.Equal(t, defaultIDToken.Email, existingSession.Email)
 	assert.Equal(t, defaultIDToken.Subject, existingSession.User)
 	assert.Equal(t, accessToken, existingSession.AccessToken)
 	assert.Equal(t, idToken, existingSession.IDToken)
 	assert.Equal(t, refreshToken, existingSession.RefreshToken)
+}
+
+func TestOIDCProviderIsRefreshSessionNeededWhenRefreshIsNeeded(t *testing.T) {
+	provider := newOIDCProvider(&url.URL{})
+
+	existingSession := &sessions.SessionState{
+		AccessToken:  "changeit",
+		IDToken:      "changeit",
+		CreatedAt:    nil,
+		ExpiresOn:    nil,
+		RefreshToken: refreshToken,
+		Email:        "changeit",
+		User:         "changeit",
+	}
+	refreshNeeded := provider.IsRefreshNeeded(existingSession)
+	assert.True(t, refreshNeeded)
+}
+
+func TestOIDCProviderIsRefreshSessionNeededWhenRefreshIsNotNeeded(t *testing.T) {
+	createdPast := time.Now().Add(-5 * time.Minute)
+	expiresFuture := time.Now().Add(+5 * time.Minute)
+
+	provider := newOIDCProvider(&url.URL{})
+
+	existingSession := &sessions.SessionState{
+		AccessToken:  "changeit",
+		IDToken:      "changeit",
+		CreatedAt:    &createdPast,
+		ExpiresOn:    &expiresFuture,
+		RefreshToken: refreshToken,
+		Email:        "changeit",
+		User:         "changeit",
+	}
+	refreshNeeded := provider.IsRefreshNeeded(existingSession)
+	assert.False(t, refreshNeeded)
 }
 
 func TestOIDCProviderCreateSessionFromToken(t *testing.T) {

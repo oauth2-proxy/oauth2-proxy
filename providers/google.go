@@ -266,16 +266,16 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 	return false
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
+// RefreshSession checks if the session has expired and uses the
 // RefreshToken to fetch a new ID token if required
-func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) error {
 	if s == nil {
-		return false, nil
+		return nil
 	}
 
 	newToken, newIDToken, duration, err := p.redeemRefreshToken(ctx, s.RefreshToken)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// TODO (@NickMeves) - Align Group authorization needs with other providers'
@@ -283,7 +283,7 @@ func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.Session
 	//
 	// re-check that the user is in the proper google group(s)
 	if !p.groupValidator(s) {
-		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
+		return fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 
 	origExpiration := s.ExpiresOn
@@ -292,7 +292,7 @@ func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.Session
 	s.IDToken = newIDToken
 	s.ExpiresOn = &expires
 	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
-	return true, nil
+	return nil
 }
 
 // IsRefreshNeeded checks if the session has expired

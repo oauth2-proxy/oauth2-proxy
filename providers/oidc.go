@@ -113,20 +113,20 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	return err == nil
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
+// RefreshSession checks if the session has expired and uses the
 // RefreshToken to fetch a new Access Token (and optional ID token) if required
-func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) error {
 	if s == nil {
-		return false, nil
+		return nil
 	}
 
 	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
-		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
+		return fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
 	logger.Printf("refreshed session: %s", s)
-	return true, nil
+	return nil
 }
 
 // IsRefreshNeeded checks if the session has expired

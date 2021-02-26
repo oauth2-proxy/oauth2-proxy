@@ -64,7 +64,7 @@ func (store *SessionStore) LoadWithLock(ctx context.Context, key string) ([]byte
 
 	err = store.Client.Lock(ctx, key, 1*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("error setting redis lock: %v", err)
+		return nil, sessions.ErrNotLockable
 	}
 	return value, nil
 }

@@ -15,10 +15,9 @@ func TestRefresh(t *testing.T) {
 	p := &ProviderData{}
 
 	expires := time.Now().Add(time.Duration(-11) * time.Minute)
-	refreshed, err := p.RefreshSession(context.Background(), &sessions.SessionState{
+	err := p.RefreshSession(context.Background(), &sessions.SessionState{
 		ExpiresOn: &expires,
 	})
-	assert.Equal(t, false, refreshed)
 	assert.Equal(t, nil, err)
 }
 

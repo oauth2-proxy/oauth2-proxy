@@ -17,40 +17,40 @@ func NewBasicAuthSessionLoader(validator basic.Validator) alice.Constructor {
 	}
 }
 
-// loadBasicAuthSession attmepts to load a session from basic auth credentials
+// loadBasicAuthSession attmepts to load a validSession from basic auth credentials
 // stored in an Authorization header within the request.
-// If no authorization header is found, or the header is invalid, no session
+// If no authorization header is found, or the header is invalid, no validSession
 // will be loaded and the request will be passed to the next handler.
-// If a session was loaded by a previous handler, it will not be replaced.
+// If a validSession was loaded by a previous handler, it will not be replaced.
 func loadBasicAuthSession(validator basic.Validator, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		scope := middlewareapi.GetRequestScope(req)
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
 		if scope.Session != nil {
-			// The session was already loaded, pass to the next handler
+			// The validSession was already loaded, pass to the next handler
 			next.ServeHTTP(rw, req)
 			return
 		}
 
 		session, err := getBasicSession(validator, req)
 		if err != nil {
-			logger.Errorf("Error retrieving session from token in Authorization header: %v", err)
+			logger.Errorf("Error retrieving validSession from token in Authorization header: %v", err)
 		}
 
-		// Add the session to the scope if it was found
+		// Add the validSession to the scope if it was found
 		scope.Session = session
 		next.ServeHTTP(rw, req)
 	})
 }
 
-// getBasicSession attempts to load a basic session from the request.
+// getBasicSession attemptValidSession to load a basic validSession from the request.
 // If the credentials in the request exist within the htpasswdMap,
-// a new session will be created.
+// a new validSession will be created.
 func getBasicSession(validator basic.Validator, req *http.Request) (*sessionsapi.SessionState, error) {
 	auth := req.Header.Get("Authorization")
 	if auth == "" {
-		// No auth header provided, so don't attempt to load a session
+		// No auth header provided, so don't attempt to load a validSession
 		return nil, nil
 	}
 

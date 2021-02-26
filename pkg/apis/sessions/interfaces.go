@@ -1,8 +1,11 @@
 package sessions
 
 import (
+	"github.com/pkg/errors"
 	"net/http"
 )
+
+var ErrNotLockable = errors.New("not able to lock session state")
 
 // SessionStore is an interface to storing user sessions in the proxy
 type SessionStore interface {
