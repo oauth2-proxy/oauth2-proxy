@@ -111,7 +111,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					middlewareapi.CreateTokenToSessionFunc(verifier),
 				}
 
-				// Create the handler with a next handler that will capture the validSession
+				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
 				handler := NewJwtSessionLoader(sessionLoaders)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +131,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				existingSession:     nil,
 				expectedSession:     nil,
 			}),
-			Entry("abcdef  (with existing validSession)", jwtSessionLoaderTableInput{
+			Entry("abcdef  (with existing session)", jwtSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
 				existingSession:     &sessionsapi.SessionState{User: "user"},
 				expectedSession:     &sessionsapi.SessionState{User: "user"},
@@ -146,7 +146,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				existingSession:     nil,
 				expectedSession:     nil,
 			}),
-			Entry("Bearer <verifiedToken> (with existing validSession)", jwtSessionLoaderTableInput{
+			Entry("Bearer <verifiedToken> (with existing session)", jwtSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
 				existingSession:     &sessionsapi.SessionState{User: "user"},
 				expectedSession:     &sessionsapi.SessionState{User: "user"},
@@ -412,7 +412,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			expectedExpires *time.Time
 		}
 
-		DescribeTable("when creating a validSession from an IDToken",
+		DescribeTable("when creating a session from an IDToken",
 			func(in tokenToSessionTableInput) {
 				verifier := func(ctx context.Context, token string) (*oidc.IDToken, error) {
 					oidcVerifier := oidc.NewVerifier(

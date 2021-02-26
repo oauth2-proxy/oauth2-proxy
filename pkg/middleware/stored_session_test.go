@@ -36,7 +36,7 @@ var _ = Describe("Stored Session Suite", func() {
 			case noRefresh:
 				return nil
 			default:
-				return errors.New("error refreshing validSession")
+				return errors.New("error refreshing session")
 			}
 		}
 
@@ -131,7 +131,7 @@ var _ = Describe("Stored Session Suite", func() {
 					ValidateSessionState:   in.validateSession,
 				}
 
-				// Create the handler with a next handler that will capture the validSession
+				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
 				handler := NewStoredSessionLoader(opts)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +163,7 @@ var _ = Describe("Stored Session Suite", func() {
 				isRefreshSessionNeeded: defaultIsRefreshNeededFunc,
 				validateSession:        defaultValidateFunc,
 			}),
-			Entry("with an existing validSession", storedSessionLoaderTableInput{
+			Entry("with an existing session", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=RefreshSession"},
 				},
@@ -179,7 +179,7 @@ var _ = Describe("Stored Session Suite", func() {
 				isRefreshSessionNeeded: defaultIsRefreshNeededFunc,
 				validateSession:        defaultValidateFunc,
 			}),
-			Entry("with a validSession that has not expired", storedSessionLoaderTableInput{
+			Entry("with a session that has not expired", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=NoRefreshSession"},
 				},
@@ -195,7 +195,7 @@ var _ = Describe("Stored Session Suite", func() {
 				isRefreshSessionNeeded: defaultIsRefreshNeededFunc,
 				validateSession:        defaultValidateFunc,
 			}),
-			Entry("with a validSession that cannot refresh and has expired", storedSessionLoaderTableInput{
+			Entry("with a session that cannot refresh and has expired", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=ExpiredNoRefreshSession"},
 				},
@@ -207,7 +207,7 @@ var _ = Describe("Stored Session Suite", func() {
 				isRefreshSessionNeeded: defaultIsRefreshNeededFunc,
 				validateSession:        defaultValidateFunc,
 			}),
-			Entry("with a validSession that can refresh, but is younger than refresh period", storedSessionLoaderTableInput{
+			Entry("with a session that can refresh, but is younger than refresh period", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=RefreshSession"},
 				},
@@ -223,7 +223,7 @@ var _ = Describe("Stored Session Suite", func() {
 				isRefreshSessionNeeded: defaultIsRefreshNeededFunc,
 				validateSession:        defaultValidateFunc,
 			}),
-			Entry("with a validSession that can refresh and is older than the refresh period", storedSessionLoaderTableInput{
+			Entry("with a session that can refresh and is older than the refresh period", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=RefreshSession"},
 				},
@@ -251,7 +251,7 @@ var _ = Describe("Stored Session Suite", func() {
 				isRefreshSessionNeeded: defaultIsRefreshNeededFunc,
 				validateSession:        defaultValidateFunc,
 			}),
-			Entry("when the validSession is not refreshed and is no longer valid", storedSessionLoaderTableInput{
+			Entry("when the session is not refreshed and is no longer valid", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=InvalidNoRefreshSession"},
 				},
@@ -278,7 +278,7 @@ var _ = Describe("Stored Session Suite", func() {
 		createdPast := time.Now().Add(-5 * time.Minute)
 		createdFuture := time.Now().Add(5 * time.Minute)
 
-		DescribeTable("with a validSession",
+		DescribeTable("with a session",
 			func(in ensureSessionIsValidTableInput) {
 				refreshed := false
 				validated := false
@@ -298,7 +298,7 @@ var _ = Describe("Stored Session Suite", func() {
 						case noRefresh:
 							return nil
 						default:
-							return errors.New("error refreshing validSession")
+							return errors.New("error refreshing session")
 						}
 					},
 					isRefreshSessionNeededWithProvider: func(ss *sessionsapi.SessionState) bool {
@@ -329,7 +329,7 @@ var _ = Describe("Stored Session Suite", func() {
 				Expect(refreshed).To(Equal(in.expectRefreshed))
 				Expect(validated).To(Equal(in.expectValidated))
 			},
-			Entry("when the refresh period is 0, and the validSession does not need refreshing", ensureSessionIsValidTableInput{
+			Entry("when the refresh period is 0, and the session does not need refreshing", ensureSessionIsValidTableInput{
 				refreshPeriod: time.Duration(0),
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
@@ -339,7 +339,7 @@ var _ = Describe("Stored Session Suite", func() {
 				expectRefreshed: false,
 				expectValidated: false,
 			}),
-			Entry("when the refresh period is 0, and the validSession needs refreshing", ensureSessionIsValidTableInput{
+			Entry("when the refresh period is 0, and the session needs refreshing", ensureSessionIsValidTableInput{
 				refreshPeriod: time.Duration(0),
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
@@ -349,7 +349,7 @@ var _ = Describe("Stored Session Suite", func() {
 				expectRefreshed: false,
 				expectValidated: false,
 			}),
-			Entry("when the validSession does not need refreshing", ensureSessionIsValidTableInput{
+			Entry("when the session does not need refreshing", ensureSessionIsValidTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
@@ -359,7 +359,7 @@ var _ = Describe("Stored Session Suite", func() {
 				expectRefreshed: false,
 				expectValidated: false,
 			}),
-			Entry("when the validSession is refreshed by the provider", ensureSessionIsValidTableInput{
+			Entry("when the session is refreshed by the provider", ensureSessionIsValidTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
@@ -369,7 +369,7 @@ var _ = Describe("Stored Session Suite", func() {
 				expectRefreshed: true,
 				expectValidated: false,
 			}),
-			Entry("when the validSession is not refreshed by the provider", ensureSessionIsValidTableInput{
+			Entry("when the session is not refreshed by the provider", ensureSessionIsValidTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					RefreshToken: noRefresh,
@@ -387,7 +387,7 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:    &createdPast,
 				},
 				expectedErr: errors.New(
-					fmt.Sprintf("error refreshing access token for validSession (%s): error refreshing access token: error refreshing validSession",
+					fmt.Sprintf("error refreshing access token for session (%s): error refreshing access token: error refreshing session",
 						&sessionsapi.SessionState{
 							RefreshToken: refreshError,
 							CreatedAt:    &createdPast,
@@ -395,7 +395,7 @@ var _ = Describe("Stored Session Suite", func() {
 				expectRefreshed: false,
 				expectValidated: false,
 			}),
-			Entry("when the validSession is not refreshed by the provider and validation fails", ensureSessionIsValidTableInput{
+			Entry("when the session is not refreshed by the provider and validation fails", ensureSessionIsValidTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					AccessToken:  "Invalid",
@@ -403,7 +403,7 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
 				},
-				expectedErr:     errors.New("validSession is invalid"),
+				expectedErr:     errors.New("session is invalid"),
 				expectRefreshed: false,
 				expectValidated: true,
 			}),
@@ -412,7 +412,7 @@ var _ = Describe("Stored Session Suite", func() {
 
 	Context("retryLoadingValidSession", func() {
 		type retryLoadingValidSessionTableInput struct {
-			validSession        *sessionsapi.SessionState
+			session             *sessionsapi.SessionState
 			inValidSession      *sessionsapi.SessionState
 			maxAttempts         int
 			attemptValidSession int
@@ -434,7 +434,7 @@ var _ = Describe("Stored Session Suite", func() {
 							}
 							attempt++
 							if in.attemptValidSession == attempt {
-								return in.validSession, nil
+								return in.session, nil
 							}
 							return in.inValidSession, nil
 						},
@@ -450,13 +450,13 @@ var _ = Describe("Stored Session Suite", func() {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
-					Expect(session).To(Equal(in.validSession))
+					Expect(session).To(Equal(in.session))
 				}
 			},
 			Entry("load valid session with first attempt", retryLoadingValidSessionTableInput{
 				maxAttempts:         10,
 				attemptValidSession: 1,
-				validSession: &sessionsapi.SessionState{
+				session: &sessionsapi.SessionState{
 					CreatedAt: &createdFuture,
 				},
 				inValidSession: nil,
@@ -465,7 +465,7 @@ var _ = Describe("Stored Session Suite", func() {
 			Entry("load valid session with second attempt", retryLoadingValidSessionTableInput{
 				maxAttempts:         10,
 				attemptValidSession: 2,
-				validSession: &sessionsapi.SessionState{
+				session: &sessionsapi.SessionState{
 					CreatedAt: &createdFuture,
 				},
 				inValidSession: &sessionsapi.SessionState{
@@ -476,7 +476,7 @@ var _ = Describe("Stored Session Suite", func() {
 			Entry("load session when error occurred", retryLoadingValidSessionTableInput{
 				maxAttempts:         10,
 				attemptValidSession: 0,
-				validSession:        nil,
+				session:             nil,
 				inValidSession:      nil,
 				expectedErr:         errors.New("not able to load valid session"),
 			}),
@@ -492,7 +492,7 @@ var _ = Describe("Stored Session Suite", func() {
 
 		createdPast := time.Now().Add(-5 * time.Minute)
 
-		DescribeTable("with a validSession",
+		DescribeTable("with a session",
 			func(in isRefreshPeriodOverTableInput) {
 				s := &storedSessionLoader{
 					refreshPeriod: in.refreshPeriod,
@@ -501,21 +501,21 @@ var _ = Describe("Stored Session Suite", func() {
 				periodIsOver := s.isRefreshPeriodOver(in.session)
 				Expect(periodIsOver).To(Equal(in.expectPeriodOver))
 			},
-			Entry("when the refresh period is 0, and the validSession does not need refreshing", isRefreshPeriodOverTableInput{
+			Entry("when the refresh period is 0, and the session does not need refreshing", isRefreshPeriodOverTableInput{
 				refreshPeriod: time.Duration(0),
 				session: &sessionsapi.SessionState{
 					CreatedAt: &createdPast,
 				},
 				expectPeriodOver: false,
 			}),
-			Entry("when the refresh period is 1, and the validSession need refreshing", isRefreshPeriodOverTableInput{
+			Entry("when the refresh period is 1, and the session need refreshing", isRefreshPeriodOverTableInput{
 				refreshPeriod: time.Duration(1),
 				session: &sessionsapi.SessionState{
 					CreatedAt: &createdPast,
 				},
 				expectPeriodOver: true,
 			}),
-			Entry("when the refresh period is 6, and the validSession does not need refreshing", isRefreshPeriodOverTableInput{
+			Entry("when the refresh period is 6, and the session does not need refreshing", isRefreshPeriodOverTableInput{
 				refreshPeriod: 6 * time.Minute,
 				session: &sessionsapi.SessionState{
 					CreatedAt: &createdPast,
@@ -545,7 +545,7 @@ var _ = Describe("Stored Session Suite", func() {
 						SaveFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
 							saved = true
 							if ss.AccessToken == "NoSave" {
-								return errors.New("unable to save validSession")
+								return errors.New("unable to save session")
 							}
 							return nil
 						},
@@ -561,7 +561,7 @@ var _ = Describe("Stored Session Suite", func() {
 						case noRefresh:
 							return nil
 						case refreshError:
-							return errors.New("error refreshing validSession")
+							return errors.New("error refreshing session")
 						default:
 							return nil
 						}
@@ -590,7 +590,7 @@ var _ = Describe("Stored Session Suite", func() {
 				Expect(refreshed).To(Equal(in.expectRefreshed))
 				Expect(saved).To(Equal(in.expectSaved))
 			},
-			Entry("when the provider refreshes the validSession", refreshSessionWithProviderTableInput{
+			Entry("when the provider refreshes the session", refreshSessionWithProviderTableInput{
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 				},
@@ -604,16 +604,16 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:    &now,
 					ExpiresOn:    &now,
 				},
-				expectedErr:     errors.New("error refreshing access token: error refreshing validSession"),
+				expectedErr:     errors.New("error refreshing access token: error refreshing session"),
 				expectRefreshed: false,
 				expectSaved:     false,
 			}),
-			Entry("when saving the validSession returns an error", refreshSessionWithProviderTableInput{
+			Entry("when saving the session returns an error", refreshSessionWithProviderTableInput{
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					AccessToken:  "NoSave",
 				},
-				expectedErr:     errors.New("error saving validSession: unable to save validSession"),
+				expectedErr:     errors.New("error saving session: unable to save session"),
 				expectRefreshed: true,
 				expectSaved:     true,
 			}),
@@ -631,7 +631,7 @@ var _ = Describe("Stored Session Suite", func() {
 			}
 		})
 
-		Context("with a valid validSession", func() {
+		Context("with a valid session", func() {
 			It("does not return an error", func() {
 				expires := time.Now().Add(1 * time.Minute)
 				session := &sessionsapi.SessionState{
@@ -642,7 +642,7 @@ var _ = Describe("Stored Session Suite", func() {
 			})
 		})
 
-		Context("with an expired validSession", func() {
+		Context("with an expired session", func() {
 			It("returns an error", func() {
 				created := time.Now().Add(-5 * time.Minute)
 				expires := time.Now().Add(-1 * time.Minute)
@@ -651,18 +651,18 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:   &created,
 					ExpiresOn:   &expires,
 				}
-				Expect(s.validateSession(ctx, session)).To(MatchError("validSession is expired"))
+				Expect(s.validateSession(ctx, session)).To(MatchError("session is expired"))
 			})
 		})
 
-		Context("with an invalid validSession", func() {
+		Context("with an invalid session", func() {
 			It("returns an error", func() {
 				expires := time.Now().Add(1 * time.Minute)
 				session := &sessionsapi.SessionState{
 					AccessToken: "Invalid",
 					ExpiresOn:   &expires,
 				}
-				Expect(s.validateSession(ctx, session)).To(MatchError("validSession is invalid"))
+				Expect(s.validateSession(ctx, session)).To(MatchError("session is invalid"))
 			})
 		})
 	})

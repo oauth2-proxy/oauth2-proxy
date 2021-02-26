@@ -30,18 +30,18 @@ type jwtSessionLoader struct {
 	sessionLoaders []middlewareapi.TokenToSessionFunc
 }
 
-// loadSession attempts to load a validSession from a JWT stored in an Authorization
+// loadSession attempts to load a session from a JWT stored in an Authorization
 // header within the request.
-// If no authorization header is found, or the header is invalid, no validSession
+// If no authorization header is found, or the header is invalid, no session
 // will be loaded and the request will be passed to the next handler.
-// If a validSession was loaded by a previous handler, it will not be replaced.
+// If a session was loaded by a previous handler, it will not be replaced.
 func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		scope := middlewareapi.GetRequestScope(req)
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
 		if scope.Session != nil {
-			// The validSession was already loaded, pass to the next handler
+			// The session was already loaded, pass to the next handler
 			next.ServeHTTP(rw, req)
 			return
 		}
