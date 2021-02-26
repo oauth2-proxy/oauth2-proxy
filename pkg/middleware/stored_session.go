@@ -95,6 +95,9 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 // that is is valid.
 func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	session, err := s.loadRefreshedSession(req, 1)
+	if err != nil {
+		return nil, err
+	}
 	if session != nil {
 		return session, nil
 	}
