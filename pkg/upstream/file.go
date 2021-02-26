@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 )
 
 const fileScheme = "file"
@@ -40,7 +40,9 @@ type fileServer struct {
 // request headers
 func (u *fileServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	scope := middleware.GetRequestScope(req)
-	scope.Upstream = u.upstream
+	if scope != nil {
+		scope.Upstream = u.upstream
+	}
 
 	u.handler.ServeHTTP(rw, req)
 }
