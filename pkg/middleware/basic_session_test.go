@@ -51,7 +51,7 @@ var _ = Describe("Basic Auth Session Suite", func() {
 					},
 				}
 
-				// Create the handler with a next handler that will capture the validSession
+				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
 				handler := NewBasicAuthSessionLoader(validator)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +71,7 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				existingSession:     nil,
 				expectedSession:     nil,
 			}),
-			Entry("abcdef (with existing validSession)", basicAuthSessionLoaderTableInput{
+			Entry("abcdef (with existing session)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
 				existingSession:     &sessionsapi.SessionState{User: "user"},
 				expectedSession:     &sessionsapi.SessionState{User: "user"},
@@ -86,7 +86,7 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				existingSession:     nil,
 				expectedSession:     nil,
 			}),
-			Entry("Basic Base64(:<password>) (with existing validSession)", basicAuthSessionLoaderTableInput{
+			Entry("Basic Base64(:<password>) (with existing session)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic OlVzRXJPbjNQNDU1",
 				existingSession:     &sessionsapi.SessionState{User: "user"},
 				expectedSession:     &sessionsapi.SessionState{User: "user"},

@@ -30,7 +30,7 @@ type jwtSessionLoader struct {
 	sessionLoaders []middlewareapi.TokenToSessionFunc
 }
 
-// loadSession attemptValidSession to load a validSession from a JWT stored in an Authorization
+// loadSession attempts to load a validSession from a JWT stored in an Authorization
 // header within the request.
 // If no authorization header is found, or the header is invalid, no validSession
 // will be loaded and the request will be passed to the next handler.
@@ -48,21 +48,21 @@ func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 
 		session, err := j.getJwtSession(req)
 		if err != nil {
-			logger.Errorf("Error retrieving validSession from token in Authorization header: %v", err)
+			logger.Errorf("Error retrieving session from token in Authorization header: %v", err)
 		}
 
-		// Add the validSession to the scope if it was found
+		// Add the session to the scope if it was found
 		scope.Session = session
 		next.ServeHTTP(rw, req)
 	})
 }
 
-// getJwtSession loads a validSession based on a JWT token in the authorization header.
+// getJwtSession loads a session based on a JWT token in the authorization header.
 // (see the config options skip-jwt-bearer-tokens and extra-jwt-issuers)
 func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.SessionState, error) {
 	auth := req.Header.Get("Authorization")
 	if auth == "" {
-		// No auth header provided, so don't attempt to load a validSession
+		// No auth header provided, so don't attempt to load a session
 		return nil, nil
 	}
 
@@ -71,7 +71,7 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 		return nil, err
 	}
 
-	// This leading error message only occurs if all validSession loaders fail
+	// This leading error message only occurs if all session loaders fail
 	errs := []error{errors.New("unable to verify bearer token")}
 	for _, loader := range j.sessionLoaders {
 		session, err := loader(req.Context(), token)
