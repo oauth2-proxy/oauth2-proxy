@@ -386,7 +386,7 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: refreshError,
 					CreatedAt:    &createdPast,
 				},
-				expectedErr: errors.New(
+				expectedErr: fmt.Errorf(
 					fmt.Sprintf("error refreshing access token for session (%s): error refreshing access token: error refreshing session",
 						&sessionsapi.SessionState{
 							RefreshToken: refreshError,
