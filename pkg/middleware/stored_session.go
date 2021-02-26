@@ -73,7 +73,10 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 		if err != nil {
 			// In the case when there was an error loading the session,
 			// we should clear the session
-			logger.Errorf("Error loading cookied session: %v, removing session", err)
+			if scope.SessionRequired {
+				// log error because session is required but we didn't find one
+				logger.Errorf("Error loading cookied session: %v, removing session", err)
+			}
 			err = s.store.Clear(rw, req)
 			if err != nil {
 				logger.Errorf("Error removing session: %v", err)

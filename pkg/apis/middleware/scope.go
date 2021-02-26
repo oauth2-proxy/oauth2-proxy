@@ -25,6 +25,10 @@ type RequestScope struct {
 	// Otherwise a random UUID is set.
 	RequestID string
 
+	// Is a session required for this request, or optional (e.g. it's a
+	// skipped route)
+	SessionRequired bool
+
 	// Session details the authenticated users information (if it exists).
 	Session *sessions.SessionState
 

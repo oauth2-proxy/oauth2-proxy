@@ -911,6 +911,8 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 
 // SkipAuthProxy proxies allowlisted requests and skips authentication
 func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
+	// set the "session optional" flag on this request
+	middlewareapi.GetRequestScope(req).SessionRequired = false
 	if p.addHeadersToSkipped {
 		session, err := p.getAuthenticatedSession(rw, req)
 		if err == nil {
