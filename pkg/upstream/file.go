@@ -40,9 +40,9 @@ type fileServer struct {
 // request headers
 func (u *fileServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	scope := middleware.GetRequestScope(req)
-	if scope != nil {
-		scope.Upstream = u.upstream
-	}
+	// If scope is nil, this will panic.
+	// A scope should always be injected before this handler is called.
+	scope.Upstream = u.upstream
 
 	u.handler.ServeHTTP(rw, req)
 }

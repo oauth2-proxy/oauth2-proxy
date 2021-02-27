@@ -15,6 +15,7 @@ import (
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -44,10 +45,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 	DescribeTable("HTTP Upstream ServeHTTP",
 		func(in *httpUpstreamTableInput) {
 			buf := bytes.NewBuffer(in.body)
-			req := middlewareapi.AddRequestScope(
-				httptest.NewRequest(in.method, in.target, buf),
-				&middlewareapi.RequestScope{},
-			)
+			req := httptest.NewRequest(in.method, in.target, buf)
 			// Don't mock the remote Address
 			req.RemoteAddr = ""
 
@@ -55,6 +53,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				req.Header.Add(key, value)
 			}
 
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
 			rw := httptest.NewRecorder()
 
 			flush := options.Duration(1 * time.Second)
@@ -262,6 +261,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 	It("ServeHTTP, when not passing a host header", func() {
 		req := httptest.NewRequest("", "http://example.localhost/foo", nil)
+		req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
 		rw := httptest.NewRecorder()
 
 		flush := options.Duration(1 * time.Second)
@@ -389,7 +389,8 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
-			proxyServer = httptest.NewServer(handler)
+
+			proxyServer = httptest.NewServer(middleware.NewScope(false)(handler))
 		})
 
 		AfterEach(func() {

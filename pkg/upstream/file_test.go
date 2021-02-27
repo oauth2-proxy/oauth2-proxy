@@ -42,10 +42,9 @@ var _ = Describe("File Server Suite", func() {
 
 	DescribeTable("fileServer ServeHTTP",
 		func(requestPath string, expectedResponseCode int, expectedBody string) {
-			req := middlewareapi.AddRequestScope(
-				httptest.NewRequest("", requestPath, nil),
-				&middlewareapi.RequestScope{},
-			)
+			req := httptest.NewRequest("", requestPath, nil)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+
 			rw := httptest.NewRecorder()
 			handler.ServeHTTP(rw, req)
 

@@ -28,9 +28,9 @@ type staticResponseHandler struct {
 // ServeHTTP serves a static response.
 func (s *staticResponseHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	scope := middleware.GetRequestScope(req)
-	if scope != nil {
-		scope.Upstream = s.upstream
-	}
+	// If scope is nil, this will panic.
+	// A scope should always be injected before this handler is called.
+	scope.Upstream = s.upstream
 
 	rw.WriteHeader(s.code)
 	_, err := fmt.Fprintf(rw, "Authenticated")

@@ -78,9 +78,9 @@ type httpUpstreamProxy struct {
 // request headers
 func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	scope := middleware.GetRequestScope(req)
-	if scope != nil {
-		scope.Upstream = h.upstream
-	}
+	// If scope is nil, this will panic.
+	// A scope should always be injected before this handler is called.
+	scope.Upstream = h.upstream
 
 	// TODO (@NickMeves) - Deprecate GAP-Signature & remove GAP-Auth
 	if h.auth != nil {

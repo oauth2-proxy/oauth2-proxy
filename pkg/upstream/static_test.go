@@ -40,10 +40,9 @@ var _ = Describe("Static Response Suite", func() {
 			}
 			handler := newStaticResponseHandler(id, code)
 
-			req := middlewareapi.AddRequestScope(
-				httptest.NewRequest("", in.requestPath, nil),
-				&middlewareapi.RequestScope{},
-			)
+			req := httptest.NewRequest("", in.requestPath, nil)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+
 			rw := httptest.NewRecorder()
 			handler.ServeHTTP(rw, req)
 
