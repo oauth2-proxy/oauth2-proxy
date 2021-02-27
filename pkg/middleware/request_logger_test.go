@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -19,6 +21,8 @@ var _ = Describe("Request logger suite", func() {
 		ExpectedLogMessage string
 		Path               string
 		ExcludePaths       []string
+		Upstream           string
+		Session            *sessions.SessionState
 	}
 
 	DescribeTable("when service a request",
@@ -33,24 +37,29 @@ var _ = Describe("Request logger suite", func() {
 			req.RemoteAddr = "127.0.0.1"
 			req.Host = "test-server"
 
-			rw := NewResponseWriter(httptest.NewRecorder())
+			scope := &middlewareapi.RequestScope{Session: in.Session}
+			req = middlewareapi.AddRequestScope(req, scope)
 
-			handler := NewRequestLogger()(testHandler())
-			handler.ServeHTTP(rw, req)
+			handler := NewRequestLogger()(testUpstreamHandler(in.Upstream))
+			handler.ServeHTTP(httptest.NewRecorder(), req)
 
 			Expect(buf.String()).To(Equal(in.ExpectedLogMessage))
 		},
 		Entry("standard request", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
-			ExpectedLogMessage: "127.0.0.1 - - [TIMELESS] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
+			ExpectedLogMessage: "127.0.0.1 - standard.user [TIMELESS] test-server GET standard \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
 			Path:               "/foo/bar",
 			ExcludePaths:       []string{},
+			Upstream:           "standard",
+			Session:            &sessions.SessionState{User: "standard.user"},
 		}),
 		Entry("with unrelated path excluded", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
-			ExpectedLogMessage: "127.0.0.1 - - [TIMELESS] test-server GET - \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
+			ExpectedLogMessage: "127.0.0.1 - unrelated.exclusion [TIMELESS] test-server GET unrelated \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
 			Path:               "/foo/bar",
 			ExcludePaths:       []string{"/ping"},
+			Upstream:           "unrelated",
+			Session:            &sessions.SessionState{User: "unrelated.exclusion"},
 		}),
 		Entry("with path as the sole exclusion", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
@@ -60,15 +69,19 @@ var _ = Describe("Request logger suite", func() {
 		}),
 		Entry("ping path", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
-			ExpectedLogMessage: "127.0.0.1 - - [TIMELESS] test-server GET - \"/ping\" HTTP/1.1 \"\" 200 4 0.000\n",
+			ExpectedLogMessage: "127.0.0.1 - mr.ping [TIMELESS] test-server GET - \"/ping\" HTTP/1.1 \"\" 200 4 0.000\n",
 			Path:               "/ping",
 			ExcludePaths:       []string{},
+			Upstream:           "",
+			Session:            &sessions.SessionState{User: "mr.ping"},
 		}),
 		Entry("ping path but excluded", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
 			ExpectedLogMessage: "",
 			Path:               "/ping",
 			ExcludePaths:       []string{"/ping"},
+			Upstream:           "",
+			Session:            &sessions.SessionState{User: "mr.ping"},
 		}),
 		Entry("ping path and excluded in list", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
@@ -77,16 +90,20 @@ var _ = Describe("Request logger suite", func() {
 			ExcludePaths:       []string{"/foo/bar", "/ping"},
 		}),
 		Entry("custom format", &requestLoggerTableInput{
-			Format:             "{{.RequestMethod}}",
-			ExpectedLogMessage: "GET\n",
+			Format:             "{{.RequestMethod}} {{.Username}} {{.Upstream}}",
+			ExpectedLogMessage: "GET custom.format custom\n",
 			Path:               "/foo/bar",
 			ExcludePaths:       []string{""},
+			Upstream:           "custom",
+			Session:            &sessions.SessionState{User: "custom.format"},
 		}),
 		Entry("custom format with unrelated exclusion", &requestLoggerTableInput{
-			Format:             "{{.RequestMethod}}",
-			ExpectedLogMessage: "GET\n",
+			Format:             "{{.RequestMethod}} {{.Username}} {{.Upstream}}",
+			ExpectedLogMessage: "GET custom.format custom\n",
 			Path:               "/foo/bar",
 			ExcludePaths:       []string{"/ping"},
+			Upstream:           "custom",
+			Session:            &sessions.SessionState{User: "custom.format"},
 		}),
 		Entry("custom format ping path", &requestLoggerTableInput{
 			Format:             "{{.RequestMethod}}",

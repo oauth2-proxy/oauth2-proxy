@@ -486,9 +486,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	p.preAuthChain.
-		Then(http.HandlerFunc(p.serveHTTP)).
-		ServeHTTP(middleware.NewResponseWriter(rw), req)
+	p.preAuthChain.Then(http.HandlerFunc(p.serveHTTP)).ServeHTTP(rw, req)
 }
 
 func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
