@@ -49,7 +49,7 @@ func (r *builder) WithContext(ctx context.Context) Builder {
 }
 
 func (r *builder) injectTracingHeaders(ctx context.Context) Builder {
-	headers, ok := tracing.TracingFromContext(ctx)
+	headers, ok := tracing.FromContext(ctx)
 	if !ok {
 		return r
 	}

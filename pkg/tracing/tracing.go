@@ -9,7 +9,7 @@ type key int
 
 var tracingHeadersKey key
 
-func NewTracingContext(req *http.Request) context.Context {
+func NewContext(req *http.Request) context.Context {
 	headers := http.Header{}
 	addHeader := func(header string) {
 		if val := req.Header.Get(header); val != "" {
@@ -30,7 +30,7 @@ func NewTracingContext(req *http.Request) context.Context {
 	return context.WithValue(req.Context(), tracingHeadersKey, &headers)
 }
 
-func TracingFromContext(ctx context.Context) (*http.Header, bool) {
+func FromContext(ctx context.Context) (*http.Header, bool) {
 	u, ok := ctx.Value(tracingHeadersKey).(*http.Header)
 	return u, ok
 }

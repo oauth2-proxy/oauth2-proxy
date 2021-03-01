@@ -489,7 +489,7 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 	var ctx context.Context
 	if p.forwardTracingHeaders {
-		ctx = tracing.NewTracingContext(req)
+		ctx = tracing.NewContext(req)
 	} else {
 		ctx = req.Context()
 	}
