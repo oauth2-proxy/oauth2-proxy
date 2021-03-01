@@ -421,7 +421,7 @@ func Test_redeemCode(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	_, err = proxy.redeemCode(req)
+	_, err = proxy.redeemCode(context.Background(), req)
 	assert.Equal(t, providers.ErrMissingCode, err)
 }
 
