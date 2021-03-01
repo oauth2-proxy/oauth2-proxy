@@ -6,6 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tracing"
 )
 
 // Builder allows users to construct a request and then execute the
@@ -40,8 +42,23 @@ func New(endpoint string) Builder {
 
 // WithContext adds a context to the request.
 // If no context is provided, context.Background() is used instead.
+// Will propagate the tracing headers from the context automatically.
 func (r *builder) WithContext(ctx context.Context) Builder {
 	r.context = ctx
+	return r.injectTracingHeaders(ctx)
+}
+
+func (r *builder) injectTracingHeaders(ctx context.Context) Builder {
+	headers, ok := tracing.TracingFromContext(ctx)
+	if !ok {
+		return r
+	}
+	if r.header == nil {
+		r.header = make(http.Header)
+	}
+	for header := range *headers {
+		r.header.Set(header, headers.Get(header))
+	}
 	return r
 }
 

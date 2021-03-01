@@ -26,6 +26,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tracing"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
@@ -75,28 +76,29 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	allowedRoutes       []allowedRoute
-	redirectURL         *url.URL // the url to receive requests at
-	whitelistDomains    []string
-	provider            providers.Provider
-	sessionStore        sessionsapi.SessionStore
-	ProxyPrefix         string
-	basicAuthValidator  basic.Validator
-	serveMux            http.Handler
-	SetXAuthRequest     bool
-	PassBasicAuth       bool
-	SetBasicAuth        bool
-	SkipProviderButton  bool
-	PassUserHeaders     bool
-	BasicAuthPassword   string
-	PassAccessToken     bool
-	SetAuthorization    bool
-	PassAuthorization   bool
-	PreferEmailToUser   bool
-	skipAuthPreflight   bool
-	skipJwtBearerTokens bool
-	realClientIPParser  ipapi.RealClientIPParser
-	trustedIPs          *ip.NetSet
+	allowedRoutes         []allowedRoute
+	redirectURL           *url.URL // the url to receive requests at
+	whitelistDomains      []string
+	provider              providers.Provider
+	sessionStore          sessionsapi.SessionStore
+	ProxyPrefix           string
+	basicAuthValidator    basic.Validator
+	serveMux              http.Handler
+	SetXAuthRequest       bool
+	PassBasicAuth         bool
+	SetBasicAuth          bool
+	SkipProviderButton    bool
+	PassUserHeaders       bool
+	BasicAuthPassword     string
+	PassAccessToken       bool
+	SetAuthorization      bool
+	PassAuthorization     bool
+	PreferEmailToUser     bool
+	skipAuthPreflight     bool
+	skipJwtBearerTokens   bool
+	realClientIPParser    ipapi.RealClientIPParser
+	trustedIPs            *ip.NetSet
+	forwardTracingHeaders bool
 
 	sessionChain alice.Chain
 	headersChain alice.Chain
@@ -205,18 +207,19 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
-		ProxyPrefix:         opts.ProxyPrefix,
-		provider:            opts.GetProvider(),
-		sessionStore:        sessionStore,
-		serveMux:            upstreamProxy,
-		redirectURL:         redirectURL,
-		allowedRoutes:       allowedRoutes,
-		whitelistDomains:    opts.WhitelistDomains,
-		skipAuthPreflight:   opts.SkipAuthPreflight,
-		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
-		realClientIPParser:  opts.GetRealClientIPParser(),
-		SkipProviderButton:  opts.SkipProviderButton,
-		trustedIPs:          trustedIPs,
+		ProxyPrefix:           opts.ProxyPrefix,
+		provider:              opts.GetProvider(),
+		sessionStore:          sessionStore,
+		serveMux:              upstreamProxy,
+		redirectURL:           redirectURL,
+		allowedRoutes:         allowedRoutes,
+		whitelistDomains:      opts.WhitelistDomains,
+		skipAuthPreflight:     opts.SkipAuthPreflight,
+		skipJwtBearerTokens:   opts.SkipJwtBearerTokens,
+		realClientIPParser:    opts.GetRealClientIPParser(),
+		SkipProviderButton:    opts.SkipProviderButton,
+		trustedIPs:            trustedIPs,
+		forwardTracingHeaders: opts.ForwardTracingHeaders,
 
 		basicAuthValidator: basicAuthValidator,
 		sessionChain:       sessionChain,
@@ -484,6 +487,13 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
+	var ctx context.Context
+	if p.forwardTracingHeaders {
+		ctx = tracing.NewTracingContext(req)
+	} else {
+		ctx = req.Context()
+	}
+
 	if req.URL.Path != p.AuthOnlyPath && strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
 		prepareNoCache(rw)
 	}
@@ -500,7 +510,7 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 	case path == p.OAuthStartPath:
 		p.OAuthStart(rw, req)
 	case path == p.OAuthCallbackPath:
-		p.OAuthCallback(rw, req)
+		p.OAuthCallback(ctx, rw, req)
 	case path == p.AuthOnlyPath:
 		p.AuthOnly(rw, req)
 	case path == p.UserInfoPath:
@@ -711,7 +721,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
-func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+func (p *OAuthProxy) OAuthCallback(ctx context.Context, rw http.ResponseWriter, req *http.Request) {
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
 
 	// finish the oauth cycle
@@ -730,14 +740,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, err := p.redeemCode(req)
+	session, err := p.redeemCode(ctx, req)
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	err = p.enrichSessionState(req.Context(), session)
+	err = p.enrichSessionState(ctx, session)
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -770,7 +780,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	authorized, err := p.provider.Authorize(req.Context(), session)
+	authorized, err := p.provider.Authorize(ctx, session)
 	if err != nil {
 		logger.Errorf("Error with authorization: %v", err)
 	}
@@ -789,14 +799,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (p *OAuthProxy) redeemCode(req *http.Request) (*sessionsapi.SessionState, error) {
+func (p *OAuthProxy) redeemCode(ctx context.Context, req *http.Request) (*sessionsapi.SessionState, error) {
 	code := req.Form.Get("code")
 	if code == "" {
 		return nil, providers.ErrMissingCode
 	}
 
 	redirectURI := p.getOAuthRedirectURI(req)
-	s, err := p.provider.Redeem(req.Context(), redirectURI, code)
+	s, err := p.provider.Redeem(ctx, redirectURI, code)
 	if err != nil {
 		return nil, err
 	}

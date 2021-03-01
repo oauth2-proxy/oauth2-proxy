@@ -106,6 +106,8 @@ type Options struct {
 	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
+	ForwardTracingHeaders bool `flag:"forward-tracing-headers" cfg:"forward_tracing_headers"`
+
 	// internal values that are set after config validation
 	redirectURL        *url.URL
 	provider           providers.Provider
