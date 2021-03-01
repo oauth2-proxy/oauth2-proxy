@@ -18,6 +18,7 @@
 - [#1039](https://github.com/oauth2-proxy/oauth2-proxy/pull/1039) Ensure errors in tests are logged to the GinkgoWriter (@JoelSpeed)
 - [#980](https://github.com/oauth2-proxy/oauth2-proxy/pull/980) Add Prometheus metrics endpoint
 - [#1023](https://github.com/oauth2-proxy/oauth2-proxy/pull/1023) Update docs on Traefik ForwardAuth support without the use of Traefik 'errors' middleware
+- [#1076](https://github.com/oauth2-proxy/oauth2-proxy/pull/1076) Add distributed tracing headers forwarding support
 
 # V7.0.1
 

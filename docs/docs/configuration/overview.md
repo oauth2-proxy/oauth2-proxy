@@ -48,6 +48,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
+| `--forward-tracing-headers` | bool | forwards zipkin/jaeger compatible headers from the upstream to the downstreams | `false` |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
 | `--footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
 | `--gcp-healthchecks` | bool | will enable `/liveness_check`, `/readiness_check`, and `/` (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses | false |
