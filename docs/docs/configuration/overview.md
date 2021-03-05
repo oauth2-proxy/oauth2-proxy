@@ -7,7 +7,8 @@ title: Overview
 
 ### Generating a Cookie Secret
 
-To generate a strong cookie secret use `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(16)).decode())'`
+To generate a strong cookie secret use `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(16)).decode())'`  
+You can use [Online Python Compiler](https://www.tutorialspoint.com/execute_python_online.php)
 
 ### Config File
 
