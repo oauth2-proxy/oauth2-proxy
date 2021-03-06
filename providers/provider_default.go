@@ -126,10 +126,15 @@ func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionS
 	return validateToken(ctx, p, s.AccessToken, nil)
 }
 
-// RefreshSessionIfNeeded should refresh the user's session if required and
-// do nothing if a refresh is not required
-func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.SessionState) (bool, error) {
-	return false, nil
+// RefreshSession refreshes the user's session
+func (p *ProviderData) RefreshSession(_ context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil {
+		return false, nil
+	}
+
+	// Pretend `RefreshSession` occured so `ValidateSession` isn't called
+	// on every request after any potential set refresh period elapses.
+	return true, nil
 }
 
 // CreateSessionFromToken converts Bearer IDTokens into sessions

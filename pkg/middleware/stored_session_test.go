@@ -109,10 +109,10 @@ var _ = Describe("Stored Session Suite", func() {
 				rw := httptest.NewRecorder()
 
 				opts := &StoredSessionLoaderOptions{
-					SessionStore:           in.store,
-					RefreshPeriod:          in.refreshPeriod,
-					RefreshSessionIfNeeded: in.refreshSession,
-					ValidateSessionState:   in.validateSession,
+					SessionStore:    in.store,
+					RefreshPeriod:   in.refreshPeriod,
+					RefreshSession:  in.refreshSession,
+					ValidateSession: in.validateSession,
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -261,7 +261,7 @@ var _ = Describe("Stored Session Suite", func() {
 				s := &storedSessionLoader{
 					refreshPeriod: in.refreshPeriod,
 					store:         &fakeSessionStore{},
-					refreshSessionWithProviderIfNeeded: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 						refreshed = true
 						switch ss.RefreshToken {
 						case refresh:
@@ -272,7 +272,7 @@ var _ = Describe("Stored Session Suite", func() {
 							return false, errors.New("error refreshing session")
 						}
 					},
-					validateSessionState: func(_ context.Context, ss *sessionsapi.SessionState) bool {
+					sessionValidator: func(_ context.Context, ss *sessionsapi.SessionState) bool {
 						validated = true
 						return ss.AccessToken != "Invalid"
 					},
@@ -364,7 +364,7 @@ var _ = Describe("Stored Session Suite", func() {
 		)
 	})
 
-	Context("refreshSessionWithProvider", func() {
+	Context("refreshSession", func() {
 		type refreshSessionWithProviderTableInput struct {
 			session         *sessionsapi.SessionState
 			expectedErr     error
@@ -388,7 +388,7 @@ var _ = Describe("Stored Session Suite", func() {
 							return nil
 						},
 					},
-					refreshSessionWithProviderIfNeeded: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 						switch ss.RefreshToken {
 						case refresh:
 							return true, nil
@@ -402,13 +402,12 @@ var _ = Describe("Stored Session Suite", func() {
 
 				req := httptest.NewRequest("", "/", nil)
 				req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
-				refreshed, err := s.refreshSessionWithProvider(nil, req, in.session)
+				err := s.refreshSession(nil, req, in.session)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
-				Expect(refreshed).To(Equal(in.expectRefreshed))
 				Expect(saved).To(Equal(in.expectSaved))
 			},
 			Entry("when the provider does not refresh the session", refreshSessionWithProviderTableInput{
@@ -416,7 +415,6 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: noRefresh,
 				},
 				expectedErr:     nil,
-				expectRefreshed: false,
 				expectSaved:     false,
 			}),
 			Entry("when the provider refreshes the session", refreshSessionWithProviderTableInput{
@@ -424,7 +422,6 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: refresh,
 				},
 				expectedErr:     nil,
-				expectRefreshed: true,
 				expectSaved:     true,
 			}),
 			Entry("when the provider returns an error", refreshSessionWithProviderTableInput{
@@ -434,7 +431,6 @@ var _ = Describe("Stored Session Suite", func() {
 					ExpiresOn:    &now,
 				},
 				expectedErr:     errors.New("error refreshing access token: error refreshing session"),
-				expectRefreshed: false,
 				expectSaved:     false,
 			}),
 			Entry("when the saving the session returns an error", refreshSessionWithProviderTableInput{
@@ -443,7 +439,6 @@ var _ = Describe("Stored Session Suite", func() {
 					AccessToken:  "NoSave",
 				},
 				expectedErr:     errors.New("error saving session: unable to save session"),
-				expectRefreshed: false,
 				expectSaved:     true,
 			}),
 		)
@@ -454,7 +449,7 @@ var _ = Describe("Stored Session Suite", func() {
 
 		BeforeEach(func() {
 			s = &storedSessionLoader{
-				validateSessionState: func(_ context.Context, ss *sessionsapi.SessionState) bool {
+				sessionValidator: func(_ context.Context, ss *sessionsapi.SessionState) bool {
 					return ss.AccessToken == "Valid"
 				},
 			}
