@@ -271,7 +271,7 @@ func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.Session
 		return false, nil
 	}
 
-	newToken, newIDToken, ttl, err := p.redeemRefreshToken(ctx, s.RefreshToken)
+	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
 		return false, err
 	}
@@ -284,26 +284,20 @@ func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.Session
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 
-	s.AccessToken = newToken
-	s.IDToken = newIDToken
-
-	s.CreatedAtNow()
-	s.ExpiresIn(ttl)
-
 	return true, nil
 }
 
-func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken string) (token string, idToken string, expires time.Duration, err error) {
+func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	// https://developers.google.com/identity/protocols/OAuth2WebServer#refresh
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return err
 	}
 
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", clientSecret)
-	params.Add("refresh_token", refreshToken)
+	params.Add("refresh_token", s.RefreshToken)
 	params.Add("grant_type", "refresh_token")
 
 	var data struct {
@@ -320,11 +314,14 @@ func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken st
 		Do().
 		UnmarshalInto(&data)
 	if err != nil {
-		return "", "", 0, err
+		return err
 	}
 
-	token = data.AccessToken
-	idToken = data.IDToken
-	expires = time.Duration(data.ExpiresIn) * time.Second
-	return
+	s.AccessToken = data.AccessToken
+	s.IDToken = data.IDToken
+
+	s.CreatedAtNow()
+	s.ExpiresIn(time.Duration(data.ExpiresIn) * time.Second)
+
+	return nil
 }

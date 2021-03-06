@@ -108,11 +108,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 
 // refreshSessionIfNeeded will attempt to refresh a session if the session
 // is older than the refresh period.
-// It is assumed that if the provider refreshes the session, the session is now
-// valid.
-// If the session requires refreshing but the provider does not refresh it,
-// we must validate the session to ensure that the returned session is still
-// valid.
+// Success or fail, we will then validate the session.
 func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
 	if s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod {
 		// Refresh is disabled or the session is not old enough, do nothing
@@ -122,10 +118,12 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, s.refreshPeriod)
 	err := s.refreshSession(rw, req, session)
 	if err != nil {
-		return err
+		// If a preemptive refresh fails, we still keep the session
+		// if validateSession succeeds.
+		logger.Errorf("Unable to refresh session: %v", err)
 	}
 
-	// Validate all sessions after any Redeem/Refresh operation
+	// Validate all sessions after any Redeem/Refresh operation (fail or success)
 	return s.validateSession(req.Context(), session)
 }
 
@@ -134,7 +132,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
 	refreshed, err := s.sessionRefresher(req.Context(), session)
 	if err != nil {
-		return fmt.Errorf("error refreshing access token: %v", err)
+		return fmt.Errorf("error refreshing tokens: %v", err)
 	}
 
 	if !refreshed {
@@ -142,6 +140,12 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	}
 
 	// If we refreshed, update the `CreatedAt` time to reset the refresh timer
+	//
+	// HACK:
+	// Providers that don't implement `RefreshSession` use the default
+	// implementation. It always returns `refreshed == true`, so the
+	// `session.CreatedAt` is updated and doesn't trigger `ValidateSession`
+	// every subsequent request.
 	session.CreatedAtNow()
 
 	// Because the session was refreshed, make sure to save it

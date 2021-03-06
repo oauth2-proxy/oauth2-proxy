@@ -135,8 +135,13 @@ func (p *ProviderData) RefreshSession(_ context.Context, s *sessions.SessionStat
 		return false, nil
 	}
 
-	// Pretend `RefreshSession` occured so `ValidateSession` isn't called
+	// HACK:
+	// Pretend `RefreshSession` occurred so `ValidateSession` isn't called
 	// on every request after any potential set refresh period elapses.
+	// See `middleware.refreshSession` for detailed logic & explanation.
+	//
+	// Intentionally doesn't use `ErrNotImplemented` since all providers will
+	// call this and we don't want to force them to implement this dummy logic.
 	return true, nil
 }
 

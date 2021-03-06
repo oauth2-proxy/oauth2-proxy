@@ -242,21 +242,23 @@ func (p *AzureProvider) RefreshSession(ctx context.Context, s *sessions.SessionS
 		return false, nil
 	}
 
-	origExpiration := s.ExpiresOn
-
 	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
-	logger.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
 	return true, nil
 }
 
 func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return err
+	}
+
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", p.ClientSecret)
+	params.Add("client_secret", clientSecret)
 	params.Add("refresh_token", s.RefreshToken)
 	params.Add("grant_type", "refresh_token")
 
@@ -267,7 +269,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 		IDToken      string `json:"id_token"`
 	}
 
-	err := requests.New(p.RedeemURL.String()).
+	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
