@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -85,9 +84,13 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*s
 	if err != nil {
 		return nil, err
 	}
+	// TODO (@NickMeves): Uses OAuth `expires_in` to set an expiration
 	if token := values.Get("access_token"); token != "" {
-		created := time.Now()
-		return &sessions.SessionState{AccessToken: token, CreatedAt: &created}, nil
+		ss := &sessions.SessionState{
+			AccessToken: token,
+		}
+		ss.CreatedAtNow()
+		return ss, nil
 	}
 
 	return nil, fmt.Errorf("no access token found %s", result.Body())

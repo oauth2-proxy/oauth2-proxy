@@ -36,8 +36,7 @@ type SessionStore struct {
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
 	if ss.CreatedAt == nil || ss.CreatedAt.IsZero() {
-		now := time.Now()
-		ss.CreatedAt = &now
+		ss.CreatedAtNow()
 	}
 	value, err := s.cookieForSession(ss)
 	if err != nil {

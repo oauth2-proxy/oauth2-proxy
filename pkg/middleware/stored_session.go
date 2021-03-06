@@ -142,8 +142,7 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	}
 
 	// If we refreshed, update the `CreatedAt` time to reset the refresh timer
-	// TODO: Implement
-	// session.CreatedAtNow()
+	session.CreatedAtNow()
 
 	// Because the session was refreshed, make sure to save it
 	err = s.store.Save(rw, req, session)

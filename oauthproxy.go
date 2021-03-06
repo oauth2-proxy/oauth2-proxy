@@ -786,6 +786,15 @@ func (p *OAuthProxy) redeemCode(req *http.Request) (*sessionsapi.SessionState, e
 	if err != nil {
 		return nil, err
 	}
+
+	// Force setting these in case the Provider didn't
+	if s.CreatedAt == nil {
+		s.CreatedAtNow()
+	}
+	if s.ExpiresOn == nil {
+		s.ExpiresIn(p.CookieOptions.Expire)
+	}
+
 	return s, nil
 }
 
@@ -861,9 +870,9 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 // See https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching?hl=en
 var noCacheHeaders = map[string]string{
-	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
-	"Cache-Control":   "no-cache, no-store, must-revalidate, max-age=0",
-	"X-Accel-Expires": "0", // https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
+	"Expires":        time.Unix(0, 0).Format(time.RFC1123),
+	"Cache-Control":  "no-cache, no-store, must-revalidate, max-age=0",
+	"X-Accel-Expire": "0", // https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/
 }
 
 // prepareNoCache prepares headers for preventing browser caching.

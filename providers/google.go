@@ -163,23 +163,22 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		return nil, err
 	}
 
-	created := time.Now()
-	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
-
-	return &sessions.SessionState{
+	ss := &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
 		Email:        c.Email,
 		User:         c.Subject,
-	}, nil
+	}
+	ss.CreatedAtNow()
+	ss.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
+
+	return ss, nil
 }
 
 // EnrichSession checks the listed Google Groups configured and adds any
 // that the user is a member of to session.Groups.
-func (p *GoogleProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionState) error {
 	// TODO (@NickMeves) - Move to pure EnrichSession logic and stop
 	// reusing legacy `groupValidator`.
 	//
@@ -272,7 +271,7 @@ func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.Session
 		return false, nil
 	}
 
-	newToken, newIDToken, duration, err := p.redeemRefreshToken(ctx, s.RefreshToken)
+	newToken, newIDToken, ttl, err := p.redeemRefreshToken(ctx, s.RefreshToken)
 	if err != nil {
 		return false, err
 	}
@@ -285,12 +284,12 @@ func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.Session
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 
-	origExpiration := s.ExpiresOn
-	expires := time.Now().Add(duration).Truncate(time.Second)
 	s.AccessToken = newToken
 	s.IDToken = newIDToken
-	s.ExpiresOn = &expires
-	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
+
+	s.CreatedAtNow()
+	s.ExpiresIn(ttl)
+
 	return true, nil
 }
 

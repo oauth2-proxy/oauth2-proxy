@@ -142,16 +142,13 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 		return nil, err
 	}
 
-	created := time.Now()
-	expires := time.Unix(jsonResponse.ExpiresOn, 0)
-
 	session := &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
 	}
+	session.CreatedAtNow()
+	session.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
 
 	email, err := p.verifyTokenAndExtractEmail(ctx, session.IDToken)
 
@@ -239,10 +236,9 @@ func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, token st
 	return email, nil
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
-func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+// RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
+func (p *AzureProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.RefreshToken == "" {
 		return false, nil
 	}
 
@@ -257,7 +253,7 @@ func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.
 	return true, nil
 }
 
-func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
+func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", p.ClientSecret)
@@ -271,25 +267,23 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 		IDToken      string `json:"id_token"`
 	}
 
-	err = requests.New(p.RedeemURL.String()).
+	err := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do().
 		UnmarshalInto(&jsonResponse)
-
 	if err != nil {
-		return
+		return err
 	}
 
-	now := time.Now()
-	expires := time.Unix(jsonResponse.ExpiresOn, 0)
 	s.AccessToken = jsonResponse.AccessToken
 	s.IDToken = jsonResponse.IDToken
 	s.RefreshToken = jsonResponse.RefreshToken
-	s.CreatedAt = &now
-	s.ExpiresOn = &expires
+
+	s.CreatedAtNow()
+	s.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
 
 	email, err := p.verifyTokenAndExtractEmail(ctx, s.IDToken)
 
@@ -312,7 +306,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 		}
 	}
 
-	return
+	return nil
 }
 
 func makeAzureHeader(accessToken string) http.Header {

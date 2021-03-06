@@ -259,14 +259,16 @@ func (p *GitLabProvider) createSession(ctx context.Context, token *oauth2.Token)
 		}
 	}
 
-	created := time.Now()
-	return &sessions.SessionState{
+	ss := &sessions.SessionState{
 		AccessToken:  token.AccessToken,
 		IDToken:      getIDToken(token),
 		RefreshToken: token.RefreshToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &idToken.Expiry,
-	}, nil
+	}
+
+	ss.CreatedAtNow()
+	ss.SetExpiresOn(idToken.Expiry)
+
+	return ss, nil
 }
 
 // ValidateSession checks that the session's IDToken is still valid
