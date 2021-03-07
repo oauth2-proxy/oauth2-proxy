@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -26,7 +27,7 @@ func NewProxy(upstreams options.Upstreams, sigData *options.SignatureData, write
 		serveMux: mux.NewRouter(),
 	}
 
-	for _, upstream := range upstreams {
+	for _, upstream := range sortByPathLongest(upstreams) {
 		if upstream.Static {
 			if err := m.registerStaticResponseHandler(upstream, writer); err != nil {
 				return nil, fmt.Errorf("could not register static upstream %q: %v", upstream.ID, err)
@@ -144,4 +145,34 @@ func registerTrailingSlashHandler(serveMux *mux.Router) {
 	}).Handler(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		http.Redirect(rw, req, req.URL.String()+"/", http.StatusMovedPermanently)
 	}))
+}
+
+// sortByPathLongest ensures that the upstreams are sorted by longest path.
+// If rewrites are involved, a rewrite takes precedence over a non-rewrite.
+// When two upstreams define rewrites, whichever has the longest path will take
+// precedence (note this is the input to the rewrite logic).
+// This does not account for when a rewrite would actually make the path shorter.
+// This should maintain the sorting behaviour of the standard go serve mux.
+func sortByPathLongest(in options.Upstreams) options.Upstreams {
+	sort.Slice(in, func(i, j int) bool {
+		iRW := in[i].RewriteTarget
+		jRW := in[j].RewriteTarget
+
+		switch {
+		case iRW != "" && jRW != "":
+			// If both have a rewrite target, whichever has the longest pattern
+			// should go first
+			return len(in[i].Path) > len(in[j].Path)
+		case iRW != "" && jRW == "":
+			// Only one has rewrite, it goes first
+			return true
+		case iRW == "" && jRW != "":
+			// Only one has rewrite, it goes first
+			return false
+		default:
+			// Default to longest Path wins
+			return len(in[i].Path) > len(in[j].Path)
+		}
+	})
+	return in
 }
