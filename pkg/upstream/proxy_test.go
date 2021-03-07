@@ -29,6 +29,7 @@ var _ = Describe("Proxy Suite", func() {
 		}
 
 		ok := http.StatusOK
+		accepted := http.StatusAccepted
 
 		upstreams := options.Upstreams{
 			{
@@ -46,6 +47,12 @@ var _ = Describe("Proxy Suite", func() {
 				Path:       "/static/",
 				Static:     true,
 				StaticCode: &ok,
+			},
+			{
+				ID:         "static-backend-no-trailing-slash",
+				Path:       "/static",
+				Static:     true,
+				StaticCode: &accepted,
 			},
 			{
 				ID:   "bad-http-backend",
@@ -234,6 +241,26 @@ var _ = Describe("Proxy Suite", func() {
 				},
 			},
 			upstream: "backend-with-rewrite-prefix",
+		}),
+		Entry("with a request to a path, missing the trailing slash", &proxyTableInput{
+			target: "http://example.localhost/http",
+			response: testHTTPResponse{
+				code: 301,
+				header: map[string][]string{
+					contentType: {textHTMLUTF8},
+					"Location":  {"http://example.localhost/http/"},
+				},
+				raw: "<a href=\"http://example.localhost/http/\">Moved Permanently</a>.\n\n",
+			},
+		}),
+		Entry("with a request to a path, missing the trailing slash, but registered separately", &proxyTableInput{
+			target: "http://example.localhost/static",
+			response: testHTTPResponse{
+				code:   202,
+				header: map[string][]string{},
+				raw:    "Authenticated",
+			},
+			upstream: "static-backend-no-trailing-slash",
 		}),
 	)
 })

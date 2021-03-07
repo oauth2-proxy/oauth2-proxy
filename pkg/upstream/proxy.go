@@ -1,6 +1,7 @@
 package upstream
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -50,6 +51,8 @@ func NewProxy(upstreams options.Upstreams, sigData *options.SignatureData, write
 			return nil, fmt.Errorf("unknown scheme for upstream %q: %q", upstream.ID, u.Scheme)
 		}
 	}
+
+	registerTrailingSlashHandler(m.serveMux)
 	return m, nil
 }
 
@@ -119,4 +122,26 @@ func (m *multiUpstreamProxy) registerRewriteHandler(upstream options.Upstream, h
 	}).Handler(h)
 
 	return nil
+}
+
+// registerTrailingSlashHandler creates a new matcher that will check if the
+// requested path would match if it had a trailing slash appended.
+// If the path matches with a trailing slash, we send back a redirect.
+// This allows us to be consistent with the built in go servemux implementation.
+func registerTrailingSlashHandler(serveMux *mux.Router) {
+	serveMux.MatcherFunc(func(req *http.Request, _ *mux.RouteMatch) bool {
+		if strings.HasSuffix(req.URL.Path, "/") {
+			return false
+		}
+
+		// Use a separate RouteMatch so that we can redirect to the path + /.
+		// If we pass through the match then the matched backed will be served
+		// instead of the redirect handler.
+		m := &mux.RouteMatch{}
+		slashReq := req.Clone(context.Background())
+		slashReq.URL.Path += "/"
+		return serveMux.Match(slashReq, m)
+	}).Handler(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		http.Redirect(rw, req, req.URL.String()+"/", http.StatusMovedPermanently)
+	}))
 }
