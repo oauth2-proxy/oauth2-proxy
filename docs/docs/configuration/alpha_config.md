@@ -119,6 +119,28 @@ They may change between releases without notice.
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
+| `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
+
+### AzureOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `azureTenant` | _string_ | AzureTenant directs to a tenant-specific or common (tenant-independent) endpoint<br/>Default value is 'commmon' |
+
+### BitbucketOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `bitbucketTeam` | _string_ | BitbucketTeam sets restrict logins to members of this team |
+| `bitbucketRepository` | _string_ | BitbucketRepository sets restrict logins to user with access to this repository |
 
 ### ClaimSource
 
@@ -142,6 +164,43 @@ A duration string is a is a possibly signed sequence of decimal numbers,
 each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m".
 Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
+
+### GitHubOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `githubOrg` | _string_ | GitHubOrg sets restrict logins to members of this organisation |
+| `githubTeam` | _string_ | GitHubTeam sets restrict logins to members of this team |
+| `githubRepo` | _string_ | GitHubRepo sets restrict logins to collaborators of this repository |
+| `githubToken` | _string_ | GitHubToken is the token to use when verifying repository collaborators<br/>it must have push access to the repository |
+| `githubUsers` | _[]string_ | GitHubUsers allows users with these usernames to login<br/>even if they do not belong to the specified org and team or collaborators |
+
+### GitLabOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `gitlabGroup` | _[]string_ | GitLabGroup sets restrict logins to members of this group |
+| `gitlabProjects` | _[]string_ | GitlabProjects sets restrict logins to members of this project |
+
+### GoogleOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `googleGroup` | _[]string_ | GoogleGroups sets restrict logins to members of this google group |
+| `googleAdminEmail` | _string_ | GoogleAdminEmail is the google admin to impersonate for api calls |
+| `googleServiceAccountJson` | _string_ | GoogleServiceAccountJSON is the path to the service account json credentials |
 
 ### Header
 
@@ -171,6 +230,88 @@ make up the header value
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. |
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+
+### KeycloakOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `keycloakGroups` | _[]string_ | KeycloakGroup enables to restrict login to members of indicated group |
+
+### LoginGovOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `jwtKey` | _string_ | JWTKey is a private key in PEM format used to sign JWT, |
+| `jwtKeyFile` | _string_ | JWTKeyFile is a path to the private key file in PEM format used to sign the JWT |
+| `pubjwkURL` | _string_ | PubJWKURL is the JWK pubkey access endpoint |
+
+### OIDCOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `oidcIssuerURL` | _string_ | OIDCIssuerURL is the OpenID Connect issuer URL<br/>eg: https://accounts.google.com |
+| `insecureOidcAllowUnverifiedEmail` | _bool_ | InsecureOIDCAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified<br/>default set to 'false' |
+| `insecureOidcSkipIssuerVerification` | _bool_ | InsecureOIDCSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL<br/>default set to 'false' |
+| `skipOidcDiscovery` | _bool_ | SkipOIDCDiscovery allows to skip OIDC discovery and use manually supplied Endpoints<br/>default set to 'false' |
+| `oidcJwksURL` | _string_ | OIDCJwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
+| `oidcEmailClaim` | _string_ | OIDCGroupsClaim indicates which OIDC claim contains the user's email |
+| `oidcGroupsClaim` | _string_ | OIDCGroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
+| `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>Deprecated: Use OIDCEmailClaim |
+
+### Provider
+
+(**Appears on:** [Providers](#providers))
+
+Provider holds all configuration for a single provider
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `clientID` | _string_ | ClientID is the OAuth Client ID that is defined in the provider<br/>This value is required for all providers. |
+| `clientSecret` | _string_ | ClientSecret is the OAuth Client Secret that is defined in the provider<br/>This value is required for all providers. |
+| `clientSecretFile` | _string_ | ClientSecretFile is the name of the file<br/>containing the OAuth Client Secret, it will be used if ClientSecret is not set. |
+| `keycloakConfig` | _[KeycloakOptions](#keycloakoptions)_ | KeycloakConfig holds all configurations for Keycloak provider. |
+| `azureConfig` | _[AzureOptions](#azureoptions)_ | AzureConfig holds all configurations for Azure provider. |
+| `bitbucketConfig` | _[BitbucketOptions](#bitbucketoptions)_ | BitbucketConfig holds all configurations for Bitbucket provider. |
+| `githubConfig` | _[GitHubOptions](#githuboptions)_ | GitHubConfig holds all configurations for GitHubC provider. |
+| `gitlabConfig` | _[GitLabOptions](#gitlaboptions)_ | GitLabConfig holds all configurations for GitLab provider. |
+| `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
+| `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
+| `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
+| `providerID` | _string_ | ProviderID should be a unique identifier for the provider.<br/>This value is required for all providers. |
+| `provider` | _string_ | ProviderType is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
+| `providerDisplayName` | _string_ | ProviderName is the providers display name<br/>if set, it will be shown to the users in the login page. |
+| `providerCAFiles` | _[]string_ | ProviderCAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
+| `loginURL` | _string_ | LoginURL is the authentication endpoint |
+| `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
+| `profileURL` | _string_ | ProfileURL is the profile access endpoint |
+| `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD only) |
+| `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
+| `scope` | _string_ | Scope is the OAuth scope specification |
+| `prompt` | _string_ | Prompt is OIDC prompt |
+| `approvalPrompt` | _string_ | ApprovalPrompt is the OAuth approval_prompt<br/>default is set to 'force' |
+| `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
+| `acrValues` | _string_ | AcrValues is a string of acr values |
+
+### Providers
+
+#### ([[]Provider](#provider) alias)
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+Providers is a collection of definitions for providers.
+
 
 ### SecretSource
 
