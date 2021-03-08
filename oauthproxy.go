@@ -596,7 +596,13 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
-	p.pageWriter.WriteErrorPage(rw, code, redirectURL, appError, messages...)
+	p.pageWriter.WriteErrorPage(rw, pagewriter.ErrorPageOpts{
+		Status:      code,
+		RedirectURL: redirectURL,
+		RequestID:   requestutil.GetRequestID(req),
+		AppError:    appError,
+		Messages:    messages,
+	})
 }
 
 // IsAllowedRequest is used to check if auth should be skipped for this request
@@ -657,7 +663,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
-	p.pageWriter.WriteSignInPage(rw, redirectURL)
+	p.pageWriter.WriteSignInPage(rw, req, redirectURL)
 }
 
 // ManualSignIn handles basic auth logins to the proxy

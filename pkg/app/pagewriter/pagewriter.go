@@ -3,15 +3,20 @@ package pagewriter
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/microcosm-cc/bluemonday"
 )
+
+// HTML sanitization policy creation done once for lifespan of the program
+var sanitizer = bluemonday.StrictPolicy()
 
 // Writer is an interface for rendering html templates for both sign-in and
 // error pages.
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
 type Writer interface {
-	WriteSignInPage(rw http.ResponseWriter, redirectURL string)
-	WriteErrorPage(rw http.ResponseWriter, status int, redirectURL string, appError string, messages ...interface{})
+	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string)
+	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 }
 

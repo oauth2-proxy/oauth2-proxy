@@ -8,6 +8,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const requestID = "11111111-2222-4333-8444-555555555555"
+
 func TestOptionsSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
 	logger.SetErrOutput(GinkgoWriter)

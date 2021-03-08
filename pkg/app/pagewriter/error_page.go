@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
 // errorMessages are default error messages for each of the the different
@@ -37,11 +38,25 @@ type errorPageWriter struct {
 	debug bool
 }
 
+// ErrorPageOpts bundles up all the content needed to write the Error Page
+type ErrorPageOpts struct {
+	// HTTP status code
+	Status int
+	// Redirect URL for "Go back" and "Sign in" buttons
+	RedirectURL string
+	// The UUID of the request
+	RequestID string
+	// App Error shown in debug mode
+	AppError string
+	// Generic error messages shown in non-debug mode
+	Messages []interface{}
+}
+
 // WriteErrorPage writes an error page to the given response writer.
 // It uses the passed redirectURL to give users the option to go back to where
 // they originally came from or try signing in again.
-func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, status int, redirectURL string, appError string, messages ...interface{}) {
-	rw.WriteHeader(status)
+func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts) {
+	rw.WriteHeader(opts.Status)
 
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
@@ -51,14 +66,16 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, status int, red
 		ProxyPrefix string
 		StatusCode  int
 		Redirect    string
+		RequestID   string
 		Footer      template.HTML
 		Version     string
 	}{
-		Title:       http.StatusText(status),
-		Message:     e.getMessage(status, appError, messages...),
+		Title:       http.StatusText(opts.Status),
+		Message:     e.getMessage(opts.Status, opts.AppError, opts.Messages...),
 		ProxyPrefix: e.proxyPrefix,
-		StatusCode:  status,
-		Redirect:    redirectURL,
+		StatusCode:  opts.Status,
+		Redirect:    opts.RedirectURL,
+		RequestID:   sanitizer.Sanitize(opts.RequestID),
 		Footer:      template.HTML(e.footer),
 		Version:     e.version,
 	}
@@ -74,7 +91,13 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, status int, red
 // It is expected to always render a bad gateway error.
 func (e *errorPageWriter) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
 	logger.Errorf("Error proxying to upstream server: %v", proxyErr)
-	e.WriteErrorPage(rw, http.StatusBadGateway, "", proxyErr.Error(), "There was a problem connecting to the upstream server.")
+	e.WriteErrorPage(rw, ErrorPageOpts{
+		Status:      http.StatusBadGateway,
+		RedirectURL: "",
+		RequestID:   requestutil.GetRequestID(req),
+		AppError:    proxyErr.Error(),
+		Messages:    []interface{}{"There was a problem connecting to the upstream server."},
+	})
 }
 
 // getMessage creates the message for the template parameters.
