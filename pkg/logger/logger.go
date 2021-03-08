@@ -25,9 +25,9 @@ const (
 	// DefaultStandardLoggingFormat defines the default standard log format
 	DefaultStandardLoggingFormat = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
 	// DefaultAuthLoggingFormat defines the default auth log format
-	DefaultAuthLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
+	DefaultAuthLoggingFormat = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
 	// DefaultRequestLoggingFormat defines the default request log format
-	DefaultRequestLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+	DefaultRequestLoggingFormat = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
 
 	// AuthSuccess indicates that an auth attempt has succeeded explicitly
 	AuthSuccess AuthStatus = "AuthSuccess"
@@ -63,6 +63,7 @@ type authLogMessageData struct {
 	Client,
 	Host,
 	Protocol,
+	RequestID,
 	RequestMethod,
 	Timestamp,
 	UserAgent,
@@ -75,6 +76,7 @@ type reqLogMessageData struct {
 	Client,
 	Host,
 	Protocol,
+	RequestID,
 	RequestDuration,
 	RequestMethod,
 	RequestURI,
@@ -199,6 +201,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 		Client:        client,
 		Host:          requestutil.GetRequestHost(req),
 		Protocol:      req.Proto,
+		RequestID:     requestutil.GetRequestID(req),
 		RequestMethod: req.Method,
 		Timestamp:     FormatTimestamp(now),
 		UserAgent:     fmt.Sprintf("%q", req.UserAgent()),
@@ -253,6 +256,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		Client:          client,
 		Host:            requestutil.GetRequestHost(req),
 		Protocol:        req.Proto,
+		RequestID:       requestutil.GetRequestID(req),
 		RequestDuration: fmt.Sprintf("%0.3f", duration),
 		RequestMethod:   req.Method,
 		RequestURI:      fmt.Sprintf("%q", url.RequestURI()),
