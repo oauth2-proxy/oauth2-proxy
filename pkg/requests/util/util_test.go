@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/google/uuid"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	. "github.com/onsi/ginkgo"
@@ -13,9 +14,13 @@ import (
 
 var _ = Describe("Util Suite", func() {
 	const (
-		proto = "http"
-		host  = "www.oauth2proxy.test"
-		uri   = "/test/endpoint"
+		proto      = "http"
+		host       = "www.oauth2proxy.test"
+		uri        = "/test/endpoint"
+		scopeUUID  = "11111111-2222-4333-8444-555555555555"
+		headerUUID = "66666666-7777-4888-8999-aaaaaaaaaaaa"
+		// mockRand io.Reader below counts bytes from 0-255 in order
+		randomUUID = "00010203-0405-4607-8809-0a0b0c0d0e0f"
 	)
 	var req *http.Request
 
@@ -128,4 +133,51 @@ var _ = Describe("Util Suite", func() {
 			})
 		})
 	})
+
+	Context("GetRequestID", func() {
+		Context("Scope is already set", func() {
+			BeforeEach(func() {
+				req = middleware.AddRequestScope(req, &middleware.RequestScope{
+					RequestID: scopeUUID,
+				})
+			})
+
+			It("returns the ID in the scope", func() {
+				Expect(util.GetRequestID(req)).To(Equal(scopeUUID))
+			})
+
+			It("ignores X-Request-Id and returns the scope ID", func() {
+				req.Header.Add("X-Request-Id", headerUUID)
+				Expect(util.GetRequestID(req)).To(Equal(scopeUUID))
+			})
+		})
+
+		Context("Scope is not set", func() {
+			BeforeEach(func() {
+				uuid.SetRand(mockRand{})
+			})
+
+			AfterEach(func() {
+				uuid.SetRand(nil)
+			})
+
+			It("returns the ID in the X-Request-Id header when set", func() {
+				req.Header.Add("X-Request-Id", headerUUID)
+				Expect(util.GetRequestID(req)).To(Equal(headerUUID))
+			})
+
+			It("returns a random UUID when the header is unset", func() {
+				Expect(util.GetRequestID(req)).To(Equal(randomUUID))
+			})
+		})
+	})
 })
+
+type mockRand struct{}
+
+func (mockRand) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = byte(i % 256)
+	}
+	return len(p), nil
+}

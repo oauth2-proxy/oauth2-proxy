@@ -5,9 +5,12 @@ import (
 	"net/http/httptest"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+const requestID = "11111111-2222-4333-8444-555555555555"
 
 var _ = Describe("Scope Suite", func() {
 	Context("NewScope", func() {
@@ -18,6 +21,7 @@ var _ = Describe("Scope Suite", func() {
 			var err error
 			request, err = http.NewRequest("", "http://127.0.0.1/", nil)
 			Expect(err).ToNot(HaveOccurred())
+			request.Header.Add(requestutil.XRequestID, requestID)
 
 			rw = httptest.NewRecorder()
 		})
@@ -48,6 +52,11 @@ var _ = Describe("Scope Suite", func() {
 				Expect(scope).ToNot(BeNil())
 				Expect(scope.ReverseProxy).To(BeFalse())
 			})
+
+			It("sets the RequestID using the request", func() {
+				scope := middlewareapi.GetRequestScope(nextRequest)
+				Expect(scope.RequestID).To(Equal(requestID))
+			})
 		})
 
 		Context("ReverseProxy is true", func() {
@@ -63,6 +72,11 @@ var _ = Describe("Scope Suite", func() {
 				scope := middlewareapi.GetRequestScope(nextRequest)
 				Expect(scope).ToNot(BeNil())
 				Expect(scope.ReverseProxy).To(BeTrue())
+			})
+
+			It("sets the RequestID using the request", func() {
+				scope := middlewareapi.GetRequestScope(nextRequest)
+				Expect(scope.RequestID).To(Equal(requestID))
 			})
 		})
 	})
