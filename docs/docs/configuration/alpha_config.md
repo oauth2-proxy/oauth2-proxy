@@ -129,7 +129,11 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< HEAD
 | `azureTenant` | _string_ | AzureTenant directs to a tenant-specific or common (tenant-independent) endpoint<br/>Default value is 'commmon' |
+=======
+| `azureTenant` | _string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### BitbucketOptions
 
@@ -139,8 +143,13 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< HEAD
 | `bitbucketTeam` | _string_ | BitbucketTeam sets restrict logins to members of this team |
 | `bitbucketRepository` | _string_ | BitbucketRepository sets restrict logins to user with access to this repository |
+=======
+| `bitbucketTeam` | _string_ |  |
+| `bitbucketRepository` | _string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### ClaimSource
 
@@ -173,11 +182,19 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< HEAD
 | `githubOrg` | _string_ | GitHubOrg sets restrict logins to members of this organisation |
 | `githubTeam` | _string_ | GitHubTeam sets restrict logins to members of this team |
 | `githubRepo` | _string_ | GitHubRepo sets restrict logins to collaborators of this repository |
 | `githubToken` | _string_ | GitHubToken is the token to use when verifying repository collaborators<br/>it must have push access to the repository |
 | `githubUsers` | _[]string_ | GitHubUsers allows users with these usernames to login<br/>even if they do not belong to the specified org and team or collaborators |
+=======
+| `githubOrg` | _string_ |  |
+| `githubTeam` | _string_ |  |
+| `githubRepo` | _string_ |  |
+| `githubToken` | _string_ |  |
+| `githubUsers` | _[]string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### GitLabOptions
 
@@ -187,8 +204,13 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< HEAD
 | `gitlabGroup` | _[]string_ | GitLabGroup sets restrict logins to members of this group |
 | `gitlabProjects` | _[]string_ | GitlabProjects sets restrict logins to members of this project |
+=======
+| `gitlabGroups` | _[]string_ |  |
+| `gitlabProjects` | _[]string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### GoogleOptions
 
@@ -198,9 +220,15 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< HEAD
 | `googleGroup` | _[]string_ | GoogleGroups sets restrict logins to members of this google group |
 | `googleAdminEmail` | _string_ | GoogleAdminEmail is the google admin to impersonate for api calls |
 | `googleServiceAccountJson` | _string_ | GoogleServiceAccountJSON is the path to the service account json credentials |
+=======
+| `googleGroup` | _[]string_ |  |
+| `googleAdminEmail` | _string_ |  |
+| `googleServiceAccountJson` | _string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### Header
 
@@ -239,7 +267,11 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< HEAD
 | `keycloakGroups` | _[]string_ | KeycloakGroup enables to restrict login to members of indicated group |
+=======
+| `keycloakGroup` | _[]string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### LoginGovOptions
 
@@ -249,9 +281,15 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< HEAD
 | `jwtKey` | _string_ | JWTKey is a private key in PEM format used to sign JWT, |
 | `jwtKeyFile` | _string_ | JWTKeyFile is a path to the private key file in PEM format used to sign the JWT |
 | `pubjwkURL` | _string_ | PubJWKURL is the JWK pubkey access endpoint |
+=======
+| `jwtKey` | _string_ |  |
+| `jwtKeyFile` | _string_ |  |
+| `pubjwkURL` | _string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### OIDCOptions
 
@@ -261,6 +299,7 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+<<<<<<< HEAD
 | `oidcIssuerURL` | _string_ | OIDCIssuerURL is the OpenID Connect issuer URL<br/>eg: https://accounts.google.com |
 | `insecureOidcAllowUnverifiedEmail` | _bool_ | InsecureOIDCAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified<br/>default set to 'false' |
 | `insecureOidcSkipIssuerVerification` | _bool_ | InsecureOIDCSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL<br/>default set to 'false' |
@@ -269,11 +308,22 @@ make up the header value
 | `oidcEmailClaim` | _string_ | OIDCGroupsClaim indicates which OIDC claim contains the user's email |
 | `oidcGroupsClaim` | _string_ | OIDCGroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>Deprecated: Use OIDCEmailClaim |
+=======
+| `oidcIssuerURL` | _string_ |  |
+| `insecureOidcAllowUnverifiedEmail` | _bool_ |  |
+| `insecureOidcSkipIssuerVerification` | _bool_ |  |
+| `skipOidcDiscovery` | _bool_ |  |
+| `oidcJwksURL` | _string_ |  |
+| `oidcGroupsClaim` | _string_ |  |
+| `oidcEmailClaim` | _string_ |  |
+| `userIDClaim` | _string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### Provider
 
 (**Appears on:** [Providers](#providers))
 
+<<<<<<< HEAD
 Provider holds all configuration for a single provider
 
 | Field | Type | Description |
@@ -303,6 +353,37 @@ Provider holds all configuration for a single provider
 | `approvalPrompt` | _string_ | ApprovalPrompt is the OAuth approval_prompt<br/>default is set to 'force' |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
 | `acrValues` | _string_ | AcrValues is a string of acr values |
+=======
+Provider holds all provider configuration
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `clientID` | _string_ |  |
+| `clientSecret` | _string_ |  |
+| `clientSecretFile` | _string_ |  |
+| `keycloakConfig` | _[KeycloakOptions](#keycloakoptions)_ |  |
+| `azureConfig` | _[AzureOptions](#azureoptions)_ |  |
+| `bitbucketConfig` | _[BitbucketOptions](#bitbucketoptions)_ |  |
+| `githubConfig` | _[GitHubOptions](#githuboptions)_ |  |
+| `gitlabConfig` | _[GitLabOptions](#gitlaboptions)_ |  |
+| `googleConfig` | _[GoogleOptions](#googleoptions)_ |  |
+| `oidcConfig` | _[OIDCOptions](#oidcoptions)_ |  |
+| `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ |  |
+| `providerID` | _string_ |  |
+| `provider` | _string_ |  |
+| `providerDisplayName` | _string_ |  |
+| `providerCAFiles` | _[]string_ |  |
+| `loginURL` | _string_ |  |
+| `redeemURL` | _string_ |  |
+| `profileURL` | _string_ |  |
+| `resource` | _string_ |  |
+| `validateURL` | _string_ |  |
+| `scope` | _string_ |  |
+| `prompt` | _string_ |  |
+| `approvalPrompt` | _string_ |  |
+| `allowedGroups` | _[]string_ |  |
+| `acrValues` | _string_ |  |
+>>>>>>> rebase (mainly service alpha options related conflicts)
 
 ### Providers
 

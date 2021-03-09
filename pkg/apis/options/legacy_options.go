@@ -51,9 +51,9 @@ func NewLegacyOptions() *LegacyOptions {
 			ProviderType:    "google",
 			AzureTenant:     "common",
 			ApprovalPrompt:  "force",
-			OIDCGroupsClaim: "groups",
-			OIDCEmailClaim:  "email",
 			UserIDClaim:     "email",
+			OIDCEmailClaim:  "email",
+			OIDCGroupsClaim: "groups",
 		},
 
 		Options: *NewOptions(),
