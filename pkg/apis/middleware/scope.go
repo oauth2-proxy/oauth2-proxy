@@ -34,6 +34,9 @@ type RequestScope struct {
 	// SessionRevalidated indicates whether the session has been revalidated since
 	// it was loaded or not.
 	SessionRevalidated bool
+
+	// Upstream tracks which upstream was used for this request
+	Upstream string
 }
 
 // GetRequestScope returns the current request scope from the given request

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 )
 
 const fileScheme = "file"
@@ -37,6 +39,10 @@ type fileServer struct {
 // ServeHTTP proxies requests to the upstream provider while signing the
 // request headers
 func (u *fileServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("GAP-Upstream-Address", u.upstream)
+	scope := middleware.GetRequestScope(req)
+	// If scope is nil, this will panic.
+	// A scope should always be injected before this handler is called.
+	scope.Upstream = u.upstream
+
 	u.handler.ServeHTTP(rw, req)
 }
