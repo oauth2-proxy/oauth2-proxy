@@ -29,14 +29,11 @@ func validateProviders(o *options.Options) []string {
 	return msgs
 }
 
-<<<<<<< HEAD
 func validateProvider(provider options.Provider, providerIDs map[string]struct{}) []string {
 	msgs := []string{}
-=======
-		if provider.ClientID == "" {
-			msgs = append(msgs, "provider missing setting: client-id")
-		}
->>>>>>> fixed lint issues
+	if provider.ClientID == "" {
+		msgs = append(msgs, "provider missing setting: client-id")
+	}
 
 	if provider.ProviderID == "" {
 		msgs = append(msgs, "provider has empty id: ids are required for all providers")
