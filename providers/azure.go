@@ -153,11 +153,26 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 		RefreshToken: jsonResponse.RefreshToken,
 	}
 
-	email, err := p.verifyTokensAndExtractEmail(ctx, session.IDToken, session.AccessToken)
-	if err != nil {
-		return nil, err
+	email, err := p.verifyTokenAndExtractEmail(ctx, session.IDToken)
+
+	// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
+	// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
+	// due to above issues, id_token may not be signed by AAD
+	// in that case, we will fallback to access token
+	if err == nil && email != "" {
+		session.Email = email
+	} else {
+		logger.Printf("unable to get email claim from id_token: %v", err)
 	}
-	session.Email = email
+
+	if session.Email == "" {
+		email, err = p.verifyTokenAndExtractEmail(ctx, session.AccessToken)
+		if err == nil && email != "" {
+			session.Email = email
+		} else {
+			logger.Printf("unable to get email claim from access token: %v", err)
+		}
+	}
 
 	return session, nil
 }
@@ -168,15 +183,12 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 		return nil
 	}
 
-	email, err := getEmailFromProfileAPI(ctx, s.AccessToken, p.ProfileURL.String())
-	if email == "" || err != nil {
-		if err != nil {
-			err = fmt.Errorf("unable to get email address, error: %v", err)
-		} else {
-			err = errors.New("unable to get email address")
-		}
-		logger.Errorf("%s", err)
-		return err
+	email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
+	if err != nil {
+		return fmt.Errorf("unable to get email address: %v", err)
+	}
+	if email == "" {
+		return errors.New("unable to get email address")
 	}
 	s.Email = email
 
@@ -204,41 +216,24 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 	return params, nil
 }
 
-// verifyTokensAndExtractEmail tries to extract email claim from id_token first
-// and falls back to access token due to
-// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
-// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
-func (p *AzureProvider) verifyTokensAndExtractEmail(ctx context.Context, idToken, accessToken string) (string, error) {
+// verifyTokenAndExtractEmail tries to extract email claim from either id_token or access token
+// when oidc verifier is configured
+func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, token string) (string, error) {
 	email := ""
-	if p.Verifier == nil {
-		return "", nil
-	}
 
-	if idToken != "" {
-		token, err := p.Verifier.Verify(ctx, idToken)
+	if token != "" && p.Verifier != nil {
+		token, err := p.Verifier.Verify(ctx, token)
 		// due to issues mentioned above, id_token may not be signed by AAD
 		if err == nil {
 			claims, err := p.getClaims(token)
 			if err == nil {
 				email = claims.Email
 			} else {
-				logger.Printf("unable to get claims from id_token: %v", err)
+				logger.Printf("unable to get claims from token: %v", err)
 			}
 		} else {
-			logger.Printf("unable to verify id_token: %v", err)
+			logger.Printf("unable to verify token: %v", err)
 		}
-	}
-
-	if email == "" && accessToken != "" {
-		token, err := p.Verifier.Verify(ctx, accessToken)
-		if err != nil {
-			return "", fmt.Errorf("failed to verify access token: %s", err)
-		}
-		claims, err := p.getClaims(token)
-		if err != nil {
-			return "", fmt.Errorf("failed to get claims from access token: %s", err)
-		}
-		email = claims.Email
 	}
 
 	return email, nil
@@ -296,11 +291,26 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	s.CreatedAt = &now
 	s.ExpiresOn = &expires
 
-	email, err := p.verifyTokensAndExtractEmail(ctx, s.IDToken, s.AccessToken)
-	if err != nil {
-		return err
+	email, err := p.verifyTokenAndExtractEmail(ctx, s.IDToken)
+
+	// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
+	// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
+	// due to above issues, id_token may not be signed by AAD
+	// in that case, we will fallback to access token
+	if err == nil && email != "" {
+		s.Email = email
+	} else {
+		logger.Printf("unable to get email claim from id_token: %v", err)
 	}
-	s.Email = email
+
+	if s.Email == "" {
+		email, err = p.verifyTokenAndExtractEmail(ctx, s.AccessToken)
+		if err == nil && email != "" {
+			s.Email = email
+		} else {
+			logger.Printf("unable to get email claim from access token: %v", err)
+		}
+	}
 
 	return
 }
@@ -334,12 +344,12 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	return email, err
 }
 
-func getEmailFromProfileAPI(ctx context.Context, accessToken, profileURL string) (string, error) {
+func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
 	if accessToken == "" {
 		return "", errors.New("missing access token")
 	}
 
-	json, err := requests.New(profileURL).
+	json, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
 		WithHeaders(makeAzureHeader(accessToken)).
 		Do().
