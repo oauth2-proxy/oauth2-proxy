@@ -1,0 +1,86 @@
+# This docker-compose file can be used to bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features.
+# Alongside OAuth2-Proxy, this file also starts Keycloak to act as the identity provider,
+# HTTPBin as an example upstream.
+#
+# This can either be created using docker-compose
+#    docker-compose -f docker-compose-traefik.yaml <command>
+# Or:
+#    make traefik-<command> (eg. make traefik-up, make traefik-down)
+#
+# Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle using user=admin@example.com, password=password
+# Access http://keycloak.localtest.me:9080 with the same credentials to check out the settings
+version: '3.3'
+services:
+
+  # Reverse proxy
+  gateway:
+    container_name: traefik
+    image: traefik:2.4.2
+    volumes:
+      - "./traefik:/etc/traefik"
+    ports:
+      - "80:80"
+      - "9090:8080"
+    depends_on:
+      - oauth2-proxy
+    networks:
+      keycloak:
+        aliases:
+          # Trick so that when oauth2-proxy request keycloak.localtest.me, it goes through
+          # Traefik to get redirected on the correct port
+          # If this is not set, oauth2-proxy can not use keycloak auto-discovery endpoint
+          # as it will not target the correct port of the machine
+          - keycloak.localtest.me
+      oauth2-proxy:
+      httpbin:
+
+  oauth2-proxy:
+    container_name: oauth2-proxy
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.0.1
+    command: --config /oauth2-proxy.cfg
+    hostname: oauth2-proxy
+    volumes:
+      - "./oauth2-proxy-traefik.cfg:/oauth2-proxy.cfg"
+    restart: unless-stopped
+    networks:
+      keycloak:
+      httpbin:
+      oauth2-proxy:
+    depends_on:
+      - httpbin
+      - keycloak
+
+  httpbin:
+    container_name: httpbin
+    image: kennethreitz/httpbin:latest
+    hostname: httpbin
+    networks:
+      httpbin:
+
+  keycloak:
+    container_name: keycloak
+    image: jboss/keycloak:10.0.0
+    hostname: keycloak
+    command:
+      [
+        '-b',
+        '0.0.0.0',
+        '-Djboss.socket.binding.port-offset=1000',
+        '-Dkeycloak.migration.action=import',
+        '-Dkeycloak.migration.provider=dir',
+        '-Dkeycloak.migration.dir=/realm-config',
+        '-Dkeycloak.migration.strategy=IGNORE_EXISTING',
+      ]
+    volumes:
+      - ./keycloak:/realm-config
+    environment:
+      KEYCLOAK_USER: admin@example.com
+      KEYCLOAK_PASSWORD: password
+    networks:
+      - keycloak
+
+networks:
+  httpbin:
+  keycloak:
+  oauth2-proxy:
