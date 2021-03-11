@@ -73,11 +73,11 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--logging-max-size` | int | Maximum size in megabytes of the log file before rotation | 100 |
 | `--jwt-key` | string | private key in PEM format used to sign JWT, so that you can say something like `--jwt-key="${OAUTH2_PROXY_JWT_KEY}"`: required by login.gov | |
 | `--jwt-key-file` | string | path to the private key file in PEM format used to sign the JWT so that you can say something like `--jwt-key-file=/etc/ssl/private/jwt_signing_key.pem`: required by login.gov | |
-| `--login-url` | string | Authentication endpoint | |
+| `--login-url` | string | Authentication endpoint. In [OpenID Provider Metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata) (shown in .well-known/openid-configuration) named as "authorization_endpoint" | |
 | `--insecure-oidc-allow-unverified-email` | bool | don't fail if an email address in an id_token is not verified | false |
 | `--insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
 | `--oidc-issuer-url` | string | the OpenID Connect issuer URL, e.g. `"https://accounts.google.com"` | |
-| `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
+| `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled. In [OpenID Provider Metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata) (shown in .well-known/openid-configuration) named as "jwks_uri"  | |
 | `--oidc-email-claim` | string | which OIDC claim contains the user's email | `"email"` |
 | `--oidc-groups-claim` | string | which OIDC claim contains the user groups | `"groups"` |
 | `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header. When used with `--set-xauthrequest` this adds the X-Auth-Request-Access-Token header to the response | false |
@@ -98,7 +98,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--proxy-websockets` | bool | enables WebSocket proxying | true |
 | `--pubjwk-url` | string | JWK pubkey access endpoint: required by login.gov | |
 | `--real-client-ip-header` | string | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP) | X-Real-IP |
-| `--redeem-url` | string | Token redemption endpoint | |
+| `--redeem-url` | string | Token redemption endpoint. In [OpenID Provider Metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata) (shown in .well-known/openid-configuration)  named as "token_endpoint" | |
 | `--redirect-url` | string | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"` | |
 | `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster` | |
 | `--redis-connection-url` | string | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`) | |
@@ -126,7 +126,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods | |
 | `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy | true |
 | `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens (the token must have [`aud`](https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields) that matches this client id or one of the extras from `extra-jwt-issuers`) | false |
-| `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
+| `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case. Should be used if the provider does not support standard OIDC discovery via their issuer URL. See [example](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/oauth_provider/#skip-oidc-discovery) | false |
 | `--skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
 | `--ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |
 | `--ssl-upstream-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS upstreams | false |
