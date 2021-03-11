@@ -55,14 +55,14 @@ func main() {
 	}
 
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
-	oauthproxy, err := NewOAuthProxy(opts, validator)
+	oauthProxy, err := NewOAuthProxy(opts, validator)
 	if err != nil {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
 
 	rand.Seed(time.Now().UnixNano())
 
-	if err := oauthproxy.Start(); err != nil {
+	if err := oauthProxy.Start(); err != nil {
 		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)
 	}
 }

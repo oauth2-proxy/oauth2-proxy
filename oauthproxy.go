@@ -811,7 +811,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	state := strings.SplitN(req.Form.Get("state"), ":", 2)
 	if len(state) != 2 {
 		logger.Error("Error while parsing OAuth2 state: invalid length")
-		p.ErrorPage(rw, req, http.StatusInternalServerError, "State paremeter did not have expected length", "Login Failed: Invalid State after login.")
+		p.ErrorPage(rw, req, http.StatusInternalServerError, "State parameter did not have expected length", "Login Failed: Invalid State after login.")
 		return
 	}
 	nonce := state[0]
