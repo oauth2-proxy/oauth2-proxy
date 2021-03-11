@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -40,6 +41,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*s
 			TokenURL: p.RedeemURL.String(),
 		},
 		RedirectURL: redirectURL,
+		Scopes:      strings.Split(p.Scope, ","),
 	}
 	token, err := c.Exchange(ctx, code)
 	if err != nil {
