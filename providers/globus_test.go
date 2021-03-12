@@ -1,12 +1,15 @@
 package providers
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+        "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 func testGlobusProvider(hostname string) *GlobusProvider {
@@ -53,7 +56,7 @@ func TestGlobusProviderDefaults(t *testing.T) {
 		p.Data().RedeemURL.String())
 	assert.Equal(t, "https://auth.globus.org/v2/oauth2/token/introspect",
 		p.Data().ValidateURL.String())
-	assert.Equal(t, "openid email profile", p.Data().Scope)
+	assert.Equal(t, "openid email profile urn:globus:auth:scope:auth.globus.org:view_identities urn:globus:auth:scope:transfer.api.globus.org:all urn:globus:auth:scope:data.materialsdatafacility.org:all urn:globus:auth:scope:transfer.api.globus.org:all urn:globus:auth:scope:search.api.globus.org:search", p.Data().Scope)
 }
 
 func TestGlobusProviderOverrides(t *testing.T) {
@@ -91,8 +94,8 @@ func TestGlobusProviderGetEmailAddress(t *testing.T) {
 	b_url, _ := url.Parse(b.URL)
 	p := testGlobusProvider(b_url.Host)
 
-	session := &SessionState{AccessToken: "imaginary_access_token"}
-	email, err := p.GetEmailAddress(session)
+	session := &sessions.SessionState{AccessToken: "imaginary_access_token"}
+	email, err := p.GetEmailAddress(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "ztaylor@example.com", email)
 }
