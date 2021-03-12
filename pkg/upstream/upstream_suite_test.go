@@ -26,6 +26,7 @@ var (
 
 func TestUpstreamSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 	log.SetOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)
@@ -58,7 +59,6 @@ const (
 	acceptEncoding  = "Accept-Encoding"
 	applicationJSON = "application/json"
 	textPlainUTF8   = "text/plain; charset=utf-8"
-	gapUpstream     = "Gap-Upstream-Address"
 	gapAuth         = "Gap-Auth"
 	gapSignature    = "Gap-Signature"
 )

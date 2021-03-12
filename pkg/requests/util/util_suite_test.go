@@ -13,6 +13,7 @@ import (
 // this functionality
 func TestRequestUtilSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Request Utils")

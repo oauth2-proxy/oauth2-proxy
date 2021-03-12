@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -42,10 +43,14 @@ var _ = Describe("File Server Suite", func() {
 	DescribeTable("fileServer ServeHTTP",
 		func(requestPath string, expectedResponseCode int, expectedBody string) {
 			req := httptest.NewRequest("", requestPath, nil)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+
 			rw := httptest.NewRecorder()
 			handler.ServeHTTP(rw, req)
 
-			Expect(rw.Header().Get("GAP-Upstream-Address")).To(Equal(id))
+			scope := middlewareapi.GetRequestScope(req)
+			Expect(scope.Upstream).To(Equal(id))
+
 			Expect(rw.Code).To(Equal(expectedResponseCode))
 			Expect(rw.Body.String()).To(Equal(expectedBody))
 		},

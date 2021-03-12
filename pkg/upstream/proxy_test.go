@@ -4,10 +4,10 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/http/httptest"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -20,9 +20,10 @@ var _ = Describe("Proxy Suite", func() {
 	BeforeEach(func() {
 		sigData := &options.SignatureData{Hash: crypto.SHA256, Key: "secret"}
 
-		tmpl, err := template.New("").Parse("{{ .Title }}\n{{ .Message }}\n{{ .ProxyPrefix }}")
-		Expect(err).ToNot(HaveOccurred())
-		errorHandler := NewProxyErrorHandler(tmpl, "prefix")
+		errorHandler := func(rw http.ResponseWriter, _ *http.Request, _ error) {
+			rw.WriteHeader(502)
+			rw.Write([]byte("Proxy Error"))
+		}
 
 		ok := http.StatusOK
 
@@ -56,6 +57,7 @@ var _ = Describe("Proxy Suite", func() {
 			},
 		}
 
+		var err error
 		upstreamServer, err = NewProxy(upstreams, sigData, errorHandler)
 		Expect(err).ToNot(HaveOccurred())
 	})
@@ -63,16 +65,23 @@ var _ = Describe("Proxy Suite", func() {
 	type proxyTableInput struct {
 		target   string
 		response testHTTPResponse
+		upstream string
 	}
 
-	DescribeTable("Proxy ServerHTTP",
+	DescribeTable("Proxy ServeHTTP",
 		func(in *proxyTableInput) {
-			req := httptest.NewRequest("", in.target, nil)
+			req := middlewareapi.AddRequestScope(
+				httptest.NewRequest("", in.target, nil),
+				&middlewareapi.RequestScope{},
+			)
 			rw := httptest.NewRecorder()
 			// Don't mock the remote Address
 			req.RemoteAddr = ""
 
 			upstreamServer.ServeHTTP(rw, req)
+
+			scope := middlewareapi.GetRequestScope(req)
+			Expect(scope.Upstream).To(Equal(in.upstream))
 
 			Expect(rw.Code).To(Equal(in.response.code))
 
@@ -98,7 +107,6 @@ var _ = Describe("Proxy Suite", func() {
 			response: testHTTPResponse{
 				code: 200,
 				header: map[string][]string{
-					gapUpstream: {"http-backend"},
 					contentType: {applicationJSON},
 				},
 				request: testHTTPRequest{
@@ -113,6 +121,7 @@ var _ = Describe("Proxy Suite", func() {
 					RequestURI: "http://example.localhost/http/1234",
 				},
 			},
+			upstream: "http-backend",
 		}),
 		Entry("with a request to the File backend", &proxyTableInput{
 			target: "http://example.localhost/files/foo",
@@ -120,31 +129,29 @@ var _ = Describe("Proxy Suite", func() {
 				code: 200,
 				header: map[string][]string{
 					contentType: {textPlainUTF8},
-					gapUpstream: {"file-backend"},
 				},
 				raw: "foo",
 			},
+			upstream: "file-backend",
 		}),
 		Entry("with a request to the Static backend", &proxyTableInput{
 			target: "http://example.localhost/static/bar",
 			response: testHTTPResponse{
-				code: 200,
-				header: map[string][]string{
-					gapUpstream: {"static-backend"},
-				},
-				raw: "Authenticated",
+				code:   200,
+				header: map[string][]string{},
+				raw:    "Authenticated",
 			},
+			upstream: "static-backend",
 		}),
 		Entry("with a request to the bad HTTP backend", &proxyTableInput{
 			target: "http://example.localhost/bad-http/bad",
 			response: testHTTPResponse{
-				code: 502,
-				header: map[string][]string{
-					gapUpstream: {"bad-http-backend"},
-				},
+				code:   502,
+				header: map[string][]string{},
 				// This tests the error handler
-				raw: "Bad Gateway\nError proxying to upstream server\nprefix",
+				raw: "Proxy Error",
 			},
+			upstream: "bad-http-backend",
 		}),
 		Entry("with a request to the to an unregistered path", &proxyTableInput{
 			target: "http://example.localhost/unregistered",
@@ -160,12 +167,11 @@ var _ = Describe("Proxy Suite", func() {
 		Entry("with a request to the to backend registered to a single path", &proxyTableInput{
 			target: "http://example.localhost/single-path",
 			response: testHTTPResponse{
-				code: 200,
-				header: map[string][]string{
-					gapUpstream: {"single-path-backend"},
-				},
-				raw: "Authenticated",
+				code:   200,
+				header: map[string][]string{},
+				raw:    "Authenticated",
 			},
+			upstream: "single-path-backend",
 		}),
 		Entry("with a request to the to a subpath of a backend registered to a single path", &proxyTableInput{
 			target: "http://example.localhost/single-path/unregistered",

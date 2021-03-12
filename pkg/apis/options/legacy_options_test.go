@@ -106,6 +106,10 @@ var _ = Describe("Legacy Options", func() {
 
 			opts.InjectResponseHeaders = []Header{}
 
+			opts.Server = Server{
+				BindAddress: "127.0.0.1:4180",
+			}
+
 			converted, err := legacyOpts.ToOptions()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(converted).To(Equal(opts))
@@ -758,5 +762,94 @@ var _ = Describe("Legacy Options", func() {
 				},
 			}),
 		)
+	})
+
+	Context("Legacy Servers", func() {
+		type legacyServersTableInput struct {
+			legacyServer          LegacyServer
+			expectedAppServer     Server
+			expectedMetricsServer Server
+		}
+
+		const (
+			insecureAddr        = "127.0.0.1:8080"
+			insecureMetricsAddr = ":9090"
+			secureAddr          = ":443"
+			secureMetricsAddr   = ":9443"
+			crtPath             = "tls.crt"
+			keyPath             = "tls.key"
+		)
+
+		var tlsConfig = &TLS{
+			Cert: &SecretSource{
+				FromFile: crtPath,
+			},
+			Key: &SecretSource{
+				FromFile: keyPath,
+			},
+		}
+
+		DescribeTable("should convert to app and metrics servers",
+			func(in legacyServersTableInput) {
+				appServer, metricsServer := in.legacyServer.convert()
+				Expect(appServer).To(Equal(in.expectedAppServer))
+				Expect(metricsServer).To(Equal(in.expectedMetricsServer))
+			},
+			Entry("with default options only starts app HTTP server", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:  insecureAddr,
+					HTTPSAddress: secureAddr,
+				},
+				expectedAppServer: Server{
+					BindAddress: insecureAddr,
+				},
+			}),
+			Entry("with TLS options specified only starts app HTTPS server", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:  insecureAddr,
+					HTTPSAddress: secureAddr,
+					TLSKeyFile:   keyPath,
+					TLSCertFile:  crtPath,
+				},
+				expectedAppServer: Server{
+					SecureBindAddress: secureAddr,
+					TLS:               tlsConfig,
+				},
+			}),
+			Entry("with metrics HTTP and HTTPS addresses", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:          insecureAddr,
+					HTTPSAddress:         secureAddr,
+					MetricsAddress:       insecureMetricsAddr,
+					MetricsSecureAddress: secureMetricsAddr,
+				},
+				expectedAppServer: Server{
+					BindAddress: insecureAddr,
+				},
+				expectedMetricsServer: Server{
+					BindAddress:       insecureMetricsAddr,
+					SecureBindAddress: secureMetricsAddr,
+				},
+			}),
+			Entry("with metrics HTTPS and tls cert/key", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:          insecureAddr,
+					HTTPSAddress:         secureAddr,
+					MetricsAddress:       insecureMetricsAddr,
+					MetricsSecureAddress: secureMetricsAddr,
+					MetricsTLSKeyFile:    keyPath,
+					MetricsTLSCertFile:   crtPath,
+				},
+				expectedAppServer: Server{
+					BindAddress: insecureAddr,
+				},
+				expectedMetricsServer: Server{
+					BindAddress:       insecureMetricsAddr,
+					SecureBindAddress: secureMetricsAddr,
+					TLS:               tlsConfig,
+				},
+			}),
+		)
+
 	})
 })
