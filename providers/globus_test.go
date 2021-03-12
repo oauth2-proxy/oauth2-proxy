@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-        "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 func testGlobusProvider(hostname string) *GlobusProvider {
@@ -37,7 +37,7 @@ func testGlobusBackend(payload string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			url := r.URL
-			if url.Path != path  || header != r.Header.Get("Authorization") {
+			if url.Path != path || header != r.Header.Get("Authorization") {
 				w.WriteHeader(404)
 			} else {
 				w.WriteHeader(200)

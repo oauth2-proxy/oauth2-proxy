@@ -1,17 +1,17 @@
 package providers
 
 import (
-        "context"
-        "bytes"
-        "encoding/json"
-        "errors"
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 
-        "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 type GlobusProvider struct {
@@ -19,10 +19,10 @@ type GlobusProvider struct {
 }
 
 type Token struct {
-    AccessToken string  `json:"access_token"`
-    ExpiresIn   int     `json:"expires_in"`
-    Scope       string  `json:"scope"`
-    Tokens      []Token `json:"other_tokens"`
+	AccessToken string  `json:"access_token"`
+	ExpiresIn   int     `json:"expires_in"`
+	Scope       string  `json:"scope"`
+	Tokens      []Token `json:"other_tokens"`
 }
 
 //https://auth.globus.org/.well-known/openid-configuration
@@ -143,20 +143,18 @@ func (p *GlobusProvider) Redeem(c context.Context, redirectURL string, code stri
 	err = json.Unmarshal(body, &globusTokens)
 	if err == nil {
 
-
 		otherTokens := ""
-        	for _, token := range globusTokens.Tokens {
+		for _, token := range globusTokens.Tokens {
 			otherTokens += " " + token.Scope + "=" + token.AccessToken
-                }
+		}
 		fmt.Printf("Found access tokens: %s\n", otherTokens)
 
-
-                s = &sessions.SessionState{
-                        AccessToken: globusTokens.AccessToken,
-                        // OtherTokens: otherTokens,
-                }
+		s = &sessions.SessionState{
+			AccessToken: globusTokens.AccessToken,
+			// OtherTokens: otherTokens,
+		}
 		return
-        }
+	}
 
 	var v url.Values
 	v, err = url.ParseQuery(string(body))
