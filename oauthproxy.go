@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/justinas/alice"
@@ -18,9 +20,11 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
@@ -75,38 +79,34 @@ type OAuthProxy struct {
 	AuthOnlyPath      string
 	UserInfoPath      string
 
-	allowedRoutes        []allowedRoute
-	redirectURL          *url.URL // the url to receive requests at
-	whitelistDomains     []string
-	provider             providers.Provider
-	providerNameOverride string
-	sessionStore         sessionsapi.SessionStore
-	ProxyPrefix          string
-	SignInMessage        string
-	basicAuthValidator   basic.Validator
-	displayHtpasswdForm  bool
-	serveMux             http.Handler
-	SetXAuthRequest      bool
-	PassBasicAuth        bool
-	SetBasicAuth         bool
-	SkipProviderButton   bool
-	PassUserHeaders      bool
-	BasicAuthPassword    string
-	PassAccessToken      bool
-	SetAuthorization     bool
-	PassAuthorization    bool
-	PreferEmailToUser    bool
-	skipAuthPreflight    bool
-	skipJwtBearerTokens  bool
-	templates            *template.Template
-	realClientIPParser   ipapi.RealClientIPParser
-	trustedIPs           *ip.NetSet
-	Banner               string
-	Footer               string
+	allowedRoutes       []allowedRoute
+	redirectURL         *url.URL // the url to receive requests at
+	whitelistDomains    []string
+	provider            providers.Provider
+	sessionStore        sessionsapi.SessionStore
+	ProxyPrefix         string
+	basicAuthValidator  basic.Validator
+	serveMux            http.Handler
+	SetXAuthRequest     bool
+	PassBasicAuth       bool
+	SetBasicAuth        bool
+	SkipProviderButton  bool
+	PassUserHeaders     bool
+	BasicAuthPassword   string
+	PassAccessToken     bool
+	SetAuthorization    bool
+	PassAuthorization   bool
+	PreferEmailToUser   bool
+	skipAuthPreflight   bool
+	skipJwtBearerTokens bool
+	realClientIPParser  ipapi.RealClientIPParser
+	trustedIPs          *ip.NetSet
 
 	sessionChain alice.Chain
 	headersChain alice.Chain
 	preAuthChain alice.Chain
+	pageWriter   pagewriter.Writer
+	server       proxyhttp.Server
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -116,9 +116,32 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
-	templates := loadTemplates(opts.CustomTemplatesDir)
-	proxyErrorHandler := upstream.NewProxyErrorHandler(templates.Lookup("error.html"), opts.ProxyPrefix)
-	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), proxyErrorHandler)
+	var basicAuthValidator basic.Validator
+	if opts.HtpasswdFile != "" {
+		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
+		var err error
+		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
+		}
+	}
+
+	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
+		TemplatesPath:    opts.Templates.Path,
+		CustomLogo:       opts.Templates.CustomLogo,
+		ProxyPrefix:      opts.ProxyPrefix,
+		Footer:           opts.Templates.Footer,
+		Version:          VERSION,
+		Debug:            opts.Templates.Debug,
+		ProviderName:     buildProviderName(opts.GetProvider(), opts.ProviderName),
+		SignInMessage:    buildSignInMessage(opts),
+		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error initialising page writer: %v", err)
+	}
+
+	upstreamProxy, err := upstream.NewProxy(opts.UpstreamServers, opts.GetSignatureData(), pageWriter.ProxyErrorHandler)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
 	}
@@ -151,16 +174,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
-	var basicAuthValidator basic.Validator
-	if opts.HtpasswdFile != "" {
-		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
-		var err error
-		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
-		}
-	}
-
 	allowedRoutes, err := buildRoutesAllowlist(opts)
 	if err != nil {
 		return nil, err
@@ -176,7 +189,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
 	}
 
-	return &OAuthProxy{
+	p := &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
 		CookieSeed:     opts.Cookie.Secret,
@@ -197,30 +210,78 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
 		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
 
-		ProxyPrefix:          opts.ProxyPrefix,
-		provider:             opts.GetProvider(),
-		providerNameOverride: opts.ProviderName,
-		sessionStore:         sessionStore,
-		serveMux:             upstreamProxy,
-		redirectURL:          redirectURL,
-		allowedRoutes:        allowedRoutes,
-		whitelistDomains:     opts.WhitelistDomains,
-		skipAuthPreflight:    opts.SkipAuthPreflight,
-		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
-		realClientIPParser:   opts.GetRealClientIPParser(),
-		SkipProviderButton:   opts.SkipProviderButton,
-		templates:            templates,
-		trustedIPs:           trustedIPs,
-		Banner:               opts.Banner,
-		Footer:               opts.Footer,
-		SignInMessage:        buildSignInMessage(opts),
+		ProxyPrefix:         opts.ProxyPrefix,
+		provider:            opts.GetProvider(),
+		sessionStore:        sessionStore,
+		serveMux:            upstreamProxy,
+		redirectURL:         redirectURL,
+		allowedRoutes:       allowedRoutes,
+		whitelistDomains:    opts.WhitelistDomains,
+		skipAuthPreflight:   opts.SkipAuthPreflight,
+		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
+		realClientIPParser:  opts.GetRealClientIPParser(),
+		SkipProviderButton:  opts.SkipProviderButton,
+		trustedIPs:          trustedIPs,
 
-		basicAuthValidator:  basicAuthValidator,
-		displayHtpasswdForm: basicAuthValidator != nil && opts.DisplayHtpasswdForm,
-		sessionChain:        sessionChain,
-		headersChain:        headersChain,
-		preAuthChain:        preAuthChain,
-	}, nil
+		basicAuthValidator: basicAuthValidator,
+		sessionChain:       sessionChain,
+		headersChain:       headersChain,
+		preAuthChain:       preAuthChain,
+		pageWriter:         pageWriter,
+	}
+
+	if err := p.setupServer(opts); err != nil {
+		return nil, fmt.Errorf("error setting up server: %v", err)
+	}
+
+	return p, nil
+}
+
+func (p *OAuthProxy) Start() error {
+	if p.server == nil {
+		// We have to call setupServer before Start is called.
+		// If this doesn't happen it's a programming error.
+		panic("server has not been initialised")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Observe signals in background goroutine.
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		cancel() // cancel the context
+	}()
+
+	return p.server.Start(ctx)
+}
+
+func (p *OAuthProxy) setupServer(opts *options.Options) error {
+	serverOpts := proxyhttp.Opts{
+		Handler:           p,
+		BindAddress:       opts.Server.BindAddress,
+		SecureBindAddress: opts.Server.SecureBindAddress,
+		TLS:               opts.Server.TLS,
+	}
+
+	appServer, err := proxyhttp.NewServer(serverOpts)
+	if err != nil {
+		return fmt.Errorf("could not build app server: %v", err)
+	}
+
+	metricsServer, err := proxyhttp.NewServer(proxyhttp.Opts{
+		Handler:           middleware.DefaultMetricsHandler,
+		BindAddress:       opts.MetricsServer.BindAddress,
+		SecureBindAddress: opts.MetricsServer.BindAddress,
+		TLS:               opts.MetricsServer.TLS,
+	})
+	if err != nil {
+		return fmt.Errorf("could not build metrics server: %v", err)
+	}
+
+	p.server = proxyhttp.NewServerGroup(appServer, metricsServer)
+	return nil
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -230,9 +291,9 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	chain := alice.New(middleware.NewScope(opts.ReverseProxy))
 
 	if opts.ForceHTTPS {
-		_, httpsPort, err := net.SplitHostPort(opts.HTTPSAddress)
+		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
 		if err != nil {
-			return alice.Chain{}, fmt.Errorf("invalid HTTPS address %q: %v", opts.HTTPAddress, err)
+			return alice.Chain{}, fmt.Errorf("invalid HTTPS address %q: %v", opts.Server.SecureBindAddress, err)
 		}
 		chain = chain.Append(middleware.NewRedirectToHTTPS(httpsPort))
 	}
@@ -247,10 +308,18 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	// To silence logging of health checks, register the health check handler before
 	// the logging handler
 	if opts.Logging.SilencePing {
-		chain = chain.Append(middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents), LoggingHandler)
+		chain = chain.Append(
+			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+			middleware.NewRequestLogger(),
+		)
 	} else {
-		chain = chain.Append(LoggingHandler, middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents))
+		chain = chain.Append(
+			middleware.NewRequestLogger(),
+			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+		)
 	}
+
+	chain = chain.Append(middleware.NewRequestMetricsWithDefaultRegistry())
 
 	return chain, nil
 }
@@ -272,7 +341,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	}
 
 	if validator != nil {
-		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator))
+		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups))
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
@@ -301,11 +370,11 @@ func buildHeadersChain(opts *options.Options) (alice.Chain, error) {
 
 func buildSignInMessage(opts *options.Options) string {
 	var msg string
-	if len(opts.Banner) >= 1 {
-		if opts.Banner == "-" {
+	if len(opts.Templates.Banner) >= 1 {
+		if opts.Templates.Banner == "-" {
 			msg = ""
 		} else {
-			msg = opts.Banner
+			msg = opts.Templates.Banner
 		}
 	} else if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
 		if len(opts.EmailDomains) > 1 {
@@ -315,6 +384,13 @@ func buildSignInMessage(opts *options.Options) string {
 		}
 	}
 	return msg
+}
+
+func buildProviderName(p providers.Provider, override string) string {
+	if override != "" {
+		return override
+	}
+	return p.Data().ProviderName
 }
 
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
@@ -478,7 +554,7 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	switch path := req.URL.Path; {
 	case path == p.RobotsPath:
-		p.RobotsTxt(rw)
+		p.RobotsTxt(rw, req)
 	case p.IsAllowedRequest(req):
 		p.SkipAuthProxy(rw, req)
 	case path == p.SignInPath:
@@ -499,33 +575,27 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 // RobotsTxt disallows scraping pages from the OAuthProxy
-func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter) {
+func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter, req *http.Request) {
 	_, err := fmt.Fprintf(rw, "User-agent: *\nDisallow: /")
 	if err != nil {
 		logger.Printf("Error writing robots.txt: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	rw.WriteHeader(http.StatusOK)
 }
 
 // ErrorPage writes an error response
-func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, code int, title string, message string) {
-	rw.WriteHeader(code)
-	t := struct {
-		Title       string
-		Message     string
-		ProxyPrefix string
-	}{
-		Title:       fmt.Sprintf("%d %s", code, title),
-		Message:     message,
-		ProxyPrefix: p.ProxyPrefix,
-	}
-	err := p.templates.ExecuteTemplate(rw, "error.html", t)
+func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code int, appError string, messages ...interface{}) {
+	redirectURL, err := p.getAppRedirect(req)
 	if err != nil {
-		logger.Printf("Error rendering error.html template: %v", err)
-		http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+		logger.Errorf("Error obtaining redirect: %v", err)
 	}
+	if redirectURL == p.SignInPath || redirectURL == "" {
+		redirectURL = "/"
+	}
+
+	p.pageWriter.WriteErrorPage(rw, code, redirectURL, appError, messages...)
 }
 
 // IsAllowedRequest is used to check if auth should be skipped for this request
@@ -570,7 +640,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	err := p.ClearSessionCookie(rw, req)
 	if err != nil {
 		logger.Printf("Error clearing session cookie: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	rw.WriteHeader(code)
@@ -578,7 +648,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	redirectURL, err := p.getAppRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -586,33 +656,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
-	// We allow unescaped template.HTML since it is user configured options
-	/* #nosec G203 */
-	t := struct {
-		ProviderName  string
-		SignInMessage template.HTML
-		CustomLogin   bool
-		Redirect      string
-		Version       string
-		ProxyPrefix   string
-		Footer        template.HTML
-	}{
-		ProviderName:  p.provider.Data().ProviderName,
-		SignInMessage: template.HTML(p.SignInMessage),
-		CustomLogin:   p.displayHtpasswdForm,
-		Redirect:      redirectURL,
-		Version:       VERSION,
-		ProxyPrefix:   p.ProxyPrefix,
-		Footer:        template.HTML(p.Footer),
-	}
-	if p.providerNameOverride != "" {
-		t.ProviderName = p.providerNameOverride
-	}
-	err = p.templates.ExecuteTemplate(rw, "sign_in.html", t)
-	if err != nil {
-		logger.Printf("Error rendering sign_in.html template: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
-	}
+	p.pageWriter.WriteSignInPage(rw, redirectURL)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
@@ -639,7 +683,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.getAppRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -649,7 +693,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		err = p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Printf("Error saving session: %v", err)
-			p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
 		http.Redirect(rw, req, redirect, http.StatusFound)
@@ -662,7 +706,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-//UserInfo endpoint outputs session email and preferred username in JSON format
+// UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
 	session, err := p.getAuthenticatedSession(rw, req)
@@ -688,7 +732,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 	err = json.NewEncoder(rw).Encode(userInfo)
 	if err != nil {
 		logger.Printf("Error encoding user info: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
 }
 
@@ -697,13 +741,13 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	redirect, err := p.getAppRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
 		logger.Errorf("Error clearing session cookie: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	http.Redirect(rw, req, redirect, http.StatusFound)
@@ -715,14 +759,14 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	nonce, err := encryption.Nonce()
 	if err != nil {
 		logger.Errorf("Error obtaining nonce: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	p.SetCSRFCookie(rw, req, nonce)
 	redirect, err := p.getAppRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	redirectURI := p.getOAuthRedirectURI(req)
@@ -738,34 +782,36 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 callback: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	errorString := req.Form.Get("error")
 	if errorString != "" {
 		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
-		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", errorString)
+		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
+		// Set the debug message and override the non debug message to be the same for this case
+		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
 		return
 	}
 
 	session, err := p.redeemCode(req)
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Internal Error")
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	err = p.enrichSessionState(req.Context(), session)
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Internal Error")
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	state := strings.SplitN(req.Form.Get("state"), ":", 2)
 	if len(state) != 2 {
 		logger.Error("Error while parsing OAuth2 state: invalid length")
-		p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", "Invalid State")
+		p.ErrorPage(rw, req, http.StatusInternalServerError, "State paremeter did not have expected length", "Login Failed: Invalid State after login.")
 		return
 	}
 	nonce := state[0]
@@ -773,13 +819,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	c, err := req.Cookie(p.CSRFCookieName)
 	if err != nil {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
-		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", err.Error())
+		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
 	p.ClearCSRFCookie(rw, req)
 	if c.Value != nonce {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
-		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", "CSRF Failed")
+		p.ErrorPage(rw, req, http.StatusForbidden, "CSRF token mismatch, potential attack", "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
 
@@ -797,13 +843,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)
-			p.ErrorPage(rw, http.StatusInternalServerError, "Internal Server Error", err.Error())
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
 		http.Redirect(rw, req, redirect, http.StatusFound)
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
-		p.ErrorPage(rw, http.StatusForbidden, "Permission Denied", "Invalid Account")
+		p.ErrorPage(rw, req, http.StatusForbidden, "Invalid session: unauthorized")
 	}
 }
 
@@ -824,6 +870,8 @@ func (p *OAuthProxy) redeemCode(req *http.Request) (*sessionsapi.SessionState, e
 func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
 	var err error
 	if s.Email == "" {
+		// TODO(@NickMeves): Remove once all provider are updated to implement EnrichSession
+		// nolint:staticcheck
 		s.Email, err = p.provider.GetEmailAddress(ctx, s)
 		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 			return err
@@ -885,13 +933,12 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		}
 
 	case ErrAccessDenied:
-		p.ErrorPage(rw, http.StatusUnauthorized, "Permission Denied", "Unauthorized")
+		p.ErrorPage(rw, req, http.StatusForbidden, "The session failed authorization checks")
 
 	default:
 		// unknown error
 		logger.Errorf("Unexpected internal error: %v", err)
-		p.ErrorPage(rw, http.StatusInternalServerError,
-			"Internal Error", "Internal Error")
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
 }
 
@@ -1126,7 +1173,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 // TODO (@NickMeves): This method is a placeholder to be extended but currently
 // fails the linter. Remove the nolint when functionality expands.
 //
-//nolint:S1008
+//nolint:gosimple
 func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
 	// Allow secondary group restrictions based on the `allowed_groups`
 	// querystring parameter

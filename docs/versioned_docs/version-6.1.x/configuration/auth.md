@@ -149,7 +149,7 @@ The group management in keycloak is using a tree. If you create a group named ad
 
 Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](https://docs.gitlab.com/ce/integration/oauth_provider.html). Make sure to enable at least the `openid`, `profile` and `email` scopes, and set the redirect url to your application url e.g. https://myapp.com/oauth2/callback.
 
-The following config should be set to ensure that the oauth will work properly. To get a cookie secret follow [these steps](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/configuration/configuration.md#configuration)
+The following config should be set to ensure that the oauth will work properly. To get a cookie secret follow [these steps](./overview.md#generating-a-cookie-secret)
 
 ```
     --provider="gitlab"

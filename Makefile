@@ -82,7 +82,7 @@ test: lint
 	GO111MODULE=on $(GO) test $(TESTCOVER) -v -race ./...
 
 .PHONY: release
-release: lint test
+release: validate-go-version lint test
 	BINARY=${BINARY} VERSION=${VERSION} ./dist.sh
 
 .PHONY: validate-go-version
