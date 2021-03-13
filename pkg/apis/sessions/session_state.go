@@ -35,28 +35,30 @@ type SessionState struct {
 
 func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {
 	if s.Lock == nil {
-		return fmt.Errorf("not able to lock session state, because lock is not available")
+		s.Lock = &NoOpLock{}
 	}
+	fmt.Println("Obtaining lock...")
 	return s.Lock.Obtain(ctx, expiration)
 }
 
 func (s *SessionState) RefreshLock(ctx context.Context, expiration time.Duration) error {
 	if s.Lock == nil {
-		return fmt.Errorf("not able to lock session state, because lock is not available")
+		s.Lock = &NoOpLock{}
 	}
 	return s.Lock.Refresh(ctx, expiration)
 }
 
 func (s *SessionState) ReleaseLock(ctx context.Context) error {
 	if s.Lock == nil {
-		return fmt.Errorf("not able to release session state, because lock object is not available")
+		s.Lock = &NoOpLock{}
 	}
+	fmt.Println("Releasing lock...")
 	return s.Lock.Release(ctx)
 }
 
 func (s *SessionState) PeekLock(ctx context.Context) (bool, error) {
 	if s.Lock == nil {
-		return false, fmt.Errorf("not able to peek lock, because lock object is not available")
+		s.Lock = &NoOpLock{}
 	}
 	return s.Lock.Peek(ctx)
 }
