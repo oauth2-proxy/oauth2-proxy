@@ -170,6 +170,55 @@ var _ = Describe("Util Suite", func() {
 				Expect(util.GetRequestID(req)).To(Equal(randomUUID))
 			})
 		})
+
+		Context("Request ID Header is overridden", func() {
+			const customRequestIDHeader = "X-Trace-Id"
+
+			BeforeEach(func() {
+				util.SetRequestIDHeader(customRequestIDHeader)
+				uuid.SetRand(mockRand{})
+			})
+
+			AfterEach(func() {
+				util.SetRequestIDHeader(util.XRequestID)
+				uuid.SetRand(nil)
+			})
+
+			It("returns the ID in the X-Trace-Id header when set", func() {
+				req.Header.Add("X-Trace-Id", headerUUID)
+				Expect(util.GetRequestID(req)).To(Equal(headerUUID))
+			})
+
+			It("returns a random UUID when the header is unset", func() {
+				Expect(util.GetRequestID(req)).To(Equal(randomUUID))
+			})
+
+			It("returns a random UUID when only the original header is set", func() {
+				req.Header.Add("X-Request-Id", headerUUID)
+				Expect(util.GetRequestID(req)).To(Equal(randomUUID))
+			})
+		})
+
+		Context("Request ID override is blank defaulting to X-Request-Id", func() {
+			BeforeEach(func() {
+				util.SetRequestIDHeader("")
+				uuid.SetRand(mockRand{})
+			})
+
+			AfterEach(func() {
+				util.SetRequestIDHeader(util.XRequestID)
+				uuid.SetRand(nil)
+			})
+
+			It("returns the ID in the X-Request-Id header when set", func() {
+				req.Header.Add("X-Request-Id", headerUUID)
+				Expect(util.GetRequestID(req)).To(Equal(headerUUID))
+			})
+
+			It("returns a random UUID when the header is unset", func() {
+				Expect(util.GetRequestID(req)).To(Equal(randomUUID))
+			})
+		})
 	})
 })
 

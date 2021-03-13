@@ -14,6 +14,8 @@ const (
 	XRequestID      = "X-Request-Id"
 )
 
+var requestIDHeader = XRequestID
+
 // GetRequestProto returns the request scheme or X-Forwarded-Proto if present
 // and the request is proxied.
 func GetRequestProto(req *http.Request) string {
@@ -53,9 +55,9 @@ func GetRequestID(req *http.Request) string {
 	if scope != nil {
 		return scope.RequestID
 	}
-	xReqID := req.Header.Get(XRequestID)
-	if xReqID != "" {
-		return xReqID
+	rid := req.Header.Get(requestIDHeader)
+	if rid != "" {
+		return rid
 	}
 	return uuid.New().String()
 }
@@ -68,4 +70,13 @@ func IsProxied(req *http.Request) bool {
 		return false
 	}
 	return scope.ReverseProxy
+}
+
+// SetRequestIDHeader sets the request header to fetch our Request IDs from
+func SetRequestIDHeader(header string) {
+	if header == "" {
+		requestIDHeader = XRequestID
+		return
+	}
+	requestIDHeader = header
 }
