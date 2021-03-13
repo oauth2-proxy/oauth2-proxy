@@ -15,6 +15,9 @@
         max-width: 400px;
         margin: 1.25rem auto;
       }
+      .logo-box {
+        margin: 1.5rem 3rem;
+      }
       footer a {
         text-decoration: underline;
       }
@@ -40,6 +43,12 @@
   <body class="has-background-light">
   <section class="section">
     <div class="box block sign-in-box has-text-centered">
+      {{ if .LogoData }}
+      <div class="block logo-box">
+        {{.LogoData}}
+      </div>
+      {{ end }}
+
       <form method="GET" action="{{.ProxyPrefix}}/start">
         <input type="hidden" name="rd" value="{{.Redirect}}">
           {{ if .SignInMessage }}
