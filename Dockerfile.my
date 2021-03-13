@@ -1,0 +1,10 @@
+FROM golang:1.15-alpine3.12 as main
+
+COPY . /application
+
+WORKDIR /application
+
+# Install the Go app
+RUN CGO_ENABLED=0 GOOS=linux go install -a -installsuffix cgo .
+
+ENTRYPOINT ["oauth2-proxy"]
