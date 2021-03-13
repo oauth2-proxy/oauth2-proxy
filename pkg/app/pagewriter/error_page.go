@@ -93,7 +93,7 @@ func (e *errorPageWriter) ProxyErrorHandler(rw http.ResponseWriter, req *http.Re
 	logger.Errorf("Error proxying to upstream server: %v", proxyErr)
 	e.WriteErrorPage(rw, ErrorPageOpts{
 		Status:      http.StatusBadGateway,
-		RedirectURL: "",
+		RedirectURL: "", // The user is already logged in and has hit an upstream error. Makes no sense to redirect in this case.
 		RequestID:   requestutil.GetRequestID(req),
 		AppError:    proxyErr.Error(),
 		Messages:    []interface{}{"There was a problem connecting to the upstream server."},

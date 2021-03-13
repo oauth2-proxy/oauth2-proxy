@@ -14,6 +14,8 @@ const (
 	XRequestID      = "X-Request-Id"
 )
 
+// This is altered by SetRequestIDHeader to globally change the default
+// RequestID Header.
 var requestIDHeader = XRequestID
 
 // GetRequestProto returns the request scheme or X-Forwarded-Proto if present
