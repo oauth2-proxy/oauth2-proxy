@@ -244,7 +244,8 @@ func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
 
 	expires := time.Now().Add(time.Duration(1) * time.Hour)
 	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: &expires}
-	refreshNeeded := p.IsRefreshNeeded(session)
+	refreshNeeded, err := p.RefreshSessionIfNeeded(context.Background(), session)
+	assert.Equal(t, nil, err)
 	assert.False(t, refreshNeeded)
 }
 
@@ -257,7 +258,7 @@ func TestAzureProviderRefreshWhenExpired(t *testing.T) {
 
 	expires := time.Now().Add(time.Duration(-1) * time.Hour)
 	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: &expires}
-	err := p.RefreshSession(context.Background(), session)
+	_, err := p.RefreshSessionIfNeeded(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "new_some_access_token", session.AccessToken)

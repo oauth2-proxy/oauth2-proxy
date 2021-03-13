@@ -26,10 +26,6 @@ type saveFunc func(string, []byte, time.Duration) error
 // string key and returning the stored value as []byte
 type loadFunc func(string) ([]byte, error)
 
-// releaseLockFunc performs a lock on a persistent store using a
-// string key
-type releaseLockFunc func(string) error
-
 // clearFunc performs a persistent store's clear functionality using
 // a string key for the target of the deletion.
 type clearFunc func(string) error
@@ -137,15 +133,6 @@ func (t *ticket) loadSession(loader loadFunc) (*sessions.SessionState, error) {
 	}
 
 	return sessions.DecodeSessionState(ciphertext, c, false)
-}
-
-// releaseSessionLock releases a potential locked session
-func (t *ticket) releaseSessionLock(releaseLock releaseLockFunc) error {
-	err := releaseLock(t.id)
-	if err != nil {
-		return fmt.Errorf("failed to release lock state with the ticket: %v", err)
-	}
-	return nil
 }
 
 // clearSession uses the passed clearFunc to delete a session stored with a

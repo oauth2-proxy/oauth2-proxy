@@ -65,31 +65,6 @@ func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 	})
 }
 
-// Load reads sessions.SessionState information from a session store. It will
-// use the session ticket from the http.Request's cookie.
-func (m *Manager) LoadWithLock(req *http.Request) (*sessions.SessionState, error) {
-	tckt, err := decodeTicketFromRequest(req, m.Options)
-	if err != nil {
-		return nil, err
-	}
-
-	return tckt.loadSession(func(key string) ([]byte, error) {
-		return m.Store.LoadWithLock(req.Context(), key)
-	})
-}
-
-// Release the session lock
-func (m *Manager) ReleaseLock(req *http.Request) error {
-	tckt, err := decodeTicketFromRequest(req, m.Options)
-	if err != nil {
-		return err
-	}
-
-	return tckt.releaseSessionLock(func(key string) error {
-		return m.Store.ReleaseLock(req.Context(), key)
-	})
-}
-
 // Clear clears any saved session information for a given ticket cookie.
 // Then it clears all session data for that ticket in the Store.
 func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {

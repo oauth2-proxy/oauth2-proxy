@@ -11,7 +11,10 @@ import (
 type Store interface {
 	Save(context.Context, string, []byte, time.Duration) error
 	Load(context.Context, string) ([]byte, error)
-	LoadWithLock(context.Context, string) ([]byte, error)
-	ReleaseLock(context.Context, string) error
 	Clear(context.Context, string) error
+}
+
+type Lock interface {
+	Obtain() error
+	Release() error
 }

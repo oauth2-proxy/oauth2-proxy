@@ -66,17 +66,6 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 	return session, nil
 }
 
-// Load reads sessions.SessionState information from Cookies within the
-// HTTP request object
-func (s *SessionStore) LoadWithLock(req *http.Request) (*sessions.SessionState, error) {
-	return s.Load(req)
-}
-
-// Release the session lock
-func (s *SessionStore) ReleaseLock(req *http.Request) error {
-	return nil
-}
-
 // Clear clears any saved session information by writing a cookie to
 // clear the session
 func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {

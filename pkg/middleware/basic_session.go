@@ -11,18 +11,18 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
-func NewBasicAuthSessionLoader(validator basic.Validator, sessionGroups []string) alice.Constructor {
+func NewBasicAuthSessionLoader(validator basic.Validator) alice.Constructor {
 	return func(next http.Handler) http.Handler {
-		return loadBasicAuthSession(validator, sessionGroups, next)
+		return loadBasicAuthSession(validator, next)
 	}
 }
 
-// loadBasicAuthSession attempts to load a session from basic auth credentials
+// loadBasicAuthSession attmepts to load a session from basic auth credentials
 // stored in an Authorization header within the request.
 // If no authorization header is found, or the header is invalid, no session
 // will be loaded and the request will be passed to the next handler.
 // If a session was loaded by a previous handler, it will not be replaced.
-func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, next http.Handler) http.Handler {
+func loadBasicAuthSession(validator basic.Validator, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		scope := middlewareapi.GetRequestScope(req)
 		// If scope is nil, this will panic.
@@ -33,7 +33,7 @@ func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, nex
 			return
 		}
 
-		session, err := getBasicSession(validator, sessionGroups, req)
+		session, err := getBasicSession(validator, req)
 		if err != nil {
 			logger.Errorf("Error retrieving session from token in Authorization header: %v", err)
 		}
@@ -47,7 +47,7 @@ func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, nex
 // getBasicSession attempts to load a basic session from the request.
 // If the credentials in the request exist within the htpasswdMap,
 // a new session will be created.
-func getBasicSession(validator basic.Validator, sessionGroups []string, req *http.Request) (*sessionsapi.SessionState, error) {
+func getBasicSession(validator basic.Validator, req *http.Request) (*sessionsapi.SessionState, error) {
 	auth := req.Header.Get("Authorization")
 	if auth == "" {
 		// No auth header provided, so don't attempt to load a session
@@ -61,8 +61,7 @@ func getBasicSession(validator basic.Validator, sessionGroups []string, req *htt
 
 	if validator.Validate(user, password) {
 		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via basic auth and HTpasswd File")
-
-		return &sessionsapi.SessionState{User: user, Groups: sessionGroups}, nil
+		return &sessionsapi.SessionState{User: user}, nil
 	}
 
 	logger.PrintAuthf(user, req, logger.AuthFailure, "Invalid authentication via basic auth: not in Htpasswd File")
