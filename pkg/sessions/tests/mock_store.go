@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"time"
 )
 
@@ -48,17 +49,6 @@ func (s *MockStore) Load(_ context.Context, key string) ([]byte, error) {
 	return entry.data, nil
 }
 
-// Load gets data from the memory cache via a key and locks it
-func (s *MockStore) LoadWithLock(_ context.Context, key string) ([]byte, error) {
-	entry, ok := s.cache[key]
-	if !ok || entry.expiration <= s.elapsed {
-		delete(s.cache, key)
-		return nil, fmt.Errorf("key not found: %s", key)
-	}
-	s.locksCache[key] = "lock"
-	return entry.data, nil
-}
-
 // Releases a previously set lock
 func (s *MockStore) ReleaseLock(_ context.Context, key string) error {
 	delete(s.locksCache, key)
@@ -69,6 +59,10 @@ func (s *MockStore) ReleaseLock(_ context.Context, key string) error {
 func (s *MockStore) Clear(_ context.Context, key string) error {
 	delete(s.cache, key)
 	return nil
+}
+
+func (s *MockStore) Lock(key string) sessions.Lock {
+	return &sessions.NoOpLock{}
 }
 
 // FastForward simulates the flow of time to test expirations

@@ -60,9 +60,13 @@ func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, err
 	}
 
-	return tckt.loadSession(func(key string) ([]byte, error) {
-		return m.Store.Load(req.Context(), key)
-	})
+	return tckt.loadSession(
+		func(key string) ([]byte, error) {
+			return m.Store.Load(req.Context(), key)
+		},
+		func(key string) sessions.Lock {
+			return m.Store.Lock(key)
+		})
 }
 
 // Clear clears any saved session information for a given ticket cookie.

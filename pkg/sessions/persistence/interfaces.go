@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"time"
 )
 
@@ -12,9 +13,5 @@ type Store interface {
 	Save(context.Context, string, []byte, time.Duration) error
 	Load(context.Context, string) ([]byte, error)
 	Clear(context.Context, string) error
-}
-
-type Lock interface {
-	Obtain() error
-	Release() error
+	Lock(key string) sessions.Lock
 }

@@ -35,7 +35,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 }
 
 // Save takes a sessions.SessionState and stores the information from it
-// to redies, and adds a new persistence cookie on the HTTP response writer
+// to redis, and adds a new persistence cookie on the HTTP response writer
 func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
 	err := store.Client.Set(ctx, key, value, exp)
 	if err != nil {
@@ -54,30 +54,6 @@ func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error)
 	return value, nil
 }
 
-// Load reads sessions.SessionState information from a persistence
-// cookie within the HTTP request object and locks it on redis
-func (store *SessionStore) LoadWithLock(ctx context.Context, key string) ([]byte, error) {
-	value, err := store.Client.Get(ctx, key)
-	if err != nil {
-		return nil, fmt.Errorf("error loading redis session: %v", err)
-	}
-
-	err = store.Client.Lock(ctx, key, 1*time.Second)
-	if err != nil {
-		return nil, sessions.ErrNotLockable
-	}
-	return value, nil
-}
-
-// ReleaseLock sessions.SessionState information from a persistence
-func (store *SessionStore) ReleaseLock(ctx context.Context, key string) error {
-	err := store.Client.Unlock(ctx, key)
-	if err != nil {
-		return fmt.Errorf("error releasing redis locks: %v", err)
-	}
-	return nil
-}
-
 // Clear clears any saved session information for a given persistence cookie
 // from redis, and then clears the session
 func (store *SessionStore) Clear(ctx context.Context, key string) error {
@@ -86,6 +62,11 @@ func (store *SessionStore) Clear(ctx context.Context, key string) error {
 		return fmt.Errorf("error clearing the session from redis: %v", err)
 	}
 	return nil
+}
+
+// Creates a lock object for sessions.SessionState
+func (store *SessionStore) Lock(key string) sessions.Lock {
+	return store.Client.Lock(key)
 }
 
 // NewRedisClient makes a redis.Client (either standalone, sentinel aware, or
@@ -175,7 +156,7 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 }
 
 // parseRedisURLs parses a list of redis urls and returns a list
-// of addresses in the form of host:port that can be used to connnect to Redis
+// of addresses in the form of host:port that can be used to connect to Redis
 func parseRedisURLs(urls []string) ([]string, error) {
 	addrs := []string{}
 	for _, u := range urls {

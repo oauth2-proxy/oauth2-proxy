@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"reflect"
 	"time"
 	"unicode/utf8"
@@ -28,6 +29,36 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+
+	Lock Lock `msgpack:"-"`
+}
+
+func (s *SessionState) ObtainLock(req *http.Request, expiration time.Duration) error {
+	if s.Lock == nil {
+		return fmt.Errorf("not able to lock session state, because lock is not available")
+	}
+	return s.Lock.Obtain(req, expiration)
+}
+
+func (s *SessionState) RefreshLock(req *http.Request, expiration time.Duration) error {
+	if s.Lock == nil {
+		return fmt.Errorf("not able to lock session state, because lock is not available")
+	}
+	return s.Lock.Refresh(req, expiration)
+}
+
+func (s *SessionState) ReleaseLock(req *http.Request) error {
+	if s.Lock == nil {
+		return fmt.Errorf("not able to release session state, because lock object is not available")
+	}
+	return s.Lock.Release(req)
+}
+
+func (s *SessionState) PeekLock(req *http.Request) (bool, error) {
+	if s.Lock == nil {
+		return false, fmt.Errorf("not able to peek lock, because lock object is not available")
+	}
+	return s.Lock.Peek(req)
 }
 
 // IsExpired checks whether the session has expired
