@@ -2,11 +2,11 @@ package sessions
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"reflect"
 	"time"
 	"unicode/utf8"
@@ -33,32 +33,32 @@ type SessionState struct {
 	Lock Lock `msgpack:"-"`
 }
 
-func (s *SessionState) ObtainLock(req *http.Request, expiration time.Duration) error {
+func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {
 	if s.Lock == nil {
 		return fmt.Errorf("not able to lock session state, because lock is not available")
 	}
-	return s.Lock.Obtain(req, expiration)
+	return s.Lock.Obtain(ctx, expiration)
 }
 
-func (s *SessionState) RefreshLock(req *http.Request, expiration time.Duration) error {
+func (s *SessionState) RefreshLock(ctx context.Context, expiration time.Duration) error {
 	if s.Lock == nil {
 		return fmt.Errorf("not able to lock session state, because lock is not available")
 	}
-	return s.Lock.Refresh(req, expiration)
+	return s.Lock.Refresh(ctx, expiration)
 }
 
-func (s *SessionState) ReleaseLock(req *http.Request) error {
+func (s *SessionState) ReleaseLock(ctx context.Context) error {
 	if s.Lock == nil {
 		return fmt.Errorf("not able to release session state, because lock object is not available")
 	}
-	return s.Lock.Release(req)
+	return s.Lock.Release(ctx)
 }
 
-func (s *SessionState) PeekLock(req *http.Request) (bool, error) {
+func (s *SessionState) PeekLock(ctx context.Context) (bool, error) {
 	if s.Lock == nil {
 		return false, fmt.Errorf("not able to peek lock, because lock object is not available")
 	}
-	return s.Lock.Peek(req)
+	return s.Lock.Peek(ctx)
 }
 
 // IsExpired checks whether the session has expired

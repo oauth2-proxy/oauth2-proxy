@@ -1,6 +1,7 @@
 package sessions
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
@@ -13,8 +14,8 @@ type SessionStore interface {
 }
 
 type Lock interface {
-	Obtain(req *http.Request, expiration time.Duration) error
-	Peek(req *http.Request) (bool, error)
-	Refresh(req *http.Request, expiration time.Duration) error
-	Release(req *http.Request) error
+	Obtain(ctx context.Context, expiration time.Duration) error
+	Peek(ctx context.Context) (bool, error)
+	Refresh(ctx context.Context, expiration time.Duration) error
+	Release(ctx context.Context) error
 }

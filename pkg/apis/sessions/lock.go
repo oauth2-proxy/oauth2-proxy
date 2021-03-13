@@ -1,24 +1,24 @@
 package sessions
 
 import (
-	"net/http"
+	"context"
 	"time"
 )
 
 type NoOpLock struct{}
 
-func (l *NoOpLock) Obtain(req *http.Request, expiration time.Duration) error {
+func (l *NoOpLock) Obtain(ctx context.Context, expiration time.Duration) error {
 	return nil
 }
 
-func (l *NoOpLock) Peek(req *http.Request) (bool, error) {
+func (l *NoOpLock) Peek(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (l *NoOpLock) Refresh(req *http.Request, expiration time.Duration) error {
+func (l *NoOpLock) Refresh(ctx context.Context, expiration time.Duration) error {
 	return nil
 }
 
-func (l *NoOpLock) Release(req *http.Request) error {
+func (l *NoOpLock) Release(ctx context.Context) error {
 	return nil
 }
