@@ -9,7 +9,7 @@ import (
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
-	// DEPRECATED: Migrate to EnrichSession
+	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error

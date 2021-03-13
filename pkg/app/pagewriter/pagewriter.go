@@ -49,6 +49,10 @@ type Opts struct {
 
 	// SignInMessage is the messge displayed above the login button.
 	SignInMessage string
+
+	// CustomLogo is the path to a logo to be displayed on the sign in page.
+	// The logo can be either PNG, JPG/JPEG or SVG.
+	CustomLogo string
 }
 
 // NewWriter constructs a Writer from the options given to allow
@@ -57,6 +61,11 @@ func NewWriter(opts Opts) (Writer, error) {
 	templates, err := loadTemplates(opts.TemplatesPath)
 	if err != nil {
 		return nil, fmt.Errorf("error loading templates: %v", err)
+	}
+
+	logoData, err := loadCustomLogo(opts.CustomLogo)
+	if err != nil {
+		return nil, fmt.Errorf("error loading logo: %v", err)
 	}
 
 	errorPage := &errorPageWriter{
@@ -76,6 +85,7 @@ func NewWriter(opts Opts) (Writer, error) {
 		footer:           opts.Footer,
 		version:          opts.Version,
 		displayLoginForm: opts.DisplayLoginForm,
+		logoData:         logoData,
 	}
 
 	return &pageWriter{

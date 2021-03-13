@@ -41,10 +41,10 @@ func Validate(o *options.Options) error {
 	} else if len(o.ProviderCAFiles) > 0 {
 		pool, err := util.GetCertPool(o.ProviderCAFiles)
 		if err == nil {
-			transport := &http.Transport{
-				TLSClientConfig: &tls.Config{
-					RootCAs: pool,
-				},
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{
+				RootCAs:    pool,
+				MinVersion: tls.VersionTLS12,
 			}
 
 			http.DefaultClient = &http.Client{Transport: transport}
