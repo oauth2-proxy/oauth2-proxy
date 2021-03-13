@@ -22,9 +22,6 @@ type Options struct {
 	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
 	PingPath           string   `flag:"ping-path" cfg:"ping_path"`
 	PingUserAgent      string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
-	MetricsAddress     string   `flag:"metrics-address" cfg:"metrics_address"`
-	HTTPAddress        string   `flag:"http-address" cfg:"http_address"`
-	HTTPSAddress       string   `flag:"https-address" cfg:"https_address"`
 	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
 	RealClientIPHeader string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
 	TrustedIPs         []string `flag:"trusted-ip" cfg:"trusted_ips"`
@@ -33,8 +30,6 @@ type Options struct {
 	ClientID           string   `flag:"client-id" cfg:"client_id"`
 	ClientSecret       string   `flag:"client-secret" cfg:"client_secret"`
 	ClientSecretFile   string   `flag:"client-secret-file" cfg:"client_secret_file"`
-	TLSCertFile        string   `flag:"tls-cert-file" cfg:"tls_cert_file"`
-	TLSKeyFile         string   `flag:"tls-key-file" cfg:"tls_key_file"`
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
@@ -67,6 +62,9 @@ type Options struct {
 
 	InjectRequestHeaders  []Header `cfg:",internal"`
 	InjectResponseHeaders []Header `cfg:",internal"`
+
+	Server        Server `cfg:",internal"`
+	MetricsServer Server `cfg:",internal"`
 
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
@@ -136,10 +134,7 @@ func NewOptions() *Options {
 	return &Options{
 		ProxyPrefix:                      "/oauth2",
 		ProviderType:                     "google",
-		MetricsAddress:                   "",
 		PingPath:                         "/ping",
-		HTTPAddress:                      "127.0.0.1:4180",
-		HTTPSAddress:                     ":443",
 		RealClientIPHeader:               "X-Real-IP",
 		ForceHTTPS:                       false,
 		Cookie:                           cookieDefaults(),
@@ -162,14 +157,10 @@ func NewOptions() *Options {
 func NewFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ExitOnError)
 
-	flagSet.String("http-address", "127.0.0.1:4180", "[http://]<addr>:<port> or unix://<path> to listen on for HTTP clients")
-	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
 	flagSet.Bool("reverse-proxy", false, "are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted")
 	flagSet.String("real-client-ip-header", "X-Real-IP", "Header used to determine the real IP of the client (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP)")
 	flagSet.StringSlice("trusted-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: trusting by IP has inherent security flaws, read the configuration documentation for more information.")
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
-	flagSet.String("tls-cert-file", "", "path to certificate file")
-	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
 	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods")
@@ -204,7 +195,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
-	flagSet.String("metrics-address", "", "the address /metrics will be served on (e.g. \":9100\")")
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
 	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")

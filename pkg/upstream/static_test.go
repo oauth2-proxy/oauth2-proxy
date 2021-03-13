@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -40,10 +41,14 @@ var _ = Describe("Static Response Suite", func() {
 			handler := newStaticResponseHandler(id, code)
 
 			req := httptest.NewRequest("", in.requestPath, nil)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
+
 			rw := httptest.NewRecorder()
 			handler.ServeHTTP(rw, req)
 
-			Expect(rw.Header().Get("GAP-Upstream-Address")).To(Equal(id))
+			scope := middlewareapi.GetRequestScope(req)
+			Expect(scope.Upstream).To(Equal(id))
+
 			Expect(rw.Code).To(Equal(in.expectedCode))
 			Expect(rw.Body.String()).To(Equal(in.expectedBody))
 		},

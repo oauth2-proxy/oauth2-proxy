@@ -117,6 +117,8 @@ They may change between releases without notice.
 | `upstreams` | _[Upstreams](#upstreams)_ | Upstreams is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list. |
 | `injectRequestHeaders` | _[[]Header](#header)_ | InjectRequestHeaders is used to configure headers that should be added<br/>to requests to upstream servers.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
+| `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
+| `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 
 ### ClaimSource
 
@@ -172,7 +174,7 @@ make up the header value
 
 ### SecretSource
 
-(**Appears on:** [ClaimSource](#claimsource), [HeaderValue](#headervalue))
+(**Appears on:** [ClaimSource](#claimsource), [HeaderValue](#headervalue), [TLS](#tls))
 
 SecretSource references an individual secret value.
 Only one source within the struct should be defined at any time.
@@ -182,6 +184,29 @@ Only one source within the struct should be defined at any time.
 | `value` | _[]byte_ | Value expects a base64 encoded string value. |
 | `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
 | `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
+
+### Server
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+Server represents the configuration for an HTTP(S) server
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `BindAddress` | _string_ | BindAddress is the the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
+| `SecureBindAddress` | _string_ | SecureBindAddress is the the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
+| `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic. |
+
+### TLS
+
+(**Appears on:** [Server](#server))
+
+TLS contains the information for loading a TLS certifcate and key.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Key` | _[SecretSource](#secretsource)_ | Key is the the TLS key data to use.<br/>Typically this will come from a file. |
+| `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
 
 ### Upstream
 

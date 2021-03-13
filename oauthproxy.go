@@ -8,8 +8,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/justinas/alice"
@@ -21,6 +24,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
@@ -102,6 +106,7 @@ type OAuthProxy struct {
 	headersChain alice.Chain
 	preAuthChain alice.Chain
 	pageWriter   pagewriter.Writer
+	server       proxyhttp.Server
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -184,7 +189,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
 	}
 
-	return &OAuthProxy{
+	p := &OAuthProxy{
 		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
 		CookieSeed:     opts.Cookie.Secret,
@@ -223,7 +228,60 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		headersChain:       headersChain,
 		preAuthChain:       preAuthChain,
 		pageWriter:         pageWriter,
-	}, nil
+	}
+
+	if err := p.setupServer(opts); err != nil {
+		return nil, fmt.Errorf("error setting up server: %v", err)
+	}
+
+	return p, nil
+}
+
+func (p *OAuthProxy) Start() error {
+	if p.server == nil {
+		// We have to call setupServer before Start is called.
+		// If this doesn't happen it's a programming error.
+		panic("server has not been initialised")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Observe signals in background goroutine.
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		cancel() // cancel the context
+	}()
+
+	return p.server.Start(ctx)
+}
+
+func (p *OAuthProxy) setupServer(opts *options.Options) error {
+	serverOpts := proxyhttp.Opts{
+		Handler:           p,
+		BindAddress:       opts.Server.BindAddress,
+		SecureBindAddress: opts.Server.SecureBindAddress,
+		TLS:               opts.Server.TLS,
+	}
+
+	appServer, err := proxyhttp.NewServer(serverOpts)
+	if err != nil {
+		return fmt.Errorf("could not build app server: %v", err)
+	}
+
+	metricsServer, err := proxyhttp.NewServer(proxyhttp.Opts{
+		Handler:           middleware.DefaultMetricsHandler,
+		BindAddress:       opts.MetricsServer.BindAddress,
+		SecureBindAddress: opts.MetricsServer.BindAddress,
+		TLS:               opts.MetricsServer.TLS,
+	})
+	if err != nil {
+		return fmt.Errorf("could not build metrics server: %v", err)
+	}
+
+	p.server = proxyhttp.NewServerGroup(appServer, metricsServer)
+	return nil
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -233,9 +291,9 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	chain := alice.New(middleware.NewScope(opts.ReverseProxy))
 
 	if opts.ForceHTTPS {
-		_, httpsPort, err := net.SplitHostPort(opts.HTTPSAddress)
+		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
 		if err != nil {
-			return alice.Chain{}, fmt.Errorf("invalid HTTPS address %q: %v", opts.HTTPAddress, err)
+			return alice.Chain{}, fmt.Errorf("invalid HTTPS address %q: %v", opts.Server.SecureBindAddress, err)
 		}
 		chain = chain.Append(middleware.NewRedirectToHTTPS(httpsPort))
 	}
@@ -250,9 +308,15 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	// To silence logging of health checks, register the health check handler before
 	// the logging handler
 	if opts.Logging.SilencePing {
-		chain = chain.Append(middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents), LoggingHandler)
+		chain = chain.Append(
+			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+			middleware.NewRequestLogger(),
+		)
 	} else {
-		chain = chain.Append(LoggingHandler, middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents))
+		chain = chain.Append(
+			middleware.NewRequestLogger(),
+			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+		)
 	}
 
 	chain = chain.Append(middleware.NewRequestMetricsWithDefaultRegistry())
