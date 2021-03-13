@@ -23,6 +23,9 @@ func NewLock(lockClient *redislock.Client, key string) sessions.Lock {
 
 func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
 	lock, err := l.locker.Obtain(ctx, fmt.Sprintf("lock.%s", l.key), expiration, nil)
+	if err == redislock.ErrNotObtained {
+		return sessions.ErrLockNotObtained
+	}
 	if err != nil {
 		return err
 	}
