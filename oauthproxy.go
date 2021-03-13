@@ -577,13 +577,7 @@ func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 
 // RobotsTxt disallows scraping pages from the OAuthProxy
 func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter, req *http.Request) {
-	_, err := fmt.Fprintf(rw, "User-agent: *\nDisallow: /")
-	if err != nil {
-		logger.Printf("Error writing robots.txt: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
-	rw.WriteHeader(http.StatusOK)
+	p.pageWriter.WriteRobotsTxt(rw, req)
 }
 
 // ErrorPage writes an error response
