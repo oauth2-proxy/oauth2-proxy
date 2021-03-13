@@ -37,7 +37,6 @@ func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration)
 	if s.Lock == nil {
 		s.Lock = &NoOpLock{}
 	}
-	fmt.Println("Obtaining lock...")
 	return s.Lock.Obtain(ctx, expiration)
 }
 
@@ -52,7 +51,6 @@ func (s *SessionState) ReleaseLock(ctx context.Context) error {
 	if s.Lock == nil {
 		s.Lock = &NoOpLock{}
 	}
-	fmt.Println("Releasing lock...")
 	return s.Lock.Release(ctx)
 }
 
