@@ -18,7 +18,7 @@ module.exports = {
       type: 'category',
       label: 'Features',
       collapsed: false,
-      items: ['features/endpoints', 'features/request_signatures'],
+      items: ['features/endpoints'],
     },
     {
       type: 'category',
