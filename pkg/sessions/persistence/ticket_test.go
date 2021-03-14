@@ -103,7 +103,10 @@ var _ = Describe("Session Ticket Tests", func() {
 			c, err := t.makeCipher()
 			Expect(err).ToNot(HaveOccurred())
 
-			ss := &sessions.SessionState{User: "foobar"}
+			ss := &sessions.SessionState{
+				User: "foobar",
+				Lock: &sessions.NoOpLock{},
+			}
 			loadedSession, err := t.loadSession(
 				func(k string) ([]byte, error) {
 					return ss.EncodeSessionState(c, false)

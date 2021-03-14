@@ -414,6 +414,7 @@ func LoadSessionTests(in *testInput) {
 		s := *in.session
 		s.CreatedAt = nil
 		s.ExpiresOn = nil
+		s.Lock = &sessionsapi.NoOpLock{}
 		Expect(l).To(Equal(s))
 
 		// Compare time.Time separately
