@@ -5,7 +5,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"time"
 
-	"github.com/bsm/redislock"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -42,7 +41,7 @@ func (c *client) Del(ctx context.Context, key string) error {
 }
 
 func (c *client) Lock(key string) sessions.Lock {
-	return NewLock(redislock.New(c), key)
+	return NewLock(c.Client, key)
 }
 
 var _ Client = (*clusterClient)(nil)
@@ -70,5 +69,5 @@ func (c *clusterClient) Del(ctx context.Context, key string) error {
 }
 
 func (c *clusterClient) Lock(key string) sessions.Lock {
-	return NewLock(redislock.New(c), key)
+	return NewLock(c.ClusterClient, key)
 }

@@ -4,19 +4,22 @@ import (
 	"context"
 	"fmt"
 	"github.com/bsm/redislock"
+	"github.com/go-redis/redis/v8"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"time"
 )
 
 type Lock struct {
+	client redis.Cmdable
 	locker *redislock.Client
 	lock   *redislock.Lock
 	key    string
 }
 
-func NewLock(lockClient *redislock.Client, key string) sessions.Lock {
+func NewLock(client redis.Cmdable, key string) sessions.Lock {
 	return &Lock{
-		locker: lockClient,
+		client: client,
+		locker: redislock.New(client),
 		key:    key,
 	}
 }
@@ -41,7 +44,13 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 }
 
 func (l *Lock) Peek(ctx context.Context) (bool, error) {
-	// we need to figure out how to do this
+	v, err := l.client.Get(ctx, l.key).Bytes()
+	if err != nil {
+		return false, err
+	}
+	if v != nil {
+		return true, nil
+	}
 	return false, nil
 }
 
