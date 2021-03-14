@@ -3,10 +3,10 @@ package redis
 import (
 	"context"
 	"fmt"
-	"github.com/bsm/redislock"
-	"github.com/go-redis/redis/v8"
 	"time"
 
+	"github.com/bsm/redislock"
+	"github.com/go-redis/redis/v8"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
