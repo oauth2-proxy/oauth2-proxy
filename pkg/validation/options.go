@@ -2,7 +2,6 @@ package validation
 
 import (
 	"context"
-	"crypto"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -30,8 +29,8 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
 	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
-	msgs = parseSignatureKey(o, msgs)
 	msgs = configureLogger(o.Logging, msgs)
+	msgs = parseSignatureKey(o, msgs)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -355,6 +354,8 @@ func parseSignatureKey(o *options.Options, msgs []string) []string {
 		return msgs
 	}
 
+	logger.Print("WARNING: `--signature-key` is deprecated. It will be removed in a future release")
+
 	components := strings.Split(o.SignatureKey, ":")
 	if len(components) != 2 {
 		return append(msgs, "invalid signature hash:key spec: "+
@@ -362,11 +363,9 @@ func parseSignatureKey(o *options.Options, msgs []string) []string {
 	}
 
 	algorithm, secretKey := components[0], components[1]
-	var hash crypto.Hash
-	var err error
-	if hash, err = hmacauth.DigestNameToCryptoHash(algorithm); err != nil {
-		return append(msgs, "unsupported signature hash algorithm: "+
-			o.SignatureKey)
+	hash, err := hmacauth.DigestNameToCryptoHash(algorithm)
+	if err != nil {
+		return append(msgs, "unsupported signature hash algorithm: "+o.SignatureKey)
 	}
 	o.SetSignatureData(&options.SignatureData{Hash: hash, Key: secretKey})
 	return msgs
