@@ -296,7 +296,7 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 	s.User = userInfo.Username
 	s.Email = userInfo.Email
 
-	p.addGroupsToSession(ctx, s)
+	p.addGroupsToSession(ctx, userInfo, s)
 
 	p.addProjectsToSession(ctx, s)
 
@@ -305,11 +305,24 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 }
 
 // addGroupsToSession projects into session.Groups
-func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.SessionState) {
-	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
-	for _, group := range p.Groups {
-		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
+func (p *GitLabProvider) addGroupsToSession(ctx context.Context, userInfo *gitlabUserInfo, s *sessions.SessionState) {
+	if len(p.Groups) == 0 {
+		return
 	}
+
+	// Collect user group memberships
+	membershipSet := make(map[string]bool)
+	for _, group := range userInfo.Groups {
+		membershipSet[group] = true
+	}
+	// Find a valid group that they are a member of
+	for _, validGroup := range p.Groups {
+		if _, ok := membershipSet[validGroup]; ok {
+			s.Groups = append(s.Groups, fmt.Sprintf("group:%s", validGroup))
+		}
+	}
+
+	logger.Errorf("user is not a member of '%s'", p.Groups)
 }
 
 // addProjectsToSession adds projects matching user access requirements into the session state groups list
