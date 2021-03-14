@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"github.com/bsm/redislock"
 	"github.com/go-redis/redis/v8"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 var LockPrefix = "lock"
