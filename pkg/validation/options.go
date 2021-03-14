@@ -30,6 +30,8 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
 	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
+	msgs = parseSignatureKey(o, msgs)
+	msgs = configureLogger(o.Logging, msgs)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -175,6 +177,9 @@ func Validate(o *options.Options) error {
 	var redirectURL *url.URL
 	redirectURL, msgs = parseURL(o.RawRedirectURL, "redirect", msgs)
 	o.SetRedirectURL(redirectURL)
+	if o.RawRedirectURL == "" && !o.Cookie.Secure && !o.ReverseProxy {
+		logger.Print("WARNING: no explicit redirect URL: redirects will default to insecure HTTP")
+	}
 
 	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
 	msgs = parseProviderInfo(o, msgs)
@@ -190,9 +195,6 @@ func Validate(o *options.Options) error {
 			msgs = append(msgs, "missing setting: google-service-account-json")
 		}
 	}
-
-	msgs = parseSignatureKey(o, msgs)
-	msgs = configureLogger(o.Logging, msgs)
 
 	if o.ReverseProxy {
 		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
