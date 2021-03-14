@@ -411,6 +411,7 @@ func LoadSessionTests(in *testInput) {
 		l := *loadedSession
 		l.CreatedAt = nil
 		l.ExpiresOn = nil
+		l.Lock = &sessionsapi.NoOpLock{}
 		s := *in.session
 		s.CreatedAt = nil
 		s.ExpiresOn = nil
