@@ -47,14 +47,14 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 }
 
 func (l *Lock) Peek(ctx context.Context) (bool, error) {
-	v, err := l.client.Get(ctx, l.lockKey()).Bytes()
+	v, err := l.client.Exists(ctx, l.lockKey()).Result()
 	if err != nil {
 		return false, err
 	}
-	if v != nil {
-		return true, nil
+	if v == 0 {
+		return false, nil
 	}
-	return false, nil
+	return true, nil
 }
 
 func (l *Lock) Release(ctx context.Context) error {
