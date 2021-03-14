@@ -2,6 +2,7 @@ package sessions
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -12,6 +13,8 @@ type SessionStore interface {
 	Load(req *http.Request) (*SessionState, error)
 	Clear(rw http.ResponseWriter, req *http.Request) error
 }
+
+var ErrLockNotObtained = fmt.Errorf("lock: not obtained")
 
 type Lock interface {
 	Obtain(ctx context.Context, expiration time.Duration) error
