@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var LockPrefix = "lock"
+
 type Lock struct {
 	client redis.Cmdable
 	locker *redislock.Client
@@ -25,7 +27,7 @@ func NewLock(client redis.Cmdable, key string) sessions.Lock {
 }
 
 func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
-	lock, err := l.locker.Obtain(ctx, fmt.Sprintf("lock.%s", l.key), expiration, nil)
+	lock, err := l.locker.Obtain(ctx, l.lockKey(), expiration, nil)
 	if err == redislock.ErrNotObtained {
 		return sessions.ErrLockNotObtained
 	}
@@ -44,7 +46,7 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 }
 
 func (l *Lock) Peek(ctx context.Context) (bool, error) {
-	v, err := l.client.Get(ctx, l.key).Bytes()
+	v, err := l.client.Get(ctx, l.lockKey()).Bytes()
 	if err != nil {
 		return false, err
 	}
@@ -59,4 +61,8 @@ func (l *Lock) Release(ctx context.Context) error {
 		return fmt.Errorf("tried to release not existing lock")
 	}
 	return l.lock.Release(ctx)
+}
+
+func (l *Lock) lockKey() string {
+	return fmt.Sprintf("%s.%s", LockPrefix, l.key)
 }
