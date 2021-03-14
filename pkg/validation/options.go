@@ -247,6 +247,10 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		if len(o.Providers[0].KeycloakConfig.Groups) > 0 {
 			p.SetAllowedGroups(o.Providers[0].KeycloakConfig.Groups)
 		}
+	case *providers.KeycloakOIDCProvider:
+		if p.Verifier == nil {
+			msgs = append(msgs, "keycloak-oidc provider requires an oidc issuer URL")
+		}
 	case *providers.GoogleProvider:
 		if o.Providers[0].GoogleConfig.ServiceAccountJSON != "" {
 			file, err := os.Open(o.Providers[0].GoogleConfig.ServiceAccountJSON)
