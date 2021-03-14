@@ -13,7 +13,7 @@ func NewScope(reverseProxy bool) alice.Constructor {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			scope := &middlewareapi.RequestScope{
 				ReverseProxy: reverseProxy,
-				RequestID:    requestutil.GetRequestID(req),
+				RequestID:    requestutil.GenRequestID(req),
 			}
 			req = middlewareapi.AddRequestScope(req, scope)
 			next.ServeHTTP(rw, req)

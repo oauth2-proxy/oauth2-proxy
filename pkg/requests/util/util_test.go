@@ -151,8 +151,10 @@ var _ = Describe("Util Suite", func() {
 				Expect(util.GetRequestID(req)).To(Equal(testScopeUUID))
 			})
 		})
+	})
 
-		Context("Scope is not set", func() {
+	Context("GenRequestID", func() {
+		Context("Standard case", func() {
 			BeforeEach(func() {
 				uuid.SetRand(mockRand{})
 			})
@@ -163,11 +165,11 @@ var _ = Describe("Util Suite", func() {
 
 			It("returns the ID in the X-Request-Id header when set", func() {
 				req.Header.Add("X-Request-Id", testHeaderUUID)
-				Expect(util.GetRequestID(req)).To(Equal(testHeaderUUID))
+				Expect(util.GenRequestID(req)).To(Equal(testHeaderUUID))
 			})
 
 			It("returns a random UUID when the header is unset", func() {
-				Expect(util.GetRequestID(req)).To(Equal(testRandomUUID))
+				Expect(util.GenRequestID(req)).To(Equal(testRandomUUID))
 			})
 		})
 
@@ -186,16 +188,16 @@ var _ = Describe("Util Suite", func() {
 
 			It("returns the ID in the X-Trace-Id header when set", func() {
 				req.Header.Add("X-Trace-Id", testHeaderUUID)
-				Expect(util.GetRequestID(req)).To(Equal(testHeaderUUID))
+				Expect(util.GenRequestID(req)).To(Equal(testHeaderUUID))
 			})
 
 			It("returns a random UUID when the header is unset", func() {
-				Expect(util.GetRequestID(req)).To(Equal(testRandomUUID))
+				Expect(util.GenRequestID(req)).To(Equal(testRandomUUID))
 			})
 
 			It("returns a random UUID when only the original header is set", func() {
 				req.Header.Add("X-Request-Id", testHeaderUUID)
-				Expect(util.GetRequestID(req)).To(Equal(testRandomUUID))
+				Expect(util.GenRequestID(req)).To(Equal(testRandomUUID))
 			})
 		})
 
@@ -212,11 +214,11 @@ var _ = Describe("Util Suite", func() {
 
 			It("returns the ID in the X-Request-Id header when set", func() {
 				req.Header.Add("X-Request-Id", testHeaderUUID)
-				Expect(util.GetRequestID(req)).To(Equal(testHeaderUUID))
+				Expect(util.GenRequestID(req)).To(Equal(testHeaderUUID))
 			})
 
 			It("returns a random UUID when the header is unset", func() {
-				Expect(util.GetRequestID(req)).To(Equal(testRandomUUID))
+				Expect(util.GenRequestID(req)).To(Equal(testRandomUUID))
 			})
 		})
 	})

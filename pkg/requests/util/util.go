@@ -50,18 +50,12 @@ func GetRequestURI(req *http.Request) string {
 }
 
 // GetRequestID gets an existing RequestID set on the request Scope.
-// If the scope isn't set yet, it pulls it from the `X-Request-Id` header
-// or makes a new random UUID if no header is set.
 func GetRequestID(req *http.Request) string {
 	scope := middlewareapi.GetRequestScope(req)
 	if scope != nil {
 		return scope.RequestID
 	}
-	rid := req.Header.Get(requestIDHeader)
-	if rid != "" {
-		return rid
-	}
-	return uuid.New().String()
+	return GenRequestID(req)
 }
 
 // IsProxied determines if a request was from a proxy based on the RequestScope
@@ -72,6 +66,18 @@ func IsProxied(req *http.Request) bool {
 		return false
 	}
 	return scope.ReverseProxy
+}
+
+// GenRequestID pulls the `X-Request-Id` header or makes a new random UUID
+// if no header is set.
+// This is only used for setting `middlewareapi.RequestScope.RequestID`.
+// All other consumers should call `GetRequestID`.
+func GenRequestID(req *http.Request) string {
+	rid := req.Header.Get(requestIDHeader)
+	if rid != "" {
+		return rid
+	}
+	return uuid.New().String()
 }
 
 // SetRequestIDHeader sets the request header to fetch our Request IDs from
