@@ -251,6 +251,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		if p.Verifier == nil {
 			msgs = append(msgs, "keycloak-oidc provider requires an oidc issuer URL")
 		}
+		p.AddAllowedRoles(o.Providers[0].KeycloakConfig.Roles)
 	case *providers.GoogleProvider:
 		if o.Providers[0].GoogleConfig.ServiceAccountJSON != "" {
 			file, err := os.Open(o.Providers[0].GoogleConfig.ServiceAccountJSON)

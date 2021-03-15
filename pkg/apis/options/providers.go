@@ -78,6 +78,7 @@ type Provider struct {
 type KeycloakOptions struct {
 	// Group enables to restrict login to members of indicated group
 	Groups []string `json:"groups,omitempty"`
+	Roles  []string `json:"roles,omitempty"`
 }
 
 type AzureOptions struct {
