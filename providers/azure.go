@@ -107,24 +107,20 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
+func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
+	extraParams := url.Values{}
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		extraParams.Add("resource", p.ProtectedResource.String())
+	}
+	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
+	return a.String()
+}
+
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
-	if code == "" {
-		return nil, ErrMissingCode
-	}
-	clientSecret, err := p.GetClientSecret()
+	params, err := p.prepareRedeem(redirectURL, code)
 	if err != nil {
 		return nil, err
-	}
-
-	params := url.Values{}
-	params.Add("redirect_uri", redirectURL)
-	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", clientSecret)
-	params.Add("code", code)
-	params.Add("grant_type", "authorization_code")
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		params.Add("resource", p.ProtectedResource.String())
 	}
 
 	// blindly try json and x-www-form-urlencoded
@@ -149,13 +145,98 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 	created := time.Now()
 	expires := time.Unix(jsonResponse.ExpiresOn, 0)
 
-	return &sessions.SessionState{
+	session := &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
 		CreatedAt:    &created,
 		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
-	}, nil
+	}
+
+	email, err := p.verifyTokenAndExtractEmail(ctx, session.IDToken)
+
+	// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
+	// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
+	// due to above issues, id_token may not be signed by AAD
+	// in that case, we will fallback to access token
+	if err == nil && email != "" {
+		session.Email = email
+	} else {
+		logger.Printf("unable to get email claim from id_token: %v", err)
+	}
+
+	if session.Email == "" {
+		email, err = p.verifyTokenAndExtractEmail(ctx, session.AccessToken)
+		if err == nil && email != "" {
+			session.Email = email
+		} else {
+			logger.Printf("unable to get email claim from access token: %v", err)
+		}
+	}
+
+	return session, nil
+}
+
+// EnrichSession finds the email to enrich the session state
+func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+	if s.Email != "" {
+		return nil
+	}
+
+	email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
+	if err != nil {
+		return fmt.Errorf("unable to get email address: %v", err)
+	}
+	if email == "" {
+		return errors.New("unable to get email address")
+	}
+	s.Email = email
+
+	return nil
+}
+
+func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, error) {
+	params := url.Values{}
+	if code == "" {
+		return params, ErrMissingCode
+	}
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return params, err
+	}
+
+	params.Add("redirect_uri", redirectURL)
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", clientSecret)
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		params.Add("resource", p.ProtectedResource.String())
+	}
+	return params, nil
+}
+
+// verifyTokenAndExtractEmail tries to extract email claim from either id_token or access token
+// when oidc verifier is configured
+func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, token string) (string, error) {
+	email := ""
+
+	if token != "" && p.Verifier != nil {
+		token, err := p.Verifier.Verify(ctx, token)
+		// due to issues mentioned above, id_token may not be signed by AAD
+		if err == nil {
+			claims, err := p.getClaims(token)
+			if err == nil {
+				email = claims.Email
+			} else {
+				logger.Printf("unable to get claims from token: %v", err)
+			}
+		} else {
+			logger.Printf("unable to verify token: %v", err)
+		}
+	}
+
+	return email, nil
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -209,6 +290,28 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	s.RefreshToken = jsonResponse.RefreshToken
 	s.CreatedAt = &now
 	s.ExpiresOn = &expires
+
+	email, err := p.verifyTokenAndExtractEmail(ctx, s.IDToken)
+
+	// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
+	// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
+	// due to above issues, id_token may not be signed by AAD
+	// in that case, we will fallback to access token
+	if err == nil && email != "" {
+		s.Email = email
+	} else {
+		logger.Printf("unable to get email claim from id_token: %v", err)
+	}
+
+	if s.Email == "" {
+		email, err = p.verifyTokenAndExtractEmail(ctx, s.AccessToken)
+		if err == nil && email != "" {
+			s.Email = email
+		} else {
+			logger.Printf("unable to get email claim from access token: %v", err)
+		}
+	}
+
 	return
 }
 
@@ -230,53 +333,32 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 		err = otherMailsErr
 	}
 
+	if err != nil || email == "" {
+		email, err = json.Get("userPrincipalName").String()
+		if err != nil {
+			logger.Errorf("unable to find userPrincipalName: %s", err)
+			return "", err
+		}
+	}
+
 	return email, err
 }
 
-// GetEmailAddress returns the Account email address
-func (p *AzureProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
-	var email string
-	var err error
-
-	if s.AccessToken == "" {
+func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
+	if accessToken == "" {
 		return "", errors.New("missing access token")
 	}
 
 	json, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
-		WithHeaders(makeAzureHeader(s.AccessToken)).
+		WithHeaders(makeAzureHeader(accessToken)).
 		Do().
 		UnmarshalJSON()
 	if err != nil {
 		return "", err
 	}
 
-	email, err = getEmailFromJSON(json)
-	if err == nil && email != "" {
-		return email, err
-	}
-
-	email, err = json.Get("userPrincipalName").String()
-	if err != nil {
-		logger.Errorf("failed making request %s", err)
-		return "", err
-	}
-
-	if email == "" {
-		logger.Errorf("failed to get email address")
-		return "", err
-	}
-
-	return email, err
-}
-
-func (p *AzureProvider) GetLoginURL(redirectURI, state string) string {
-	extraParams := url.Values{}
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		extraParams.Add("resource", p.ProtectedResource.String())
-	}
-	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
-	return a.String()
+	return getEmailFromJSON(json)
 }
 
 // ValidateSession validates the AccessToken

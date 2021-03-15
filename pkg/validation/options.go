@@ -2,7 +2,6 @@ package validation
 
 import (
 	"context"
-	"crypto"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -30,6 +29,8 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
 	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
+	msgs = configureLogger(o.Logging, msgs)
+	msgs = parseSignatureKey(o, msgs)
 
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
@@ -41,10 +42,10 @@ func Validate(o *options.Options) error {
 	} else if len(o.ProviderCAFiles) > 0 {
 		pool, err := util.GetCertPool(o.ProviderCAFiles)
 		if err == nil {
-			transport := &http.Transport{
-				TLSClientConfig: &tls.Config{
-					RootCAs: pool,
-				},
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{
+				RootCAs:    pool,
+				MinVersion: tls.VersionTLS12,
 			}
 
 			http.DefaultClient = &http.Client{Transport: transport}
@@ -175,6 +176,9 @@ func Validate(o *options.Options) error {
 	var redirectURL *url.URL
 	redirectURL, msgs = parseURL(o.RawRedirectURL, "redirect", msgs)
 	o.SetRedirectURL(redirectURL)
+	if o.RawRedirectURL == "" && !o.Cookie.Secure && !o.ReverseProxy {
+		logger.Print("WARNING: no explicit redirect URL: redirects will default to insecure HTTP")
+	}
 
 	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
 	msgs = parseProviderInfo(o, msgs)
@@ -190,9 +194,6 @@ func Validate(o *options.Options) error {
 			msgs = append(msgs, "missing setting: google-service-account-json")
 		}
 	}
-
-	msgs = parseSignatureKey(o, msgs)
-	msgs = configureLogger(o.Logging, msgs)
 
 	if o.ReverseProxy {
 		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
@@ -353,6 +354,8 @@ func parseSignatureKey(o *options.Options, msgs []string) []string {
 		return msgs
 	}
 
+	logger.Print("WARNING: `--signature-key` is deprecated. It will be removed in a future release")
+
 	components := strings.Split(o.SignatureKey, ":")
 	if len(components) != 2 {
 		return append(msgs, "invalid signature hash:key spec: "+
@@ -360,11 +363,9 @@ func parseSignatureKey(o *options.Options, msgs []string) []string {
 	}
 
 	algorithm, secretKey := components[0], components[1]
-	var hash crypto.Hash
-	var err error
-	if hash, err = hmacauth.DigestNameToCryptoHash(algorithm); err != nil {
-		return append(msgs, "unsupported signature hash algorithm: "+
-			o.SignatureKey)
+	hash, err := hmacauth.DigestNameToCryptoHash(algorithm)
+	if err != nil {
+		return append(msgs, "unsupported signature hash algorithm: "+o.SignatureKey)
 	}
 	o.SetSignatureData(&options.SignatureData{Hash: hash, Key: secretKey})
 	return msgs

@@ -4,10 +4,23 @@
 
 ## Important Notes
 
+
+- [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Upstream request signatures via `--signature-key` is
+  deprecated. Support will be removed completely in v8.0.0.
+
 ## Breaking Changes
 
 ## Changes since v7.0.1
 
+- [#1045](https://github.com/oauth2-proxy/oauth2-proxy/pull/1045) Ensure redirect URI always has a scheme (@JoelSpeed)
+- [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Deprecate upstream request signatures (@NickMeves)
+- [#914](https://github.com/oauth2-proxy/oauth2-proxy/pull/914) Extract email from id_token for azure provider when oidc is configured
+- [#1047](https://github.com/oauth2-proxy/oauth2-proxy/pull/1047) Refactor HTTP Server and add ServerGroup to handle graceful shutdown of multiple servers (@JoelSpeed)
+- [#1070](https://github.com/oauth2-proxy/oauth2-proxy/pull/1070) Refactor logging middleware to middleware package (@NickMeves)
+- [#1064](https://github.com/oauth2-proxy/oauth2-proxy/pull/1064) Add support for setting groups on session when using basic auth (@stefansedich)
+- [#1056](https://github.com/oauth2-proxy/oauth2-proxy/pull/1056) Add option for custom logos on the sign in page (@JoelSpeed)
+- [#1054](https://github.com/oauth2-proxy/oauth2-proxy/pull/1054) Update to Go 1.16 (@JoelSpeed)
+- [#1052](https://github.com/oauth2-proxy/oauth2-proxy/pull/1052) Update golangci-lint to latest version (v1.36.0) (@JoelSpeed)
 - [#1043](https://github.com/oauth2-proxy/oauth2-proxy/pull/1043) Refactor Sign In Page rendering and capture all page rendering code in pagewriter package (@JoelSpeed)
 - [#1029](https://github.com/oauth2-proxy/oauth2-proxy/pull/1029) Refactor error page rendering and allow debug messages on error (@JoelSpeed)
 - [#1028](https://github.com/oauth2-proxy/oauth2-proxy/pull/1028) Refactor templates, update theme and provide styled error pages (@JoelSpeed)

@@ -40,6 +40,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
 | `--custom-templates-dir` | string | path to custom html templates | |
+| `--custom-sign-in-logo` | string | path to an custom image for the sign_in page logo. Use \"-\" to disable default logo. |
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
@@ -61,6 +62,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
 | `--google-service-account-json` | string | the path to the service account json credentials | |
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption | |
+| `--htpasswd-user-group` | string \| list | the groups to be set on sessions for htpasswd users | |
 | `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients | `"127.0.0.1:4180"` |
 | `--https-address` | string | `<addr>:<port>` to listen on for HTTPS clients | `":443"` |
 | `--logging-compress` | bool | Should rotated log files be compressed using gzip | false |
