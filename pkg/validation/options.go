@@ -275,12 +275,13 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 
 		// Backwards compatibility with `--keycloak-group` option
 		if len(o.KeycloakGroups) > 0 {
-			// Maybe already added with proper `--allowed-group` flag
+			// Maybe already added with `--allowed-group` flag
 			if !strings.Contains(o.Scope, " groups") {
 				o.Scope += " groups"
 			}
 			p.SetAllowedGroups(o.KeycloakGroups)
 		}
+		p.AddAllowedRoles(o.KeycloakRoles)
 	case *providers.GoogleProvider:
 		if o.GoogleServiceAccountJSON != "" {
 			file, err := os.Open(o.GoogleServiceAccountJSON)
