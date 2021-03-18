@@ -33,7 +33,6 @@ type Options struct {
 
 	AuthenticatedEmailsFile  string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
-	KeycloakRoles            []string `flag:"keycloak-role" cfg:"keycloak_roles"`
 	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
 	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
@@ -97,6 +96,7 @@ type Options struct {
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
+	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	AcrValues       string `flag:"acr-values" cfg:"acr_values"`
@@ -174,7 +174,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
-	flagSet.StringSlice("keycloak-role", []string{}, "restrict logins to members of these roles (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
@@ -238,6 +237,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.String("user-id-claim", providers.OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
+	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
