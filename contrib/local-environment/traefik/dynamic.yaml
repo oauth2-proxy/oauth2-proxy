@@ -1,31 +1,28 @@
 http:
   routers:
-    a-service-route-1:
-      rule: "Host(`httpbin.localtest.me`)"
-      service: a-service-backend
+    oauth2-proxy-route:
+      rule: "Host(`oauth2-proxy.oauth2-proxy.localhost`)"
       middlewares:
-        - oauth-auth-redirect # redirects all unauthenticated to oauth2 signin
-    a-service-route-2:
-      rule: "Host(`httpbin.localtest.me`) && PathPrefix(`/no-auto-redirect`)"
-      service: a-service-backend
+        - auth-headers
+      service: oauth-backend
+    httpbin-route:
+      rule: "Host(`httpbin.oauth2-proxy.localhost`)"
+      service: httpbin-service
+      middlewares:
+        - oauth-auth-redirect # redirects all unauthenticated to oauth2 signin    
+    httpbin-route-2:
+      rule: "Host(`httpbin.oauth2-proxy.localhost`) && PathPrefix(`/no-auto-redirect`)"
+      service: httpbin-service
       middlewares:
         - oauth-auth-wo-redirect # unauthenticated session will return a 401
     services-oauth2-route:
-      rule: "Host(`httpbin.localtest.me`) && PathPrefix(`/oauth2/`)"
+      rule: "Host(`httpbin.oauth2-proxy.localhost`) && PathPrefix(`/oauth2/`)"
       middlewares:
         - auth-headers
       service: oauth-backend
-    oauth2-proxy-route:
-      rule: "Host(`oauth2-proxy.localtest.me`)"
-      middlewares:
-        - auth-headers
-      service: oauth-backend
-    keycloak:
-      rule: "Host(`keycloak.localtest.me`)"
-      service: keycloak-back
 
   services:
-    a-service-backend:
+    httpbin-service:
       loadBalancer:
         servers:
           - url: http://httpbin
@@ -33,11 +30,6 @@ http:
       loadBalancer:
         servers:
           - url: http://oauth2-proxy:4180
-
-    keycloak-back:
-      loadBalancer:
-        servers:
-          - url: http://keycloak:9080
 
   middlewares:
     auth-headers:
