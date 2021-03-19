@@ -509,8 +509,7 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "72341b6d-7065-4518-a0e4-50ee15025608",
       "redirectUris": [
-        "http://oauth2-proxy.localtest.me:4180/oauth2/callback",
-        "http://oauth2-proxy.localtest.me/oauth2/callback"
+        "http://oauth2-proxy.localtest.me:4180/oauth2/callback"
       ],
       "webOrigins": [],
       "notBefore": 0,
