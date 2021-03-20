@@ -16,7 +16,7 @@ import (
 
 var _ = Describe("Static Pages", func() {
 	var customDir string
-	const customRobots = "I AM A ROBOT!!!"
+	const customRobots = "User-agent: *\nAllow: /\n"
 	var errorPage *errorPageWriter
 	var request *http.Request
 
@@ -110,8 +110,8 @@ var _ = Describe("Static Pages", func() {
 				It("Loads the custom content", func() {
 					pages, err := loadStaticPages(customDir)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(pages).To(HaveLen(1))
-					Expect(pages).To(HaveKeyWithValue(robotsTxtName, []byte(customRobots)))
+					Expect(pages.pages).To(HaveLen(1))
+					Expect(pages.getPage(robotsTxtName)).To(BeEquivalentTo(customRobots))
 				})
 			})
 
@@ -122,8 +122,8 @@ var _ = Describe("Static Pages", func() {
 
 					pages, err := loadStaticPages(customDir)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(pages).To(HaveLen(1))
-					Expect(pages).To(HaveKeyWithValue(robotsTxtName, defaultRobotsTxt))
+					Expect(pages.pages).To(HaveLen(1))
+					Expect(pages.getPage(robotsTxtName)).To(BeEquivalentTo(defaultRobotsTxt))
 				})
 			})
 		})
@@ -132,8 +132,8 @@ var _ = Describe("Static Pages", func() {
 			It("Loads the default content", func() {
 				pages, err := loadStaticPages("")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(pages).To(HaveLen(1))
-				Expect(pages).To(HaveKeyWithValue(robotsTxtName, defaultRobotsTxt))
+				Expect(pages.pages).To(HaveLen(1))
+				Expect(pages.getPage(robotsTxtName)).To(BeEquivalentTo(defaultRobotsTxt))
 			})
 		})
 	})
