@@ -142,7 +142,6 @@ They may change between releases without notice.
 | `team` | _string_ | Team sets restrict logins to members of this team |
 | `repository` | _string_ | Repository sets restrict logins to user with access to this repository |
 
-
 ### ClaimSource
 
 (**Appears on:** [HeaderValue](#headervalue))
@@ -269,7 +268,7 @@ make up the header value
 | `jwksURL` | _string_ | JwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
 | `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
-| `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>Deprecated: Use OIDCEmailClaim |
+| `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
 
 ### Provider
 
@@ -304,7 +303,6 @@ Provider holds all configuration for a single provider
 | `approvalPrompt` | _string_ | ApprovalPrompt is the OAuth approval_prompt<br/>default is set to 'force' |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
 | `acrValues` | _string_ | AcrValues is a string of acr values |
-
 
 ### Providers
 
