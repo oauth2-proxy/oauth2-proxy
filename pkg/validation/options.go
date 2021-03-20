@@ -40,8 +40,8 @@ func Validate(o *options.Options) error {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
-	} else if len(o.Providers[0].ProviderCAFiles) > 0 {
-		pool, err := util.GetCertPool(o.Providers[0].ProviderCAFiles)
+	} else if len(o.Providers[0].CAFiles) > 0 {
+		pool, err := util.GetCertPool(o.Providers[0].CAFiles)
 		if err == nil {
 			transport := http.DefaultTransport.(*http.Transport).Clone()
 			transport.TLSClientConfig = &tls.Config{
@@ -60,18 +60,18 @@ func Validate(o *options.Options) error {
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 
-	if o.Providers[0].OIDCConfig.OIDCIssuerURL != "" {
+	if o.Providers[0].OIDCConfig.IssuerURL != "" {
 
 		ctx := context.Background()
 
-		if o.Providers[0].OIDCConfig.InsecureOIDCSkipIssuerVerification && !o.Providers[0].OIDCConfig.SkipOIDCDiscovery {
+		if o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification && !o.Providers[0].OIDCConfig.SkipDiscovery {
 			// go-oidc doesn't let us pass bypass the issuer check this in the oidc.NewProvider call
 			// (which uses discovery to get the URLs), so we'll do a quick check ourselves and if
 			// we get the URLs, we'll just use the non-discovery path.
 
 			logger.Printf("Performing OIDC Discovery...")
 
-			requestURL := strings.TrimSuffix(o.Providers[0].OIDCConfig.OIDCIssuerURL, "/") + "/.well-known/openid-configuration"
+			requestURL := strings.TrimSuffix(o.Providers[0].OIDCConfig.IssuerURL, "/") + "/.well-known/openid-configuration"
 			body, err := requests.New(requestURL).
 				WithContext(ctx).
 				Do().
@@ -90,15 +90,15 @@ func Validate(o *options.Options) error {
 					o.Providers[0].RedeemURL = body.Get("token_endpoint").MustString()
 				}
 
-				if o.Providers[0].OIDCConfig.OIDCJwksURL == "" {
-					o.Providers[0].OIDCConfig.OIDCJwksURL = body.Get("jwks_uri").MustString()
+				if o.Providers[0].OIDCConfig.JwksURL == "" {
+					o.Providers[0].OIDCConfig.JwksURL = body.Get("jwks_uri").MustString()
 				}
 
 				if o.Providers[0].ProfileURL == "" {
 					o.Providers[0].ProfileURL = body.Get("userinfo_endpoint").MustString()
 				}
 
-				o.Providers[0].OIDCConfig.SkipOIDCDiscovery = true
+				o.Providers[0].OIDCConfig.SkipDiscovery = true
 			}
 		}
 
@@ -106,30 +106,30 @@ func Validate(o *options.Options) error {
 		// instead of metadata discovery if we enable -skip-oidc-discovery.
 		// In this case we need to make sure the required endpoints for
 		// the provider are configured.
-		if o.Providers[0].OIDCConfig.SkipOIDCDiscovery {
+		if o.Providers[0].OIDCConfig.SkipDiscovery {
 			if o.Providers[0].LoginURL == "" {
 				msgs = append(msgs, "missing setting: login-url")
 			}
 			if o.Providers[0].RedeemURL == "" {
 				msgs = append(msgs, "missing setting: redeem-url")
 			}
-			if o.Providers[0].OIDCConfig.OIDCJwksURL == "" {
+			if o.Providers[0].OIDCConfig.JwksURL == "" {
 				msgs = append(msgs, "missing setting: oidc-jwks-url")
 			}
-			keySet := oidc.NewRemoteKeySet(ctx, o.Providers[0].OIDCConfig.OIDCJwksURL)
-			o.SetOIDCVerifier(oidc.NewVerifier(o.Providers[0].OIDCConfig.OIDCIssuerURL, keySet, &oidc.Config{
+			keySet := oidc.NewRemoteKeySet(ctx, o.Providers[0].OIDCConfig.JwksURL)
+			o.SetOIDCVerifier(oidc.NewVerifier(o.Providers[0].OIDCConfig.IssuerURL, keySet, &oidc.Config{
 				ClientID:        o.Providers[0].ClientID,
-				SkipIssuerCheck: o.Providers[0].OIDCConfig.InsecureOIDCSkipIssuerVerification,
+				SkipIssuerCheck: o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
 			}))
 		} else {
 			// Configure discoverable provider data.
-			provider, err := oidc.NewProvider(ctx, o.Providers[0].OIDCConfig.OIDCIssuerURL)
+			provider, err := oidc.NewProvider(ctx, o.Providers[0].OIDCConfig.IssuerURL)
 			if err != nil {
 				return err
 			}
 			o.SetOIDCVerifier(provider.Verifier(&oidc.Config{
 				ClientID:        o.Providers[0].ClientID,
-				SkipIssuerCheck: o.Providers[0].OIDCConfig.InsecureOIDCSkipIssuerVerification,
+				SkipIssuerCheck: o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
 			}))
 
 			o.Providers[0].LoginURL = provider.Endpoint().AuthURL
@@ -212,64 +212,64 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.ProtectedResource, msgs = parseURL(o.Providers[0].ProtectedResource, "resource", msgs)
 
 	// Make the OIDC options available to all providers that support it
-	p.AllowUnverifiedEmail = o.Providers[0].OIDCConfig.InsecureOIDCAllowUnverifiedEmail
-	p.EmailClaim = o.Providers[0].OIDCConfig.OIDCEmailClaim
-	p.GroupsClaim = o.Providers[0].OIDCConfig.OIDCGroupsClaim
+	p.AllowUnverifiedEmail = o.Providers[0].OIDCConfig.InsecureAllowUnverifiedEmail
+	p.EmailClaim = o.Providers[0].OIDCConfig.EmailClaim
+	p.GroupsClaim = o.Providers[0].OIDCConfig.GroupsClaim
 	p.Verifier = o.GetOIDCVerifier()
 
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option
-	if o.Providers[0].OIDCConfig.OIDCEmailClaim == providers.OIDCEmailClaim &&
+	if o.Providers[0].OIDCConfig.EmailClaim == providers.OIDCEmailClaim &&
 		o.Providers[0].OIDCConfig.UserIDClaim != providers.OIDCEmailClaim {
 		p.EmailClaim = o.Providers[0].OIDCConfig.UserIDClaim
 	}
 
 	p.SetAllowedGroups(o.Providers[0].AllowedGroups)
 
-	provider := providers.New(o.Providers[0].ProviderType, p)
+	provider := providers.New(o.Providers[0].Type, p)
 	if provider == nil {
-		msgs = append(msgs, fmt.Sprintf("invalid setting: provider '%s' is not available", o.Providers[0].ProviderType))
+		msgs = append(msgs, fmt.Sprintf("invalid setting: provider '%s' is not available", o.Providers[0].Type))
 		return msgs
 	}
 	o.SetProvider(provider)
 
 	switch p := o.GetProvider().(type) {
 	case *providers.AzureProvider:
-		p.Configure(o.Providers[0].AzureConfig.AzureTenant)
+		p.Configure(o.Providers[0].AzureConfig.Tenant)
 	case *providers.GitHubProvider:
-		p.SetOrgTeam(o.Providers[0].GitHubConfig.GitHubOrg, o.Providers[0].GitHubConfig.GitHubTeam)
-		p.SetRepo(o.Providers[0].GitHubConfig.GitHubRepo, o.Providers[0].GitHubConfig.GitHubToken)
-		p.SetUsers(o.Providers[0].GitHubConfig.GitHubUsers)
+		p.SetOrgTeam(o.Providers[0].GitHubConfig.Org, o.Providers[0].GitHubConfig.Team)
+		p.SetRepo(o.Providers[0].GitHubConfig.Repo, o.Providers[0].GitHubConfig.Token)
+		p.SetUsers(o.Providers[0].GitHubConfig.Users)
 	case *providers.KeycloakProvider:
 		// Backwards compatibility with `--keycloak-group` option
-		if len(o.Providers[0].KeycloakConfig.KeycloakGroups) > 0 {
-			p.SetAllowedGroups(o.Providers[0].KeycloakConfig.KeycloakGroups)
+		if len(o.Providers[0].KeycloakConfig.Groups) > 0 {
+			p.SetAllowedGroups(o.Providers[0].KeycloakConfig.Groups)
 		}
 	case *providers.GoogleProvider:
-		if o.Providers[0].GoogleConfig.GoogleServiceAccountJSON != "" {
-			file, err := os.Open(o.Providers[0].GoogleConfig.GoogleServiceAccountJSON)
+		if o.Providers[0].GoogleConfig.ServiceAccountJSON != "" {
+			file, err := os.Open(o.Providers[0].GoogleConfig.ServiceAccountJSON)
 			if err != nil {
-				msgs = append(msgs, "invalid Google credentials file: "+o.Providers[0].GoogleConfig.GoogleServiceAccountJSON)
+				msgs = append(msgs, "invalid Google credentials file: "+o.Providers[0].GoogleConfig.ServiceAccountJSON)
 			} else {
 				groups := o.Providers[0].AllowedGroups
 				// Backwards compatibility with `--google-group` option
-				if len(o.Providers[0].GoogleConfig.GoogleGroups) > 0 {
-					groups = o.Providers[0].GoogleConfig.GoogleGroups
+				if len(o.Providers[0].GoogleConfig.Groups) > 0 {
+					groups = o.Providers[0].GoogleConfig.Groups
 					p.SetAllowedGroups(groups)
 				}
-				p.SetGroupRestriction(groups, o.Providers[0].GoogleConfig.GoogleAdminEmail, file)
+				p.SetGroupRestriction(groups, o.Providers[0].GoogleConfig.AdminEmail, file)
 			}
 		}
 	case *providers.BitbucketProvider:
-		p.SetTeam(o.Providers[0].BitbucketConfig.BitbucketTeam)
-		p.SetRepository(o.Providers[0].BitbucketConfig.BitbucketRepository)
+		p.SetTeam(o.Providers[0].BitbucketConfig.Team)
+		p.SetRepository(o.Providers[0].BitbucketConfig.Repository)
 	case *providers.OIDCProvider:
 		if p.Verifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		}
 	case *providers.GitLabProvider:
-		p.Groups = o.Providers[0].GitLabConfig.GitLabGroup
-		err := p.AddProjects(o.Providers[0].GitLabConfig.GitLabProjects)
+		p.Groups = o.Providers[0].GitLabConfig.Group
+		err := p.AddProjects(o.Providers[0].GitLabConfig.Projects)
 		if err != nil {
 			msgs = append(msgs, "failed to setup gitlab project access level")
 		}

@@ -32,22 +32,22 @@ func validateProviders(o *options.Options) []string {
 func validateProvider(provider options.Provider, providerIDs map[string]struct{}) []string {
 	msgs := []string{}
 
-	if provider.ProviderID == "" {
+	if provider.ID == "" {
 		msgs = append(msgs, "provider has empty id: ids are required for all providers")
 	}
 
 	// Ensure provider IDs are unique
-	if _, ok := providerIDs[provider.ProviderID]; ok {
-		msgs = append(msgs, fmt.Sprintf("multiple providers found with id %s: provider ids must be unique", provider.ProviderID))
+	if _, ok := providerIDs[provider.ID]; ok {
+		msgs = append(msgs, fmt.Sprintf("multiple providers found with id %s: provider ids must be unique", provider.ID))
 	}
-	providerIDs[provider.ProviderID] = struct{}{}
+	providerIDs[provider.ID] = struct{}{}
 
 	if provider.ClientID == "" {
 		msgs = append(msgs, "provider missing setting: client-id")
 	}
 
 	// login.gov uses a signed JWT to authenticate, not a client-secret
-	if provider.ProviderType != "login.gov" {
+	if provider.Type != "login.gov" {
 		if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
 			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
 		}
@@ -66,12 +66,16 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 
 func validateGoogleConfig(provider options.Provider) []string {
 	msgs := []string{}
-	if provider.GoogleConfig.GoogleAdminEmail != "" ||
-		provider.GoogleConfig.GoogleServiceAccountJSON != "" {
-		if provider.GoogleConfig.GoogleAdminEmail == "" {
+	if len(provider.GoogleConfig.Groups) > 0 ||
+		provider.GoogleConfig.AdminEmail != "" ||
+		provider.GoogleConfig.ServiceAccountJSON != "" {
+		if len(provider.GoogleConfig.Groups) < 1 {
+			msgs = append(msgs, "missing setting: google-group")
+		}
+		if provider.GoogleConfig.AdminEmail == "" {
 			msgs = append(msgs, "missing setting: google-admin-email")
 		}
-		if provider.GoogleConfig.GoogleServiceAccountJSON == "" {
+		if provider.GoogleConfig.ServiceAccountJSON == "" {
 			msgs = append(msgs, "missing setting: google-service-account-json")
 		}
 	}

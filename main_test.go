@@ -61,15 +61,15 @@ server:
   bindAddress: "127.0.0.1:4180"
 providers:
 - provider: google
-  providerID: google_oauth2-proxy
+  ID: google=oauth2-proxy
   clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
   approvalPrompt: force
   azureConfig:
-    azureTenant: common
+    tenant: common
   oidcConfig:
-    oidcGroupsClaim: groups
-    oidcEmailClaim: email
+    groupsClaim: groups
+    emailClaim: email
     userIDClaim: email
 `
 
@@ -130,17 +130,17 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 		opts.Providers = options.Providers{
 			{
-				ProviderID:   "google_oauth2-proxy",
-				ProviderType: "google",
+				ID:           "google=oauth2-proxy",
+				Type:         "google",
 				ClientSecret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
 				ClientID:     "oauth2-proxy",
 				AzureConfig: options.AzureOptions{
-					AzureTenant: "common",
+					Tenant: "common",
 				},
 				OIDCConfig: options.OIDCOptions{
-					OIDCGroupsClaim: "groups",
-					OIDCEmailClaim:  "email",
-					UserIDClaim:     "email",
+					GroupsClaim: "groups",
+					EmailClaim:  "email",
+					UserIDClaim: "email",
 				},
 				ApprovalPrompt: "force",
 			},

@@ -129,7 +129,7 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `azureTenant` | _string_ | AzureTenant directs to a tenant-specific or common (tenant-independent) endpoint<br/>Default value 
+| `tenant` | _string_ | Tenant directs to a tenant-specific or common (tenant-independent) endpoint<br/>Default value is 'commmon' |
 
 ### BitbucketOptions
 
@@ -139,8 +139,8 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `bitbucketTeam` | _string_ | BitbucketTeam sets restrict logins to members of this team |
-| `bitbucketRepository` | _string_ | BitbucketRepository sets restrict logins to user with access to this repository |
+| `team` | _string_ | Team sets restrict logins to members of this team |
+| `repository` | _string_ | Repository sets restrict logins to user with access to this repository |
 
 
 ### ClaimSource
@@ -174,11 +174,11 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `githubOrg` | _string_ | GitHubOrg sets restrict logins to members of this organisation |
-| `githubTeam` | _string_ | GitHubTeam sets restrict logins to members of this team |
-| `githubRepo` | _string_ | GitHubRepo sets restrict logins to collaborators of this repository |
-| `githubToken` | _string_ | GitHubToken is the token to use when verifying repository collaborators<br/>it must have push access to the repository |
-| `githubUsers` | _[]string_ | GitHubUsers allows users with these usernames to login<br/>even if they do not belong to the specified org and team or collaborators |
+| `org` | _string_ | Org sets restrict logins to members of this organisation |
+| `team` | _string_ | Team sets restrict logins to members of this team |
+| `repo` | _string_ | Repo sets restrict logins to collaborators of this repository |
+| `token` | _string_ | Token is the token to use when verifying repository collaborators<br/>it must have push access to the repository |
+| `users` | _[]string_ | Users allows users with these usernames to login<br/>even if they do not belong to the specified org and team or collaborators |
 
 ### GitLabOptions
 
@@ -188,8 +188,8 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `gitlabGroup` | _[]string_ | GitLabGroup sets restrict logins to members of this group |
-| `gitlabProjects` | _[]string_ | GitlabProjects sets restrict logins to members of this project |
+| `group` | _[]string_ | Group sets restrict logins to members of this group |
+| `projects` | _[]string_ | Projects restricts logins to members of any of these projects |
 
 ### GoogleOptions
 
@@ -199,9 +199,9 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `googleGroup` | _[]string_ | GoogleGroups sets restrict logins to members of this google group |
-| `googleAdminEmail` | _string_ | GoogleAdminEmail is the google admin to impersonate for api calls |
-| `googleServiceAccountJson` | _string_ | GoogleServiceAccountJSON is the path to the service account json credentials |
+| `group` | _[]string_ | Groups sets restrict logins to members of this google group |
+| `adminEmail` | _string_ | AdminEmail is the google admin to impersonate for api calls |
+| `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
 
 ### Header
 
@@ -240,7 +240,7 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `keycloakGroups` | _[]string_ | KeycloakGroup enables to restrict login to members of indicated group |
+| `groups` | _[]string_ | Group enables to restrict login to members of indicated group |
 
 ### LoginGovOptions
 
@@ -262,13 +262,13 @@ make up the header value
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `oidcIssuerURL` | _string_ | OIDCIssuerURL is the OpenID Connect issuer URL<br/>eg: https://accounts.google.com |
-| `insecureOidcAllowUnverifiedEmail` | _bool_ | InsecureOIDCAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified<br/>default set to 'false' |
-| `insecureOidcSkipIssuerVerification` | _bool_ | InsecureOIDCSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL<br/>default set to 'false' |
-| `skipOidcDiscovery` | _bool_ | SkipOIDCDiscovery allows to skip OIDC discovery and use manually supplied Endpoints<br/>default set to 'false' |
-| `oidcJwksURL` | _string_ | OIDCJwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
-| `oidcEmailClaim` | _string_ | OIDCGroupsClaim indicates which OIDC claim contains the user's email |
-| `oidcGroupsClaim` | _string_ | OIDCGroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
+| `issuerURL` | _string_ | IssuerURL is the OpenID Connect issuer URL<br/>eg: https://accounts.google.com |
+| `insecureAllowUnverifiedEmail` | _bool_ | InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified<br/>default set to 'false' |
+| `insecureSkipIssuerVerification` | _bool_ | InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL<br/>default set to 'false' |
+| `skipDiscovery` | _bool_ | SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints<br/>default set to 'false' |
+| `jwksURL` | _string_ | JwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
+| `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
+| `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>Deprecated: Use OIDCEmailClaim |
 
 ### Provider
@@ -290,10 +290,10 @@ Provider holds all configuration for a single provider
 | `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
 | `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
-| `providerID` | _string_ | ProviderID should be a unique identifier for the provider.<br/>This value is required for all providers. |
-| `provider` | _string_ | ProviderType is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
-| `providerDisplayName` | _string_ | ProviderName is the providers display name<br/>if set, it will be shown to the users in the login page. |
-| `providerCAFiles` | _[]string_ | ProviderCAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
+| `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
+| `provider` | _string_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
+| `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
+| `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |

@@ -117,6 +117,7 @@ N/A
 
 ## Changes since v7.0.0
 
+- [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
 - [#1020](https://github.com/oauth2-proxy/oauth2-proxy/pull/1020) Flatten array-based response headers (@NickMeves)
 - [#1026](https://github.com/oauth2-proxy/oauth2-proxy/pull/1026) Ensure config flags get parsed correctly when other flags precede them (@JoelSpeed)
 
@@ -208,7 +209,6 @@ N/A
 - [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Migrate Keycloak to EnrichSession & support multiple groups for authorization (@NickMeves)
 - [#957](https://github.com/oauth2-proxy/oauth2-proxy/pull/957) Use X-Forwarded-{Proto,Host,Uri} on redirect as last resort (@linuxgemini)
 - [#630](https://github.com/oauth2-proxy/oauth2-proxy/pull/630) Add support for Gitlab project based authentication (@factorysh)
-- [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
 - [#907](https://github.com/oauth2-proxy/oauth2-proxy/pull/907) Introduce alpha configuration option to enable testing of structured configuration (@JoelSpeed)
 - [#938](https://github.com/oauth2-proxy/oauth2-proxy/pull/938) Cleanup missed provider renaming refactor methods (@NickMeves)
 - [#816](https://github.com/oauth2-proxy/oauth2-proxy/pull/816) (via [#936](https://github.com/oauth2-proxy/oauth2-proxy/pull/936)) Support non-list group claims (@loafoe)

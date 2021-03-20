@@ -14,14 +14,14 @@ var _ = Describe("Providers", func() {
 	}
 
 	validProvider := options.Provider{
-		ProviderID:   "ProviderID",
+		ID:           "ProviderID",
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
 	}
 
 	validLoginGovProvider := options.Provider{
-		ProviderType: "login.gov",
-		ProviderID:   "ProviderIDLoginGov",
+		Type:         "login.gov",
+		ID:           "ProviderIDLoginGov",
 		ClientID:     "ClientID",
 		ClientSecret: "ClientSecret",
 	}

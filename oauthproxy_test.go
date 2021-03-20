@@ -2292,7 +2292,7 @@ func Test_noCacheHeaders(t *testing.T) {
 func baseTestOptions() *options.Options {
 	opts := options.NewOptions()
 	opts.Cookie.Secret = rawCookieSecret
-	opts.Providers[0].ProviderID = "providerID"
+	opts.Providers[0].ID = "providerID"
 	opts.Providers[0].ClientID = clientID
 	opts.Providers[0].ClientSecret = clientSecret
 	opts.EmailDomains = []string{"*"}

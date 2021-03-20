@@ -112,7 +112,7 @@ var _ = Describe("Legacy Options", func() {
 			}
 
 			opts.Providers[0].ClientID = "oauth-proxy"
-			opts.Providers[0].ProviderID = "google_oauth-proxy"
+			opts.Providers[0].ID = "google=oauth-proxy"
 
 			converted, err := legacyOpts.ToOptions()
 			Expect(err).ToNot(HaveOccurred())
@@ -867,9 +867,9 @@ var _ = Describe("Legacy Options", func() {
 		clientID := "abcd"
 
 		defaultProvider := Provider{
-			ProviderID:   "google_" + clientID,
-			ClientID:     clientID,
-			ProviderType: "google",
+			ID:       "google=" + clientID,
+			ClientID: clientID,
+			Type:     "google",
 		}
 		defaultLegacyProvider := LegacyProvider{
 			ClientID:     clientID,
@@ -877,10 +877,10 @@ var _ = Describe("Legacy Options", func() {
 		}
 
 		displayNameProvider := Provider{
-			ProviderID:   "displayName",
-			ProviderName: "displayName",
-			ClientID:     clientID,
-			ProviderType: "google",
+			ID:       "displayName",
+			Name:     "displayName",
+			ClientID: clientID,
+			Type:     "google",
 		}
 
 		displayNameLegacyProvider := LegacyProvider{
@@ -890,13 +890,13 @@ var _ = Describe("Legacy Options", func() {
 		}
 
 		internalConfigProvider := Provider{
-			ProviderID:   "google_" + clientID,
-			ClientID:     clientID,
-			ProviderType: "google",
+			ID:       "google=" + clientID,
+			ClientID: clientID,
+			Type:     "google",
 			GoogleConfig: GoogleOptions{
-				GoogleAdminEmail:         "email@email.com",
-				GoogleServiceAccountJSON: "test.json",
-				GoogleGroups:             []string{"1", "2"},
+				AdminEmail:         "email@email.com",
+				ServiceAccountJSON: "test.json",
+				Groups:             []string{"1", "2"},
 			},
 		}
 

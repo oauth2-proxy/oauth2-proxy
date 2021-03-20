@@ -14,17 +14,8 @@ import (
 )
 
 var _ = Describe("Load", func() {
-	optionsWithNilProvider := &Options{
-		ProxyPrefix:        "/oauth2",
-		PingPath:           "/ping",
-		RealClientIPHeader: "X-Real-IP",
-		ForceHTTPS:         false,
-		Cookie:             cookieDefaults(),
-		Session:            sessionOptionsDefaults(),
-		Templates:          templatesDefaults(),
-		SkipAuthPreflight:  false,
-		Logging:            loggingDefaults(),
-	}
+	optionsWithNilProvider := NewOptions()
+	optionsWithNilProvider.Providers = nil
 
 	legacyOptionsWithNilProvider := &LegacyOptions{
 		LegacyUpstreams: LegacyUpstreams{
@@ -343,9 +334,6 @@ var _ = Describe("Load", func() {
 					},
 				},
 			}),
-			// TODO (yanasega): temporary solution: optionsWithNilProvider and legacyOptionsWithNilProvider are set because Providers is internal
-			// therefore it's loaded as nil but it has some default fields that are being set in NewOptions
-			// as appose to Upstreams/Headers alpha options
 			Entry("with an empty Options struct, should return default values", &testOptionsTableInput{
 				flagSet:        NewFlagSet,
 				input:          &Options{},

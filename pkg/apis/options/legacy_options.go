@@ -611,8 +611,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientID:          l.ClientID,
 		ClientSecret:      l.ClientSecret,
 		ClientSecretFile:  l.ClientSecretFile,
-		ProviderType:      l.ProviderType,
-		ProviderCAFiles:   l.ProviderCAFiles,
+		Type:              l.ProviderType,
+		CAFiles:           l.ProviderCAFiles,
 		LoginURL:          l.LoginURL,
 		RedeemURL:         l.RedeemURL,
 		ProfileURL:        l.ProfileURL,
@@ -627,39 +627,39 @@ func (l *LegacyProvider) convert() (Providers, error) {
 
 	// This part is out of the switch section for all providers that support OIDC
 	provider.OIDCConfig = OIDCOptions{
-		OIDCIssuerURL:                      l.OIDCIssuerURL,
-		InsecureOIDCAllowUnverifiedEmail:   l.InsecureOIDCAllowUnverifiedEmail,
-		InsecureOIDCSkipIssuerVerification: l.InsecureOIDCSkipIssuerVerification,
-		SkipOIDCDiscovery:                  l.SkipOIDCDiscovery,
-		OIDCJwksURL:                        l.OIDCJwksURL,
-		UserIDClaim:                        l.UserIDClaim,
-		OIDCEmailClaim:                     l.OIDCEmailClaim,
-		OIDCGroupsClaim:                    l.OIDCGroupsClaim,
+		IssuerURL:                      l.OIDCIssuerURL,
+		InsecureAllowUnverifiedEmail:   l.InsecureOIDCAllowUnverifiedEmail,
+		InsecureSkipIssuerVerification: l.InsecureOIDCSkipIssuerVerification,
+		SkipDiscovery:                  l.SkipOIDCDiscovery,
+		JwksURL:                        l.OIDCJwksURL,
+		UserIDClaim:                    l.UserIDClaim,
+		EmailClaim:                     l.OIDCEmailClaim,
+		GroupsClaim:                    l.OIDCGroupsClaim,
 	}
 
 	// This part is out of the switch section because azure has a default tenant
 	// that needs to be added from legacy options
 	provider.AzureConfig = AzureOptions{
-		AzureTenant: l.AzureTenant,
+		Tenant: l.AzureTenant,
 	}
 
-	switch provider.ProviderType {
+	switch provider.Type {
 	case "github":
 		provider.GitHubConfig = GitHubOptions{
-			GitHubOrg:   l.GitHubOrg,
-			GitHubTeam:  l.GitHubTeam,
-			GitHubRepo:  l.GitHubRepo,
-			GitHubToken: l.GitHubToken,
-			GitHubUsers: l.GitHubUsers,
+			Org:   l.GitHubOrg,
+			Team:  l.GitHubTeam,
+			Repo:  l.GitHubRepo,
+			Token: l.GitHubToken,
+			Users: l.GitHubUsers,
 		}
 	case "keycloak":
 		provider.KeycloakConfig = KeycloakOptions{
-			KeycloakGroups: l.KeycloakGroups,
+			Groups: l.KeycloakGroups,
 		}
 	case "gitlab":
 		provider.GitLabConfig = GitLabOptions{
-			GitLabGroup:    l.GitLabGroup,
-			GitLabProjects: l.GitLabProjects,
+			Group:    l.GitLabGroup,
+			Projects: l.GitLabProjects,
 		}
 	case "login.gov":
 		provider.LoginGovConfig = LoginGovOptions{
@@ -669,23 +669,22 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 	case "bitbucket":
 		provider.BitbucketConfig = BitbucketOptions{
-			BitbucketTeam:       l.BitbucketTeam,
-			BitbucketRepository: l.BitbucketRepository,
+			Team:       l.BitbucketTeam,
+			Repository: l.BitbucketRepository,
 		}
 	case "google":
 		provider.GoogleConfig = GoogleOptions{
-			GoogleGroups:             l.GoogleGroups,
-			GoogleAdminEmail:         l.GoogleAdminEmail,
-			GoogleServiceAccountJSON: l.GoogleServiceAccountJSON,
+			Groups:             l.GoogleGroups,
+			AdminEmail:         l.GoogleAdminEmail,
+			ServiceAccountJSON: l.GoogleServiceAccountJSON,
 		}
 	}
 
 	if l.ProviderName != "" {
-		provider.ProviderID = l.ProviderName
-		provider.ProviderName = l.ProviderName
+		provider.ID = l.ProviderName
+		provider.Name = l.ProviderName
 	} else {
-		// TODO (yanasega): should set a better default id value
-		provider.ProviderID = l.ProviderType + "_" + l.ClientID
+		provider.ID = l.ProviderType + "=" + l.ClientID
 	}
 
 	providers = append(providers, provider)

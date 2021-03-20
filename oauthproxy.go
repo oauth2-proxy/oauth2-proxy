@@ -122,7 +122,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Footer:           opts.Templates.Footer,
 		Version:          VERSION,
 		Debug:            opts.Templates.Debug,
-		ProviderName:     buildProviderName(opts.GetProvider(), opts.Providers[0].ProviderName),
+		ProviderName:     buildProviderName(opts.GetProvider(), opts.Providers[0].Name),
 		SignInMessage:    buildSignInMessage(opts),
 		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	})
@@ -136,7 +136,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	if opts.SkipJwtBearerTokens {
-		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.OIDCIssuerURL)
+		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
 		for _, issuer := range opts.ExtraJwtIssuers {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}

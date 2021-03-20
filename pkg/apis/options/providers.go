@@ -35,19 +35,19 @@ type Provider struct {
 	// LoginGovConfig holds all configurations for LoginGov provider.
 	LoginGovConfig LoginGovOptions `json:"loginGovConfig,omitempty"`
 
-	// ProviderID should be a unique identifier for the provider.
+	// ID should be a unique identifier for the provider.
 	// This value is required for all providers.
-	ProviderID string `json:"providerID,omitempty"`
-	// ProviderType is the OAuth provider
+	ID string `json:"id,omitempty"`
+	// Type is the OAuth provider
 	// must be set from the supported providers group,
 	// otherwise 'Google' is set as default
-	ProviderType string `json:"provider,omitempty"`
-	// ProviderName is the providers display name
+	Type string `json:"provider,omitempty"`
+	// Name is the providers display name
 	// if set, it will be shown to the users in the login page.
-	ProviderName string `json:"providerDisplayName,omitempty"`
-	// ProviderCAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
+	Name string `json:"name,omitempty"`
+	// CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
 	// If not specified, the default Go trust sources are used instead
-	ProviderCAFiles []string `json:"providerCAFiles,omitempty"`
+	CAFiles []string `json:"caFiles,omitempty"`
 
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
@@ -74,76 +74,76 @@ type Provider struct {
 }
 
 type KeycloakOptions struct {
-	// KeycloakGroups enables to restrict login to members of indicated group
-	KeycloakGroups []string `json:"keycloakGroups,omitempty"`
+	// Group enables to restrict login to members of indicated group
+	Groups []string `json:"groups,omitempty"`
 }
 
 type AzureOptions struct {
-	// AzureTenant directs to a tenant-specific or common (tenant-independent) endpoint
+	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
 	// Default value is 'commmon'
-	AzureTenant string `json:"azureTenant,omitempty"`
+	Tenant string `json:"tenant,omitempty"`
 }
 
 type BitbucketOptions struct {
-	// BitbucketTeam sets restrict logins to members of this team
-	BitbucketTeam string `json:"bitbucketTeam,omitempty"`
-	// BitbucketRepository sets restrict logins to user with access to this repository
-	BitbucketRepository string `json:"bitbucketRepository,omitempty"`
+	// Team sets restrict logins to members of this team
+	Team string `json:"team,omitempty"`
+	// Repository sets restrict logins to user with access to this repository
+	Repository string `json:"repository,omitempty"`
 }
 
 type GitHubOptions struct {
-	// GitHubOrg sets restrict logins to members of this organisation
-	GitHubOrg string `json:"githubOrg,omitempty"`
-	// GitHubTeam sets restrict logins to members of this team
-	GitHubTeam string `json:"githubTeam,omitempty"`
-	// GitHubRepo sets restrict logins to collaborators of this repository
-	GitHubRepo string `json:"githubRepo,omitempty"`
-	// GitHubToken is the token to use when verifying repository collaborators
+	// Org sets restrict logins to members of this organisation
+	Org string `json:"org,omitempty"`
+	// Team sets restrict logins to members of this team
+	Team string `json:"team,omitempty"`
+	// Repo sets restrict logins to collaborators of this repository
+	Repo string `json:"repo,omitempty"`
+	// Token is the token to use when verifying repository collaborators
 	// it must have push access to the repository
-	GitHubToken string `json:"githubToken,omitempty"`
-	// GitHubUsers allows users with these usernames to login
+	Token string `json:"token,omitempty"`
+	// Users allows users with these usernames to login
 	// even if they do not belong to the specified org and team or collaborators
-	GitHubUsers []string `json:"githubUsers,omitempty"`
+	Users []string `json:"users,omitempty"`
 }
 
 type GitLabOptions struct {
-	// GitLabGroup sets restrict logins to members of this group
-	GitLabGroup []string `json:"gitLabGroups,omitempty"`
-	// GitLabProjects sets restrict logins to members of any of these projects
-	GitLabProjects []string `json:"gitLabProjects,omitempty"`
+	// Group sets restrict logins to members of this group
+	Group []string `json:"group,omitempty"`
+	// Projects restricts logins to members of any of these projects
+	Projects []string `json:"projects,omitempty"`
 }
 
 type GoogleOptions struct {
-	// GoogleGroups sets restrict logins to members of this google group
-	GoogleGroups []string `json:"googleGroup,omitempty"`
-	// GoogleAdminEmail is the google admin to impersonate for api calls
-	GoogleAdminEmail string `json:"googleAdminEmail,omitempty"`
-	// GoogleServiceAccountJSON is the path to the service account json credentials
-	GoogleServiceAccountJSON string `json:"googleServiceAccountJson,omitempty"`
+	// Groups sets restrict logins to members of this google group
+	Groups []string `json:"group,omitempty"`
+	// AdminEmail is the google admin to impersonate for api calls
+	AdminEmail string `json:"adminEmail,omitempty"`
+	// ServiceAccountJSON is the path to the service account json credentials
+	ServiceAccountJSON string `json:"serviceAccountJson,omitempty"`
 }
 
 type OIDCOptions struct {
-	// OIDCIssuerURL is the OpenID Connect issuer URL
+	// IssuerURL is the OpenID Connect issuer URL
 	// eg: https://accounts.google.com
-	OIDCIssuerURL string `json:"oidcIssuerURL,omitempty"`
-	// InsecureOIDCAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified
+	IssuerURL string `json:"issuerURL,omitempty"`
+	// InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified
 	// default set to 'false'
-	InsecureOIDCAllowUnverifiedEmail bool `json:"insecureOidcAllowUnverifiedEmail,omitempty"`
-	// InsecureOIDCSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
+	InsecureAllowUnverifiedEmail bool `json:"insecureAllowUnverifiedEmail,omitempty"`
+	// InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
 	// default set to 'false'
-	InsecureOIDCSkipIssuerVerification bool `json:"insecureOidcSkipIssuerVerification,omitempty"`
-	// SkipOIDCDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
+	InsecureSkipIssuerVerification bool `json:"insecureSkipIssuerVerification,omitempty"`
+	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
-	SkipOIDCDiscovery bool `json:"skipOidcDiscovery,omitempty"`
-	// OIDCJwksURL is the OpenID Connect JWKS URL
+	SkipDiscovery bool `json:"skipDiscovery,omitempty"`
+	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
-	OIDCJwksURL string `json:"oidcJwksURL,omitempty"`
-	// OIDCGroupsClaim indicates which claim contains the user groups
-	// default set to 'groups'
-	OIDCGroupsClaim string `json:"oidcGroupsClaim,omitempty"`
-	// OIDCEmailClaim indicates which claim contains the user email
+	JwksURL string `json:"jwksURL,omitempty"`
+	// EmailClaim indicates which claim contains the user email,
 	// default set to 'email'
-	OIDCEmailClaim string `json:"oidcEmailClaim,omitempty,omitempty"`
+	EmailClaim string `json:"emailClaim,omitempty"`
+	// GroupsClaim indicates which claim contains the user groups
+	// default set to 'groups'
+	GroupsClaim string `json:"groupsClaim,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
@@ -161,18 +161,18 @@ type LoginGovOptions struct {
 func providerDefaults() Providers {
 	providers := Providers{
 		{
-			ProviderType:   "google",
+			Type:           "google",
 			Prompt:         "", // Change to "login" when ApprovalPrompt officially deprecated
 			ApprovalPrompt: "force",
 			AzureConfig: AzureOptions{
-				AzureTenant: "common",
+				Tenant: "common",
 			},
 			OIDCConfig: OIDCOptions{
-				UserIDClaim:                      providers.OIDCEmailClaim,
-				InsecureOIDCAllowUnverifiedEmail: false,
-				SkipOIDCDiscovery:                false,
-				OIDCEmailClaim:                   providers.OIDCEmailClaim,
-				OIDCGroupsClaim:                  providers.OIDCGroupsClaim,
+				InsecureAllowUnverifiedEmail: false,
+				SkipDiscovery:                false,
+				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
+				EmailClaim:                   providers.OIDCEmailClaim,
+				GroupsClaim:                  providers.OIDCGroupsClaim,
 			},
 		},
 	}
