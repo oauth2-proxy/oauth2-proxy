@@ -113,26 +113,15 @@ func TestClientSecretFileOption(t *testing.T) {
 	assert.Equal(t, "testcase", s)
 }
 
-func TestGoogleAdminEmailOptions(t *testing.T) {
+func TestGoogleGroupOptions(t *testing.T) {
 	o := testOptions()
 	o.Providers[0].GoogleConfig.Groups = []string{"googlegroup"}
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
 	expected := errorMsg([]string{
-		"missing setting: google-service-account-json"})
-	assert.Equal(t, expected, err.Error())
-}
-
-func TestGoogleServiceAccountJSONOptions(t *testing.T) {
-	o := testOptions()
-	o.Providers[0].GoogleConfig.ServiceAccountJSON = "file_doesnt_exist.json"
-	err := Validate(o)
-	assert.NotEqual(t, nil, err)
-
-	expected := errorMsg([]string{
 		"missing setting: google-admin-email",
-		"invalid Google credentials file: file_doesnt_exist.json"})
+		"missing setting: google-service-account-json"})
 	assert.Equal(t, expected, err.Error())
 }
 
