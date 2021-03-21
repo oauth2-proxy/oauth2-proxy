@@ -47,7 +47,7 @@
       <h1 class="subtitle is-1">{{.Title}}</h1>
     </div>
 
-    {{ if .Message }}
+    {{ if or .Message .RequestID }}
     <div id="more-info" class="block card is-fullwidth is-shadowless">
       <header class="card-header is-shadowless">
         <p class="card-header-title">More Info</p>
@@ -56,9 +56,16 @@
         </a>
       </header>
       <div class="card-content has-text-left is-hidden">
+        {{ if .Message }}
         <div class="content">
           {{.Message}}
         </div>
+        {{ end }}
+        {{ if .RequestID }}
+        <div class="content">
+          Request ID: {{.RequestID}}
+        </div>
+        {{ end }}
       </div>
     </div>
     {{ end }}

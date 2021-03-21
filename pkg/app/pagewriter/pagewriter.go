@@ -10,8 +10,8 @@ import (
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
 type Writer interface {
-	WriteSignInPage(rw http.ResponseWriter, redirectURL string)
-	WriteErrorPage(rw http.ResponseWriter, status int, redirectURL string, appError string, messages ...interface{})
+	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string)
+	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 }
 

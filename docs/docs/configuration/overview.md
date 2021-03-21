@@ -108,6 +108,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
+| `--request-id-header` | string | Request header to use as the request ID in logging | X-Request-Id |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `--resource` | string | The resource that is protected (Azure AD only) | |
@@ -184,7 +185,7 @@ Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) can b
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
 
 ```
-<REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] [<STATUS>] <MESSAGE>
+<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] [<STATUS>] <MESSAGE>
 ```
 
 The status block will contain one of the below strings:
@@ -197,7 +198,7 @@ If you require a different format than that, you can configure it with the `--au
 The default format is configured as follows:
 
 ```
-{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
+{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
 ```
 
 Available variables for auth logging:
@@ -206,26 +207,27 @@ Available variables for auth logging:
 | --- | --- | --- |
 | Client | 74.125.224.72 | The client/remote IP address. Will use the X-Real-IP header it if exists & reverse-proxy is set to true. |
 | Host  | domain.com | The value of the Host header. |
+| Message | Authenticated via OAuth2 | The details of the auth attempt. |
 | Protocol | HTTP/1.0 | The request protocol. |
+| RequestID | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty |
 | RequestMethod | GET | The request method. |
 | Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
 | UserAgent | - | The full user agent as reported by the requesting client. |
 | Username | username@email.com | The email or username of the auth request. |
 | Status | AuthSuccess | The status of the auth request. See above for details. |
-| Message | Authenticated via OAuth2 | The details of the auth attempt. |
 
 ### Request Log Format
 HTTP request logs will output by default in the below format:
 
 ```
-<REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
+<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
 ```
 
 If you require a different format than that, you can configure it with the `--request-logging-format` flag.
 The default format is configured as follows:
 
 ```
-{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
+{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
 ```
 
 Available variables for request logging:
@@ -236,6 +238,7 @@ Available variables for request logging:
 | Host  | domain.com | The value of the Host header. |
 | Protocol | HTTP/1.0 | The request protocol. |
 | RequestDuration | 0.001 | The time in seconds that a request took to process. |
+| RequestID | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty |
 | RequestMethod | GET | The request method. |
 | RequestURI | "/oauth2/auth" | The URI path of the request. |
 | ResponseSize | 12 | The size in bytes of the response. |

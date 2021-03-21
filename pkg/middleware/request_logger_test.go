@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const RequestLoggingFormatWithoutTime = "{{.Client}} - {{.Username}} [TIMELESS] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+const RequestLoggingFormatWithoutTime = "{{.Client}} - {{.RequestID}} - {{.Username}} [TIMELESS] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
 
 var _ = Describe("Request logger suite", func() {
 	type requestLoggerTableInput struct {
@@ -37,7 +37,10 @@ var _ = Describe("Request logger suite", func() {
 			req.RemoteAddr = "127.0.0.1"
 			req.Host = "test-server"
 
-			scope := &middlewareapi.RequestScope{Session: in.Session}
+			scope := &middlewareapi.RequestScope{
+				RequestID: "11111111-2222-4333-8444-555555555555",
+				Session:   in.Session,
+			}
 			req = middlewareapi.AddRequestScope(req, scope)
 
 			handler := NewRequestLogger()(testUpstreamHandler(in.Upstream))
@@ -47,7 +50,7 @@ var _ = Describe("Request logger suite", func() {
 		},
 		Entry("standard request", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
-			ExpectedLogMessage: "127.0.0.1 - standard.user [TIMELESS] test-server GET standard \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
+			ExpectedLogMessage: "127.0.0.1 - 11111111-2222-4333-8444-555555555555 - standard.user [TIMELESS] test-server GET standard \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
 			Path:               "/foo/bar",
 			ExcludePaths:       []string{},
 			Upstream:           "standard",
@@ -55,7 +58,7 @@ var _ = Describe("Request logger suite", func() {
 		}),
 		Entry("with unrelated path excluded", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
-			ExpectedLogMessage: "127.0.0.1 - unrelated.exclusion [TIMELESS] test-server GET unrelated \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
+			ExpectedLogMessage: "127.0.0.1 - 11111111-2222-4333-8444-555555555555 - unrelated.exclusion [TIMELESS] test-server GET unrelated \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
 			Path:               "/foo/bar",
 			ExcludePaths:       []string{"/ping"},
 			Upstream:           "unrelated",
@@ -69,7 +72,7 @@ var _ = Describe("Request logger suite", func() {
 		}),
 		Entry("ping path", &requestLoggerTableInput{
 			Format:             RequestLoggingFormatWithoutTime,
-			ExpectedLogMessage: "127.0.0.1 - mr.ping [TIMELESS] test-server GET - \"/ping\" HTTP/1.1 \"\" 200 4 0.000\n",
+			ExpectedLogMessage: "127.0.0.1 - 11111111-2222-4333-8444-555555555555 - mr.ping [TIMELESS] test-server GET - \"/ping\" HTTP/1.1 \"\" 200 4 0.000\n",
 			Path:               "/ping",
 			ExcludePaths:       []string{},
 			Upstream:           "",
