@@ -11,9 +11,9 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
-func NewBasicAuthSessionLoader(validator basic.Validator, sessionGroups []string) alice.Constructor {
+func NewBasicAuthSessionLoader(validator basic.Validator, sessionGroups []string, preferEmail bool) alice.Constructor {
 	return func(next http.Handler) http.Handler {
-		return loadBasicAuthSession(validator, sessionGroups, next)
+		return loadBasicAuthSession(validator, sessionGroups, preferEmail, next)
 	}
 }
 
@@ -22,7 +22,20 @@ func NewBasicAuthSessionLoader(validator basic.Validator, sessionGroups []string
 // If no authorization header is found, or the header is invalid, no session
 // will be loaded and the request will be passed to the next handler.
 // If a session was loaded by a previous handler, it will not be replaced.
-func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, next http.Handler) http.Handler {
+func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, preferEmail bool, next http.Handler) http.Handler {
+	// This is a hack to be backwards compatible with the old PreferEmailToUser option.
+	// Long term we will have a rich static user configuration option and this will
+	// be removed.
+	// TODO(JoelSpeed): Remove this hack once rich static user config is implemented.
+	getSession := getBasicSession
+	if preferEmail {
+		getSession = func(validator basic.Validator, sessionGroups []string, req *http.Request) (*sessionsapi.SessionState, error) {
+			session, err := getBasicSession(validator, sessionGroups, req)
+			session.Email = session.User
+			return session, err
+		}
+	}
+
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		scope := middlewareapi.GetRequestScope(req)
 		// If scope is nil, this will panic.
@@ -33,7 +46,7 @@ func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, nex
 			return
 		}
 
-		session, err := getBasicSession(validator, sessionGroups, req)
+		session, err := getSession(validator, sessionGroups, req)
 		if err != nil {
 			logger.Errorf("Error retrieving session from token in Authorization header: %v", err)
 		}

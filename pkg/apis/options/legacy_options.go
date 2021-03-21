@@ -67,6 +67,8 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 	l.Options.InjectRequestHeaders, l.Options.InjectResponseHeaders = l.LegacyHeaders.convert()
 	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
 
+	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
+
 	return &l.Options, nil
 }
 

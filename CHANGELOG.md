@@ -16,6 +16,7 @@
 
 ## Changes since v7.0.1
 
+- [#1116](https://github.com/oauth2-proxy/oauth2-proxy/pull/1116) Reinstate preferEmailToUser behaviour for basic auth sessions (@JoelSpeed)
 - [#1115](https://github.com/oauth2-proxy/oauth2-proxy/pull/1115) Fix upstream proxy appending ? to requests (@JoelSpeed)
 - [#1117](https://github.com/oauth2-proxy/oauth2-proxy/pull/1117)  Deprecate GCP HealthCheck option (@JoelSpeed)
 - [#1104](https://github.com/oauth2-proxy/oauth2-proxy/pull/1104) Allow custom robots text pages (@JoelSpeed)
