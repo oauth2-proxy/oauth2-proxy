@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http/httptest"
 
-	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -32,7 +32,7 @@ var _ = Describe("Error Page Writer", func() {
 			errorPage.WriteErrorPage(recorder, ErrorPageOpts{
 				Status:      403,
 				RedirectURL: "/redirect",
-				RequestID:   requestID,
+				RequestID:   testRequestID,
 				AppError:    "Access Denied",
 			})
 
@@ -46,7 +46,7 @@ var _ = Describe("Error Page Writer", func() {
 			errorPage.WriteErrorPage(recorder, ErrorPageOpts{
 				Status:      500,
 				RedirectURL: "/redirect",
-				RequestID:   requestID,
+				RequestID:   testRequestID,
 				AppError:    "Access Denied",
 			})
 
@@ -60,7 +60,7 @@ var _ = Describe("Error Page Writer", func() {
 			errorPage.WriteErrorPage(recorder, ErrorPageOpts{
 				Status:      403,
 				RedirectURL: "/redirect",
-				RequestID:   requestID,
+				RequestID:   testRequestID,
 				AppError:    "Access Denied",
 				Messages: []interface{}{
 					"An extra message: %s",
@@ -91,7 +91,9 @@ var _ = Describe("Error Page Writer", func() {
 	Context("ProxyErrorHandler", func() {
 		It("Writes a bad gateway error the response writer", func() {
 			req := httptest.NewRequest("", "/bad-gateway", nil)
-			req.Header.Add(requestutil.XRequestID, requestID)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
+				RequestID: testRequestID,
+			})
 			recorder := httptest.NewRecorder()
 			errorPage.ProxyErrorHandler(recorder, req, errors.New("some upstream error"))
 
@@ -128,6 +130,9 @@ var _ = Describe("Error Page Writer", func() {
 		Context("ProxyErrorHandler", func() {
 			It("Writes a bad gateway error the response writer", func() {
 				req := httptest.NewRequest("", "/bad-gateway", nil)
+				req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
+					RequestID: testRequestID,
+				})
 				recorder := httptest.NewRecorder()
 				errorPage.ProxyErrorHandler(recorder, req, errors.New("some upstream error"))
 

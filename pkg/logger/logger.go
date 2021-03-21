@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
@@ -197,11 +198,12 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	scope := middlewareapi.GetRequestScope(req)
 	err := l.authTemplate.Execute(l.writer, authLogMessageData{
 		Client:        client,
 		Host:          requestutil.GetRequestHost(req),
 		Protocol:      req.Proto,
-		RequestID:     requestutil.GetRequestID(req),
+		RequestID:     scope.RequestID,
 		RequestMethod: req.Method,
 		Timestamp:     FormatTimestamp(now),
 		UserAgent:     fmt.Sprintf("%q", req.UserAgent()),
@@ -252,11 +254,12 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	scope := middlewareapi.GetRequestScope(req)
 	err := l.reqTemplate.Execute(l.writer, reqLogMessageData{
 		Client:          client,
 		Host:            requestutil.GetRequestHost(req),
 		Protocol:        req.Proto,
-		RequestID:       requestutil.GetRequestID(req),
+		RequestID:       scope.RequestID,
 		RequestDuration: fmt.Sprintf("%0.3f", duration),
 		RequestMethod:   req.Method,
 		RequestURI:      fmt.Sprintf("%q", url.RequestURI()),

@@ -2,7 +2,6 @@ package options
 
 import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	"github.com/spf13/pflag"
 )
 
@@ -45,7 +44,7 @@ func loggingFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("exclude-logging-path", []string{}, "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
 	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
 	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping endpoint")
-	flagSet.String("request-id-header", requestutil.XRequestID, "Request header to use as the request ID")
+	flagSet.String("request-id-header", "X-Request-Id", "Request header to use as the request ID")
 
 	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
 	flagSet.Int("logging-max-size", 100, "Maximum size in megabytes of the log file before rotation")
@@ -62,7 +61,7 @@ func loggingDefaults() Logging {
 		ExcludePaths:    nil,
 		LocalTime:       true,
 		SilencePing:     false,
-		RequestIDHeader: requestutil.XRequestID,
+		RequestIDHeader: "X-Request-Id",
 		AuthEnabled:     true,
 		AuthFormat:      logger.DefaultAuthLoggingFormat,
 		RequestEnabled:  true,

@@ -289,7 +289,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
 func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
-	chain := alice.New(middleware.NewScope(opts.ReverseProxy))
+	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader))
 
 	if opts.ForceHTTPS {
 		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
@@ -596,10 +596,11 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
+	scope := middlewareapi.GetRequestScope(req)
 	p.pageWriter.WriteErrorPage(rw, pagewriter.ErrorPageOpts{
 		Status:      code,
 		RedirectURL: redirectURL,
-		RequestID:   requestutil.GetRequestID(req),
+		RequestID:   scope.RequestID,
 		AppError:    appError,
 		Messages:    messages,
 	})

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/google/uuid"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	. "github.com/onsi/ginkgo"
@@ -14,13 +13,9 @@ import (
 
 var _ = Describe("Util Suite", func() {
 	const (
-		proto          = "http"
-		host           = "www.oauth2proxy.test"
-		uri            = "/test/endpoint"
-		testScopeUUID  = "11111111-2222-4333-8444-555555555555"
-		testHeaderUUID = "66666666-7777-4888-8999-aaaaaaaaaaaa"
-		// mockRand io.Reader below counts bytes from 0-255 in order
-		testRandomUUID = "00010203-0405-4607-8809-0a0b0c0d0e0f"
+		proto = "http"
+		host  = "www.oauth2proxy.test"
+		uri   = "/test/endpoint"
 	)
 	var req *http.Request
 
@@ -133,102 +128,4 @@ var _ = Describe("Util Suite", func() {
 			})
 		})
 	})
-
-	Context("GetRequestID", func() {
-		Context("Scope is already set", func() {
-			BeforeEach(func() {
-				req = middleware.AddRequestScope(req, &middleware.RequestScope{
-					RequestID: testScopeUUID,
-				})
-			})
-
-			It("returns the ID in the scope", func() {
-				Expect(util.GetRequestID(req)).To(Equal(testScopeUUID))
-			})
-
-			It("ignores X-Request-Id and returns the scope ID", func() {
-				req.Header.Add("X-Request-Id", testHeaderUUID)
-				Expect(util.GetRequestID(req)).To(Equal(testScopeUUID))
-			})
-		})
-	})
-
-	Context("GenRequestID", func() {
-		Context("Standard case", func() {
-			BeforeEach(func() {
-				uuid.SetRand(mockRand{})
-			})
-
-			AfterEach(func() {
-				uuid.SetRand(nil)
-			})
-
-			It("returns the ID in the X-Request-Id header when set", func() {
-				req.Header.Add("X-Request-Id", testHeaderUUID)
-				Expect(util.GenRequestID(req)).To(Equal(testHeaderUUID))
-			})
-
-			It("returns a random UUID when the header is unset", func() {
-				Expect(util.GenRequestID(req)).To(Equal(testRandomUUID))
-			})
-		})
-
-		Context("Request ID Header is overridden", func() {
-			const customRequestIDHeader = "X-Trace-Id"
-
-			BeforeEach(func() {
-				util.SetRequestIDHeader(customRequestIDHeader)
-				uuid.SetRand(mockRand{})
-			})
-
-			AfterEach(func() {
-				util.SetRequestIDHeader("")
-				uuid.SetRand(nil)
-			})
-
-			It("returns the ID in the X-Trace-Id header when set", func() {
-				req.Header.Add("X-Trace-Id", testHeaderUUID)
-				Expect(util.GenRequestID(req)).To(Equal(testHeaderUUID))
-			})
-
-			It("returns a random UUID when the header is unset", func() {
-				Expect(util.GenRequestID(req)).To(Equal(testRandomUUID))
-			})
-
-			It("returns a random UUID when only the original header is set", func() {
-				req.Header.Add("X-Request-Id", testHeaderUUID)
-				Expect(util.GenRequestID(req)).To(Equal(testRandomUUID))
-			})
-		})
-
-		Context("Request ID override is blank defaulting to X-Request-Id", func() {
-			BeforeEach(func() {
-				util.SetRequestIDHeader("")
-				uuid.SetRand(mockRand{})
-			})
-
-			AfterEach(func() {
-				util.SetRequestIDHeader(util.XRequestID)
-				uuid.SetRand(nil)
-			})
-
-			It("returns the ID in the X-Request-Id header when set", func() {
-				req.Header.Add("X-Request-Id", testHeaderUUID)
-				Expect(util.GenRequestID(req)).To(Equal(testHeaderUUID))
-			})
-
-			It("returns a random UUID when the header is unset", func() {
-				Expect(util.GenRequestID(req)).To(Equal(testRandomUUID))
-			})
-		})
-	})
 })
-
-type mockRand struct{}
-
-func (mockRand) Read(p []byte) (int, error) {
-	for i := range p {
-		p[i] = byte(i % 256)
-	}
-	return len(p), nil
-}

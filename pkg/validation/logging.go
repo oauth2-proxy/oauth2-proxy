@@ -5,7 +5,6 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -54,7 +53,6 @@ func configureLogger(o options.Logging, msgs []string) []string {
 	logger.SetReqTemplate(o.RequestFormat)
 
 	logger.SetExcludePaths(o.ExcludePaths)
-	requestutil.SetRequestIDHeader(o.RequestIDHeader)
 
 	if !o.LocalTime {
 		logger.SetFlags(logger.Flags() | logger.LUTC)

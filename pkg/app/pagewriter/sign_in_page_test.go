@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -46,7 +46,9 @@ var _ = Describe("SignIn Page", func() {
 			}
 
 			request = httptest.NewRequest("", "http://127.0.0.1/", nil)
-			request.Header.Add(requestutil.XRequestID, requestID)
+			request = middlewareapi.AddRequestScope(request, &middlewareapi.RequestScope{
+				RequestID: testRequestID,
+			})
 		})
 
 		Context("WriteSignInPage", func() {
@@ -70,7 +72,7 @@ var _ = Describe("SignIn Page", func() {
 
 				body, err := ioutil.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(body)).To(Equal(fmt.Sprintf("Internal Server Error | %s", requestID)))
+				Expect(string(body)).To(Equal(fmt.Sprintf("Internal Server Error | %s", testRequestID)))
 			})
 		})
 	})

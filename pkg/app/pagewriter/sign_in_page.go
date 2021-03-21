@@ -13,8 +13,8 @@ import (
 	"html/template"
 	"net/http"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
 //go:embed default_logo.svg
@@ -80,10 +80,11 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 	err := s.template.Execute(rw, t)
 	if err != nil {
 		logger.Printf("Error rendering sign-in template: %v", err)
+		scope := middlewareapi.GetRequestScope(req)
 		s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
 			Status:      http.StatusInternalServerError,
 			RedirectURL: redirectURL,
-			RequestID:   requestutil.GetRequestID(req),
+			RequestID:   scope.RequestID,
 			AppError:    err.Error(),
 		})
 	}

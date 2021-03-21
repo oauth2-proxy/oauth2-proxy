@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -31,7 +30,6 @@ var _ = Describe("Writer", func() {
 			}
 
 			request = httptest.NewRequest("", "http://127.0.0.1/", nil)
-			request.Header.Add(requestutil.XRequestID, requestID)
 		})
 
 		Context("With no custom templates", func() {

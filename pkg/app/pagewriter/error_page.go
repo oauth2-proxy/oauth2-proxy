@@ -5,8 +5,8 @@ import (
 	"html/template"
 	"net/http"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
 // errorMessages are default error messages for each of the the different
@@ -91,10 +91,11 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
 // It is expected to always render a bad gateway error.
 func (e *errorPageWriter) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
 	logger.Errorf("Error proxying to upstream server: %v", proxyErr)
+	scope := middlewareapi.GetRequestScope(req)
 	e.WriteErrorPage(rw, ErrorPageOpts{
 		Status:      http.StatusBadGateway,
 		RedirectURL: "", // The user is already logged in and has hit an upstream error. Makes no sense to redirect in this case.
-		RequestID:   requestutil.GetRequestID(req),
+		RequestID:   scope.RequestID,
 		AppError:    proxyErr.Error(),
 		Messages:    []interface{}{"There was a problem connecting to the upstream server."},
 	})
