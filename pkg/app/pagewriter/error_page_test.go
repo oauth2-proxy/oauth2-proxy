@@ -84,7 +84,7 @@ var _ = Describe("Error Page Writer", func() {
 
 			body, err := ioutil.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(body)).To(Equal("Forbidden You do not have permission to access this resource. /prefix/ 403 /redirect  Custom Footer Text v0.0.0-test"))
+			Expect(string(body)).To(Equal("Forbidden You do not have permission to access this resource. /prefix/ 403 /redirect &lt;script&gt;alert(1)&lt;/script&gt; Custom Footer Text v0.0.0-test"))
 		})
 	})
 

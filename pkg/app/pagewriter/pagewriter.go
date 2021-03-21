@@ -3,12 +3,7 @@ package pagewriter
 import (
 	"fmt"
 	"net/http"
-
-	"github.com/microcosm-cc/bluemonday"
 )
-
-// HTML sanitization policy creation done once for lifespan of the program
-var sanitizer = bluemonday.StrictPolicy()
 
 // Writer is an interface for rendering html templates for both sign-in and
 // error pages.

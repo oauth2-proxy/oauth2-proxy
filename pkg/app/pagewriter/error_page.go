@@ -75,7 +75,7 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
 		ProxyPrefix: e.proxyPrefix,
 		StatusCode:  opts.Status,
 		Redirect:    opts.RedirectURL,
-		RequestID:   sanitizer.Sanitize(opts.RequestID),
+		RequestID:   opts.RequestID,
 		Footer:      template.HTML(e.footer),
 		Version:     e.version,
 	}
