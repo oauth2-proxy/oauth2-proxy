@@ -45,12 +45,13 @@ func configureLogger(o options.Logging, msgs []string) []string {
 
 	// Pass configuration values to the standard logger
 	logger.SetStandardEnabled(o.StandardEnabled)
-	logger.SetSensEnabled(o.SensitiveEnabled)
 	logger.SetErrToInfo(o.ErrToInfo)
 	logger.SetAuthEnabled(o.AuthEnabled)
+	logger.SetRefreshEnabled(o.RefreshEnabled)
 	logger.SetReqEnabled(o.RequestEnabled)
 	logger.SetStandardTemplate(o.StandardFormat)
 	logger.SetAuthTemplate(o.AuthFormat)
+	logger.SetRefreshTemplate(o.RefreshFormat)
 	logger.SetReqTemplate(o.RequestFormat)
 
 	logger.SetExcludePaths(o.ExcludePaths)

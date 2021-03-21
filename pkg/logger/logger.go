@@ -2,7 +2,9 @@ package logger
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"io"
 	"net/http"
 	"net/url"
@@ -18,6 +20,9 @@ import (
 // AuthStatus defines the different types of auth logging that occur
 type AuthStatus string
 
+// RefreshStatus defines the different types of refresh logging that occur
+type RefreshStatus string
+
 // Level indicates the log level for log messages
 type Level int
 
@@ -26,6 +31,8 @@ const (
 	DefaultStandardLoggingFormat = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
 	// DefaultAuthLoggingFormat defines the default auth log format
 	DefaultAuthLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
+	// DefaultRefreshLoggingFormat defines the default refresh log format
+	DefaultRefreshLoggingFormat = "{{.Session}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
 	// DefaultRequestLoggingFormat defines the default request log format
 	DefaultRequestLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
 
@@ -35,6 +42,13 @@ const (
 	AuthFailure AuthStatus = "AuthFailure"
 	// AuthError indicates that an auth attempt has failed due to an error
 	AuthError AuthStatus = "AuthError"
+
+	// RefreshSuccess indicates that an refresh attempt has succeeded explicitly
+	RefreshSuccess RefreshStatus = "RefreshSuccess"
+	// Refreshing indicates that a session refresh is starting
+	Refreshing RefreshStatus = "Refreshing"
+	// RefreshError indicates that an refresh attempt has failed due to an error
+	RefreshError RefreshStatus = "RefreshError"
 
 	// Llongfile flag to log full file name and line number: /a/b/c/d.go:23
 	Llongfile = 1 << iota
@@ -50,6 +64,13 @@ const (
 	// ERROR is for error-level logging
 	ERROR
 )
+
+var customTemplateFunctions = template.FuncMap{
+	"hash": func(value string) string {
+		md5.New()
+		return fmt.Sprintf("%x", md5.Sum([]byte(value)))
+	},
+}
 
 // These are the containers for all values that are available as variables in the logging formats.
 // All values are pre-formatted strings so it is easy to use them in the format string.
@@ -86,6 +107,15 @@ type reqLogMessageData struct {
 	Username string
 }
 
+type refreshLogMessageData struct {
+	Timestamp,
+	Session,
+	Username,
+	ExpiresOn,
+	Status,
+	Message string
+}
+
 // Returns the apparent "real client IP" as a string.
 type GetClientFunc = func(r *http.Request) string
 
@@ -95,18 +125,20 @@ type GetClientFunc = func(r *http.Request) string
 // can be used simultaneously from multiple goroutines; it guarantees to
 // serialize access to the Writer.
 type Logger struct {
-	mu             sync.Mutex
-	flag           int
-	writer         io.Writer
-	errWriter      io.Writer
-	stdEnabled     bool
-	authEnabled    bool
-	reqEnabled     bool
-	getClientFunc  GetClientFunc
-	excludePaths   map[string]struct{}
-	stdLogTemplate *template.Template
-	authTemplate   *template.Template
-	reqTemplate    *template.Template
+	mu              sync.Mutex
+	flag            int
+	writer          io.Writer
+	errWriter       io.Writer
+	stdEnabled      bool
+	authEnabled     bool
+	refreshEnabled  bool
+	reqEnabled      bool
+	getClientFunc   GetClientFunc
+	excludePaths    map[string]struct{}
+	stdLogTemplate  *template.Template
+	authTemplate    *template.Template
+	refreshTemplate *template.Template
+	reqTemplate     *template.Template
 }
 
 // New creates a new Standarderr Logger.
@@ -117,6 +149,7 @@ func New(flag int) *Logger {
 		flag:           flag,
 		stdEnabled:     true,
 		authEnabled:    true,
+		refreshEnabled: true,
 		reqEnabled:     true,
 		getClientFunc:  func(r *http.Request) string { return r.RemoteAddr },
 		excludePaths:   nil,
@@ -205,6 +238,37 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 		Username:      username,
 		Status:        string(status),
 		Message:       fmt.Sprintf(format, a...),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = l.writer.Write([]byte("\n"))
+	if err != nil {
+		panic(err)
+	}
+}
+
+// PrintRefreshf writes refresh info to the logger. Requires an http.Request to
+// log request details. Remaining arguments are handled in the manner of
+// fmt.Sprintf. Writes a final newline to the end of every message.
+func (l *Logger) PrintRefreshf(sessionState *sessions.SessionState, status RefreshStatus, format string, a ...interface{}) {
+	if !l.refreshEnabled {
+		return
+	}
+
+	now := time.Now()
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	err := l.refreshTemplate.Execute(l.writer, refreshLogMessageData{
+		Timestamp: FormatTimestamp(now),
+		Session:   fmt.Sprintf("%s", sessionState),
+		ExpiresOn: fmt.Sprintf("%s", sessionState.ExpiresOn),
+		Username:  sessionState.Email,
+		Status:    string(status),
+		Message:   fmt.Sprintf(format, a...),
 	})
 	if err != nil {
 		panic(err)
@@ -349,6 +413,13 @@ func (l *Logger) SetAuthEnabled(e bool) {
 	l.authEnabled = e
 }
 
+// SetRefreshEnabled enables or disables refresh logging.
+func (l *Logger) SetRefreshEnabled(e bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.refreshEnabled = e
+}
+
 // SetReqEnabled enabled or disables request logging.
 func (l *Logger) SetReqEnabled(e bool) {
 	l.mu.Lock()
@@ -377,21 +448,28 @@ func (l *Logger) SetExcludePaths(s []string) {
 func (l *Logger) SetStandardTemplate(t string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.stdLogTemplate = template.Must(template.New("std-log").Parse(t))
+	l.stdLogTemplate = template.Must(template.New("std-log").Funcs(customTemplateFunctions).Parse(t))
 }
 
 // SetAuthTemplate sets the template for auth logging.
 func (l *Logger) SetAuthTemplate(t string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.authTemplate = template.Must(template.New("auth-log").Parse(t))
+	l.authTemplate = template.Must(template.New("auth-log").Funcs(customTemplateFunctions).Parse(t))
+}
+
+// SetRefreshTemplate sets the template for refresh logging.
+func (l *Logger) SetRefreshTemplate(t string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.refreshTemplate = template.Must(template.New("refresh-log").Funcs(customTemplateFunctions).Parse(t))
 }
 
 // SetReqTemplate sets the template for request logging.
 func (l *Logger) SetReqTemplate(t string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.reqTemplate = template.Must(template.New("req-log").Parse(t))
+	l.reqTemplate = template.Must(template.New("req-log").Funcs(customTemplateFunctions).Parse(t))
 }
 
 // These functions utilize the standard logger.
@@ -443,6 +521,12 @@ func SetAuthEnabled(e bool) {
 	std.SetAuthEnabled(e)
 }
 
+// SetRefreshEnabled enables or disables refresh logging for the standard
+// logger.
+func SetRefreshEnabled(e bool) {
+	std.SetRefreshEnabled(e)
+}
+
 // SetReqEnabled enables or disables request logging for the
 // standard logger.
 func SetReqEnabled(e bool) {
@@ -470,6 +554,12 @@ func SetStandardTemplate(t string) {
 // standard logger.
 func SetAuthTemplate(t string) {
 	std.SetAuthTemplate(t)
+}
+
+// SetRefreshTemplate sets the template for refresh logging for the
+// standard logger.
+func SetRefreshTemplate(t string) {
+	std.SetRefreshTemplate(t)
 }
 
 // SetReqTemplate sets the template for request logging for the
@@ -559,47 +649,13 @@ func PrintAuthf(username string, req *http.Request, status AuthStatus, format st
 	std.PrintAuthf(username, req, status, format, a...)
 }
 
+// PrintRefreshf writes refresh session details to the standard logger.
+// Arguments are handled in the manner of fmt.Printf.
+func PrintRefreshf(sessionState *sessions.SessionState, status RefreshStatus, format string, a ...interface{}) {
+	std.PrintRefreshf(sessionState, status, format, a...)
+}
+
 // PrintReq writes request details to the standard logger.
 func PrintReq(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) {
 	std.PrintReq(username, upstream, req, url, ts, status, size)
-}
-
-type SensitiveDataWrapper struct {
-	sensEnabled bool
-}
-
-var sensDataWrap = SensitiveDataWrapper{
-	sensEnabled: false,
-}
-
-// SetSensEnabled enables or disables sensitive data wrapping.
-func (w *SensitiveDataWrapper) SetSensEnabled(e bool) {
-	w.sensEnabled = e
-}
-
-// SetSensEnabled enables or disables sensitive data wrapping.
-func SetSensEnabled(e bool) {
-	sensDataWrap.SetSensEnabled(e)
-}
-
-func (w *SensitiveDataWrapper) wrapSensData(d interface{}) interface{} {
-	if !w.sensEnabled {
-		return "censored"
-	}
-	return d
-}
-
-func (w *SensitiveDataWrapper) wrapSensDataAlt(d interface{}, alt interface{}) interface{} {
-	if !w.sensEnabled {
-		return alt
-	}
-	return d
-}
-
-func WrapSensData(d interface{}) interface{} {
-	return sensDataWrap.wrapSensData(d)
-}
-
-func WrapSensDataAlt(d interface{}, alt string) interface{} {
-	return sensDataWrap.wrapSensDataAlt(d, alt)
 }

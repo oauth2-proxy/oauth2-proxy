@@ -840,7 +840,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		logger.Errorf("Error with authorization: %v", err)
 	}
 	if p.Validator(session.Email) && authorized {
-		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2")
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
 			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)

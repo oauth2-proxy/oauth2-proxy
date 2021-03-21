@@ -100,7 +100,8 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 
 	err = s.refreshSessionIfNeeded(rw, req, session)
 	if err != nil {
-		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
+		logger.PrintRefreshf(session, logger.RefreshError, "error refreshing access token: %v", err)
+		return nil, fmt.Errorf("error refreshing access token: %v", err)
 	}
 
 	return session, nil
@@ -119,7 +120,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 		return nil
 	}
 
-	logger.Printf("Refreshing %s old session cookie for %s (refresh after %s)", session.Age(), session, s.refreshPeriod)
+	logger.PrintRefreshf(session, logger.Refreshing, "Refreshing %s old session cookie (refresh after %s)", session.Age(), s.refreshPeriod)
 	refreshed, err := s.refreshSessionWithProvider(rw, req, session)
 	if err != nil {
 		return err
@@ -147,7 +148,7 @@ func (s *storedSessionLoader) refreshSessionWithProvider(rw http.ResponseWriter,
 	// Because the session was refreshed, make sure to save it
 	err = s.store.Save(rw, req, session)
 	if err != nil {
-		logger.PrintAuthf(session.Email, req, logger.AuthError, "error saving session: %v", err)
+		logger.PrintRefreshf(session, logger.RefreshError, "error saving session: %v", err)
 		return false, fmt.Errorf("error saving session: %v", err)
 	}
 	return true, nil

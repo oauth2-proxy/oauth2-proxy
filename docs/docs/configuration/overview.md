@@ -108,6 +108,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
+| `--refresh-logging` | bool | Log session refresh attempts | true |
+| `--refresh-logging-format` | string | Template for session refresh log lines | see [Logging Configuration](#logging-configuration) |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `--resource` | string | The resource that is protected (Azure AD only) | |
@@ -130,7 +132,6 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--skip-provider-button` | bool | will skip sign-in-page to directly reach the next step: oauth/start | false |
 | `--ssl-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS providers | false |
 | `--ssl-upstream-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS upstreams | false |
-| `--sensitive-logging` | bool | Log sensitive data like user email | false |
 | `--standard-logging` | bool | Log standard runtime information | true |
 | `--standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
 | `--tls-cert-file` | string | path to certificate file | |
@@ -175,7 +176,7 @@ By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to
 
 If logging to a file you can also configure the maximum file size (`--logging-max-size`), age (`--logging-max-age`), max backup logs (`--logging-max-backups`), and if backup logs should be compressed (`--logging-compress`).
 
-There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
+There are three different types of logging: standard, authentication, session refresh and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, `--refresh-logging`, and `--request-logging`.
 
 Each type of logging has its own configurable format and variables. By default these formats are similar to the Apache Combined Log.
 

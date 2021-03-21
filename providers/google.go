@@ -253,7 +253,7 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 		if err != nil {
 			logger.Errorf(
 				"error using get API to check member %s of google group %s: user not in the group",
-				logger.WrapSensData(email), group)
+				email, group)
 			return false
 		}
 
@@ -285,7 +285,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	//
 	// re-check that the user is in the proper google group(s)
 	if !p.groupValidator(s) {
-		return false, fmt.Errorf("%s is no longer in the group(s)", logger.WrapSensDataAlt(s.Email, "given email"))
+		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 
 	origExpiration := s.ExpiresOn
@@ -293,7 +293,7 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	s.AccessToken = newToken
 	s.IDToken = newIDToken
 	s.ExpiresOn = &expires
-	logger.Printf("refreshed access token %s (expired on %s)", logger.WrapSensData(s), origExpiration)
+	logger.PrintRefreshf(s, logger.RefreshSuccess, "refreshed access token (expired on %s)", origExpiration)
 	return true, nil
 }
 
