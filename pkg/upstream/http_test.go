@@ -390,7 +390,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
 
-			proxyServer = httptest.NewServer(middleware.NewScope(false)(handler))
+			proxyServer = httptest.NewServer(middleware.NewScope(false, "X-Request-Id")(handler))
 		})
 
 		AfterEach(func() {
