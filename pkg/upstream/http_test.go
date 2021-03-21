@@ -140,6 +140,29 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			},
 			expectedUpstream: "encodedSlashes",
 		}),
+		Entry("request a path with an empty query string", &httpUpstreamTableInput{
+			id:           "default",
+			serverAddr:   &serverAddr,
+			target:       "http://example.localhost/foo?",
+			method:       "GET",
+			body:         []byte{},
+			errorHandler: nil,
+			expectedResponse: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method:     "GET",
+					URL:        "http://example.localhost/foo?",
+					Header:     map[string][]string{},
+					Body:       []byte{},
+					Host:       "example.localhost",
+					RequestURI: "http://example.localhost/foo?",
+				},
+			},
+			expectedUpstream: "default",
+		}),
 		Entry("when the request has a body", &httpUpstreamTableInput{
 			id:           "requestWithBody",
 			serverAddr:   &serverAddr,

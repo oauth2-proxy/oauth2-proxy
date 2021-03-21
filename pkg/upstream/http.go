@@ -153,6 +153,7 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 		// use RequestURI so that we aren't unescaping encoded slashes in the request path
 		req.URL.Opaque = req.RequestURI
 		req.URL.RawQuery = ""
+		req.URL.ForceQuery = false
 	}
 }
 
