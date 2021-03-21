@@ -302,6 +302,7 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	healthCheckPaths := []string{opts.PingPath}
 	healthCheckUserAgents := []string{opts.PingUserAgent}
 	if opts.GCPHealthChecks {
+		logger.Printf("WARNING: GCP HealthChecks are now deprecated: Reconfigure apps to use the ping path for liveness and readiness checks, set the ping user agent to \"GoogleHC/1.0\" to preserve existing behaviour")
 		healthCheckPaths = append(healthCheckPaths, "/liveness_check", "/readiness_check")
 		healthCheckUserAgents = append(healthCheckUserAgents, "GoogleHC/1.0")
 	}
