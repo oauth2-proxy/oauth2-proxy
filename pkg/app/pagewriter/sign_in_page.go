@@ -13,6 +13,7 @@ import (
 	"html/template"
 	"net/http"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
@@ -53,7 +54,7 @@ type signInPageWriter struct {
 
 // WriteSignInPage writes the sign-in page to the given response writer.
 // It uses the redirectURL to be able to set the final destination for the user post login.
-func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, redirectURL string) {
+func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string) {
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	t := struct {
@@ -79,7 +80,13 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, redirectURL s
 	err := s.template.Execute(rw, t)
 	if err != nil {
 		logger.Printf("Error rendering sign-in template: %v", err)
-		s.errorPageWriter.WriteErrorPage(rw, http.StatusInternalServerError, redirectURL, err.Error())
+		scope := middlewareapi.GetRequestScope(req)
+		s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
+			Status:      http.StatusInternalServerError,
+			RedirectURL: redirectURL,
+			RequestID:   scope.RequestID,
+			AppError:    err.Error(),
+		})
 	}
 }
 

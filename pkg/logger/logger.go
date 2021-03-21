@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
@@ -30,11 +31,11 @@ const (
 	// DefaultStandardLoggingFormat defines the default standard log format
 	DefaultStandardLoggingFormat = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
 	// DefaultAuthLoggingFormat defines the default auth log format
-	DefaultAuthLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
+	DefaultAuthLoggingFormat = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
 	// DefaultRefreshLoggingFormat defines the default refresh log format
 	DefaultRefreshLoggingFormat = "{{.Session}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}"
 	// DefaultRequestLoggingFormat defines the default request log format
-	DefaultRequestLoggingFormat = "{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
+	DefaultRequestLoggingFormat = "{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}"
 
 	// AuthSuccess indicates that an auth attempt has succeeded explicitly
 	AuthSuccess AuthStatus = "AuthSuccess"
@@ -84,6 +85,7 @@ type authLogMessageData struct {
 	Client,
 	Host,
 	Protocol,
+	RequestID,
 	RequestMethod,
 	Timestamp,
 	UserAgent,
@@ -96,6 +98,7 @@ type reqLogMessageData struct {
 	Client,
 	Host,
 	Protocol,
+	RequestID,
 	RequestDuration,
 	RequestMethod,
 	RequestURI,
@@ -228,10 +231,12 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	scope := middlewareapi.GetRequestScope(req)
 	err := l.authTemplate.Execute(l.writer, authLogMessageData{
 		Client:        client,
 		Host:          requestutil.GetRequestHost(req),
 		Protocol:      req.Proto,
+		RequestID:     scope.RequestID,
 		RequestMethod: req.Method,
 		Timestamp:     FormatTimestamp(now),
 		UserAgent:     fmt.Sprintf("%q", req.UserAgent()),
@@ -313,10 +318,12 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	scope := middlewareapi.GetRequestScope(req)
 	err := l.reqTemplate.Execute(l.writer, reqLogMessageData{
 		Client:          client,
 		Host:            requestutil.GetRequestHost(req),
 		Protocol:        req.Proto,
+		RequestID:       scope.RequestID,
 		RequestDuration: fmt.Sprintf("%0.3f", duration),
 		RequestMethod:   req.Method,
 		RequestURI:      fmt.Sprintf("%q", url.RequestURI()),
