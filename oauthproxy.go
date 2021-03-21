@@ -289,7 +289,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
 func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
-	chain := alice.New(middleware.NewScope(opts.ReverseProxy))
+	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader))
 
 	if opts.ForceHTTPS {
 		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
@@ -596,7 +596,14 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
-	p.pageWriter.WriteErrorPage(rw, code, redirectURL, appError, messages...)
+	scope := middlewareapi.GetRequestScope(req)
+	p.pageWriter.WriteErrorPage(rw, pagewriter.ErrorPageOpts{
+		Status:      code,
+		RedirectURL: redirectURL,
+		RequestID:   scope.RequestID,
+		AppError:    appError,
+		Messages:    messages,
+	})
 }
 
 // IsAllowedRequest is used to check if auth should be skipped for this request
@@ -657,7 +664,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
-	p.pageWriter.WriteSignInPage(rw, redirectURL)
+	p.pageWriter.WriteSignInPage(rw, req, redirectURL)
 }
 
 // ManualSignIn handles basic auth logins to the proxy

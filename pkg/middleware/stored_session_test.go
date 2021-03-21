@@ -401,6 +401,7 @@ var _ = Describe("Stored Session Suite", func() {
 				}
 
 				req := httptest.NewRequest("", "/", nil)
+				req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
 				refreshed, err := s.refreshSessionWithProvider(nil, req, in.session)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
