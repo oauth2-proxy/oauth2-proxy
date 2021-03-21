@@ -116,11 +116,11 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 		}
 	}
 
-	// Set the request director based on the PassHostHeader option
+	// Ensure we always pass the original request path
+	setProxyDirector(proxy)
+
 	if upstream.PassHostHeader != nil && !*upstream.PassHostHeader {
 		setProxyUpstreamHostHeader(proxy, target)
-	} else {
-		setProxyDirector(proxy)
 	}
 
 	// Set the error handler so that upstream connection failures render the
@@ -137,10 +137,7 @@ func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
 	director := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		director(req)
-		// use RequestURI so that we aren't unescaping encoded slashes in the request path
 		req.Host = target.Host
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
 	}
 }
 
