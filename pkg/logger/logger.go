@@ -264,8 +264,8 @@ func (l *Logger) PrintRefreshf(sessionState *sessions.SessionState, status Refre
 
 	err := l.refreshTemplate.Execute(l.writer, refreshLogMessageData{
 		Timestamp: FormatTimestamp(now),
-		Session:   fmt.Sprintf("%s", sessionState),
-		ExpiresOn: fmt.Sprintf("%s", sessionState.ExpiresOn),
+		Session:   sessionState.String(),
+		ExpiresOn: sessionState.ExpiresOn.String(),
 		Username:  sessionState.Email,
 		Status:    string(status),
 		Message:   fmt.Sprintf(format, a...),
