@@ -38,3 +38,11 @@ kubernetes-up:
 .PHONY: kubernetes-down
 kubernetes-down:
 	make -C kubernetes delete-cluster
+
+.PHONY: traefik-up
+traefik-up:
+	docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml up -d
+
+.PHONY: traefik-%
+traefik-%:
+	docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml $*
