@@ -1,6 +1,6 @@
 # This docker-compose file can be used to bring up an example instance of oauth2-proxy
 # for manual testing and exploration of features.
-# Alongside OAuth2-Proxy, this file also starts Keycloak to act as the identity provider,
+# Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
 # HTTPBin as an example upstream.
 #
 # This can either be created using docker-compose

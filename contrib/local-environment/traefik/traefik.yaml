@@ -1,7 +1,7 @@
 api:
   insecure: true
 log:
-  level: DEBUG
+  level: INFO
 providers:
   file:
     filename: /etc/traefik/dynamic.yaml
