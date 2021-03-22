@@ -4,11 +4,26 @@
 
 ## Important Notes
 
+- [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Upstream request signatures via `--signature-key` is
+  deprecated. Support will be removed completely in v8.0.0.
+- [1087](https://github.com/oauth2-proxy/oauth2-proxy/pull/1087) The default logging templates have been updated to include {{.RequestID}}
+- [#1117](https://github.com/oauth2-proxy/oauth2-proxy/pull/1117) The `--gcp-healthchecks` option is now deprecated. It will be removed in a future release.
+  - To migrate, you can change your application health checks for OAuth2 Proxy to point to
+    the `--ping-path` value.
+  - You can also migrate the user agent based health check using the `--ping-user-agent` option. Set it to `GoogleHC/1.0` to allow health checks on the path `/` from the Google health checker.
+
 ## Breaking Changes
 
 ## Changes since v7.0.1
 
-- [#914](https://github.com/oauth2-proxy/oauth2-proxy/pull/914) Extract email from id_token for azure provider when oidc is configured
+- [#1116](https://github.com/oauth2-proxy/oauth2-proxy/pull/1116) Reinstate preferEmailToUser behaviour for basic auth sessions (@JoelSpeed)
+- [#1115](https://github.com/oauth2-proxy/oauth2-proxy/pull/1115) Fix upstream proxy appending ? to requests (@JoelSpeed)
+- [#1117](https://github.com/oauth2-proxy/oauth2-proxy/pull/1117)  Deprecate GCP HealthCheck option (@JoelSpeed)
+- [#1104](https://github.com/oauth2-proxy/oauth2-proxy/pull/1104) Allow custom robots text pages (@JoelSpeed)
+- [#1045](https://github.com/oauth2-proxy/oauth2-proxy/pull/1045) Ensure redirect URI always has a scheme (@JoelSpeed)
+- [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Deprecate upstream request signatures (@NickMeves)
+- [1087](https://github.com/oauth2-proxy/oauth2-proxy/pull/1087) Support Request ID in logging (@NickMeves)
+- [#914](https://github.com/oauth2-proxy/oauth2-proxy/pull/914) Extract email from id_token for azure provider when oidc is configured (@weinong)
 - [#1047](https://github.com/oauth2-proxy/oauth2-proxy/pull/1047) Refactor HTTP Server and add ServerGroup to handle graceful shutdown of multiple servers (@JoelSpeed)
 - [#1070](https://github.com/oauth2-proxy/oauth2-proxy/pull/1070) Refactor logging middleware to middleware package (@NickMeves)
 - [#1064](https://github.com/oauth2-proxy/oauth2-proxy/pull/1064) Add support for setting groups on session when using basic auth (@stefansedich)

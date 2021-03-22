@@ -4,9 +4,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/google/uuid"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+)
+
+const (
+	testRequestHeader = "X-Request-Id"
+	testRequestID     = "11111111-2222-4333-8444-555555555555"
+	// mockRand io.Reader below counts bytes from 0-255 in order
+	testRandomUUID = "00010203-0405-4607-8809-0a0b0c0d0e0f"
 )
 
 var _ = Describe("Scope Suite", func() {
@@ -24,10 +32,11 @@ var _ = Describe("Scope Suite", func() {
 
 		Context("ReverseProxy is false", func() {
 			BeforeEach(func() {
-				handler := NewScope(false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					nextRequest = r
-					w.WriteHeader(200)
-				}))
+				handler := NewScope(false, testRequestHeader)(
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						nextRequest = r
+						w.WriteHeader(200)
+					}))
 				handler.ServeHTTP(rw, request)
 			})
 
@@ -52,10 +61,11 @@ var _ = Describe("Scope Suite", func() {
 
 		Context("ReverseProxy is true", func() {
 			BeforeEach(func() {
-				handler := NewScope(true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					nextRequest = r
-					w.WriteHeader(200)
-				}))
+				handler := NewScope(true, testRequestHeader)(
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						nextRequest = r
+						w.WriteHeader(200)
+					}))
 				handler.ServeHTTP(rw, request)
 			})
 
@@ -65,5 +75,53 @@ var _ = Describe("Scope Suite", func() {
 				Expect(scope.ReverseProxy).To(BeTrue())
 			})
 		})
+
+		Context("Request ID header is present", func() {
+			BeforeEach(func() {
+				request.Header.Add(testRequestHeader, testRequestID)
+				handler := NewScope(false, testRequestHeader)(
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						nextRequest = r
+						w.WriteHeader(200)
+					}))
+				handler.ServeHTTP(rw, request)
+			})
+
+			It("sets the RequestID using the request", func() {
+				scope := middlewareapi.GetRequestScope(nextRequest)
+				Expect(scope.RequestID).To(Equal(testRequestID))
+			})
+		})
+
+		Context("Request ID header is missing", func() {
+			BeforeEach(func() {
+				uuid.SetRand(mockRand{})
+
+				handler := NewScope(true, testRequestHeader)(
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						nextRequest = r
+						w.WriteHeader(200)
+					}))
+				handler.ServeHTTP(rw, request)
+			})
+
+			AfterEach(func() {
+				uuid.SetRand(nil)
+			})
+
+			It("sets the RequestID using a random UUID", func() {
+				scope := middlewareapi.GetRequestScope(nextRequest)
+				Expect(scope.RequestID).To(Equal(testRandomUUID))
+			})
+		})
 	})
 })
+
+type mockRand struct{}
+
+func (mockRand) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = byte(i % 256)
+	}
+	return len(p), nil
+}

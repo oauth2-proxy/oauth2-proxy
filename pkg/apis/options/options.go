@@ -104,6 +104,9 @@ type Options struct {
 	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
+	// This is used for backwards compatibility for basic auth users
+	LegacyPreferEmailToUser bool `cfg:",internal"`
+
 	// internal values that are set after config validation
 	redirectURL        *url.URL
 	provider           providers.Provider
