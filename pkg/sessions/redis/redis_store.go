@@ -10,6 +10,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 )
@@ -22,7 +23,7 @@ type SessionStore struct {
 
 // NewRedisSessionStore initialises a new instance of the SessionStore and wraps
 // it in a persistence.Manager
-func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessions.SessionStore, error) {
+func NewRedisSessionStore(opts *options.SessionOptions, cookieBuilder cookies.Builder) (sessions.SessionStore, error) {
 	client, err := NewRedisClient(opts.Redis)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing redis client: %v", err)
@@ -31,7 +32,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 	rs := &SessionStore{
 		Client: client,
 	}
-	return persistence.NewManager(rs, cookieOpts), nil
+	return persistence.NewManager(rs, cookieBuilder), nil
 }
 
 // Save takes a sessions.SessionState and stores the information from it

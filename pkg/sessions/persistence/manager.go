@@ -1,27 +1,28 @@
 package persistence
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 )
 
 // Manager wraps a Store and handles the implementation details of the
 // sessions.SessionStore with its use of session tickets
 type Manager struct {
-	Store   Store
-	Options *options.Cookie
+	Store         Store
+	cookieBuilder cookies.Builder
 }
 
 // NewManager creates a Manager that can wrap a Store and manage the
 // sessions.SessionStore implementation details
-func NewManager(store Store, cookieOpts *options.Cookie) *Manager {
+func NewManager(store Store, cookieBuilder cookies.Builder) *Manager {
 	return &Manager{
-		Store:   store,
-		Options: cookieOpts,
+		Store:         store,
+		cookieBuilder: cookieBuilder,
 	}
 }
 
@@ -33,9 +34,9 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 		s.CreatedAtNow()
 	}
 
-	tckt, err := decodeTicketFromRequest(req, m.Options)
+	tckt, err := decodeTicketFromRequest(req, m.cookieBuilder)
 	if err != nil {
-		tckt, err = newTicket(m.Options)
+		tckt, err = newTicket(m.cookieBuilder)
 		if err != nil {
 			return fmt.Errorf("error creating a session ticket: %v", err)
 		}
@@ -54,7 +55,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 // Load reads sessions.SessionState information from a session store. It will
 // use the session ticket from the http.Request's cookie.
 func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
-	tckt, err := decodeTicketFromRequest(req, m.Options)
+	tckt, err := decodeTicketFromRequest(req, m.cookieBuilder)
 	if err != nil {
 		return nil, err
 	}
@@ -70,16 +71,18 @@ func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 // Clear clears any saved session information for a given ticket cookie.
 // Then it clears all session data for that ticket in the Store.
 func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {
-	tckt, err := decodeTicketFromRequest(req, m.Options)
+	tckt, err := decodeTicketFromRequest(req, m.cookieBuilder)
 	if err != nil {
 		// Always clear the cookie, even when we can't load a cookie from
 		// the request
 		tckt = &ticket{
-			options: m.Options,
+			cookieBuilder: m.cookieBuilder,
 		}
-		tckt.clearCookie(rw, req)
+		if err := tckt.clearCookie(rw, req); err != nil {
+			return fmt.Errorf("error creating cookie to clear session: %v", err)
+		}
 		// Don't raise an error if we didn't have a Cookie
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			return nil
 		}
 		return fmt.Errorf("error decoding ticket to clear session: %v", err)

@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
@@ -38,20 +37,20 @@ type initLockFunc func(string) sessions.Lock
 // session storage. It provides a unique per session decryption secret giving
 // more security than the shared CookieSecret.
 type ticket struct {
-	id      string
-	secret  []byte
-	options *options.Cookie
+	id            string
+	secret        []byte
+	cookieBuilder cookies.Builder
 }
 
 // newTicket creates a new ticket. The ID & secret will be randomly created
 // with 16 byte sizes. The ID will be prefixed & hex encoded.
-func newTicket(cookieOpts *options.Cookie) (*ticket, error) {
+func newTicket(cookieBuilder cookies.Builder) (*ticket, error) {
 	rawID := make([]byte, 16)
 	if _, err := io.ReadFull(rand.Reader, rawID); err != nil {
 		return nil, fmt.Errorf("failed to create new ticket ID: %v", err)
 	}
 	// ticketID is hex encoded
-	ticketID := fmt.Sprintf("%s-%s", cookieOpts.Name, hex.EncodeToString(rawID))
+	ticketID := fmt.Sprintf("%s-%s", cookieBuilder.GetName(), hex.EncodeToString(rawID))
 
 	secret := make([]byte, aes.BlockSize)
 	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
@@ -59,9 +58,9 @@ func newTicket(cookieOpts *options.Cookie) (*ticket, error) {
 	}
 
 	return &ticket{
-		id:      ticketID,
-		secret:  secret,
-		options: cookieOpts,
+		id:            ticketID,
+		secret:        secret,
+		cookieBuilder: cookieBuilder,
 	}, nil
 }
 
@@ -71,7 +70,7 @@ func (t *ticket) encodeTicket() string {
 }
 
 // decodeTicket decodes an encoded ticket string
-func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error) {
+func decodeTicket(encTicket string, cookieBuilder cookies.Builder) (*ticket, error) {
 	ticketParts := strings.Split(encTicket, ".")
 	if len(ticketParts) != 2 {
 		return nil, errors.New("failed to decode ticket")
@@ -84,29 +83,22 @@ func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error)
 	}
 
 	return &ticket{
-		id:      ticketID,
-		secret:  secret,
-		options: cookieOpts,
+		id:            ticketID,
+		secret:        secret,
+		cookieBuilder: cookieBuilder,
 	}, nil
 }
 
 // decodeTicketFromRequest retrieves a potential ticket cookie from a request
 // and decodes it to a ticket.
-func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ticket, error) {
-	requestCookie, err := req.Cookie(cookieOpts.Name)
+func decodeTicketFromRequest(req *http.Request, cookieBuilder cookies.Builder) (*ticket, error) {
+	val, err := cookieBuilder.ValidateRequest(req)
 	if err != nil {
-		// Don't wrap this error to allow `err == http.ErrNoCookie` checks
-		return nil, err
-	}
-
-	// An existing cookie exists, try to retrieve the ticket
-	val, _, ok := encryption.Validate(requestCookie, cookieOpts.Secret, cookieOpts.Expire)
-	if !ok {
-		return nil, fmt.Errorf("session ticket cookie failed validation: %v", err)
+		return nil, fmt.Errorf("invalid cookie: %w", err)
 	}
 
 	// Valid cookie, decode the ticket
-	return decodeTicket(string(val), cookieOpts)
+	return decodeTicket(val, cookieBuilder)
 }
 
 // saveSession encodes the SessionState with the ticket's secret and persists
@@ -120,7 +112,7 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode the session state with the ticket: %v", err)
 	}
-	return saver(t.id, ciphertext, t.options.Expire)
+	return saver(t.id, ciphertext, t.cookieBuilder.GetExpiration())
 }
 
 // loadSession loads a session from the disk store via the passed loadFunc
@@ -154,12 +146,10 @@ func (t *ticket) clearSession(clearer clearFunc) error {
 
 // setCookie sets the encoded ticket as a cookie
 func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
-	ticketCookie, err := t.makeCookie(
-		req,
-		t.encodeTicket(),
-		t.options.Expire,
-		*s.CreatedAt,
-	)
+	ticketCookie, err := t.cookieBuilder.
+		WithSignedValue(true).
+		WithStart(*s.CreatedAt).
+		MakeCookie(req, t.encodeTicket())
 	if err != nil {
 		return err
 	}
@@ -170,34 +160,16 @@ func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *session
 
 // clearCookie removes any cookies that would be where this ticket
 // would set them
-func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
-	http.SetCookie(rw, cookies.MakeCookieFromOptions(
-		req,
-		t.options.Name,
-		"",
-		t.options,
-		time.Hour*-1,
-		time.Now(),
-	))
-}
-
-// makeCookie makes a cookie, signing the value if present
-func (t *ticket) makeCookie(req *http.Request, value string, expires time.Duration, now time.Time) (*http.Cookie, error) {
-	if value != "" {
-		var err error
-		value, err = encryption.SignedValue(t.options.Secret, t.options.Name, []byte(value), now)
-		if err != nil {
-			return nil, err
-		}
+func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) error {
+	cookie, err := t.cookieBuilder.
+		WithExpiration(time.Hour*-1). // Set the expiration to negative to clear the cookie
+		MakeCookie(req, "")
+	if err != nil {
+		return fmt.Errorf("could not clear cookie: %v", err)
 	}
-	return cookies.MakeCookieFromOptions(
-		req,
-		t.options.Name,
-		value,
-		t.options,
-		expires,
-		now,
-	), nil
+
+	http.SetCookie(rw, cookie)
+	return nil
 }
 
 // makeCipher makes a AES-GCM cipher out of the ticket's secret

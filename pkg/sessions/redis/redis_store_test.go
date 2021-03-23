@@ -12,6 +12,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
@@ -80,7 +81,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 			// Capture the session store so that we can close the client
 			var err error
-			ss, err = NewRedisSessionStore(opts, cookieOpts)
+			ss, err = NewRedisSessionStore(opts, cookies.NewBuilder(*cookieOpts))
 			return ss, err
 		},
 		func(d time.Duration) error {
@@ -112,7 +113,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 				// Capture the session store so that we can close the client
 				var err error
-				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				ss, err = NewRedisSessionStore(opts, cookies.NewBuilder(*cookieOpts))
 				return ss, err
 			},
 			func(d time.Duration) error {
@@ -132,7 +133,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 				// Capture the session store so that we can close the client
 				var err error
-				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				ss, err = NewRedisSessionStore(opts, cookies.NewBuilder(*cookieOpts))
 				return ss, err
 			},
 			func(d time.Duration) error {
@@ -160,7 +161,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 				// Capture the session store so that we can close the client
 				var err error
-				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				ss, err = NewRedisSessionStore(opts, cookies.NewBuilder(*cookieOpts))
 				return ss, err
 			},
 			func(d time.Duration) error {
@@ -193,7 +194,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 					// Capture the session store so that we can close the client
 					var err error
-					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					ss, err = NewRedisSessionStore(opts, cookies.NewBuilder(*cookieOpts))
 					return ss, err
 				},
 				func(d time.Duration) error {
@@ -214,7 +215,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 					// Capture the session store so that we can close the client
 					var err error
-					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					ss, err = NewRedisSessionStore(opts, cookies.NewBuilder(*cookieOpts))
 					return ss, err
 				},
 				func(d time.Duration) error {
