@@ -1,7 +1,6 @@
 package cookie
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -9,7 +8,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	pkgcookies "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
@@ -27,9 +26,9 @@ var _ sessions.SessionStore = &SessionStore{}
 // SessionStore is an implementation of the sessions.SessionStore
 // interface that stores sessions in client side cookies
 type SessionStore struct {
-	Cookie       *options.Cookie
-	CookieCipher encryption.Cipher
-	Minimal      bool
+	cookieBuilder cookies.Builder
+	CookieCipher  encryption.Cipher
+	Minimal       bool
 }
 
 // Save takes a sessions.SessionState and stores the information from it
@@ -48,17 +47,18 @@ func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessi
 // Load reads sessions.SessionState information from Cookies within the
 // HTTP request object
 func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
-	c, err := loadCookie(req, s.Cookie.Name)
+	c, err := loadCookie(req, s.cookieBuilder.GetName())
 	if err != nil {
 		// always http.ErrNoCookie
-		return nil, fmt.Errorf("cookie %q not present", s.Cookie.Name)
-	}
-	val, _, ok := encryption.Validate(c, s.Cookie.Secret, s.Cookie.Expire)
-	if !ok {
-		return nil, errors.New("cookie signature not valid")
+		return nil, fmt.Errorf("cookie %q not present", s.cookieBuilder.GetName())
 	}
 
-	session, err := sessions.DecodeSessionState(val, s.CookieCipher, true)
+	val, err := s.cookieBuilder.ValidateCookie(c)
+	if err != nil {
+		return nil, fmt.Errorf("cookie signature not valid: %v", err)
+	}
+
+	session, err := sessions.DecodeSessionState([]byte(val), s.CookieCipher, true)
 	if err != nil {
 		return nil, err
 	}
@@ -69,11 +69,17 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 // clear the session
 func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	// matches CookieName, CookieName_<number>
-	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.Cookie.Name))
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.cookieBuilder.GetName()))
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
-			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
+			clearCookie, err := s.cookieBuilder.
+				WithName(c.Name).
+				WithExpiration(time.Hour*-1).
+				MakeCookie(req, "")
+			if err != nil {
+				return err
+			}
 
 			http.SetCookie(rw, clearCookie)
 		}
@@ -111,30 +117,14 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 // makeSessionCookie creates an http.Cookie containing the authenticated user's
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now time.Time) ([]*http.Cookie, error) {
-	strValue := string(value)
-	if strValue != "" {
-		var err error
-		strValue, err = encryption.SignedValue(s.Cookie.Secret, s.Cookie.Name, value, now)
-		if err != nil {
-			return nil, err
-		}
+	cookie, err := s.cookieBuilder.WithSignedValue(true).WithStart(now).MakeCookie(req, string(value))
+	if err != nil {
+		return nil, fmt.Errorf("could not create cookie: %v", err)
 	}
-	c := s.makeCookie(req, s.Cookie.Name, strValue, s.Cookie.Expire, now)
-	if len(c.String()) > maxCookieLength {
-		return splitCookie(c), nil
+	if len(cookie.String()) > maxCookieLength {
+		return splitCookie(cookie), nil
 	}
-	return []*http.Cookie{c}, nil
-}
-
-func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
-	return pkgcookies.MakeCookieFromOptions(
-		req,
-		name,
-		value,
-		s.Cookie,
-		expiration,
-		now,
-	)
+	return []*http.Cookie{cookie}, nil
 }
 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
@@ -146,9 +136,9 @@ func NewCookieSessionStore(opts *options.SessionOptions, cookieOpts *options.Coo
 	}
 
 	return &SessionStore{
-		CookieCipher: cipher,
-		Cookie:       cookieOpts,
-		Minimal:      opts.Cookie.Minimal,
+		CookieCipher:  cipher,
+		cookieBuilder: cookies.NewBuilder(*cookieOpts),
+		Minimal:       opts.Cookie.Minimal,
 	}, nil
 }
 
