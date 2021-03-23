@@ -5,41 +5,10 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
-
-// MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
-// value and creation time
-func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.Cookie, expiration time.Duration, now time.Time) *http.Cookie {
-	domain := GetCookieDomain(req, opts.Domains)
-	// If nothing matches, create the cookie with the shortest domain
-	if domain == "" && len(opts.Domains) > 0 {
-		logger.Errorf("Warning: request host %q did not match any of the specific cookie domains of %q",
-			requestutil.GetRequestHost(req),
-			strings.Join(opts.Domains, ","),
-		)
-		domain = opts.Domains[len(opts.Domains)-1]
-	}
-
-	c := &http.Cookie{
-		Name:     name,
-		Value:    value,
-		Path:     opts.Path,
-		Domain:   domain,
-		Expires:  now.Add(expiration),
-		HttpOnly: opts.HTTPOnly,
-		Secure:   opts.Secure,
-		SameSite: ParseSameSite(opts.SameSite),
-	}
-
-	warnInvalidDomain(c, req)
-
-	return c
-}
 
 // GetCookieDomain returns the correct cookie domain given a list of domains
 // by checking the X-Fowarded-Host and host header of an an http request
