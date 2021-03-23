@@ -402,7 +402,7 @@ func (patTest *PassAccessTokenTest) Close() {
 func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie string) {
 	rw := httptest.NewRecorder()
 
-	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions)
+	csrf, err := cookies.NewCSRF(patTest.proxy.csrfCookieBuilder, patTest.proxy.encryptionSecret)
 	if err != nil {
 		panic(err)
 	}

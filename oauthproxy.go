@@ -94,10 +94,18 @@ type OAuthProxy struct {
 	serveMux          *mux.Router
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
+	csrfCookieBuilder cookies.Builder
+	encryptionSecret  string
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
 func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
+	cookieBuilder := cookies.NewBuilder(opts.Cookie)
+	// CSRF cookies add a `_csrf` suffix and must always be signed.
+	csrfCookieBuilder := cookieBuilder.
+		WithName(fmt.Sprintf("%s_%s", opts.Cookie.Name, "csrf")).
+		WithSignedValue(true)
+
 	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising session store: %v", err)
@@ -209,6 +217,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
+		csrfCookieBuilder:  csrfCookieBuilder,
+		encryptionSecret:   opts.Cookie.Secret,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -665,7 +675,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	prepareNoCache(rw)
 
-	csrf, err := cookies.NewCSRF(p.CookieOptions)
+	csrf, err := cookies.NewCSRF(p.csrfCookieBuilder, p.encryptionSecret)
 	if err != nil {
 		logger.Errorf("Error creating CSRF nonce: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -730,14 +740,18 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
+	csrf, err := cookies.LoadCSRFCookie(req, p.csrfCookieBuilder, p.encryptionSecret)
 	if err != nil {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
 
-	csrf.ClearCookie(rw, req)
+	if err := csrf.ClearCookie(rw, req); err != nil {
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to clear CSRF cookie")
+		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to clear CSRF token. Please try again.")
+		return
+	}
 
 	nonce, appRedirect, err := decodeState(req)
 	if err != nil {
