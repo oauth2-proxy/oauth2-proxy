@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -18,10 +20,11 @@ import (
 var _ = Describe("SignIn Page", func() {
 
 	Context("SignIn Page Writer", func() {
+		var request *http.Request
 		var signInPage *signInPageWriter
 
 		BeforeEach(func() {
-			errorTmpl, err := template.New("").Parse("{{.Title}}")
+			errorTmpl, err := template.New("").Parse("{{.Title}} | {{.RequestID}}")
 			Expect(err).ToNot(HaveOccurred())
 			errorPage := &errorPageWriter{
 				template: errorTmpl,
@@ -41,12 +44,17 @@ var _ = Describe("SignIn Page", func() {
 				displayLoginForm: true,
 				logoData:         "Logo Data",
 			}
+
+			request = httptest.NewRequest("", "http://127.0.0.1/", nil)
+			request = middlewareapi.AddRequestScope(request, &middlewareapi.RequestScope{
+				RequestID: testRequestID,
+			})
 		})
 
 		Context("WriteSignInPage", func() {
 			It("Writes the template to the response writer", func() {
 				recorder := httptest.NewRecorder()
-				signInPage.WriteSignInPage(recorder, "/redirect")
+				signInPage.WriteSignInPage(recorder, request, "/redirect")
 
 				body, err := ioutil.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
@@ -60,11 +68,11 @@ var _ = Describe("SignIn Page", func() {
 				signInPage.template = tmpl
 
 				recorder := httptest.NewRecorder()
-				signInPage.WriteSignInPage(recorder, "/redirect")
+				signInPage.WriteSignInPage(recorder, request, "/redirect")
 
 				body, err := ioutil.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(body)).To(Equal("Internal Server Error"))
+				Expect(string(body)).To(Equal(fmt.Sprintf("Internal Server Error | %s", testRequestID)))
 			})
 		})
 	})

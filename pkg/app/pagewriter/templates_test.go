@@ -51,6 +51,7 @@ var _ = Describe("Templates", func() {
 				StatusCode int
 				Title      string
 				Message    string
+				RequestID  string
 
 				// For custom templates
 				TestString string
@@ -67,6 +68,7 @@ var _ = Describe("Templates", func() {
 				StatusCode: 404,
 				Title:      "<title>",
 				Message:    "<message>",
+				RequestID:  "<request-id>",
 
 				TestString: "Testing",
 			}
