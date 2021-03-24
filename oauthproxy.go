@@ -60,15 +60,12 @@ type allowedRoute struct {
 
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
-	CookieSeed     string
-	CookieName     string
 	CSRFCookieName string
 	CookieDomains  []string
 	CookiePath     string
 	CookieSecure   bool
 	CookieHTTPOnly bool
 	CookieExpire   time.Duration
-	CookieRefresh  time.Duration
 	CookieSameSite string
 	Validator      func(string) bool
 
@@ -88,16 +85,7 @@ type OAuthProxy struct {
 	ProxyPrefix         string
 	basicAuthValidator  basic.Validator
 	serveMux            http.Handler
-	SetXAuthRequest     bool
-	PassBasicAuth       bool
-	SetBasicAuth        bool
 	SkipProviderButton  bool
-	PassUserHeaders     bool
-	BasicAuthPassword   string
-	PassAccessToken     bool
-	SetAuthorization    bool
-	PassAuthorization   bool
-	PreferEmailToUser   bool
 	skipAuthPreflight   bool
 	skipJwtBearerTokens bool
 	realClientIPParser  ipapi.RealClientIPParser
@@ -191,15 +179,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	p := &OAuthProxy{
-		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
-		CookieSeed:     opts.Cookie.Secret,
 		CookieDomains:  opts.Cookie.Domains,
 		CookiePath:     opts.Cookie.Path,
 		CookieSecure:   opts.Cookie.Secure,
 		CookieHTTPOnly: opts.Cookie.HTTPOnly,
 		CookieExpire:   opts.Cookie.Expire,
-		CookieRefresh:  opts.Cookie.Refresh,
 		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
