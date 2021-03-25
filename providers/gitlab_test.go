@@ -232,11 +232,11 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				Expect(session.Groups).To(Equal(in.expectedValue))
 			},
 			Entry("project membership valid on group project", entitiesTableInput{
-				expectedValue: []string{"project:my_group/my_project"},
+				expectedValue: []string{"group:foo", "group:bar", "project:my_group/my_project"},
 				projects:      []string{"my_group/my_project"},
 			}),
 			Entry("project membership invalid on group project, insufficient access level level", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				projects:      []string{"my_group/my_project=40"},
 			}),
 			Entry("project membership invalid on group project, no access at all", entitiesTableInput{
@@ -244,28 +244,28 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				projects:      []string{"no_access_group/no_access_project=30"},
 			}),
 			Entry("project membership valid on personnal project", entitiesTableInput{
-				expectedValue: []string{"project:my_profile/my_personal_project"},
+				expectedValue: []string{"group:foo", "group:bar", "project:my_profile/my_personal_project"},
 				projects:      []string{"my_profile/my_personal_project"},
 			}),
 			Entry("project membership invalid on personnal project, insufficient access level", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				projects:      []string{"my_profile/my_personal_project=40"},
 			}),
 			Entry("project membership invalid", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				projects:      []string{"my_group/my_bad_project"},
 			}),
 			Entry("group membership valid", entitiesTableInput{
-				expectedValue: []string{"group:foo"},
+				expectedValue: []string{"group:foo", "group:bar"},
 				groups:        []string{"foo"},
 			}),
 			Entry("groups and projects", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:baz", "project:my_group/my_project", "project:my_profile/my_personal_project"},
+				expectedValue: []string{"group:foo", "group:bar", "project:my_group/my_project", "project:my_profile/my_personal_project"},
 				groups:        []string{"foo", "baz"},
 				projects:      []string{"my_group/my_project", "my_profile/my_personal_project"},
 			}),
 			Entry("archived projects", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				groups:        []string{},
 				projects:      []string{"my_group/my_archived_project"},
 			}),
