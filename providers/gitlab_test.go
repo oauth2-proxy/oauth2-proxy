@@ -240,7 +240,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				projects:      []string{"my_group/my_project=40"},
 			}),
 			Entry("project membership invalid on group project, no access at all", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				projects:      []string{"no_access_group/no_access_project=30"},
 			}),
 			Entry("project membership valid on personnal project", entitiesTableInput{
