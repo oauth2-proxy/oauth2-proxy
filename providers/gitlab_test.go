@@ -41,6 +41,7 @@ func testGitLabBackend() *httptest.Server {
 			"groups": ["foo", "bar"]
 		}
 	`
+
 	projectInfo := `
 		{
 			"name": "MyProject",
@@ -52,6 +53,18 @@ func testGitLabBackend() *httptest.Server {
 					"access_level": 30,
 					"notification_level": 3
 				}
+			}
+		}
+	`
+
+	noAccessProjectInfo := `
+		{
+			"name": "NoAccessProject",
+			"archived": false,
+			"path_with_namespace": "no_access_group/no_access_project",
+			"permissions": {
+				"project_access": null,
+				"group_access": null,
 			}
 		}
 	`
@@ -102,6 +115,13 @@ func testGitLabBackend() *httptest.Server {
 				if r.Header["Authorization"][0] == authHeader {
 					w.WriteHeader(200)
 					w.Write([]byte(projectInfo))
+				} else {
+					w.WriteHeader(401)
+				}
+			case "/api/v4/projects/no_access_group/no_access_project":
+				if r.Header["Authorization"][0] == authHeader {
+					w.WriteHeader(200)
+					w.Write([]byte(noAccessProjectInfo))
 				} else {
 					w.WriteHeader(401)
 				}
@@ -218,6 +238,10 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			Entry("project membership invalid on group project, insufficient access level level", entitiesTableInput{
 				expectedValue: nil,
 				projects:      []string{"my_group/my_project=40"},
+			}),
+			Entry("project membership invalid on group project, no access at all", entitiesTableInput{
+				expectedValue: nil,
+				projects:      []string{"no_access_group/no_access_project=30"},
 			}),
 			Entry("project membership valid on personnal project", entitiesTableInput{
 				expectedValue: []string{"project:my_profile/my_personal_project"},
