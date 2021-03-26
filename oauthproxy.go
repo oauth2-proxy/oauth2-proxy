@@ -274,7 +274,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 	metricsServer, err := proxyhttp.NewServer(proxyhttp.Opts{
 		Handler:           middleware.DefaultMetricsHandler,
 		BindAddress:       opts.MetricsServer.BindAddress,
-		SecureBindAddress: opts.MetricsServer.BindAddress,
+		SecureBindAddress: opts.MetricsServer.SecureBindAddress,
 		TLS:               opts.MetricsServer.TLS,
 	})
 	if err != nil {
