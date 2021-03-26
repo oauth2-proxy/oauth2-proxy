@@ -8,6 +8,8 @@
 
 ## Changes since v7.1.0
 
+- [#1133](https://github.com/oauth2-proxy/oauth2-proxy/pull/1133) Metrics server should be constructed with secure bind address for TLS (@JoelSpeed)
+
 # V7.1.0
 
 ## Release Highlights
