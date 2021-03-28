@@ -41,6 +41,7 @@ func testGitLabBackend() *httptest.Server {
 			"groups": ["foo", "bar"]
 		}
 	`
+
 	projectInfo := `
 		{
 			"name": "MyProject",
@@ -52,6 +53,18 @@ func testGitLabBackend() *httptest.Server {
 					"access_level": 30,
 					"notification_level": 3
 				}
+			}
+		}
+	`
+
+	noAccessProjectInfo := `
+		{
+			"name": "NoAccessProject",
+			"archived": false,
+			"path_with_namespace": "no_access_group/no_access_project",
+			"permissions": {
+				"project_access": null,
+				"group_access": null,
 			}
 		}
 	`
@@ -102,6 +115,13 @@ func testGitLabBackend() *httptest.Server {
 				if r.Header["Authorization"][0] == authHeader {
 					w.WriteHeader(200)
 					w.Write([]byte(projectInfo))
+				} else {
+					w.WriteHeader(401)
+				}
+			case "/api/v4/projects/no_access_group/no_access_project":
+				if r.Header["Authorization"][0] == authHeader {
+					w.WriteHeader(200)
+					w.Write([]byte(noAccessProjectInfo))
 				} else {
 					w.WriteHeader(401)
 				}
@@ -212,36 +232,40 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				Expect(session.Groups).To(Equal(in.expectedValue))
 			},
 			Entry("project membership valid on group project", entitiesTableInput{
-				expectedValue: []string{"project:my_group/my_project"},
+				expectedValue: []string{"group:foo", "group:bar", "project:my_group/my_project"},
 				projects:      []string{"my_group/my_project"},
 			}),
 			Entry("project membership invalid on group project, insufficient access level level", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				projects:      []string{"my_group/my_project=40"},
 			}),
+			Entry("project membership invalid on group project, no access at all", entitiesTableInput{
+				expectedValue: []string{"group:foo", "group:bar"},
+				projects:      []string{"no_access_group/no_access_project=30"},
+			}),
 			Entry("project membership valid on personnal project", entitiesTableInput{
-				expectedValue: []string{"project:my_profile/my_personal_project"},
+				expectedValue: []string{"group:foo", "group:bar", "project:my_profile/my_personal_project"},
 				projects:      []string{"my_profile/my_personal_project"},
 			}),
 			Entry("project membership invalid on personnal project, insufficient access level", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				projects:      []string{"my_profile/my_personal_project=40"},
 			}),
 			Entry("project membership invalid", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				projects:      []string{"my_group/my_bad_project"},
 			}),
 			Entry("group membership valid", entitiesTableInput{
-				expectedValue: []string{"group:foo"},
+				expectedValue: []string{"group:foo", "group:bar"},
 				groups:        []string{"foo"},
 			}),
 			Entry("groups and projects", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:baz", "project:my_group/my_project", "project:my_profile/my_personal_project"},
+				expectedValue: []string{"group:foo", "group:bar", "project:my_group/my_project", "project:my_profile/my_personal_project"},
 				groups:        []string{"foo", "baz"},
 				projects:      []string{"my_group/my_project", "my_profile/my_personal_project"},
 			}),
 			Entry("archived projects", entitiesTableInput{
-				expectedValue: nil,
+				expectedValue: []string{"group:foo", "group:bar"},
 				groups:        []string{},
 				projects:      []string{"my_group/my_archived_project"},
 			}),

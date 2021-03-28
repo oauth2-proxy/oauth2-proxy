@@ -30,16 +30,17 @@ var _ = Describe("HTTP Upstream Suite", func() {
 	falsum := false
 
 	type httpUpstreamTableInput struct {
-		id               string
-		serverAddr       *string
-		target           string
-		method           string
-		body             []byte
-		signatureData    *options.SignatureData
-		existingHeaders  map[string]string
-		expectedResponse testHTTPResponse
-		expectedUpstream string
-		errorHandler     ProxyErrorHandler
+		id                     string
+		serverAddr             *string
+		target                 string
+		method                 string
+		body                   []byte
+		passUpstreamHostHeader bool
+		signatureData          *options.SignatureData
+		existingHeaders        map[string]string
+		expectedResponse       testHTTPResponse
+		expectedUpstream       string
+		errorHandler           ProxyErrorHandler
 	}
 
 	DescribeTable("HTTP Upstream ServeHTTP",
@@ -52,6 +53,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			for key, value := range in.existingHeaders {
 				req.Header.Add(key, value)
 			}
+			if host := req.Header.Get("Host"); host != "" {
+				req.Host = host
+			}
 
 			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
 			rw := httptest.NewRecorder()
@@ -60,7 +64,7 @@ var _ = Describe("HTTP Upstream Suite", func() {
 
 			upstream := options.Upstream{
 				ID:                    in.id,
-				PassHostHeader:        &truth,
+				PassHostHeader:        &in.passUpstreamHostHeader,
 				ProxyWebSockets:       &falsum,
 				InsecureSkipTLSVerify: false,
 				FlushInterval:         &flush,
@@ -139,6 +143,29 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				},
 			},
 			expectedUpstream: "encodedSlashes",
+		}),
+		Entry("request a path with an empty query string", &httpUpstreamTableInput{
+			id:           "default",
+			serverAddr:   &serverAddr,
+			target:       "http://example.localhost/foo?",
+			method:       "GET",
+			body:         []byte{},
+			errorHandler: nil,
+			expectedResponse: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method:     "GET",
+					URL:        "http://example.localhost/foo?",
+					Header:     map[string][]string{},
+					Body:       []byte{},
+					Host:       "example.localhost",
+					RequestURI: "http://example.localhost/foo?",
+				},
+			},
+			expectedUpstream: "default",
 		}),
 		Entry("when the request has a body", &httpUpstreamTableInput{
 			id:           "requestWithBody",
@@ -256,6 +283,33 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				},
 			},
 			expectedUpstream: "existingHeaders",
+		}),
+		Entry("when passing the existing host header", &httpUpstreamTableInput{
+			id:                     "passExistingHostHeader",
+			serverAddr:             &serverAddr,
+			target:                 "/existingHostHeader",
+			method:                 "GET",
+			body:                   []byte{},
+			errorHandler:           nil,
+			passUpstreamHostHeader: true,
+			existingHeaders: map[string]string{
+				"Host": "existing-host",
+			},
+			expectedResponse: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method:     "GET",
+					URL:        "/existingHostHeader",
+					Header:     map[string][]string{},
+					Body:       []byte{},
+					Host:       "existing-host",
+					RequestURI: "/existingHostHeader",
+				},
+			},
+			expectedUpstream: "passExistingHostHeader",
 		}),
 	)
 

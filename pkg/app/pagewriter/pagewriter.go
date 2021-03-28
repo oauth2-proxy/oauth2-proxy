@@ -13,12 +13,14 @@ type Writer interface {
 	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string)
 	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
+	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
 }
 
 // pageWriter implements the Writer interface
 type pageWriter struct {
 	*errorPageWriter
 	*signInPageWriter
+	*staticPageWriter
 }
 
 // Opts contains all options required to configure the template
@@ -88,8 +90,14 @@ func NewWriter(opts Opts) (Writer, error) {
 		logoData:         logoData,
 	}
 
+	staticPages, err := newStaticPageWriter(opts.TemplatesPath, errorPage)
+	if err != nil {
+		return nil, fmt.Errorf("error loading static page writer: %v", err)
+	}
+
 	return &pageWriter{
 		errorPageWriter:  errorPage,
 		signInPageWriter: signInPage,
+		staticPageWriter: staticPages,
 	}, nil
 }
