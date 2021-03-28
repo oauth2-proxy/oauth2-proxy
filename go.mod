@@ -37,4 +37,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/square/go-jose.v2 v2.5.1
 	k8s.io/apimachinery v0.19.3
+	k8s.io/klog/v2 v2.8.0 // indirect
 )

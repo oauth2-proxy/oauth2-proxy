@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/spf13/pflag"
+	"k8s.io/klog/v2"
 )
 
 func main() {
@@ -27,7 +29,10 @@ func main() {
 	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
 	convertConfig := configFlagSet.Bool("convert-config-to-alpha", false, "if true, the proxy will load configuration as normal and convert existing configuration to the alpha config structure, and print it to stdout")
 	showVersion := configFlagSet.Bool("version", false, "print version string")
+	logLevel := configFlagSet.Int("log-level", 0, "standard logging level (higher numbers will be more verbose)")
 	configFlagSet.Parse(os.Args[1:])
+
+	configureKlog(*logLevel)
 
 	if *showVersion {
 		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
@@ -153,4 +158,30 @@ func printConvertedConfig(opts *options.Options) error {
 	}
 
 	return nil
+}
+
+// configureKlog congiures the klog library to write its output to the OAuth2
+// Proxy logger package. This allows us to use the interfaces but retain the
+// formatting configured by our built in logger library.
+func configureKlog(logLevel int) {
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
+
+	// If any of the following fail, this is a programming error
+	if err := klogFlags.Lookup("logtostderr").Value.Set("false"); err != nil {
+		panic(err)
+	}
+	if err := klogFlags.Lookup("one_output").Value.Set("true"); err != nil {
+		panic(err)
+	}
+	if err := klogFlags.Lookup("skip_headers").Value.Set("true"); err != nil {
+		panic(err)
+	}
+
+	// If this fails, it's a user input error
+	if err := klogFlags.Lookup("v").Value.Set(fmt.Sprintf("%d", logLevel)); err != nil {
+		logger.Fatalf("ERROR: could not set log level: %v", err)
+	}
+	klog.SetOutput(logger.StdKlogErrorLogger)
+	klog.SetOutputBySeverity("INFO", logger.StdKlogInfoLogger)
 }

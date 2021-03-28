@@ -149,9 +149,12 @@ func (l *Logger) formatLogMessage(calldepth int, message string) []byte {
 		panic(err)
 	}
 
-	_, err = logBuff.Write([]byte("\n"))
-	if err != nil {
-		panic(err)
+	// If the output doesn't end with a new line, add one
+	if string(logBuff.Bytes()[logBuff.Len()-1]) != "\n" {
+		_, err = logBuff.Write([]byte("\n"))
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return logBuff.Bytes()
