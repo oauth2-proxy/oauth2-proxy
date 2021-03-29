@@ -27,6 +27,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -316,54 +318,47 @@ func TestIsValidRedirect(t *testing.T) {
 	}
 }
 
-func TestOpenRedirects(t *testing.T) {
-	opts := baseTestOptions()
-	// Should match domains that are exactly foo.bar and any subdomain of bar.foo
-	opts.WhitelistDomains = []string{
-		"foo.bar",
-		".bar.foo",
-		"port.bar:8080",
-		".sub.port.bar:8080",
-		"anyport.bar:*",
-		".sub.anyport.bar:*",
-		"www.whitelisteddomain.tld",
-	}
-	err := validation.Validate(opts)
-	assert.NoError(t, err)
+var _ = Describe("OpenRedirect Tests", func() {
+	var proxy *OAuthProxy
 
-	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
-	if err != nil {
-		t.Fatal(err)
-	}
+	BeforeEach(func() {
+		opts := baseTestOptions()
+		// Should match domains that are exactly foo.bar and any subdomain of bar.foo
+		opts.WhitelistDomains = []string{
+			"foo.bar",
+			".bar.foo",
+			"port.bar:8080",
+			".sub.port.bar:8080",
+			"anyport.bar:*",
+			".sub.anyport.bar:*",
+			"www.whitelisteddomain.tld",
+		}
+		Expect(validation.Validate(opts)).To(Succeed())
+
+		var err error
+		proxy, err = NewOAuthProxy(opts, func(string) bool { return true })
+		Expect(err).ToNot(HaveOccurred())
+	})
 
 	file, err := os.Open("./testdata/openredirects.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(t *testing.T) {
-		if err := file.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}(t)
+	Expect(err).ToNot(HaveOccurred())
+	defer func() {
+		Expect(file.Close()).To(Succeed())
+	}()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		rd := scanner.Text()
-		t.Run(rd, func(t *testing.T) {
+		It(rd, func() {
 			rdUnescaped, err := url.QueryUnescape(rd)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if proxy.IsValidRedirect(rdUnescaped) {
-				t.Errorf("Expected %q to not be valid (unescaped: %q)", rd, rdUnescaped)
-			}
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(proxy.IsValidRedirect(rdUnescaped)).To(BeFalse(), "Expected redirect not to be valid")
 		})
 	}
 
-	if err := scanner.Err(); err != nil {
-		t.Fatal(err)
-	}
-}
+	Expect(scanner.Err()).ToNot(HaveOccurred())
+})
 
 type TestProvider struct {
 	*providers.ProviderData
