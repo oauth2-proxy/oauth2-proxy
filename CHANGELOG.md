@@ -6,6 +6,25 @@
 
 ## Breaking Changes
 
+## Changes since v7.1.1
+
+- [#1129](https://github.com/oauth2-proxy/oauth2-proxy/pull/1129) Rewrite OpenRedirect tests in ginkgo (@JoelSpeed)
+- [#1127](https://github.com/oauth2-proxy/oauth2-proxy/pull/1127) Remove unused fields from OAuthProxy (@JoelSpeed)
+
+# V7.1.1
+
+## Release Highlights
+
+- The metrics server could not be started in v7.1.0, this is now fixed.
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.1.0
 
 - [#1133](https://github.com/oauth2-proxy/oauth2-proxy/pull/1133) Metrics server should be constructed with secure bind address for TLS (@JoelSpeed)
