@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -237,31 +236,15 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 }
 
 func (p *OIDCProvider) GetLoginURL(redirectURI, state string) string {
-	s := makeLoginURL(p.ProviderData, redirectURI, state, p.makeIDTokenClaims())
+	s := makeLoginURL(p.ProviderData, redirectURI, state, p.makeClaims())
 	return s.String()
 }
 
-func (p *OIDCProvider) makeIDTokenClaims() url.Values {
+func (p *OIDCProvider) makeClaims() url.Values {
 	idTokenClaimsParam := url.Values{}
-	if len(p.TokenClaims) == 0 {
+	if p.ClaimsParameter == "" {
 		return idTokenClaimsParam
 	}
-	type essential struct {
-		Essential bool `json:"essential"`
-	}
-	idTokenClaims := &struct {
-		IDToken map[string]essential `json:"id_token"`
-	}{
-		make(map[string]essential),
-	}
-	for _, claim := range p.TokenClaims {
-		idTokenClaims.IDToken[claim] = essential{true}
-	}
-	js, err := json.Marshal(idTokenClaims)
-	if err != nil {
-		logger.Errorf("Warning: Unable to marshal ID Token Claims: %v", err)
-		return idTokenClaimsParam
-	}
-	idTokenClaimsParam.Add("claims", string(js))
+	idTokenClaimsParam.Add("claims", p.ClaimsParameter)
 	return idTokenClaimsParam
 }

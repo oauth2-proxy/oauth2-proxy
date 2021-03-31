@@ -238,7 +238,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.AllowUnverifiedEmail = o.InsecureOIDCAllowUnverifiedEmail
 	p.EmailClaim = o.OIDCEmailClaim
 	p.GroupsClaim = o.OIDCGroupsClaim
-	p.TokenClaims = o.OIDCTokenClaims
+	p.ClaimsParameter = o.OIDCClaimsParameter
 	p.Verifier = o.GetOIDCVerifier()
 
 	// TODO (@NickMeves) - Remove This

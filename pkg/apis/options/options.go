@@ -86,7 +86,7 @@ type Options struct {
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
-	OIDCTokenClaims                    []string `flag:"oidc-token-claims" cfg:"oidc_token_claims"`
+	OIDCClaimsParameter                string   `flag:"oidc-claims-parameter" cfg:"oidc-claims-parameter"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
@@ -221,7 +221,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
-	flagSet.StringSlice("oidc-token-claims", []string{}, "which additional OIDC claims are contained in the id_token")
+	flagSet.String("oidc-claims-parameter", "", "additional OIDC claims parameter")
 	flagSet.String("oidc-email-claim", providers.OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")

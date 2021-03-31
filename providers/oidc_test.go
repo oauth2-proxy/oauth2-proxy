@@ -570,17 +570,16 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 }
 
 func TestOIDCGetLoginURL(t *testing.T) {
-	tokenClaims := []string{"group", "affiliation"}
+	claims := `{"groups": null, "affiliation": null}`
 	server, provider := newTestOIDCSetup([]byte(``))
 	defer server.Close()
 	result := provider.GetLoginURL("", "")
-	for _, claim := range tokenClaims {
-		assert.NotContains(t, result, claim)
-	}
+	t.Log(result)
+	assert.NotContains(t, result, "groups")
+	assert.NotContains(t, result, "affiliation")
 
-	provider.TokenClaims = tokenClaims
+	provider.ClaimsParameter = claims
 	result = provider.GetLoginURL("", "")
-	for _, claim := range tokenClaims {
-		assert.Contains(t, result, claim)
-	}
+	assert.Contains(t, result, "groups")
+	assert.Contains(t, result, "affiliation")
 }

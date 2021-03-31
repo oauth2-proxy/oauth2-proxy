@@ -43,7 +43,7 @@ type ProviderData struct {
 	AllowUnverifiedEmail bool
 	EmailClaim           string
 	GroupsClaim          string
-	TokenClaims          []string
+	ClaimsParameter      string
 	Verifier             *oidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
