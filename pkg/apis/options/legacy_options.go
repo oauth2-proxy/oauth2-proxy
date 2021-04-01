@@ -419,7 +419,7 @@ func getXAuthRequestAccessTokenHeader() Header {
 
 type LegacyServer struct {
 	MetricsAddress       string `flag:"metrics-address" cfg:"metrics_address"`
-	MetricsSecureAddress string `flag:"metrics-secure-address" cfg:"metrics_address"`
+	MetricsSecureAddress string `flag:"metrics-secure-address" cfg:"metrics_secure_address"`
 	MetricsTLSCertFile   string `flag:"metrics-tls-cert-file" cfg:"tls_cert_file"`
 	MetricsTLSKeyFile    string `flag:"metrics-tls-key-file" cfg:"tls_key_file"`
 	HTTPAddress          string `flag:"http-address" cfg:"http_address"`
