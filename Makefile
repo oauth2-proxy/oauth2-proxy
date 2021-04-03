@@ -13,7 +13,7 @@ MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
 MINIMUM_SUPPORTED_GO_MINOR_VERSION = 15
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
 
-DOCKER_BUILD := docker build --build-arg VERSION=${VERSION}
+DOCKER_BUILD := docker buildx build --platform linux/amd64,linux/arm64 --build-arg VERSION=${VERSION}
 
 ifeq ($(COVER),true)
 TESTCOVER ?= -coverprofile c.out
