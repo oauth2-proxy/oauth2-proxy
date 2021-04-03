@@ -7,9 +7,9 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 )
 
-type authInput struct {
-	request *http.Request
-	session *sessionsapi.SessionState
+type AuthInput struct {
+	Request *http.Request
+	Session *sessionsapi.SessionState
 }
 
 func authorize(req *http.Request, session *sessionsapi.SessionState) (bool, error) {
@@ -21,7 +21,7 @@ package oauth2proxy
 default allow = false
 
 allow {
-  endswith(input.session.email, "@bar.com")
+  endswith(input.Session.Email, "@bar.com")
 }
     `),
 	)
@@ -31,9 +31,9 @@ allow {
 		return false, err
 	}
 
-	input := rego.EvalInput(authInput{
-		request: req,
-		session: session,
+	input := rego.EvalInput(AuthInput{
+		Request: nil,
+		Session: session,
 	})
 
 	result, err := query.Eval(req.Context(), input)
