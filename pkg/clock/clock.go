@@ -55,7 +55,7 @@ func Reset() {
 // package.
 type Clock struct {
 	mock *clockapi.Mock
-	sync.RWMutex
+	sync.Mutex
 }
 
 // Set sets the Clock to a clock.Mock at the given time.Time
@@ -91,8 +91,6 @@ func (c *Clock) After(d time.Duration) <-chan time.Time {
 	if c.mock == nil {
 		return globalClock.After(d)
 	}
-	c.RLock()
-	defer c.RUnlock()
 	return c.mock.After(d)
 }
 
@@ -100,8 +98,6 @@ func (c *Clock) AfterFunc(d time.Duration, f func()) *clockapi.Timer {
 	if c.mock == nil {
 		return globalClock.AfterFunc(d, f)
 	}
-	c.RLock()
-	defer c.RUnlock()
 	return c.mock.AfterFunc(d, f)
 }
 
@@ -109,8 +105,6 @@ func (c *Clock) Now() time.Time {
 	if c.mock == nil {
 		return globalClock.Now()
 	}
-	c.RLock()
-	defer c.RUnlock()
 	return c.mock.Now()
 }
 
@@ -118,8 +112,6 @@ func (c *Clock) Since(t time.Time) time.Duration {
 	if c.mock == nil {
 		return globalClock.Since(t)
 	}
-	c.RLock()
-	defer c.RUnlock()
 	return c.mock.Since(t)
 }
 
@@ -128,8 +120,6 @@ func (c *Clock) Sleep(d time.Duration) {
 		globalClock.Sleep(d)
 		return
 	}
-	c.RLock()
-	defer c.RUnlock()
 	c.mock.Sleep(d)
 }
 
@@ -137,8 +127,6 @@ func (c *Clock) Tick(d time.Duration) <-chan time.Time {
 	if c.mock == nil {
 		return globalClock.Tick(d)
 	}
-	c.RLock()
-	defer c.RUnlock()
 	return c.mock.Tick(d)
 }
 
@@ -146,8 +134,6 @@ func (c *Clock) Ticker(d time.Duration) *clockapi.Ticker {
 	if c.mock == nil {
 		return globalClock.Ticker(d)
 	}
-	c.RLock()
-	defer c.RUnlock()
 	return c.mock.Ticker(d)
 }
 
@@ -155,7 +141,5 @@ func (c *Clock) Timer(d time.Duration) *clockapi.Timer {
 	if c.mock == nil {
 		return globalClock.Timer(d)
 	}
-	c.RLock()
-	defer c.RUnlock()
 	return c.mock.Timer(d)
 }
