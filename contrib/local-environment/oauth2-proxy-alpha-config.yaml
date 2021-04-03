@@ -15,3 +15,9 @@ injectRequestHeaders:
 - name: X-Forwarded-Preferred-Username
   values:
   - claim: preferred_username
+providers:
+- provider: oidc
+  clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
+  clientID: oauth2-proxy
+  oidcConfig:
+    oidcIssuerURL: http://dex.localhost:4190/dex
