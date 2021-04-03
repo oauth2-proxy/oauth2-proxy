@@ -24,6 +24,7 @@ N/A
 
 ## Changes since v7.1.1
 
+- [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
 - [#1129](https://github.com/oauth2-proxy/oauth2-proxy/pull/1129) Rewrite OpenRedirect tests in ginkgo (@JoelSpeed)
 - [#1127](https://github.com/oauth2-proxy/oauth2-proxy/pull/1127) Remove unused fields from OAuthProxy (@JoelSpeed)
 - [#1141](https://github.com/oauth2-proxy/oauth2-proxy/pull/1141) Fix metrics server bind address initialization (@oliver006)
@@ -117,7 +118,6 @@ N/A
 
 ## Changes since v7.0.0
 
-- [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
 - [#1020](https://github.com/oauth2-proxy/oauth2-proxy/pull/1020) Flatten array-based response headers (@NickMeves)
 - [#1026](https://github.com/oauth2-proxy/oauth2-proxy/pull/1026) Ensure config flags get parsed correctly when other flags precede them (@JoelSpeed)
 
