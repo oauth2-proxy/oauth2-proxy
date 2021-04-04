@@ -57,7 +57,7 @@ docker-all: docker
 
 .PHONY: docker-push
 docker-push:
-	docker push $(REGISTRY)/oauth2-proxy:latest
+	docker buildx build --push --platform linux/amd64,linux/arm64 -t $(REGISTRY)/oauth2-proxy:latest .
 
 .PHONY: docker-push-all
 docker-push-all: docker-push
