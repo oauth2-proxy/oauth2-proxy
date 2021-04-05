@@ -30,38 +30,43 @@ var _ = Describe("Clock suite", func() {
 		})
 
 		Context("Clock not mocked via Set", func() {
+			const (
+				outsideTolerance = int32(0)
+				withinTolerance  = int32(1)
+			)
+
 			It("uses time.After for After", func() {
-				var tolerance bool
+				var tolerance int32
 				go func() {
 					time.Sleep(10 * time.Millisecond)
-					tolerance = true
+					atomic.StoreInt32(&tolerance, withinTolerance)
 				}()
 				go func() {
 					time.Sleep(30 * time.Millisecond)
-					tolerance = false
+					atomic.StoreInt32(&tolerance, outsideTolerance)
 				}()
 
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 
 				<-testClock.After(20 * time.Millisecond)
-				Expect(tolerance).To(BeTrue())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
 
 				<-testClock.After(20 * time.Millisecond)
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 			})
 
 			It("uses time.AfterFunc for AfterFunc", func() {
-				var tolerance bool
+				var tolerance int32
 				go func() {
 					time.Sleep(10 * time.Millisecond)
-					tolerance = true
+					atomic.StoreInt32(&tolerance, withinTolerance)
 				}()
 				go func() {
 					time.Sleep(30 * time.Millisecond)
-					tolerance = false
+					atomic.StoreInt32(&tolerance, outsideTolerance)
 				}()
 
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 
 				var wg sync.WaitGroup
 				wg.Add(1)
@@ -69,14 +74,14 @@ var _ = Describe("Clock suite", func() {
 					wg.Done()
 				})
 				wg.Wait()
-				Expect(tolerance).To(BeTrue())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
 
 				wg.Add(1)
 				testClock.AfterFunc(20*time.Millisecond, func() {
 					wg.Done()
 				})
 				wg.Wait()
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 			})
 
 			It("uses time.Now for Now", func() {
@@ -92,65 +97,65 @@ var _ = Describe("Clock suite", func() {
 			})
 
 			It("uses time.Sleep for Sleep", func() {
-				var tolerance bool
+				var tolerance int32
 				go func() {
 					time.Sleep(10 * time.Millisecond)
-					tolerance = true
+					atomic.StoreInt32(&tolerance, withinTolerance)
 				}()
 				go func() {
 					time.Sleep(30 * time.Millisecond)
-					tolerance = false
+					atomic.StoreInt32(&tolerance, outsideTolerance)
 				}()
 
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 
 				testClock.Sleep(20 * time.Millisecond)
-				Expect(tolerance).To(BeTrue())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
 
 				testClock.Sleep(20 * time.Millisecond)
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 			})
 
 			It("uses time.Tick for Tick", func() {
-				var tolerance bool
+				var tolerance int32
 				go func() {
 					time.Sleep(10 * time.Millisecond)
-					tolerance = true
+					atomic.StoreInt32(&tolerance, withinTolerance)
 				}()
 				go func() {
 					time.Sleep(50 * time.Millisecond)
-					tolerance = false
+					atomic.StoreInt32(&tolerance, outsideTolerance)
 				}()
 
 				ch := testClock.Tick(20 * time.Millisecond)
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 				<-ch
-				Expect(tolerance).To(BeTrue())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
 				<-ch
-				Expect(tolerance).To(BeTrue())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
 				<-ch
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 			})
 
 			It("uses time.Ticker for Ticker", func() {
-				var tolerance bool
+				var tolerance int32
 				go func() {
 					time.Sleep(10 * time.Millisecond)
-					tolerance = true
+					atomic.StoreInt32(&tolerance, withinTolerance)
 				}()
 				go func() {
 					time.Sleep(50 * time.Millisecond)
-					tolerance = false
+					atomic.StoreInt32(&tolerance, outsideTolerance)
 				}()
 
 				ticker := testClock.Ticker(20 * time.Millisecond)
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 				<-ticker.C
-				Expect(tolerance).To(BeTrue())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
 				<-ticker.C
-				Expect(tolerance).To(BeTrue())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(withinTolerance))
 				<-ticker.C
-				Expect(tolerance).To(BeFalse())
+				Expect(atomic.LoadInt32(&tolerance)).To(Equal(outsideTolerance))
 			})
 
 			It("errors if Add is used", func() {
