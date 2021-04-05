@@ -38,11 +38,19 @@ func Add(d time.Duration) error {
 	return nil
 }
 
-// Reset sets the global clock to a pure time implementation
-func Reset() {
+// Reset sets the global clock to a pure time implementation. Returns any
+// existing Mock if set in case lingering time operations are attached to it.
+func Reset() *clockapi.Mock {
 	mu.Lock()
 	defer mu.Unlock()
+	existing := globalClock
 	globalClock = clockapi.New()
+
+	mock, ok := existing.(*clockapi.Mock)
+	if !ok {
+		return nil
+	}
+	return mock
 }
 
 // Clock is a non-package level wrapper around time that supports stubbing.
@@ -80,66 +88,77 @@ func (c *Clock) Add(d time.Duration) error {
 	return nil
 }
 
-// Reset removes local clock.Mock
-func (c *Clock) Reset() {
+// Reset removes local clock.Mock.  Returns any existing Mock if set in case
+// lingering time operations are attached to it.
+func (c *Clock) Reset() *clockapi.Mock {
 	c.Lock()
 	defer c.Unlock()
+	existing := c.mock
 	c.mock = nil
+	return existing
 }
 
 func (c *Clock) After(d time.Duration) <-chan time.Time {
-	if c.mock == nil {
+	m := c.mock
+	if m == nil {
 		return globalClock.After(d)
 	}
-	return c.mock.After(d)
+	return m.After(d)
 }
 
 func (c *Clock) AfterFunc(d time.Duration, f func()) *clockapi.Timer {
-	if c.mock == nil {
+	m := c.mock
+	if m == nil {
 		return globalClock.AfterFunc(d, f)
 	}
-	return c.mock.AfterFunc(d, f)
+	return m.AfterFunc(d, f)
 }
 
 func (c *Clock) Now() time.Time {
-	if c.mock == nil {
+	m := c.mock
+	if m == nil {
 		return globalClock.Now()
 	}
-	return c.mock.Now()
+	return m.Now()
 }
 
 func (c *Clock) Since(t time.Time) time.Duration {
-	if c.mock == nil {
+	m := c.mock
+	if m == nil {
 		return globalClock.Since(t)
 	}
-	return c.mock.Since(t)
+	return m.Since(t)
 }
 
 func (c *Clock) Sleep(d time.Duration) {
-	if c.mock == nil {
+	m := c.mock
+	if m == nil {
 		globalClock.Sleep(d)
 		return
 	}
-	c.mock.Sleep(d)
+	m.Sleep(d)
 }
 
 func (c *Clock) Tick(d time.Duration) <-chan time.Time {
-	if c.mock == nil {
+	m := c.mock
+	if m == nil {
 		return globalClock.Tick(d)
 	}
-	return c.mock.Tick(d)
+	return m.Tick(d)
 }
 
 func (c *Clock) Ticker(d time.Duration) *clockapi.Ticker {
-	if c.mock == nil {
+	m := c.mock
+	if m == nil {
 		return globalClock.Ticker(d)
 	}
-	return c.mock.Ticker(d)
+	return m.Ticker(d)
 }
 
 func (c *Clock) Timer(d time.Duration) *clockapi.Timer {
-	if c.mock == nil {
+	m := c.mock
+	if m == nil {
 		return globalClock.Timer(d)
 	}
-	return c.mock.Timer(d)
+	return m.Timer(d)
 }
