@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -29,7 +30,7 @@ func NewLock(client redis.Cmdable, key string) sessions.Lock {
 
 func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
 	lock, err := l.locker.Obtain(ctx, l.lockKey(), expiration, nil)
-	if err == redislock.ErrNotObtained {
+	if errors.Is(err, redislock.ErrNotObtained) {
 		return sessions.ErrLockNotObtained
 	}
 	if err != nil {
@@ -41,7 +42,7 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
 
 func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 	if l.lock == nil {
-		return fmt.Errorf("tried to refresh not existing lock")
+		return sessions.ErrNotLocked
 	}
 	return l.lock.Refresh(ctx, expiration, nil)
 }
@@ -59,7 +60,7 @@ func (l *Lock) Peek(ctx context.Context) (bool, error) {
 
 func (l *Lock) Release(ctx context.Context) error {
 	if l.lock == nil {
-		return fmt.Errorf("tried to release not existing lock")
+		return sessions.ErrNotLocked
 	}
 	return l.lock.Release(ctx)
 }

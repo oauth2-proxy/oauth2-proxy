@@ -2,7 +2,7 @@ package sessions
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"time"
 )
@@ -15,6 +15,7 @@ type SessionStore interface {
 }
 
 var ErrLockNotObtained = errors.New("lock: not obtained")
+var ErrNotLocked = errors.New("tried to release not existing lock")
 
 type Lock interface {
 	Obtain(ctx context.Context, expiration time.Duration) error
