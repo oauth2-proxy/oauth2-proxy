@@ -40,6 +40,9 @@ type AlphaOptions struct {
 	// This can be done by setting the BindAddress and the SecureBindAddress simultaneously.
 	// To use the secure server you must configure a TLS certificate and key.
 	MetricsServer Server `json:"metricsServer,omitempty"`
+
+	// Providers is used to configure multiple providers.
+	Providers Providers `json:"providers,omitempty"`
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -50,6 +53,8 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.InjectResponseHeaders = a.InjectResponseHeaders
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
+	opts.Providers = a.Providers
+
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from
@@ -60,4 +65,5 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.InjectResponseHeaders = opts.InjectResponseHeaders
 	a.Server = opts.Server
 	a.MetricsServer = opts.MetricsServer
+	a.Providers = opts.Providers
 }

@@ -6,6 +6,44 @@
 
 ## Breaking Changes
 
+## Changes since v7.1.2
+
+- [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
+
+# V7.1.2
+
+## Release Highlights
+
+- Metrics bind address initialisation was broken in config files
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
+## Changes since v7.1.1
+
+- [#1129](https://github.com/oauth2-proxy/oauth2-proxy/pull/1129) Rewrite OpenRedirect tests in ginkgo (@JoelSpeed)
+- [#1127](https://github.com/oauth2-proxy/oauth2-proxy/pull/1127) Remove unused fields from OAuthProxy (@JoelSpeed)
+- [#1141](https://github.com/oauth2-proxy/oauth2-proxy/pull/1141) Fix metrics server bind address initialization (@oliver006)
+
+# V7.1.1
+
+## Release Highlights
+
+- The metrics server could not be started in v7.1.0, this is now fixed.
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.1.0
 
 - [#1133](https://github.com/oauth2-proxy/oauth2-proxy/pull/1133) Metrics server should be constructed with secure bind address for TLS (@JoelSpeed)

@@ -1,5 +1,4 @@
 FROM golang:1.16-buster AS builder
-ARG VERSION
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
@@ -10,6 +9,8 @@ RUN GO111MODULE=on go mod download
 
 # Now pull in our code
 COPY . .
+
+ARG VERSION
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because

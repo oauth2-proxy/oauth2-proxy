@@ -92,7 +92,10 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |
-| `--metrics-address` | string | the address prometheus metrics will be scraped from | `""` |
+| `--metrics-address` | string | the address /metrics will be served on | `""` |
+| `--metrics-secure-address` | string | the address /metrics will be served on via HTTPS | `""` |
+| `--metrics-tls-cert-file` | string | path to certificate file for secure metrics server | `""` |
+| `--metrics-tls-key-file` | string | path to private key file for secure metrics server | `""` |
 | `--proxy-prefix` | string | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`) | `"/oauth2"` |
 | `--proxy-websockets` | bool | enables WebSocket proxying | true |
 | `--pubjwk-url` | string | JWK pubkey access endpoint: required by login.gov | |
