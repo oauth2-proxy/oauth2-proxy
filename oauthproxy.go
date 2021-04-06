@@ -60,15 +60,12 @@ type allowedRoute struct {
 
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
-	CookieSeed     string
-	CookieName     string
 	CSRFCookieName string
 	CookieDomains  []string
 	CookiePath     string
 	CookieSecure   bool
 	CookieHTTPOnly bool
 	CookieExpire   time.Duration
-	CookieRefresh  time.Duration
 	CookieSameSite string
 	Validator      func(string) bool
 
@@ -88,16 +85,7 @@ type OAuthProxy struct {
 	ProxyPrefix         string
 	basicAuthValidator  basic.Validator
 	serveMux            http.Handler
-	SetXAuthRequest     bool
-	PassBasicAuth       bool
-	SetBasicAuth        bool
 	SkipProviderButton  bool
-	PassUserHeaders     bool
-	BasicAuthPassword   string
-	PassAccessToken     bool
-	SetAuthorization    bool
-	PassAuthorization   bool
-	PreferEmailToUser   bool
 	skipAuthPreflight   bool
 	skipJwtBearerTokens bool
 	realClientIPParser  ipapi.RealClientIPParser
@@ -134,7 +122,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Footer:           opts.Templates.Footer,
 		Version:          VERSION,
 		Debug:            opts.Templates.Debug,
-		ProviderName:     buildProviderName(opts.GetProvider(), opts.ProviderName),
+		ProviderName:     buildProviderName(opts.GetProvider(), opts.Providers[0].Name),
 		SignInMessage:    buildSignInMessage(opts),
 		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	})
@@ -148,7 +136,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	if opts.SkipJwtBearerTokens {
-		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.OIDCIssuerURL)
+		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
 		for _, issuer := range opts.ExtraJwtIssuers {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
@@ -158,7 +146,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 	}
 
-	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.GetProvider().Data().ProviderName, opts.ClientID)
+	logger.Printf("OAuthProxy configured for %s Client ID: %s", opts.GetProvider().Data().ProviderName, opts.Providers[0].ClientID)
 	refresh := "disabled"
 	if opts.Cookie.Refresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
@@ -191,15 +179,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	p := &OAuthProxy{
-		CookieName:     opts.Cookie.Name,
 		CSRFCookieName: fmt.Sprintf("%v_%v", opts.Cookie.Name, "csrf"),
-		CookieSeed:     opts.Cookie.Secret,
 		CookieDomains:  opts.Cookie.Domains,
 		CookiePath:     opts.Cookie.Path,
 		CookieSecure:   opts.Cookie.Secure,
 		CookieHTTPOnly: opts.Cookie.HTTPOnly,
 		CookieExpire:   opts.Cookie.Expire,
-		CookieRefresh:  opts.Cookie.Refresh,
 		CookieSameSite: opts.Cookie.SameSite,
 		Validator:      validator,
 
