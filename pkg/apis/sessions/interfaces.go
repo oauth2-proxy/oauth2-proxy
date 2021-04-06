@@ -14,7 +14,7 @@ type SessionStore interface {
 	Clear(rw http.ResponseWriter, req *http.Request) error
 }
 
-var ErrLockNotObtained = fmt.Errorf("lock: not obtained")
+var ErrLockNotObtained = errors.New("lock: not obtained")
 
 type Lock interface {
 	Obtain(ctx context.Context, expiration time.Duration) error
