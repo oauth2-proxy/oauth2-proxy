@@ -1,0 +1,49 @@
+# This docker-compose file can be used to bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features.
+# Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
+# HTTPBin as an example upstream.
+#
+# This can either be created using docker-compose
+#    docker-compose -f docker-compose-traefik.yaml <command>
+# Or:
+#    make traefik-<command> (eg. make traefik-up, make traefik-down)
+#
+# Access one of the following URLs to initiate a login flow:
+#    - http://oauth2-proxy.localhost
+#    - http://httpbin.oauth2-proxy.localhost
+#
+# The OAuth2 Proxy itself is hosted at http://oauth2-proxy.oauth2-proxy.localhost
+#
+# Note, the above URLs should work with Chrome, but you may need to add hosts
+# entries for other browsers
+#    127.0.0.1 oauth2-proxy.localhost
+#    127.0.0.1 httpbin.oauth2-proxy.localhost
+#    127.0.0.1 oauth2-proxy.oauth2-proxy.localhost
+version: '3.0'
+services:
+
+  oauth2-proxy:
+    ports: []
+    hostname: oauth2-proxy
+    volumes:
+      - "./oauth2-proxy-traefik.cfg:/oauth2-proxy.cfg"
+    networks:
+      oauth2-proxy:
+
+  # Reverse proxy
+  gateway:
+    container_name: traefik
+    image: traefik:2.4.2
+    volumes:
+      - "./traefik:/etc/traefik"
+    ports:
+      - "80:80"
+      - "9090:8080"
+    depends_on:
+      - oauth2-proxy
+    networks:
+      oauth2-proxy:
+      httpbin:
+
+networks:
+  oauth2-proxy:

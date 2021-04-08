@@ -4,17 +4,90 @@
 
 ## Important Notes
 
+## Breaking Changes
 
-- [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Upstream request signatures via `--signature-key` is
-  deprecated. Support will be removed completely in v8.0.0.
+## Changes since v7.1.2
+
+- [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
+
+# V7.1.2
+
+## Release Highlights
+
+- Metrics bind address initialisation was broken in config files
+
+## Important Notes
+
+N/A
 
 ## Breaking Changes
 
+N/A
+
+## Changes since v7.1.1
+
+- [#1129](https://github.com/oauth2-proxy/oauth2-proxy/pull/1129) Rewrite OpenRedirect tests in ginkgo (@JoelSpeed)
+- [#1127](https://github.com/oauth2-proxy/oauth2-proxy/pull/1127) Remove unused fields from OAuthProxy (@JoelSpeed)
+- [#1141](https://github.com/oauth2-proxy/oauth2-proxy/pull/1141) Fix metrics server bind address initialization (@oliver006)
+
+# V7.1.1
+
+## Release Highlights
+
+- The metrics server could not be started in v7.1.0, this is now fixed.
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
+## Changes since v7.1.0
+
+- [#1133](https://github.com/oauth2-proxy/oauth2-proxy/pull/1133) Metrics server should be constructed with secure bind address for TLS (@JoelSpeed)
+
+# V7.1.0
+
+## Release Highlights
+
+- New improved design for sign in and error pages based on bulma framework
+- Refactored templates loading
+  - `robots.txt`, `sign_in.html` and `error.html` can now be provided individually in `--custom-templates-dir`
+  - If any of the above are not provided, defaults are used
+  - Defaults templates be found in [pkg/app/pagewriter](https://github.com/oauth2-proxy/oauth2-proxy/tree/v7.1.0/pkg/app/pagewriter)
+- Introduction of basic prometheus metrics
+- Introduction of Traefik based local testing/example environment
+- Support for request IDs to allow request co-ordination of log lines
+
+## Important Notes
+
+- [GHSA-652x-m2gr-hppm](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-652x-m2gr-hppm) GitLab group authorization stopped working in v7.0.0, the functionality has now been restored, please see the linked advisory for details
+- [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Upstream request signatures via `--signature-key` is
+  deprecated. Support will be removed completely in v8.0.0.
+- [1087](https://github.com/oauth2-proxy/oauth2-proxy/pull/1087) The default logging templates have been updated to include {{.RequestID}}
+- [#1117](https://github.com/oauth2-proxy/oauth2-proxy/pull/1117) The `--gcp-healthchecks` option is now deprecated. It will be removed in a future release.
+  - To migrate, you can change your application health checks for OAuth2 Proxy to point to
+    the `--ping-path` value.
+  - You can also migrate the user agent based health check using the `--ping-user-agent` option. Set it to `GoogleHC/1.0` to allow health checks on the path `/` from the Google health checker.
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.0.1
 
+- [GHSA-652x-m2gr-hppm](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-652x-m2gr-hppm) `--gitlab-group` GitLab Group Authorization config flag stopped working in v7.0.0 (@NickMeves, @papey)
+- [#1113](https://github.com/oauth2-proxy/oauth2-proxy/pull/1113) Panic with GitLab project repository auth (@piersharding)
+- [#1116](https://github.com/oauth2-proxy/oauth2-proxy/pull/1116) Reinstate preferEmailToUser behaviour for basic auth sessions (@JoelSpeed)
+- [#1115](https://github.com/oauth2-proxy/oauth2-proxy/pull/1115) Fix upstream proxy appending ? to requests (@JoelSpeed)
+- [#1117](https://github.com/oauth2-proxy/oauth2-proxy/pull/1117) Deprecate GCP HealthCheck option (@JoelSpeed)
+- [#1104](https://github.com/oauth2-proxy/oauth2-proxy/pull/1104) Allow custom robots text pages (@JoelSpeed)
 - [#1045](https://github.com/oauth2-proxy/oauth2-proxy/pull/1045) Ensure redirect URI always has a scheme (@JoelSpeed)
 - [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Deprecate upstream request signatures (@NickMeves)
-- [#914](https://github.com/oauth2-proxy/oauth2-proxy/pull/914) Extract email from id_token for azure provider when oidc is configured
+- [#1087](https://github.com/oauth2-proxy/oauth2-proxy/pull/1087) Support Request ID in logging (@NickMeves)
+- [#914](https://github.com/oauth2-proxy/oauth2-proxy/pull/914) Extract email from id_token for azure provider when oidc is configured (@weinong)
 - [#1047](https://github.com/oauth2-proxy/oauth2-proxy/pull/1047) Refactor HTTP Server and add ServerGroup to handle graceful shutdown of multiple servers (@JoelSpeed)
 - [#1070](https://github.com/oauth2-proxy/oauth2-proxy/pull/1070) Refactor logging middleware to middleware package (@NickMeves)
 - [#1064](https://github.com/oauth2-proxy/oauth2-proxy/pull/1064) Add support for setting groups on session when using basic auth (@stefansedich)
@@ -25,8 +98,9 @@
 - [#1029](https://github.com/oauth2-proxy/oauth2-proxy/pull/1029) Refactor error page rendering and allow debug messages on error (@JoelSpeed)
 - [#1028](https://github.com/oauth2-proxy/oauth2-proxy/pull/1028) Refactor templates, update theme and provide styled error pages (@JoelSpeed)
 - [#1039](https://github.com/oauth2-proxy/oauth2-proxy/pull/1039) Ensure errors in tests are logged to the GinkgoWriter (@JoelSpeed)
-- [#980](https://github.com/oauth2-proxy/oauth2-proxy/pull/980) Add Prometheus metrics endpoint
-- [#1023](https://github.com/oauth2-proxy/oauth2-proxy/pull/1023) Update docs on Traefik ForwardAuth support without the use of Traefik 'errors' middleware
+- [#980](https://github.com/oauth2-proxy/oauth2-proxy/pull/980) Add Prometheus metrics endpoint (@neuralsandwich)
+- [#1023](https://github.com/oauth2-proxy/oauth2-proxy/pull/1023) Update docs on Traefik ForwardAuth support without the use of Traefik 'errors' middleware (@pcneo83)
+- [#1091](https://github.com/oauth2-proxy/oauth2-proxy/pull/1091) Add an example with Traefik (configuration without Traefik 'errors' middleware) (@fcollonval)
 
 # V7.0.1
 

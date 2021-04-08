@@ -295,21 +295,13 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 
 	s.User = userInfo.Username
 	s.Email = userInfo.Email
-
-	p.addGroupsToSession(ctx, s)
+	for _, group := range userInfo.Groups {
+		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
+	}
 
 	p.addProjectsToSession(ctx, s)
 
 	return nil
-
-}
-
-// addGroupsToSession projects into session.Groups
-func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.SessionState) {
-	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
-	for _, group := range p.Groups {
-		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
-	}
 }
 
 // addProjectsToSession adds projects matching user access requirements into the session state groups list
@@ -329,31 +321,32 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 			if perms == nil {
 				// use group project access as fallback
 				perms = projectInfo.Permissions.GroupAccess
+				// group project access is not set for this user then we give up
+				if perms == nil {
+					logger.Errorf("Warning: user %q has no project level access to %s", s.Email, project.Name)
+					continue
+				}
 			}
 
-			if perms.AccessLevel >= project.AccessLevel {
+			if perms != nil && perms.AccessLevel >= project.AccessLevel {
 				s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.Name))
 			} else {
 				logger.Errorf("Warning: user %q does not have the minimum required access level for project %q", s.Email, project.Name)
 			}
-		} else {
-			logger.Errorf("Warning: project %s is archived", project.Name)
+			continue
 		}
 
+		logger.Errorf("Warning: project %s is archived", project.Name)
 	}
-
 }
 
 // PrefixAllowedGroups returns a list of allowed groups, prefixed by their `kind` value
 func (p *GitLabProvider) PrefixAllowedGroups() (groups []string) {
-
 	for _, val := range p.Groups {
 		groups = append(groups, fmt.Sprintf("group:%s", val))
 	}
-
 	for _, val := range p.Projects {
 		groups = append(groups, fmt.Sprintf("project:%s", val.Name))
 	}
-
 	return groups
 }
