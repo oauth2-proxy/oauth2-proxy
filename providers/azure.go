@@ -177,21 +177,27 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 	return session, nil
 }
 
-// EnrichSession finds the email to enrich the session state
+// EnrichSession finds the email and groups claim to enrich the session state
 func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if s.Email != "" {
-		return nil
+	if s.Email == "" {
+		// add email
+		email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
+		if err != nil {
+			return fmt.Errorf("unable to get email address: %v", err)
+		}
+		if email == "" {
+			return errors.New("unable to get email address")
+		}
+		s.Email = email
 	}
 
-	email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
-	if err != nil {
-		return fmt.Errorf("unable to get email address: %v", err)
+	if s.Groups == nil {
+		// add groups claim
+		oidcClaims, err := p.verifyTokenAndExtractClaims(ctx, s.IDToken)
+		if err == nil && oidcClaims != nil {
+			s.Groups = oidcClaims.Groups
+		}
 	}
-	if email == "" {
-		return errors.New("unable to get email address")
-	}
-	s.Email = email
-
 	return nil
 }
 
@@ -216,10 +222,24 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 	return params, nil
 }
 
-// verifyTokenAndExtractEmail tries to extract email claim from either id_token or access token
+// verifyTokenAndExtractEmail tries to extract email from either id_token or access token
 // when oidc verifier is configured
 func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, token string) (string, error) {
 	email := ""
+
+	oidcClaims, err := p.verifyTokenAndExtractClaims(ctx, token)
+	if err == nil && oidcClaims != nil {
+		email = oidcClaims.Email
+	}
+
+	return email, nil
+}
+
+// verifyTokenAndExtractClaims tries to extract oauth claims from either id_token or access token
+// when oidc verifier is configured
+func (p *AzureProvider) verifyTokenAndExtractClaims(ctx context.Context, token string) (*OIDCClaims, error) {
+	var oidcClaims *OIDCClaims
+	oidcClaims = nil
 
 	if token != "" && p.Verifier != nil {
 		token, err := p.Verifier.Verify(ctx, token)
@@ -227,7 +247,7 @@ func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, token st
 		if err == nil {
 			claims, err := p.getClaims(token)
 			if err == nil {
-				email = claims.Email
+				oidcClaims = claims
 			} else {
 				logger.Printf("unable to get claims from token: %v", err)
 			}
@@ -236,7 +256,7 @@ func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, token st
 		}
 	}
 
-	return email, nil
+	return oidcClaims, nil
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the
@@ -364,26 +384,4 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 // ValidateSession validates the AccessToken
 func (p *AzureProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeAzureHeader(s.AccessToken))
-}
-
-func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if p.Verifier == nil {
-		logger.Errorf("Verifier is empty can not verify id token and extract claims")
-		return nil
-	}
-	// verify jwt
-	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
-	if err != nil {
-		logger.Errorf("id_token is not valid (failed to verify)")
-		return nil
-	}
-	// extract claims
-	claims, err := p.getClaims(idToken)
-	if err != nil {
-		logger.Errorf("Failed to decode claims of id_token")
-		return nil
-	}
-	// set claims for session
-	s.Groups = claims.Groups
-	return nil
 }
