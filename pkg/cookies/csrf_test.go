@@ -120,10 +120,10 @@ var _ = Describe("CSRF Cookie Tests", func() {
 	Context("Cookie Management", func() {
 		var req *http.Request
 
+		testNow := time.Unix(nowEpoch, 0)
+
 		BeforeEach(func() {
-			now = func() time.Time {
-				return time.Unix(nowEpoch, 0)
-			}
+			privateCSRF.time.Set(testNow)
 
 			req = &http.Request{
 				Method: http.MethodGet,
@@ -136,6 +136,10 @@ var _ = Describe("CSRF Cookie Tests", func() {
 					Path:   cookiePath,
 				},
 			}
+		})
+
+		AfterEach(func() {
+			privateCSRF.time.Reset()
 		})
 
 		Context("SetCookie", func() {
@@ -153,7 +157,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
 						cookiePath,
 						cookieDomain,
-						testCookieExpires(now().Add(cookieOpts.Expire)),
+						testCookieExpires(testNow.Add(cookieOpts.Expire)),
 					),
 				))
 			})
@@ -171,7 +175,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 						privateCSRF.cookieName(),
 						cookiePath,
 						cookieDomain,
-						testCookieExpires(now().Add(time.Hour*-1)),
+						testCookieExpires(testNow.Add(time.Hour*-1)),
 					),
 				))
 			})
