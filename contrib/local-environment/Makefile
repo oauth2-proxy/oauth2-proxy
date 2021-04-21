@@ -46,3 +46,11 @@ traefik-up:
 .PHONY: traefik-%
 traefik-%:
 	docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml $*
+
+.PHONY: redis-up
+redis-up:
+	docker-compose -f docker-compose.yaml -f docker-compose-redis.yaml up -d
+
+.PHONY: redis-%
+redis-%:
+	docker-compose -f docker-compose.yaml -f docker-compose-redis.yaml $*

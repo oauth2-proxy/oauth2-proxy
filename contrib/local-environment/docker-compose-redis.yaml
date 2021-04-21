@@ -1,0 +1,30 @@
+# This docker-compose file can be used to bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features.
+# Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
+# etcd for storage for Dex, Redis for storage for OAuth2 Proxy sessions and HTTPBin
+# as an example upstream.
+#
+# This file is an extension of the main compose file and must be used with it
+#    docker-compose -f docker-compose.yaml -f docker-compose-redis.yaml <command>
+# Alternatively:
+#    make redis-<command> (eg make redis-up, make redis-down)
+#
+# Access http://localhost:4180 to initiate a login cycle
+version: '3.0'
+services:
+  oauth2-proxy:
+    ports: []
+    hostname: oauth2-proxy
+    volumes:
+      - "./oauth2-proxy-redis.cfg:/oauth2-proxy.cfg"
+    networks:
+      oauth2-proxy: {}
+  redis:
+    container_name: redis
+    image: redis:6.2
+    hostname: redis
+    networks:
+      oauth2-proxy: {}
+      httpbin: {}
+networks:
+  oauth2-proxy: {}
