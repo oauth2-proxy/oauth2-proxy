@@ -86,7 +86,7 @@ type Options struct {
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
-	OIDCClaimsParameter                string   `flag:"oidc-claims-parameter" cfg:"oidc-claims-parameter"`
+	OIDCClaimsParameter                string   `flag:"oidc-claims-parameter" cfg:"oidc_claims_parameter"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
