@@ -11,6 +11,7 @@
 
 ## Changes since v7.1.2
 
+- [#1168](https://github.com/oauth2-proxy/oauth2-proxy/pull/1168) Fix incorrect `cfg` name in Metrics TLS flags (@NickMeves)
 - [#967](https://github.com/oauth2-proxy/oauth2-proxy/pull/967) Set & verify a nonce with OIDC providers (@NickMeves)
 - [#1136](https://github.com/oauth2-proxy/oauth2-proxy/pull/1136) Add clock package for better time mocking in tests (@NickMeves)
 - [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
