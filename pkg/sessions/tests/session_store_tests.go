@@ -288,7 +288,7 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 		})
 	})
 
-	Context("when a lock is applied", func() {
+	Context("when lock is checked", func() {
 		BeforeEach(func() {
 			req := httptest.NewRequest("GET", "http://example.com/", nil)
 			resp := httptest.NewRecorder()
@@ -304,14 +304,20 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 			}
 		})
 
-		It("lock exists on loaded session", func() {
-			req := httptest.NewRequest("GET", "http://example.com/", nil)
-			loadedSession, err := in.ss().Load(req)
-			Expect(err).ToNot(HaveOccurred())
-			isLocked, err := loadedSession.PeekLock(context.Background())
+		Context("when lock is applied", func() {
+			BeforeEach(func() {
+				Expect(in.persistentFastForward(in.cookieOpts.Refresh + time.Minute)).To(Succeed())
+			})
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(isLocked).To(BeTrue())
+			It("lock exists on loaded session", func() {
+				req := httptest.NewRequest("GET", "http://example.com/", nil)
+				loadedSession, err := in.ss().Load(req)
+				Expect(err).ToNot(HaveOccurred())
+				isLocked, err := loadedSession.PeekLock(context.Background())
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isLocked).To(BeTrue())
+			})
 		})
 	})
 
