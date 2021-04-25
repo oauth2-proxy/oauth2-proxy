@@ -33,6 +33,13 @@ var (
 	_ Provider = (*ProviderData)(nil)
 )
 
+// GetLoginURL with typical oauth parameters
+func (p *ProviderData) GetLoginURL(redirectURI, state, _ string) string {
+	extraParams := url.Values{}
+	loginURL := makeLoginURL(p, redirectURI, state, extraParams)
+	return loginURL.String()
+}
+
 // Redeem provides a default implementation of the OAuth2 token redemption process
 func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
@@ -84,13 +91,6 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*s
 	}
 
 	return nil, fmt.Errorf("no access token found %s", result.Body())
-}
-
-// GetLoginURL with typical oauth parameters
-func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	extraParams := url.Values{}
-	a := makeLoginURL(p, redirectURI, state, extraParams)
-	return a.String()
 }
 
 // GetEmailAddress returns the Account email address

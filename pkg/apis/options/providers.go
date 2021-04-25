@@ -132,6 +132,12 @@ type OIDCOptions struct {
 	// InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
 	// default set to 'false'
 	InsecureSkipIssuerVerification bool `json:"insecureSkipIssuerVerification,omitempty"`
+	// InsecureSkipNonce skips verifying the ID Token's nonce claim that must match
+	// the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked
+	// after the initial OAuth redeem & subsequent token refreshes.
+	// default set to 'true'
+	// Warning: In a future release, this will change to 'false' by default for enhanced security.
+	InsecureSkipNonce bool `json:"insecureSkipNonce,omitempty"`
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
 	SkipDiscovery bool `json:"skipDiscovery,omitempty"`
@@ -169,6 +175,7 @@ func providerDefaults() Providers {
 			},
 			OIDCConfig: OIDCOptions{
 				InsecureAllowUnverifiedEmail: false,
+				InsecureSkipNonce:            true,
 				SkipDiscovery:                false,
 				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   providers.OIDCEmailClaim,
