@@ -286,13 +286,55 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 				Expect(loadedSession).To(BeNil())
 			})
 		})
+	})
 
-		Context("when a lock is applied", func() {
-			BeforeEach(func() {
-				Expect(in.persistentFastForward(in.cookieOpts.Refresh + time.Minute)).To(Succeed())
-			})
+	Context("when a lock is applied", func() {
+		BeforeEach(func() {
+			req := httptest.NewRequest("GET", "http://example.com/", nil)
+			resp := httptest.NewRecorder()
+			err := in.ss().Save(resp, req, in.session)
+			Expect(err).ToNot(HaveOccurred())
+			loadedSession, err := in.ss().Load(req)
+			Expect(err).ToNot(HaveOccurred())
+			err = loadedSession.ObtainLock(context.Background(), time.Minute)
+			Expect(err).ToNot(HaveOccurred())
 
-			LockSessionTests(in)
+			for _, cookie := range resp.Result().Cookies() {
+				in.request.AddCookie(cookie)
+			}
+		})
+
+		It("lock exists on loaded session", func() {
+			req := httptest.NewRequest("GET", "http://example.com/", nil)
+			loadedSession, err := in.ss().Load(req)
+			Expect(err).ToNot(HaveOccurred())
+			isLocked, err := loadedSession.PeekLock(context.Background())
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(isLocked).To(BeTrue())
+		})
+	})
+
+	Context("when a lock is applied", func() {
+		BeforeEach(func() {
+			req := httptest.NewRequest("GET", "http://example.com/", nil)
+			resp := httptest.NewRecorder()
+			err := in.ss().Save(resp, req, in.session)
+			Expect(err).ToNot(HaveOccurred())
+			loadedSession, err := in.ss().Load(req)
+			Expect(err).ToNot(HaveOccurred())
+			err = loadedSession.ObtainLock(context.Background(), time.Minute)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("lock exists on loaded session", func() {
+			req := httptest.NewRequest("GET", "http://example.com/", nil)
+			loadedSession, err := in.ss().Load(req)
+			Expect(err).ToNot(HaveOccurred())
+			isLocked, err := loadedSession.PeekLock(context.Background())
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(isLocked).To(BeTrue())
 		})
 	})
 }
@@ -430,32 +472,6 @@ func LoadSessionTests(in *testInput) {
 		// Compare time.Time separately
 		Expect(loadedSession.CreatedAt.Equal(*in.session.CreatedAt)).To(BeTrue())
 		Expect(loadedSession.ExpiresOn.Equal(*in.session.ExpiresOn)).To(BeTrue())
-
-	})
-}
-
-func LockSessionTests(in *testInput) {
-	var loadedSession *sessionsapi.SessionState
-	BeforeEach(func() {
-		var err error
-		loadedSession, err = in.ss().Load(in.request)
-		Expect(err).ToNot(HaveOccurred())
-		err = loadedSession.ObtainLock(context.Background(), 1*time.Minute)
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	It("try to save session that is locked", func() {
-		// Can't compare time.Time using Equal() so remove ExpiresOn from sessions
-		l := *loadedSession
-		l.CreatedAt = nil
-		l.ExpiresOn = nil
-		l.Lock = &sessionsapi.NoOpLock{}
-
-		req := httptest.NewRequest("GET", "http://example.com/", nil)
-		resp := httptest.NewRecorder()
-		err := in.ss().Save(resp, req, &l)
-
-		Expect(err).To(HaveOccurred())
 
 	})
 }
