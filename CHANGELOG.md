@@ -4,10 +4,15 @@
 
 ## Important Notes
 
+- [#967](https://github.com/oauth2-proxy/oauth2-proxy/pull/967) `--insecure-oidc-skip-nonce` is currently `true` by default in case
+  any existing OIDC Identity Providers don't support it. The default will switch to `false` in a future version.
+
 ## Breaking Changes
 
 ## Changes since v7.1.2
 
+- [#967](https://github.com/oauth2-proxy/oauth2-proxy/pull/967) Set & verify a nonce with OIDC providers (@NickMeves)
+- [#1136](https://github.com/oauth2-proxy/oauth2-proxy/pull/1136) Add clock package for better time mocking in tests (@NickMeves)
 - [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
 
 # V7.1.2
