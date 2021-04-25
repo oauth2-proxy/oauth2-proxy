@@ -320,29 +320,6 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 			})
 		})
 	})
-
-	Context("when a lock is applied", func() {
-		BeforeEach(func() {
-			req := httptest.NewRequest("GET", "http://example.com/", nil)
-			resp := httptest.NewRecorder()
-			err := in.ss().Save(resp, req, in.session)
-			Expect(err).ToNot(HaveOccurred())
-			loadedSession, err := in.ss().Load(req)
-			Expect(err).ToNot(HaveOccurred())
-			err = loadedSession.ObtainLock(context.Background(), time.Minute)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("lock exists on loaded session", func() {
-			req := httptest.NewRequest("GET", "http://example.com/", nil)
-			loadedSession, err := in.ss().Load(req)
-			Expect(err).ToNot(HaveOccurred())
-			isLocked, err := loadedSession.PeekLock(context.Background())
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(isLocked).To(BeTrue())
-		})
-	})
 }
 
 func SessionStoreInterfaceTests(in *testInput) {
