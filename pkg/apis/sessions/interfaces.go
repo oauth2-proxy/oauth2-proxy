@@ -17,6 +17,7 @@ type SessionStore interface {
 var ErrLockNotObtained = errors.New("lock: not obtained")
 var ErrNotLocked = errors.New("tried to release not existing lock")
 
+// Lock is an interface for controlling session locks
 type Lock interface {
 	Obtain(ctx context.Context, expiration time.Duration) error
 	Peek(ctx context.Context) (bool, error)
