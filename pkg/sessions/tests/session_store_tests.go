@@ -291,11 +291,13 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 	Context("when lock is checked", func() {
 		BeforeEach(func() {
 			resp := httptest.NewRecorder()
+			err := in.ss().Save(resp, in.request, in.session)
+			Expect(err).ToNot(HaveOccurred())
+
 			for _, cookie := range resp.Result().Cookies() {
 				in.request.AddCookie(cookie)
 			}
-			err := in.ss().Save(resp, in.request, in.session)
-			Expect(err).ToNot(HaveOccurred())
+
 			loadedSession, err := in.ss().Load(in.request)
 			Expect(err).ToNot(HaveOccurred())
 			err = loadedSession.ObtainLock(context.Background(), time.Minute)
