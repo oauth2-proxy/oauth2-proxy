@@ -17,15 +17,17 @@ type entry struct {
 // MockStore is a generic in-memory implementation of persistence.Store
 // for mocking in tests
 type MockStore struct {
-	cache   map[string]entry
-	elapsed time.Duration
+	cache     map[string]entry
+	lockCache map[string]sessions.Lock
+	elapsed   time.Duration
 }
 
 // NewMockStore creates a MockStore
 func NewMockStore() *MockStore {
 	return &MockStore{
-		cache:   map[string]entry{},
-		elapsed: 0 * time.Second,
+		cache:     map[string]entry{},
+		lockCache: map[string]sessions.Lock{},
+		elapsed:   0 * time.Second,
 	}
 }
 
@@ -55,7 +57,9 @@ func (s *MockStore) Clear(_ context.Context, key string) error {
 }
 
 func (s *MockStore) Lock(key string) sessions.Lock {
-	return &MockLock{}
+	lock := &MockLock{}
+	s.lockCache[key] = lock
+	return lock
 }
 
 // FastForward simulates the flow of time to test expirations
