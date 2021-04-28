@@ -4,6 +4,18 @@
 
 ## Important Notes
 
+## Breaking Changes
+
+## Changes since v7.1.3
+
+# V7.1.3
+
+## Release Highlights
+
+- Fixed typos in the metrics server TLS config names
+
+## Important Notes
+
 - [#967](https://github.com/oauth2-proxy/oauth2-proxy/pull/967) `--insecure-oidc-skip-nonce` is currently `true` by default in case
   any existing OIDC Identity Providers don't support it. The default will switch to `false` in a future version.
 
