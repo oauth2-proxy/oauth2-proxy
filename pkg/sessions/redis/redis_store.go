@@ -64,7 +64,7 @@ func (store *SessionStore) Clear(ctx context.Context, key string) error {
 	return nil
 }
 
-// Creates a lock object for sessions.SessionState
+// Lock creates a lock object for sessions.SessionState
 func (store *SessionStore) Lock(key string) sessions.Lock {
 	return store.Client.Lock(key)
 }

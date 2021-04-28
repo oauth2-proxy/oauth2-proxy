@@ -313,7 +313,7 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 			It("lock exists on loaded session", func() {
 				loadedSession, err := in.ss().Load(in.request)
 				Expect(err).ToNot(HaveOccurred())
-				isLocked, err := loadedSession.PeekLock(context.Background())
+				isLocked, err := loadedSession.PeekLock(in.request.Context())
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(isLocked).To(BeTrue())
