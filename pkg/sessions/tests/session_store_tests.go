@@ -301,7 +301,9 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 			Expect(err).ToNot(HaveOccurred())
 			err = loadedSession.ObtainLock(in.request.Context(), 2*time.Minute)
 			Expect(err).ToNot(HaveOccurred())
-
+			isLocked, err := loadedSession.PeekLock(in.request.Context())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(isLocked).To(BeTrue())
 		})
 
 		Context("before lock expired", func() {
