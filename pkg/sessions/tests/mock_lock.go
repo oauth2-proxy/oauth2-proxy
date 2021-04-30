@@ -8,33 +8,41 @@ import (
 )
 
 type MockLock struct {
-	expireTime time.Time
+	expiration time.Duration
+	elapsed    time.Duration
 }
 
 func (l *MockLock) Obtain(ctx context.Context, expiration time.Duration) error {
-	l.expireTime = time.Now().Add(expiration)
+	l.expiration = expiration
 	return nil
 }
 
 func (l *MockLock) Peek(ctx context.Context) (bool, error) {
-	if l.expireTime.After(time.Now()) {
+	if l.elapsed < l.expiration {
 		return true, nil
 	}
 	return false, nil
 }
 
 func (l *MockLock) Refresh(ctx context.Context, expiration time.Duration) error {
-	if l.expireTime.Before(time.Now()) {
+	if l.expiration <= l.elapsed {
 		return sessions.ErrNotLocked
 	}
-	l.expireTime = time.Now().Add(expiration)
+	l.expiration = expiration
+	l.elapsed = time.Duration(0)
 	return nil
 }
 
 func (l *MockLock) Release(ctx context.Context) error {
-	if l.expireTime.After(time.Now()) {
+	if l.expiration <= l.elapsed {
 		return sessions.ErrNotLocked
 	}
-	l.expireTime = time.Now()
+	l.expiration = time.Duration(0)
+	l.elapsed = time.Duration(0)
 	return nil
+}
+
+// FastForward simulates the flow of time to test expirations
+func (l *MockLock) FastForward(duration time.Duration) {
+	l.elapsed += duration
 }

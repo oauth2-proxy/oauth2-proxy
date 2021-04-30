@@ -18,7 +18,7 @@ type entry struct {
 // for mocking in tests
 type MockStore struct {
 	cache     map[string]entry
-	lockCache map[string]sessions.Lock
+	lockCache map[string]*MockLock
 	elapsed   time.Duration
 }
 
@@ -26,7 +26,7 @@ type MockStore struct {
 func NewMockStore() *MockStore {
 	return &MockStore{
 		cache:     map[string]entry{},
-		lockCache: map[string]sessions.Lock{},
+		lockCache: map[string]*MockLock{},
 		elapsed:   0 * time.Second,
 	}
 }
@@ -64,5 +64,8 @@ func (s *MockStore) Lock(key string) sessions.Lock {
 
 // FastForward simulates the flow of time to test expirations
 func (s *MockStore) FastForward(duration time.Duration) {
+	for _, mockLock := range s.lockCache {
+		mockLock.FastForward(duration)
+	}
 	s.elapsed += duration
 }

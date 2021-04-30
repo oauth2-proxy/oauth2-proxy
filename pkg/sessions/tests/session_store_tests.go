@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"context"
 	"crypto/rand"
 	"net/http"
 	"net/http/httptest"
@@ -288,7 +287,7 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 		})
 	})
 
-	Context("when lock is checked", func() {
+	Context("when lock is applied", func() {
 		BeforeEach(func() {
 			resp := httptest.NewRecorder()
 			err := in.ss().Save(resp, in.request, in.session)
@@ -300,14 +299,14 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 
 			loadedSession, err := in.ss().Load(in.request)
 			Expect(err).ToNot(HaveOccurred())
-			err = loadedSession.ObtainLock(context.Background(), time.Minute)
+			err = loadedSession.ObtainLock(in.request.Context(), 2*time.Minute)
 			Expect(err).ToNot(HaveOccurred())
 
 		})
 
-		Context("when lock is applied", func() {
+		Context("before lock expired", func() {
 			BeforeEach(func() {
-				Expect(in.persistentFastForward(in.cookieOpts.Refresh + time.Minute)).To(Succeed())
+				Expect(in.persistentFastForward(time.Minute)).To(Succeed())
 			})
 
 			It("lock exists on loaded session", func() {
@@ -317,6 +316,21 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(isLocked).To(BeTrue())
+			})
+		})
+
+		Context("after lock expired", func() {
+			BeforeEach(func() {
+				Expect(in.persistentFastForward(3 * time.Minute)).To(Succeed())
+			})
+
+			It("lock exists on loaded session", func() {
+				loadedSession, err := in.ss().Load(in.request)
+				Expect(err).ToNot(HaveOccurred())
+				isLocked, err := loadedSession.PeekLock(in.request.Context())
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isLocked).To(BeFalse())
 			})
 		})
 	})
