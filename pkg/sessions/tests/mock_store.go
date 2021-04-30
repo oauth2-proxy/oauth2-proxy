@@ -57,6 +57,9 @@ func (s *MockStore) Clear(_ context.Context, key string) error {
 }
 
 func (s *MockStore) Lock(key string) sessions.Lock {
+	if s.lockCache[key] != nil {
+		return s.lockCache[key]
+	}
 	lock := &MockLock{}
 	s.lockCache[key] = lock
 	return lock
