@@ -311,11 +311,37 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 				Expect(in.persistentFastForward(time.Minute)).To(Succeed())
 			})
 
-			It("lock exists on loaded session", func() {
+			It("peek returns true on loaded session lock", func() {
 				loadedSession, err := in.ss().Load(in.request)
 				Expect(err).ToNot(HaveOccurred())
 				isLocked, err := loadedSession.PeekLock(in.request.Context())
 
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isLocked).To(BeTrue())
+			})
+
+			It("lock can be released", func() {
+				loadedSession, err := in.ss().Load(in.request)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = loadedSession.ReleaseLock(in.request.Context())
+				Expect(err).NotTo(HaveOccurred())
+
+				isLocked, err := loadedSession.PeekLock(in.request.Context())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isLocked).To(BeFalse())
+			})
+
+			It("lock is refreshed", func() {
+				loadedSession, err := in.ss().Load(in.request)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = loadedSession.RefreshLock(in.request.Context(), 3*time.Minute)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(in.persistentFastForward(2 * time.Minute)).To(Succeed())
+
+				isLocked, err := loadedSession.PeekLock(in.request.Context())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(isLocked).To(BeTrue())
 			})
@@ -326,7 +352,7 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 				Expect(in.persistentFastForward(3 * time.Minute)).To(Succeed())
 			})
 
-			It("lock is expired on loaded session", func() {
+			It("peek returns false on loaded session lock", func() {
 				loadedSession, err := in.ss().Load(in.request)
 				Expect(err).ToNot(HaveOccurred())
 				isLocked, err := loadedSession.PeekLock(in.request.Context())
