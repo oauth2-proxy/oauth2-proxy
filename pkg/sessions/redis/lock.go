@@ -20,7 +20,7 @@ type Lock struct {
 	key    string
 }
 
-// Instantiate a ne lock instance. This will not yet apply a lock on Redis side.
+// NewLock instantiate a new lock instance. This will not yet apply a lock on Redis side.
 // For that you have to call Obtain(ctx context.Context, expiration time.Duration)
 func NewLock(client redis.Cmdable, key string) sessions.Lock {
 	return &Lock{
@@ -45,10 +45,14 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
 
 // Refresh refreshes an already existing lock.
 func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
-	if l.lock == nil {
+	v, err := l.client.Exists(ctx, l.lockKey()).Result()
+	if err != nil {
+		return err
+	}
+	if v == 0 {
 		return sessions.ErrNotLocked
 	}
-	return l.lock.Refresh(ctx, expiration, nil)
+	return l.client.PExpire(ctx, l.lockKey(), expiration).Err()
 }
 
 // Peek returns true, if the lock is still applied.
@@ -65,10 +69,14 @@ func (l *Lock) Peek(ctx context.Context) (bool, error) {
 
 // Release releases the lock on Redis side.
 func (l *Lock) Release(ctx context.Context) error {
-	if l.lock == nil {
+	v, err := l.client.Exists(ctx, l.lockKey()).Result()
+	if err != nil {
+		return err
+	}
+	if v == 0 {
 		return sessions.ErrNotLocked
 	}
-	return l.lock.Release(ctx)
+	return l.client.Del(ctx, l.lockKey()).Err()
 }
 
 func (l *Lock) lockKey() string {
