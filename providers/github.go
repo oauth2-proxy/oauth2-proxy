@@ -108,6 +108,7 @@ func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 	if err != nil {
 		return err
 	}
+
 	return p.getUser(ctx, s)
 }
 
@@ -172,7 +173,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 	return false, nil
 }
 
-func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (bool, error) {
+func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string, s *sessions.SessionState) (bool, error) {
 	// https://developer.github.com/v3/orgs/teams/#list-user-teams
 
 	var teams []struct {
@@ -270,6 +271,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			ts := strings.Split(p.Team, ",")
 			for _, t := range ts {
 				if t == team.Slug {
+					s.Groups = []string{team.Slug}
 					logger.Printf("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
 					return true, nil
 				}
@@ -404,7 +406,7 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 	if !verifiedUser {
 		if p.Org != "" {
 			if p.Team != "" {
-				if ok, err := p.hasOrgAndTeam(ctx, s.AccessToken); err != nil || !ok {
+				if ok, err := p.hasOrgAndTeam(ctx, s.AccessToken, s); err != nil || !ok {
 					return err
 				}
 			} else {
@@ -485,5 +487,6 @@ func (p *GitHubProvider) isVerifiedUser(username string) bool {
 			return true
 		}
 	}
+
 	return false
 }
