@@ -1,9 +1,12 @@
 package providers
 
 import (
+	"bytes"
 	"context"
+	b64 "encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"time"
 
@@ -52,6 +55,13 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*s
 // EnrichSession is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
 func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+	if p.IntrospectURL.String() != "" {
+		err := p.enrichFromIntrospectURL(ctx, s)
+		if err != nil {
+			logger.Errorf("Warning: Introspect URL request failed: %v", err)
+		}
+	}
+
 	if p.ProfileURL.String() == "" {
 		if s.Email == "" {
 			return errors.New("id_token did not contain an email and profileURL is not defined")
@@ -104,6 +114,38 @@ func (p *OIDCProvider) enrichFromProfileURL(ctx context.Context, s *sessions.Ses
 		s.Groups = append(s.Groups, formatted)
 	}
 
+	return nil
+}
+
+// enrichFromIntrospectURL enriches a session's claims and permissions via the JSON response of
+// an OIDC Introspection URL
+func (p *OIDCProvider) enrichFromIntrospectURL(ctx context.Context, s *sessions.SessionState) error {
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return err
+	}
+	params := url.Values{}
+	params.Add("token", s.AccessToken)
+	basicAuth := b64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", p.ClientID, clientSecret)))
+	respJSON, err := requests.New(p.IntrospectURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Authorization", fmt.Sprintf("Basic %s", basicAuth)).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalJSON()
+
+	if err != nil {
+		logger.Errorf("Warning: Error while fetching introspection claims , error %s", err)
+		return err
+	}
+	b, err := respJSON.MarshalJSON()
+	if err != nil {
+		logger.Errorf("Cannot convert to JSON , error %s", err)
+		return err
+	}
+	s.IntrospectClaims = b64.StdEncoding.EncodeToString([]byte(string(b)))
 	return nil
 }
 

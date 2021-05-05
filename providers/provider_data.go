@@ -27,6 +27,7 @@ type ProviderData struct {
 	LoginURL          *url.URL
 	RedeemURL         *url.URL
 	ProfileURL        *url.URL
+	IntrospectURL     *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
 	// Auth request params & related, see

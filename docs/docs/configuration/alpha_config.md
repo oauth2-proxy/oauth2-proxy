@@ -296,6 +296,7 @@ Provider holds all configuration for a single provider
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
+| `introspectURL` | _string_ | IntrospectURL is the claims and permissions access Endpoint (OIDC) |
 | `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD only) |
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |

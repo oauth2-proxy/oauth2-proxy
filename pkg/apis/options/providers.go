@@ -55,6 +55,8 @@ type Provider struct {
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
 	ProfileURL string `json:"profileURL,omitempty"`
+	// IntrospectURL is the claims and permissions access Endpoint (OIDC)
+	IntrospectURL string `json:"introspectURL,omitempty"`
 	// ProtectedResource is the resource that is protected (Azure AD only)
 	ProtectedResource string `json:"resource,omitempty"`
 	// ValidateURL is the access token validation endpoint
