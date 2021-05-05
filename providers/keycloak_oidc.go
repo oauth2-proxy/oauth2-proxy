@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 const keycloakOIDCProviderName = "Keycloak OIDC"
@@ -31,6 +30,9 @@ var _ Provider = (*KeycloakOIDCProvider)(nil)
 // Assumes `SetAllowedGroups` is already called on groups and appends to that
 // with `role:` prefixed roles.
 func (p *KeycloakOIDCProvider) AddAllowedRoles(roles []string) {
+	if p.AllowedGroups == nil {
+		p.AllowedGroups = make(map[string]struct{})
+	}
 	for _, role := range roles {
 		p.AllowedGroups[formatRole(role)] = struct{}{}
 	}
@@ -41,9 +43,21 @@ func (p *KeycloakOIDCProvider) AddAllowedRoles(roles []string) {
 func (p *KeycloakOIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	err := p.OIDCProvider.EnrichSession(ctx, s)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not enrich oidc session: %v", err)
 	}
 	return p.extractRoles(ctx, s)
+}
+
+// RefreshSession adds role extraction logic to the refresh flow
+func (p *KeycloakOIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	refreshed, err := p.OIDCProvider.RefreshSession(ctx, s)
+
+	// Refresh could have failed or there was not session to refresh (with no error raised)
+	if err != nil || !refreshed {
+		return refreshed, err
+	}
+
+	return true, p.extractRoles(ctx, s)
 }
 
 func (p *KeycloakOIDCProvider) extractRoles(ctx context.Context, s *sessions.SessionState) error {
@@ -109,7 +123,6 @@ func getClientRoles(claims *accessClaims) []string {
 	for clientName, access := range claims.ResourceAccess {
 		accessMap, ok := access.(map[string]interface{})
 		if !ok {
-			logger.Errorf("Unable to parse client roles from claims for client: %v", clientName)
 			continue
 		}
 

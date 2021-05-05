@@ -192,6 +192,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--tls-key-file` | string | path to private key file | |
 | `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
 | `--allowed-group` | string \| list | restrict logins to members of this group (may be given multiple times) | |
+| `--allowed-role` | string \| list | restrict logins to users with this role (may be given multiple times). Only works with the keycloak-oidc provider. | |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
 | `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (e.g. `.example.com`)&nbsp;\[[2](#footnote2)\] | |
