@@ -6,6 +6,7 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"reflect"
 	"time"
@@ -127,25 +128,19 @@ func (p *OIDCProvider) enrichFromIntrospectURL(ctx context.Context, s *sessions.
 	params := url.Values{}
 	params.Add("token", s.AccessToken)
 	basicAuth := b64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", p.ClientID, clientSecret)))
-	respJSON, err := requests.New(p.IntrospectURL.String()).
+	result := requests.New(p.IntrospectURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Authorization", fmt.Sprintf("Basic %s", basicAuth)).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
-		Do().
-		UnmarshalJSON()
+		Do()
 
-	if err != nil {
-		logger.Errorf("Warning: Error while fetching introspection claims , error %s", err)
-		return err
+	if result.StatusCode() != http.StatusOK {
+		logger.Errorf("Warning: unable to while requesting introspection claims , status code - %d", result.StatusCode())
+		return nil
 	}
-	b, err := respJSON.MarshalJSON()
-	if err != nil {
-		logger.Errorf("Cannot convert to JSON , error %s", err)
-		return err
-	}
-	s.IntrospectClaims = b64.StdEncoding.EncodeToString([]byte(string(b)))
+	s.IntrospectClaims = b64.StdEncoding.EncodeToString(result.Body())
 	return nil
 }
 
