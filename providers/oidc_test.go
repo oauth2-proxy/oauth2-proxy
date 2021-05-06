@@ -446,13 +446,13 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			profileJson, err := json.Marshal(tc.ProfileJSON)
+			profileJSON, err := json.Marshal(tc.ProfileJSON)
 			assert.NoError(t, err)
 
-			introspectJson, err := json.Marshal(tc.IntrospectJSON)
+			introspectJSON, err := json.Marshal(tc.IntrospectJSON)
 			assert.NoError(t, err)
 
-			server, provider := newTestOIDCSetup([]byte(`{}`), profileJson, introspectJson)
+			server, provider := newTestOIDCSetup([]byte(`{}`), profileJSON, introspectJSON)
 			provider.ProfileURL, err = url.Parse(server.URL)
 			assert.NoError(t, err)
 
