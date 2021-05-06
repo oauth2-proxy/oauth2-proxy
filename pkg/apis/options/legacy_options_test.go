@@ -434,6 +434,18 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
+		xAuthIntrospectResponse := Header{
+			Name:                 "X-Auth-Introspect-Response",
+			PreserveRequestValue: false,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "introspect-claims",
+					},
+				},
+			},
+		}
+
 		xAuthRequestAccessToken := Header{
 			Name:                 "X-Auth-Request-Access-Token",
 			PreserveRequestValue: false,
@@ -653,6 +665,27 @@ var _ = Describe("Legacy Options", func() {
 					xAuthRequestEmail,
 					xAuthRequestGroups,
 					xAuthRequestPreferredUsername,
+				},
+			}),
+			Entry("with setXAuthIntrospectResponse", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   false,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:             false,
+					SetXAuthRequest:          false,
+					SetIntrospectionResponse: true,
+					SetAuthorization:         false,
+
+					PreferEmailToUser:    false,
+					BasicAuthPassword:    "",
+					SkipAuthStripHeaders: true,
+				},
+				expectedRequestHeaders: []Header{},
+				expectedResponseHeaders: []Header{
+					xAuthIntrospectResponse,
 				},
 			}),
 			Entry("with passAccessToken", legacyHeadersTableInput{
