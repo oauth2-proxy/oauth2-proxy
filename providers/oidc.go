@@ -137,8 +137,7 @@ func (p *OIDCProvider) enrichFromIntrospectURL(ctx context.Context, s *sessions.
 		Do()
 
 	if result.StatusCode() != http.StatusOK {
-		logger.Errorf("Warning: unable to while requesting introspection claims , status code - %d", result.StatusCode())
-		return nil
+		return fmt.Errorf("error while requesting introspect claims, status code - %d", result.StatusCode())
 	}
 	s.IntrospectClaims = b64.StdEncoding.EncodeToString(result.Body())
 	return nil
