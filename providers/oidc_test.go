@@ -40,6 +40,10 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
 			Path:   "/profile"},
+		IntrospectURL: &url.URL{
+			Scheme: serverURL.Scheme,
+			Host:   serverURL.Host,
+			Path:   "/introspect"},
 		ValidateURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
@@ -59,18 +63,34 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 	return p
 }
 
-func newOIDCServer(body []byte) (*url.URL, *httptest.Server) {
-	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Add("content-type", "application/json")
-		_, _ = rw.Write(body)
-	}))
-	u, _ := url.Parse(s.URL)
-	return u, s
+func newOIDCServer(redeemJSON []byte, profileJSON []byte, introspectJSON []byte) *httptest.Server {
+	mux := http.NewServeMux()
+	if len(redeemJSON) > 0 {
+		mux.HandleFunc("/login/oauth/access_token", func(rw http.ResponseWriter, req *http.Request) {
+			rw.Header().Add("content-type", "application/json")
+			_, _ = rw.Write(redeemJSON)
+		})
+	}
+	if len(profileJSON) > 0 {
+		mux.HandleFunc("/profile", func(rw http.ResponseWriter, req *http.Request) {
+			rw.Header().Add("content-type", "application/json")
+			_, _ = rw.Write(profileJSON)
+		})
+	}
+	if len(introspectJSON) > 0 {
+		mux.HandleFunc("/introspect", func(rw http.ResponseWriter, req *http.Request) {
+			rw.Header().Add("content-type", "application/json")
+			_, _ = rw.Write(introspectJSON)
+		})
+	}
+	testserver := httptest.NewServer(mux)
+	return testserver
 }
 
-func newTestOIDCSetup(body []byte) (*httptest.Server, *OIDCProvider) {
-	redeemURL, server := newOIDCServer(body)
-	provider := newOIDCProvider(redeemURL)
+func newTestOIDCSetup(redeemJSON []byte, profileJSON []byte, introspectJSON []byte) (*httptest.Server, *OIDCProvider) {
+	server := newOIDCServer(redeemJSON, profileJSON, introspectJSON)
+	serverURL, _ := url.Parse(server.URL)
+	provider := newOIDCProvider(serverURL)
 	return server, provider
 }
 
@@ -84,8 +104,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 		RefreshToken: refreshToken,
 		IDToken:      idToken,
 	})
-
-	server, provider := newTestOIDCSetup(body)
+	server, provider := newTestOIDCSetup(body, []byte(`{}`), []byte(`{}`))
 	defer server.Close()
 
 	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
@@ -108,7 +127,7 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 		IDToken:      idToken,
 	})
 
-	server, provider := newTestOIDCSetup(body)
+	server, provider := newTestOIDCSetup(body, []byte(`{}`), []byte(`{}`))
 	provider.EmailClaim = "phone_number"
 	defer server.Close()
 
@@ -123,6 +142,7 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 		EmailClaim      string
 		GroupsClaim     string
 		ProfileJSON     map[string]interface{}
+		IntrospectJSON  map[string]interface{}
 		ExpectedError   error
 		ExpectedSession *sessions.SessionState
 	}{
@@ -426,10 +446,13 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			jsonResp, err := json.Marshal(tc.ProfileJSON)
+			profileJson, err := json.Marshal(tc.ProfileJSON)
 			assert.NoError(t, err)
 
-			server, provider := newTestOIDCSetup(jsonResp)
+			introspectJson, err := json.Marshal(tc.IntrospectJSON)
+			assert.NoError(t, err)
+
+			server, provider := newTestOIDCSetup([]byte(`{}`), profileJson, introspectJson)
 			provider.ProfileURL, err = url.Parse(server.URL)
 			assert.NoError(t, err)
 
@@ -454,7 +477,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 		RefreshToken: refreshToken,
 	})
 
-	server, provider := newTestOIDCSetup(body)
+	server, provider := newTestOIDCSetup(body, []byte(`{}`), []byte(`{}`))
 	defer server.Close()
 
 	existingSession := &sessions.SessionState{
@@ -488,7 +511,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 		IDToken:      idToken,
 	})
 
-	server, provider := newTestOIDCSetup(body)
+	server, provider := newTestOIDCSetup(body, []byte(`{}`), []byte(`{}`))
 	defer server.Close()
 
 	existingSession := &sessions.SessionState{
@@ -549,7 +572,7 @@ func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			server, provider := newTestOIDCSetup([]byte(`{}`))
+			server, provider := newTestOIDCSetup([]byte(`{}`), []byte(`{}`), []byte(`{}`))
 			provider.GroupsClaim = tc.GroupsClaim
 			defer server.Close()
 
