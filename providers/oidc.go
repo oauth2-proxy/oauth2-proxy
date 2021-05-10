@@ -152,7 +152,7 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 // RefreshSessionIfNeeded checks if the session has expired and uses the
 // RefreshToken to fetch a new Access Token (and optional ID token) if required
 func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || s.RefreshToken == "" {
+	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
 		return false, nil
 	}
 
