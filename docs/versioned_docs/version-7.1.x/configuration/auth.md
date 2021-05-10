@@ -83,6 +83,7 @@ Note: The user is checked against the group members list on initial authenticati
    --provider=azure
    --client-id=<application ID from step 3>
    --client-secret=<value from step 6>
+   --oidc-issuer-url=https://sts.windows.net/{tenant-id}/
 ```
 
 Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) should resolve this.

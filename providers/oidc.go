@@ -20,15 +20,30 @@ import (
 // OIDCProvider represents an OIDC based Identity Provider
 type OIDCProvider struct {
 	*ProviderData
+
+	SkipNonce bool
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData) *OIDCProvider {
 	p.ProviderName = "OpenID Connect"
-	return &OIDCProvider{ProviderData: p}
+	return &OIDCProvider{
+		ProviderData: p,
+		SkipNonce:    true,
+	}
 }
 
 var _ Provider = (*OIDCProvider)(nil)
+
+// GetLoginURL makes the LoginURL with optional nonce support
+func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string) string {
+	extraParams := url.Values{}
+	if !p.SkipNonce {
+		extraParams.Add("nonce", nonce)
+	}
+	loginURL := makeLoginURL(p.Data(), redirectURI, state, extraParams)
+	return loginURL.String()
+}
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
@@ -145,8 +160,22 @@ func (p *OIDCProvider) enrichFromIntrospectURL(ctx context.Context, s *sessions.
 
 // ValidateSession checks that the session's IDToken is still valid
 func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	_, err := p.Verifier.Verify(ctx, s.IDToken)
-	return err == nil
+	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
+	if err != nil {
+		logger.Errorf("id_token verification failed: %v", err)
+		return false
+	}
+
+	if p.SkipNonce {
+		return true
+	}
+	err = p.checkNonce(s, idToken)
+	if err != nil {
+		logger.Errorf("nonce verification failed: %v", err)
+		return false
+	}
+
+	return true
 }
 
 // RefreshSessionIfNeeded checks if the session has expired and uses the

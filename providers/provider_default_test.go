@@ -31,7 +31,7 @@ func TestAcrValuesNotConfigured(t *testing.T) {
 		},
 	}
 
-	result := p.GetLoginURL("https://my.test.app/oauth", "")
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "")
 	assert.NotContains(t, result, "acr_values")
 }
 
@@ -45,7 +45,7 @@ func TestAcrValuesConfigured(t *testing.T) {
 		AcrValues: "testValue",
 	}
 
-	result := p.GetLoginURL("https://my.test.app/oauth", "")
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "")
 	assert.Contains(t, result, "acr_values=testValue")
 }
 
