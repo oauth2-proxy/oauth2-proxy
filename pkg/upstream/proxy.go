@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
@@ -15,7 +16,7 @@ type ProxyErrorHandler func(http.ResponseWriter, *http.Request, error)
 
 // NewProxy creates a new multiUpstreamProxy that can serve requests directed to
 // multiple upstreams.
-func NewProxy(upstreams options.Upstreams, sigData *options.SignatureData, errorHandler ProxyErrorHandler) (http.Handler, error) {
+func NewProxy(upstreams options.Upstreams, sigData *options.SignatureData, writer pagewriter.Writer) (http.Handler, error) {
 	m := &multiUpstreamProxy{
 		serveMux: http.NewServeMux(),
 	}
@@ -34,7 +35,7 @@ func NewProxy(upstreams options.Upstreams, sigData *options.SignatureData, error
 		case fileScheme:
 			m.registerFileServer(upstream, u)
 		case httpScheme, httpsScheme:
-			m.registerHTTPUpstreamProxy(upstream, u, sigData, errorHandler)
+			m.registerHTTPUpstreamProxy(upstream, u, sigData, writer)
 		default:
 			return nil, fmt.Errorf("unknown scheme for upstream %q: %q", upstream.ID, u.Scheme)
 		}
@@ -66,7 +67,7 @@ func (m *multiUpstreamProxy) registerFileServer(upstream options.Upstream, u *ur
 }
 
 // registerHTTPUpstreamProxy registers a new httpUpstreamProxy based on the configuration given.
-func (m *multiUpstreamProxy) registerHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, errorHandler ProxyErrorHandler) {
+func (m *multiUpstreamProxy) registerHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, writer pagewriter.Writer) {
 	logger.Printf("mapping path %q => upstream %q", upstream.Path, upstream.URI)
-	m.serveMux.Handle(upstream.Path, newHTTPUpstreamProxy(upstream, u, sigData, errorHandler))
+	m.serveMux.Handle(upstream.Path, newHTTPUpstreamProxy(upstream, u, sigData, writer.ProxyErrorHandler))
 }
