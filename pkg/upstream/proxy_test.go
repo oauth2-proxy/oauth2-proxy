@@ -9,6 +9,7 @@ import (
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -20,9 +21,11 @@ var _ = Describe("Proxy Suite", func() {
 	BeforeEach(func() {
 		sigData := &options.SignatureData{Hash: crypto.SHA256, Key: "secret"}
 
-		errorHandler := func(rw http.ResponseWriter, _ *http.Request, _ error) {
-			rw.WriteHeader(502)
-			rw.Write([]byte("Proxy Error"))
+		writer := &pagewriter.WriterFuncs{
+			ProxyErrorFunc: func(rw http.ResponseWriter, _ *http.Request, _ error) {
+				rw.WriteHeader(502)
+				rw.Write([]byte("Proxy Error"))
+			},
 		}
 
 		ok := http.StatusOK
@@ -58,7 +61,7 @@ var _ = Describe("Proxy Suite", func() {
 		}
 
 		var err error
-		upstreamServer, err = NewProxy(upstreams, sigData, errorHandler)
+		upstreamServer, err = NewProxy(upstreams, sigData, writer)
 		Expect(err).ToNot(HaveOccurred())
 	})
 

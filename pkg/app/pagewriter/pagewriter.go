@@ -101,3 +101,73 @@ func NewWriter(opts Opts) (Writer, error) {
 		staticPageWriter: staticPages,
 	}, nil
 }
+
+// WriterFuncs is an implementation of the PageWriter interface based
+// on override functions.
+// If any of the funcs are not provided, a default implementation will be used.
+// This is primarily for us in testing.
+type WriterFuncs struct {
+	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string)
+	ErrorPageFunc  func(rw http.ResponseWriter, opts ErrorPageOpts)
+	ProxyErrorFunc func(rw http.ResponseWriter, req *http.Request, proxyErr error)
+	RobotsTxtfunc  func(rw http.ResponseWriter, req *http.Request)
+}
+
+// WriteSignInPage implements the Writer interface.
+// If the SignInPageFunc is provided, this will be used, else a default
+// implementation will be used.
+func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string) {
+	if w.SignInPageFunc != nil {
+		w.SignInPageFunc(rw, req, redirectURL)
+		return
+	}
+
+	if _, err := rw.Write([]byte("Sign In")); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+// WriteErrorPage implements the Writer interface.
+// If the ErrorPageFunc is provided, this will be used, else a default
+// implementation will be used.
+func (w *WriterFuncs) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts) {
+	if w.ErrorPageFunc != nil {
+		w.ErrorPageFunc(rw, opts)
+		return
+	}
+
+	rw.WriteHeader(opts.Status)
+	errMsg := fmt.Sprintf("%d - %v", opts.Status, opts.AppError)
+	if _, err := rw.Write([]byte(errMsg)); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+// ProxyErrorHandler implements the Writer interface.
+// If the ProxyErrorFunc is provided, this will be used, else a default
+// implementation will be used.
+func (w *WriterFuncs) ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error) {
+	if w.ProxyErrorFunc != nil {
+		w.ProxyErrorFunc(rw, req, proxyErr)
+		return
+	}
+
+	w.WriteErrorPage(rw, ErrorPageOpts{
+		Status:   http.StatusBadGateway,
+		AppError: proxyErr.Error(),
+	})
+}
+
+// WriteRobotsTxt implements the Writer interface.
+// If the RobotsTxtfunc is provided, this will be used, else a default
+// implementation will be used.
+func (w *WriterFuncs) WriteRobotsTxt(rw http.ResponseWriter, req *http.Request) {
+	if w.RobotsTxtfunc != nil {
+		w.RobotsTxtfunc(rw, req)
+		return
+	}
+
+	if _, err := rw.Write([]byte("Allow: *")); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
