@@ -180,6 +180,13 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
 
+	// @todo hier wird geprüft ob SkipAudCheckWhenMissing == True,
+	// wenn ja prüfen ob aud da ist, wenn ja prüfen und fehler wenn aud != p.ClientId, ansonsten skippen (also einfach weiter machen)
+	// aud := claims.raw["aud"]
+
+
+	// @todo hier prüfen ob ClientIdVerificationClaim gesetzt, wenn ja diesen claim mit p.ClientId vergleichen und fehler wenn ungleich
+
 	return ss, nil
 }
 

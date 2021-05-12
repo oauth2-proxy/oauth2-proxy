@@ -164,6 +164,13 @@ type OIDCOptions struct {
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
+	// SkipAudCheckWhenMissing allow to skip verification of aud claim when aud claim does not exist
+	// It is recommended to use ClientIdVerificationClaim when setting this to true
+	// default set to 'false'
+	SkipAudCheckWhenMissing bool `json:"skipAudCheckWhenMissing,omitempty"`
+	// ClientIdVerificationClaim allows to define any claim that is verified against the client id
+	// Setting ClientIdVerificationClaim implies SkipAudCheckWhenMissing to be set to 'true'
+	ClientIdVerificationClaim string `json:"claimChecks,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -187,6 +194,7 @@ func providerDefaults() Providers {
 			OIDCConfig: OIDCOptions{
 				InsecureAllowUnverifiedEmail: false,
 				InsecureSkipNonce:            true,
+				SkipAudCheckWhenMissing:      false,
 				SkipDiscovery:                false,
 				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   providers.OIDCEmailClaim,

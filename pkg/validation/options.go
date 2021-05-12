@@ -118,8 +118,9 @@ func Validate(o *options.Options) error {
 			}
 			keySet := oidc.NewRemoteKeySet(ctx, o.Providers[0].OIDCConfig.JwksURL)
 			o.SetOIDCVerifier(oidc.NewVerifier(o.Providers[0].OIDCConfig.IssuerURL, keySet, &oidc.Config{
-				ClientID:        o.Providers[0].ClientID,
-				SkipIssuerCheck: o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
+				ClientID:          o.Providers[0].ClientID,
+				SkipIssuerCheck:   o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
+				SkipClientIDCheck: o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing,
 			}))
 		} else {
 			// Configure discoverable provider data.
@@ -128,8 +129,9 @@ func Validate(o *options.Options) error {
 				return err
 			}
 			o.SetOIDCVerifier(provider.Verifier(&oidc.Config{
-				ClientID:        o.Providers[0].ClientID,
-				SkipIssuerCheck: o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
+				ClientID:          o.Providers[0].ClientID,
+				SkipIssuerCheck:   o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
+				SkipClientIDCheck: o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing,
 			}))
 
 			o.Providers[0].LoginURL = provider.Endpoint().AuthURL
@@ -375,6 +377,7 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error) {
 	config := &oidc.Config{
 		ClientID: jwtIssuer.audience,
+		// @todo needs to be considered as well
 	}
 	// Try as an OpenID Connect Provider first
 	var verifier *oidc.IDTokenVerifier
