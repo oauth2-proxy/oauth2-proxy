@@ -170,7 +170,7 @@ type OIDCOptions struct {
 	SkipAudCheckWhenMissing bool `json:"skipAudCheckWhenMissing,omitempty"`
 	// ClientIdVerificationClaim allows to define any claim that is verified against the client id
 	// Setting ClientIdVerificationClaim implies SkipAudCheckWhenMissing to be set to 'true'
-	ClientIdVerificationClaim string `json:"claimChecks,omitempty"`
+	ClientIDVerificationClaim string `json:"claimChecks,omitempty"`
 }
 
 type LoginGovOptions struct {

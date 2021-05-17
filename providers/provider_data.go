@@ -49,6 +49,10 @@ type ProviderData struct {
 	// Universal Group authorization data structure
 	// any provider can set to consume
 	AllowedGroups map[string]struct{}
+
+	// cognito specific
+	SkipAudCheckWhenMissing   bool
+	ClientIDVerificationClaim string
 }
 
 // Data returns the ProviderData
@@ -183,8 +187,24 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 	// @todo hier wird geprüft ob SkipAudCheckWhenMissing == True,
 	// wenn ja prüfen ob aud da ist, wenn ja prüfen und fehler wenn aud != p.ClientId, ansonsten skippen (also einfach weiter machen)
 	// aud := claims.raw["aud"]
-
-
+	if p.SkipAudCheckWhenMissing {
+		if aud, audExists := claims.raw["aud"]; audExists {
+			if aud != p.ClientID {
+				return nil, fmt.Errorf("provided aud claim %s does not match the client id %s",
+					claims.raw["aud"], p.ClientID)
+			}
+		} else {
+			if p.ClientIDVerificationClaim != "" {
+				if clientIDVerification, clientIDVerificationExists := claims.raw[p.ClientIDVerificationClaim]; clientIDVerificationExists {
+					logger.Printf("Trying verify provided claim value %+v\n", clientIDVerification)
+					if clientIDVerification != p.ClientID {
+						return nil, fmt.Errorf("provided claim %s with the value %s does not match the client id %s",
+							p.ClientIDVerificationClaim, clientIDVerification, p.ClientID)
+					}
+				}
+			}
+		}
+	}
 	// @todo hier prüfen ob ClientIdVerificationClaim gesetzt, wenn ja diesen claim mit p.ClientId vergleichen und fehler wenn ungleich
 
 	return ss, nil

@@ -641,6 +641,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
+		SkipAudCheckWhenMissing:        true,
 	}
 
 	// This part is out of the switch section because azure has a default tenant

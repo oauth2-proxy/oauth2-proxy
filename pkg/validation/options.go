@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -125,6 +126,12 @@ func Validate(o *options.Options) error {
 		} else {
 			// Configure discoverable provider data.
 			provider, err := oidc.NewProvider(ctx, o.Providers[0].OIDCConfig.IssuerURL)
+
+			debug.PrintStack()
+			logger.Printf("Check options: %+v\n", o)
+			logger.Printf("Check Kevin Setting SkipAudience: %+v\n", o.Providers[0].OIDCConfig)
+			//o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing = true
+
 			if err != nil {
 				return err
 			}
@@ -136,6 +143,9 @@ func Validate(o *options.Options) error {
 
 			o.Providers[0].LoginURL = provider.Endpoint().AuthURL
 			o.Providers[0].RedeemURL = provider.Endpoint().TokenURL
+			logger.Printf("Check options: %+v\n", o)
+			logger.Printf("Check Kevin Setting SkipAudience: %+v\n", o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing)
+			logger.Printf("Verifier: %p\n", *o.GetOIDCVerifier())
 		}
 		if o.Providers[0].Scope == "" {
 			o.Providers[0].Scope = "openid email profile"
@@ -199,13 +209,15 @@ func Validate(o *options.Options) error {
 
 func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p := &providers.ProviderData{
-		Scope:            o.Providers[0].Scope,
-		ClientID:         o.Providers[0].ClientID,
-		ClientSecret:     o.Providers[0].ClientSecret,
-		ClientSecretFile: o.Providers[0].ClientSecretFile,
-		Prompt:           o.Providers[0].Prompt,
-		ApprovalPrompt:   o.Providers[0].ApprovalPrompt,
-		AcrValues:        o.Providers[0].AcrValues,
+		Scope:                     o.Providers[0].Scope,
+		ClientID:                  o.Providers[0].ClientID,
+		ClientSecret:              o.Providers[0].ClientSecret,
+		ClientSecretFile:          o.Providers[0].ClientSecretFile,
+		Prompt:                    o.Providers[0].Prompt,
+		ApprovalPrompt:            o.Providers[0].ApprovalPrompt,
+		AcrValues:                 o.Providers[0].AcrValues,
+		SkipAudCheckWhenMissing:   o.SkipAudCheckWhenMissing,
+		ClientIDVerificationClaim: o.ClientIDVerificationClaim,
 	}
 	p.LoginURL, msgs = parseURL(o.Providers[0].LoginURL, "login", msgs)
 	p.RedeemURL, msgs = parseURL(o.Providers[0].RedeemURL, "redeem", msgs)
