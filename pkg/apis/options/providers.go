@@ -168,9 +168,12 @@ type OIDCOptions struct {
 	// It is recommended to use ClientIdVerificationClaim when setting this to true
 	// default set to 'false'
 	SkipAudCheckWhenMissing bool `json:"skipAudCheckWhenMissing,omitempty"`
-	// ClientIdVerificationClaim allows to define any claim that is verified against the client id
-	// Setting ClientIdVerificationClaim implies SkipAudCheckWhenMissing to be set to 'true'
-	ClientIDVerificationClaim string `json:"claimChecks,omitempty"`
+	// AudienceVerificationClaim allows to define any claim that is verified against the client id
+	// Setting AudienceVerificationClaim implies SkipAudCheckWhenMissing to be set to 'true'
+	AudienceVerificationClaim string `json:"audienceVerificationClaim,omitempty"`
+	// ExtraAudiencesForVerification defines a list of audiences that are allowed to pass verification check
+	// Setting AudienceVerificationClaim implies SkipAudCheckWhenMissing to be set to 'true'
+	ExtraAudiencesForVerification []string `json:"extraAudiencesForVerification,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -194,11 +197,11 @@ func providerDefaults() Providers {
 			OIDCConfig: OIDCOptions{
 				InsecureAllowUnverifiedEmail: false,
 				InsecureSkipNonce:            true,
-				SkipAudCheckWhenMissing:      false,
 				SkipDiscovery:                false,
 				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   providers.OIDCEmailClaim,
 				GroupsClaim:                  providers.OIDCGroupsClaim,
+				SkipAudCheckWhenMissing:      false,
 			},
 		},
 	}

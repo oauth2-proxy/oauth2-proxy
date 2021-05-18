@@ -39,9 +39,6 @@ type Options struct {
 	Logging   Logging        `cfg:",squash"`
 	Templates Templates      `cfg:",squash"`
 
-	SkipAudCheckWhenMissing   bool   `flag:"skip-aud-check-when-missing" cfg:"skip_aud_check_when_missing"`
-	ClientIDVerificationClaim string `flag:"client-id-verification-claim" cfg:"client_id_verification_claim"`
-
 	// Not used in the legacy config, name not allowed to match an external key (upstreams)
 	// TODO(JoelSpeed): Rename when legacy config is removed
 	UpstreamServers UpstreamConfig `cfg:",internal"`
@@ -96,17 +93,16 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClie
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:             "/oauth2",
-		Providers:               providerDefaults(),
-		PingPath:                "/ping",
-		RealClientIPHeader:      "X-Real-IP",
-		ForceHTTPS:              false,
-		Cookie:                  cookieDefaults(),
-		Session:                 sessionOptionsDefaults(),
-		Templates:               templatesDefaults(),
-		SkipAuthPreflight:       false,
-		Logging:                 loggingDefaults(),
-		SkipAudCheckWhenMissing: true,
+		ProxyPrefix:        "/oauth2",
+		Providers:          providerDefaults(),
+		PingPath:           "/ping",
+		RealClientIPHeader: "X-Real-IP",
+		ForceHTTPS:         false,
+		Cookie:             cookieDefaults(),
+		Session:            sessionOptionsDefaults(),
+		Templates:          templatesDefaults(),
+		SkipAuthPreflight:  false,
+		Logging:            loggingDefaults(),
 	}
 }
 
@@ -150,9 +146,6 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
-
-	flagSet.Bool("skip-aud-check-when-missing", false, "Cognito specific setting in order to skip checking aud claim as not present & use clientID claim instead")
-	flagSet.String("client-id-verification-claim", "", "Claim to verify client id token when audience claim is missing")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())

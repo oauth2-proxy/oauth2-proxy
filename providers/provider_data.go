@@ -50,9 +50,9 @@ type ProviderData struct {
 	// any provider can set to consume
 	AllowedGroups map[string]struct{}
 
-	// cognito specific
-	SkipAudCheckWhenMissing   bool
-	ClientIDVerificationClaim string
+	SkipAudCheckWhenMissing       bool
+	AudienceVerificationClaim     string
+	ExtraAudiencesForVerification []string
 }
 
 // Data returns the ProviderData
@@ -184,28 +184,29 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
 
-	// @todo hier wird geprüft ob SkipAudCheckWhenMissing == True,
-	// wenn ja prüfen ob aud da ist, wenn ja prüfen und fehler wenn aud != p.ClientId, ansonsten skippen (also einfach weiter machen)
-	// aud := claims.raw["aud"]
 	if p.SkipAudCheckWhenMissing {
+		logger.Println("SkipAudCheckWhenMissing is set, checking aud...")
 		if aud, audExists := claims.raw["aud"]; audExists {
-			if aud != p.ClientID {
+			logger.Println(fmt.Sprintf("aud claim does exist with value %v, verifying...", aud))
+			if !isValidAudience(p, aud) {
 				return nil, fmt.Errorf("provided aud claim %s does not match the client id %s",
 					claims.raw["aud"], p.ClientID)
 			}
 		} else {
-			if p.ClientIDVerificationClaim != "" {
-				if clientIDVerification, clientIDVerificationExists := claims.raw[p.ClientIDVerificationClaim]; clientIDVerificationExists {
-					logger.Printf("Trying verify provided claim value %+v\n", clientIDVerification)
-					if clientIDVerification != p.ClientID {
-						return nil, fmt.Errorf("provided claim %s with the value %s does not match the client id %s",
-							p.ClientIDVerificationClaim, clientIDVerification, p.ClientID)
+			logger.Println("aud claim does not exist")
+			if p.AudienceVerificationClaim != "" {
+				logger.Println(fmt.Sprintf("AudienceVerificationClaim %s is set, verifying...", p.AudienceVerificationClaim))
+				if audienceClaimValue, audienceClaimExists := claims.raw[p.AudienceVerificationClaim]; audienceClaimExists {
+					logger.Println(fmt.Sprintf("Trying verify provided claim value %+v", audienceClaimValue))
+					if !isValidAudience(p, audienceClaimValue) {
+						return nil, fmt.Errorf("provided claim %s with the value %s does not match",
+							p.AudienceVerificationClaim, audienceClaimValue)
 					}
 				}
 			}
 		}
+		logger.Println("SkipAudCheckWhenMissing verification done, successful")
 	}
-	// @todo hier prüfen ob ClientIdVerificationClaim gesetzt, wenn ja diesen claim mit p.ClientId vergleichen und fehler wenn ungleich
 
 	return ss, nil
 }
@@ -274,4 +275,21 @@ func (p *ProviderData) extractGroups(claims map[string]interface{}) []string {
 		groups = append(groups, formattedGroup)
 	}
 	return groups
+}
+
+// isValidAudience Checks whether or not the given audience is allowed to pass verification
+func isValidAudience(p *ProviderData, aud interface{}) bool {
+	if aud == nil {
+		return false
+	}
+	aud = aud.(string)
+	allowedAudiences := append(p.ExtraAudiencesForVerification, p.ClientID)
+	for _, allowedAudience := range allowedAudiences {
+		if allowedAudience == aud {
+			logger.Printf("audience %s is one of %v", aud, allowedAudiences)
+			return true
+		}
+	}
+	logger.Printf("audience %s is not one of %v", aud, allowedAudiences)
+	return false
 }

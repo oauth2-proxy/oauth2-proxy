@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"runtime/debug"
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -126,12 +125,6 @@ func Validate(o *options.Options) error {
 		} else {
 			// Configure discoverable provider data.
 			provider, err := oidc.NewProvider(ctx, o.Providers[0].OIDCConfig.IssuerURL)
-
-			debug.PrintStack()
-			logger.Printf("Check options: %+v\n", o)
-			logger.Printf("Check Kevin Setting SkipAudience: %+v\n", o.Providers[0].OIDCConfig)
-			//o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing = true
-
 			if err != nil {
 				return err
 			}
@@ -143,9 +136,6 @@ func Validate(o *options.Options) error {
 
 			o.Providers[0].LoginURL = provider.Endpoint().AuthURL
 			o.Providers[0].RedeemURL = provider.Endpoint().TokenURL
-			logger.Printf("Check options: %+v\n", o)
-			logger.Printf("Check Kevin Setting SkipAudience: %+v\n", o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing)
-			logger.Printf("Verifier: %p\n", *o.GetOIDCVerifier())
 		}
 		if o.Providers[0].Scope == "" {
 			o.Providers[0].Scope = "openid email profile"
@@ -209,15 +199,13 @@ func Validate(o *options.Options) error {
 
 func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p := &providers.ProviderData{
-		Scope:                     o.Providers[0].Scope,
-		ClientID:                  o.Providers[0].ClientID,
-		ClientSecret:              o.Providers[0].ClientSecret,
-		ClientSecretFile:          o.Providers[0].ClientSecretFile,
-		Prompt:                    o.Providers[0].Prompt,
-		ApprovalPrompt:            o.Providers[0].ApprovalPrompt,
-		AcrValues:                 o.Providers[0].AcrValues,
-		SkipAudCheckWhenMissing:   o.SkipAudCheckWhenMissing,
-		ClientIDVerificationClaim: o.ClientIDVerificationClaim,
+		Scope:            o.Providers[0].Scope,
+		ClientID:         o.Providers[0].ClientID,
+		ClientSecret:     o.Providers[0].ClientSecret,
+		ClientSecretFile: o.Providers[0].ClientSecretFile,
+		Prompt:           o.Providers[0].Prompt,
+		ApprovalPrompt:   o.Providers[0].ApprovalPrompt,
+		AcrValues:        o.Providers[0].AcrValues,
 	}
 	p.LoginURL, msgs = parseURL(o.Providers[0].LoginURL, "login", msgs)
 	p.RedeemURL, msgs = parseURL(o.Providers[0].RedeemURL, "redeem", msgs)
@@ -286,6 +274,15 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetRepository(o.Providers[0].BitbucketConfig.Repository)
 	case *providers.OIDCProvider:
 		p.SkipNonce = o.Providers[0].OIDCConfig.InsecureSkipNonce
+		p.SkipAudCheckWhenMissing = o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing
+		p.AudienceVerificationClaim = o.Providers[0].OIDCConfig.AudienceVerificationClaim
+		p.ExtraAudiencesForVerification = o.Providers[0].OIDCConfig.ExtraAudiencesForVerification
+		// Implicit set of SkipAudCheckWhenMissing
+		// when AudienceVerificationClaim or ExtraAudiencesForVerification is set
+		if p.AudienceVerificationClaim != "" ||
+			len(p.ExtraAudiencesForVerification) > 0 {
+			p.SkipAudCheckWhenMissing = true
+		}
 		if p.Verifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		}
@@ -389,7 +386,6 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error) {
 	config := &oidc.Config{
 		ClientID: jwtIssuer.audience,
-		// @todo needs to be considered as well
 	}
 	// Try as an OpenID Connect Provider first
 	var verifier *oidc.IDTokenVerifier
