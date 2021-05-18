@@ -68,9 +68,6 @@ func (s *SessionState) String() string {
 	if len(s.Groups) > 0 {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
 	}
-	if s.IntrospectClaims != "" {
-		o += fmt.Sprintf(" Introspection Claims:%s", s.IntrospectClaims)
-	}
 	return o + "}"
 }
 
@@ -99,7 +96,7 @@ func (s *SessionState) GetClaim(claim string) []string {
 		return groups
 	case "preferred_username":
 		return []string{s.PreferredUsername}
-	case "introspect-claims":
+	case "introspect_claims":
 		return []string{s.IntrospectClaims}
 	default:
 		return []string{}

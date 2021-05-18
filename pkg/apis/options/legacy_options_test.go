@@ -440,7 +440,7 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim: "introspect-claims",
+						Claim: "introspect_claims",
 					},
 				},
 			},

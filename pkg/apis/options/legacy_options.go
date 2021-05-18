@@ -449,7 +449,7 @@ func getXAuthIntrospectResponseHeaders() Header {
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
-					Claim: "introspect-claims",
+					Claim: "introspect_claims",
 				},
 			},
 		},
