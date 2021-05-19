@@ -33,7 +33,7 @@ type Templates struct {
 	// It is not advised to use this in production as errors may contain sensitive
 	// information.
 	// Use only for diagnosing backend errors.
-	Debug bool `flag:"show-debug-on-error" cfg:"show-debug-on-error"`
+	Debug bool `flag:"show-debug-on-error" cfg:"show_debug_on_error"`
 }
 
 func templatesFlagSet() *pflag.FlagSet {

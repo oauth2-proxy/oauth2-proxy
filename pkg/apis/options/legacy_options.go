@@ -48,12 +48,13 @@ func NewLegacyOptions() *LegacyOptions {
 		},
 
 		LegacyProvider: LegacyProvider{
-			ProviderType:    "google",
-			AzureTenant:     "common",
-			ApprovalPrompt:  "force",
-			UserIDClaim:     "email",
-			OIDCEmailClaim:  "email",
-			OIDCGroupsClaim: "groups",
+			ProviderType:          "google",
+			AzureTenant:           "common",
+			ApprovalPrompt:        "force",
+			UserIDClaim:           "email",
+			OIDCEmailClaim:        "email",
+			OIDCGroupsClaim:       "groups",
+			InsecureOIDCSkipNonce: true,
 		},
 
 		Options: *NewOptions(),
@@ -459,8 +460,8 @@ func getXAuthIntrospectionValueHeaders() Header {
 type LegacyServer struct {
 	MetricsAddress       string `flag:"metrics-address" cfg:"metrics_address"`
 	MetricsSecureAddress string `flag:"metrics-secure-address" cfg:"metrics_secure_address"`
-	MetricsTLSCertFile   string `flag:"metrics-tls-cert-file" cfg:"tls_cert_file"`
-	MetricsTLSKeyFile    string `flag:"metrics-tls-key-file" cfg:"tls_key_file"`
+	MetricsTLSCertFile   string `flag:"metrics-tls-cert-file" cfg:"metrics_tls_cert_file"`
+	MetricsTLSKeyFile    string `flag:"metrics-tls-key-file" cfg:"metrics_tls_key_file"`
 	HTTPAddress          string `flag:"http-address" cfg:"http_address"`
 	HTTPSAddress         string `flag:"https-address" cfg:"https_address"`
 	TLSCertFile          string `flag:"tls-cert-file" cfg:"tls_cert_file"`
@@ -510,6 +511,7 @@ type LegacyProvider struct {
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
+	InsecureOIDCSkipNonce              bool     `flag:"insecure-oidc-skip-nonce" cfg:"insecure_oidc_skip_nonce"`
 	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
@@ -559,6 +561,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
+	flagSet.Bool("insecure-oidc-skip-nonce", true, "skip verifying the OIDC ID Token's nonce claim")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
@@ -651,6 +654,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		IssuerURL:                      l.OIDCIssuerURL,
 		InsecureAllowUnverifiedEmail:   l.InsecureOIDCAllowUnverifiedEmail,
 		InsecureSkipIssuerVerification: l.InsecureOIDCSkipIssuerVerification,
+		InsecureSkipNonce:              l.InsecureOIDCSkipNonce,
 		SkipDiscovery:                  l.SkipOIDCDiscovery,
 		JwksURL:                        l.OIDCJwksURL,
 		UserIDClaim:                    l.UserIDClaim,
