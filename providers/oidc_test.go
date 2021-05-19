@@ -505,18 +505,42 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				"email": "new@thing.com",
 			},
 			IntrospectJSON: map[string]interface{}{
-				"active":     true,
-				"exp":        1613553280,
-				"iat":        1613549680,
-				"sub":        "00u65ah10oSUDoNd65d6",
-				"aud":        "0oa5t6ts1XZgPOOSA5d6",
-				"iss":        "https://dev.authprovider.com/oauth2/default",
-				"jti":        "ID.ShxppK0vysORHsr8S9GSPPRV-Dy1PFhqx3fPYwtijc0",
-				"token_type": "Bearer",
-				"at_hash":    "_1EsbE1ZpyMOLiu-VdBTlg",
-				"idp":        "0oa5t8x90SALHBBk85d6",
-				"auth_time":  1613549026,
-				"amr":        []string{"pwd"},
+				"active":   true,
+				"scope":    "openid profile email",
+				"username": "red.rush@invincible.com",
+				"exp":      1620821880,
+				"sub":      "a9dcb37f-a5b5-4304-b334-aa72865ebacf",
+				"iss":      "https://dev.authprovider.com/oauth2/default",
+				"organizations": map[string]interface{}{
+					"managingOrganization": "9e99787d-ee6a-4ece-83e7-065da45c77eb",
+					"organizationList": [](map[string]interface{}){
+						{
+							"organizationId": "a7f6fa08-4aba-4b19-844f-3d3bb9eb721d",
+							"permissions": []string{
+								"CLIENT.READ",
+								"CP-CONFIG.BUNDLE_READ",
+								"CP-CONFIG.READ",
+							},
+							"organizationName": "org1",
+							"groups": []string{
+								"admin",
+							},
+							"roles": []string{
+								"adminaccess",
+							},
+						},
+						{
+							"organizationId": "c7c7970d-21a7-450b-9557-5fa2080f3ff4",
+							"permissions": []string{
+								"CLIENT.WRITE",
+								"EMAILTEMPLATE.DELETE",
+							},
+							"organizationName": "org2",
+						},
+					}},
+				"client_id":     "oidcclient1",
+				"token_type":    "Bearer",
+				"identity_type": "user",
 			},
 			ExpectedError: nil,
 			ExpectedSession: &sessions.SessionState{
@@ -525,7 +549,7 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				IDToken:          idToken,
 				AccessToken:      accessToken,
 				RefreshToken:     refreshToken,
-				IntrospectClaims: "eyJhY3RpdmUiOnRydWUsImFtciI6WyJwd2QiXSwiYXRfaGFzaCI6Il8xRXNiRTFacHlNT0xpdS1WZEJUbGciLCJhdWQiOiIwb2E1dDZ0czFYWmdQT09TQTVkNiIsImF1dGhfdGltZSI6MTYxMzU0OTAyNiwiZXhwIjoxNjEzNTUzMjgwLCJpYXQiOjE2MTM1NDk2ODAsImlkcCI6IjBvYTV0OHg5MFNBTEhCQms4NWQ2IiwiaXNzIjoiaHR0cHM6Ly9kZXYuYXV0aHByb3ZpZGVyLmNvbS9vYXV0aDIvZGVmYXVsdCIsImp0aSI6IklELlNoeHBwSzB2eXNPUkhzcjhTOUdTUFBSVi1EeTFQRmhxeDNmUFl3dGlqYzAiLCJzdWIiOiIwMHU2NWFoMTBvU1VEb05kNjVkNiIsInRva2VuX3R5cGUiOiJCZWFyZXIifQ==",
+				IntrospectClaims: "eyJhY3RpdmUiOnRydWUsImNsaWVudF9pZCI6Im9pZGNjbGllbnQxIiwiZXhwIjoxNjIwODIxODgwLCJpZGVudGl0eV90eXBlIjoidXNlciIsImlzcyI6Imh0dHBzOi8vZGV2LmF1dGhwcm92aWRlci5jb20vb2F1dGgyL2RlZmF1bHQiLCJvcmdhbml6YXRpb25zIjp7Im1hbmFnaW5nT3JnYW5pemF0aW9uIjoiOWU5OTc4N2QtZWU2YS00ZWNlLTgzZTctMDY1ZGE0NWM3N2ViIiwib3JnYW5pemF0aW9uTGlzdCI6W3siZ3JvdXBzIjpbImFkbWluIl0sIm9yZ2FuaXphdGlvbklkIjoiYTdmNmZhMDgtNGFiYS00YjE5LTg0NGYtM2QzYmI5ZWI3MjFkIiwib3JnYW5pemF0aW9uTmFtZSI6Im9yZzEiLCJwZXJtaXNzaW9ucyI6WyJDTElFTlQuUkVBRCIsIkNQLUNPTkZJRy5CVU5ETEVfUkVBRCIsIkNQLUNPTkZJRy5SRUFEIl0sInJvbGVzIjpbImFkbWluYWNjZXNzIl19LHsib3JnYW5pemF0aW9uSWQiOiJjN2M3OTcwZC0yMWE3LTQ1MGItOTU1Ny01ZmEyMDgwZjNmZjQiLCJvcmdhbml6YXRpb25OYW1lIjoib3JnMiIsInBlcm1pc3Npb25zIjpbIkNMSUVOVC5XUklURSIsIkVNQUlMVEVNUExBVEUuREVMRVRFIl19XX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJzdWIiOiJhOWRjYjM3Zi1hNWI1LTQzMDQtYjMzNC1hYTcyODY1ZWJhY2YiLCJ0b2tlbl90eXBlIjoiQmVhcmVyIiwidXNlcm5hbWUiOiJyZWQucnVzaEBpbnZpbmNpYmxlLmNvbSJ9",
 			},
 		},
 	}

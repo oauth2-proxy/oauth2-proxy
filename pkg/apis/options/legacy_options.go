@@ -180,10 +180,10 @@ type LegacyHeaders struct {
 	PassUserHeaders   bool `flag:"pass-user-headers" cfg:"pass_user_headers"`
 	PassAuthorization bool `flag:"pass-authorization-header" cfg:"pass_authorization_header"`
 
-	SetBasicAuth             bool `flag:"set-basic-auth" cfg:"set_basic_auth"`
-	SetXAuthRequest          bool `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
-	SetAuthorization         bool `flag:"set-authorization-header" cfg:"set_authorization_header"`
-	SetIntrospectionResponse bool `flag:"set-introspect-response-header" cfg:"set_introspect_response_header"`
+	SetBasicAuth          bool `flag:"set-basic-auth" cfg:"set_basic_auth"`
+	SetXAuthRequest       bool `flag:"set-xauthrequest" cfg:"set_xauthrequest"`
+	SetAuthorization      bool `flag:"set-authorization-header" cfg:"set_authorization_header"`
+	SetIntrospectionValue bool `flag:"set-introspection-value" cfg:"set_introspection_value"`
 
 	PreferEmailToUser    bool   `flag:"prefer-email-to-user" cfg:"prefer_email_to_user"`
 	BasicAuthPassword    string `flag:"basic-auth-password" cfg:"basic_auth_password"`
@@ -201,7 +201,7 @@ func legacyHeadersFlagSet() *pflag.FlagSet {
 	flagSet.Bool("set-basic-auth", false, "set HTTP Basic Auth information in response (useful in Nginx auth_request mode)")
 	flagSet.Bool("set-xauthrequest", false, "set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)")
 	flagSet.Bool("set-authorization-header", false, "set Authorization response headers (useful in Nginx auth_request mode)")
-	flagSet.Bool("set-introspect-response-header", false, "set the Introspect claims in the response headers")
+	flagSet.Bool("set-introspection-value", false, "set the Introspect claims in the response headers via X-Auth-Introspect-Value")
 
 	flagSet.Bool("prefer-email-to-user", false, "Prefer to use the Email address as the Username when passing information to upstream. Will only use Username if Email is unavailable, eg. htaccess authentication. Used in conjunction with -pass-basic-auth and -pass-user-headers")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
@@ -262,8 +262,8 @@ func (l *LegacyHeaders) getResponseHeaders() []Header {
 		responseHeaders = append(responseHeaders, getAuthorizationHeader())
 	}
 
-	if l.SetIntrospectionResponse {
-		responseHeaders = append(responseHeaders, getXAuthIntrospectResponseHeaders())
+	if l.SetIntrospectionValue {
+		responseHeaders = append(responseHeaders, getXAuthIntrospectionValueHeaders())
 	}
 	return responseHeaders
 }
@@ -443,9 +443,9 @@ func getXAuthRequestAccessTokenHeader() Header {
 	}
 }
 
-func getXAuthIntrospectResponseHeaders() Header {
+func getXAuthIntrospectionValueHeaders() Header {
 	return Header{
-		Name: "X-Auth-Introspect-Response",
+		Name: "X-Auth-Introspect-Value",
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{

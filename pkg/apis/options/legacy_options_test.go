@@ -435,7 +435,7 @@ var _ = Describe("Legacy Options", func() {
 		}
 
 		xAuthIntrospectResponse := Header{
-			Name:                 "X-Auth-Introspect-Response",
+			Name:                 "X-Auth-Introspect-Value",
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
@@ -484,9 +484,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -502,9 +503,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:     true,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          true,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    basicAuthSecret,
@@ -528,9 +530,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:     true,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          true,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    basicAuthSecret,
@@ -554,9 +557,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:     true,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          true,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    true,
 					BasicAuthPassword:    basicAuthSecret,
@@ -579,9 +583,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   true,
 					PassAuthorization: false,
 
-					SetBasicAuth:     true,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          true,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    basicAuthSecret,
@@ -605,9 +610,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   true,
 					PassAuthorization: false,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -628,9 +634,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   true,
 					PassAuthorization: false,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -651,9 +658,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  true,
-					SetAuthorization: false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       true,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -674,10 +682,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:             false,
-					SetXAuthRequest:          false,
-					SetIntrospectionResponse: true,
-					SetAuthorization:         false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: true,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -695,9 +703,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -715,9 +724,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  true,
-					SetAuthorization: false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       true,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -741,9 +751,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  false,
-					SetAuthorization: false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -761,9 +772,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: true,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  false,
-					SetAuthorization: true,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      true,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
@@ -783,9 +795,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: true,
 
-					SetBasicAuth:     false,
-					SetXAuthRequest:  false,
-					SetAuthorization: true,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: false,
+					SetAuthorization:      true,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
