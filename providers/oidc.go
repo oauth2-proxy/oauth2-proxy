@@ -155,6 +155,12 @@ func (p *OIDCProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.S
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
+	err = p.EnrichSession(ctx, s)
+	if err != nil {
+		// Non critical, use unenriched session
+		logger.Errorf("Warning: unable to enrich session, error %s", err)
+	}
+
 	logger.Printf("refreshed session: %s", s)
 	return true, nil
 }
