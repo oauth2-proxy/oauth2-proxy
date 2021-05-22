@@ -11,7 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
-var LockPrefix = "lock"
+var LockSuffix = "lock"
 
 type Lock struct {
 	client redis.Cmdable
@@ -80,5 +80,5 @@ func (l *Lock) Release(ctx context.Context) error {
 }
 
 func (l *Lock) lockKey() string {
-	return fmt.Sprintf("%s.%s", LockPrefix, l.key)
+	return fmt.Sprintf("%s.%s", l.key, LockSuffix)
 }
