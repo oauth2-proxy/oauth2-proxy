@@ -30,7 +30,7 @@ type Lock interface {
 	// if is still applied.
 	// Otherwise it will return ErrNotLocked
 	Refresh(ctx context.Context, expiration time.Duration) error
-	// Release removes the applied lock if is obtained,
+	// Release removes the existing lock,
 	// Otherwise it will return ErrNotLocked
 	Release(ctx context.Context) error
 }
