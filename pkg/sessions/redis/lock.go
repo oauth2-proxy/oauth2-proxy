@@ -50,7 +50,7 @@ func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
 	}
 	err := l.lock.Refresh(ctx, expiration, nil)
 	if errors.Is(err, redislock.ErrNotObtained) {
-		return sessions.ErrLockNotObtained
+		return sessions.ErrNotLocked
 	}
 	return err
 }
