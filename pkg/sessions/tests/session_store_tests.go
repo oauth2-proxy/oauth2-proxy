@@ -298,7 +298,7 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 				in.request.AddCookie(cookie)
 			}
 
-			loadedSession, err := in.ss().Load(in.request)
+			loadedSession, err = in.ss().Load(in.request)
 			Expect(err).ToNot(HaveOccurred())
 			err = loadedSession.ObtainLock(in.request.Context(), 2*time.Minute)
 			Expect(err).ToNot(HaveOccurred())
