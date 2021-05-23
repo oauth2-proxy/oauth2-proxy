@@ -10,6 +10,7 @@
 
 - [#1142](https://github.com/oauth2-proxy/oauth2-proxy/pull/1142) Add pagewriter to upstream proxy (@JoelSpeed)
 - [#1181](https://github.com/oauth2-proxy/oauth2-proxy/pull/1181) Fix incorrect `cfg` name in show-debug-on-error flag (@iTaybb)
+- [#1063](https://github.com/oauth2-proxy/oauth2-proxy/pull/1063) Add Redis lock feature to lock persistent sessions (@Bibob7)
 
 # V7.1.3
 
@@ -30,7 +31,6 @@
 - [#967](https://github.com/oauth2-proxy/oauth2-proxy/pull/967) Set & verify a nonce with OIDC providers (@NickMeves)
 - [#1136](https://github.com/oauth2-proxy/oauth2-proxy/pull/1136) Add clock package for better time mocking in tests (@NickMeves)
 - [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
-- [#1063](https://github.com/oauth2-proxy/oauth2-proxy/pull/1063) Add Redis lock feature to lock persistent sessions (@Bibob7)
 
 # V7.1.2
 
