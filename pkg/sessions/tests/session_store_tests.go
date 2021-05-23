@@ -288,6 +288,7 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 	})
 
 	Context("when lock is applied", func() {
+		var loadedSession *sessionsapi.SessionState
 		BeforeEach(func() {
 			resp := httptest.NewRecorder()
 			err := in.ss().Save(resp, in.request, in.session)
@@ -312,36 +313,32 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 			})
 
 			It("peek returns true on loaded session lock", func() {
-				loadedSession, err := in.ss().Load(in.request)
-				Expect(err).ToNot(HaveOccurred())
-				isLocked, err := loadedSession.PeekLock(in.request.Context())
+				l := *loadedSession
+				isLocked, err := l.PeekLock(in.request.Context())
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(isLocked).To(BeTrue())
 			})
 
 			It("lock can be released", func() {
-				loadedSession, err := in.ss().Load(in.request)
-				Expect(err).ToNot(HaveOccurred())
+				l := *loadedSession
 
-				err = loadedSession.ReleaseLock(in.request.Context())
+				err := l.ReleaseLock(in.request.Context())
 				Expect(err).NotTo(HaveOccurred())
 
-				isLocked, err := loadedSession.PeekLock(in.request.Context())
+				isLocked, err := l.PeekLock(in.request.Context())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(isLocked).To(BeFalse())
 			})
 
 			It("lock is refreshed", func() {
-				loadedSession, err := in.ss().Load(in.request)
-				Expect(err).ToNot(HaveOccurred())
-
-				err = loadedSession.RefreshLock(in.request.Context(), 3*time.Minute)
+				l := *loadedSession
+				err := l.RefreshLock(in.request.Context(), 3*time.Minute)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(in.persistentFastForward(2 * time.Minute)).To(Succeed())
 
-				isLocked, err := loadedSession.PeekLock(in.request.Context())
+				isLocked, err := l.PeekLock(in.request.Context())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(isLocked).To(BeTrue())
 			})
@@ -353,9 +350,8 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 			})
 
 			It("peek returns false on loaded session lock", func() {
-				loadedSession, err := in.ss().Load(in.request)
-				Expect(err).ToNot(HaveOccurred())
-				isLocked, err := loadedSession.PeekLock(in.request.Context())
+				l := *loadedSession
+				isLocked, err := l.PeekLock(in.request.Context())
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(isLocked).To(BeFalse())
