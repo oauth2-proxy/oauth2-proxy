@@ -45,14 +45,14 @@ func (l *Lock) Obtain(ctx context.Context, expiration time.Duration) error {
 
 // Refresh refreshes an already existing lock.
 func (l *Lock) Refresh(ctx context.Context, expiration time.Duration) error {
-	v, err := l.client.Exists(ctx, l.lockKey()).Result()
-	if err != nil {
-		return err
-	}
-	if v == 0 {
+	if l.lock == nil {
 		return sessions.ErrNotLocked
 	}
-	return l.client.PExpire(ctx, l.lockKey(), expiration).Err()
+	err := l.lock.Refresh(ctx, expiration, nil)
+	if errors.Is(err, redislock.ErrNotObtained) {
+		return sessions.ErrLockNotObtained
+	}
+	return err
 }
 
 // Peek returns true, if the lock is still applied.
@@ -69,14 +69,14 @@ func (l *Lock) Peek(ctx context.Context) (bool, error) {
 
 // Release releases the lock on Redis side.
 func (l *Lock) Release(ctx context.Context) error {
-	v, err := l.client.Exists(ctx, l.lockKey()).Result()
-	if err != nil {
-		return err
-	}
-	if v == 0 {
+	if l.lock == nil {
 		return sessions.ErrNotLocked
 	}
-	return l.client.Del(ctx, l.lockKey()).Err()
+	err := l.lock.Release(ctx)
+	if errors.Is(err, redislock.ErrLockNotHeld) {
+		return sessions.ErrNotLocked
+	}
+	return err
 }
 
 func (l *Lock) lockKey() string {
