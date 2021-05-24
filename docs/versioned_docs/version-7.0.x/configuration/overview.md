@@ -7,7 +7,62 @@ title: Overview
 
 ### Generating a Cookie Secret
 
-To generate a strong cookie secret use `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(16)).decode())'`
+To generate a strong cookie secret use one of the below commands:
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs
+  defaultValue="python"
+  values={[
+    {label: 'Python', value: 'python'},
+    {label: 'Bash', value: 'bash'},
+    {label: 'OpenSSL', value: 'openssl'},
+    {label: 'PowerShell', value: 'powershell'},
+    {label: 'Terraform', value: 'terraform'},
+  ]}>
+  <TabItem value="python">
+
+  ```shell
+  python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
+  ```
+
+  </TabItem>
+  <TabItem value="bash">
+
+  ```shell
+  cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 | base64
+  ```
+
+  </TabItem>
+  <TabItem value="openssl">
+
+  ```shell
+  openssl rand -base64 32 | tr -- '+/' '-_'
+  ```
+
+  </TabItem>
+  <TabItem value="powershell">
+
+  ```shell
+  # Add System.Web assembly to session, just in case
+  Add-Type -AssemblyName System.Web
+  [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
+  ```
+
+  </TabItem>
+  <TabItem value="terraform">
+
+  ```shell
+  # Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
+  resource "random_password" "cookie_secret" {
+    length           = 32
+    override_special = "-_"
+  }
+  ```
+
+  </TabItem>
+</Tabs>
 
 ### Config File
 
