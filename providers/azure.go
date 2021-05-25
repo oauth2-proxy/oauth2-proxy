@@ -192,6 +192,13 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 	}
 	s.Email = email
 
+	user, err := p.getUserFromProfileAPI(ctx, s.AccessToken)
+	if err != nil {
+		return fmt.Errorf("unable to get user: %v", err)
+	}
+	// Not going to throw an error if this is empty
+	s.User = user
+
 	return nil
 }
 
@@ -359,6 +366,48 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 	}
 
 	return getEmailFromJSON(json)
+}
+
+func getUserFromJSON(json *simplejson.Json) (string, error) {
+	var user string
+	var err error
+
+	user, err = json.Get("userPrincipalName").String()
+
+	if err != nil || user == "" {
+		otherMails, otherMailsErr := json.Get("otherMails").Array()
+		if len(otherMails) > 0 {
+			user = otherMails[0].(string)
+		}
+		err = otherMailsErr
+	}
+
+	if err != nil || user == "" {
+		user, err = json.Get("mail").String()
+		if err != nil {
+			logger.Errorf("unable to find User: %s", err)
+			return "", err
+		}
+	}
+
+	return user, err
+}
+
+func (p *AzureProvider) getUserFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
+	if accessToken == "" {
+		return "", errors.New("missing access token")
+	}
+
+	json, err := requests.New(p.ProfileURL.String()).
+		WithContext(ctx).
+		WithHeaders(makeAzureHeader(accessToken)).
+		Do().
+		UnmarshalJSON()
+	if err != nil {
+		return "", err
+	}
+
+	return getUserFromJSON(json)
 }
 
 // ValidateSession validates the AccessToken
