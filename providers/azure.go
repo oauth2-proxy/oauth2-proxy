@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/bitly/go-simplejson"
@@ -372,7 +373,8 @@ func getUserFromJSON(json *simplejson.Json) (string, error) {
 	var user string
 	var err error
 
-	user, err = json.Get("userPrincipalName").String()
+	userEmail, err := json.Get("userPrincipalName").String()
+	user = strings.Split(userEmail, "@")[0]
 
 	if err != nil || user == "" {
 		otherMails, otherMailsErr := json.Get("otherMails").Array()
