@@ -101,7 +101,7 @@ var _ = Describe("Stored Session Suite", func() {
 					Session: in.existingSession,
 				}
 
-				// Set up the request with the request headesr and a request scope
+				// Set up the request with the request header and a request scope
 				req := httptest.NewRequest("", "/", nil)
 				req.Header = in.requestHeaders
 				req = middlewareapi.AddRequestScope(req, scope)
