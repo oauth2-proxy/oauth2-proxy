@@ -22,23 +22,6 @@
         text-decoration: underline;
       }
     </style>
-
-    <script>
-      if (window.location.hash) {
-        (function() {
-          var inputs = document.getElementsByName('rd');
-          for (var i = 0; i < inputs.length; i++) {
-            // Add hash, but make sure it is only added once
-            var idx = inputs[i].value.indexOf('#');
-            if (idx >= 0) {
-              // Remove existing hash from URL
-              inputs[i].value = inputs[i].value.substr(0, idx);
-            }
-            inputs[i].value += window.location.hash;
-          }
-        })();
-      }
-    </script>
   </head>
   <body class="has-background-light">
   <section class="section">
@@ -81,6 +64,23 @@
     </form>
     </div>
   </section>
+
+  <script>
+    if (window.location.hash) {
+      (function() {
+        var inputs = document.getElementsByName('rd');
+        for (var i = 0; i < inputs.length; i++) {
+          // Add hash, but make sure it is only added once
+          var idx = inputs[i].value.indexOf('#');
+          if (idx >= 0) {
+            // Remove existing hash from URL
+            inputs[i].value = inputs[i].value.substr(0, idx);
+          }
+          inputs[i].value += window.location.hash;
+        }
+      })();
+    }
+  </script>
 
   <footer class="footer has-text-grey has-background-light is-size-7">
     <div class="content has-text-centered">
