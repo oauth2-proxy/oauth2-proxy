@@ -153,7 +153,7 @@ response header.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `name` | _string_ | Name is the header name to be used for this set of values.<br/>Names should be unique within a list of Headers. |
-| `preserveRequestValue` | _bool_ | PreserveRequestValue determines whether any values for this header<br/>should be preserved for the request to the upstream server.<br/>This option only takes effet on injected request headers.<br/>Defaults to false (headers that match this header will be stripped). |
+| `preserveRequestValue` | _bool_ | PreserveRequestValue determines whether any values for this header<br/>should be preserved for the request to the upstream server.<br/>This option only applies to injected request headers.<br/>Defaults to false (headers that match this header will be stripped). |
 | `values` | _[[]HeaderValue](#headervalue)_ | Values contains the desired values for this header |
 
 ### HeaderValue
@@ -193,8 +193,8 @@ Server represents the configuration for an HTTP(S) server
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `BindAddress` | _string_ | BindAddress is the the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
-| `SecureBindAddress` | _string_ | SecureBindAddress is the the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
+| `BindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
+| `SecureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
 | `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic. |
 
 ### TLS
@@ -205,7 +205,7 @@ TLS contains the information for loading a TLS certifcate and key.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Key` | _[SecretSource](#secretsource)_ | Key is the the TLS key data to use.<br/>Typically this will come from a file. |
+| `Key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
 | `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
 
 ### Upstream

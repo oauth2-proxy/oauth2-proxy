@@ -33,7 +33,7 @@ users to re-authenticate
 ### Redis Storage
 
 The Redis Storage backend stores sessions, encrypted, in redis. Instead sending all the information
-back the the client for storage, as in the [Cookie storage](#cookie-storage), a ticket is sent back
+back the client for storage, as in the [Cookie storage](#cookie-storage), a ticket is sent back
 to the user as the cookie value instead.
 
 A ticket is composed as the following:
