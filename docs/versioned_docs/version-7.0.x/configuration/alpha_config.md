@@ -151,7 +151,7 @@ response header.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `name` | _string_ | Name is the header name to be used for this set of values.<br/>Names should be unique within a list of Headers. |
-| `preserveRequestValue` | _bool_ | PreserveRequestValue determines whether any values for this header<br/>should be preserved for the request to the upstream server.<br/>This option only takes effet on injected request headers.<br/>Defaults to false (headers that match this header will be stripped). |
+| `preserveRequestValue` | _bool_ | PreserveRequestValue determines whether any values for this header<br/>should be preserved for the request to the upstream server.<br/>This option only applies to injected request headers.<br/>Defaults to false (headers that match this header will be stripped). |
 | `values` | _[[]HeaderValue](#headervalue)_ | Values contains the desired values for this header |
 
 ### HeaderValue

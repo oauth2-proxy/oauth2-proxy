@@ -286,6 +286,78 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
 			})
 		})
 	})
+
+	Context("when lock is applied", func() {
+		var loadedSession *sessionsapi.SessionState
+		BeforeEach(func() {
+			resp := httptest.NewRecorder()
+			err := in.ss().Save(resp, in.request, in.session)
+			Expect(err).ToNot(HaveOccurred())
+
+			for _, cookie := range resp.Result().Cookies() {
+				in.request.AddCookie(cookie)
+			}
+
+			loadedSession, err = in.ss().Load(in.request)
+			Expect(err).ToNot(HaveOccurred())
+			err = loadedSession.ObtainLock(in.request.Context(), 2*time.Minute)
+			Expect(err).ToNot(HaveOccurred())
+			isLocked, err := loadedSession.PeekLock(in.request.Context())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(isLocked).To(BeTrue())
+		})
+
+		Context("before lock expired", func() {
+			BeforeEach(func() {
+				Expect(in.persistentFastForward(time.Minute)).To(Succeed())
+			})
+
+			It("peek returns true on loaded session lock", func() {
+				l := *loadedSession
+				isLocked, err := l.PeekLock(in.request.Context())
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isLocked).To(BeTrue())
+			})
+
+			It("lock can be released", func() {
+				l := *loadedSession
+
+				err := l.ReleaseLock(in.request.Context())
+				Expect(err).NotTo(HaveOccurred())
+
+				isLocked, err := l.PeekLock(in.request.Context())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isLocked).To(BeFalse())
+			})
+
+			It("lock is refreshed", func() {
+				l := *loadedSession
+				err := l.RefreshLock(in.request.Context(), 3*time.Minute)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(in.persistentFastForward(2 * time.Minute)).To(Succeed())
+
+				isLocked, err := l.PeekLock(in.request.Context())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isLocked).To(BeTrue())
+			})
+		})
+
+		Context("after lock expired", func() {
+			BeforeEach(func() {
+				Expect(in.persistentFastForward(3 * time.Minute)).To(Succeed())
+			})
+
+			It("peek returns false on loaded session lock", func() {
+				l := *loadedSession
+				isLocked, err := l.PeekLock(in.request.Context())
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(isLocked).To(BeFalse())
+			})
+		})
+	})
 }
 
 func SessionStoreInterfaceTests(in *testInput) {
@@ -411,9 +483,11 @@ func LoadSessionTests(in *testInput) {
 		l := *loadedSession
 		l.CreatedAt = nil
 		l.ExpiresOn = nil
+		l.Lock = &sessionsapi.NoOpLock{}
 		s := *in.session
 		s.CreatedAt = nil
 		s.ExpiresOn = nil
+		s.Lock = &sessionsapi.NoOpLock{}
 		Expect(l).To(Equal(s))
 
 		// Compare time.Time separately
