@@ -180,25 +180,26 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 
 // EnrichSession finds the email to enrich the session state
 func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if s.Email != "" {
-		return nil
+	if s.Email == "" {
+
+		email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
+		if err != nil {
+			return fmt.Errorf("unable to get email address: %v", err)
+		}
+		if email == "" {
+			return errors.New("unable to get email address")
+		}
+		s.Email = email
 	}
 
-	email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
-	if err != nil {
-		return fmt.Errorf("unable to get email address: %v", err)
+	if s.User == "" {
+		user, err := p.getUserFromProfileAPI(ctx, s.AccessToken)
+		if err != nil {
+			return fmt.Errorf("unable to get user: %v", err)
+		}
+		// Not going to throw an error if this is empty
+		s.User = user
 	}
-	if email == "" {
-		return errors.New("unable to get email address")
-	}
-	s.Email = email
-
-	user, err := p.getUserFromProfileAPI(ctx, s.AccessToken)
-	if err != nil {
-		return fmt.Errorf("unable to get user: %v", err)
-	}
-	// Not going to throw an error if this is empty
-	s.User = user
 
 	return nil
 }
@@ -370,11 +371,9 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 }
 
 func getUserFromJSON(json *simplejson.Json) (string, error) {
-	var user string
-	var err error
 
 	userEmail, err := json.Get("userPrincipalName").String()
-	user = strings.Split(userEmail, "@")[0]
+	user := strings.Split(userEmail, "@")[0]
 
 	if err != nil || user == "" {
 		otherMails, otherMailsErr := json.Get("otherMails").Array()
