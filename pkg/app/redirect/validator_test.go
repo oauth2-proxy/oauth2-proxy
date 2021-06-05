@@ -99,4 +99,45 @@ var _ = Describe("Validator suite", func() {
 			Entry("Partial Subdomain", "evilbar.foo", false),
 		)
 	})
+
+	Context("SplitHostPort", func() {
+		type splitHostPortTableInput struct {
+			hostport     string
+			expectedHost string
+			expectedPort string
+		}
+
+		DescribeTable("Should split the host and port",
+			func(in splitHostPortTableInput) {
+				host, port := splitHostPort(in.hostport)
+				Expect(host).To(Equal(in.expectedHost))
+				Expect(port).To(Equal(in.expectedPort))
+			},
+			Entry("when no port is specified", splitHostPortTableInput{
+				hostport:     "foo.bar",
+				expectedHost: "foo.bar",
+				expectedPort: "",
+			}),
+			Entry("with a valid port specified", splitHostPortTableInput{
+				hostport:     "foo.bar:8080",
+				expectedHost: "foo.bar",
+				expectedPort: "8080",
+			}),
+			Entry("with an invalid port specified", splitHostPortTableInput{
+				hostport:     "foo.bar:808a",
+				expectedHost: "foo.bar:808a",
+				expectedPort: "",
+			}),
+			Entry("with a wildcard port specified", splitHostPortTableInput{
+				hostport:     "foo.bar:*",
+				expectedHost: "foo.bar",
+				expectedPort: "*",
+			}),
+			Entry("when the host is specified with brackets", splitHostPortTableInput{
+				hostport:     "[foo.bar]",
+				expectedHost: "foo.bar",
+				expectedPort: "",
+			}),
+		)
+	})
 })
