@@ -22,6 +22,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/redirect"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
@@ -55,10 +56,6 @@ var (
 
 	// ErrAccessDenied means the user should receive a 401 Unauthorized response
 	ErrAccessDenied = errors.New("access denied")
-
-	// Used to check final redirects are not susceptible to open redirects.
-	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
-	invalidRedirectRegex = regexp.MustCompile(`[/\\](?:[\s\v]*|\.{1,2})[/\\]`)
 )
 
 // allowedRoute manages method + path based allowlists
@@ -87,13 +84,15 @@ type OAuthProxy struct {
 	realClientIPParser  ipapi.RealClientIPParser
 	trustedIPs          *ip.NetSet
 
-	sessionChain  alice.Chain
-	headersChain  alice.Chain
-	preAuthChain  alice.Chain
-	pageWriter    pagewriter.Writer
-	server        proxyhttp.Server
-	upstreamProxy http.Handler
-	serveMux      *mux.Router
+	sessionChain      alice.Chain
+	headersChain      alice.Chain
+	preAuthChain      alice.Chain
+	pageWriter        pagewriter.Writer
+	server            proxyhttp.Server
+	upstreamProxy     http.Handler
+	serveMux          *mux.Router
+	redirectValidator redirect.Validator
+	appDirector       redirect.AppDirector
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -176,6 +175,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
 	}
 
+	redirectValidator := redirect.NewValidator(opts.WhitelistDomains)
+	appDirector := redirect.NewAppDirector(redirect.AppDirectorOpts{
+		ProxyPrefix: opts.ProxyPrefix,
+		Validator:   redirectValidator,
+	})
+
 	p := &OAuthProxy{
 		CookieOptions: &opts.Cookie,
 		Validator:     validator,
@@ -200,6 +205,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		preAuthChain:       preAuthChain,
 		pageWriter:         pageWriter,
 		upstreamProxy:      upstreamProxy,
+		redirectValidator:  redirectValidator,
+		appDirector:        appDirector,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -465,59 +472,13 @@ func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *s
 	return p.sessionStore.Save(rw, req, s)
 }
 
-// IsValidRedirect checks whether the redirect URL is whitelisted
-func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
-	switch {
-	case redirect == "":
-		// The user didn't specify a redirect, should fallback to `/`
-		return false
-	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !invalidRedirectRegex.MatchString(redirect):
-		return true
-	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
-		redirectURL, err := url.Parse(redirect)
-		if err != nil {
-			logger.Printf("Rejecting invalid redirect %q: scheme unsupported or missing", redirect)
-			return false
-		}
-		redirectHostname := redirectURL.Hostname()
-
-		for _, allowedDomain := range p.whitelistDomains {
-			allowedHost, allowedPort := splitHostPort(allowedDomain)
-			if allowedHost == "" {
-				continue
-			}
-
-			if redirectHostname == strings.TrimPrefix(allowedHost, ".") ||
-				(strings.HasPrefix(allowedHost, ".") &&
-					strings.HasSuffix(redirectHostname, allowedHost)) {
-				// the domain names match, now validate the ports
-				// if the whitelisted domain's port is '*', allow all ports
-				// if the whitelisted domain contains a specific port, only allow that port
-				// if the whitelisted domain doesn't contain a port at all, only allow empty redirect ports ie http and https
-				redirectPort := redirectURL.Port()
-				if allowedPort == "*" ||
-					allowedPort == redirectPort ||
-					(allowedPort == "" && redirectPort == "") {
-					return true
-				}
-			}
-		}
-
-		logger.Printf("Rejecting invalid redirect %q: domain / port not in whitelist", redirect)
-		return false
-	default:
-		logger.Printf("Rejecting invalid redirect %q: not an absolute or relative URL", redirect)
-		return false
-	}
-}
-
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	p.serveMux.ServeHTTP(rw, req)
 }
 
 // ErrorPage writes an error response
 func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code int, appError string, messages ...interface{}) {
-	redirectURL, err := p.getAppRedirect(req)
+	redirectURL, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 	}
@@ -582,7 +543,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	}
 	rw.WriteHeader(code)
 
-	redirectURL, err := p.getAppRedirect(req)
+	redirectURL, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -617,7 +578,7 @@ func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool) {
 
 // SignIn serves a page prompting users to sign in
 func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
-	redirect, err := p.getAppRedirect(req)
+	redirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -681,7 +642,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
 // SignOut sends a response to clear the authentication cookie
 func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
-	redirect, err := p.getAppRedirect(req)
+	redirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -707,7 +668,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	appRedirect, err := p.getAppRedirect(req)
+	appRedirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining application redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -790,7 +751,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	csrf.SetSessionNonce(session)
 	p.provider.ValidateSession(req.Context(), session)
 
-	if !p.IsValidRedirect(appRedirect) {
+	if !p.redirectValidator.IsValidRedirect(appRedirect) {
 		appRedirect = "/"
 	}
 
@@ -945,158 +906,6 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 		rd.Scheme = schemeHTTPS
 	}
 	return rd.String()
-}
-
-// getAppRedirect determines the full URL or URI path to redirect clients to
-// once authenticated with the OAuthProxy
-// Strategy priority (first legal result is used):
-// - `rd` querysting parameter
-// - `X-Auth-Request-Redirect` header
-// - `X-Forwarded-(Proto|Host|Uri)` headers (when ReverseProxy mode is enabled)
-// - `X-Forwarded-(Proto|Host)` if `Uri` has the ProxyPath (i.e. /oauth2/*)
-// - `X-Forwarded-Uri` direct URI path (when ReverseProxy mode is enabled)
-// - `req.URL.RequestURI` if not under the ProxyPath (i.e. /oauth2/*)
-// - `/`
-func (p *OAuthProxy) getAppRedirect(req *http.Request) (string, error) {
-	err := req.ParseForm()
-	if err != nil {
-		return "", err
-	}
-
-	// These redirect getter functions are strategies ordered by priority
-	// for figuring out the redirect URL.
-	type redirectGetter func(req *http.Request) string
-	for _, rdGetter := range []redirectGetter{
-		p.getRdQuerystringRedirect,
-		p.getXAuthRequestRedirect,
-		p.getXForwardedHeadersRedirect,
-		p.getURIRedirect,
-	} {
-		redirect := rdGetter(req)
-		// Call `p.IsValidRedirect` again here a final time to be safe
-		if redirect != "" && p.IsValidRedirect(redirect) {
-			return redirect, nil
-		}
-	}
-
-	return "/", nil
-}
-
-func isForwardedRequest(req *http.Request) bool {
-	return requestutil.IsProxied(req) &&
-		req.Host != requestutil.GetRequestHost(req)
-}
-
-func (p *OAuthProxy) hasProxyPrefix(path string) bool {
-	return strings.HasPrefix(path, fmt.Sprintf("%s/", p.ProxyPrefix))
-}
-
-func (p *OAuthProxy) validateRedirect(redirect string, errorFormat string) string {
-	if p.IsValidRedirect(redirect) {
-		return redirect
-	}
-	if redirect != "" {
-		logger.Errorf(errorFormat, redirect)
-	}
-	return ""
-}
-
-// getRdQuerystringRedirect handles this getAppRedirect strategy:
-// - `rd` querysting parameter
-func (p *OAuthProxy) getRdQuerystringRedirect(req *http.Request) string {
-	return p.validateRedirect(
-		req.Form.Get("rd"),
-		"Invalid redirect provided in rd querystring parameter: %s",
-	)
-}
-
-// getXAuthRequestRedirect handles this getAppRedirect strategy:
-// - `X-Auth-Request-Redirect` Header
-func (p *OAuthProxy) getXAuthRequestRedirect(req *http.Request) string {
-	return p.validateRedirect(
-		req.Header.Get("X-Auth-Request-Redirect"),
-		"Invalid redirect provided in X-Auth-Request-Redirect header: %s",
-	)
-}
-
-// getXForwardedHeadersRedirect handles these getAppRedirect strategies:
-// - `X-Forwarded-(Proto|Host|Uri)` headers (when ReverseProxy mode is enabled)
-// - `X-Forwarded-(Proto|Host)` if `Uri` has the ProxyPath (i.e. /oauth2/*)
-func (p *OAuthProxy) getXForwardedHeadersRedirect(req *http.Request) string {
-	if !isForwardedRequest(req) {
-		return ""
-	}
-
-	uri := requestutil.GetRequestURI(req)
-	if p.hasProxyPrefix(uri) {
-		uri = "/"
-	}
-
-	redirect := fmt.Sprintf(
-		"%s://%s%s",
-		requestutil.GetRequestProto(req),
-		requestutil.GetRequestHost(req),
-		uri,
-	)
-
-	return p.validateRedirect(redirect,
-		"Invalid redirect generated from X-Forwarded-* headers: %s")
-}
-
-// getURIRedirect handles these getAppRedirect strategies:
-// - `X-Forwarded-Uri` direct URI path (when ReverseProxy mode is enabled)
-// - `req.URL.RequestURI` if not under the ProxyPath (i.e. /oauth2/*)
-// - `/`
-func (p *OAuthProxy) getURIRedirect(req *http.Request) string {
-	redirect := p.validateRedirect(
-		requestutil.GetRequestURI(req),
-		"Invalid redirect generated from X-Forwarded-Uri header: %s",
-	)
-	if redirect == "" {
-		redirect = req.URL.RequestURI()
-	}
-
-	if p.hasProxyPrefix(redirect) {
-		return "/"
-	}
-	return redirect
-}
-
-// splitHostPort separates host and port. If the port is not valid, it returns
-// the entire input as host, and it doesn't check the validity of the host.
-// Unlike net.SplitHostPort, but per RFC 3986, it requires ports to be numeric.
-// *** taken from net/url, modified validOptionalPort() to accept ":*"
-func splitHostPort(hostport string) (host, port string) {
-	host = hostport
-
-	colon := strings.LastIndexByte(host, ':')
-	if colon != -1 && validOptionalPort(host[colon:]) {
-		host, port = host[:colon], host[colon+1:]
-	}
-
-	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
-		host = host[1 : len(host)-1]
-	}
-
-	return
-}
-
-// validOptionalPort reports whether port is either an empty string
-// or matches /^:\d*$/
-// *** taken from net/url, modified to accept ":*"
-func validOptionalPort(port string) bool {
-	if port == "" || port == ":*" {
-		return true
-	}
-	if port[0] != ':' {
-		return false
-	}
-	for _, b := range port[1:] {
-		if b < '0' || b > '9' {
-			return false
-		}
-	}
-	return true
 }
 
 // getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
