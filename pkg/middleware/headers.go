@@ -43,7 +43,7 @@ func newStripHeaders(headers []options.Header) alice.Constructor {
 
 func flattenHeaders(headers http.Header) {
 	for name, values := range headers {
-		if len(values) > 1 {
+		if len(values) > 1 && name != "Set-Cookie" {
 			headers.Set(name, strings.Join(values, ","))
 		}
 	}
