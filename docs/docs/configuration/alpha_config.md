@@ -269,6 +269,7 @@ make up the header value
 | `jwksURL` | _string_ | JwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
 | `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
+| `preferredUsernameClaim` | _string_ | PreferredUsernameClaim indicates which claim contains the preferred username<br/>default set to 'preferred_username' |
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
 
 ### Provider

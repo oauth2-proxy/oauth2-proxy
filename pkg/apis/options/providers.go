@@ -150,6 +150,9 @@ type OIDCOptions struct {
 	// GroupsClaim indicates which claim contains the user groups
 	// default set to 'groups'
 	GroupsClaim string `json:"groupsClaim,omitempty"`
+	// PreferredUsernameClaim indicates which claim contains the preferred username
+	// default set to 'preferred_username'
+	PreferredUsernameClaim string `json:"preferredUsernameClaim,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
@@ -180,6 +183,7 @@ func providerDefaults() Providers {
 				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   providers.OIDCEmailClaim,
 				GroupsClaim:                  providers.OIDCGroupsClaim,
+				PreferredUsernameClaim:       providers.OIDCPreferredUsernameClaim,
 			},
 		},
 	}

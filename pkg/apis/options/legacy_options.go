@@ -48,13 +48,14 @@ func NewLegacyOptions() *LegacyOptions {
 		},
 
 		LegacyProvider: LegacyProvider{
-			ProviderType:          "google",
-			AzureTenant:           "common",
-			ApprovalPrompt:        "force",
-			UserIDClaim:           "email",
-			OIDCEmailClaim:        "email",
-			OIDCGroupsClaim:       "groups",
-			InsecureOIDCSkipNonce: true,
+			ProviderType:               "google",
+			AzureTenant:                "common",
+			ApprovalPrompt:             "force",
+			UserIDClaim:                "email",
+			OIDCEmailClaim:             "email",
+			OIDCGroupsClaim:            "groups",
+			OIDCPreferredUsernameClaim: "preferred_username",
+			InsecureOIDCSkipNonce:      true,
 		},
 
 		Options: *NewOptions(),
@@ -498,6 +499,7 @@ type LegacyProvider struct {
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
+	OIDCPreferredUsernameClaim         string   `flag:"oidc-preferred-username-claim" cfg:"oidc_preferred_username_claim"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
@@ -546,6 +548,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-preferred-username-claim", providers.OIDCPreferredUsernameClaim, "which OIDC claim contains the preferred username")
 	flagSet.String("oidc-email-claim", providers.OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
@@ -639,6 +642,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
+		PreferredUsernameClaim:         l.OIDCPreferredUsernameClaim,
 	}
 
 	// This part is out of the switch section because azure has a default tenant

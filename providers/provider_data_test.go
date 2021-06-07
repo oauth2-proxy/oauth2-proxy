@@ -209,18 +209,20 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 
 func TestProviderData_buildSessionFromClaims(t *testing.T) {
 	testCases := map[string]struct {
-		IDToken         idTokenClaims
-		AllowUnverified bool
-		EmailClaim      string
-		GroupsClaim     string
-		ExpectedError   error
-		ExpectedSession *sessions.SessionState
+		IDToken                idTokenClaims
+		AllowUnverified        bool
+		EmailClaim             string
+		GroupsClaim            string
+		PreferredUsernameClaim string
+		ExpectedError          error
+		ExpectedSession        *sessions.SessionState
 	}{
 		"Standard": {
-			IDToken:         defaultIDToken,
-			AllowUnverified: false,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
+			IDToken:                defaultIDToken,
+			AllowUnverified:        false,
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "preferred_username",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
@@ -229,17 +231,19 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			},
 		},
 		"Unverified Denied": {
-			IDToken:         unverifiedIDToken,
-			AllowUnverified: false,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
-			ExpectedError:   errors.New("email in id_token (unverified@email.com) isn't verified"),
+			IDToken:                unverifiedIDToken,
+			AllowUnverified:        false,
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "preferred_username",
+			ExpectedError:          errors.New("email in id_token (unverified@email.com) isn't verified"),
 		},
 		"Unverified Allowed": {
-			IDToken:         unverifiedIDToken,
-			AllowUnverified: true,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
+			IDToken:                unverifiedIDToken,
+			AllowUnverified:        true,
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "preferred_username",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "unverified@email.com",
@@ -248,10 +252,11 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			},
 		},
 		"Complex Groups": {
-			IDToken:         complexGroupsIDToken,
-			AllowUnverified: true,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
+			IDToken:                complexGroupsIDToken,
+			AllowUnverified:        true,
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "preferred_username",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "complex@claims.com",
@@ -260,10 +265,11 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			},
 		},
 		"Email Claim Switched": {
-			IDToken:         unverifiedIDToken,
-			AllowUnverified: true,
-			EmailClaim:      "phone_number",
-			GroupsClaim:     "groups",
+			IDToken:                unverifiedIDToken,
+			AllowUnverified:        true,
+			EmailClaim:             "phone_number",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "preferred_username",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "+4025205729",
@@ -272,10 +278,11 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			},
 		},
 		"Email Claim Switched to Non String": {
-			IDToken:         unverifiedIDToken,
-			AllowUnverified: true,
-			EmailClaim:      "roles",
-			GroupsClaim:     "groups",
+			IDToken:                unverifiedIDToken,
+			AllowUnverified:        true,
+			EmailClaim:             "roles",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "preferred_username",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "[test:c test:d]",
@@ -284,10 +291,11 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			},
 		},
 		"Email Claim Non Existent": {
-			IDToken:         unverifiedIDToken,
-			AllowUnverified: true,
-			EmailClaim:      "aksjdfhjksadh",
-			GroupsClaim:     "groups",
+			IDToken:                unverifiedIDToken,
+			AllowUnverified:        true,
+			EmailClaim:             "aksjdfhjksadh",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "preferred_username",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "",
@@ -296,10 +304,11 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			},
 		},
 		"Groups Claim Switched": {
-			IDToken:         defaultIDToken,
-			AllowUnverified: false,
-			EmailClaim:      "email",
-			GroupsClaim:     "roles",
+			IDToken:                defaultIDToken,
+			AllowUnverified:        false,
+			EmailClaim:             "email",
+			GroupsClaim:            "roles",
+			PreferredUsernameClaim: "preferred_username",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
@@ -308,15 +317,29 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			},
 		},
 		"Groups Claim Non Existent": {
-			IDToken:         defaultIDToken,
-			AllowUnverified: false,
-			EmailClaim:      "email",
-			GroupsClaim:     "alskdjfsalkdjf",
+			IDToken:                defaultIDToken,
+			AllowUnverified:        false,
+			EmailClaim:             "email",
+			GroupsClaim:            "alskdjfsalkdjf",
+			PreferredUsernameClaim: "preferred_username",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
 				Groups:            nil,
 				PreferredUsername: "Jane Dobbs",
+			},
+		},
+		"Preferred Username Claim Switched": {
+			IDToken:                defaultIDToken,
+			AllowUnverified:        true,
+			EmailClaim:             "email",
+			GroupsClaim:            "groups",
+			PreferredUsernameClaim: "sub",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "123456789",
 			},
 		},
 	}
@@ -334,6 +357,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			provider.AllowUnverifiedEmail = tc.AllowUnverified
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
+			provider.PreferredUsernameClaim = tc.PreferredUsernameClaim
 
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			g.Expect(err).ToNot(HaveOccurred())

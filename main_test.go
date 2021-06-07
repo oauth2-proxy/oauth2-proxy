@@ -69,6 +69,7 @@ providers:
     tenant: common
   oidcConfig:
     groupsClaim: groups
+    preferredUsernameClaim: preferred_username
     emailClaim: email
     userIDClaim: email
     insecureSkipNonce: true
@@ -139,10 +140,11 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					Tenant: "common",
 				},
 				OIDCConfig: options.OIDCOptions{
-					GroupsClaim:       "groups",
-					EmailClaim:        "email",
-					UserIDClaim:       "email",
-					InsecureSkipNonce: true,
+					GroupsClaim:            "groups",
+					PreferredUsernameClaim: "preferred_username",
+					EmailClaim:             "email",
+					UserIDClaim:            "email",
+					InsecureSkipNonce:      true,
 				},
 				ApprovalPrompt: "force",
 			},
@@ -230,7 +232,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig,
 			alphaConfigContent: testAlphaConfig + ":",
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line 49: did not find expected key"),
+			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line 50: did not find expected key"),
 		}),
 		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig + "unknown_field=\"something\"",

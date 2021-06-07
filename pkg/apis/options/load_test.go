@@ -36,13 +36,14 @@ var _ = Describe("Load", func() {
 		},
 
 		LegacyProvider: LegacyProvider{
-			ProviderType:          "google",
-			AzureTenant:           "common",
-			ApprovalPrompt:        "force",
-			UserIDClaim:           "email",
-			OIDCEmailClaim:        "email",
-			OIDCGroupsClaim:       "groups",
-			InsecureOIDCSkipNonce: true,
+			ProviderType:               "google",
+			AzureTenant:                "common",
+			ApprovalPrompt:             "force",
+			UserIDClaim:                "email",
+			OIDCEmailClaim:             "email",
+			OIDCGroupsClaim:            "groups",
+			OIDCPreferredUsernameClaim: "preferred_username",
+			InsecureOIDCSkipNonce:      true,
 		},
 
 		Options: Options{
