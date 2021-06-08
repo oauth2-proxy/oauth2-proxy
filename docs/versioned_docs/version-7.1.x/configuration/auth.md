@@ -263,7 +263,7 @@ See also [our local testing environment](https://github.com/oauth2-proxy/oauth2-
 To configure the OIDC provider for Okta, perform the following steps:
 
 1. Log in to Okta using an administrative account. It is suggested you try this in preview first, `example.oktapreview.com`
-2. (OPTIONAL) If you want to configure authorization scopes and claims to be passed on to multiple applications,
+2. (**OPTIONAL!**) If you want to configure authorization scopes and claims to be passed on to multiple applications,
 you may wish to configure an authorization server for each application. Otherwise, the provided `default` will work.
 * Navigate to **Security** then select **API**
 * Click **Add Authorization Server**, if this option is not available you may require an additional license for a custom authorization server.
@@ -300,9 +300,10 @@ you may wish to configure an authorization server for each application. Otherwis
     skip_provider_button = true
     ```
 
-The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com .
+The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com (If your not using Authorization Server).
+The `redirect_url` is **the Login redirect URIs** you set in okta .
 The `client_id` and `client_secret` are configured in the application settings.
-Generate a unique `client_secret` to encrypt the cookie.
+Generate a unique 16, 24, or 32 bytes `cookie_secret` to encrypt the cookie .
 
 Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.cfg`
 
