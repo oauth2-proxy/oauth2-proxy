@@ -50,7 +50,7 @@ func (r *result) Body() []byte {
 	return r.body
 }
 
-// UnmarshalInto attempts to unmarshal the response into the the given interface.
+// UnmarshalInto attempts to unmarshal the response into the given interface.
 // The response body is assumed to be JSON.
 // The response must have a 200 status otherwise an error will be returned.
 func (r *result) UnmarshalInto(into interface{}) error {

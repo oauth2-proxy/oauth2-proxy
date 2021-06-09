@@ -2,6 +2,7 @@ package sessions
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -30,6 +31,36 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+
+	Lock Lock `msgpack:"-"`
+}
+
+func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {
+	if s.Lock == nil {
+		s.Lock = &NoOpLock{}
+	}
+	return s.Lock.Obtain(ctx, expiration)
+}
+
+func (s *SessionState) RefreshLock(ctx context.Context, expiration time.Duration) error {
+	if s.Lock == nil {
+		s.Lock = &NoOpLock{}
+	}
+	return s.Lock.Refresh(ctx, expiration)
+}
+
+func (s *SessionState) ReleaseLock(ctx context.Context) error {
+	if s.Lock == nil {
+		s.Lock = &NoOpLock{}
+	}
+	return s.Lock.Release(ctx)
+}
+
+func (s *SessionState) PeekLock(ctx context.Context) (bool, error) {
+	if s.Lock == nil {
+		s.Lock = &NoOpLock{}
+	}
+	return s.Lock.Peek(ctx)
 }
 
 // IsExpired checks whether the session has expired

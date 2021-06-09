@@ -30,6 +30,10 @@ type loadFunc func(string) ([]byte, error)
 // a string key for the target of the deletion.
 type clearFunc func(string) error
 
+// initLockFunc returns a lock object for a persistent store using a
+// string key
+type initLockFunc func(string) sessions.Lock
+
 // ticket is a structure representing the ticket used in server based
 // session storage. It provides a unique per session decryption secret giving
 // more security than the shared CookieSecret.
@@ -122,7 +126,8 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
 // loadSession loads a session from the disk store via the passed loadFunc
 // using the ticket.id as the key. It then decodes the SessionState using
 // ticket.secret to make the AES-GCM cipher.
-func (t *ticket) loadSession(loader loadFunc) (*sessions.SessionState, error) {
+// finally it appends a lock implementation
+func (t *ticket) loadSession(loader loadFunc, initLock initLockFunc) (*sessions.SessionState, error) {
 	ciphertext, err := loader(t.id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load the session state with the ticket: %v", err)
@@ -132,7 +137,13 @@ func (t *ticket) loadSession(loader loadFunc) (*sessions.SessionState, error) {
 		return nil, err
 	}
 
-	return sessions.DecodeSessionState(ciphertext, c, false)
+	sessionState, err := sessions.DecodeSessionState(ciphertext, c, false)
+	if err != nil {
+		return nil, err
+	}
+	lock := initLock(t.id)
+	sessionState.Lock = lock
+	return sessionState, nil
 }
 
 // clearSession uses the passed clearFunc to delete a session stored with a
