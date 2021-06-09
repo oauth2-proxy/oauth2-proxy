@@ -1,0 +1,47 @@
+# This docker-compose file can be used to bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features.
+# Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
+# etcd for storage for Dex, Open Policy Agent as a access controller and other http
+# services for upstreams
+#
+# This file is an extension of the main compose file and must be used with it
+#    docker-compose -f docker-compose.yaml -f docker-compose-opa.yaml <command>
+# Alternatively:
+#    make opa-<command> (eg make nginx-up, make nginx-down)
+#
+# Access one of the following URLs to initiate a login flow:
+#    - http://oauth2-proxy.localhost
+#    - http://httpbin.oauth2-proxy.localhost
+#
+# The OAuth2 Proxy itself is hosted at http://oauth2-proxy.oauth2-proxy.localhost:8080
+#
+# Note, the above URLs should work with Chrome, but you may need to add hosts
+# entries for other browsers
+#    127.0.0.1 oauth2-proxy.localhost:8080
+#    127.0.0.1 httpbin.oauth2-proxy.localhost:8080
+#    127.0.0.1 oauth2-proxy.oauth2-proxy.localhost:8080
+version: '3.0'
+services:
+  oauth2-proxy:
+    volumes:
+      - "./oauth2-proxy-opa.cfg:/oauth2-proxy.cfg"
+    networks:
+      oauth2-proxy: {}
+  opa:
+    container_name: opa
+    image: openpolicyagent/opa
+    ports:
+      - 8181:8181/tcp
+    hostname: opa
+    command:
+      - "run"
+      - "--log-format=json-pretty"
+      - "--log-level=debug"
+      - "--server"
+      - "/etc/opa.rego"
+    volumes:
+      - ./opa.rego:/etc/opa.rego
+    networks:
+      oauth2-proxy: {}
+networks:
+  oauth2-proxy: {}

@@ -46,3 +46,11 @@ traefik-up:
 .PHONY: traefik-%
 traefik-%:
 	docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml $*
+
+.PHONY: opa-up
+opa-up:
+	docker-compose -f docker-compose.yaml -f docker-compose-opa.yaml up --build -d
+
+.PHONY: opa-%
+opa-%:
+	docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml $*
