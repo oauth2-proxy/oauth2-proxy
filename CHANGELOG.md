@@ -7,7 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.1.3
-
+- [#1227](https://github.com/oauth2-proxy/oauth2-proxy/pull/1227) Fix Refresh Session not working for multiple cookies (@rishi1111)
 - [#1063](https://github.com/oauth2-proxy/oauth2-proxy/pull/1063) Add Redis lock feature to lock persistent sessions (@Bibob7)
 - [#1108](https://github.com/oauth2-proxy/oauth2-proxy/pull/1108) Add alternative ways to generate cookie secrets to docs (@JoelSpeed)
 - [#1142](https://github.com/oauth2-proxy/oauth2-proxy/pull/1142) Add pagewriter to upstream proxy (@JoelSpeed)
