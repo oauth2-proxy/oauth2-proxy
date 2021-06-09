@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -24,10 +25,12 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
+
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
@@ -84,6 +87,7 @@ type OAuthProxy struct {
 	skipJwtBearerTokens bool
 	realClientIPParser  ipapi.RealClientIPParser
 	trustedIPs          *ip.NetSet
+	openPolicyAgentURL  string
 
 	sessionChain alice.Chain
 	headersChain alice.Chain
@@ -196,6 +200,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		realClientIPParser:  opts.GetRealClientIPParser(),
 		SkipProviderButton:  opts.SkipProviderButton,
 		trustedIPs:          trustedIPs,
+		openPolicyAgentURL:  opts.OpenPolicyAgentURL,
 
 		basicAuthValidator: basicAuthValidator,
 		sessionChain:       sessionChain,
@@ -845,7 +850,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 
 	// Unauthorized cases need to return 403 to prevent infinite redirects with
 	// subrequest architectures
-	if !authOnlyAuthorize(req, session) {
+	if !p.authOnlyAuthorize(req, session) {
 		http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
@@ -1132,10 +1137,15 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 // fails the linter. Remove the nolint when functionality expands.
 //
 //nolint:gosimple
-func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
+func (p *OAuthProxy) authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
 	// Allow secondary group restrictions based on the `allowed_groups`
 	// querystring parameter
 	if !checkAllowedGroups(req, s) {
+		return false
+	}
+
+	// Transfer authorization to Open Policy Agent
+	if !p.checkOpenPolicyAgent(req, s) {
 		return false
 	}
 
@@ -1170,6 +1180,53 @@ func extractAllowedGroups(req *http.Request) map[string]struct{} {
 	}
 
 	return groups
+}
+
+func (p *OAuthProxy) checkOpenPolicyAgent(req *http.Request, session *sessionsapi.SessionState) bool {
+	if p.openPolicyAgentURL == "" {
+		return true
+	}
+
+	query := map[string]string{}
+	for k := range req.URL.Query() {
+		query[k] = req.URL.Query().Get(k)
+	}
+
+	var request struct {
+		Input struct {
+			Query map[string]string `json:"query,omitempty"`
+			Token string            `json:"token"`
+		} `json:"input"`
+	}
+
+	request.Input.Query = query
+	request.Input.Token = session.AccessToken
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		logger.Errorf("Error marshal Open Policy Agent authorization input: %v", err)
+		return false
+	}
+
+	var response struct {
+		Result struct {
+			Allow bool `json:"allow"`
+		} `json:"result"`
+	}
+
+	err = requests.New(p.openPolicyAgentURL).
+		WithContext(req.Context()).
+		WithMethod("POST").
+		SetHeader("Content-Type", "application/json").
+		WithBody(bytes.NewBuffer(body)).
+		Do().
+		UnmarshalInto(&response)
+	if err != nil {
+		logger.Errorf("Error with Open Policy Agent authorization: %v", err)
+		return false
+	}
+
+	return response.Result.Allow
 }
 
 // encodedState builds the OAuth state param out of our nonce and

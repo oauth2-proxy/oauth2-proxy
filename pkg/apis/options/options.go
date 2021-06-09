@@ -33,6 +33,7 @@ type Options struct {
 	WhitelistDomains        []string `flag:"whitelist-domain" cfg:"whitelist_domains"`
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
+	OpenPolicyAgentURL      string   `flag:"open-policy-agent-url" cfg:"open_policy_agent_url"`
 
 	Cookie    Cookie         `cfg:",squash"`
 	Session   SessionOptions `cfg:",squash"`
@@ -143,6 +144,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("redis-sentinel-connection-urls", []string{}, "List of Redis sentinel connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-sentinel")
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-cluster")
+	flagSet.String("open-policy-agent-url", "", "URL of Open Policy Agent server for Nginx subrequest authorization (eg: http://HOST[:PORT])/v1/data/authz")
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
