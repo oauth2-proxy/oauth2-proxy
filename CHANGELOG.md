@@ -13,6 +13,7 @@
 - [#1142](https://github.com/oauth2-proxy/oauth2-proxy/pull/1142) Add pagewriter to upstream proxy (@JoelSpeed)
 - [#1181](https://github.com/oauth2-proxy/oauth2-proxy/pull/1181) Fix incorrect `cfg` name in show-debug-on-error flag (@iTaybb)
 - [#1207](https://github.com/oauth2-proxy/oauth2-proxy/pull/1207) Fix URI fragment handling on sign-in page, regression introduced in 7.1.0 (@tarvip)
+- [#1236](https://github.com/oauth2-proxy/oauth2-proxy/pull/1236) Properly skip preflight checks in auth-only (no proxy) mode (@codablock)
 
 
 # V7.1.3
