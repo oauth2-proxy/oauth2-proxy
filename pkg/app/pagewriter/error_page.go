@@ -9,7 +9,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
-// errorMessages are default error messages for each of the the different
+// errorMessages are default error messages for each of the different
 // http status codes expected to be rendered in the error page.
 var errorMessages = map[int]string{
 	http.StatusInternalServerError: "Oops! Something went wrong. For more information contact your server administrator.",
