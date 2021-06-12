@@ -11,6 +11,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -18,8 +19,9 @@ import (
 
 var _ = Describe("Stored Session Suite", func() {
 	const (
-		refresh   = "Refresh"
-		noRefresh = "NoRefresh"
+		refresh        = "Refresh"
+		noRefresh      = "NoRefresh"
+		notImplemented = "NotImplemented"
 	)
 
 	var ctx = context.Background()
@@ -293,6 +295,8 @@ var _ = Describe("Stored Session Suite", func() {
 							return true, nil
 						case noRefresh:
 							return false, nil
+						case notImplemented:
+							return false, providers.ErrNotImplemented
 						default:
 							return false, errors.New("error refreshing session")
 						}
@@ -364,6 +368,16 @@ var _ = Describe("Stored Session Suite", func() {
 				expectRefreshed: true,
 				expectValidated: true,
 			}),
+			Entry("when the provider doesn't implement refresh but validation succeeds", refreshSessionIfNeededTableInput{
+				refreshPeriod: 1 * time.Minute,
+				session: &sessionsapi.SessionState{
+					RefreshToken: notImplemented,
+					CreatedAt:    &createdPast,
+				},
+				expectedErr:     nil,
+				expectRefreshed: true,
+				expectValidated: true,
+			}),
 			Entry("when the provider refresh fails but validation succeeds", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
@@ -418,6 +432,8 @@ var _ = Describe("Stored Session Suite", func() {
 							return true, nil
 						case noRefresh:
 							return false, nil
+						case notImplemented:
+							return false, providers.ErrNotImplemented
 						default:
 							return false, errors.New("error refreshing session")
 						}
@@ -444,6 +460,13 @@ var _ = Describe("Stored Session Suite", func() {
 			Entry("when the provider refreshes the session", refreshSessionWithProviderTableInput{
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
+				},
+				expectedErr: nil,
+				expectSaved: true,
+			}),
+			Entry("when the provider doesn't implement refresh", refreshSessionWithProviderTableInput{
+				session: &sessionsapi.SessionState{
+					RefreshToken: notImplemented,
 				},
 				expectedErr: nil,
 				expectSaved: true,

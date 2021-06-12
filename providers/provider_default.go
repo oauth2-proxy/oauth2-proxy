@@ -130,19 +130,8 @@ func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionS
 }
 
 // RefreshSession refreshes the user's session
-func (p *ProviderData) RefreshSession(_ context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil {
-		return false, nil
-	}
-
-	// HACK:
-	// Pretend `RefreshSession` occurred so `ValidateSession` isn't called
-	// on every request after any potential set refresh period elapses.
-	// See `middleware.refreshSession` for detailed logic & explanation.
-	//
-	// Intentionally doesn't use `ErrNotImplemented` since all providers will
-	// call this and we don't want to force them to implement this dummy logic.
-	return true, nil
+func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionState) (bool, error) {
+	return false, ErrNotImplemented
 }
 
 // CreateSessionFromToken converts Bearer IDTokens into sessions
