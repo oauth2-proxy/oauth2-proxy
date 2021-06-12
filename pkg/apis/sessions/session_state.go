@@ -3,18 +3,14 @@ package sessions
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"reflect"
-	"time"
-	"unicode/utf8"
-
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/pierrec/lz4"
 	"github.com/vmihailenco/msgpack/v4"
+	"io"
+	"io/ioutil"
+	"time"
 )
 
 // SessionState is used to store information about the currently authenticated user session
@@ -200,11 +196,6 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 		return nil, fmt.Errorf("error unmarshalling data to session state: %w", err)
 	}
 
-	err = ss.validate()
-	if err != nil {
-		return nil, err
-	}
-
 	return &ss, nil
 }
 
@@ -257,36 +248,4 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 	}
 
 	return payload, nil
-}
-
-// validate ensures the decoded session is non-empty and contains valid data
-//
-// Non-empty check is needed due to ensure the non-authenticated AES-CFB
-// decryption doesn't result in garbage data that collides with a valid
-// MessagePack header bytes (which MessagePack will unmarshal to an empty
-// default SessionState). <1% chance, but observed with random test data.
-//
-// UTF-8 check ensures the strings are valid and not raw bytes overloaded
-// into Latin-1 encoding. The occurs when legacy unencrypted fields are
-// decrypted with AES-CFB which results in random bytes.
-func (s *SessionState) validate() error {
-	for _, field := range []string{
-		s.User,
-		s.Email,
-		s.PreferredUsername,
-		s.AccessToken,
-		s.IDToken,
-		s.RefreshToken,
-	} {
-		if !utf8.ValidString(field) {
-			return errors.New("invalid non-UTF8 field in session")
-		}
-	}
-
-	empty := new(SessionState)
-	if reflect.DeepEqual(*s, *empty) {
-		return errors.New("invalid empty session unmarshalled")
-	}
-
-	return nil
 }
