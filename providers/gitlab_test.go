@@ -228,7 +228,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				p.SetAllowedGroups(in.allowedGroups)
 
 				err := p.SetAllowedProjects(in.allowedProjects)
-				if err == nil {
+				if in.expectedError == nil {
 					Expect(err).To(BeNil())
 				} else {
 					Expect(err).To(MatchError(in.expectedError))
