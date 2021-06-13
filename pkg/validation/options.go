@@ -236,6 +236,8 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	switch p := o.GetProvider().(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.Providers[0].AzureConfig.Tenant)
+	case *providers.ADFSProvider:
+		p.Configure(o.Providers[0].ADFSConfig.SkipScope)
 	case *providers.GitHubProvider:
 		p.SetOrgTeam(o.Providers[0].GitHubConfig.Org, o.Providers[0].GitHubConfig.Team)
 		p.SetRepo(o.Providers[0].GitHubConfig.Repo, o.Providers[0].GitHubConfig.Token)
