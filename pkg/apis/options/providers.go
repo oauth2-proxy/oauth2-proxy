@@ -21,6 +21,8 @@ type Provider struct {
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
 	// AzureConfig holds all configurations for Azure provider.
 	AzureConfig AzureOptions `json:"azureConfig,omitempty"`
+	// ADFSConfig holds all configurations for ADFS provider.
+	ADFSConfig ADFSOptions `json:"ADFSConfig,omitempty"`
 	// BitbucketConfig holds all configurations for Bitbucket provider.
 	BitbucketConfig BitbucketOptions `json:"bitbucketConfig,omitempty"`
 	// GitHubConfig holds all configurations for GitHubC provider.
@@ -55,7 +57,7 @@ type Provider struct {
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
 	ProfileURL string `json:"profileURL,omitempty"`
-	// ProtectedResource is the resource that is protected (Azure AD only)
+	// ProtectedResource is the resource that is protected (Azure AD and ADFS only)
 	ProtectedResource string `json:"resource,omitempty"`
 	// ValidateURL is the access token validation endpoint
 	ValidateURL string `json:"validateURL,omitempty"`
@@ -82,6 +84,12 @@ type AzureOptions struct {
 	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
 	// Default value is 'commmon'
 	Tenant string `json:"tenant,omitempty"`
+}
+
+type ADFSOptions struct {
+	// Skip adding the scope parameter in login request
+	// Default value is 'false'
+	SkipScope bool `json:"skipScope,omitempty"`
 }
 
 type BitbucketOptions struct {
