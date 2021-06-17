@@ -102,6 +102,13 @@ func Validate(o *options.Options) error {
 			}
 		}
 
+		// if AudienceClaim is anything other then `aud`, skip client id check from underlying oidc lib
+		// in this case, the check is handled by oauth2-proxy
+		skipClientIDCheck := false
+		if o.Providers[0].OIDCConfig.AudienceClaim != providers.OIDCAudienceClaim {
+			skipClientIDCheck = true
+		}
+
 		// Construct a manual IDTokenVerifier from issuer URL & JWKS URI
 		// instead of metadata discovery if we enable -skip-oidc-discovery.
 		// In this case we need to make sure the required endpoints for
@@ -120,7 +127,7 @@ func Validate(o *options.Options) error {
 			o.SetOIDCVerifier(oidc.NewVerifier(o.Providers[0].OIDCConfig.IssuerURL, keySet, &oidc.Config{
 				ClientID:          o.Providers[0].ClientID,
 				SkipIssuerCheck:   o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
-				SkipClientIDCheck: o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing,
+				SkipClientIDCheck: skipClientIDCheck,
 			}))
 		} else {
 			// Configure discoverable provider data.
@@ -131,7 +138,7 @@ func Validate(o *options.Options) error {
 			o.SetOIDCVerifier(provider.Verifier(&oidc.Config{
 				ClientID:          o.Providers[0].ClientID,
 				SkipIssuerCheck:   o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
-				SkipClientIDCheck: o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing,
+				SkipClientIDCheck: skipClientIDCheck,
 			}))
 
 			o.Providers[0].LoginURL = provider.Endpoint().AuthURL
@@ -274,15 +281,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetRepository(o.Providers[0].BitbucketConfig.Repository)
 	case *providers.OIDCProvider:
 		p.SkipNonce = o.Providers[0].OIDCConfig.InsecureSkipNonce
-		p.SkipAudCheckWhenMissing = o.Providers[0].OIDCConfig.SkipAudCheckWhenMissing
-		p.AudienceVerificationClaim = o.Providers[0].OIDCConfig.AudienceVerificationClaim
-		p.ExtraAudiencesForVerification = o.Providers[0].OIDCConfig.ExtraAudiencesForVerification
-		// Implicit set of SkipAudCheckWhenMissing
-		// when AudienceVerificationClaim or ExtraAudiencesForVerification is set
-		if p.AudienceVerificationClaim != "" ||
-			len(p.ExtraAudiencesForVerification) > 0 {
-			p.SkipAudCheckWhenMissing = true
-		}
+		p.AudienceClaim = o.Providers[0].OIDCConfig.AudienceClaim
 		if p.Verifier == nil {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		}

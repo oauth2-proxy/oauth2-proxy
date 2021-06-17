@@ -498,6 +498,7 @@ type LegacyProvider struct {
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
+	OIDCAudienceClaim                  string   `flag:"oidc-audience-claim" cfg:"oidc_audience_claim"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
@@ -509,10 +510,6 @@ type LegacyProvider struct {
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
-
-	SkipAudCheckWhenMissing       bool     `flag:"skip-aud-check-when-missing" cfg:"skip_aud_check_when_missing"`
-	AudienceVerificationClaim     string   `flag:"audience-verification-claim" cfg:"audience_verification_claim"`
-	ExtraAudiencesForVerification []string `flag:"extra-audiences-for-verification" cfg:"extra_audiences_for_verification"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -552,6 +549,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
 	flagSet.String("oidc-email-claim", providers.OIDCEmailClaim, "which OIDC claim contains the user's email")
+	flagSet.String("oidc-audience-claim", providers.OIDCAudienceClaim, "which OIDC claim is used as audience to verify against client id")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -560,10 +558,6 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
-
-	flagSet.Bool("skip-aud-check-when-missing", false, "Cognito specific setting in order to skip checking aud claim as not present & use clientID claim instead")
-	flagSet.String("audience-verification-claim", "", "Claim where to find audience to verify against client id. Only applies when `skip-aud-check-when-missing` is set.")
-	flagSet.StringSlice("extra-audiences-for-verification", []string{}, "Additional audiences that are allowed to pass verification. Only applies when `skip-aud-check-when-missing` is set.")
 
 	flagSet.String("acr-values", "", "acr values string:  optional")
 	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
@@ -649,9 +643,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
-		SkipAudCheckWhenMissing:        l.SkipAudCheckWhenMissing,
-		AudienceVerificationClaim:      l.AudienceVerificationClaim,
-		ExtraAudiencesForVerification:  l.ExtraAudiencesForVerification,
+		AudienceClaim:                  l.OIDCAudienceClaim,
 	}
 
 	// This part is out of the switch section because azure has a default tenant

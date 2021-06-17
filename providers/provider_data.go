@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	OIDCEmailClaim  = "email"
-	OIDCGroupsClaim = "groups"
+	OIDCEmailClaim    = "email"
+	OIDCGroupsClaim   = "groups"
+	OIDCAudienceClaim = "aud"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -44,15 +45,12 @@ type ProviderData struct {
 	UserClaim            string
 	EmailClaim           string
 	GroupsClaim          string
+	AudienceClaim        string
 	Verifier             *oidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
 	AllowedGroups map[string]struct{}
-
-	SkipAudCheckWhenMissing       bool
-	AudienceVerificationClaim     string
-	ExtraAudiencesForVerification []string
 }
 
 // Data returns the ProviderData
@@ -184,28 +182,24 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
 
-	if p.SkipAudCheckWhenMissing {
-		logger.Println("SkipAudCheckWhenMissing is set, checking aud...")
-		if aud, audExists := claims.raw["aud"]; audExists {
-			logger.Println(fmt.Sprintf("aud claim does exist with value %v, verifying...", aud))
-			if !isValidAudience(p, aud) {
-				return nil, fmt.Errorf("provided aud claim %s does not match the client id %s",
-					claims.raw["aud"], p.ClientID)
+	if p.AudienceClaim != OIDCAudienceClaim {
+		logger.Printf("OIDCAudienceClaim %s is set, verifying...", p.AudienceClaim)
+		if audienceClaimValue, audienceClaimExists := claims.raw[p.AudienceClaim]; audienceClaimExists {
+			logger.Printf("Trying verify provided claim value %+v", audienceClaimValue)
+			if !isValidAudience(p, audienceClaimValue) {
+				return nil, fmt.Errorf("provided audience claim %s with value %s does not match with %s",
+					p.AudienceClaim, audienceClaimValue, p.ClientID)
 			}
 		} else {
-			logger.Println("aud claim does not exist")
-			if p.AudienceVerificationClaim != "" {
-				logger.Println(fmt.Sprintf("AudienceVerificationClaim %s is set, verifying...", p.AudienceVerificationClaim))
-				if audienceClaimValue, audienceClaimExists := claims.raw[p.AudienceVerificationClaim]; audienceClaimExists {
-					logger.Println(fmt.Sprintf("Trying verify provided claim value %+v", audienceClaimValue))
-					if !isValidAudience(p, audienceClaimValue) {
-						return nil, fmt.Errorf("provided claim %s with the value %s does not match",
-							p.AudienceVerificationClaim, audienceClaimValue)
-					}
+			logger.Printf("OIDCAudienceClaim %s does not exist", p.AudienceClaim)
+			if defaultAudience, defaultAudienceExists := claims.raw[OIDCAudienceClaim]; defaultAudienceExists {
+				logger.Print("falling back to aud claim, as aud claim exists")
+				if !isValidAudience(p, defaultAudience) {
+					return nil, fmt.Errorf("aud with value %s does not match with %s",
+						audienceClaimValue, p.ClientID)
 				}
 			}
 		}
-		logger.Println("SkipAudCheckWhenMissing verification done, successful")
 	}
 
 	return ss, nil
@@ -283,13 +277,10 @@ func isValidAudience(p *ProviderData, aud interface{}) bool {
 		return false
 	}
 	aud = aud.(string)
-	allowedAudiences := append(p.ExtraAudiencesForVerification, p.ClientID)
-	for _, allowedAudience := range allowedAudiences {
-		if allowedAudience == aud {
-			logger.Printf("audience %s is one of %v", aud, allowedAudiences)
-			return true
-		}
+	if p.ClientID == aud {
+		logger.Printf("audience %s matches %s", aud, p.ClientID)
+		return true
 	}
-	logger.Printf("audience %s is not one of %v", aud, allowedAudiences)
+	logger.Printf("audience %s does not match %s", aud, p.ClientID)
 	return false
 }
