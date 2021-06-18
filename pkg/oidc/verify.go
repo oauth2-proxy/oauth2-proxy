@@ -33,7 +33,7 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
 	}
 
-	if isValidAudience, err := v.isValidAudience(claims); !isValidAudience {
+	if isValidAudience, err := v.verifyAudience(claims); !isValidAudience {
 		return nil, err
 	}
 
@@ -42,37 +42,33 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 	return token, err
 }
 
-func (v *IDTokenVerifier) isValidAudience(claims map[string]interface{}) (bool, error) {
-	if v.AudienceClaim == "" {
-		return false, fmt.Errorf("invalid audience claim, oidc-audience-claim  is empty")
-	}
+func (v *IDTokenVerifier) verifyAudience(claims map[string]interface{}) (bool, error) {
 	allowedAudiences := append([]string{v.ClientID}, v.IDTokenVerificationOptions.ExtraAudiences...)
 	if audienceClaimValue, audienceClaimExists := claims[v.AudienceClaim]; audienceClaimExists {
 		logger.Printf("verifying provided aud claim %s with value %s against allowed audiences %v",
 			v.AudienceClaim, audienceClaimValue, allowedAudiences)
-		for _, allowedAudience := range allowedAudiences {
-			if audienceClaimValue == allowedAudience {
-				return true, nil
-			}
-		}
-		return false, fmt.Errorf("audience from claim %s with value %s does not match with any of allowed audiences %v",
-			v.AudienceClaim, audienceClaimValue, allowedAudiences)
+		return v.isValidAudience(audienceClaimValue.(string), allowedAudiences)
 	} else {
 		if v.AudienceClaim == "aud" {
 			return false, fmt.Errorf("no valid aud claim exists in token")
 		}
-		logger.Printf("aud claim %s does not exist", v.AudienceClaim)
 		if defaultAudienceValue, defaultAudienceExists := claims["aud"]; defaultAudienceExists {
 			logger.Printf("falling back to aud claim, as %s claim does not exists", v.AudienceClaim)
-			for _, allowedAudience := range allowedAudiences {
-				if defaultAudienceValue == allowedAudience {
-					return true, nil
-				}
-			}
-			return false, fmt.Errorf("aud with value %s does not match with any of allowed audiences %v",
-				defaultAudienceValue, allowedAudiences)
+			return v.isValidAudience(defaultAudienceValue.(string), allowedAudiences)
+		} else {
+			logger.Printf("aud claim %s does not exist", v.AudienceClaim)
 		}
 	}
 	return false, fmt.Errorf("error validating audience from claim %s against any of %v; claims: %v",
 		v.AudienceClaim, allowedAudiences, claims)
+}
+
+func (v *IDTokenVerifier) isValidAudience(audience string, allowedAudiences []string) (bool, error) {
+	for _, allowedAudience := range allowedAudiences {
+		if audience == allowedAudience {
+			return true, nil
+		}
+	}
+	return false, fmt.Errorf("aud with value %s does not match with any of allowed audiences %v",
+		audience, allowedAudiences)
 }
