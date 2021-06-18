@@ -24,6 +24,9 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 			Email             string `json:"email"`
 			Verified          *bool  `json:"email_verified"`
 			PreferredUsername string `json:"preferred_username"`
+                        // TODO:  It's unclear whether the claim from --oidc-groups-claim should be here.
+                        //        It appears to be hard-coded elsewhere in oauth2-proxy.
+                        Groups            []string `json:"groups,omitempty"`
 		}
 
 		idToken, err := verify(ctx, token)
@@ -45,6 +48,7 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 
 		newSession := &sessionsapi.SessionState{
 			Email:             claims.Email,
+                        Groups:            claims.Groups,
 			User:              claims.Subject,
 			PreferredUsername: claims.PreferredUsername,
 			AccessToken:       token,
