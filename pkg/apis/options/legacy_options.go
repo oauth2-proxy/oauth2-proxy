@@ -499,6 +499,7 @@ type LegacyProvider struct {
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
 	OIDCAudienceClaim                  string   `flag:"oidc-audience-claim" cfg:"oidc_audience_claim"`
+	OIDCExtraAudiences                 []string `flag:"oidc-extra-audiences" cfg:"oidc_extra_audiences"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
@@ -550,6 +551,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
 	flagSet.String("oidc-email-claim", providers.OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.String("oidc-audience-claim", providers.OIDCAudienceClaim, "which OIDC claim is used as audience to verify against client id")
+	flagSet.StringSlice("oidc-extra-audiences", []string{}, "additional audiences allowed to pass audience verification")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -644,6 +646,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
 		AudienceClaim:                  l.OIDCAudienceClaim,
+		ExtraAudiences:                 l.OIDCExtraAudiences,
 	}
 
 	// This part is out of the switch section because azure has a default tenant

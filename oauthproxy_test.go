@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"encoding/base64"
 	"fmt"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -1707,7 +1708,14 @@ func TestGetJwtSession(t *testing.T) {
 
 	keyset := NoOpKeySet{}
 	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
-		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true,
+			SkipClientIDCheck: true})
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaim:  "aud",
+		ClientID:       "https://test.myapp.com",
+		ExtraAudiences: []string{},
+	}
+	internalVerifier := internaloidc.NewVerifier(verifier, verificationOptions)
 
 	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.InjectRequestHeaders = []options.Header{
@@ -1778,7 +1786,7 @@ func TestGetJwtSession(t *testing.T) {
 			},
 		}
 		opts.SkipJwtBearerTokens = true
-		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), verifier))
+		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), internalVerifier))
 	})
 	if err != nil {
 		t.Fatal(err)

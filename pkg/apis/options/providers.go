@@ -167,6 +167,8 @@ type OIDCOptions struct {
 	// AudienceClaim allows to define any claim that is verified against the client id
 	// By default `aud` claim is checked by the underlying oidc lib
 	AudienceClaim string `json:"audienceClaim,omitempty"`
+	// ExtraAudiences additional audiences that are allowed to pass validation for this provider
+	ExtraAudiences []string `json:"extraAudiences,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -195,6 +197,7 @@ func providerDefaults() Providers {
 				EmailClaim:                   providers.OIDCEmailClaim,
 				GroupsClaim:                  providers.OIDCGroupsClaim,
 				AudienceClaim:                providers.OIDCAudienceClaim,
+				ExtraAudiences:               []string{},
 			},
 		},
 	}

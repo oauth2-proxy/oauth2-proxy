@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	"io/ioutil"
 	"net/url"
 	"reflect"
@@ -46,7 +47,7 @@ type ProviderData struct {
 	EmailClaim           string
 	GroupsClaim          string
 	AudienceClaim        string
-	Verifier             *oidc.IDTokenVerifier
+	Verifier             *internaloidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
@@ -182,26 +183,6 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
 
-	if p.AudienceClaim != OIDCAudienceClaim {
-		logger.Printf("OIDCAudienceClaim %s is set, verifying...", p.AudienceClaim)
-		if audienceClaimValue, audienceClaimExists := claims.raw[p.AudienceClaim]; audienceClaimExists {
-			logger.Printf("Trying verify provided claim value %+v", audienceClaimValue)
-			if !isValidAudience(p, audienceClaimValue) {
-				return nil, fmt.Errorf("provided audience claim %s with value %s does not match with %s",
-					p.AudienceClaim, audienceClaimValue, p.ClientID)
-			}
-		} else {
-			logger.Printf("OIDCAudienceClaim %s does not exist", p.AudienceClaim)
-			if defaultAudience, defaultAudienceExists := claims.raw[OIDCAudienceClaim]; defaultAudienceExists {
-				logger.Print("falling back to aud claim, as aud claim exists")
-				if !isValidAudience(p, defaultAudience) {
-					return nil, fmt.Errorf("aud with value %s does not match with %s",
-						audienceClaimValue, p.ClientID)
-				}
-			}
-		}
-	}
-
 	return ss, nil
 }
 
@@ -269,18 +250,4 @@ func (p *ProviderData) extractGroups(claims map[string]interface{}) []string {
 		groups = append(groups, formattedGroup)
 	}
 	return groups
-}
-
-// isValidAudience Checks whether or not the given audience is allowed to pass verification
-func isValidAudience(p *ProviderData, aud interface{}) bool {
-	if aud == nil {
-		return false
-	}
-	aud = aud.(string)
-	if p.ClientID == aud {
-		logger.Printf("audience %s matches %s", aud, p.ClientID)
-		return true
-	}
-	logger.Printf("audience %s does not match %s", aud, p.ClientID)
-	return false
 }
