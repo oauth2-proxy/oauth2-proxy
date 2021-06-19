@@ -15,6 +15,7 @@ import (
 const (
 	gitlabProviderName = "GitLab"
 	gitlabDefaultScope = "openid email"
+	gitlabUserClaim    = "nickname"
 )
 
 // GitLabProvider represents a GitLab based Identity Provider
@@ -29,6 +30,7 @@ var _ Provider = (*GitLabProvider)(nil)
 // NewGitLabProvider initiates a new GitLabProvider
 func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 	p.ProviderName = gitlabProviderName
+	p.UserClaim = gitlabUserClaim
 	if p.Scope == "" {
 		p.Scope = gitlabDefaultScope
 	}
@@ -119,17 +121,24 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 		return fmt.Errorf("user email is not verified")
 	}
 
-	s.User = userinfo.Username
-	s.Email = userinfo.Email
-	s.Groups = append(s.Groups, userinfo.Groups...)
+	if userinfo.Nickname != "" {
+		s.User = userinfo.Nickname
+	}
+	if userinfo.Email != "" {
+		s.Email = userinfo.Email
+	}
+	if len(userinfo.Groups) > 0 {
+		s.Groups = userinfo.Groups
+	}
 
+	// Add projects as `project:blah` to s.Groups
 	p.addProjectsToSession(ctx, s)
 
 	return nil
 }
 
 type gitlabUserinfo struct {
-	Username      string   `json:"nickname"`
+	Nickname      string   `json:"nickname"`
 	Email         string   `json:"email"`
 	EmailVerified bool     `json:"email_verified"`
 	Groups        []string `json:"groups"`

@@ -211,6 +211,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 	testCases := map[string]struct {
 		IDToken         idTokenClaims
 		AllowUnverified bool
+		UserClaim       string
 		EmailClaim      string
 		GroupsClaim     string
 		ExpectedError   error
@@ -258,6 +259,27 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				Groups:            []string{"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}"},
 				PreferredUsername: "Complex Claim",
 			},
+		},
+		"User Claim Switched": {
+			IDToken:         defaultIDToken,
+			AllowUnverified: true,
+			UserClaim:       "phone_number",
+			EmailClaim:      "email",
+			GroupsClaim:     "groups",
+			ExpectedSession: &sessions.SessionState{
+				User:              "+4798765432",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "Jane Dobbs",
+			},
+		},
+		"User Claim Invalid": {
+			IDToken:         defaultIDToken,
+			AllowUnverified: true,
+			UserClaim:       "groups",
+			EmailClaim:      "email",
+			GroupsClaim:     "groups",
+			ExpectedError:   errors.New("unable to extract custom UserClaim (groups)"),
 		},
 		"Email Claim Switched": {
 			IDToken:         unverifiedIDToken,
@@ -332,6 +354,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				),
 			}
 			provider.AllowUnverifiedEmail = tc.AllowUnverified
+			provider.UserClaim = tc.UserClaim
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
 
