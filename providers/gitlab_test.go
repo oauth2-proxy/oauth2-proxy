@@ -307,4 +307,55 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			}),
 		)
 	})
+
+	Context("when refreshing", func() {
+		It("keeps existing projects after refreshing groups", func() {
+			session := &sessions.SessionState{}
+			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
+
+			p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+				s.Groups = []string{"baz"}
+				return true, nil
+			}
+
+			refreshed, err := p.RefreshSession(context.Background(), session)
+			Expect(refreshed).To(BeTrue())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(session.Groups)).To(Equal(3))
+			Expect(session.Groups).
+				To(ContainElements([]string{"baz", "project:thing", "project:sample"}))
+		})
+
+		It("leaves existing groups when not refreshed", func() {
+			session := &sessions.SessionState{}
+			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
+
+			p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+				return false, nil
+			}
+
+			refreshed, err := p.RefreshSession(context.Background(), session)
+			Expect(refreshed).To(BeFalse())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(session.Groups)).To(Equal(4))
+			Expect(session.Groups).
+				To(ContainElements([]string{"foo", "bar", "project:thing", "project:sample"}))
+		})
+
+		It("leaves existing groups when OIDC refresh errors", func() {
+			session := &sessions.SessionState{}
+			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
+
+			p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+				return false, errors.New("failure")
+			}
+
+			refreshed, err := p.RefreshSession(context.Background(), session)
+			Expect(refreshed).To(BeFalse())
+			Expect(err).To(HaveOccurred())
+			Expect(len(session.Groups)).To(Equal(4))
+			Expect(session.Groups).
+				To(ContainElements([]string{"foo", "bar", "project:thing", "project:sample"}))
+		})
+	})
 })
