@@ -134,8 +134,8 @@ var _ = Describe("ADFS Provider Tests", func() {
 			idToken, err := p.Verifier.Verify(context.Background(), rawIDToken)
 			Expect(err).To(BeNil())
 			session, err := p.buildSessionFromClaims(idToken)
-			session.IDToken = rawIDToken
 			Expect(err).To(BeNil())
+			session.IDToken = rawIDToken
 			err = p.EnrichSession(context.Background(), session)
 			Expect(session.Email).To(Equal("janed@me.com"))
 			Expect(err).To(BeNil())
@@ -149,7 +149,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 				ProtectedResource: resource,
 				Scope:             "",
 			})
-			p.SkipScope = true
+			p.skipScope = true
 
 			result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "")
 			Expect(result).NotTo(ContainSubstring("scope="))

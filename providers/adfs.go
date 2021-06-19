@@ -1,36 +1,32 @@
 package providers
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"net/url"
 	"strings"
-
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 // ADFSProvider represents an ADFS based Identity Provider
 type ADFSProvider struct {
 	*OIDCProvider
-	SkipScope bool
+	skipScope bool
 }
 
 var _ Provider = (*ADFSProvider)(nil)
 
 const (
-	ADFSProviderName = "ADFS"
-	ADFSDefaultScope = "openid email profile"
-	ADFSSkipScope    = false
+	adfsProviderName = "ADFS"
+	adfsDefaultScope = "openid email profile"
+	adfsSkipScope    = false
+	adfsEmailClaim   = "upn"
 )
 
 // NewADFSProvider initiates a new ADFSProvider
 func NewADFSProvider(p *ProviderData) *ADFSProvider {
-
 	p.setProviderDefaults(providerDefaults{
-		name:  ADFSProviderName,
-		scope: ADFSDefaultScope,
+		name:  adfsProviderName,
+		scope: adfsDefaultScope,
 	})
+	p.EmailClaim = adfsEmailClaim
 
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		resource := p.ProtectedResource.String()
@@ -48,13 +44,13 @@ func NewADFSProvider(p *ProviderData) *ADFSProvider {
 			ProviderData: p,
 			SkipNonce:    true,
 		},
-		SkipScope: ADFSSkipScope,
+		skipScope: adfsSkipScope,
 	}
 }
 
 // Configure defaults the ADFSProvider configuration options
 func (p *ADFSProvider) Configure(skipScope bool) {
-	p.SkipScope = skipScope
+	p.skipScope = skipScope
 }
 
 // GetLoginURL Override to double encode the state parameter. If not query params are lost
@@ -65,36 +61,10 @@ func (p *ADFSProvider) GetLoginURL(redirectURI, state, nonce string) string {
 		extraParams.Add("nonce", nonce)
 	}
 	loginURL := makeLoginURL(p.Data(), redirectURI, url.QueryEscape(state), extraParams)
-	if p.SkipScope {
+	if p.skipScope {
 		q := loginURL.Query()
 		q.Del("scope")
 		loginURL.RawQuery = q.Encode()
 	}
 	return loginURL.String()
-}
-
-// EnrichSession to add email
-func (p *ADFSProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if s.Email != "" {
-		return nil
-	}
-
-	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
-	if err != nil {
-		return err
-	}
-
-	p.EmailClaim = "upn"
-	c, err := p.getClaims(idToken)
-
-	if err != nil {
-		return fmt.Errorf("couldn't extract claims from id_token (%v)", err)
-	}
-	s.Email = c.Email
-
-	if s.Email == "" {
-		err = errors.New("email not set")
-	}
-
-	return err
 }
