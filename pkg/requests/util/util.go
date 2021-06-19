@@ -52,3 +52,8 @@ func IsProxied(req *http.Request) bool {
 	}
 	return scope.ReverseProxy
 }
+
+func IsForwardedRequest(req *http.Request) bool {
+	return IsProxied(req) &&
+		req.Host != GetRequestHost(req)
+}
