@@ -8,6 +8,7 @@
 
 ## Changes since v7.1.3
 
+- [#1226](https://github.com/oauth2-proxy/oauth2-proxy/pull/1226) Move app redirection logic to its own package (@JoelSpeed)
 - [#1128](https://github.com/oauth2-proxy/oauth2-proxy/pull/1128) Use gorilla mux for OAuth Proxy routing (@JoelSpeed)
 - [#1238](https://github.com/oauth2-proxy/oauth2-proxy/pull/1238) Added ADFS provider (@samirachoadi)
 - [#1227](https://github.com/oauth2-proxy/oauth2-proxy/pull/1227) Fix Refresh Session not working for multiple cookies (@rishi1111)
