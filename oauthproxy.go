@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -38,6 +39,14 @@ const (
 	schemeHTTP      = "http"
 	schemeHTTPS     = "https"
 	applicationJSON = "application/json"
+
+	robotsPath        = "/robots.txt"
+	signInPath        = "/sign_in"
+	signOutPath       = "/sign_out"
+	oauthStartPath    = "/start"
+	oauthCallbackPath = "/callback"
+	authOnlyPath      = "/auth"
+	userInfoPath      = "/userinfo"
 )
 
 var (
@@ -63,13 +72,7 @@ type OAuthProxy struct {
 	CookieOptions *options.Cookie
 	Validator     func(string) bool
 
-	RobotsPath        string
-	SignInPath        string
-	SignOutPath       string
-	OAuthStartPath    string
-	OAuthCallbackPath string
-	AuthOnlyPath      string
-	UserInfoPath      string
+	SignInPath string
 
 	allowedRoutes       []allowedRoute
 	redirectURL         *url.URL // the url to receive requests at
@@ -78,18 +81,19 @@ type OAuthProxy struct {
 	sessionStore        sessionsapi.SessionStore
 	ProxyPrefix         string
 	basicAuthValidator  basic.Validator
-	serveMux            http.Handler
 	SkipProviderButton  bool
 	skipAuthPreflight   bool
 	skipJwtBearerTokens bool
 	realClientIPParser  ipapi.RealClientIPParser
 	trustedIPs          *ip.NetSet
 
-	sessionChain alice.Chain
-	headersChain alice.Chain
-	preAuthChain alice.Chain
-	pageWriter   pagewriter.Writer
-	server       proxyhttp.Server
+	sessionChain  alice.Chain
+	headersChain  alice.Chain
+	preAuthChain  alice.Chain
+	pageWriter    pagewriter.Writer
+	server        proxyhttp.Server
+	upstreamProxy http.Handler
+	serveMux      *mux.Router
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -176,18 +180,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		CookieOptions: &opts.Cookie,
 		Validator:     validator,
 
-		RobotsPath:        "/robots.txt",
-		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
-		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
-		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
-		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
-		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
-		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
+		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
 		ProxyPrefix:         opts.ProxyPrefix,
 		provider:            opts.GetProvider(),
 		sessionStore:        sessionStore,
-		serveMux:            upstreamProxy,
 		redirectURL:         redirectURL,
 		allowedRoutes:       allowedRoutes,
 		whitelistDomains:    opts.WhitelistDomains,
@@ -202,7 +199,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		headersChain:       headersChain,
 		preAuthChain:       preAuthChain,
 		pageWriter:         pageWriter,
+		upstreamProxy:      upstreamProxy,
 	}
+	p.buildServeMux(opts.ProxyPrefix)
 
 	if err := p.setupServer(opts); err != nil {
 		return nil, fmt.Errorf("error setting up server: %v", err)
@@ -256,6 +255,41 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 
 	p.server = proxyhttp.NewServerGroup(appServer, metricsServer)
 	return nil
+}
+
+func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
+	r := mux.NewRouter()
+	// Everything served by the router must go through the preAuthChain first.
+	r.Use(p.preAuthChain.Then)
+
+	// Register the robots path writer
+	r.Path(robotsPath).HandlerFunc(p.pageWriter.WriteRobotsTxt)
+
+	// The authonly path should be registered separately to prevent it from getting no-cache headers.
+	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
+	// likelihood of multiple reuests trying to referesh sessions simultaneously.
+	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
+
+	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
+	// are not applied.
+	p.buildProxySubrouter(r.PathPrefix(proxyPrefix).Subrouter())
+
+	// Register serveHTTP last so it catches anything that isn't already caught earlier.
+	// Anything that got to this point needs to have a session loaded.
+	r.PathPrefix("/").Handler(p.sessionChain.ThenFunc(p.Proxy))
+	p.serveMux = r
+}
+
+func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
+	s.Use(prepareNoCacheMiddleware)
+
+	s.Path(signInPath).HandlerFunc(p.SignIn)
+	s.Path(signOutPath).HandlerFunc(p.SignOut)
+	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
+	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
+
+	// The userinfo endpoint needs to load sessions before handling the request
+	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -478,39 +512,7 @@ func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	p.preAuthChain.Then(http.HandlerFunc(p.serveHTTP)).ServeHTTP(rw, req)
-}
-
-func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
-	if req.URL.Path != p.AuthOnlyPath && strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
-		prepareNoCache(rw)
-	}
-
-	switch path := req.URL.Path; {
-	case path == p.RobotsPath:
-		p.RobotsTxt(rw, req)
-	case p.IsAllowedRequest(req):
-		p.SkipAuthProxy(rw, req)
-	case path == p.SignInPath:
-		p.SignIn(rw, req)
-	case path == p.SignOutPath:
-		p.SignOut(rw, req)
-	case path == p.OAuthStartPath:
-		p.OAuthStart(rw, req)
-	case path == p.OAuthCallbackPath:
-		p.OAuthCallback(rw, req)
-	case path == p.AuthOnlyPath:
-		p.AuthOnly(rw, req)
-	case path == p.UserInfoPath:
-		p.UserInfo(rw, req)
-	default:
-		p.Proxy(rw, req)
-	}
-}
-
-// RobotsTxt disallows scraping pages from the OAuthProxy
-func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter, req *http.Request) {
-	p.pageWriter.WriteRobotsTxt(rw, req)
+	p.serveMux.ServeHTTP(rw, req)
 }
 
 // ErrorPage writes an error response
@@ -643,10 +645,19 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 
 // UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
-
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	if session == nil {
+		if _, err := rw.Write([]byte("{}")); err != nil {
+			logger.Printf("Error encoding empty user info: %v", err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 
@@ -662,10 +673,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		PreferredUsername: session.PreferredUsername,
 	}
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(rw).Encode(userInfo)
-	if err != nil {
+	if err := json.NewEncoder(rw).Encode(userInfo); err != nil {
 		logger.Printf("Error encoding user info: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
@@ -857,11 +865,6 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	})).ServeHTTP(rw, req)
 }
 
-// SkipAuthProxy proxies allowlisted requests and skips authentication
-func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
-	p.headersChain.Then(p.serveMux).ServeHTTP(rw, req)
-}
-
 // Proxy proxies the user request if the user is authenticated else it prompts
 // them to authenticate
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
@@ -870,7 +873,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	case nil:
 		// we are authenticated
 		p.addHeadersForProxying(rw, session)
-		p.headersChain.Then(p.serveMux).ServeHTTP(rw, req)
+		p.headersChain.Then(p.upstreamProxy).ServeHTTP(rw, req)
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
 		if isAjax(req) {
@@ -908,6 +911,13 @@ func prepareNoCache(w http.ResponseWriter) {
 	for k, v := range noCacheHeaders {
 		w.Header().Set(k, v)
 	}
+}
+
+func prepareNoCacheMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		prepareNoCache(rw)
+		next.ServeHTTP(rw, req)
+	})
 }
 
 // getOAuthRedirectURI returns the redirectURL that the upstream OAuth Provider will
@@ -1095,12 +1105,12 @@ func validOptionalPort(port string) bool {
 // - `nil, ErrAccessDenied` if the authenticated user is not authorized
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
 func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
-	var session *sessionsapi.SessionState
+	session := middlewareapi.GetRequestScope(req).Session
 
-	getSession := p.sessionChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		session = middlewareapi.GetRequestScope(req).Session
-	}))
-	getSession.ServeHTTP(rw, req)
+	// Check this after loading the session so that if a valid session exists, we can add headers from it
+	if p.IsAllowedRequest(req) {
+		return session, nil
+	}
 
 	if session == nil {
 		return nil, ErrNeedsLogin
@@ -1190,6 +1200,9 @@ func decodeState(req *http.Request) (string, string, error) {
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
 func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, session *sessionsapi.SessionState) {
+	if session == nil {
+		return
+	}
 	if session.Email == "" {
 		rw.Header().Set("GAP-Auth", session.User)
 	} else {
