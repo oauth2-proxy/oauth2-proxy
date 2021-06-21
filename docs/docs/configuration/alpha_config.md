@@ -281,6 +281,8 @@ make up the header value
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
 | `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
+| `audienceClaim` | _string_ | Set the claim which is used to verify the audience<br/>default set to 'aud' |
+| `extraAudiences` | _[]string_ | A list of additional audiences which are allowed to pass verification<br/>default set to '[]' |
 
 ### Provider
 
