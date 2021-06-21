@@ -54,6 +54,8 @@ func NewLegacyOptions() *LegacyOptions {
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
+			OIDCAudienceClaim:     "aud",
+			OIDCExtraAudiences:    []string{},
 			InsecureOIDCSkipNonce: true,
 		},
 

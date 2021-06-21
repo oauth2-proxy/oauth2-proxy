@@ -10,6 +10,7 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -26,12 +27,15 @@ func (fakeADFSJwks) VerifySignature(_ context.Context, jwt string) (payload []by
 }
 
 func testADFSProvider(hostname string) *ADFSProvider {
-
-	o := oidc.NewVerifier(
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaim: "aud",
+		ClientID:      "https://test.myapp.com",
+	}
+	o := internaloidc.NewVerifier(oidc.NewVerifier(
 		"https://issuer.example.com",
 		fakeADFSJwks{},
 		&oidc.Config{ClientID: "https://test.myapp.com"},
-	)
+	), verificationOptions)
 
 	p := NewADFSProvider(&ProviderData{
 		ProviderName: "",

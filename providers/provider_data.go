@@ -46,7 +46,6 @@ type ProviderData struct {
 	UserClaim            string
 	EmailClaim           string
 	GroupsClaim          string
-	AudienceClaim        string
 	Verifier             *internaloidc.IDTokenVerifier
 
 	// Universal Group authorization data structure

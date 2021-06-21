@@ -16,6 +16,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	. "github.com/onsi/gomega"
 	"golang.org/x/oauth2"
 )
@@ -155,7 +156,8 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 			IDToken:       &failureIDToken,
 			Verifier:      true,
 			ExpectIDToken: false,
-			ExpectedError: errors.New("failed to verify signature: the validation failed for subject [123456789]"),
+			ExpectedError: errors.New("failed to verify token: failed to verify signature: " +
+				"the validation failed for subject [123456789]"),
 		},
 		"Missing ID Token": {
 			IDToken:       nil,
@@ -186,11 +188,15 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 
 			provider := &ProviderData{}
 			if tc.Verifier {
-				provider.Verifier = oidc.NewVerifier(
+				verificationOptions := &internaloidc.IDTokenVerificationOptions{
+					AudienceClaim: "aud",
+					ClientID:      oidcClientID,
+				}
+				provider.Verifier = internaloidc.NewVerifier(oidc.NewVerifier(
 					oidcIssuer,
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
-				)
+				), verificationOptions)
 			}
 			verified, err := provider.verifyIDToken(context.Background(), token)
 			if err != nil {
@@ -346,12 +352,16 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
 
+			verificationOptions := &internaloidc.IDTokenVerificationOptions{
+				AudienceClaim: "aud",
+				ClientID:      oidcClientID,
+			}
 			provider := &ProviderData{
-				Verifier: oidc.NewVerifier(
+				Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 					oidcIssuer,
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
-				),
+				), verificationOptions),
 			}
 			provider.AllowUnverifiedEmail = tc.AllowUnverified
 			provider.UserClaim = tc.UserClaim
@@ -408,12 +418,16 @@ func TestProviderData_checkNonce(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
 
+			verificationOptions := &internaloidc.IDTokenVerificationOptions{
+				AudienceClaim: "aud",
+				ClientID:      oidcClientID,
+			}
 			provider := &ProviderData{
-				Verifier: oidc.NewVerifier(
+				Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 					oidcIssuer,
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
-				),
+				), verificationOptions),
 			}
 
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
@@ -501,12 +515,16 @@ func TestProviderData_extractGroups(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
 
+			verificationOptions := &internaloidc.IDTokenVerificationOptions{
+				AudienceClaim: "aud",
+				ClientID:      oidcClientID,
+			}
 			provider := &ProviderData{
-				Verifier: oidc.NewVerifier(
+				Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 					oidcIssuer,
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
-				),
+				), verificationOptions),
 			}
 			provider.GroupsClaim = tc.GroupsClaim
 
