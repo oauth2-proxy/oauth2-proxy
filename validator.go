@@ -108,8 +108,8 @@ func NewValidator(domains []string, usersFile string) func(string) bool {
 }
 
 // isEmailValidWithDomains checks if the authenticated email is validated against the provided domain
-func isEmailValidWithDomains(email string, emailDomains []string) bool {
-	for _, domain := range emailDomains {
+func isEmailValidWithDomains(email string, allowedDomains []string) bool {
+	for _, domain := range allowedDomains {
 		// allow if the domain is perfect suffix match with the email
 		if strings.HasSuffix(email, "@"+domain) {
 			return true
