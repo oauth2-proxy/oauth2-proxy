@@ -2,11 +2,11 @@ package options
 
 import (
 	"crypto"
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	"net/url"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/spf13/pflag"
 )
