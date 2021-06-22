@@ -61,228 +61,6 @@ func (vt *ValidatorTest) WriteEmails(t *testing.T, emails []string) {
 	}
 }
 
-func TestValidatorEmpty(t *testing.T) {
-	testCases := []struct {
-		name          string
-		email         string
-		expectedAuthZ bool
-	}{
-		{
-			name:          "EmptyDomainAndEmailList",
-			email:         "foo.bar@example.com",
-			expectedAuthZ: false,
-		},
-	}
-
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			vt.WriteEmails(t, []string(nil))
-			validator := vt.NewValidator([]string(nil), nil)
-
-			authorized := validator(tc.email)
-			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
-		})
-	}
-}
-
-func TestValidatorSingleEmail(t *testing.T) {
-	testCases := []struct {
-		name          string
-		email         string
-		expectedAuthZ bool
-	}{
-		{
-			name:          "EmailMatchWithAllowedEmails",
-			email:         "foo.bar@example.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "EmailFromSameDomainButNotInList",
-			email:         "baz.quux@example.com",
-			expectedAuthZ: false,
-		},
-	}
-
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
-
-	vt.WriteEmails(t, []string{"foo.bar@example.com"})
-	validator := vt.NewValidator([]string(nil), nil)
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-			authorized := validator(tc.email)
-			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
-		})
-	}
-}
-
-func TestValidatorSingleDomain(t *testing.T) {
-	testCases := []struct {
-		name          string
-		email         string
-		expectedAuthZ bool
-	}{
-		{
-			name:          "EmailMatchOnDomain",
-			email:         "foo.bar@example.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "EmailMatchOnDomain2",
-			email:         "baz.quux@example.com",
-			expectedAuthZ: true,
-		},
-	}
-
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
-
-	vt.WriteEmails(t, []string(nil))
-	validator := vt.NewValidator([]string{"example.com"}, nil)
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-			authorized := validator(tc.email)
-			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
-		})
-	}
-}
-
-func TestValidatorMultipleEmailsMultipleDomains(t *testing.T) {
-	testCases := []struct {
-		name          string
-		email         string
-		expectedAuthZ bool
-	}{
-		{
-			name:          "EmailFromFirstDomainShouldValidate",
-			email:         "foo.bar@example0.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "EmailFromSecondDomainShouldValidate",
-			email:         "baz.quux@example1.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "FirstEmailInListShouldValidate",
-			email:         "xyzzy@example.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "SecondEmailInListShouldValidate",
-			email:         "plugh@example.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "EmailNotInListThatMatchesNoDomains ",
-			email:         "xyzzy.plugh@example.com",
-			expectedAuthZ: false,
-		},
-	}
-
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
-
-	vt.WriteEmails(t, []string{"xyzzy@example.com", "plugh@example.com"})
-	domains := []string{"example0.com", "example1.com"}
-	validator := vt.NewValidator(domains, nil)
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-			authorized := validator(tc.email)
-			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
-		})
-	}
-}
-
-func TestValidatorComparisonsAreCaseInsensitive(t *testing.T) {
-	testCases := []struct {
-		name          string
-		email         string
-		expectedAuthZ bool
-	}{
-		{
-			name:          "LoadedEmailAddressesAreNotLowerCased",
-			email:         "foo.bar@example.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "ValidatedEmailAddressesAreNotLowerCased",
-			email:         "Foo.Bar@Example.Com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "LoadedDomainsAreNotLowerCased",
-			email:         "foo.bar@frobozz.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "ValidatedDomainsAreNotLowerCased",
-			email:         "foo.bar@Frobozz.Com",
-			expectedAuthZ: true,
-		},
-	}
-
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
-
-	vt.WriteEmails(t, []string{"Foo.Bar@Example.Com"})
-	validator := vt.NewValidator([]string{"Frobozz.Com"}, nil)
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-			authorized := validator(tc.email)
-			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
-		})
-	}
-}
-
-func TestValidatorIgnoreSpacesInAuthEmails(t *testing.T) {
-	testCases := []struct {
-		name          string
-		allowedEmails []string
-		email         string
-		expectedAuthZ bool
-	}{
-		{
-			name:          "IgnoreSpacesInAuthEmails",
-			allowedEmails: []string{"   foo.bar@example.com   "},
-			email:         "foo.bar@example.com",
-			expectedAuthZ: true,
-		},
-		{
-			name:          "IgnorePrefixSpacesInAuthEmails",
-			allowedEmails: []string{"   foo.bar@example.com"},
-			email:         "foo.bar@example.com",
-			expectedAuthZ: true,
-		},
-	}
-
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			vt.WriteEmails(t, tc.allowedEmails)
-			validator := vt.NewValidator([]string(nil), nil)
-
-			authorized := validator(tc.email)
-			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
-		})
-	}
-}
-
 func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 	testCasesPreUpdate := []struct {
 		name          string
@@ -360,7 +138,7 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 	}
 }
 
-func TestValidatorSubDomains(t *testing.T) {
+func TestValidatorCases(t *testing.T) {
 	testCases := []struct {
 		name           string
 		allowedEmails  []string
@@ -465,6 +243,118 @@ func TestValidatorSubDomains(t *testing.T) {
 			allowedDomains: []string{".mycompany.com"},
 			email:          "something@ext.evilhackmycompany.com",
 			expectedAuthZ:  false,
+		},
+		{
+			name:           "EmptyDomainAndEmailList",
+			allowedEmails:  []string(nil),
+			allowedDomains: []string(nil),
+			email:          "foo.bar@example.com",
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "EmailMatchWithAllowedEmails",
+			email:          "foo.bar@example.com",
+			allowedEmails:  []string(nil),
+			allowedDomains: []string{"example.com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailFromSameDomainButNotInList",
+			email:          "baz.quux@example.com",
+			allowedEmails:  []string(nil),
+			allowedDomains: []string{"example.com"},
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "EmailMatchOnDomain",
+			email:          "foo.bar@example.com",
+			allowedEmails:  []string(nil),
+			allowedDomains: []string{"example.com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailMatchOnDomain2",
+			email:          "baz.quux@example.com",
+			allowedEmails:  []string(nil),
+			allowedDomains: []string{"example.com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailFromFirstDomainShouldValidate",
+			email:          "foo.bar@example0.com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"example0.com", "example1.com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailFromSecondDomainShouldValidate",
+			email:          "baz.quux@example1.com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"example0.com", "example1.com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "FirstEmailInListShouldValidate",
+			email:          "xyzzy@example.com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"example0.com", "example1.com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "SecondEmailInListShouldValidate",
+			email:          "plugh@example.com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"example0.com", "example1.com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "EmailNotInListThatMatchesNoDomains ",
+			email:          "xyzzy.plugh@example.com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"example0.com", "example1.com"},
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "LoadedEmailAddressesAreNotLowerCased",
+			email:          "foo.bar@example.com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"Frobozz.Com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "ValidatedEmailAddressesAreNotLowerCased",
+			email:          "Foo.Bar@Example.Com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"Frobozz.Com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "LoadedDomainsAreNotLowerCased",
+			email:          "foo.bar@frobozz.com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"Frobozz.Com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "ValidatedDomainsAreNotLowerCased",
+			email:          "foo.bar@Frobozz.Com",
+			allowedEmails:  []string{"Foo.Bar@Example.Com"},
+			allowedDomains: []string{"Frobozz.Com"},
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "IgnoreSpacesInAuthEmails",
+			email:          "foo.bar@example.com",
+			allowedEmails:  []string{"   foo.bar@example.com   "},
+			allowedDomains: []string(nil),
+			expectedAuthZ:  true,
+		},
+		{
+			name:           "IgnorePrefixSpacesInAuthEmails",
+			email:          "foo.bar@example.com",
+			allowedEmails:  []string{"   foo.bar@example.com"},
+			allowedDomains: []string(nil),
+			expectedAuthZ:  true,
 		},
 	}
 
