@@ -88,7 +88,7 @@ func (p *FacebookProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	return r.Email, nil
 }
 
-// ValidateSessionState validates the AccessToken
+// ValidateSession validates the AccessToken
 func (p *FacebookProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }

@@ -159,7 +159,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -214,17 +214,16 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 		return nil, err
 	}
 
-	created := time.Now()
-	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
-
-	// Store the data that we found in the session state
-	return &sessions.SessionState{
+	session := &sessions.SessionState{
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,
-		CreatedAt:   &created,
-		ExpiresOn:   &expires,
 		Email:       email,
-	}, nil
+	}
+
+	session.CreatedAtNow()
+	session.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
+
+	return session, nil
 }
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters

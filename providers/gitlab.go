@@ -121,10 +121,9 @@ func (p *GitLabProvider) SetProjectScope() {
 	}
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
-func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
+// RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
+func (p *GitLabProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.RefreshToken == "" {
 		return false, nil
 	}
 
@@ -139,10 +138,10 @@ func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 	return true, nil
 }
 
-func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
+func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return err
 	}
 
 	c := oauth2.Config{
@@ -164,13 +163,9 @@ func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.Ses
 	if err != nil {
 		return fmt.Errorf("unable to update session: %v", err)
 	}
-	s.AccessToken = newSession.AccessToken
-	s.IDToken = newSession.IDToken
-	s.RefreshToken = newSession.RefreshToken
-	s.CreatedAt = newSession.CreatedAt
-	s.ExpiresOn = newSession.ExpiresOn
-	s.Email = newSession.Email
-	return
+	*s = *newSession
+
+	return nil
 }
 
 type gitlabUserInfo struct {
@@ -264,14 +259,16 @@ func (p *GitLabProvider) createSession(ctx context.Context, token *oauth2.Token)
 		}
 	}
 
-	created := time.Now()
-	return &sessions.SessionState{
+	ss := &sessions.SessionState{
 		AccessToken:  token.AccessToken,
 		IDToken:      getIDToken(token),
 		RefreshToken: token.RefreshToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &idToken.Expiry,
-	}, nil
+	}
+
+	ss.CreatedAtNow()
+	ss.SetExpiresOn(idToken.Expiry)
+
+	return ss, nil
 }
 
 // ValidateSession checks that the session's IDToken is still valid

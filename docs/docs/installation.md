@@ -17,7 +17,7 @@ slug: /
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 
 ```
-$ sha256sum -c sha256sum.txt 2>&1 | grep OK
+$ sha256sum -c sha256sum.txt
 oauth2-proxy-x.y.z.linux-amd64: OK
 ```
 

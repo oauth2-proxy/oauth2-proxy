@@ -63,13 +63,10 @@ func Reset() *clockapi.Mock {
 // package.
 type Clock struct {
 	mock *clockapi.Mock
-	sync.Mutex
 }
 
 // Set sets the Clock to a clock.Mock at the given time.Time
 func (c *Clock) Set(t time.Time) {
-	c.Lock()
-	defer c.Unlock()
 	if c.mock == nil {
 		c.mock = clockapi.NewMock()
 	}
@@ -79,8 +76,6 @@ func (c *Clock) Set(t time.Time) {
 // Add moves clock forward time.Duration if it is mocked. It will error
 // if the clock is not mocked.
 func (c *Clock) Add(d time.Duration) error {
-	c.Lock()
-	defer c.Unlock()
 	if c.mock == nil {
 		return errors.New("clock not mocked")
 	}
@@ -91,8 +86,6 @@ func (c *Clock) Add(d time.Duration) error {
 // Reset removes local clock.Mock.  Returns any existing Mock if set in case
 // lingering time operations are attached to it.
 func (c *Clock) Reset() *clockapi.Mock {
-	c.Lock()
-	defer c.Unlock()
 	existing := c.mock
 	c.mock = nil
 	return existing
