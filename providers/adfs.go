@@ -48,7 +48,7 @@ func NewADFSProvider(p *ProviderData) *ADFSProvider {
 
 	oidcProvider := &OIDCProvider{
 		ProviderData: p,
-		SkipNonce:    true,
+		SkipNonce:    false,
 	}
 
 	return &ADFSProvider{
