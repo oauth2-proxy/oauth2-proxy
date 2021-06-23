@@ -16,6 +16,30 @@ func timePtr(t time.Time) *time.Time {
 	return &t
 }
 
+func TestCreatedAtNow(t *testing.T) {
+	g := NewWithT(t)
+	ss := &SessionState{}
+
+	now := time.Unix(1234567890, 0)
+	ss.Clock.Set(now)
+
+	ss.CreatedAtNow()
+	g.Expect(*ss.CreatedAt).To(Equal(now))
+}
+
+func TestExpiresIn(t *testing.T) {
+	g := NewWithT(t)
+	ss := &SessionState{}
+
+	now := time.Unix(1234567890, 0)
+	ss.Clock.Set(now)
+
+	ttl := time.Duration(743) * time.Second
+	ss.ExpiresIn(ttl)
+
+	g.Expect(*ss.ExpiresOn).To(Equal(ss.CreatedAt.Add(ttl)))
+}
+
 func TestString(t *testing.T) {
 	g := NewWithT(t)
 	created, err := time.Parse(time.RFC3339, "2000-01-01T00:00:00Z")

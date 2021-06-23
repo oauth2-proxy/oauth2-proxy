@@ -30,8 +30,7 @@ func NewManager(store Store, cookieOpts *options.Cookie) *Manager {
 // from the persistent data store.
 func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
 	if s.CreatedAt == nil || s.CreatedAt.IsZero() {
-		now := time.Now()
-		s.CreatedAt = &now
+		s.CreatedAtNow()
 	}
 
 	tckt, err := decodeTicketFromRequest(req, m.Options)
