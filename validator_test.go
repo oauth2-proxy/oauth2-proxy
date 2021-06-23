@@ -262,7 +262,7 @@ func TestValidatorCases(t *testing.T) {
 			name:           "EmailFromSameDomainButNotInList",
 			email:          "baz.quux@example.com",
 			allowedEmails:  []string{"foo.bar@example.com"},
-			allowedDomains: []string{"example.com"},
+			allowedDomains: []string(nil),
 			expectedAuthZ:  false,
 		},
 		{
@@ -296,7 +296,7 @@ func TestValidatorCases(t *testing.T) {
 		{
 			name:           "FirstEmailInListShouldValidate",
 			email:          "xyzzy@example.com",
-			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},	
+			allowedEmails:  []string{"xyzzy@example.com", "plugh@example.com"},
 			allowedDomains: []string{"example0.com", "example1.com"},
 			expectedAuthZ:  true,
 		},
@@ -356,18 +356,30 @@ func TestValidatorCases(t *testing.T) {
 			allowedDomains: []string(nil),
 			expectedAuthZ:  true,
 		},
+		{
+			name:           "CheckForEqualityNotSuffix",
+			email:          "foo@evilcompany.com",
+			allowedEmails:  []string(nil),
+			allowedDomains: []string{".company.com"},
+			expectedAuthZ:  false,
+		},
+		{
+			name:           "CheckForEqualityNotSuffix2",
+			email:          "foo@evilcompany.com",
+			allowedEmails:  []string(nil),
+			allowedDomains: []string{"company.com"},
+			expectedAuthZ:  false,
+		},
 	}
-
-	vt := NewValidatorTest(t)
-	defer vt.TearDown()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
+			vt := NewValidatorTest(t)
+			defer vt.TearDown()
 
+			g := NewWithT(t)
 			vt.WriteEmails(t, tc.allowedEmails)
 			validator := vt.NewValidator(tc.allowedDomains, nil)
-
 			authorized := validator(tc.email)
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})
