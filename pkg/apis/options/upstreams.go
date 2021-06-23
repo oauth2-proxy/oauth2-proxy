@@ -19,7 +19,21 @@ type Upstream struct {
 
 	// Path is used to map requests to the upstream server.
 	// The closest match will take precedence and all Paths must be unique.
+	// Path can also take a pattern when used with RewriteTarget.
+	// Path segments can be captured and matched using regular experessions.
+	// Eg:
+	// - `^/foo$`: Match only the explicit path `/foo`
+	// - `^/bar/$`: Match any path prefixed with `/bar/`
+	// - `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget
 	Path string `json:"path,omitempty"`
+
+	// RewriteTarget allows users to rewrite the request path before it is sent to
+	// the upstream server.
+	// Use the Path to capture segments for reuse within the rewrite target.
+	// Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite
+	// the request `/baz/abc/123` to `/foo/abc/123` before proxying to the
+	// upstream server.
+	RewriteTarget string `json:"rewriteTarget,omitempty"`
 
 	// The URI of the upstream server. This may be an HTTP(S) server of a File
 	// based URL. It may include a path, in which case all requests will be served
