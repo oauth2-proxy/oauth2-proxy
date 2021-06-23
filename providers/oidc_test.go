@@ -464,7 +464,7 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 	}
 }
 
-func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
+func TestOIDCProviderRefreshSessionWithoutIdToken(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(redeemTokenResponse{
@@ -497,7 +497,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 	assert.Equal(t, "11223344", existingSession.User)
 }
 
-func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
+func TestOIDCProviderRefreshSessionWithIdToken(t *testing.T) {
 
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(redeemTokenResponse{

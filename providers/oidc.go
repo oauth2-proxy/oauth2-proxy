@@ -186,14 +186,31 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
 
+	replaceSession(s, newSession)
+	return nil
+}
+
+func replaceSession(s *sessions.SessionState, newSession *sessions.SessionState) {
 	// It's possible that if the refresh token isn't in the token response the
 	// session will not contain an id token.
 	// If it doesn't it's probably better to retain the old one
 	if newSession.IDToken != "" {
 		s.IDToken = newSession.IDToken
+	}
+
+	// Only copy over fields if they are present. Otherwise they might've
+	// originally been set via a ProfileURL call in `EnrichSession` but
+	// are empty in IDToken claims.
+	if newSession.Email != "" {
 		s.Email = newSession.Email
+	}
+	if newSession.User != "" {
 		s.User = newSession.User
+	}
+	if newSession.Groups != nil {
 		s.Groups = newSession.Groups
+	}
+	if newSession.PreferredUsername != "" {
 		s.PreferredUsername = newSession.PreferredUsername
 	}
 
@@ -201,8 +218,6 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 	s.RefreshToken = newSession.RefreshToken
 	s.CreatedAt = newSession.CreatedAt
 	s.ExpiresOn = newSession.ExpiresOn
-
-	return nil
 }
 
 // CreateSessionFromToken converts Bearer IDTokens into sessions
