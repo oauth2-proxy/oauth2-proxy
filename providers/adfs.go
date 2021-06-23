@@ -1,14 +1,22 @@
 package providers
 
 import (
+	"context"
+	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
 // ADFSProvider represents an ADFS based Identity Provider
 type ADFSProvider struct {
 	*OIDCProvider
+
 	skipScope bool
+	// Expose for unit testing
+	oidcEnrichFunc  func(context.Context, *sessions.SessionState) error
+	oidcRefreshFunc func(context.Context, *sessions.SessionState) (bool, error)
 }
 
 var _ Provider = (*ADFSProvider)(nil)
@@ -17,7 +25,7 @@ const (
 	adfsProviderName = "ADFS"
 	adfsDefaultScope = "openid email profile"
 	adfsSkipScope    = false
-	adfsEmailClaim   = "upn"
+	adfsUPNClaim     = "upn"
 )
 
 // NewADFSProvider initiates a new ADFSProvider
@@ -26,7 +34,6 @@ func NewADFSProvider(p *ProviderData) *ADFSProvider {
 		name:  adfsProviderName,
 		scope: adfsDefaultScope,
 	})
-	p.EmailClaim = adfsEmailClaim
 
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		resource := p.ProtectedResource.String()
@@ -39,12 +46,16 @@ func NewADFSProvider(p *ProviderData) *ADFSProvider {
 		}
 	}
 
+	oidcProvider := &OIDCProvider{
+		ProviderData: p,
+		SkipNonce:    true,
+	}
+
 	return &ADFSProvider{
-		OIDCProvider: &OIDCProvider{
-			ProviderData: p,
-			SkipNonce:    true,
-		},
-		skipScope: adfsSkipScope,
+		OIDCProvider:    oidcProvider,
+		skipScope:       adfsSkipScope,
+		oidcEnrichFunc:  oidcProvider.EnrichSession,
+		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
 }
 
@@ -67,4 +78,45 @@ func (p *ADFSProvider) GetLoginURL(redirectURI, state, nonce string) string {
 		loginURL.RawQuery = q.Encode()
 	}
 	return loginURL.String()
+}
+
+// EnrichSession calls the OIDC ProfileURL to backfill any fields missing
+// from the claims. If Email is missing, falls back to ADFS `upn` claim.
+func (p *ADFSProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+	err := p.oidcEnrichFunc(ctx, s)
+	if err != nil {
+		return err
+	}
+
+	if s.Email == "" {
+		return p.fallbackUPN(ctx, s)
+	}
+	return nil
+}
+
+// RefreshSession refreshes via the OIDC implementation. If email is missing,
+// falls back to ADFS `upn` claim.
+func (p *ADFSProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	refreshed, err := p.oidcRefreshFunc(ctx, s)
+	if err != nil || s.Email != "" {
+		return refreshed, err
+	}
+	err = p.fallbackUPN(ctx, s)
+	return refreshed, err
+}
+
+func (p *ADFSProvider) fallbackUPN(ctx context.Context, s *sessions.SessionState) error {
+	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
+	if err != nil {
+		return err
+	}
+	claims, err := p.getClaims(idToken)
+	if err != nil {
+		return fmt.Errorf("couldn't extract claims from id_token (%v)", err)
+	}
+	upn := claims.raw[adfsUPNClaim]
+	if upn != nil {
+		s.Email = fmt.Sprint(upn)
+	}
+	return nil
 }
