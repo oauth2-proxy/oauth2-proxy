@@ -44,7 +44,7 @@ oauth2-proxy-x.y.z.linux-amd64: OK
 ## Security
 
 If you are running a version older than v6.0.0 we **strongly recommend you please update** to a current version.
-See [open redirect vulnverability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) for details.
+See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) for details.
 
 ## Docs
 
