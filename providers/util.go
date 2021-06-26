@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/go-simplejson"
 	"golang.org/x/oauth2"
 )
 
@@ -82,19 +81,4 @@ func formatGroup(rawGroup interface{}) (string, error) {
 		return "", err
 	}
 	return string(jsonGroup), nil
-}
-
-// coerceArray extracts a field from simplejson.Json that might be a
-// singleton or a list and coerces it into a list.
-func coerceArray(sj *simplejson.Json, key string) []interface{} {
-	array, err := sj.Get(key).Array()
-	if err == nil {
-		return array
-	}
-
-	single := sj.Get(key).Interface()
-	if single == nil {
-		return nil
-	}
-	return []interface{}{single}
 }

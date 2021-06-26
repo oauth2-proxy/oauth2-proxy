@@ -103,16 +103,17 @@ func (p *ADFSProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 }
 
 func (p *ADFSProvider) fallbackUPN(ctx context.Context, s *sessions.SessionState) error {
-	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
+	claims, err := p.getClaimExtractor(s.IDToken, s.AccessToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not extract claims: %v", err)
 	}
-	claims, err := p.getClaims(idToken)
+
+	upn, found, err := claims.GetClaim(adfsUPNClaim)
 	if err != nil {
-		return fmt.Errorf("couldn't extract claims from id_token (%v)", err)
+		return fmt.Errorf("could not extract %s claim: %v", adfsUPNClaim, err)
 	}
-	upn := claims.raw[adfsUPNClaim]
-	if upn != nil {
+
+	if found && fmt.Sprint(upn) != "" {
 		s.Email = fmt.Sprint(upn)
 	}
 	return nil
