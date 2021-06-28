@@ -88,8 +88,8 @@ func TestNextcloudProviderOverrides(t *testing.T) {
 		p.Data().ValidateURL.String())
 }
 
-func TestNextcloudProviderGetEmailAddress(t *testing.T) {
-	b := testNextcloudBackend("{\"ocs\": {\"data\": { \"email\": \"michael.bland@gsa.gov\"}}}")
+func TestNextcloudProviderEnrichSessionNoGroups(t *testing.T) {
+	b := testNextcloudBackend("{\"ocs\": {\"data\": { \"email\": \"michael.bland@gsa.gov\", \"groups\": [] }}}")
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -98,14 +98,31 @@ func TestNextcloudProviderGetEmailAddress(t *testing.T) {
 	p.ValidateURL.RawQuery = formatJSON
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", email)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Empty(t, session.Groups)
+}
+
+func TestNextcloudProviderEnrichSessionWithGroups(t *testing.T) {
+	b := testNextcloudBackend("{\"ocs\": {\"data\": { \"email\": \"michael.bland@gsa.gov\", \"groups\": [\"group1\", \"group2\"] }}}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testNextcloudProvider(bURL.Host)
+	p.ValidateURL.Path = userPath
+	p.ValidateURL.RawQuery = formatJSON
+
+	session := CreateAuthorizedSession()
+	err := p.EnrichSession(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, []string{"group1", "group2"}, session.Groups)
 }
 
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
-func TestNextcloudProviderGetEmailAddressFailedRequest(t *testing.T) {
+func TestNextcloudProviderEnrichSessionFailedRequest(t *testing.T) {
 	b := testNextcloudBackend("unused payload")
 	defer b.Close()
 
@@ -118,12 +135,13 @@ func TestNextcloudProviderGetEmailAddressFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
+	assert.Empty(t, session.Groups)
 }
 
-func TestNextcloudProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) {
+func TestNextcloudProviderEnrichSessionContentNotPresentInPayload(t *testing.T) {
 	b := testNextcloudBackend("{\"foo\": \"bar\"}")
 	defer b.Close()
 
@@ -133,7 +151,8 @@ func TestNextcloudProviderGetEmailAddressEmailNotPresentInPayload(t *testing.T) 
 	p.ValidateURL.RawQuery = formatJSON
 
 	session := CreateAuthorizedSession()
-	email, err := p.GetEmailAddress(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", email)
+	assert.Equal(t, "", session.Email)
+	assert.Empty(t, session.Groups)
 }
