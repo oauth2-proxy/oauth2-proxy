@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
@@ -37,6 +38,18 @@ func (p *NextcloudProvider) EnrichSession(ctx context.Context, s *sessions.Sessi
 
 	data := json.Get("ocs").Get("data")
 
+	err = populateSessionFromOcs(data, s)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// populateSessionFromOcs takes some json returned from Nextcloud's OCS API and
+// a session state, and populates the session state with data from the ocs response.
+func populateSessionFromOcs(data *simplejson.Json, s *sessions.SessionState) error {
 	id, err := data.Get("id").String()
 	if err != nil {
 		return err
