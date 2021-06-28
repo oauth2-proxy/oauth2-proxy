@@ -89,7 +89,15 @@ func TestNextcloudProviderOverrides(t *testing.T) {
 }
 
 func TestNextcloudProviderEnrichSessionNoGroups(t *testing.T) {
-	b := testNextcloudBackend("{\"ocs\": {\"data\": { \"email\": \"michael.bland@gsa.gov\", \"groups\": [] }}}")
+	b := testNextcloudBackend(`{
+		"ocs": {
+			"data": {
+				"id": "testusername",
+				"email": "michael.bland@gsa.gov",
+				"groups": []
+			}
+		}
+	}`)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -100,12 +108,21 @@ func TestNextcloudProviderEnrichSessionNoGroups(t *testing.T) {
 	session := CreateAuthorizedSession()
 	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
+	assert.Equal(t, "testusername", session.User)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 	assert.Empty(t, session.Groups)
 }
 
 func TestNextcloudProviderEnrichSessionWithGroups(t *testing.T) {
-	b := testNextcloudBackend("{\"ocs\": {\"data\": { \"email\": \"michael.bland@gsa.gov\", \"groups\": [\"group1\", \"group2\"] }}}")
+	b := testNextcloudBackend(`{
+		"ocs": {
+			"data": {
+				"id": "testusername",
+				"email": "michael.bland@gsa.gov",
+				"groups": ["group1", "group2"]
+			}
+		}
+	}`)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -116,6 +133,7 @@ func TestNextcloudProviderEnrichSessionWithGroups(t *testing.T) {
 	session := CreateAuthorizedSession()
 	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
+	assert.Equal(t, "testusername", session.User)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 	assert.Equal(t, []string{"group1", "group2"}, session.Groups)
 }
@@ -137,6 +155,7 @@ func TestNextcloudProviderEnrichSessionFailedRequest(t *testing.T) {
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
 	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "", session.User)
 	assert.Equal(t, "", session.Email)
 	assert.Empty(t, session.Groups)
 }
@@ -153,6 +172,7 @@ func TestNextcloudProviderEnrichSessionContentNotPresentInPayload(t *testing.T) 
 	session := CreateAuthorizedSession()
 	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "", session.User)
 	assert.Equal(t, "", session.Email)
 	assert.Empty(t, session.Groups)
 }

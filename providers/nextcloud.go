@@ -37,6 +37,12 @@ func (p *NextcloudProvider) EnrichSession(ctx context.Context, s *sessions.Sessi
 
 	data := json.Get("ocs").Get("data")
 
+	id, err := data.Get("id").String()
+	if err != nil {
+		return err
+	}
+	s.User = id
+
 	email, err := data.Get("email").String()
 	if err != nil {
 		return err
