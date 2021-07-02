@@ -264,22 +264,6 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 					}
 				})
 			}
-
-			t.Run("Mixed cipher types cause errors", func(t *testing.T) {
-				for testName, ss := range testCases {
-					t.Run(testName, func(t *testing.T) {
-						cfbEncoded, err := ss.EncodeSessionState(cfb, false)
-						assert.NoError(t, err)
-						_, err = DecodeSessionState(cfbEncoded, gcm, false)
-						assert.Error(t, err)
-
-						gcmEncoded, err := ss.EncodeSessionState(gcm, false)
-						assert.NoError(t, err)
-						_, err = DecodeSessionState(gcmEncoded, cfb, false)
-						assert.Error(t, err)
-					})
-				}
-			})
 		})
 	}
 }
