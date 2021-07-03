@@ -15,7 +15,6 @@ import (
 const (
 	gitlabProviderName  = "GitLab"
 	gitlabDefaultScope  = "openid email"
-	gitlabUserClaim     = "nickname"
 	gitlabProjectPrefix = "project:"
 )
 
@@ -33,7 +32,6 @@ var _ Provider = (*GitLabProvider)(nil)
 // NewGitLabProvider initiates a new GitLabProvider
 func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 	p.ProviderName = gitlabProviderName
-	p.UserClaim = gitlabUserClaim
 	if p.Scope == "" {
 		p.Scope = gitlabDefaultScope
 	}
@@ -257,10 +255,13 @@ func formatProject(project *gitlabProject) string {
 // RefreshSession refreshes the session with the OIDCProvider implementation
 // but preserves the custom GitLab projects added in the `EnrichSession` stage.
 func (p *GitLabProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	nickname := s.User
 	projects := getSessionProjects(s)
 	// This will overwrite s.Groups with the new IDToken's `groups` claims
+	// and s.User with the `sub` claim.
 	refreshed, err := p.oidcRefreshFunc(ctx, s)
 	if refreshed && err == nil {
+		s.User = nickname
 		s.Groups = append(s.Groups, projects...)
 		s.Groups = deduplicateGroups(s.Groups)
 	}

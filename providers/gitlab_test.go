@@ -309,6 +309,19 @@ var _ = Describe("Gitlab Provider Tests", func() {
 	})
 
 	Context("when refreshing", func() {
+		It("keeps the existing nickname after refreshing", func() {
+			session := &sessions.SessionState{
+				User: "nickname",
+			}
+			p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+				s.User = "subject"
+				return true, nil
+			}
+			refreshed, err := p.RefreshSession(context.Background(), session)
+			Expect(refreshed).To(BeTrue())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(session.User).To(Equal("nickname"))
+		})
 		It("keeps existing projects after refreshing groups", func() {
 			session := &sessions.SessionState{}
 			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
@@ -325,7 +338,6 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			Expect(session.Groups).
 				To(ContainElements([]string{"baz", "project:thing", "project:sample"}))
 		})
-
 		It("leaves existing groups when not refreshed", func() {
 			session := &sessions.SessionState{}
 			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
@@ -341,7 +353,6 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			Expect(session.Groups).
 				To(ContainElements([]string{"foo", "bar", "project:thing", "project:sample"}))
 		})
-
 		It("leaves existing groups when OIDC refresh errors", func() {
 			session := &sessions.SessionState{}
 			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
