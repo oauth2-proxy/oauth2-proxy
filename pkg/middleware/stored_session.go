@@ -131,6 +131,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 // refreshSession attempts to refresh the session with the provider
 // and will save the session if it was updated.
 func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
+	origEmail := session.Email
 	refreshed, err := s.sessionRefresher(req.Context(), session)
 	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 		return fmt.Errorf("error refreshing tokens: %v", err)
@@ -160,6 +161,11 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	if err != nil {
 		logger.PrintAuthf(session.Email, req, logger.AuthError, "error saving session: %v", err)
 		return fmt.Errorf("error saving session: %v", err)
+	}
+	// Log if authenticated user details changed
+	if session.Email != origEmail {
+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess,
+			"Warning: Email changed during refresh: %s => %s", origEmail, session.Email)
 	}
 	return nil
 }
