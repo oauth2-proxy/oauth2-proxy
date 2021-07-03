@@ -196,6 +196,11 @@ func replaceSession(s *sessions.SessionState, newSession *sessions.SessionState)
 	// If it doesn't it's probably better to retain the old one
 	if newSession.IDToken != "" {
 		s.IDToken = newSession.IDToken
+
+		// Override groups even if empty to prevent a user removed
+		// from all groups retaining access after refresh
+		// Only override if IDToken was present to set Groups.
+		s.Groups = newSession.Groups
 	}
 
 	// Only copy over fields if they are present. Otherwise they might've
@@ -206,9 +211,6 @@ func replaceSession(s *sessions.SessionState, newSession *sessions.SessionState)
 	}
 	if newSession.User != "" {
 		s.User = newSession.User
-	}
-	if newSession.Groups != nil {
-		s.Groups = newSession.Groups
 	}
 	if newSession.PreferredUsername != "" {
 		s.PreferredUsername = newSession.PreferredUsername
