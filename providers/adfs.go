@@ -84,11 +84,8 @@ func (p *ADFSProvider) GetLoginURL(redirectURI, state, nonce string) string {
 // from the claims. If Email is missing, falls back to ADFS `upn` claim.
 func (p *ADFSProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	err := p.oidcEnrichFunc(ctx, s)
-	if err != nil {
-		return err
-	}
-
-	if s.Email == "" {
+	if err != nil || s.Email == "" {
+		// OIDC only errors if email is missing
 		return p.fallbackUPN(ctx, s)
 	}
 	return nil

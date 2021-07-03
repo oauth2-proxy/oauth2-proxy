@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -247,6 +248,16 @@ var _ = Describe("ADFS Provider Tests", func() {
 			It("falls back to UPN claim if Email is missing", func() {
 				p.oidcEnrichFunc = func(_ context.Context, s *sessions.SessionState) error {
 					return nil
+				}
+
+				err := p.EnrichSession(context.Background(), session)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(session.Email).To(Equal("upn@company.com"))
+			})
+
+			It("falls back to UPN claim on errors", func() {
+				p.oidcEnrichFunc = func(_ context.Context, s *sessions.SessionState) error {
+					return errors.New("neither the id_token nor the profileURL set an email")
 				}
 
 				err := p.EnrichSession(context.Background(), session)
