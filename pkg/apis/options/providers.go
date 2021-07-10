@@ -82,7 +82,7 @@ type KeycloakOptions struct {
 
 type AzureOptions struct {
 	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
-	// Default value is 'commmon'
+	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
 }
 
