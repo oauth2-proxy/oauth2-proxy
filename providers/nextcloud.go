@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
@@ -23,17 +24,49 @@ func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
 	return &NextcloudProvider{ProviderData: p}
 }
 
-// GetEmailAddress returns the Account email address
-func (p *NextcloudProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+// EnrichSession is called after Redeem to allow providers to enrich session fields
+// such as User, Email, Groups with provider specific API calls.
+func (p *NextcloudProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	json, err := requests.New(p.ValidateURL.String()).
 		WithContext(ctx).
 		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalJSON()
 	if err != nil {
-		return "", fmt.Errorf("error making request: %v", err)
+		return fmt.Errorf("error requesting ocs data: %v", err)
 	}
 
-	email, err := json.Get("ocs").Get("data").Get("email").String()
-	return email, err
+	data := json.Get("ocs").Get("data")
+
+	err = populateSessionFromOcs(data, s)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// populateSessionFromOcs takes some json returned from Nextcloud's OCS API and
+// a session state, and populates the session state with data from the ocs response.
+func populateSessionFromOcs(data *simplejson.Json, s *sessions.SessionState) error {
+	id, err := data.Get("id").String()
+	if err != nil {
+		return err
+	}
+	s.User = id
+
+	email, err := data.Get("email").String()
+	if err != nil {
+		return err
+	}
+	s.Email = email
+
+	groups, err := data.Get("groups").StringArray()
+	if err != nil {
+		return err
+	}
+	s.Groups = groups
+
+	return nil
 }
