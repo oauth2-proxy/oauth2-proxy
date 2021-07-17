@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/bitly/go-simplejson"
@@ -176,18 +177,26 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 
 // EnrichSession finds the email to enrich the session state
 func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if s.Email != "" {
-		return nil
+	if s.Email == "" {
+
+		email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
+		if err != nil {
+			return fmt.Errorf("unable to get email address: %v", err)
+		}
+		if email == "" {
+			return errors.New("unable to get email address")
+		}
+		s.Email = email
 	}
 
-	email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
-	if err != nil {
-		return fmt.Errorf("unable to get email address: %v", err)
+	if s.User == "" {
+		user, err := p.getUserFromProfileAPI(ctx, s.AccessToken)
+		if err != nil {
+			return fmt.Errorf("unable to get user: %v", err)
+		}
+		// Not going to throw an error if this is empty
+		s.User = user
 	}
-	if email == "" {
-		return errors.New("unable to get email address")
-	}
-	s.Email = email
 
 	return nil
 }
@@ -355,6 +364,47 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 	}
 
 	return getEmailFromJSON(json)
+}
+
+func getUserFromJSON(json *simplejson.Json) (string, error) {
+
+	userEmail, err := json.Get("userPrincipalName").String()
+	user := strings.Split(userEmail, "@")[0]
+
+	if err != nil || user == "" {
+		otherMails, otherMailsErr := json.Get("otherMails").Array()
+		if len(otherMails) > 0 {
+			user = otherMails[0].(string)
+		}
+		err = otherMailsErr
+	}
+
+	if err != nil || user == "" {
+		user, err = json.Get("mail").String()
+		if err != nil {
+			logger.Errorf("unable to find User: %s", err)
+			return "", err
+		}
+	}
+
+	return user, err
+}
+
+func (p *AzureProvider) getUserFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
+	if accessToken == "" {
+		return "", errors.New("missing access token")
+	}
+
+	json, err := requests.New(p.ProfileURL.String()).
+		WithContext(ctx).
+		WithHeaders(makeAzureHeader(accessToken)).
+		Do().
+		UnmarshalJSON()
+	if err != nil {
+		return "", err
+	}
+
+	return getUserFromJSON(json)
 }
 
 // ValidateSession validates the AccessToken
