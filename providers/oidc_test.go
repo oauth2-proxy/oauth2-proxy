@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/stretchr/testify/assert"
