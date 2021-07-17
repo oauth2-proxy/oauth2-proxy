@@ -48,6 +48,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 			ProtectedResource: &url.URL{},
 			Scope:             "",
 			EmailClaim:        "email",
+			GroupsClaim:       "groups",
 			Verifier: oidc.NewVerifier(
 				"https://issuer.example.com",
 				fakeAzureKeySetStub{},
@@ -373,4 +374,78 @@ func TestAzureProviderRefresh(t *testing.T) {
 	assert.Equal(t, idTokenString, session.IDToken)
 	assert.Equal(t, email, session.Email)
 	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
+}
+
+func TestAzureProviderGetGroupsEmpty(t *testing.T) {
+	email := "some@mail.com"
+	idToken := idTokenClaims{Email: email}
+	idTokenString, err := newSignedTestIDToken(idToken)
+	assert.NoError(t, err)
+	payload := azureOAuthPayload{
+		IDToken:      idTokenString,
+		RefreshToken: "some_refresh_token",
+		AccessToken:  authorizedAccessToken,
+		ExpiresOn:    1136239445,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	assert.NoError(t, err)
+
+	b := testAzureBackend(string(payloadBytes))
+	defer b.Close()
+
+	timestamp, _ := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+
+	err = p.EnrichSession(context.Background(), session)
+	assert.Equal(t, nil, err)
+
+	groups := session.Groups
+
+	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
+
+	assert.Equal(t, idTokenString, session.IDToken)
+	assert.Equal(t, 0, len(groups))
+}
+
+func TestAzureProviderGetGroupsFromJWT(t *testing.T) {
+	email := "some@mail.com"
+	groups := []string{"groups"}
+	idToken := idTokenClaims{Email: email, Groups: groups}
+	idTokenString, err := newSignedTestIDToken(idToken)
+	assert.NoError(t, err)
+	payload := azureOAuthPayload{
+		IDToken:      idTokenString,
+		RefreshToken: "some_refresh_token",
+		AccessToken:  authorizedAccessToken,
+		ExpiresOn:    1136239445,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	assert.NoError(t, err)
+
+	b := testAzureBackend(string(payloadBytes))
+	defer b.Close()
+
+	timestamp, _ := time.Parse(time.RFC3339, "2006-01-02T22:04:05Z")
+	bURL, _ := url.Parse(b.URL)
+	p := testAzureProvider(bURL.Host)
+
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	assert.Equal(t, nil, err)
+	assert.NotEqual(t, session, nil)
+
+	err = p.EnrichSession(context.Background(), session)
+	assert.Equal(t, nil, err)
+
+	claimGroups := session.Groups
+
+	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
+
+	assert.Equal(t, idTokenString, session.IDToken)
+	assert.Equal(t, 1, len(claimGroups))
+	assert.Equal(t, groups[0], claimGroups[0])
 }
