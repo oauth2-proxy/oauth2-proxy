@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	OIDCEmailClaim  = "email"
-	OIDCGroupsClaim = "groups"
+	OIDCEmailClaim             = "email"
+	OIDCGroupsClaim            = "groups"
+	OIDCPreferredUsernameClaim = "preferred_username"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -40,10 +41,11 @@ type ProviderData struct {
 	Prompt           string
 
 	// Common OIDC options for any OIDC-based providers to consume
-	AllowUnverifiedEmail bool
-	EmailClaim           string
-	GroupsClaim          string
-	Verifier             *oidc.IDTokenVerifier
+	AllowUnverifiedEmail   bool
+	EmailClaim             string
+	GroupsClaim            string
+	PreferredUsernameClaim string
+	Verifier               *oidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
@@ -157,7 +159,7 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 	ss.Groups = claims.Groups
 
 	// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
-	if pref, ok := claims.raw["preferred_username"].(string); ok {
+	if pref, ok := claims.raw[p.PreferredUsernameClaim].(string); ok {
 		ss.PreferredUsername = pref
 	}
 

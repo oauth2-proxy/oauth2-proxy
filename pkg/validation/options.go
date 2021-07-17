@@ -215,6 +215,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	p.AllowUnverifiedEmail = o.Providers[0].OIDCConfig.InsecureAllowUnverifiedEmail
 	p.EmailClaim = o.Providers[0].OIDCConfig.EmailClaim
 	p.GroupsClaim = o.Providers[0].OIDCConfig.GroupsClaim
+	p.PreferredUsernameClaim = o.Providers[0].OIDCConfig.PreferredUsernameClaim
 	p.Verifier = o.GetOIDCVerifier()
 
 	// TODO (@NickMeves) - Remove This
