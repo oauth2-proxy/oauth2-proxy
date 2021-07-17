@@ -1,12 +1,13 @@
 # This docker-compose file can be used to bring up an example instance of oauth2-proxy
 # for manual testing and exploration of features.
 # Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
-# etcd for storage for Dex, nginx as a reverse proxy and other http services for upstreams
+# etcd for storage for Dex, Open Policy Agent as a access controller and other http
+# services for upstreams
 #
 # This file is an extension of the main compose file and must be used with it
-#    docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml <command>
+#    docker-compose -f docker-compose.yaml -f docker-compose-opa.yaml <command>
 # Alternatively:
-#    make nginx-<command> (eg make nginx-up, make nginx-down)
+#    make opa-<command> (eg make nginx-up, make nginx-down)
 #
 # Access one of the following URLs to initiate a login flow:
 #    - http://oauth2-proxy.localhost
@@ -22,22 +23,25 @@
 version: '3.0'
 services:
   oauth2-proxy:
-    ports: []
-    hostname: oauth2-proxy
     volumes:
-      - "./oauth2-proxy-nginx.cfg:/oauth2-proxy.cfg"
+      - "./oauth2-proxy-opa.cfg:/oauth2-proxy.cfg"
     networks:
       oauth2-proxy: {}
-  nginx:
-    container_name: nginx
-    image: nginx:1.18
+  opa:
+    container_name: opa
+    image: openpolicyagent/opa
     ports:
-      - 8080:8080/tcp
-    hostname: nginx
+      - 8181:8181/tcp
+    hostname: opa
+    command:
+      - "run"
+      - "--log-format=json-pretty"
+      - "--log-level=debug"
+      - "--server"
+      - "/etc/opa.rego"
     volumes:
-      - "./nginx.conf:/etc/nginx/conf.d/default.conf"
+      - ./opa.rego:/etc/opa.rego
     networks:
       oauth2-proxy: {}
-      httpbin: {}
 networks:
   oauth2-proxy: {}

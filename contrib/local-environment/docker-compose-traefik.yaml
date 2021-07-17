@@ -9,16 +9,16 @@
 #    make traefik-<command> (eg. make traefik-up, make traefik-down)
 #
 # Access one of the following URLs to initiate a login flow:
-#    - http://oauth2-proxy.localhost
-#    - http://httpbin.oauth2-proxy.localhost
+#    - http://oauth2-proxy.localhost:8080
+#    - http://httpbin.oauth2-proxy.localhost:8080
 #
-# The OAuth2 Proxy itself is hosted at http://oauth2-proxy.oauth2-proxy.localhost
+# The OAuth2 Proxy itself is hosted at http://oauth2-proxy.oauth2-proxy.localhost:8080
 #
 # Note, the above URLs should work with Chrome, but you may need to add hosts
 # entries for other browsers
-#    127.0.0.1 oauth2-proxy.localhost
-#    127.0.0.1 httpbin.oauth2-proxy.localhost
-#    127.0.0.1 oauth2-proxy.oauth2-proxy.localhost
+#    127.0.0.1 oauth2-proxy.localhost:8080
+#    127.0.0.1 httpbin.oauth2-proxy.localhost:8080
+#    127.0.0.1 oauth2-proxy.oauth2-proxy.localhost:8080
 version: '3.0'
 services:
 
