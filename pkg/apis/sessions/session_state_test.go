@@ -16,6 +16,30 @@ func timePtr(t time.Time) *time.Time {
 	return &t
 }
 
+func TestCreatedAtNow(t *testing.T) {
+	g := NewWithT(t)
+	ss := &SessionState{}
+
+	now := time.Unix(1234567890, 0)
+	ss.Clock.Set(now)
+
+	ss.CreatedAtNow()
+	g.Expect(*ss.CreatedAt).To(Equal(now))
+}
+
+func TestExpiresIn(t *testing.T) {
+	g := NewWithT(t)
+	ss := &SessionState{}
+
+	now := time.Unix(1234567890, 0)
+	ss.Clock.Set(now)
+
+	ttl := time.Duration(743) * time.Second
+	ss.ExpiresIn(ttl)
+
+	g.Expect(*ss.ExpiresOn).To(Equal(ss.CreatedAt.Add(ttl)))
+}
+
 func TestString(t *testing.T) {
 	g := NewWithT(t)
 	created, err := time.Parse(time.RFC3339, "2000-01-01T00:00:00Z")
@@ -153,6 +177,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			CreatedAt:         &created,
 			ExpiresOn:         &expires,
 			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			Nonce:             []byte("abcdef1234567890abcdef1234567890"),
 		},
 		"No ExpiresOn": {
 			Email:             "username@example.com",
@@ -162,6 +187,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			IDToken:           "IDToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
 			CreatedAt:         &created,
 			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			Nonce:             []byte("abcdef1234567890abcdef1234567890"),
 		},
 		"No PreferredUsername": {
 			Email:        "username@example.com",
@@ -171,6 +197,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			CreatedAt:    &created,
 			ExpiresOn:    &expires,
 			RefreshToken: "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			Nonce:        []byte("abcdef1234567890abcdef1234567890"),
 		},
 		"Minimal session": {
 			User:         "username",
@@ -194,6 +221,7 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 			CreatedAt:         &created,
 			ExpiresOn:         &expires,
 			RefreshToken:      "RefreshToken.12349871293847fdsaihf9238h4f91h8fr.1349f831y98fd7",
+			Nonce:             []byte("abcdef1234567890abcdef1234567890"),
 			Groups:            []string{"group-a", "group-b"},
 		},
 	}
@@ -236,22 +264,6 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 					}
 				})
 			}
-
-			t.Run("Mixed cipher types cause errors", func(t *testing.T) {
-				for testName, ss := range testCases {
-					t.Run(testName, func(t *testing.T) {
-						cfbEncoded, err := ss.EncodeSessionState(cfb, false)
-						assert.NoError(t, err)
-						_, err = DecodeSessionState(cfbEncoded, gcm, false)
-						assert.Error(t, err)
-
-						gcmEncoded, err := ss.EncodeSessionState(gcm, false)
-						assert.NoError(t, err)
-						_, err = DecodeSessionState(gcmEncoded, cfb, false)
-						assert.Error(t, err)
-					})
-				}
-			})
 		})
 	}
 }

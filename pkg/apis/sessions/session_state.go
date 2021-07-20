@@ -2,14 +2,13 @@ package sessions
 
 import (
 	"bytes"
-	"errors"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"reflect"
 	"time"
-	"unicode/utf8"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/pierrec/lz4"
 	"github.com/vmihailenco/msgpack/v4"
@@ -24,15 +23,70 @@ type SessionState struct {
 	IDToken      string `msgpack:"it,omitempty"`
 	RefreshToken string `msgpack:"rt,omitempty"`
 
+	Nonce []byte `msgpack:"n,omitempty"`
+
 	Email             string   `msgpack:"e,omitempty"`
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+
+	// Internal helpers, not serialized
+	Clock clock.Clock `msgpack:"-"`
+	Lock  Lock        `msgpack:"-"`
+}
+
+func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {
+	if s.Lock == nil {
+		s.Lock = &NoOpLock{}
+	}
+	return s.Lock.Obtain(ctx, expiration)
+}
+
+func (s *SessionState) RefreshLock(ctx context.Context, expiration time.Duration) error {
+	if s.Lock == nil {
+		s.Lock = &NoOpLock{}
+	}
+	return s.Lock.Refresh(ctx, expiration)
+}
+
+func (s *SessionState) ReleaseLock(ctx context.Context) error {
+	if s.Lock == nil {
+		s.Lock = &NoOpLock{}
+	}
+	return s.Lock.Release(ctx)
+}
+
+func (s *SessionState) PeekLock(ctx context.Context) (bool, error) {
+	if s.Lock == nil {
+		s.Lock = &NoOpLock{}
+	}
+	return s.Lock.Peek(ctx)
+}
+
+// CreatedAtNow sets a SessionState's CreatedAt to now
+func (s *SessionState) CreatedAtNow() {
+	now := s.Clock.Now()
+	s.CreatedAt = &now
+}
+
+// SetExpiresOn sets an expiration
+func (s *SessionState) SetExpiresOn(exp time.Time) {
+	s.ExpiresOn = &exp
+}
+
+// ExpiresIn sets an expiration a certain duration from CreatedAt.
+// CreatedAt will be set to time.Now if it is unset.
+func (s *SessionState) ExpiresIn(d time.Duration) {
+	if s.CreatedAt == nil {
+		s.CreatedAtNow()
+	}
+	exp := s.CreatedAt.Add(d)
+	s.ExpiresOn = &exp
 }
 
 // IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
-	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(time.Now()) {
+	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(s.Clock.Now()) {
 		return true
 	}
 	return false
@@ -41,7 +95,7 @@ func (s *SessionState) IsExpired() bool {
 // Age returns the age of a session
 func (s *SessionState) Age() time.Duration {
 	if s.CreatedAt != nil && !s.CreatedAt.IsZero() {
-		return time.Now().Truncate(time.Second).Sub(*s.CreatedAt)
+		return s.Clock.Now().Truncate(time.Second).Sub(*s.CreatedAt)
 	}
 	return 0
 }
@@ -100,6 +154,11 @@ func (s *SessionState) GetClaim(claim string) []string {
 	}
 }
 
+// CheckNonce compares the Nonce against a potential hash of it
+func (s *SessionState) CheckNonce(hashed string) bool {
+	return encryption.CheckNonce(s.Nonce, hashed)
+}
+
 // EncodeSessionState returns an encrypted, lz4 compressed, MessagePack encoded session
 func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([]byte, error) {
 	packed, err := msgpack.Marshal(s)
@@ -137,11 +196,6 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 	err = msgpack.Unmarshal(packed, &ss)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling data to session state: %w", err)
-	}
-
-	err = ss.validate()
-	if err != nil {
-		return nil, err
 	}
 
 	return &ss, nil
@@ -196,36 +250,4 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 	}
 
 	return payload, nil
-}
-
-// validate ensures the decoded session is non-empty and contains valid data
-//
-// Non-empty check is needed due to ensure the non-authenticated AES-CFB
-// decryption doesn't result in garbage data that collides with a valid
-// MessagePack header bytes (which MessagePack will unmarshal to an empty
-// default SessionState). <1% chance, but observed with random test data.
-//
-// UTF-8 check ensures the strings are valid and not raw bytes overloaded
-// into Latin-1 encoding. The occurs when legacy unencrypted fields are
-// decrypted with AES-CFB which results in random bytes.
-func (s *SessionState) validate() error {
-	for _, field := range []string{
-		s.User,
-		s.Email,
-		s.PreferredUsername,
-		s.AccessToken,
-		s.IDToken,
-		s.RefreshToken,
-	} {
-		if !utf8.ValidString(field) {
-			return errors.New("invalid non-UTF8 field in session")
-		}
-	}
-
-	empty := new(SessionState)
-	if reflect.DeepEqual(*s, *empty) {
-		return errors.New("invalid empty session unmarshalled")
-	}
-
-	return nil
 }

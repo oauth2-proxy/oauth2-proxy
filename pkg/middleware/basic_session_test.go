@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +26,8 @@ var _ = Describe("Basic Auth Session Suite", func() {
 
 		type basicAuthSessionLoaderTableInput struct {
 			authorizationHeader string
+			preferEmail         bool
+			sessionGroups       []string
 			existingSession     *sessionsapi.SessionState
 			expectedSession     *sessionsapi.SessionState
 		}
@@ -40,8 +41,7 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				// Set up the request with the authorization header and a request scope
 				req := httptest.NewRequest("", "/", nil)
 				req.Header.Set("Authorization", in.authorizationHeader)
-				contextWithScope := context.WithValue(req.Context(), requestScopeKey, scope)
-				req = req.WithContext(contextWithScope)
+				req = middlewareapi.AddRequestScope(req, scope)
 
 				rw := httptest.NewRecorder()
 
@@ -56,8 +56,8 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				// Create the handler with a next handler that will capture the session
 				// from the scope
 				var gotSession *sessionsapi.SessionState
-				handler := NewBasicAuthSessionLoader(validator)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					gotSession = r.Context().Value(requestScopeKey).(*middlewareapi.RequestScope).Session
+				handler := NewBasicAuthSessionLoader(validator, in.sessionGroups, in.preferEmail)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					gotSession = middlewareapi.GetRequestScope(r).Session
 				}))
 				handler.ServeHTTP(rw, req)
 
@@ -112,6 +112,18 @@ var _ = Describe("Basic Auth Session Suite", func() {
 				authorizationHeader: "Basic YWRtaW46QWRtMW4xc3RyJHQwcg==",
 				existingSession:     nil,
 				expectedSession:     &sessionsapi.SessionState{User: "admin"},
+			}),
+			Entry("Basic with groups", basicAuthSessionLoaderTableInput{
+				authorizationHeader: "Basic YWRtaW46QWRtMW4xc3RyJHQwcg==",
+				sessionGroups:       []string{"a", "b"},
+				existingSession:     nil,
+				expectedSession:     &sessionsapi.SessionState{User: "admin", Groups: []string{"a", "b"}},
+			}),
+			Entry("Basic Base64(user1:<user1Password>) (with PreferEmailToUser)", basicAuthSessionLoaderTableInput{
+				authorizationHeader: "Basic dXNlcjE6VXNFck9uM1A0NTU=",
+				preferEmail:         true,
+				existingSession:     nil,
+				expectedSession:     &sessionsapi.SessionState{User: "user1", Email: "user1"},
 			}),
 		)
 	})

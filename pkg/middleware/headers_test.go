@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
@@ -31,8 +30,7 @@ var _ = Describe("Headers Suite", func() {
 
 			// Set up the request with a request scope
 			req := httptest.NewRequest("", "/", nil)
-			contextWithScope := context.WithValue(req.Context(), requestScopeKey, scope)
-			req = req.WithContext(contextWithScope)
+			req = middlewareapi.AddRequestScope(req, scope)
 			req.Header = in.initialHeaders.Clone()
 
 			rw := httptest.NewRecorder()
@@ -57,11 +55,11 @@ var _ = Describe("Headers Suite", func() {
 		Entry("with no configured headers", headersTableInput{
 			headers: []options.Header{},
 			initialHeaders: http.Header{
-				"foo": []string{"bar", "baz"},
+				"Foo": []string{"bar", "baz"},
 			},
 			session: &sessionsapi.SessionState{},
 			expectedHeaders: http.Header{
-				"foo": []string{"bar", "baz"},
+				"Foo": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),
@@ -79,13 +77,13 @@ var _ = Describe("Headers Suite", func() {
 				},
 			},
 			initialHeaders: http.Header{
-				"foo": []string{"bar", "baz"},
+				"Foo": []string{"bar", "baz"},
 			},
 			session: &sessionsapi.SessionState{
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"foo":   []string{"bar", "baz"},
+				"Foo":   []string{"bar,baz"},
 				"Claim": []string{"IDToken-1234"},
 			},
 			expectedErr: "",
@@ -135,7 +133,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
@@ -178,7 +176,7 @@ var _ = Describe("Headers Suite", func() {
 			},
 			session: nil,
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz"},
+				"Claim": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),
@@ -218,8 +216,7 @@ var _ = Describe("Headers Suite", func() {
 
 			// Set up the request with a request scope
 			req := httptest.NewRequest("", "/", nil)
-			contextWithScope := context.WithValue(req.Context(), requestScopeKey, scope)
-			req = req.WithContext(contextWithScope)
+			req = middlewareapi.AddRequestScope(req, scope)
 
 			rw := httptest.NewRecorder()
 			for key, values := range in.initialHeaders {
@@ -252,10 +249,46 @@ var _ = Describe("Headers Suite", func() {
 			},
 			session: &sessionsapi.SessionState{},
 			expectedHeaders: http.Header{
-				"Foo": []string{"bar", "baz"},
+				"Foo": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),
+
+		Entry("with flattenHeaders (set-cookie and any other)", headersTableInput{
+			headers: []options.Header{
+				{
+					Name: "Set-Cookie",
+					Values: []options.HeaderValue{
+						{
+							SecretSource: &options.SecretSource{
+								Value: []byte("_oauth2_proxy=ey123123123"),
+							},
+						},
+					},
+				},
+				{
+					Name: "X-Auth-User",
+					Values: []options.HeaderValue{
+						{
+							SecretSource: &options.SecretSource{
+								Value: []byte("oauth_user"),
+							},
+						},
+					},
+				},
+			},
+			initialHeaders: http.Header{
+				"Set-Cookie":  []string{"cookie1=value1", "cookie2=value2"},
+				"X-Auth-User": []string{"oauth_user_1"},
+			},
+
+			expectedHeaders: http.Header{
+				"Set-Cookie":  []string{"cookie1=value1", "cookie2=value2", "_oauth2_proxy=ey123123123"},
+				"X-Auth-User": []string{"oauth_user_1,oauth_user"},
+			},
+			expectedErr: "",
+		}),
+
 		Entry("with a claim valued header", headersTableInput{
 			headers: []options.Header{
 				{
@@ -276,7 +309,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Foo":   []string{"bar", "baz"},
+				"Foo":   []string{"bar,baz"},
 				"Claim": []string{"IDToken-1234"},
 			},
 			expectedErr: "",
@@ -301,7 +334,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
@@ -326,7 +359,7 @@ var _ = Describe("Headers Suite", func() {
 				IDToken: "IDToken-1234",
 			},
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz", "IDToken-1234"},
+				"Claim": []string{"bar,baz,IDToken-1234"},
 			},
 			expectedErr: "",
 		}),
@@ -348,7 +381,7 @@ var _ = Describe("Headers Suite", func() {
 			},
 			session: nil,
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz"},
+				"Claim": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),
@@ -371,7 +404,7 @@ var _ = Describe("Headers Suite", func() {
 			},
 			session: nil,
 			expectedHeaders: http.Header{
-				"Claim": []string{"bar", "baz"},
+				"Claim": []string{"bar,baz"},
 			},
 			expectedErr: "",
 		}),

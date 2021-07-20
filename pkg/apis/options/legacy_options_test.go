@@ -22,6 +22,7 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts.LegacyUpstreams.ProxyWebSockets = true
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
 			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file:///var/lib/website#/bar", "static://204"}
+			legacyOpts.LegacyProvider.ClientID = "oauth-proxy"
 
 			truth := true
 			staticCode := 204
@@ -105,6 +106,14 @@ var _ = Describe("Legacy Options", func() {
 			}
 
 			opts.InjectResponseHeaders = []Header{}
+
+			opts.Server = Server{
+				BindAddress: "127.0.0.1:4180",
+			}
+
+			opts.Providers[0].ClientID = "oauth-proxy"
+			opts.Providers[0].ID = "google=oauth-proxy"
+			opts.Providers[0].OIDCConfig.InsecureSkipNonce = true
 
 			converted, err := legacyOpts.ToOptions()
 			Expect(err).ToNot(HaveOccurred())
@@ -192,9 +201,9 @@ var _ = Describe("Legacy Options", func() {
 		invalidHTTPErrMsg := "could not parse upstream \":foo\": parse \":foo\": missing protocol scheme"
 
 		DescribeTable("convertLegacyUpstreams",
-			func(o *convertUpstreamsTableInput) {
+			func(in *convertUpstreamsTableInput) {
 				legacyUpstreams := LegacyUpstreams{
-					Upstreams:                     o.upstreamStrings,
+					Upstreams:                     in.upstreamStrings,
 					SSLUpstreamInsecureSkipVerify: skipVerify,
 					PassHostHeader:                passHostHeader,
 					ProxyWebSockets:               proxyWebSockets,
@@ -203,14 +212,14 @@ var _ = Describe("Legacy Options", func() {
 
 				upstreams, err := legacyUpstreams.convert()
 
-				if o.errMsg != "" {
+				if in.errMsg != "" {
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(o.errMsg))
+					Expect(err.Error()).To(Equal(in.errMsg))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				Expect(upstreams).To(ConsistOf(o.expectedUpstreams))
+				Expect(upstreams).To(ConsistOf(in.expectedUpstreams))
 			},
 			Entry("with no upstreams", &convertUpstreamsTableInput{
 				upstreamStrings:   []string{},
@@ -756,6 +765,176 @@ var _ = Describe("Legacy Options", func() {
 				expectedResponseHeaders: []Header{
 					authorizationHeader,
 				},
+			}),
+		)
+	})
+
+	Context("Legacy Servers", func() {
+		type legacyServersTableInput struct {
+			legacyServer          LegacyServer
+			expectedAppServer     Server
+			expectedMetricsServer Server
+		}
+
+		const (
+			insecureAddr        = "127.0.0.1:8080"
+			insecureMetricsAddr = ":9090"
+			secureAddr          = ":443"
+			secureMetricsAddr   = ":9443"
+			crtPath             = "tls.crt"
+			keyPath             = "tls.key"
+		)
+
+		var tlsConfig = &TLS{
+			Cert: &SecretSource{
+				FromFile: crtPath,
+			},
+			Key: &SecretSource{
+				FromFile: keyPath,
+			},
+		}
+
+		DescribeTable("should convert to app and metrics servers",
+			func(in legacyServersTableInput) {
+				appServer, metricsServer := in.legacyServer.convert()
+				Expect(appServer).To(Equal(in.expectedAppServer))
+				Expect(metricsServer).To(Equal(in.expectedMetricsServer))
+			},
+			Entry("with default options only starts app HTTP server", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:  insecureAddr,
+					HTTPSAddress: secureAddr,
+				},
+				expectedAppServer: Server{
+					BindAddress: insecureAddr,
+				},
+			}),
+			Entry("with TLS options specified only starts app HTTPS server", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:  insecureAddr,
+					HTTPSAddress: secureAddr,
+					TLSKeyFile:   keyPath,
+					TLSCertFile:  crtPath,
+				},
+				expectedAppServer: Server{
+					SecureBindAddress: secureAddr,
+					TLS:               tlsConfig,
+				},
+			}),
+			Entry("with metrics HTTP and HTTPS addresses", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:          insecureAddr,
+					HTTPSAddress:         secureAddr,
+					MetricsAddress:       insecureMetricsAddr,
+					MetricsSecureAddress: secureMetricsAddr,
+				},
+				expectedAppServer: Server{
+					BindAddress: insecureAddr,
+				},
+				expectedMetricsServer: Server{
+					BindAddress:       insecureMetricsAddr,
+					SecureBindAddress: secureMetricsAddr,
+				},
+			}),
+			Entry("with metrics HTTPS and tls cert/key", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:          insecureAddr,
+					HTTPSAddress:         secureAddr,
+					MetricsAddress:       insecureMetricsAddr,
+					MetricsSecureAddress: secureMetricsAddr,
+					MetricsTLSKeyFile:    keyPath,
+					MetricsTLSCertFile:   crtPath,
+				},
+				expectedAppServer: Server{
+					BindAddress: insecureAddr,
+				},
+				expectedMetricsServer: Server{
+					BindAddress:       insecureMetricsAddr,
+					SecureBindAddress: secureMetricsAddr,
+					TLS:               tlsConfig,
+				},
+			}),
+		)
+	})
+
+	Context("Legacy Providers", func() {
+		type convertProvidersTableInput struct {
+			legacyProvider    LegacyProvider
+			expectedProviders Providers
+			errMsg            string
+		}
+
+		// Non defaults for these options
+		clientID := "abcd"
+
+		defaultProvider := Provider{
+			ID:       "google=" + clientID,
+			ClientID: clientID,
+			Type:     "google",
+		}
+		defaultLegacyProvider := LegacyProvider{
+			ClientID:     clientID,
+			ProviderType: "google",
+		}
+
+		displayNameProvider := Provider{
+			ID:       "displayName",
+			Name:     "displayName",
+			ClientID: clientID,
+			Type:     "google",
+		}
+
+		displayNameLegacyProvider := LegacyProvider{
+			ClientID:     clientID,
+			ProviderName: "displayName",
+			ProviderType: "google",
+		}
+
+		internalConfigProvider := Provider{
+			ID:       "google=" + clientID,
+			ClientID: clientID,
+			Type:     "google",
+			GoogleConfig: GoogleOptions{
+				AdminEmail:         "email@email.com",
+				ServiceAccountJSON: "test.json",
+				Groups:             []string{"1", "2"},
+			},
+		}
+
+		internalConfigLegacyProvider := LegacyProvider{
+			ClientID:                 clientID,
+			ProviderType:             "google",
+			GoogleAdminEmail:         "email@email.com",
+			GoogleServiceAccountJSON: "test.json",
+			GoogleGroups:             []string{"1", "2"},
+		}
+		DescribeTable("convertLegacyProviders",
+			func(in *convertProvidersTableInput) {
+				providers, err := in.legacyProvider.convert()
+
+				if in.errMsg != "" {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(in.errMsg))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				Expect(providers).To(ConsistOf(in.expectedProviders))
+			},
+			Entry("with default provider", &convertProvidersTableInput{
+				legacyProvider:    defaultLegacyProvider,
+				expectedProviders: Providers{defaultProvider},
+				errMsg:            "",
+			}),
+			Entry("with provider display name", &convertProvidersTableInput{
+				legacyProvider:    displayNameLegacyProvider,
+				expectedProviders: Providers{displayNameProvider},
+				errMsg:            "",
+			}),
+			Entry("with internal provider config", &convertProvidersTableInput{
+				legacyProvider:    internalConfigLegacyProvider,
+				expectedProviders: Providers{internalConfigProvider},
+				errMsg:            "",
 			}),
 		)
 	})

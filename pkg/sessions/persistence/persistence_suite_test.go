@@ -10,6 +10,8 @@ import (
 
 func TestPersistenceSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Persistence")
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -37,8 +36,7 @@ type SessionStore struct {
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
 	if ss.CreatedAt == nil || ss.CreatedAt.IsZero() {
-		now := time.Now()
-		ss.CreatedAt = &now
+		ss.CreatedAtNow()
 	}
 	value, err := s.cookieForSession(ss)
 	if err != nil {
@@ -220,12 +218,12 @@ func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {
 	if len(cookies) == 0 {
 		return nil, fmt.Errorf("could not find cookie %s", cookieName)
 	}
-	return joinCookies(cookies)
+	return joinCookies(cookies, cookieName)
 }
 
 // joinCookies takes a slice of cookies from the request and reconstructs the
 // full session cookie
-func joinCookies(cookies []*http.Cookie) (*http.Cookie, error) {
+func joinCookies(cookies []*http.Cookie, cookieName string) (*http.Cookie, error) {
 	if len(cookies) == 0 {
 		return nil, fmt.Errorf("list of cookies must be > 0")
 	}
@@ -236,7 +234,7 @@ func joinCookies(cookies []*http.Cookie) (*http.Cookie, error) {
 	for i := 1; i < len(cookies); i++ {
 		c.Value += cookies[i].Value
 	}
-	c.Name = strings.TrimRight(c.Name, "_0")
+	c.Name = cookieName
 	return c, nil
 }
 

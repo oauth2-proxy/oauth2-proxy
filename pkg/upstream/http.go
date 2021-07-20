@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mbland/hmacauth"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/yhat/wsutil"
 )
@@ -76,7 +77,12 @@ type httpUpstreamProxy struct {
 // ServeHTTP proxies requests to the upstream provider while signing the
 // request headers
 func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rw.Header().Set("GAP-Upstream-Address", h.upstream)
+	scope := middleware.GetRequestScope(req)
+	// If scope is nil, this will panic.
+	// A scope should always be injected before this handler is called.
+	scope.Upstream = h.upstream
+
+	// TODO (@NickMeves) - Deprecate GAP-Signature & remove GAP-Auth
 	if h.auth != nil {
 		req.Header.Set("GAP-Auth", rw.Header().Get("GAP-Auth"))
 		h.auth.SignRequest(req)
@@ -110,11 +116,11 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 		}
 	}
 
-	// Set the request director based on the PassHostHeader option
+	// Ensure we always pass the original request path
+	setProxyDirector(proxy)
+
 	if upstream.PassHostHeader != nil && !*upstream.PassHostHeader {
 		setProxyUpstreamHostHeader(proxy, target)
-	} else {
-		setProxyDirector(proxy)
 	}
 
 	// Set the error handler so that upstream connection failures render the
@@ -131,10 +137,7 @@ func setProxyUpstreamHostHeader(proxy *httputil.ReverseProxy, target *url.URL) {
 	director := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		director(req)
-		// use RequestURI so that we aren't unescaping encoded slashes in the request path
 		req.Host = target.Host
-		req.URL.Opaque = req.RequestURI
-		req.URL.RawQuery = ""
 	}
 }
 
@@ -147,6 +150,7 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 		// use RequestURI so that we aren't unescaping encoded slashes in the request path
 		req.URL.Opaque = req.RequestURI
 		req.URL.RawQuery = ""
+		req.URL.ForceQuery = false
 	}
 }
 
