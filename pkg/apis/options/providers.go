@@ -27,6 +27,8 @@ type Provider struct {
 	BitbucketConfig BitbucketOptions `json:"bitbucketConfig,omitempty"`
 	// GitHubConfig holds all configurations for GitHubC provider.
 	GitHubConfig GitHubOptions `json:"githubConfig,omitempty"`
+	// GiteeOptions holds all configurations for GiteeC provider.
+	GiteeOptions GiteeOptions `json:"giteeConfig,omitempty"`
 	// GitLabConfig holds all configurations for GitLab provider.
 	GitLabConfig GitLabOptions `json:"gitlabConfig,omitempty"`
 	// GoogleConfig holds all configurations for Google provider.
@@ -98,6 +100,8 @@ type BitbucketOptions struct {
 	// Repository sets restrict logins to user with access to this repository
 	Repository string `json:"repository,omitempty"`
 }
+
+type GiteeOptions GitHubOptions
 
 type GitHubOptions struct {
 	// Org sets restrict logins to members of this organisation

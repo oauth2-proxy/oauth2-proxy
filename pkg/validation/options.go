@@ -242,6 +242,10 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.SetOrgTeam(o.Providers[0].GitHubConfig.Org, o.Providers[0].GitHubConfig.Team)
 		p.SetRepo(o.Providers[0].GitHubConfig.Repo, o.Providers[0].GitHubConfig.Token)
 		p.SetUsers(o.Providers[0].GitHubConfig.Users)
+	case *providers.GiteeProvider:
+		p.SetOrg(o.Providers[0].GiteeOptions.Org)
+		p.SetRepo(o.Providers[0].GiteeOptions.Repo, o.Providers[0].GiteeOptions.Token)
+		p.SetUsers(o.Providers[0].GiteeOptions.Users)
 	case *providers.KeycloakProvider:
 		// Backwards compatibility with `--keycloak-group` option
 		if len(o.Providers[0].KeycloakConfig.Groups) > 0 {

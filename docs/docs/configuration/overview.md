@@ -95,7 +95,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
 | `--custom-templates-dir` | string | path to custom html templates | |
-| `--custom-sign-in-logo` | string | path to an custom image for the sign_in page logo. Use \"-\" to disable default logo. |
+| `--custom-sign-in-logo` | string | path to an custom image for the sign_in page logo. Use \"-\" to disable default logo. ||
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
@@ -110,6 +110,10 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--github-repo` | string | restrict logins to collaborators of this repository formatted as `orgname/repo` | |
 | `--github-token` | string | the token to use when verifying repository collaborators (must have push access to the repository) | |
 | `--github-user` | string \| list | To allow users to login by username even if they do not belong to the specified org and team or collaborators | |
+| `--gitee-org` | string | restrict logins to members of this organisation | |
+| `--gitee-repo` | string | restrict logins to collaborators of this repository formatted as `orgname/repo` | |
+| `--gitee-token` | string | the token to use when verifying repository collaborators (must have push access to the repository) | |
+| `--gitee-user` | string \| list | To allow users to login by username even if they do not belong to the specified org and team or collaborators | |
 | `--gitlab-group` | string \| list | restrict logins to members of any of these groups (slug), separated by a comma | |
 | `--gitlab-projects` | string \| list | restrict logins to members of any of these projects (may be given multiple times) formatted as `orgname/repo=accesslevel`. Access level should be a value matching [Gitlab access levels](https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent | |
 | `--google-admin-email` | string | the google admin to impersonate for api calls | |
@@ -144,7 +148,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--profile-url` | string | Profile access endpoint | |
 | `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `--provider` | string | OAuth provider | google |
-| `--provider-ca-file` |  string \| list |  Paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead. |
+| `--provider-ca-file` |  string \| list |  Paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead. ||
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |

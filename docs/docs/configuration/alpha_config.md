@@ -200,6 +200,20 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | `group` | _[]string_ | Group sets restrict logins to members of this group |
 | `projects` | _[]string_ | Projects restricts logins to members of any of these projects |
 
+### GiteeOptions
+
+(**Appears on:** [Provider](#provider))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `org` | _string_ | Org sets restrict logins to members of this organisation |
+| `team` | _string_ | Team sets restrict logins to members of this team |
+| `repo` | _string_ | Repo sets restrict logins to collaborators of this repository |
+| `token` | _string_ | Token is the token to use when verifying repository collaborators<br/>it must have push access to the repository |
+| `users` | _[]string_ | Users allows users with these usernames to login<br/>even if they do not belong to the specified org and team or collaborators |
+
 ### GoogleOptions
 
 (**Appears on:** [Provider](#provider))
@@ -297,6 +311,7 @@ Provider holds all configuration for a single provider
 | `ADFSConfig` | _[ADFSOptions](#adfsoptions)_ | ADFSConfig holds all configurations for ADFS provider. |
 | `bitbucketConfig` | _[BitbucketOptions](#bitbucketoptions)_ | BitbucketConfig holds all configurations for Bitbucket provider. |
 | `githubConfig` | _[GitHubOptions](#githuboptions)_ | GitHubConfig holds all configurations for GitHubC provider. |
+| `giteeConfig` | _[GiteeOptions](#giteeoptions)_ | GiteeOptions holds all configurations for GiteeC provider. |
 | `gitlabConfig` | _[GitLabOptions](#gitlaboptions)_ | GitLabConfig holds all configurations for GitLab provider. |
 | `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
