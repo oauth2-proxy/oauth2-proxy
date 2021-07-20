@@ -478,6 +478,10 @@ type LegacyProvider struct {
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
 	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
 	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
+	GiteeOrg                 string   `flag:"gitee-org" cfg:"gitee_org"`
+	GiteeRepo                string   `flag:"gitee-repo" cfg:"gitee_repo"`
+	GiteeToken               string   `flag:"gitee-token" cfg:"gitee_token"`
+	GiteeUsers               []string `flag:"gitee-user" cfg:"gitee_users"`
 	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
 	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
 	GitLabProjects           []string `flag:"gitlab-project" cfg:"gitlab_projects"`
@@ -526,6 +530,10 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("github-team", "", "restrict logins to members of this team")
 	flagSet.String("github-repo", "", "restrict logins to collaborators of this repository")
 	flagSet.String("github-token", "", "the token to use when verifying repository collaborators (must have push access to the repository)")
+	flagSet.String("gitee-org", "", "restrict gitee logins to members of this organisation")
+	flagSet.String("gitee-repo", "", "restrict gitee logins to collaborators of this repository")
+	flagSet.String("gitee-token", "", "the gitee token to use when verifying repository collaborators (must have push access to the repository)")
+	flagSet.StringSlice("gitee-user", []string{}, "allow gitee users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project=accesslevel`). Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent")
@@ -655,6 +663,13 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Repo:  l.GitHubRepo,
 			Token: l.GitHubToken,
 			Users: l.GitHubUsers,
+		}
+	case "gitee":
+		provider.GiteeOptions = GiteeOptions{
+			Org:   l.GiteeOrg,
+			Repo:  l.GiteeRepo,
+			Token: l.GiteeToken,
+			Users: l.GiteeUsers,
 		}
 	case "keycloak":
 		provider.KeycloakConfig = KeycloakOptions{
