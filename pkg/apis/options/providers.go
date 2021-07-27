@@ -161,6 +161,8 @@ type OIDCOptions struct {
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
+	// default set to false
+	ForceSessionEnrichment bool `json:"forceSessionEnrichment,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -188,6 +190,7 @@ func providerDefaults() Providers {
 				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   providers.OIDCEmailClaim,
 				GroupsClaim:                  providers.OIDCGroupsClaim,
+				ForceSessionEnrichment:       false,
 			},
 		},
 	}

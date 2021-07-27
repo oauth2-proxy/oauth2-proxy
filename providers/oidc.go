@@ -76,7 +76,7 @@ func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionSta
 	}
 
 	// Try to get missing emails or groups from a profileURL
-	if s.Email == "" || s.Groups == nil {
+	if s.Email == "" || s.Groups == nil || p.ForceSessionEnrichment {
 		err := p.enrichFromProfileURL(ctx, s)
 		if err != nil {
 			logger.Errorf("Warning: Profile URL request failed: %v", err)
@@ -107,7 +107,7 @@ func (p *OIDCProvider) enrichFromProfileURL(ctx context.Context, s *sessions.Ses
 		s.Email = email
 	}
 
-	if len(s.Groups) > 0 {
+	if len(s.Groups) > 0 && !p.ForceSessionEnrichment {
 		return nil
 	}
 	for _, group := range coerceArray(respJSON, p.GroupsClaim) {

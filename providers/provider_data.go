@@ -40,10 +40,11 @@ type ProviderData struct {
 	Prompt           string
 
 	// Common OIDC options for any OIDC-based providers to consume
-	AllowUnverifiedEmail bool
-	EmailClaim           string
-	GroupsClaim          string
-	Verifier             *oidc.IDTokenVerifier
+	AllowUnverifiedEmail   bool
+	EmailClaim             string
+	GroupsClaim            string
+	ForceSessionEnrichment bool
+	Verifier               *oidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
