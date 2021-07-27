@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"golang.org/x/oauth2"
@@ -122,6 +122,7 @@ type OIDCClaims struct {
 	Email    string   `json:"-"`
 	Groups   []string `json:"-"`
 	Verified *bool    `json:"email_verified"`
+	Nonce    string   `json:"nonce"`
 
 	raw map[string]interface{}
 }
@@ -190,6 +191,18 @@ func (p *ProviderData) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
 	claims.Groups = p.extractGroups(claims.raw)
 
 	return claims, nil
+}
+
+// checkNonce compares the session's nonce with the IDToken's nonce claim
+func (p *ProviderData) checkNonce(s *sessions.SessionState, idToken *oidc.IDToken) error {
+	claims, err := p.getClaims(idToken)
+	if err != nil {
+		return fmt.Errorf("id_token claims extraction failed: %v", err)
+	}
+	if !s.CheckNonce(claims.Nonce) {
+		return errors.New("id_token nonce claim does not match the session nonce")
+	}
+	return nil
 }
 
 // extractGroups extracts groups from a claim to a list in a type safe manner.

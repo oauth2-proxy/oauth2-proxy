@@ -19,6 +19,8 @@ import (
 
 func TestSessionStore(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
+	logger.SetErrOutput(GinkgoWriter)
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Cookie SessionStore")
 }

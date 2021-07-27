@@ -163,23 +163,22 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		return nil, err
 	}
 
-	created := time.Now()
-	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
-
-	return &sessions.SessionState{
+	ss := &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
 		Email:        c.Email,
 		User:         c.Subject,
-	}, nil
+	}
+	ss.CreatedAtNow()
+	ss.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
+
+	return ss, nil
 }
 
 // EnrichSession checks the listed Google Groups configured and adds any
 // that the user is a member of to session.Groups.
-func (p *GoogleProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionState) error {
 	// TODO (@NickMeves) - Move to pure EnrichSession logic and stop
 	// reusing legacy `groupValidator`.
 	//
@@ -266,14 +265,13 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 	return false
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
-func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
+// RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
+func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.RefreshToken == "" {
 		return false, nil
 	}
 
-	newToken, newIDToken, duration, err := p.redeemRefreshToken(ctx, s.RefreshToken)
+	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
 		return false, err
 	}
@@ -286,26 +284,20 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 
-	origExpiration := s.ExpiresOn
-	expires := time.Now().Add(duration).Truncate(time.Second)
-	s.AccessToken = newToken
-	s.IDToken = newIDToken
-	s.ExpiresOn = &expires
-	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
 	return true, nil
 }
 
-func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken string) (token string, idToken string, expires time.Duration, err error) {
+func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	// https://developers.google.com/identity/protocols/OAuth2WebServer#refresh
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return err
 	}
 
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", clientSecret)
-	params.Add("refresh_token", refreshToken)
+	params.Add("refresh_token", s.RefreshToken)
 	params.Add("grant_type", "refresh_token")
 
 	var data struct {
@@ -322,11 +314,14 @@ func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken st
 		Do().
 		UnmarshalInto(&data)
 	if err != nil {
-		return "", "", 0, err
+		return err
 	}
 
-	token = data.AccessToken
-	idToken = data.IDToken
-	expires = time.Duration(data.ExpiresIn) * time.Second
-	return
+	s.AccessToken = data.AccessToken
+	s.IDToken = data.IDToken
+
+	s.CreatedAtNow()
+	s.ExpiresIn(time.Duration(data.ExpiresIn) * time.Second)
+
+	return nil
 }

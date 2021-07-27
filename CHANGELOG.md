@@ -4,6 +4,179 @@
 
 ## Important Notes
 
+- [#1086](https://github.com/oauth2-proxy/oauth2-proxy/pull/1086) The extra validation to protect invalid session
+  deserialization from v6.0.0 (only) has been removed to improve performance. If you are on v6.0.0, either upgrade
+  to a version before this first and allow legacy sessions to expire gracefully or change your `cookie-secret`
+  value and force all sessions to reauthenticate.
+
+## Breaking Changes
+
+## Changes since v7.1.3
+
+- [#1264](https://github.com/oauth2-proxy/oauth2-proxy/pull/1264) Update go-oidc to v3 (@NickMeves)
+- [#1233](https://github.com/oauth2-proxy/oauth2-proxy/pull/1233) Extend email-domain validation with sub-domain capability (@morarucostel)
+- [#1060](https://github.com/oauth2-proxy/oauth2-proxy/pull/1060) Implement RewriteTarget to allow requests to be rewritten before proxying to upstream servers (@JoelSpeed)
+- [#1086](https://github.com/oauth2-proxy/oauth2-proxy/pull/1086) Refresh sessions before token expiration if configured (@NickMeves)
+- [#1226](https://github.com/oauth2-proxy/oauth2-proxy/pull/1226) Move app redirection logic to its own package (@JoelSpeed)
+- [#1128](https://github.com/oauth2-proxy/oauth2-proxy/pull/1128) Use gorilla mux for OAuth Proxy routing (@JoelSpeed)
+- [#1238](https://github.com/oauth2-proxy/oauth2-proxy/pull/1238) Added ADFS provider (@samirachoadi)
+- [#1227](https://github.com/oauth2-proxy/oauth2-proxy/pull/1227) Fix Refresh Session not working for multiple cookies (@rishi1111)
+- [#1063](https://github.com/oauth2-proxy/oauth2-proxy/pull/1063) Add Redis lock feature to lock persistent sessions (@Bibob7)
+- [#1108](https://github.com/oauth2-proxy/oauth2-proxy/pull/1108) Add alternative ways to generate cookie secrets to docs (@JoelSpeed)
+- [#1142](https://github.com/oauth2-proxy/oauth2-proxy/pull/1142) Add pagewriter to upstream proxy (@JoelSpeed)
+- [#1181](https://github.com/oauth2-proxy/oauth2-proxy/pull/1181) Fix incorrect `cfg` name in show-debug-on-error flag (@iTaybb)
+- [#1207](https://github.com/oauth2-proxy/oauth2-proxy/pull/1207) Fix URI fragment handling on sign-in page, regression introduced in 7.1.0 (@tarvip)
+- [#1244](https://github.com/oauth2-proxy/oauth2-proxy/pull/1244) Update Alpine image version to 3.14 (@ahovgaard)
+
+
+# V7.1.3
+
+## Release Highlights
+
+- Fixed typos in the metrics server TLS config names
+
+## Important Notes
+
+- [#967](https://github.com/oauth2-proxy/oauth2-proxy/pull/967) `--insecure-oidc-skip-nonce` is currently `true` by default in case
+  any existing OIDC Identity Providers don't support it. The default will switch to `false` in a future version.
+
+## Breaking Changes
+
+## Changes since v7.1.2
+
+- [#1168](https://github.com/oauth2-proxy/oauth2-proxy/pull/1168) Fix incorrect `cfg` name in Metrics TLS flags (@NickMeves)
+- [#967](https://github.com/oauth2-proxy/oauth2-proxy/pull/967) Set & verify a nonce with OIDC providers (@NickMeves)
+- [#1136](https://github.com/oauth2-proxy/oauth2-proxy/pull/1136) Add clock package for better time mocking in tests (@NickMeves)
+- [#947](https://github.com/oauth2-proxy/oauth2-proxy/pull/947) Multiple provider ingestion and validation in alpha options (first stage: [#926](https://github.com/oauth2-proxy/oauth2-proxy/issues/926)) (@yanasega)
+
+# V7.1.2
+
+## Release Highlights
+
+- Metrics bind address initialisation was broken in config files
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
+## Changes since v7.1.1
+
+- [#1129](https://github.com/oauth2-proxy/oauth2-proxy/pull/1129) Rewrite OpenRedirect tests in ginkgo (@JoelSpeed)
+- [#1127](https://github.com/oauth2-proxy/oauth2-proxy/pull/1127) Remove unused fields from OAuthProxy (@JoelSpeed)
+- [#1141](https://github.com/oauth2-proxy/oauth2-proxy/pull/1141) Fix metrics server bind address initialization (@oliver006)
+
+# V7.1.1
+
+## Release Highlights
+
+- The metrics server could not be started in v7.1.0, this is now fixed.
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
+## Changes since v7.1.0
+
+- [#1133](https://github.com/oauth2-proxy/oauth2-proxy/pull/1133) Metrics server should be constructed with secure bind address for TLS (@JoelSpeed)
+
+# V7.1.0
+
+## Release Highlights
+
+- New improved design for sign in and error pages based on bulma framework
+- Refactored templates loading
+  - `robots.txt`, `sign_in.html` and `error.html` can now be provided individually in `--custom-templates-dir`
+  - If any of the above are not provided, defaults are used
+  - Defaults templates be found in [pkg/app/pagewriter](https://github.com/oauth2-proxy/oauth2-proxy/tree/v7.1.0/pkg/app/pagewriter)
+- Introduction of basic prometheus metrics
+- Introduction of Traefik based local testing/example environment
+- Support for request IDs to allow request co-ordination of log lines
+
+## Important Notes
+
+- [GHSA-652x-m2gr-hppm](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-652x-m2gr-hppm) GitLab group authorization stopped working in v7.0.0, the functionality has now been restored, please see the linked advisory for details
+- [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Upstream request signatures via `--signature-key` is
+  deprecated. Support will be removed completely in v8.0.0.
+- [1087](https://github.com/oauth2-proxy/oauth2-proxy/pull/1087) The default logging templates have been updated to include {{.RequestID}}
+- [#1117](https://github.com/oauth2-proxy/oauth2-proxy/pull/1117) The `--gcp-healthchecks` option is now deprecated. It will be removed in a future release.
+  - To migrate, you can change your application health checks for OAuth2 Proxy to point to
+    the `--ping-path` value.
+  - You can also migrate the user agent based health check using the `--ping-user-agent` option. Set it to `GoogleHC/1.0` to allow health checks on the path `/` from the Google health checker.
+
+## Breaking Changes
+
+N/A
+
+## Changes since v7.0.1
+
+- [GHSA-652x-m2gr-hppm](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-652x-m2gr-hppm) `--gitlab-group` GitLab Group Authorization config flag stopped working in v7.0.0 (@NickMeves, @papey)
+- [#1113](https://github.com/oauth2-proxy/oauth2-proxy/pull/1113) Panic with GitLab project repository auth (@piersharding)
+- [#1116](https://github.com/oauth2-proxy/oauth2-proxy/pull/1116) Reinstate preferEmailToUser behaviour for basic auth sessions (@JoelSpeed)
+- [#1115](https://github.com/oauth2-proxy/oauth2-proxy/pull/1115) Fix upstream proxy appending ? to requests (@JoelSpeed)
+- [#1117](https://github.com/oauth2-proxy/oauth2-proxy/pull/1117) Deprecate GCP HealthCheck option (@JoelSpeed)
+- [#1104](https://github.com/oauth2-proxy/oauth2-proxy/pull/1104) Allow custom robots text pages (@JoelSpeed)
+- [#1045](https://github.com/oauth2-proxy/oauth2-proxy/pull/1045) Ensure redirect URI always has a scheme (@JoelSpeed)
+- [#1103](https://github.com/oauth2-proxy/oauth2-proxy/pull/1103) Deprecate upstream request signatures (@NickMeves)
+- [#1087](https://github.com/oauth2-proxy/oauth2-proxy/pull/1087) Support Request ID in logging (@NickMeves)
+- [#914](https://github.com/oauth2-proxy/oauth2-proxy/pull/914) Extract email from id_token for azure provider when oidc is configured (@weinong)
+- [#1047](https://github.com/oauth2-proxy/oauth2-proxy/pull/1047) Refactor HTTP Server and add ServerGroup to handle graceful shutdown of multiple servers (@JoelSpeed)
+- [#1070](https://github.com/oauth2-proxy/oauth2-proxy/pull/1070) Refactor logging middleware to middleware package (@NickMeves)
+- [#1064](https://github.com/oauth2-proxy/oauth2-proxy/pull/1064) Add support for setting groups on session when using basic auth (@stefansedich)
+- [#1056](https://github.com/oauth2-proxy/oauth2-proxy/pull/1056) Add option for custom logos on the sign in page (@JoelSpeed)
+- [#1054](https://github.com/oauth2-proxy/oauth2-proxy/pull/1054) Update to Go 1.16 (@JoelSpeed)
+- [#1052](https://github.com/oauth2-proxy/oauth2-proxy/pull/1052) Update golangci-lint to latest version (v1.36.0) (@JoelSpeed)
+- [#1043](https://github.com/oauth2-proxy/oauth2-proxy/pull/1043) Refactor Sign In Page rendering and capture all page rendering code in pagewriter package (@JoelSpeed)
+- [#1029](https://github.com/oauth2-proxy/oauth2-proxy/pull/1029) Refactor error page rendering and allow debug messages on error (@JoelSpeed)
+- [#1028](https://github.com/oauth2-proxy/oauth2-proxy/pull/1028) Refactor templates, update theme and provide styled error pages (@JoelSpeed)
+- [#1039](https://github.com/oauth2-proxy/oauth2-proxy/pull/1039) Ensure errors in tests are logged to the GinkgoWriter (@JoelSpeed)
+- [#980](https://github.com/oauth2-proxy/oauth2-proxy/pull/980) Add Prometheus metrics endpoint (@neuralsandwich)
+- [#1023](https://github.com/oauth2-proxy/oauth2-proxy/pull/1023) Update docs on Traefik ForwardAuth support without the use of Traefik 'errors' middleware (@pcneo83)
+- [#1091](https://github.com/oauth2-proxy/oauth2-proxy/pull/1091) Add an example with Traefik (configuration without Traefik 'errors' middleware) (@fcollonval)
+
+# V7.0.1
+
+## Release Highlights
+
+- Fixed a bug that meant that flag ordering mattered
+- Fixed a bug where response headers for groups were not being flattened
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
+## Changes since v7.0.0
+
+- [#1020](https://github.com/oauth2-proxy/oauth2-proxy/pull/1020) Flatten array-based response headers (@NickMeves)
+- [#1026](https://github.com/oauth2-proxy/oauth2-proxy/pull/1026) Ensure config flags get parsed correctly when other flags precede them (@JoelSpeed)
+
+# V7.0.0
+
+## Release Highlights
+
+- Major internal improvements to provider interfaces
+- Added group authorization support
+- Improved support for external auth for Traefik
+- Introduced alpha configuration format to allow users to trial new configuration format and alpha features
+- GitLab provider now supports restricting to members of a project
+- Keycloak provider now supports restricting users to members of a set of groups
+- (Alpha) Flexible header configuration allowing user defined mapping of session claims to header values
+
+
+## Important Notes
+
+- [GHSA-4mf2-f3wh-gvf2](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-4mf2-f3wh-gvf2) The whitelist domain feature has been updated to fix a vulnerability that was identified, please see the linked advisory for details
 - [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Redirect URL generation will attempt secondary strategies
   in the priority chain if any fail the `IsValidRedirect` security check. Previously any failures fell back to `/`.
 - [#953](https://github.com/oauth2-proxy/oauth2-proxy/pull/953) Keycloak will now use `--profile-url` if set for the userinfo endpoint
@@ -66,6 +239,10 @@
 
 ## Changes since v6.1.1
 
+- [GHSA-4mf2-f3wh-gvf2](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-4mf2-f3wh-gvf2) Subdomain checking of whitelisted domains could allow unintended redirects (@NickMeves)
+- [#1002](https://github.com/oauth2-proxy/oauth2-proxy/pull/1002) Use logger for logging refreshed session in azure and gitlab provider (@Bibob7)
+- [#799](https://github.com/oauth2-proxy/oauth2-proxy/pull/799) Use comma separated multiple values for header (@lilida)
+- [#903](https://github.com/oauth2-proxy/oauth2-proxy/pull/903) Add docs and generated reference for Alpha configuration (@JoelSpeed)
 - [#995](https://github.com/oauth2-proxy/oauth2-proxy/pull/995) Add Security Policy (@JoelSpeed)
 - [#964](https://github.com/oauth2-proxy/oauth2-proxy/pull/964) Require `--reverse-proxy` true to trust `X-Forwareded-*` type headers (@NickMeves)
 - [#970](https://github.com/oauth2-proxy/oauth2-proxy/pull/970) Fix joined cookie name for those containing underline in the suffix (@peppered)
@@ -82,7 +259,7 @@
 - [#916](https://github.com/oauth2-proxy/oauth2-proxy/pull/916) Add AlphaOptions struct to prepare for alpha config loading (@JoelSpeed)
 - [#923](https://github.com/oauth2-proxy/oauth2-proxy/pull/923) Support TLS 1.3 (@aajisaka)
 - [#918](https://github.com/oauth2-proxy/oauth2-proxy/pull/918) Fix log header output (@JoelSpeed)
-- [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Validate provider type on startup.
+- [#911](https://github.com/oauth2-proxy/oauth2-proxy/pull/911) Validate provider type on startup. (@arcivanov)
 - [#906](https://github.com/oauth2-proxy/oauth2-proxy/pull/906) Set up v6.1.x versioned documentation as default documentation (@JoelSpeed)
 - [#905](https://github.com/oauth2-proxy/oauth2-proxy/pull/905) Remove v5 legacy sessions support (@NickMeves)
 - [#904](https://github.com/oauth2-proxy/oauth2-proxy/pull/904) Set `skip-auth-strip-headers` to `true` by default (@NickMeves)
@@ -110,6 +287,7 @@
 - [#829](https://github.com/oauth2-proxy/oauth2-proxy/pull/820) Rename test directory to testdata (@johejo)
 - [#819](https://github.com/oauth2-proxy/oauth2-proxy/pull/819) Improve CI (@johejo)
 - [#989](https://github.com/oauth2-proxy/oauth2-proxy/pull/989) Adapt isAjax to support mimetype lists (@rassie)
+- [#1013](https://github.com/oauth2-proxy/oauth2-proxy/pull/1013) Update alpine version to 3.13 (@nishanth-pinnapareddy)
 
 # v6.1.1
 

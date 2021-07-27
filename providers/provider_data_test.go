@@ -12,9 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	. "github.com/onsi/gomega"
 	"golang.org/x/oauth2"
 )
@@ -27,6 +28,7 @@ const (
 	oidcIssuer   = "https://issuer.example.com"
 	oidcClientID = "https://test.myapp.com"
 	oidcSecret   = "SuperSecret123456789"
+	oidcNonce    = "abcde12345edcba09876abcde12345ff"
 
 	failureTokenID = "this-id-fails-verification"
 )
@@ -53,6 +55,7 @@ var (
 		Groups:         []string{"test:a", "test:b"},
 		Roles:          []string{"test:c", "test:d"},
 		Verified:       &verified,
+		Nonce:          encryption.HashNonce([]byte(oidcNonce)),
 		StandardClaims: standardClaims,
 	}
 
@@ -96,6 +99,7 @@ type idTokenClaims struct {
 	Groups   interface{} `json:"groups,omitempty"`
 	Roles    interface{} `json:"roles,omitempty"`
 	Verified *bool       `json:"email_verified,omitempty"`
+	Nonce    string      `json:"nonce,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -343,6 +347,63 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			}
 			if ss != nil {
 				g.Expect(ss).To(Equal(tc.ExpectedSession))
+			}
+		})
+	}
+}
+
+func TestProviderData_checkNonce(t *testing.T) {
+	testCases := map[string]struct {
+		Session       *sessions.SessionState
+		IDToken       idTokenClaims
+		ExpectedError error
+	}{
+		"Nonces match": {
+			Session: &sessions.SessionState{
+				Nonce: []byte(oidcNonce),
+			},
+			IDToken:       defaultIDToken,
+			ExpectedError: nil,
+		},
+		"Nonces do not match": {
+			Session: &sessions.SessionState{
+				Nonce: []byte("WrongWrongWrong"),
+			},
+			IDToken:       defaultIDToken,
+			ExpectedError: errors.New("id_token nonce claim does not match the session nonce"),
+		},
+
+		"Missing nonce claim": {
+			Session: &sessions.SessionState{
+				Nonce: []byte(oidcNonce),
+			},
+			IDToken:       minimalIDToken,
+			ExpectedError: errors.New("id_token nonce claim does not match the session nonce"),
+		},
+	}
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			g := NewWithT(t)
+
+			provider := &ProviderData{
+				Verifier: oidc.NewVerifier(
+					oidcIssuer,
+					mockJWKS{},
+					&oidc.Config{ClientID: oidcClientID},
+				),
+			}
+
+			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			idToken, err := provider.Verifier.Verify(context.Background(), rawIDToken)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			err = provider.checkNonce(tc.Session, idToken)
+			if err != nil {
+				g.Expect(err).To(Equal(tc.ExpectedError))
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
 			}
 		})
 	}

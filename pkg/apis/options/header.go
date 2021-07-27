@@ -9,7 +9,7 @@ type Header struct {
 
 	// PreserveRequestValue determines whether any values for this header
 	// should be preserved for the request to the upstream server.
-	// This option only takes effet on injected request headers.
+	// This option only applies to injected request headers.
 	// Defaults to false (headers that match this header will be stripped).
 	PreserveRequestValue bool `json:"preserveRequestValue,omitempty"`
 

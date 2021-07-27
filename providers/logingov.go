@@ -3,9 +3,10 @@ package providers
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/url"
 	"time"
 
@@ -34,7 +35,13 @@ var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 func randSeq(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		max := big.NewInt(int64(len(letters)))
+		bigN, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			// This should never happen
+			panic(err)
+		}
+		b[i] = letters[bigN.Int64()]
 	}
 	return string(b)
 }
@@ -152,7 +159,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -207,21 +214,20 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, redirectURL, code string)
 		return nil, err
 	}
 
-	created := time.Now()
-	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
-
-	// Store the data that we found in the session state
-	return &sessions.SessionState{
+	session := &sessions.SessionState{
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,
-		CreatedAt:   &created,
-		ExpiresOn:   &expires,
 		Email:       email,
-	}, nil
+	}
+
+	session.CreatedAtNow()
+	session.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
+
+	return session, nil
 }
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
-func (p *LoginGovProvider) GetLoginURL(redirectURI, state string) string {
+func (p *LoginGovProvider) GetLoginURL(redirectURI, state, _ string) string {
 	extraParams := url.Values{}
 	if p.AcrValues == "" {
 		acr := "http://idmanagement.gov/ns/assurance/loa/1"

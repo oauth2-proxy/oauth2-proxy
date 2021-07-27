@@ -121,10 +121,9 @@ func (p *GitLabProvider) SetProjectScope() {
 	}
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
-func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
+// RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
+func (p *GitLabProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.RefreshToken == "" {
 		return false, nil
 	}
 
@@ -135,14 +134,14 @@ func (p *GitLabProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
-	fmt.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
+	logger.Printf("refreshed id token %s (expired on %s)\n", s, origExpiration)
 	return true, nil
 }
 
-func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
+func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return err
 	}
 
 	c := oauth2.Config{
@@ -164,13 +163,9 @@ func (p *GitLabProvider) redeemRefreshToken(ctx context.Context, s *sessions.Ses
 	if err != nil {
 		return fmt.Errorf("unable to update session: %v", err)
 	}
-	s.AccessToken = newSession.AccessToken
-	s.IDToken = newSession.IDToken
-	s.RefreshToken = newSession.RefreshToken
-	s.CreatedAt = newSession.CreatedAt
-	s.ExpiresOn = newSession.ExpiresOn
-	s.Email = newSession.Email
-	return
+	*s = *newSession
+
+	return nil
 }
 
 type gitlabUserInfo struct {
@@ -264,14 +259,16 @@ func (p *GitLabProvider) createSession(ctx context.Context, token *oauth2.Token)
 		}
 	}
 
-	created := time.Now()
-	return &sessions.SessionState{
+	ss := &sessions.SessionState{
 		AccessToken:  token.AccessToken,
 		IDToken:      getIDToken(token),
 		RefreshToken: token.RefreshToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &idToken.Expiry,
-	}, nil
+	}
+
+	ss.CreatedAtNow()
+	ss.SetExpiresOn(idToken.Expiry)
+
+	return ss, nil
 }
 
 // ValidateSession checks that the session's IDToken is still valid
@@ -295,21 +292,13 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 
 	s.User = userInfo.Username
 	s.Email = userInfo.Email
-
-	p.addGroupsToSession(ctx, s)
+	for _, group := range userInfo.Groups {
+		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
+	}
 
 	p.addProjectsToSession(ctx, s)
 
 	return nil
-
-}
-
-// addGroupsToSession projects into session.Groups
-func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.SessionState) {
-	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
-	for _, group := range p.Groups {
-		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))
-	}
 }
 
 // addProjectsToSession adds projects matching user access requirements into the session state groups list
@@ -329,31 +318,32 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 			if perms == nil {
 				// use group project access as fallback
 				perms = projectInfo.Permissions.GroupAccess
+				// group project access is not set for this user then we give up
+				if perms == nil {
+					logger.Errorf("Warning: user %q has no project level access to %s", s.Email, project.Name)
+					continue
+				}
 			}
 
-			if perms.AccessLevel >= project.AccessLevel {
+			if perms != nil && perms.AccessLevel >= project.AccessLevel {
 				s.Groups = append(s.Groups, fmt.Sprintf("project:%s", project.Name))
 			} else {
 				logger.Errorf("Warning: user %q does not have the minimum required access level for project %q", s.Email, project.Name)
 			}
-		} else {
-			logger.Errorf("Warning: project %s is archived", project.Name)
+			continue
 		}
 
+		logger.Errorf("Warning: project %s is archived", project.Name)
 	}
-
 }
 
 // PrefixAllowedGroups returns a list of allowed groups, prefixed by their `kind` value
 func (p *GitLabProvider) PrefixAllowedGroups() (groups []string) {
-
 	for _, val := range p.Groups {
 		groups = append(groups, fmt.Sprintf("group:%s", val))
 	}
-
 	for _, val := range p.Projects {
 		groups = append(groups, fmt.Sprintf("project:%s", val.Name))
 	}
-
 	return groups
 }
