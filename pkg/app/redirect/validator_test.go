@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -22,6 +23,10 @@ var _ = Describe("Validator suite", func() {
 			"anyport.bar:*",
 			".sub.anyport.bar:*",
 			"www.whitelisteddomain.tld",
+			"*.wildcard.sub.port.bar:8080",
+			"*.wildcard.sub.anyport.bar:*",
+			"*.wildcard.bar",
+			"*.wildcard.proxy.foo.bar",
 		}
 	})
 
@@ -96,7 +101,20 @@ var _ = Describe("Validator suite", func() {
 			Entry("Quad Tab 2", "/\t\t\\\t\t/evil.com", false),
 			Entry("Relative Path", "/./\\evil.com", false),
 			Entry("Relative Subpath", "/./../../\\evil.com", false),
-			Entry("Partial Subdomain", "evilbar.foo", false),
+			Entry("Valid HTTP Wildcard Subdomain", "http://foo.wildcard.bar/redirect", true),
+			Entry("Valid HTTPS Wildcard Subdomain", "https://foo.wildcard.bar/redirect", true),
+			Entry("Valid HTTP Wildcard Subdomain Root", "http://wildcard.bar/redirect", true),
+			Entry("Valid HTTPS Wildcard Subdomain Root", "https://wildcard.bar/redirect", true),
+			Entry("Valid HTTP Wildcard Subdomain anyport", "http://foo.wildcard.sub.anyport.bar:4242/redirect", true),
+			Entry("Valid HTTPS Wildcard Subdomain anyport", "https://foo.wildcard.sub.anyport.bar:4242/redirect", true),
+			Entry("Valid HTTP Wildcard Subdomain Anyport Root", "http://wildcard.sub.anyport.bar:4242/redirect", true),
+			Entry("Valid HTTPS Wildcard Subdomain Anyport Root", "https://wildcard.sub.anyport.bar:4242/redirect", true),
+			Entry("Valid HTTP Wildcard Subdomain Defined Port", "http://foo.wildcard.sub.port.bar:8080/redirect", true),
+			Entry("Valid HTTPS Wildcard Subdomain Defined Port", "https://foo.wildcard.sub.port.bar:8080/redirect", true),
+			Entry("Valid HTTP Wildcard Subdomain Defined Port Root", "http://wildcard.sub.port.bar:8080/redirect", true),
+			Entry("Valid HTTPS Wildcard Subdomain Defined Port Root", "https://wildcard.sub.port.bar:8080/redirect", true),
+			Entry("Missing Protocol Root Domain", "foo.bar/redirect", false),
+			Entry("Missing Protocol Wildcard Subdomain", "proxy.wildcard.bar/redirect", false),
 		)
 	})
 
@@ -109,7 +127,7 @@ var _ = Describe("Validator suite", func() {
 
 		DescribeTable("Should split the host and port",
 			func(in splitHostPortTableInput) {
-				host, port := splitHostPort(in.hostport)
+				host, port := util.SplitHostPort(in.hostport)
 				Expect(host).To(Equal(in.expectedHost))
 				Expect(port).To(Equal(in.expectedPort))
 			},
