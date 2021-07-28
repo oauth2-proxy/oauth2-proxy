@@ -34,3 +34,11 @@ X-Auth-Request-Redirect: https://my-oidc-provider/sign_out_page
 (The "sign_out_page" should be the [`end_session_endpoint`](https://openid.net/specs/openid-connect-session-1_0.html#rfc.section.2.1) from [the metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) if your OIDC provider supports Session Management and Discovery.)
 
 BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` in the example) must be added to the [`--whitelist-domain`](../configuration/overview) configuration option otherwise the redirect will be ignored.
+
+### Auth
+
+This endpoint returns 202 Accepted response or a 401 Unauthorized response.
+
+It can be configured using the following query parameters query parameters:
+- `allowed_groups`: comma separated list of allowed groups
+- `allowed_email_domains`: comma separated list of allowed email domains
