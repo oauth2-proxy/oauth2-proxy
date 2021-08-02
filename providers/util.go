@@ -47,6 +47,9 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	} else { // Legacy variant of the prompt param:
 		params.Set("approval_prompt", p.ApprovalPrompt)
 	}
+	if p.HostedDomain != "" {
+		params.Set("hd", p.HostedDomain)
+	}
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")

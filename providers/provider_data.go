@@ -33,6 +33,7 @@ type ProviderData struct {
 	//https://openid.net/specs/openid-connect-basic-1_0.html#rfc.section.2.1.1.1
 	AcrValues        string
 	ApprovalPrompt   string // NOTE: Renamed to "prompt" in OAuth2
+	HostedDomain     string // "hd" parameter for login URL
 	ClientID         string
 	ClientSecret     string
 	ClientSecretFile string

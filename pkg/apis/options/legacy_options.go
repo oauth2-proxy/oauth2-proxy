@@ -51,6 +51,7 @@ func NewLegacyOptions() *LegacyOptions {
 			ProviderType:          "google",
 			AzureTenant:           "common",
 			ApprovalPrompt:        "force",
+			HostedDomain:          "*",
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
@@ -506,6 +507,7 @@ type LegacyProvider struct {
 	Scope                              string   `flag:"scope" cfg:"scope"`
 	Prompt                             string   `flag:"prompt" cfg:"prompt"`
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
+	HostedDomain                       string   `flag:"hosted-domain" cfg:"hosted_domain"`
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 

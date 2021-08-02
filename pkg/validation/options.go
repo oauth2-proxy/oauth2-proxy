@@ -203,6 +203,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		ClientSecretFile: o.Providers[0].ClientSecretFile,
 		Prompt:           o.Providers[0].Prompt,
 		ApprovalPrompt:   o.Providers[0].ApprovalPrompt,
+		HostedDomain:     o.Providers[0].HostedDomain,
 		AcrValues:        o.Providers[0].AcrValues,
 	}
 	p.LoginURL, msgs = parseURL(o.Providers[0].LoginURL, "login", msgs)

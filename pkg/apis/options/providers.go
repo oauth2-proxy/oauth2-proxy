@@ -70,6 +70,9 @@ type Provider struct {
 	ApprovalPrompt string `json:"approvalPrompt,omitempty"`
 	// AllowedGroups is a list of restrict logins to members of this group
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
+	// HostedDomain is the OAuth hd parameter
+	// default is set to '*' for all domains
+	HostedDomain string `json:"hostedDomain,omitempty"`
 
 	// AcrValues is a string of acr values
 	AcrValues string `json:"acrValues,omitempty"`
