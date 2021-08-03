@@ -3,6 +3,9 @@ package providers
 import (
 	"bytes"
 	"context"
+	"crypto/rsa"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -19,6 +23,11 @@ import (
 type AzureProvider struct {
 	*ProviderData
 	Tenant string
+
+	Nonce       string
+	Thumbprint   string
+	JWTKey      *rsa.PrivateKey
+	PubJWKURL   *url.URL
 }
 
 var _ Provider = (*AzureProvider)(nil)
@@ -82,11 +91,12 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 	return &AzureProvider{
 		ProviderData: p,
 		Tenant:       "common",
+		Nonce:        randSeq(32),
 	}
 }
 
 // Configure defaults the AzureProvider configuration options
-func (p *AzureProvider) Configure(tenant string) {
+func (p *AzureProvider) ConfigureTenant(tenant string) {
 	if tenant == "" || tenant == "common" {
 		// tenant is empty or default, remain on the default "common" tenant
 		return
@@ -197,19 +207,47 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 	if code == "" {
 		return params, ErrMissingCode
 	}
-	clientSecret, err := p.GetClientSecret()
-	if err != nil {
-		return params, err
-	}
 
+	if p.JWTKey == nil || p.Thumbprint == "" {
+		// use client secret for credentials if JWT key is unavailable
+		clientSecret, err := p.GetClientSecret()
+		if err != nil {
+			return params, err
+		}
+
+		params.Add("client_secret", clientSecret)
+		params.Add("grant_type", "authorization_code")
+	} else {
+		// use client certificate for credentials if JWT key is available
+		claims := &jwt.StandardClaims{
+			Issuer:    p.ClientID,
+			Subject:   p.ClientID,
+			Audience:  p.RedeemURL.String(),
+			ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
+			Id:        randSeq(32),
+		}
+		token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
+		thumbprintString, err := hex.DecodeString(p.Thumbprint)
+		if err != nil {
+			return nil, err
+		}
+		token.Header["x5t"] = base64.StdEncoding.EncodeToString(thumbprintString)
+		ss, err := token.SignedString(p.JWTKey)
+		if err != nil {
+			return nil, err
+		}
+
+		params.Add("client_assertion", ss)
+		params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+		params.Add("grant_type", "authorization_code")
+	}
 	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
-	params.Add("grant_type", "authorization_code")
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}
+
 	return params, nil
 }
 

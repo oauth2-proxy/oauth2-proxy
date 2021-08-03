@@ -84,6 +84,15 @@ type AzureOptions struct {
 	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
 	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
+
+	// Thumbprint is the thumbprint of certificate
+	Thumbprint string `json:"thumbprint,omitempty"`
+	// JWTKey is a private key in PEM format used to sign JWT,
+	JWTKey string `json:"jwtKey,omitempty"`
+	// JWTKeyFile is a path to the private key file in PEM format used to sign the JWT
+	JWTKeyFile string `json:"jwtKeyFile,omitempty"`
+	// PubJWKURL is the JWK pubkey access endpoint
+	PubJWKURL string `json:"pubjwkURL,omitempty"`
 }
 
 type ADFSOptions struct {

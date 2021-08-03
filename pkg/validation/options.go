@@ -235,7 +235,37 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 
 	switch p := o.GetProvider().(type) {
 	case *providers.AzureProvider:
-		p.Configure(o.Providers[0].AzureConfig.Tenant)
+		p.ConfigureTenant(o.Providers[0].AzureConfig.Tenant)
+		p.PubJWKURL, msgs = parseURL(o.Providers[0].AzureConfig.PubJWKURL, "pubjwk", msgs)
+		p.Thumbprint = o.Providers[0].AzureConfig.Thumbprint
+
+		// JWT key can be supplied via env variable or file in the filesystem, but not both.
+		switch {
+		case o.Providers[0].AzureConfig.JWTKey == "" && o.Providers[0].AzureConfig.JWTKeyFile == "" && o.Providers[0].ClientSecret == "" && o.Providers[0].ClientSecretFile != "":
+			msgs = append(msgs, "Azure provider requires either a client secret, or a private key for signing JWTs")
+		case o.Providers[0].AzureConfig.JWTKey != "" && o.Providers[0].AzureConfig.JWTKeyFile != "":
+			msgs = append(msgs, "cannot set both jwt-key and jwt-key-file options")
+		case o.Providers[0].AzureConfig.JWTKey != "":
+			// The JWT Key is in the commandline argument
+			signKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(o.Providers[0].AzureConfig.JWTKey))
+			if err != nil {
+				msgs = append(msgs, "could not parse RSA Private Key PEM")
+			} else {
+				p.JWTKey = signKey
+			}
+		case o.Providers[0].AzureConfig.JWTKeyFile != "":
+			// The JWT key is in the filesystem
+			keyData, err := ioutil.ReadFile(o.Providers[0].AzureConfig.JWTKeyFile)
+			if err != nil {
+				msgs = append(msgs, "could not read key file: "+o.Providers[0].AzureConfig.JWTKeyFile)
+			}
+			signKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyData)
+			if err != nil {
+				msgs = append(msgs, "could not parse private key from PEM file:"+o.Providers[0].AzureConfig.JWTKeyFile)
+			} else {
+				p.JWTKey = signKey
+			}
+		}
 	case *providers.ADFSProvider:
 		p.Configure(o.Providers[0].ADFSConfig.SkipScope)
 	case *providers.GitHubProvider:
