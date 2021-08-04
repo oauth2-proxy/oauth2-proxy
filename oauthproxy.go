@@ -934,6 +934,12 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return nil, ErrNeedsLogin
 	}
 
+	// Make sure groups and email data is set, even if we believe it (should) already exist here
+	err := p.provider.EnrichSession(req.Context(), session)
+	if err != nil {
+		logger.Errorf("Unable to enrich session: %+v", err)
+	}
+
 	invalidEmail := session.Email != "" && !p.Validator(session.Email)
 	authorized, err := p.provider.Authorize(req.Context(), session)
 	if err != nil {
