@@ -161,6 +161,7 @@ type OIDCOptions struct {
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
+	// ForceSessionEnrichment indicates if the fetched data from profile endpoint should be enriched, even if the claims are already present in the id token
 	// default set to false
 	ForceSessionEnrichment bool `json:"forceSessionEnrichment,omitempty"`
 }
