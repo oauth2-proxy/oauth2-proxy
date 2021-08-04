@@ -27,6 +27,7 @@
 - [#1181](https://github.com/oauth2-proxy/oauth2-proxy/pull/1181) Fix incorrect `cfg` name in show-debug-on-error flag (@iTaybb)
 - [#1207](https://github.com/oauth2-proxy/oauth2-proxy/pull/1207) Fix URI fragment handling on sign-in page, regression introduced in 7.1.0 (@tarvip)
 - [#1244](https://github.com/oauth2-proxy/oauth2-proxy/pull/1244) Update Alpine image version to 3.14 (@ahovgaard)
+- [#1288](https://github.com/oauth2-proxy/oauth2-proxy/pull/1288) Added flag to turn on forcing session enrichment
 
 
 # V7.1.3
