@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/rsa"
+	"crypto/sha1"
+	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -25,7 +26,7 @@ type AzureProvider struct {
 	Tenant string
 
 	Nonce       string
-	Thumbprint   string
+	Certificate *x509.Certificate
 	JWTKey      *rsa.PrivateKey
 	PubJWKURL   *url.URL
 }
@@ -208,7 +209,7 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 		return params, ErrMissingCode
 	}
 
-	if p.JWTKey == nil || p.Thumbprint == "" {
+	if p.JWTKey == nil || p.Certificate == nil {
 		// use client secret for credentials if JWT key is unavailable
 		clientSecret, err := p.GetClientSecret()
 		if err != nil {
@@ -227,11 +228,10 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 			Id:        randSeq(32),
 		}
 		token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
-		thumbprintString, err := hex.DecodeString(p.Thumbprint)
-		if err != nil {
-			return nil, err
-		}
-		token.Header["x5t"] = base64.StdEncoding.EncodeToString(thumbprintString)
+		thumbprint := sha1.Sum(p.Certificate.Raw)
+		base64Thumbprint := base64.StdEncoding.EncodeToString(thumbprint[:])
+		token.Header["x5t"] = base64Thumbprint
+		token.Header["x5c"] = []string{base64.StdEncoding.EncodeToString(p.Certificate.Raw)}
 		ss, err := token.SignedString(p.JWTKey)
 		if err != nil {
 			return nil, err

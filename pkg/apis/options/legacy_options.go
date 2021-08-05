@@ -509,11 +509,12 @@ type LegacyProvider struct {
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 
-	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
-	Thumbprint string `flag:"thumbprint" cfg:"thumbprint"`
-	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
-	JWTKeyFile string `flag:"jwt-key-file" cfg:"jwt_key_file"`
-	PubJWKURL  string `flag:"pubjwk-url" cfg:"pubjwk_url"`
+	AcrValues       string `flag:"acr-values" cfg:"acr_values"`
+	Certificate     string `flag:"certificate" cfg:"certificate"`
+	CertificateFile string `flag:"certificate-file" cfg:"certificate-file"`
+	JWTKey          string `flag:"jwt-key" cfg:"jwt_key"`
+	JWTKeyFile      string `flag:"jwt-key-file" cfg:"jwt_key_file"`
+	PubJWKURL       string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 }
 
 func legacyProviderFlagSet() *pflag.FlagSet {
@@ -558,9 +559,10 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 
 	flagSet.String("acr-values", "", "acr values string:  optional")
-	flagSet.String("thumbprint", "", "certificate thumbprint packed in JWT, so that you can say something like -thumbprint=\"${OAUTH2_PROXY_THUMBPRINT}\": available for azure")
 	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov, available for azure")
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov, available for azure")
+	flagSet.String("certificate", "", "client certificate content: available for azure")
+	flagSet.String("certificate-file", "", "client certificate file: available for azure")
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 
 	flagSet.String("user-id-claim", providers.OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
@@ -646,11 +648,12 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	// This part is out of the switch section because azure has a default tenant
 	// that needs to be added from legacy options
 	provider.AzureConfig = AzureOptions{
-		Tenant:     l.AzureTenant,
-		Thumbprint: l.Thumbprint,
-		JWTKey:     l.JWTKey,
-		JWTKeyFile: l.JWTKeyFile,
-		PubJWKURL:  l.PubJWKURL,
+		Tenant:          l.AzureTenant,
+		Certificate:     l.Certificate,
+		CertificateFile: l.CertificateFile,
+		JWTKey:          l.JWTKey,
+		JWTKeyFile:      l.JWTKeyFile,
+		PubJWKURL:       l.PubJWKURL,
 	}
 
 	switch provider.Type {

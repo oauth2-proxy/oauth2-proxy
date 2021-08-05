@@ -85,8 +85,10 @@ type AzureOptions struct {
 	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
 
-	// Thumbprint is the thumbprint of certificate
-	Thumbprint string `json:"thumbprint,omitempty"`
+	// Certificate is the content of client certificate
+	Certificate string `json:"certificate,omitempty"`
+	// CertificateFile is the file path of client certificate
+	CertificateFile string `json:"certificate,omitempty"`
 	// JWTKey is a private key in PEM format used to sign JWT,
 	JWTKey string `json:"jwtKey,omitempty"`
 	// JWTKeyFile is a path to the private key file in PEM format used to sign the JWT

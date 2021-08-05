@@ -3,6 +3,8 @@ package validation
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -237,12 +239,12 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	case *providers.AzureProvider:
 		p.ConfigureTenant(o.Providers[0].AzureConfig.Tenant)
 		p.PubJWKURL, msgs = parseURL(o.Providers[0].AzureConfig.PubJWKURL, "pubjwk", msgs)
-		p.Thumbprint = o.Providers[0].AzureConfig.Thumbprint
+		useClientSecret := false
 
 		// JWT key can be supplied via env variable or file in the filesystem, but not both.
 		switch {
-		case o.Providers[0].AzureConfig.JWTKey == "" && o.Providers[0].AzureConfig.JWTKeyFile == "" && o.Providers[0].ClientSecret == "" && o.Providers[0].ClientSecretFile != "":
-			msgs = append(msgs, "Azure provider requires either a client secret, or a private key for signing JWTs")
+		case o.Providers[0].AzureConfig.JWTKey == "" && o.Providers[0].AzureConfig.JWTKeyFile == "":
+			useClientSecret = true
 		case o.Providers[0].AzureConfig.JWTKey != "" && o.Providers[0].AzureConfig.JWTKeyFile != "":
 			msgs = append(msgs, "cannot set both jwt-key and jwt-key-file options")
 		case o.Providers[0].AzureConfig.JWTKey != "":
@@ -266,6 +268,47 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 				p.JWTKey = signKey
 			}
 		}
+
+		// Certificate can be supplied via env variable or file in the filesystem, but not both.
+		switch {
+		case o.Providers[0].AzureConfig.Certificate == "" && o.Providers[0].AzureConfig.CertificateFile == "":
+			useClientSecret = true
+		case o.Providers[0].AzureConfig.Certificate != "" && o.Providers[0].AzureConfig.CertificateFile != "":
+			msgs = append(msgs, "cannot set both certificate and certificate-file options")
+		case o.Providers[0].AzureConfig.Certificate != "":
+			// The certificate is in the commandline argument
+			block, _ := pem.Decode([]byte(o.Providers[0].AzureConfig.Certificate))
+			if block == nil {
+				msgs = append(msgs, "could not parse Certificate PEM")
+			} else {
+				certificate, err := x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					msgs = append(msgs, "could not parse Certificate PEM")
+				}
+				p.Certificate = certificate
+			}
+		case o.Providers[0].AzureConfig.CertificateFile != "":
+			// The certificate is in the filesystem
+			certificateData, err := ioutil.ReadFile(o.Providers[0].AzureConfig.CertificateFile)
+			if err != nil {
+				msgs = append(msgs, "could not read certificate file: "+o.Providers[0].AzureConfig.CertificateFile)
+			}
+			block, _ := pem.Decode(certificateData)
+			if block == nil {
+				msgs = append(msgs, "could not parse Certificate PEM")
+			} else {
+				certificate, err := x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					msgs = append(msgs, "could not parse Certificate PEM")
+				}
+				p.Certificate = certificate
+			}
+		}
+
+		if useClientSecret && o.Providers[0].ClientSecret == "" && o.Providers[0].ClientSecretFile == "" {
+			msgs = append(msgs, "neither client secret nor JWT key is specified")
+		}
+
 	case *providers.ADFSProvider:
 		p.Configure(o.Providers[0].ADFSConfig.SkipScope)
 	case *providers.GitHubProvider:
