@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
@@ -127,7 +128,10 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 	}
 
 	if opts.InsecureSkipTLSVerify {
-		opt.TLSConfig.InsecureSkipVerify = true
+		/* #nosec */
+		opt.TLSConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	}
 
 	if opts.CAPath != "" {
@@ -148,7 +152,10 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 			logger.Errorf("no certs appended, using system certs only")
 		}
 
-		opt.TLSConfig.RootCAs = rootCAs
+		/* #nosec */
+		opt.TLSConfig = &tls.Config{
+			RootCAs: rootCAs,
+		}
 	}
 
 	client := redis.NewClient(opt)
