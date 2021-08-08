@@ -128,10 +128,12 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 	}
 
 	if opts.InsecureSkipTLSVerify {
-		/* #nosec */
-		opt.TLSConfig = &tls.Config{
-			InsecureSkipVerify: true,
+		if opt.TLSConfig == nil {
+			/* #nosec */
+			opt.TLSConfig = &tls.Config{}
 		}
+
+		opt.TLSConfig.InsecureSkipVerify = true
 	}
 
 	if opts.CAPath != "" {
@@ -152,10 +154,12 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 			logger.Errorf("no certs appended, using system certs only")
 		}
 
-		/* #nosec */
-		opt.TLSConfig = &tls.Config{
-			RootCAs: rootCAs,
+		if opt.TLSConfig == nil {
+			/* #nosec */
+			opt.TLSConfig = &tls.Config{}
 		}
+
+		opt.TLSConfig.RootCAs = rootCAs
 	}
 
 	client := redis.NewClient(opt)
