@@ -915,6 +915,15 @@ func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 }
 
+func TestEncodedUrlsStayEncoded(t *testing.T) {
+	encodeTest, err := NewSignInPageTest(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, _ := encodeTest.GetEndpoint("/%2F/test1/%2F/test2")
+	assert.Equal(t, 403, code)
+}
+
 func NewAuthOnlyEndpointTest(querystring string, modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
 	pcTest, err := NewProcessCookieTestWithOptionsModifiers(modifiers...)
 	if err != nil {
