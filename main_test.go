@@ -27,6 +27,7 @@ client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 
 	const testAlphaConfig = `
 upstreams:
+  proxyrawpath: false
   configs:
   - id: /
     path: /
