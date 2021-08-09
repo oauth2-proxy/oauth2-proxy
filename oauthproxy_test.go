@@ -198,10 +198,12 @@ func TestBasicAuthPassword(t *testing.T) {
 	basicAuthPassword := "This is a secure password"
 	opts := baseTestOptions()
 	opts.UpstreamServers = options.Upstreams{
-		{
-			ID:   providerServer.URL,
-			Path: "/",
-			URI:  providerServer.URL,
+		Configs: []options.Upstream{
+			{
+				ID:   providerServer.URL,
+				Path: "/",
+				URI:  providerServer.URL,
+			},
 		},
 	}
 
@@ -347,14 +349,16 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 
 	patt.opts = baseTestOptions()
 	patt.opts.UpstreamServers = options.Upstreams{
-		{
-			ID:   patt.providerServer.URL,
-			Path: "/",
-			URI:  patt.providerServer.URL,
+		Configs: []options.Upstream{
+			{
+				ID:   patt.providerServer.URL,
+				Path: "/",
+				URI:  patt.providerServer.URL,
+			},
 		},
 	}
 	if opts.ProxyUpstream.ID != "" {
-		patt.opts.UpstreamServers = append(patt.opts.UpstreamServers, opts.ProxyUpstream)
+		patt.opts.UpstreamServers.Configs = append(patt.opts.UpstreamServers.Configs, opts.ProxyUpstream)
 	}
 
 	patt.opts.Cookie.Secure = false
@@ -1270,10 +1274,12 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 
 	opts := baseTestOptions()
 	opts.UpstreamServers = options.Upstreams{
-		{
-			ID:   upstreamServer.URL,
-			Path: "/",
-			URI:  upstreamServer.URL,
+		Configs: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
 		},
 	}
 	opts.SkipAuthPreflight = true
@@ -1345,10 +1351,12 @@ func NewSignatureTest() (*SignatureTest, error) {
 		return nil, err
 	}
 	opts.UpstreamServers = options.Upstreams{
-		{
-			ID:   upstreamServer.URL,
-			Path: "/",
-			URI:  upstreamServer.URL,
+		Configs: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
 		},
 	}
 
@@ -1781,10 +1789,12 @@ func Test_noCacheHeaders(t *testing.T) {
 
 	opts := baseTestOptions()
 	opts.UpstreamServers = options.Upstreams{
-		{
-			ID:   upstreamServer.URL,
-			Path: "/",
-			URI:  upstreamServer.URL,
+		Configs: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
 		},
 	}
 	opts.SkipAuthRegex = []string{".*"}
@@ -2051,10 +2061,12 @@ func TestTrustedIPs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := baseTestOptions()
 			opts.UpstreamServers = options.Upstreams{
-				{
-					ID:     "static",
-					Path:   "/",
-					Static: true,
+				Configs: []options.Upstream{
+					{
+						ID:     "static",
+						Path:   "/",
+						Static: true,
+					},
 				},
 			}
 			opts.TrustedIPs = tt.trustedIPs
@@ -2244,10 +2256,12 @@ func TestAllowedRequest(t *testing.T) {
 
 	opts := baseTestOptions()
 	opts.UpstreamServers = options.Upstreams{
-		{
-			ID:   upstreamServer.URL,
-			Path: "/",
-			URI:  upstreamServer.URL,
+		Configs: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
 		},
 	}
 	opts.SkipAuthRegex = []string{
@@ -2359,10 +2373,12 @@ func TestProxyAllowedGroups(t *testing.T) {
 			test, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 				opts.Providers[0].AllowedGroups = tt.allowedGroups
 				opts.UpstreamServers = options.Upstreams{
-					{
-						ID:   upstreamServer.URL,
-						Path: "/",
-						URI:  upstreamServer.URL,
+					Configs: []options.Upstream{
+						{
+							ID:   upstreamServer.URL,
+							Path: "/",
+							URI:  upstreamServer.URL,
+						},
 					},
 				}
 			})

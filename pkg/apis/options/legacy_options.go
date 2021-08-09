@@ -120,7 +120,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 	for _, upstreamString := range l.Upstreams {
 		u, err := url.Parse(upstreamString)
 		if err != nil {
-			return nil, fmt.Errorf("could not parse upstream %q: %v", upstreamString, err)
+			return Upstreams{}, fmt.Errorf("could not parse upstream %q: %v", upstreamString, err)
 		}
 
 		if u.Path == "" {
@@ -169,7 +169,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			upstream.FlushInterval = nil
 		}
 
-		upstreams = append(upstreams, upstream)
+		upstreams.Configs = append(upstreams.Configs, upstream)
 	}
 
 	return upstreams, nil

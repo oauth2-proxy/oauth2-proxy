@@ -33,61 +33,63 @@ var _ = Describe("Proxy Suite", func() {
 			accepted := http.StatusAccepted
 
 			upstreams := options.Upstreams{
-				{
-					ID:   "http-backend",
-					Path: "/http/",
-					URI:  serverAddr,
-				},
-				{
-					ID:   "file-backend",
-					Path: "/files/",
-					URI:  fmt.Sprintf("file:///%s", filesDir),
-				},
-				{
-					ID:         "static-backend",
-					Path:       "/static/",
-					Static:     true,
-					StaticCode: &ok,
-				},
-				{
-					ID:         "static-backend-no-trailing-slash",
-					Path:       "/static",
-					Static:     true,
-					StaticCode: &accepted,
-				},
-				{
-					ID:         "static-backend-long",
-					Path:       "/static/long",
-					Static:     true,
-					StaticCode: &accepted,
-				},
-				{
-					ID:   "bad-http-backend",
-					Path: "/bad-http/",
-					URI:  "http://::1",
-				},
-				{
-					ID:         "single-path-backend",
-					Path:       "/single-path",
-					Static:     true,
-					StaticCode: &ok,
-				},
-				{
-					ID:            "backend-with-rewrite-prefix",
-					Path:          "^/rewrite-prefix/(.*)",
-					RewriteTarget: "/different/backend/path/$1",
-					URI:           serverAddr,
-				},
-				{
-					ID:   "double-match-plain",
-					Path: "/double-match/",
-					URI:  serverAddr,
-				},
-				{
-					ID:            "double-match-rewrite",
-					Path:          "^/double-match/(.*)",
-					RewriteTarget: "/double-match/rewrite/$1",
-					URI:           serverAddr,
+				Configs: []options.Upstream{
+					{
+						ID:   "http-backend",
+						Path: "/http/",
+						URI:  serverAddr,
+					},
+					{
+						ID:   "file-backend",
+						Path: "/files/",
+						URI:  fmt.Sprintf("file:///%s", filesDir),
+					},
+					{
+						ID:         "static-backend",
+						Path:       "/static/",
+						Static:     true,
+						StaticCode: &ok,
+					},
+					{
+						ID:         "static-backend-no-trailing-slash",
+						Path:       "/static",
+						Static:     true,
+						StaticCode: &accepted,
+					},
+					{
+						ID:         "static-backend-long",
+						Path:       "/static/long",
+						Static:     true,
+						StaticCode: &accepted,
+					},
+					{
+						ID:   "bad-http-backend",
+						Path: "/bad-http/",
+						URI:  "http://::1",
+					},
+					{
+						ID:         "single-path-backend",
+						Path:       "/single-path",
+						Static:     true,
+						StaticCode: &ok,
+					},
+					{
+						ID:            "backend-with-rewrite-prefix",
+						Path:          "^/rewrite-prefix/(.*)",
+						RewriteTarget: "/different/backend/path/$1",
+						URI:           serverAddr,
+					},
+					{
+						ID:   "double-match-plain",
+						Path: "/double-match/",
+						URI:  serverAddr,
+					},
+					{
+						ID:            "double-match-rewrite",
+						Path:          "^/double-match/(.*)",
+						RewriteTarget: "/double-match/rewrite/$1",
+						URI:           serverAddr,
+					},
 				},
 			}
 
@@ -315,8 +317,8 @@ var _ = Describe("Proxy Suite", func() {
 
 	Context("sortByPathLongest", func() {
 		type sortByPathLongestTableInput struct {
-			input          options.Upstreams
-			expectedOutput options.Upstreams
+			input          []options.Upstream
+			expectedOutput []options.Upstream
 		}
 
 		var httpPath = options.Upstream{
@@ -346,40 +348,40 @@ var _ = Describe("Proxy Suite", func() {
 				Expect(sortByPathLongest(in.input)).To(Equal(in.expectedOutput))
 			},
 			Entry("with a mix of paths registered", sortByPathLongestTableInput{
-				input:          options.Upstreams{httpPath, httpSubPath, shortSubPathWithRewrite, longerPath, shortPathWithRewrite},
-				expectedOutput: options.Upstreams{shortSubPathWithRewrite, shortPathWithRewrite, longerPath, httpSubPath, httpPath},
+				input:          []options.Upstream{httpPath, httpSubPath, shortSubPathWithRewrite, longerPath, shortPathWithRewrite},
+				expectedOutput: []options.Upstream{shortSubPathWithRewrite, shortPathWithRewrite, longerPath, httpSubPath, httpPath},
 			}),
 			Entry("when a subpath is registered (in order)", sortByPathLongestTableInput{
-				input:          options.Upstreams{httpSubPath, httpPath},
-				expectedOutput: options.Upstreams{httpSubPath, httpPath},
+				input:          []options.Upstream{httpSubPath, httpPath},
+				expectedOutput: []options.Upstream{httpSubPath, httpPath},
 			}),
 			Entry("when a subpath is registered (out of order)", sortByPathLongestTableInput{
-				input:          options.Upstreams{httpPath, httpSubPath},
-				expectedOutput: options.Upstreams{httpSubPath, httpPath},
+				input:          []options.Upstream{httpPath, httpSubPath},
+				expectedOutput: []options.Upstream{httpSubPath, httpPath},
 			}),
 			Entry("when longer paths are registered (in order)", sortByPathLongestTableInput{
-				input:          options.Upstreams{longerPath, httpPath},
-				expectedOutput: options.Upstreams{longerPath, httpPath},
+				input:          []options.Upstream{longerPath, httpPath},
+				expectedOutput: []options.Upstream{longerPath, httpPath},
 			}),
 			Entry("when longer paths are registered (out of order)", sortByPathLongestTableInput{
-				input:          options.Upstreams{httpPath, longerPath},
-				expectedOutput: options.Upstreams{longerPath, httpPath},
+				input:          []options.Upstream{httpPath, longerPath},
+				expectedOutput: []options.Upstream{longerPath, httpPath},
 			}),
 			Entry("when a rewrite target is registered (in order)", sortByPathLongestTableInput{
-				input:          options.Upstreams{shortPathWithRewrite, longerPath},
-				expectedOutput: options.Upstreams{shortPathWithRewrite, longerPath},
+				input:          []options.Upstream{shortPathWithRewrite, longerPath},
+				expectedOutput: []options.Upstream{shortPathWithRewrite, longerPath},
 			}),
 			Entry("when a rewrite target is registered (out of order)", sortByPathLongestTableInput{
-				input:          options.Upstreams{longerPath, shortPathWithRewrite},
-				expectedOutput: options.Upstreams{shortPathWithRewrite, longerPath},
+				input:          []options.Upstream{longerPath, shortPathWithRewrite},
+				expectedOutput: []options.Upstream{shortPathWithRewrite, longerPath},
 			}),
 			Entry("with multiple rewrite targets registered (in order)", sortByPathLongestTableInput{
-				input:          options.Upstreams{shortSubPathWithRewrite, shortPathWithRewrite},
-				expectedOutput: options.Upstreams{shortSubPathWithRewrite, shortPathWithRewrite},
+				input:          []options.Upstream{shortSubPathWithRewrite, shortPathWithRewrite},
+				expectedOutput: []options.Upstream{shortSubPathWithRewrite, shortPathWithRewrite},
 			}),
 			Entry("with multiple rewrite targets registered (out of order)", sortByPathLongestTableInput{
-				input:          options.Upstreams{shortPathWithRewrite, shortSubPathWithRewrite},
-				expectedOutput: options.Upstreams{shortSubPathWithRewrite, shortPathWithRewrite},
+				input:          []options.Upstream{shortPathWithRewrite, shortSubPathWithRewrite},
+				expectedOutput: []options.Upstream{shortSubPathWithRewrite, shortPathWithRewrite},
 			}),
 		)
 	})

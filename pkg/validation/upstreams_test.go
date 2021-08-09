@@ -59,83 +59,99 @@ var _ = Describe("Upstreams", func() {
 		}),
 		Entry("with valid upstreams", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				validHTTPUpstream,
-				validStaticUpstream,
-				validFileUpstream,
+				Configs: []options.Upstream{
+					validHTTPUpstream,
+					validStaticUpstream,
+					validFileUpstream,
+				},
 			},
 			errStrings: []string{},
 		}),
 		Entry("with an empty ID", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:   "",
-					Path: "/foo",
-					URI:  "http://localhost:8080",
+				Configs: []options.Upstream{
+					{
+						ID:   "",
+						Path: "/foo",
+						URI:  "http://localhost:8080",
+					},
 				},
 			},
 			errStrings: []string{emptyIDMsg},
 		}),
 		Entry("with an empty Path", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:   "foo",
-					Path: "",
-					URI:  "http://localhost:8080",
+				Configs: []options.Upstream{
+					{
+						ID:   "foo",
+						Path: "",
+						URI:  "http://localhost:8080",
+					},
 				},
 			},
 			errStrings: []string{emptyPathMsg},
 		}),
 		Entry("with an empty Path", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:   "foo",
-					Path: "",
-					URI:  "http://localhost:8080",
+				Configs: []options.Upstream{
+					{
+						ID:   "foo",
+						Path: "",
+						URI:  "http://localhost:8080",
+					},
 				},
 			},
 			errStrings: []string{emptyPathMsg},
 		}),
 		Entry("with an empty URI", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:   "foo",
-					Path: "/foo",
-					URI:  "",
+				Configs: []options.Upstream{
+					{
+						ID:   "foo",
+						Path: "/foo",
+						URI:  "",
+					},
 				},
 			},
 			errStrings: []string{emptyURIMsg},
 		}),
 		Entry("with an invalid URI", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:   "foo",
-					Path: "/foo",
-					URI:  ":",
+				Configs: []options.Upstream{
+					{
+						ID:   "foo",
+						Path: "/foo",
+						URI:  ":",
+					},
 				},
 			},
 			errStrings: []string{invalidURIMsg},
 		}),
 		Entry("with an invalid URI scheme", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:   "foo",
-					Path: "/foo",
-					URI:  "ftp://foo",
+				Configs: []options.Upstream{
+					{
+						ID:   "foo",
+						Path: "/foo",
+						URI:  "ftp://foo",
+					},
 				},
 			},
 			errStrings: []string{invalidURISchemeMsg},
 		}),
 		Entry("with a static upstream and invalid optons", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:                    "foo",
-					Path:                  "/foo",
-					URI:                   "ftp://foo",
-					Static:                true,
-					FlushInterval:         &flushInterval,
-					PassHostHeader:        &truth,
-					ProxyWebSockets:       &truth,
-					InsecureSkipTLSVerify: true,
+				Configs: []options.Upstream{
+					{
+						ID:                    "foo",
+						Path:                  "/foo",
+						URI:                   "ftp://foo",
+						Static:                true,
+						FlushInterval:         &flushInterval,
+						PassHostHeader:        &truth,
+						ProxyWebSockets:       &truth,
+						InsecureSkipTLSVerify: true,
+					},
 				},
 			},
 			errStrings: []string{
@@ -148,40 +164,46 @@ var _ = Describe("Upstreams", func() {
 		}),
 		Entry("with duplicate IDs", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:   "foo",
-					Path: "/foo1",
-					URI:  "http://foo",
-				},
-				{
-					ID:   "foo",
-					Path: "/foo2",
-					URI:  "http://foo",
+				Configs: []options.Upstream{
+					{
+						ID:   "foo",
+						Path: "/foo1",
+						URI:  "http://foo",
+					},
+					{
+						ID:   "foo",
+						Path: "/foo2",
+						URI:  "http://foo",
+					},
 				},
 			},
 			errStrings: []string{multipleIDsMsg},
 		}),
 		Entry("with duplicate Paths", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:   "foo1",
-					Path: "/foo",
-					URI:  "http://foo",
-				},
-				{
-					ID:   "foo2",
-					Path: "/foo",
-					URI:  "http://foo",
+				Configs: []options.Upstream{
+					{
+						ID:   "foo1",
+						Path: "/foo",
+						URI:  "http://foo",
+					},
+					{
+						ID:   "foo2",
+						Path: "/foo",
+						URI:  "http://foo",
+					},
 				},
 			},
 			errStrings: []string{multiplePathsMsg},
 		}),
 		Entry("when a static code is supplied without static", &validateUpstreamTableInput{
 			upstreams: options.Upstreams{
-				{
-					ID:         "foo",
-					Path:       "/foo",
-					StaticCode: &staticCode200,
+				Configs: []options.Upstream{
+					{
+						ID:         "foo",
+						Path:       "/foo",
+						StaticCode: &staticCode200,
+					},
 				},
 			},
 			errStrings: []string{emptyURIMsg, staticCodeMsg},

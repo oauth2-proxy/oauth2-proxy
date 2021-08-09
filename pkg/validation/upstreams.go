@@ -12,7 +12,7 @@ func validateUpstreams(upstreams options.Upstreams) []string {
 	ids := make(map[string]struct{})
 	paths := make(map[string]struct{})
 
-	for _, upstream := range upstreams {
+	for _, upstream := range upstreams.Configs {
 		msgs = append(msgs, validateUpstream(upstream, ids, paths)...)
 	}
 
