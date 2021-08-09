@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/coreos/go-oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 // IDTokenVerifier Used to verify an ID Token and extends oidc.IDTokenVerifier from the underlying oidc library
 type IDTokenVerifier struct {
 	*oidc.IDTokenVerifier
 	*IDTokenVerificationOptions
-	allowedAudiences []string
+	allowedAudiences map[string]struct{}
 }
 
 // IDTokenVerificationOptions options for the oidc.IDTokenVerifier that are required to verify an ID Token
@@ -23,7 +22,11 @@ type IDTokenVerificationOptions struct {
 
 // NewVerifier constructs a new IDTokenVerifier
 func NewVerifier(iv *oidc.IDTokenVerifier, vo *IDTokenVerificationOptions) *IDTokenVerifier {
-	allowedAudiences := append([]string{vo.ClientID}, vo.ExtraAudiences...)
+	allowedAudiences := make(map[string]struct{})
+	allowedAudiences[vo.ClientID] = struct{}{}
+	for _, extraAudience := range vo.ExtraAudiences {
+		allowedAudiences[extraAudience] = struct{}{}
+	}
 	return &IDTokenVerifier{iv, vo, allowedAudiences}
 }
 
@@ -43,27 +46,21 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 		return nil, err
 	}
 
-	// maybe other additional validation/verification for future purposes...
-
 	return token, err
 }
 
 func (v *IDTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
 	if audienceClaimValue, audienceClaimExists := claims[v.AudienceClaim]; audienceClaimExists {
 		token.Audience = []string{audienceClaimValue.(string)}
-		logger.Printf("verifying provided audience claim %s with value %s against allowed audiences %v",
-			v.AudienceClaim, audienceClaimValue, v.allowedAudiences)
 		return v.isValidAudience(audienceClaimValue.(string), v.allowedAudiences)
 	}
 	return false, fmt.Errorf("audience claim %s does not exist in claims: %v",
-		v.AudienceClaim, v.allowedAudiences)
+		v.AudienceClaim, claims)
 }
 
-func (v *IDTokenVerifier) isValidAudience(audience string, allowedAudiences []string) (bool, error) {
-	for _, allowedAudience := range allowedAudiences {
-		if audience == allowedAudience {
-			return true, nil
-		}
+func (v *IDTokenVerifier) isValidAudience(audience string, allowedAudiences map[string]struct{}) (bool, error) {
+	if _, allowedAudienceExists := allowedAudiences[audience]; allowedAudienceExists {
+		return true, nil
 	}
 	return false, fmt.Errorf(
 		"audience from claim %s with value %s does not match with any of allowed audiences %v",

@@ -17,9 +17,7 @@ var _ = Describe("Verify", func() {
 		ctx context.Context
 	)
 
-	BeforeEach(func() {
-		ctx = context.Background()
-	})
+	ctx = context.Background()
 
 	It("Succeeds with default aud behavior", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
@@ -46,7 +44,7 @@ var _ = Describe("Verify", func() {
 			Aud: "1226737",
 		})
 		Expect(err).To(MatchError("audience from claim aud with value 1226737 does not match with " +
-			"any of allowed audiences [7817818]"))
+			"any of allowed audiences map[7817818:{}]"))
 		Expect(result).To(BeNil())
 	})
 
@@ -76,7 +74,7 @@ var _ = Describe("Verify", func() {
 		})
 
 		Expect(err).To(MatchError("audience from claim aud with value 1226737 does not match with any " +
-			"of allowed audiences [7817818 xyz abc]"))
+			"of allowed audiences map[7817818:{} abc:{} xyz:{}]"))
 		Expect(result).To(BeNil())
 	})
 
@@ -105,7 +103,7 @@ var _ = Describe("Verify", func() {
 			ClientId: "1226737",
 		})
 		Expect(err).To(MatchError("audience from claim client_id with value 1226737 does not match with " +
-			"any of allowed audiences [7817818]"))
+			"any of allowed audiences map[7817818:{}]"))
 		Expect(result).To(BeNil())
 	})
 
@@ -135,7 +133,23 @@ var _ = Describe("Verify", func() {
 		})
 
 		Expect(err).To(MatchError("audience from claim client_id with value 1226737 does not match with any " +
-			"of allowed audiences [7817818 xyz abc]"))
+			"of allowed audiences map[7817818:{} abc:{} xyz:{}]"))
+		Expect(result).To(BeNil())
+	})
+
+	It("Fails if audience claim does not exist", func() {
+		result, err := verify(ctx, &IDTokenVerificationOptions{
+			AudienceClaim:  "not_exists",
+			ClientID:       "7817818",
+			ExtraAudiences: []string{"xyz", "abc"},
+		}, payload{
+			Iss:      "https://foo",
+			ClientId: "1226737",
+			Aud:      "1226737",
+		})
+
+		Expect(err).To(MatchError("audience claim not_exists does not exist in claims: " +
+			"map[aud:1226737 client_id:1226737 iss:https://foo]"))
 		Expect(result).To(BeNil())
 	})
 })
