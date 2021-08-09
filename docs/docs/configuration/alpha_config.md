@@ -384,9 +384,11 @@ Requests will be proxied to this upstream if the path matches the request path.
 
 ### Upstreams
 
-#### ([[]Upstream](#upstream) alias)
-
 (**Appears on:** [AlphaOptions](#alphaoptions))
 
 Upstreams is a collection of definitions for upstream servers.
 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `proxyRawPath` | _bool_ | ProxyRawPath will pass the raw url path to upstream allowing for url's<br/>like: "/%2F/" which would otherwise be redirected to "/" |
+| `configs` | _[[]Upstream](#upstream)_ | Upstream represents the configuration for an upstream server.<br/>Requests will be proxied to this upstream if the path matches the request path. |
