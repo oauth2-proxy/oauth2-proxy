@@ -165,9 +165,10 @@ type OIDCOptions struct {
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
 	// AudienceClaim allows to define any claim that is verified against the client id
-	// By default `aud` claim is checked by the underlying oidc lib
+	// By default `aud` claim is used for verification.
 	AudienceClaim string `json:"audienceClaim,omitempty"`
-	// ExtraAudiences additional audiences that are allowed to pass validation for this provider
+	// ExtraAudiences is a list of additional audiences that are allowed
+	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
 }
 

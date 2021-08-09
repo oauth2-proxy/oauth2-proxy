@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestProviderSuite(t *testing.T) {
+func TestOIDCSuite(t *testing.T) {
 	logger.SetOutput(GinkgoWriter)
 
 	RegisterFailHandler(Fail)
