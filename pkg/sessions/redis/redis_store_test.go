@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"os"
 	"testing"
@@ -223,5 +224,83 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				},
 			)
 		})
+	})
+
+	Context("with custom CA path", func() {
+		BeforeEach(func() {
+			mr.Close()
+
+			var cert tls.Certificate
+			var err error
+			cert, err = tls.LoadX509KeyPair("testdata/cert.pem", "testdata/key.pem")
+			Expect(err).ToNot(HaveOccurred())
+			mr, err = miniredis.RunTLS(&tls.Config{Certificates: []tls.Certificate{cert}})
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			mr.Close()
+
+			var err error
+			mr, err = miniredis.Run()
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		tests.RunSessionStoreTests(
+			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+				// Set the connection URL
+				opts.Type = options.RedisSessionStoreType
+				opts.Redis.ConnectionURL = "redis://" + mr.Addr()
+				opts.Redis.CAPath = "testdata/cert.pem"
+
+				// Capture the session store so that we can close the client
+				var err error
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				return ss, err
+			},
+			func(d time.Duration) error {
+				mr.FastForward(d)
+				return nil
+			},
+		)
+	})
+
+	Context("with insecure TLS connection", func() {
+		BeforeEach(func() {
+			mr.Close()
+
+			var cert tls.Certificate
+			var err error
+			cert, err = tls.LoadX509KeyPair("testdata/cert.pem", "testdata/key.pem")
+			Expect(err).ToNot(HaveOccurred())
+			mr, err = miniredis.RunTLS(&tls.Config{Certificates: []tls.Certificate{cert}})
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			mr.Close()
+
+			var err error
+			mr, err = miniredis.Run()
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		tests.RunSessionStoreTests(
+			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+				// Set the connection URL
+				opts.Type = options.RedisSessionStoreType
+				opts.Redis.ConnectionURL = "redis://" + mr.Addr()
+				opts.Redis.InsecureSkipTLSVerify = true
+
+				// Capture the session store so that we can close the client
+				var err error
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				return ss, err
+			},
+			func(d time.Duration) error {
+				mr.FastForward(d)
+				return nil
+			},
+		)
 	})
 })
