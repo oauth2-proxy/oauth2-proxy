@@ -31,8 +31,9 @@ var _ = Describe("Verify", func() {
 			Aud: "1226737",
 		})
 
-		Expect(err).To(Succeed())
-		Expect(result).ToNot(BeNil())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.Issuer).To(Equal("https://foo"))
+		Expect(result.Audience).To(Equal([]string{"1226737"}))
 	})
 
 	It("Fails with default aud behavior", func() {
@@ -59,8 +60,9 @@ var _ = Describe("Verify", func() {
 			Aud: "1226737",
 		})
 
-		Expect(err).To(Succeed())
-		Expect(result).ToNot(BeNil())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.Issuer).To(Equal("https://foo"))
+		Expect(result.Audience).To(Equal([]string{"1226737"}))
 	})
 
 	It("Fails with extra audiences", func() {
@@ -88,8 +90,9 @@ var _ = Describe("Verify", func() {
 			ClientId: "1226737",
 		})
 
-		Expect(err).To(Succeed())
-		Expect(result).ToNot(BeNil())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.Issuer).To(Equal("https://foo"))
+		Expect(result.Audience).To(Equal([]string{"1226737"}))
 	})
 
 	It("Fails with non default aud behavior", func() {
@@ -116,8 +119,9 @@ var _ = Describe("Verify", func() {
 			ClientId: "1226737",
 		})
 
-		Expect(err).To(Succeed())
-		Expect(result).ToNot(BeNil())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.Issuer).To(Equal("https://foo"))
+		Expect(result.Audience).To(Equal([]string{"1226737"}))
 	})
 
 	It("Fails with non default aud behavior and extra audiences", func() {

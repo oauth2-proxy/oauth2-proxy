@@ -39,7 +39,7 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
 	}
 
-	if isValidAudience, err := v.verifyAudience(claims); !isValidAudience {
+	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
 		return nil, err
 	}
 
@@ -48,8 +48,9 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 	return token, err
 }
 
-func (v *IDTokenVerifier) verifyAudience(claims map[string]interface{}) (bool, error) {
+func (v *IDTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
 	if audienceClaimValue, audienceClaimExists := claims[v.AudienceClaim]; audienceClaimExists {
+		token.Audience = []string{audienceClaimValue.(string)}
 		logger.Printf("verifying provided audience claim %s with value %s against allowed audiences %v",
 			v.AudienceClaim, audienceClaimValue, v.allowedAudiences)
 		return v.isValidAudience(audienceClaimValue.(string), v.allowedAudiences)
