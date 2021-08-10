@@ -129,9 +129,19 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string) string {
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
-	params, err := p.prepareRedeem(redirectURL, code)
+	if code == "" {
+		return nil, ErrMissingCode
+	}
+
+	params, err := p.prepareRedeem()
 	if err != nil {
 		return nil, err
+	}
+
+	params.Add("redirect_uri", redirectURL)
+	params.Add("code", code)
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		params.Add("resource", p.ProtectedResource.String())
 	}
 
 	// blindly try json and x-www-form-urlencoded
@@ -203,11 +213,8 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 	return nil
 }
 
-func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, error) {
+func (p *AzureProvider) prepareRedeem() (url.Values, error) {
 	params := url.Values{}
-	if code == "" {
-		return params, ErrMissingCode
-	}
 
 	if p.JWTKey == nil || p.Certificate == nil {
 		// use client secret for credentials if JWT key is unavailable
@@ -241,12 +248,7 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 		params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 		params.Add("grant_type", "authorization_code")
 	}
-	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
-	params.Add("code", code)
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		params.Add("resource", p.ProtectedResource.String())
-	}
 
 	return params, nil
 }
@@ -289,16 +291,12 @@ func (p *AzureProvider) RefreshSession(ctx context.Context, s *sessions.SessionS
 }
 
 func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
-	clientSecret, err := p.GetClientSecret()
+	params, err := p.prepareRedeem()
 	if err != nil {
 		return err
 	}
 
-	params := url.Values{}
-	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", clientSecret)
 	params.Add("refresh_token", s.RefreshToken)
-	params.Add("grant_type", "refresh_token")
 
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
