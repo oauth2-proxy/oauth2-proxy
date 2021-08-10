@@ -250,6 +250,7 @@ make up the header value
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `groups` | _[]string_ | Group enables to restrict login to members of indicated group |
+| `roles` | _[]string_ | Role enables to restrict login to users with role (only available when using the keycloak-oidc provider) |
 
 ### LoginGovOptions
 
