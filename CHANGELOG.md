@@ -31,7 +31,7 @@
 - [#1207](https://github.com/oauth2-proxy/oauth2-proxy/pull/1207) Fix URI fragment handling on sign-in page, regression introduced in 7.1.0 (@tarvip)
 - [#1210](https://github.com/oauth2-proxy/oauth2-proxy/pull/1210) New Keycloak OIDC Provider (@pb82)
 - [#1244](https://github.com/oauth2-proxy/oauth2-proxy/pull/1244) Update Alpine image version to 3.14 (@ahovgaard)
-
+- [#1317](https://github.com/oauth2-proxy/oauth2-proxy/pull/1317) Fix incorrect `</form>` tag on the sing_in page when *not* using a custom template (@jord1e)
 
 # V7.1.3
 
