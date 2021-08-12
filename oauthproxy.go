@@ -367,6 +367,7 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
 		SessionStore:    sessionStore,
 		RefreshPeriod:   opts.Cookie.Refresh,
+		SessionExpiryOffset: opts.Session.SessionExpiryOffset,
 		RefreshSession:  opts.GetProvider().RefreshSession,
 		ValidateSession: opts.GetProvider().ValidateSession,
 	}))

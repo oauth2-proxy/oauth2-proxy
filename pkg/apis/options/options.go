@@ -132,6 +132,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
 	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
 	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
+	flagSet.String("session-expiry-offset", "5m", "oauth2-proxy will try to refresh the session this amount of time before it expires")
 	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
 	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://HOST[:PORT])")
 	flagSet.String("redis-password", "", "Redis password. Applicable for all Redis configurations. Will override any password set in `--redis-connection-url`")

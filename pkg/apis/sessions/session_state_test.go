@@ -146,6 +146,12 @@ func TestIsExpired(t *testing.T) {
 	assert.Equal(t, false, s.IsExpired())
 }
 
+func TestIsExpiredOn(t *testing.T) {
+	s := &SessionState{ExpiresOn: timePtr(time.Now().Add(time.Duration(1) * time.Hour))}
+	assert.Equal(t, true, s.IsExpiredOn(time.Now().Add(time.Duration(1) * time.Hour)))
+	assert.Equal(t, false, s.IsExpiredOn(time.Now().Add(time.Duration(59) * time.Minute)))
+}
+
 func TestAge(t *testing.T) {
 	ss := &SessionState{}
 

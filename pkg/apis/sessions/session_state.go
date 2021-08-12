@@ -86,7 +86,12 @@ func (s *SessionState) ExpiresIn(d time.Duration) {
 
 // IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
-	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(s.Clock.Now()) {
+	return s.IsExpiredOn(s.Clock.Now())
+}
+
+// IsExpiredOn checks whether the session will be expired on a specific time
+func (s *SessionState) IsExpiredOn(t time.Time) bool {
+	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(t) {
 		return true
 	}
 	return false

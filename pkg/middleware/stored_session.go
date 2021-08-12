@@ -24,6 +24,9 @@ type StoredSessionLoaderOptions struct {
 	// How often should sessions be refreshed
 	RefreshPeriod time.Duration
 
+	// A session will be refreshed already in this time frame before the token is considered as expired
+	SessionExpiryOffset time.Duration
+
 	// Provider based session refreshing
 	RefreshSession func(context.Context, *sessionsapi.SessionState) (bool, error)
 
@@ -39,10 +42,11 @@ type StoredSessionLoaderOptions struct {
 // If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
 	ss := &storedSessionLoader{
-		store:            opts.SessionStore,
-		refreshPeriod:    opts.RefreshPeriod,
-		sessionRefresher: opts.RefreshSession,
-		sessionValidator: opts.ValidateSession,
+		store:               opts.SessionStore,
+		refreshPeriod:       opts.RefreshPeriod,
+		sessionRefresher:    opts.RefreshSession,
+		sessionExpiryOffset: opts.SessionExpiryOffset,
+		sessionValidator:    opts.ValidateSession,
 	}
 	return ss.loadSession
 }
@@ -50,10 +54,11 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 // storedSessionLoader is responsible for loading sessions from cookie
 // identified sessions in the session store.
 type storedSessionLoader struct {
-	store            sessionsapi.SessionStore
-	refreshPeriod    time.Duration
-	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
-	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	store               sessionsapi.SessionStore
+	refreshPeriod       time.Duration
+	sessionExpiryOffset time.Duration
+	sessionRefresher    func(context.Context, *sessionsapi.SessionState) (bool, error)
+	sessionValidator    func(context.Context, *sessionsapi.SessionState) bool
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -111,7 +116,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 // is older than the refresh period.
 // Success or fail, we will then validate the session.
 func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	if s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod {
+	if !session.IsExpiredOn(time.Now().Add(s.sessionExpiryOffset)) && (s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod) {
 		// Refresh is disabled or the session is not old enough, do nothing
 		return nil
 	}

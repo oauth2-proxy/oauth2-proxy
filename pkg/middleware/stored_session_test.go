@@ -280,16 +280,22 @@ var _ = Describe("Stored Session Suite", func() {
 		createdPast := time.Now().Add(-5 * time.Minute)
 		createdFuture := time.Now().Add(5 * time.Minute)
 
+		sessionExpiryOffset := 5 * time.Minute
+		expired := time.Now().Add(sessionExpiryOffset)
+		notExpired := time.Now().Add(sessionExpiryOffset).Add(time.Minute)
+
 		DescribeTable("with a session",
 			func(in refreshSessionIfNeededTableInput) {
 				refreshed := false
 				validated := false
 
 				s := &storedSessionLoader{
-					refreshPeriod: in.refreshPeriod,
-					store:         &fakeSessionStore{},
+					refreshPeriod:       in.refreshPeriod,
+					store:               &fakeSessionStore{},
+					sessionExpiryOffset: sessionExpiryOffset,
 					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 						refreshed = true
+						ss.ExpiresOn = &notExpired
 						switch ss.RefreshToken {
 						case refresh:
 							return true, nil
@@ -317,6 +323,28 @@ var _ = Describe("Stored Session Suite", func() {
 				Expect(refreshed).To(Equal(in.expectRefreshed))
 				Expect(validated).To(Equal(in.expectValidated))
 			},
+			Entry("when the session is expired", refreshSessionIfNeededTableInput{
+				refreshPeriod: time.Duration(0),
+				session: &sessionsapi.SessionState{
+					RefreshToken: refresh,
+					CreatedAt:    &createdFuture,
+					ExpiresOn:    &expired,
+				},
+				expectedErr:     nil,
+				expectRefreshed: true,
+				expectValidated: true,
+			}),
+			Entry("when the session is not expired", refreshSessionIfNeededTableInput{
+				refreshPeriod: time.Duration(0),
+				session: &sessionsapi.SessionState{
+					RefreshToken: refresh,
+					CreatedAt:    &createdFuture,
+					ExpiresOn:    &notExpired,
+				},
+				expectedErr:     nil,
+				expectRefreshed: false,
+				expectValidated: false,
+			}),
 			Entry("when the refresh period is 0, and the session does not need refreshing", refreshSessionIfNeededTableInput{
 				refreshPeriod: time.Duration(0),
 				session: &sessionsapi.SessionState{
