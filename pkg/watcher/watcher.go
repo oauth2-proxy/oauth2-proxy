@@ -1,6 +1,6 @@
 // +build go1.3,!plan9,!solaris
 
-package main
+package watcher
 
 import (
 	"os"

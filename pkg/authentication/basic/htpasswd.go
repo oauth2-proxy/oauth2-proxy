@@ -5,18 +5,21 @@ import (
 	"crypto/sha1" // #nosec G505
 	"encoding/base64"
 	"encoding/csv"
-	"fmt"
 	"io"
 	"os"
+	"sync/atomic"
+	"unsafe"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/watcher"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // htpasswdMap represents the structure of an htpasswd file.
 // Passwords must be generated with -B for bcrypt or -s for SHA1.
 type htpasswdMap struct {
-	users map[string]interface{}
+	usersFile string
+	m         unsafe.Pointer
 }
 
 // bcryptPass is used to identify bcrypt passwords in the
@@ -29,11 +32,45 @@ type sha1Pass string
 
 // NewHTPasswdValidator constructs an httpasswd based validator from the file
 // at the path given.
-func NewHTPasswdValidator(path string) (Validator, error) {
-	// We allow HTPasswd location via config options
-	r, err := os.Open(path) // #nosec G304
+func NewHTPasswdValidator(path string) func(string, string) bool {
+	return newHTPasswdValidatorImpl(path, nil, func() {})
+}
+
+func newHTPasswdValidatorImpl(path string,
+	done <-chan bool, onUpdate func()) func(string, string) bool {
+
+	// get users
+	validUsers := NewHTPasswdMap(path, done, onUpdate)
+
+	validator := func(user string, password string) (valid bool) {
+		if user == "" || password == "" {
+			return
+		}
+
+		return validUsers.IsValid(user, password)
+	}
+	return validator
+}
+
+func NewHTPasswdMap(usersFile string, done <-chan bool, onUpdate func()) *htpasswdMap {
+	um := &htpasswdMap{usersFile: usersFile}
+	m := make(map[string]interface{})
+	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
+	if usersFile != "" {
+		logger.Printf("using htpasswd file %s", usersFile)
+		WatchForUpdates(usersFile, done, func() {
+			um.LoadHTPasswdFile()
+			onUpdate()
+		})
+		um.LoadHTPasswdFile()
+	}
+	return um
+}
+
+func (um *htpasswdMap) LoadHTPasswdFile() {
+	r, err := os.Open(um.usersFile) // #nosec G304
 	if err != nil {
-		return nil, fmt.Errorf("could not open htpasswd file: %v", err)
+		logger.Fatalf("fcould not open htpasswd file=%q, %s", um.usersFile, err)
 	}
 	defer func(c io.Closer) {
 		cerr := c.Close()
@@ -41,38 +78,29 @@ func NewHTPasswdValidator(path string) (Validator, error) {
 			logger.Fatalf("error closing the htpasswd file: %v", cerr)
 		}
 	}(r)
-	return newHtpasswd(r)
-}
-
-// newHtpasswd consctructs an htpasswd from an io.Reader (an opened file).
-func newHtpasswd(file io.Reader) (*htpasswdMap, error) {
-	csvReader := csv.NewReader(file)
+	csvReader := csv.NewReader(r)
 	csvReader.Comma = ':'
 	csvReader.Comment = '#'
 	csvReader.TrimLeadingSpace = true
-
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("could not read htpasswd file: %v", err)
+		logger.Errorf("could not read htpasswd file=%q, %s", um.usersFile, err)
+		return
 	}
 
-	return createHtpasswdMap(records)
-}
-
-// createHtasswdMap constructs an htpasswdMap from the given records
-func createHtpasswdMap(records [][]string) (*htpasswdMap, error) {
-	h := &htpasswdMap{users: make(map[string]interface{})}
+	updated := make(map[string]interface{})
+	// h := &htpasswdMap{users: make(map[string]interface{})}
 	for _, record := range records {
 		user, realPassword := record[0], record[1]
 		shaPrefix := realPassword[:5]
 		if shaPrefix == "{SHA}" {
-			h.users[user] = sha1Pass(realPassword[5:])
+			updated[user] = sha1Pass(realPassword[5:])
 			continue
 		}
 
 		bcryptPrefix := realPassword[:4]
 		if bcryptPrefix == "$2a$" || bcryptPrefix == "$2b$" || bcryptPrefix == "$2x$" || bcryptPrefix == "$2y$" {
-			h.users[user] = bcryptPass(realPassword)
+			updated[user] = bcryptPass(realPassword)
 			continue
 		}
 
@@ -80,12 +108,14 @@ func createHtpasswdMap(records [][]string) (*htpasswdMap, error) {
 		// TODO(JoelSpeed): In the next breaking release, make this return an error.
 		logger.Errorf("Invalid htpasswd entry for %s. Must be a SHA or bcrypt entry.", user)
 	}
-	return h, nil
+	atomic.StorePointer(&um.m, unsafe.Pointer(&updated)) // #nosec G103
 }
 
 // Validate checks a users password against the htpasswd entries
-func (h *htpasswdMap) Validate(user string, password string) bool {
-	realPassword, exists := h.users[user]
+func (um *htpasswdMap) IsValid(user string, password string) bool {
+	m := *(*map[string]interface{})(atomic.LoadPointer(&um.m))
+
+	realPassword, exists := m[user]
 	if !exists {
 		return false
 	}

@@ -7,11 +7,10 @@ import (
 	"github.com/justinas/alice"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
-func NewBasicAuthSessionLoader(validator basic.Validator, sessionGroups []string, preferEmail bool) alice.Constructor {
+func NewBasicAuthSessionLoader(validator func(string, string) bool, sessionGroups []string, preferEmail bool) alice.Constructor {
 	return func(next http.Handler) http.Handler {
 		return loadBasicAuthSession(validator, sessionGroups, preferEmail, next)
 	}
@@ -22,14 +21,14 @@ func NewBasicAuthSessionLoader(validator basic.Validator, sessionGroups []string
 // If no authorization header is found, or the header is invalid, no session
 // will be loaded and the request will be passed to the next handler.
 // If a session was loaded by a previous handler, it will not be replaced.
-func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, preferEmail bool, next http.Handler) http.Handler {
+func loadBasicAuthSession(validator func(string, string) bool, sessionGroups []string, preferEmail bool, next http.Handler) http.Handler {
 	// This is a hack to be backwards compatible with the old PreferEmailToUser option.
 	// Long term we will have a rich static user configuration option and this will
 	// be removed.
 	// TODO(JoelSpeed): Remove this hack once rich static user config is implemented.
 	getSession := getBasicSession
 	if preferEmail {
-		getSession = func(validator basic.Validator, sessionGroups []string, req *http.Request) (*sessionsapi.SessionState, error) {
+		getSession = func(validator func(string, string) bool, sessionGroups []string, req *http.Request) (*sessionsapi.SessionState, error) {
 			session, err := getBasicSession(validator, sessionGroups, req)
 			session.Email = session.User
 			return session, err
@@ -60,7 +59,7 @@ func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, pre
 // getBasicSession attempts to load a basic session from the request.
 // If the credentials in the request exist within the htpasswdMap,
 // a new session will be created.
-func getBasicSession(validator basic.Validator, sessionGroups []string, req *http.Request) (*sessionsapi.SessionState, error) {
+func getBasicSession(validator func(string, string) bool, sessionGroups []string, req *http.Request) (*sessionsapi.SessionState, error) {
 	auth := req.Header.Get("Authorization")
 	if auth == "" {
 		// No auth header provided, so don't attempt to load a session
@@ -72,7 +71,7 @@ func getBasicSession(validator basic.Validator, sessionGroups []string, req *htt
 		return nil, err
 	}
 
-	if validator.Validate(user, password) {
+	if validator(user, password) {
 		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via basic auth and HTpasswd File")
 
 		return &sessionsapi.SessionState{User: user, Groups: sessionGroups}, nil

@@ -1,6 +1,6 @@
 // +build !go1.3 plan9 solaris
 
-package main
+package watcher
 
 import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 
