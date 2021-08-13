@@ -131,7 +131,7 @@ func TestHtpasswdValidatorOverwriteUsersListDirectly(t *testing.T) {
 	vt.WriteUsers(t, []string{
 		//bcrypt admin:Adm1n1str$t0r
 		"admin:$2y$05$SXWrNM7ldtbRzBvUC3VXyOvUeiUcP45XPwM93P5eeGOEPIiAZmJjC",
-		//bcrypt user1:UsErOn3P455 
+		//bcrypt user1:UsErOn3P455
 		"user1:$2y$05$/sZYJOk8.3Etg4V6fV7puuXfCJLmV5Q7u3xvKpjBSJUka.t2YtmmG",
 		//SHA1 admin1:Adm1n1str$t0r
 		"admin1:{SHA}gXQeRH0bcaCfhAk2gOLm1uaePMA=",
