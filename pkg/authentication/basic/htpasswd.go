@@ -58,7 +58,7 @@ func NewHTPasswdMap(usersFile string, done <-chan bool, onUpdate func()) *htpass
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
 	if usersFile != "" {
 		logger.Printf("using htpasswd file %s", usersFile)
-		WatchForUpdates(usersFile, done, func() {
+		watcher.WatchForUpdates(usersFile, done, func() {
 			um.LoadHTPasswdFile()
 			onUpdate()
 		})
