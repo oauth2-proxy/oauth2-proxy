@@ -11,8 +11,8 @@ import (
 
 type HtpasswdValidatorTest struct {
 	usersFileName string
-	done              chan bool
-	updateSeen        bool
+	done          chan bool
+	updateSeen    bool
 }
 
 func NewHtpasswdValidatorTest(t *testing.T) *HtpasswdValidatorTest {

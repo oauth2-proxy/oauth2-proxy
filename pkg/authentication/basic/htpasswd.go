@@ -15,9 +15,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// htpasswdMap represents the structure of an htpasswd file.
+// HtpasswdMap represents the structure of an htpasswd file.
 // Passwords must be generated with -B for bcrypt or -s for SHA1.
-type htpasswdMap struct {
+type HtpasswdMap struct {
 	usersFile string
 	m         unsafe.Pointer
 }
@@ -52,8 +52,8 @@ func newHTPasswdValidatorImpl(path string,
 	return validator
 }
 
-func NewHTPasswdMap(usersFile string, done <-chan bool, onUpdate func()) *htpasswdMap {
-	um := &htpasswdMap{usersFile: usersFile}
+func NewHTPasswdMap(usersFile string, done <-chan bool, onUpdate func()) *HtpasswdMap {
+	um := &HtpasswdMap{usersFile: usersFile}
 	m := make(map[string]interface{})
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
 	if usersFile != "" {
@@ -67,7 +67,7 @@ func NewHTPasswdMap(usersFile string, done <-chan bool, onUpdate func()) *htpass
 	return um
 }
 
-func (um *htpasswdMap) LoadHTPasswdFile() {
+func (um *HtpasswdMap) LoadHTPasswdFile() {
 	r, err := os.Open(um.usersFile) // #nosec G304
 	if err != nil {
 		logger.Fatalf("fcould not open htpasswd file=%q, %s", um.usersFile, err)
@@ -89,7 +89,6 @@ func (um *htpasswdMap) LoadHTPasswdFile() {
 	}
 
 	updated := make(map[string]interface{})
-	// h := &htpasswdMap{users: make(map[string]interface{})}
 	for _, record := range records {
 		user, realPassword := record[0], record[1]
 		shaPrefix := realPassword[:5]
@@ -112,7 +111,7 @@ func (um *htpasswdMap) LoadHTPasswdFile() {
 }
 
 // Validate checks a users password against the htpasswd entries
-func (um *htpasswdMap) IsValid(user string, password string) bool {
+func (um *HtpasswdMap) IsValid(user string, password string) bool {
 	m := *(*map[string]interface{})(atomic.LoadPointer(&um.m))
 
 	realPassword, exists := m[user]
