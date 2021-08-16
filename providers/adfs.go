@@ -84,7 +84,7 @@ func (p *ADFSProvider) EnrichSession(ctx context.Context, s *sessions.SessionSta
 		return err
 	}
 
-	p.EmailClaim = "upn"
+	p.EmailClaim = []string{"upn"}
 	c, err := p.getClaims(idToken)
 
 	if err != nil {

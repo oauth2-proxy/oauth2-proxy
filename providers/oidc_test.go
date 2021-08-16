@@ -47,8 +47,8 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 			Host:   serverURL.Host,
 			Path:   "/api"},
 		Scope:       "openid profile offline_access",
-		EmailClaim:  "email",
-		GroupsClaim: "groups",
+		EmailClaim:  []string{"email"},
+		GroupsClaim: []string{"groups"},
 		Verifier: oidc.NewVerifier(
 			oidcIssuer,
 			mockJWKS{},
@@ -129,7 +129,7 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 	})
 
 	server, provider := newTestOIDCSetup(body)
-	provider.EmailClaim = "phone_number"
+	provider.EmailClaim = []string{"phone_number"}
 	defer server.Close()
 
 	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
@@ -140,8 +140,8 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 func TestOIDCProvider_EnrichSession(t *testing.T) {
 	testCases := map[string]struct {
 		ExistingSession *sessions.SessionState
-		EmailClaim      string
-		GroupsClaim     string
+		EmailClaim      []string
+		GroupsClaim     []string
 		ProfileJSON     map[string]interface{}
 		ExpectedError   error
 		ExpectedSession *sessions.SessionState
@@ -155,8 +155,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email":  "new@thing.com",
 				"groups": []string{"new", "thing"},
@@ -179,8 +179,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email":  "found@email.com",
 				"groups": []string{"new", "thing"},
@@ -203,8 +203,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email": "found@email.com",
 			},
@@ -225,8 +225,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "weird",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"weird"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"weird":  "weird@claim.com",
 				"groups": []string{"new", "thing"},
@@ -249,8 +249,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"groups": []string{"new", "thing"},
 			},
@@ -272,8 +272,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email":  "new@thing.com",
 				"groups": []string{"new", "thing"},
@@ -297,8 +297,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email": "new@thing.com",
 				"groups": []map[string]interface{}{
@@ -327,8 +327,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email": "new@thing.com",
 				"groups": map[string]interface{}{
@@ -355,8 +355,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email":  "new@thing.com",
 				"groups": []string{"new", "thing"},
@@ -380,8 +380,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "roles",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"roles"},
 			ProfileJSON: map[string]interface{}{
 				"email": "new@thing.com",
 				"roles": []string{"new", "thing", "roles"},
@@ -405,8 +405,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email":  "new@thing.com",
 				"groups": "singleton",
@@ -429,8 +429,8 @@ func TestOIDCProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:  "email",
-			GroupsClaim: "groups",
+			EmailClaim:  []string{"email"},
+			GroupsClaim: []string{"groups"},
 			ProfileJSON: map[string]interface{}{
 				"email": "new@thing.com",
 			},
@@ -533,38 +533,45 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 	testCases := map[string]struct {
 		IDToken        idTokenClaims
-		GroupsClaim    string
+		GroupsClaim    []string
 		ExpectedUser   string
 		ExpectedEmail  string
 		ExpectedGroups []string
 	}{
 		"Default IDToken": {
 			IDToken:        defaultIDToken,
-			GroupsClaim:    "groups",
+			GroupsClaim:    []string{"groups"},
 			ExpectedUser:   "123456789",
 			ExpectedEmail:  "janed@me.com",
 			ExpectedGroups: []string{"test:a", "test:b"},
 		},
 		"Minimal IDToken with no email claim": {
 			IDToken:        minimalIDToken,
-			GroupsClaim:    "groups",
+			GroupsClaim:    []string{"groups"},
 			ExpectedUser:   "123456789",
 			ExpectedEmail:  "123456789",
 			ExpectedGroups: nil,
 		},
 		"Custom Groups Claim": {
 			IDToken:        defaultIDToken,
-			GroupsClaim:    "roles",
+			GroupsClaim:    []string{"roles"},
 			ExpectedUser:   "123456789",
 			ExpectedEmail:  "janed@me.com",
 			ExpectedGroups: []string{"test:c", "test:d"},
 		},
 		"Complex Groups Claim": {
 			IDToken:        complexGroupsIDToken,
-			GroupsClaim:    "groups",
+			GroupsClaim:    []string{"groups"},
 			ExpectedUser:   "123456789",
 			ExpectedEmail:  "complex@claims.com",
 			ExpectedGroups: []string{"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}"},
+		},
+		"Nested Claim": {
+			IDToken:        nestedIDToken,
+			GroupsClaim:    []string{"nested", "groups"},
+			ExpectedUser:   "123456789",
+			ExpectedEmail:  "nested@claims.com",
+			ExpectedGroups: []string{"test:a", "test:b"},
 		},
 	}
 	for testName, tc := range testCases {

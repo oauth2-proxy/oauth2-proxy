@@ -95,3 +95,46 @@ func TestGetCertPool(t *testing.T) {
 	expectedSubjects := []string{testCA1Subj, testCA2Subj}
 	assert.Equal(t, expectedSubjects, got)
 }
+
+func TestGetFromNestedMap(t *testing.T) {
+	testCases := map[string]struct {
+		Map        map[string]interface{}
+		Keys       []string
+		Expected   interface{}
+		ExpectedOk bool
+	}{
+		"Empty Keys": {
+			Map:        map[string]interface{}{},
+			Keys:       []string{},
+			Expected:   nil,
+			ExpectedOk: false,
+		},
+		"Missing Field": {
+			Map:        map[string]interface{}{"field": "value"},
+			Keys:       []string{"nonexistent"},
+			Expected:   nil,
+			ExpectedOk: false,
+		},
+		"Top-level Field": {
+			Map:        map[string]interface{}{"field": "value"},
+			Keys:       []string{"field"},
+			Expected:   "value",
+			ExpectedOk: true,
+		},
+		"Nested Field": {
+			Map:        map[string]interface{}{"field1": map[string]interface{}{"field2": "value"}},
+			Keys:       []string{"field1", "field2"},
+			Expected:   "value",
+			ExpectedOk: true,
+		},
+	}
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			out, ok := GetFromNestedMap(tc.Map, tc.Keys...)
+
+			assert.Equal(t, tc.Expected, out)
+			assert.Equal(t, tc.ExpectedOk, ok)
+		})
+	}
+}

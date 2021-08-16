@@ -70,8 +70,8 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 		SkipClientIDCheck: true,
 		SkipExpiryCheck:   true,
 	})
-	p.EmailClaim = "email"
-	p.GroupsClaim = "groups"
+	p.EmailClaim = []string{"email"}
+	p.GroupsClaim = []string{"groups"}
 	return p
 }
 

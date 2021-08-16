@@ -86,13 +86,13 @@ func formatGroup(rawGroup interface{}) (string, error) {
 
 // coerceArray extracts a field from simplejson.Json that might be a
 // singleton or a list and coerces it into a list.
-func coerceArray(sj *simplejson.Json, key string) []interface{} {
-	array, err := sj.Get(key).Array()
+func coerceArray(sj *simplejson.Json, keys []string) []interface{} {
+	array, err := sj.GetPath(keys...).Array()
 	if err == nil {
 		return array
 	}
 
-	single := sj.Get(key).Interface()
+	single := sj.GetPath(keys...).Interface()
 	if single == nil {
 		return nil
 	}

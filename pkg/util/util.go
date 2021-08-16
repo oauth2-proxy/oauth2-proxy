@@ -23,3 +23,30 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 	}
 	return pool, nil
 }
+
+// GetFromNestedMap traverses through a potentially-nested map using the given slice of keys. If a value exists in that
+// nested field then the value is returned, otherwise nil is returned and the second return value is false. This method
+// is intended to mimic the interface for the standard [] operator on maps.
+func GetFromNestedMap(m map[string]interface{}, ks ...string) (interface{}, bool) {
+	if len(ks) == 0 {
+		return nil, false
+	}
+
+	v, ok := m[ks[0]]
+
+	if !ok {
+		return nil, false
+	}
+
+	if len(ks) == 1 {
+		return v, true
+	}
+
+	m, ok = v.(map[string]interface{})
+
+	if !ok {
+		return nil, false
+	}
+
+	return GetFromNestedMap(m, ks[1:]...)
+}

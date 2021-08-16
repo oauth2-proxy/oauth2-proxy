@@ -12,6 +12,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"golang.org/x/oauth2"
 )
 
@@ -41,8 +42,8 @@ type ProviderData struct {
 
 	// Common OIDC options for any OIDC-based providers to consume
 	AllowUnverifiedEmail bool
-	EmailClaim           string
-	GroupsClaim          string
+	EmailClaim           []string
+	GroupsClaim          []string
 	Verifier             *oidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
@@ -163,7 +164,7 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
-	verifyEmail := (p.EmailClaim == OIDCEmailClaim) && !p.AllowUnverifiedEmail
+	verifyEmail := len(p.EmailClaim) == 1 && p.EmailClaim[0] == OIDCEmailClaim && !p.AllowUnverifiedEmail
 	if verifyEmail && claims.Verified != nil && !*claims.Verified {
 		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
@@ -184,8 +185,7 @@ func (p *ProviderData) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
 		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)
 	}
 
-	email := claims.raw[p.EmailClaim]
-	if email != nil {
+	if email, ok := util.GetFromNestedMap(claims.raw, p.EmailClaim...); ok && email != nil {
 		claims.Email = fmt.Sprint(email)
 	}
 	claims.Groups = p.extractGroups(claims.raw)
@@ -209,7 +209,7 @@ func (p *ProviderData) checkNonce(s *sessions.SessionState, idToken *oidc.IDToke
 // If the claim isn't present, `nil` is returned. If the groups claim is
 // present but empty, `[]string{}` is returned.
 func (p *ProviderData) extractGroups(claims map[string]interface{}) []string {
-	rawClaim, ok := claims[p.GroupsClaim]
+	rawClaim, ok := util.GetFromNestedMap(claims, p.GroupsClaim...)
 	if !ok {
 		return nil
 	}

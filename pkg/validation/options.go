@@ -142,8 +142,8 @@ func Validate(o *options.Options) error {
 				o.Providers[0].Scope += " groups"
 			}
 		}
-		if o.Providers[0].OIDCConfig.UserIDClaim == "" {
-			o.Providers[0].OIDCConfig.UserIDClaim = "email"
+		if len(o.Providers[0].OIDCConfig.UserIDClaim) == 0 || o.Providers[0].OIDCConfig.UserIDClaim[0] == "" {
+			o.Providers[0].OIDCConfig.UserIDClaim = []string{"email"}
 		}
 	}
 
@@ -219,8 +219,8 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option
-	if o.Providers[0].OIDCConfig.EmailClaim == providers.OIDCEmailClaim &&
-		o.Providers[0].OIDCConfig.UserIDClaim != providers.OIDCEmailClaim {
+	if len(o.Providers[0].OIDCConfig.EmailClaim) == 1 && o.Providers[0].OIDCConfig.EmailClaim[0] == providers.OIDCEmailClaim &&
+		!(len(o.Providers[0].OIDCConfig.UserIDClaim) == 1 && o.Providers[0].OIDCConfig.UserIDClaim[0] == providers.OIDCEmailClaim) {
 		p.EmailClaim = o.Providers[0].OIDCConfig.UserIDClaim
 	}
 

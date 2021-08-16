@@ -129,7 +129,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 
 	Context("with valid token", func() {
 		It("should not throw an error", func() {
-			p.EmailClaim = "email"
+			p.EmailClaim = []string{"email"}
 			rawIDToken, _ := newSignedTestIDToken(defaultIDToken)
 			idToken, err := p.Verifier.Verify(context.Background(), rawIDToken)
 			Expect(err).To(BeNil())

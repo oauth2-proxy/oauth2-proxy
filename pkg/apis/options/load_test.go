@@ -39,9 +39,9 @@ var _ = Describe("Load", func() {
 			ProviderType:          "google",
 			AzureTenant:           "common",
 			ApprovalPrompt:        "force",
-			UserIDClaim:           "email",
-			OIDCEmailClaim:        "email",
-			OIDCGroupsClaim:       "groups",
+			UserIDClaim:           []string{"email"},
+			OIDCEmailClaim:        []string{"email"},
+			OIDCGroupsClaim:       []string{"groups"},
 			InsecureOIDCSkipNonce: true,
 		},
 

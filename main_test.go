@@ -68,9 +68,9 @@ providers:
   azureConfig:
     tenant: common
   oidcConfig:
-    groupsClaim: groups
-    emailClaim: email
-    userIDClaim: email
+    groupsClaim: [groups]
+    emailClaim: [email]
+    userIDClaim: [email]
     insecureSkipNonce: true
 `
 
@@ -139,9 +139,9 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					Tenant: "common",
 				},
 				OIDCConfig: options.OIDCOptions{
-					GroupsClaim:       "groups",
-					EmailClaim:        "email",
-					UserIDClaim:       "email",
+					GroupsClaim:       []string{"groups"},
+					EmailClaim:        []string{"email"},
+					UserIDClaim:       []string{"email"},
 					InsecureSkipNonce: true,
 				},
 				ApprovalPrompt: "force",

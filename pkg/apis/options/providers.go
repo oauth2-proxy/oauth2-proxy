@@ -157,13 +157,13 @@ type OIDCOptions struct {
 	JwksURL string `json:"jwksURL,omitempty"`
 	// EmailClaim indicates which claim contains the user email,
 	// default set to 'email'
-	EmailClaim string `json:"emailClaim,omitempty"`
+	EmailClaim []string `json:"emailClaim,omitempty"`
 	// GroupsClaim indicates which claim contains the user groups
 	// default set to 'groups'
-	GroupsClaim string `json:"groupsClaim,omitempty"`
+	GroupsClaim []string `json:"groupsClaim,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
-	UserIDClaim string `json:"userIDClaim,omitempty"`
+	UserIDClaim []string `json:"userIDClaim,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -188,9 +188,9 @@ func providerDefaults() Providers {
 				InsecureAllowUnverifiedEmail: false,
 				InsecureSkipNonce:            true,
 				SkipDiscovery:                false,
-				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
-				EmailClaim:                   providers.OIDCEmailClaim,
-				GroupsClaim:                  providers.OIDCGroupsClaim,
+				UserIDClaim:                  []string{providers.OIDCEmailClaim}, // Deprecated: Use OIDCEmailClaim
+				EmailClaim:                   []string{providers.OIDCEmailClaim},
+				GroupsClaim:                  []string{providers.OIDCGroupsClaim},
 			},
 		},
 	}

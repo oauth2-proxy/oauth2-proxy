@@ -102,7 +102,7 @@ func (p *OIDCProvider) enrichFromProfileURL(ctx context.Context, s *sessions.Ses
 		return err
 	}
 
-	email, err := respJSON.Get(p.EmailClaim).String()
+	email, err := respJSON.GetPath(p.EmailClaim...).String()
 	if err == nil && s.Email == "" {
 		s.Email = email
 	}

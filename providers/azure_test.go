@@ -47,7 +47,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 			ValidateURL:       &url.URL{},
 			ProtectedResource: &url.URL{},
 			Scope:             "",
-			EmailClaim:        "email",
+			EmailClaim:        []string{"email"},
 			Verifier: oidc.NewVerifier(
 				"https://issuer.example.com",
 				fakeAzureKeySetStub{},

@@ -75,6 +75,19 @@ var (
 		StandardClaims: standardClaims,
 	}
 
+	nestedIDToken = idTokenClaims{
+		Name:     "Nested Claim",
+		Email:    "nested@claims.com",
+		Phone:    "+5439871234",
+		Picture:  "http://mugbook.com/complex/claims.jpg",
+		Verified: &verified,
+		Nested: nestedClaims{
+			Email:  "nested@claims.com",
+			Groups: []string{"test:a", "test:b"},
+		},
+		StandardClaims: standardClaims,
+	}
+
 	unverifiedIDToken = idTokenClaims{
 		Name:           "Mystery Man",
 		Email:          "unverified@email.com",
@@ -92,15 +105,21 @@ var (
 )
 
 type idTokenClaims struct {
-	Name     string      `json:"preferred_username,omitempty"`
-	Email    string      `json:"email,omitempty"`
-	Phone    string      `json:"phone_number,omitempty"`
-	Picture  string      `json:"picture,omitempty"`
-	Groups   interface{} `json:"groups,omitempty"`
-	Roles    interface{} `json:"roles,omitempty"`
-	Verified *bool       `json:"email_verified,omitempty"`
-	Nonce    string      `json:"nonce,omitempty"`
+	Name     string       `json:"preferred_username,omitempty"`
+	Email    string       `json:"email,omitempty"`
+	Phone    string       `json:"phone_number,omitempty"`
+	Picture  string       `json:"picture,omitempty"`
+	Groups   interface{}  `json:"groups,omitempty"`
+	Roles    interface{}  `json:"roles,omitempty"`
+	Verified *bool        `json:"email_verified,omitempty"`
+	Nonce    string       `json:"nonce,omitempty"`
+	Nested   nestedClaims `json:"nested,omitempty"`
 	jwt.StandardClaims
+}
+
+type nestedClaims struct {
+	Email  string      `json:"email,omitempty"`
+	Groups interface{} `json:"groups,omitempty"`
 }
 
 type mockJWKS struct{}
@@ -211,16 +230,16 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 	testCases := map[string]struct {
 		IDToken         idTokenClaims
 		AllowUnverified bool
-		EmailClaim      string
-		GroupsClaim     string
+		EmailClaim      []string
+		GroupsClaim     []string
 		ExpectedError   error
 		ExpectedSession *sessions.SessionState
 	}{
 		"Standard": {
 			IDToken:         defaultIDToken,
 			AllowUnverified: false,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
+			EmailClaim:      []string{"email"},
+			GroupsClaim:     []string{"groups"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
@@ -231,15 +250,15 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		"Unverified Denied": {
 			IDToken:         unverifiedIDToken,
 			AllowUnverified: false,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
+			EmailClaim:      []string{"email"},
+			GroupsClaim:     []string{"groups"},
 			ExpectedError:   errors.New("email in id_token (unverified@email.com) isn't verified"),
 		},
 		"Unverified Allowed": {
 			IDToken:         unverifiedIDToken,
 			AllowUnverified: true,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
+			EmailClaim:      []string{"email"},
+			GroupsClaim:     []string{"groups"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "unverified@email.com",
@@ -250,8 +269,8 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		"Complex Groups": {
 			IDToken:         complexGroupsIDToken,
 			AllowUnverified: true,
-			EmailClaim:      "email",
-			GroupsClaim:     "groups",
+			EmailClaim:      []string{"email"},
+			GroupsClaim:     []string{"groups"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "complex@claims.com",
@@ -259,11 +278,23 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				PreferredUsername: "Complex Claim",
 			},
 		},
+		"Nested Claims": {
+			IDToken:         nestedIDToken,
+			AllowUnverified: true,
+			EmailClaim:      []string{"nested", "email"},
+			GroupsClaim:     []string{"nested", "groups"},
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "nested@claims.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "Nested Claim",
+			},
+		},
 		"Email Claim Switched": {
 			IDToken:         unverifiedIDToken,
 			AllowUnverified: true,
-			EmailClaim:      "phone_number",
-			GroupsClaim:     "groups",
+			EmailClaim:      []string{"phone_number"},
+			GroupsClaim:     []string{"groups"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "+4025205729",
@@ -274,8 +305,8 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		"Email Claim Switched to Non String": {
 			IDToken:         unverifiedIDToken,
 			AllowUnverified: true,
-			EmailClaim:      "roles",
-			GroupsClaim:     "groups",
+			EmailClaim:      []string{"roles"},
+			GroupsClaim:     []string{"groups"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "[test:c test:d]",
@@ -286,8 +317,8 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		"Email Claim Non Existent": {
 			IDToken:         unverifiedIDToken,
 			AllowUnverified: true,
-			EmailClaim:      "aksjdfhjksadh",
-			GroupsClaim:     "groups",
+			EmailClaim:      []string{"aksjdfhjksadh"},
+			GroupsClaim:     []string{"groups"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "",
@@ -298,8 +329,8 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		"Groups Claim Switched": {
 			IDToken:         defaultIDToken,
 			AllowUnverified: false,
-			EmailClaim:      "email",
-			GroupsClaim:     "roles",
+			EmailClaim:      []string{"email"},
+			GroupsClaim:     []string{"roles"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
@@ -310,8 +341,8 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		"Groups Claim Non Existent": {
 			IDToken:         defaultIDToken,
 			AllowUnverified: false,
-			EmailClaim:      "email",
-			GroupsClaim:     "alskdjfsalkdjf",
+			EmailClaim:      []string{"email"},
+			GroupsClaim:     []string{"alskdjfsalkdjf"},
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
@@ -412,7 +443,7 @@ func TestProviderData_checkNonce(t *testing.T) {
 func TestProviderData_extractGroups(t *testing.T) {
 	testCases := map[string]struct {
 		Claims         map[string]interface{}
-		GroupsClaim    string
+		GroupsClaim    []string
 		ExpectedGroups []string
 	}{
 		"Standard String Groups": {
@@ -420,7 +451,7 @@ func TestProviderData_extractGroups(t *testing.T) {
 				"email":  "this@does.not.matter.com",
 				"groups": []interface{}{"three", "string", "groups"},
 			},
-			GroupsClaim:    "groups",
+			GroupsClaim:    []string{"groups"},
 			ExpectedGroups: []string{"three", "string", "groups"},
 		},
 		"Different Claim Name": {
@@ -428,7 +459,7 @@ func TestProviderData_extractGroups(t *testing.T) {
 				"email": "this@does.not.matter.com",
 				"roles": []interface{}{"three", "string", "roles"},
 			},
-			GroupsClaim:    "roles",
+			GroupsClaim:    []string{"roles"},
 			ExpectedGroups: []string{"three", "string", "roles"},
 		},
 		"Numeric Groups": {
@@ -436,7 +467,7 @@ func TestProviderData_extractGroups(t *testing.T) {
 				"email":  "this@does.not.matter.com",
 				"groups": []interface{}{1, 2, 3},
 			},
-			GroupsClaim:    "groups",
+			GroupsClaim:    []string{"groups"},
 			ExpectedGroups: []string{"1", "2", "3"},
 		},
 		"Complex Groups": {
@@ -451,18 +482,28 @@ func TestProviderData_extractGroups(t *testing.T) {
 					"Just::A::String",
 				},
 			},
-			GroupsClaim: "groups",
+			GroupsClaim: []string{"groups"},
 			ExpectedGroups: []string{
 				"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}",
 				"12345",
 				"Just::A::String",
 			},
 		},
+		"Nested Groups": {
+			Claims: map[string]interface{}{
+				"email": "this@does.not.matter.com",
+				"nested": map[string]interface{}{
+					"groups": []interface{}{"three", "string", "groups"},
+				},
+			},
+			GroupsClaim:    []string{"nested", "groups"},
+			ExpectedGroups: []string{"three", "string", "groups"},
+		},
 		"Missing Groups Claim Returns Nil": {
 			Claims: map[string]interface{}{
 				"email": "this@does.not.matter.com",
 			},
-			GroupsClaim:    "groups",
+			GroupsClaim:    []string{"groups"},
 			ExpectedGroups: nil,
 		},
 		"Non List Groups": {
@@ -470,7 +511,7 @@ func TestProviderData_extractGroups(t *testing.T) {
 				"email":  "this@does.not.matter.com",
 				"groups": "singleton",
 			},
-			GroupsClaim:    "groups",
+			GroupsClaim:    []string{"groups"},
 			ExpectedGroups: []string{"singleton"},
 		},
 	}
