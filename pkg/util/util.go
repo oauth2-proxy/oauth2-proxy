@@ -34,12 +34,8 @@ func GetFromNestedMap(m map[string]interface{}, ks ...string) (interface{}, bool
 
 	v, ok := m[ks[0]]
 
-	if !ok {
-		return nil, false
-	}
-
-	if len(ks) == 1 {
-		return v, true
+	if !ok || len(ks) == 1 {
+		return v, ok
 	}
 
 	m, ok = v.(map[string]interface{})
