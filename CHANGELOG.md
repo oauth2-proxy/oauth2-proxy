@@ -32,6 +32,7 @@
 - [#1210](https://github.com/oauth2-proxy/oauth2-proxy/pull/1210) New Keycloak OIDC Provider (@pb82)
 - [#1244](https://github.com/oauth2-proxy/oauth2-proxy/pull/1244) Update Alpine image version to 3.14 (@ahovgaard)
 - [#1317](https://github.com/oauth2-proxy/oauth2-proxy/pull/1317) Fix incorrect `</form>` tag on the sing_in page when *not* using a custom template (@jord1e)
+- [#1332](https://github.com/oauth2-proxy/oauth2-proxy/pull/1332) Add an option to make the `/auth` endpoint always respond with `202 Accepted` (@jord1e)
 
 # V7.1.3
 

@@ -957,6 +957,20 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
+func TestAuthOnlyEndpointAlwaysAcceptOptionOnNoCookie(t *testing.T) {
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
+		opts.AuthEndpointAcceptUnauthenticated = true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusAccepted, test.rw.Code)
+	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	assert.Equal(t, "", string(bodyBytes))
+}
+
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour

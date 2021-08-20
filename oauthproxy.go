@@ -84,6 +84,8 @@ type OAuthProxy struct {
 	realClientIPParser  ipapi.RealClientIPParser
 	trustedIPs          *ip.NetSet
 
+	authEndpointAcceptUnauthenticated bool
+
 	sessionChain      alice.Chain
 	headersChain      alice.Chain
 	preAuthChain      alice.Chain
@@ -151,6 +153,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
+	if opts.AuthEndpointAcceptUnauthenticated {
+		logger.Printf("Accepting unauthenticated %s/auth endpoint requests (group based authorization is still active)", opts.ProxyPrefix)
+	}
+
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
 		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
@@ -198,6 +204,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		realClientIPParser:  opts.GetRealClientIPParser(),
 		SkipProviderButton:  opts.SkipProviderButton,
 		trustedIPs:          trustedIPs,
+
+		authEndpointAcceptUnauthenticated: opts.AuthEndpointAcceptUnauthenticated,
 
 		basicAuthValidator: basicAuthValidator,
 		sessionChain:       sessionChain,
@@ -817,7 +825,11 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
-		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		if p.authEndpointAcceptUnauthenticated {
+			rw.WriteHeader(http.StatusAccepted)
+		} else {
+			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		}
 		return
 	}
 

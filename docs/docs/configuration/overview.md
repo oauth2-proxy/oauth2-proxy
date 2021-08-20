@@ -76,6 +76,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | ------ | ---- | ----------- | ------- |
 | `--acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
 | `--approval-prompt` | string | OAuth approval_prompt | `"force"` |
+| `--auth-endpoint-accept-unauthenticated` | bool | Respond with `202 Accepted` when making unauthenticated requests to the `/auth` endpoint. Does not affect authorization configured by `--allowed-group` | false |
 | `--auth-logging` | bool | Log authentication attempts | true |
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
@@ -418,6 +419,20 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 It is recommended to use `--session-store-type=redis` when expecting large sessions/OIDC tokens (_e.g._ with MS Azure).
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
+
+You can use the `--auth-endpoint-accept-unauthenticated=true` option to allow requests to propagate without logging in, whilst still passing the Authorization header when applicable:
+```yaml
+nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
+nginx.ingress.kubernetes.io/configuration-snippet: |
+  auth_request_set $name_upstream_1 $upstream_cookie_name_1;
+
+  access_by_lua_block {
+    if ngx.var.name_upstream_1 ~= "" then
+      ngx.header["Set-Cookie"] = "name_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
+    end
+  }
+```
 
 ## Configuring for use with the Traefik (v2) `ForwardAuth` middleware
 
