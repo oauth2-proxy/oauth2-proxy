@@ -54,7 +54,7 @@ type Opts struct {
 
 	// CustomLogo is the path or URL to a logo to be displayed on the sign in page.
 	// The logo can be either PNG, JPG/JPEG or SVG.
-	// If URL is used, image support depends on the browser.
+	// If a URL is used, image support depends on the browser.
 	CustomLogo string
 }
 
