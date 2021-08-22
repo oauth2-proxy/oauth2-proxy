@@ -420,19 +420,7 @@ It is recommended to use `--session-store-type=redis` when expecting large sessi
 
 You have to substitute *name* with the actual cookie name you configured via --cookie-name parameter. If you don't set a custom cookie name the variable  should be "$upstream_cookie__oauth2_proxy_1" instead of "$upstream_cookie_name_1" and the new cookie-name should be "_oauth2_proxy_1=" instead of "name_1=".
 
-You can use the `--auth-endpoint-accept-unauthenticated=true` option to allow requests to propagate without logging in, whilst still passing the Authorization header when applicable:
-```yaml
-nginx.ingress.kubernetes.io/auth-response-headers: Authorization
-nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
-nginx.ingress.kubernetes.io/configuration-snippet: |
-  auth_request_set $name_upstream_1 $upstream_cookie_name_1;
-
-  access_by_lua_block {
-    if ngx.var.name_upstream_1 ~= "" then
-      ngx.header["Set-Cookie"] = "name_1=" .. ngx.var.name_upstream_1 .. ngx.var.auth_cookie:match("(; .*)")
-    end
-  }
-```
+You can use the `--auth-endpoint-accept-unauthenticated=true` option to allow requests to propagate without logging in, whilst still passing the Authorization header when applicable. This can be achieved by leaving the `nginx.ingress.kubernetes.io/auth-signin` annotation out.
 
 ## Configuring for use with the Traefik (v2) `ForwardAuth` middleware
 
