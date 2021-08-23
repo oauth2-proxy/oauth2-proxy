@@ -50,6 +50,14 @@ func main() {
 		return
 	}
 
+        if opts.ExtraJwtIssuers != nil {
+                for _, provider := range opts.Providers {
+                        if provider.AllowedGroups != nil {
+                                logger.Fatalf("cannot use extra-jwt-issuers and allowed-groups together")
+                        }
+                }
+        }
+
 	if err = validation.Validate(opts); err != nil {
 		logger.Fatalf("%s", err)
 	}
