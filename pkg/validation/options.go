@@ -224,6 +224,13 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		p.EmailClaim = o.Providers[0].OIDCConfig.UserIDClaim
 	}
 
+        if len(o.Providers[0].AllowedGroups) > 0 && len(o.ExtraJwtIssuers) > 0 {
+                logger.Errorf(
+                        "invalid configuration: --allowed-group is not compatible with " +
+                        "--extra-jwt-issuers, because groups are not currently loaded " +
+                        "for --extra-jwt-issuers.")
+        }
+
 	p.SetAllowedGroups(o.Providers[0].AllowedGroups)
 
 	provider := providers.New(o.Providers[0].Type, p)
