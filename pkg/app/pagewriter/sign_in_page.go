@@ -105,7 +105,7 @@ func loadCustomLogo(logoPath string) (string, error) {
 		return "", nil
 	}
 
-	if strings.HasPrefix(logoPath, "https://") || strings.HasPrefix(logoPath, "http://") {
+	if strings.HasPrefix(logoPath, "https://") {
 		// Return img tag pointing to the URL.
 		return fmt.Sprintf("<img src=\"%s\" alt=\"Logo\" />", logoPath), nil
 	}
