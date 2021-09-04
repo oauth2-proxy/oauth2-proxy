@@ -34,7 +34,7 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 		if err := idToken.Claims(&claims); err != nil {
 			return nil, fmt.Errorf("failed to parse bearer token claims: %v", err)
 		}
-
+		//		logger.Printf("TRACE: claims %+v", claims)
 		if claims.Email == "" {
 			claims.Email = claims.Subject
 		}

@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/juju/loggo"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
@@ -98,18 +99,19 @@ type GetClientFunc = func(r *http.Request) string
 // can be used simultaneously from multiple goroutines; it guarantees to
 // serialize access to the Writer.
 type Logger struct {
-	mu             sync.Mutex
-	flag           int
-	writer         io.Writer
-	errWriter      io.Writer
-	stdEnabled     bool
-	authEnabled    bool
-	reqEnabled     bool
-	getClientFunc  GetClientFunc
-	excludePaths   map[string]struct{}
-	stdLogTemplate *template.Template
-	authTemplate   *template.Template
-	reqTemplate    *template.Template
+	mu              sync.Mutex
+	flag            int
+	writer          io.Writer
+	errWriter       io.Writer
+	stdEnabled      bool
+	authEnabled     bool
+	reqEnabled      bool
+	getClientFunc   GetClientFunc
+	excludePaths    map[string]struct{}
+	stdLogTemplate  *template.Template
+	authTemplate    *template.Template
+	reqTemplate     *template.Template
+	minimalLogLevel loggo.Level //int
 }
 
 // New creates a new Standarderr Logger.
@@ -400,6 +402,24 @@ func (l *Logger) SetReqTemplate(t string) {
 	defer l.mu.Unlock()
 	l.reqTemplate = template.Must(template.New("req-log").Parse(t))
 }
+func (l *Logger) SetMinimalLogLevel(minimalLogLevel string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	//Note: do not call Printf or Error, but use fmt.Fprintf for local debugging
+	//fmt.Fprintf(os.Stdout, "SetMinimalLogLevel started: %s specified\n", minimalLogLevel)
+	if len(minimalLogLevel) > 0 {
+		var isValid bool
+		//todo trim " from the ends to be flag more compatible with .cfg
+		l.minimalLogLevel, isValid = loggo.ParseLevel(minimalLogLevel)
+		if !isValid {
+			l.minimalLogLevel = loggo.WARNING
+			fmt.Fprintf(os.Stderr, "Unable to parse MinimalLogLevel value %s, default to Warning\n", minimalLogLevel)
+		}
+	} else {
+		l.minimalLogLevel = loggo.WARNING //TRACE // loggo.WARNING
+	}
+	fmt.Fprintf(os.Stdout, "Set MinimalLogLevel %v\n", l.minimalLogLevel)
+}
 
 // These functions utilize the standard logger.
 
@@ -484,6 +504,9 @@ func SetAuthTemplate(t string) {
 func SetReqTemplate(t string) {
 	std.SetReqTemplate(t)
 }
+func SetMinimalLogLevel(level string) {
+	std.SetMinimalLogLevel(level)
+}
 
 // Print calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Print.
@@ -560,7 +583,7 @@ func Panicln(v ...interface{}) {
 	panic(s)
 }
 
-// PrintAuthf writes authentication details to the standard logger.
+// PrintAuthf writes authentication details to the standard logger if auth-logging==true
 // Arguments are handled in the manner of fmt.Printf.
 func PrintAuthf(username string, req *http.Request, status AuthStatus, format string, a ...interface{}) {
 	std.PrintAuthf(username, req, status, format, a...)
@@ -569,4 +592,15 @@ func PrintAuthf(username string, req *http.Request, status AuthStatus, format st
 // PrintReq writes request details to the standard logger.
 func PrintReq(username, upstream string, req *http.Request, url url.URL, ts time.Time, status int, size int) {
 	std.PrintReq(username, upstream, req, url, ts, status, size)
+}
+
+// methods depending on loggo.Level
+//create similar methods for other levels, consider to move to separate file
+func LogTracef(format string, v ...interface{}) {
+	//level loggo.Level,
+	if std.minimalLogLevel <= loggo.TRACE {
+		//Printf(format, v...) calldepth 3 to show caller
+		std.Output(DEFAULT, 3, fmt.Sprintf(format, v...))
+	}
+
 }

@@ -179,6 +179,7 @@ func (p *ProviderData) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
 	if err := idToken.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
 	}
+	logger.LogTracef("TRACE: claims %+v", claims)
 	// Extract custom claims.
 	if err := idToken.Claims(&claims.raw); err != nil {
 		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)

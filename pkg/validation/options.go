@@ -125,6 +125,7 @@ func Validate(o *options.Options) error {
 			// Configure discoverable provider data.
 			provider, err := oidc.NewProvider(ctx, o.Providers[0].OIDCConfig.IssuerURL)
 			if err != nil {
+				logger.Errorf("error: failed to discover OIDC NewProvider in %s : %v",o.Providers[0].OIDCConfig.IssuerURL, err)
 				return err
 			}
 			o.SetOIDCVerifier(provider.Verifier(&oidc.Config{

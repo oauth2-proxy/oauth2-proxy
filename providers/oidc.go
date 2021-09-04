@@ -57,6 +57,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*s
 		},
 		RedirectURL: redirectURL,
 	}
+	logger.LogTracef("TRACE: Config: %+v", c)
 	token, err := c.Exchange(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("token exchange failed: %v", err)
@@ -154,6 +155,7 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}
 
+	logger.LogTracef("refreshed session: %s", s)
 	return true, nil
 }
 
@@ -235,6 +237,7 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 // createSession takes an oauth2.Token and creates a SessionState from it.
 // It alters behavior if called from Redeem vs Refresh
 func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {
+	//there are some properties to skip validation, like  p.Verifier.config.SkipIssuerCheck
 	idToken, err := p.verifyIDToken(ctx, token)
 	if err != nil {
 		switch err {

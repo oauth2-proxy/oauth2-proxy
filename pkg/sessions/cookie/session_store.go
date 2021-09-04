@@ -53,6 +53,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 		// always http.ErrNoCookie
 		return nil, fmt.Errorf("cookie %q not present", s.Cookie.Name)
 	}
+	logger.LogTracef("TRACE: SessionStore.Load  Cookie: %+v s.Cookie.Name %v", c, s.Cookie.Name)
 	val, _, ok := encryption.Validate(c, s.Cookie.Secret, s.Cookie.Expire)
 	if !ok {
 		return nil, errors.New("cookie signature not valid")
@@ -89,10 +90,10 @@ func (s *SessionStore) cookieForSession(ss *sessions.SessionState) ([]byte, erro
 		minimal.AccessToken = ""
 		minimal.IDToken = ""
 		minimal.RefreshToken = ""
-
+		logger.LogTracef("TRACE: minimal SessionState: %+v", minimal)
 		return minimal.EncodeSessionState(s.CookieCipher, true)
 	}
-
+	logger.LogTracef("TRACE:  SessionState: %+v", ss)
 	return ss.EncodeSessionState(s.CookieCipher, true)
 }
 
@@ -102,6 +103,7 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 	if err != nil {
 		return err
 	}
+	logger.LogTracef("TRACE: setSessionCookie cookies: %+v", cookies)
 	for _, c := range cookies {
 		http.SetCookie(rw, c)
 	}

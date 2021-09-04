@@ -53,6 +53,7 @@ func configureLogger(o options.Logging, msgs []string) []string {
 	logger.SetReqTemplate(o.RequestFormat)
 
 	logger.SetExcludePaths(o.ExcludePaths)
+	logger.SetMinimalLogLevel(o.MinimalLogLevel)
 
 	if !o.LocalTime {
 		logger.SetFlags(logger.Flags() | logger.LUTC)

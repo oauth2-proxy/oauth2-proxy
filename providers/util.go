@@ -8,6 +8,8 @@ import (
 
 	"github.com/bitly/go-simplejson"
 	"golang.org/x/oauth2"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 const (
@@ -56,6 +58,7 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 			params.Add(n, v)
 		}
 	}
+	//logger.LogTrace("TRACE:(to write configurable) Authorize params : %v", params)
 	a.RawQuery = params.Encode()
 	return a
 }

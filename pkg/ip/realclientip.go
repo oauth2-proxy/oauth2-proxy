@@ -69,7 +69,7 @@ func GetClientIP(p ipapi.RealClientIPParser, req *http.Request) (net.IP, error) 
 // getRemoteIP obtains the IP of the low-level connected network host
 func getRemoteIP(req *http.Request) (net.IP, error) {
 	if ipStr, _, err := net.SplitHostPort(req.RemoteAddr); err != nil {
-		return nil, fmt.Errorf("unable to get ip and port from http.RemoteAddr (%s)", req.RemoteAddr)
+		return nil, fmt.Errorf("unable to get ip and port from http.RemoteAddr (%s) %+v", req.RemoteAddr, req)
 	} else if ip := net.ParseIP(ipStr); ip != nil {
 		return ip, nil
 	} else {

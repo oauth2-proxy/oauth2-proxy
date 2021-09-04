@@ -19,6 +19,7 @@ type Logging struct {
 	SilencePing     bool           `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
 	RequestIDHeader string         `flag:"request-id-header" cfg:"request_id_header"`
 	File            LogFileOptions `cfg:",squash"`
+	MinimalLogLevel string         `flag:"minimal-log-level" cfg:"minimal_log_level"` //TODO in cfg use '-' isnstead of '_'
 }
 
 // LogFileOptions contains options for configuring logging to a file
@@ -51,6 +52,7 @@ func loggingFlagSet() *pflag.FlagSet {
 	flagSet.Int("logging-max-age", 7, "Maximum number of days to retain old log files")
 	flagSet.Int("logging-max-backups", 0, "Maximum number of old log files to retain; 0 to disable")
 	flagSet.Bool("logging-compress", false, "Should rotated log files be compressed using gzip")
+	flagSet.String("minimal-log-level", "", "E.g TRACE, WARNING : possible values see https://pkg.go.dev/github.com/juju/loggo#Level")
 
 	return flagSet
 }

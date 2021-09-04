@@ -351,6 +351,7 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 		Do().
 		UnmarshalJSON()
 	if err != nil {
+		logger.Errorf("failed making request %s", err)
 		return "", err
 	}
 

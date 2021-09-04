@@ -221,7 +221,7 @@ func (l *LegacyHeaders) getRequestHeaders() []Header {
 	if l.PassBasicAuth && l.BasicAuthPassword != "" {
 		requestHeaders = append(requestHeaders, getBasicAuthHeader(l.PreferEmailToUser, l.BasicAuthPassword))
 	}
-
+	//logger.LogTracef("getRequestHeaders l.PassUserHeaders %v ", l.PassUserHeaders)
 	// In the old implementation, PassUserHeaders is a subset of PassBasicAuth
 	if l.PassBasicAuth || l.PassUserHeaders {
 		requestHeaders = append(requestHeaders, getPassUserHeaders(l.PreferEmailToUser)...)
@@ -314,6 +314,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 			},
 		)
 	}
+	//logger.LogTracef("getPassUserHeaders headers %+v ", headers)
 
 	return append(headers,
 		Header{
