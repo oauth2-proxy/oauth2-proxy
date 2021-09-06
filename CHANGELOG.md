@@ -34,6 +34,7 @@
 - [#1210](https://github.com/oauth2-proxy/oauth2-proxy/pull/1210) New Keycloak OIDC Provider (@pb82)
 - [#1244](https://github.com/oauth2-proxy/oauth2-proxy/pull/1244) Update Alpine image version to 3.14 (@ahovgaard)
 - [#1317](https://github.com/oauth2-proxy/oauth2-proxy/pull/1317) Fix incorrect `</form>` tag on the sing_in page when *not* using a custom template (@jord1e)
+- [#1330](https://github.com/oauth2-proxy/oauth2-proxy/pull/1330) Allow specifying URL as input for custom sign in logo (@MaikuMori)
 
 # V7.1.3
 
