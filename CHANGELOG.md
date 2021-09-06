@@ -15,6 +15,7 @@
 
 ## Changes since v7.1.3
 
+- [#1348](https://github.com/oauth2-proxy/oauth2-proxy/pull/1348) Using the native httputil proxy code for websockets rather than yhat/wsutil to properly handle HTTP-level failures (@thetrime)
 - [#1337](https://github.com/oauth2-proxy/oauth2-proxy/pull/1337) Changing user field type to text when using htpasswd (@pburgisser)
 - [#1276](https://github.com/oauth2-proxy/oauth2-proxy/pull/1276) Update crypto and switched to new github.com/golang-jwt/jwt (@JVecsei)
 - [#1264](https://github.com/oauth2-proxy/oauth2-proxy/pull/1264) Update go-oidc to v3 (@NickMeves)
