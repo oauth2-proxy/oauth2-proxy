@@ -34,6 +34,7 @@
 - [#1244](https://github.com/oauth2-proxy/oauth2-proxy/pull/1244) Update Alpine image version to 3.14 (@ahovgaard)
 - [#1317](https://github.com/oauth2-proxy/oauth2-proxy/pull/1317) Fix incorrect `</form>` tag on the sing_in page when *not* using a custom template (@jord1e)
 - [#1330](https://github.com/oauth2-proxy/oauth2-proxy/pull/1330) Allow specifying URL as input for custom sign in logo (@MaikuMori)
+- [#1357](https://github.com/oauth2-proxy/oauth2-proxy/pull/1357) Fix unsafe access to session variable (@harzallah)
 
 # V7.1.3
 
