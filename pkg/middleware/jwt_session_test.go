@@ -463,7 +463,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				},
 				expectedErr:     nil,
 				expectedUser:    "123456789",
-				expectedEmail:   "123456789",
+				expectedEmail:   "",
 				expectedExpires: &expiresFuture,
 			}),
 			Entry("with a verified email", tokenToSessionTableInput{
@@ -485,7 +485,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				expectedEmail:   "foo@example.com",
 				expectedExpires: &expiresFuture,
 			}),
-			Entry("with a non-verified email", tokenToSessionTableInput{
+			Entry("do not fail with a non-verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
 					StandardClaims: jwt.StandardClaims{
 						Audience:  "asdf1234",
@@ -499,7 +499,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Email:    "foo@example.com",
 					Verified: &notVerified,
 				},
-				expectedErr: errors.New("email in id_token (foo@example.com) isn't verified"),
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "foo@example.com",
+				expectedExpires: &expiresFuture,
 			}),
 		)
 	})
