@@ -21,6 +21,8 @@ type Provider struct {
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
 	// AzureConfig holds all configurations for Azure provider.
 	AzureConfig AzureOptions `json:"azureConfig,omitempty"`
+	// ADFSConfig holds all configurations for ADFS provider.
+	ADFSConfig ADFSOptions `json:"ADFSConfig,omitempty"`
 	// BitbucketConfig holds all configurations for Bitbucket provider.
 	BitbucketConfig BitbucketOptions `json:"bitbucketConfig,omitempty"`
 	// GitHubConfig holds all configurations for GitHubC provider.
@@ -57,7 +59,7 @@ type Provider struct {
 	ProfileURL string `json:"profileURL,omitempty"`
 	// IntrospectURL is the claims and permissions access Endpoint (OIDC)
 	IntrospectURL string `json:"introspectURL,omitempty"`
-	// ProtectedResource is the resource that is protected (Azure AD only)
+	// ProtectedResource is the resource that is protected (Azure AD and ADFS only)
 	ProtectedResource string `json:"resource,omitempty"`
 	// ValidateURL is the access token validation endpoint
 	ValidateURL string `json:"validateURL,omitempty"`
@@ -78,12 +80,21 @@ type Provider struct {
 type KeycloakOptions struct {
 	// Group enables to restrict login to members of indicated group
 	Groups []string `json:"groups,omitempty"`
+
+	// Role enables to restrict login to users with role (only available when using the keycloak-oidc provider)
+	Roles []string `json:"roles,omitempty"`
 }
 
 type AzureOptions struct {
 	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
-	// Default value is 'commmon'
+	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
+}
+
+type ADFSOptions struct {
+	// Skip adding the scope parameter in login request
+	// Default value is 'false'
+	SkipScope bool `json:"skipScope,omitempty"`
 }
 
 type BitbucketOptions struct {

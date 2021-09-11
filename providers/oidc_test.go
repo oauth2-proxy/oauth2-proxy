@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/stretchr/testify/assert"
@@ -618,7 +618,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithoutIdToken(t *testing.T) {
 		User:         "11223344",
 	}
 
-	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), existingSession)
+	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, refreshed, true)
 	assert.Equal(t, "janedoe@example.com", existingSession.Email)
@@ -651,7 +651,7 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 		Email:        "changeit",
 		User:         "changeit",
 	}
-	refreshed, err := provider.RefreshSessionIfNeeded(context.Background(), existingSession)
+	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, refreshed, true)
 	assert.Equal(t, defaultIDToken.Email, existingSession.Email)

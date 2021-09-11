@@ -14,12 +14,20 @@ import (
 func TestRefresh(t *testing.T) {
 	p := &ProviderData{}
 
-	expires := time.Now().Add(time.Duration(-11) * time.Minute)
-	refreshed, err := p.RefreshSessionIfNeeded(context.Background(), &sessions.SessionState{
-		ExpiresOn: &expires,
-	})
-	assert.Equal(t, false, refreshed)
-	assert.Equal(t, nil, err)
+	now := time.Unix(1234567890, 10)
+	expires := time.Unix(1234567890, 0)
+
+	ss := &sessions.SessionState{}
+	ss.Clock.Set(now)
+	ss.SetExpiresOn(expires)
+
+	refreshed, err := p.RefreshSession(context.Background(), ss)
+	assert.False(t, refreshed)
+	assert.Equal(t, ErrNotImplemented, err)
+
+	refreshed, err = p.RefreshSession(context.Background(), nil)
+	assert.False(t, refreshed)
+	assert.Equal(t, ErrNotImplemented, err)
 }
 
 func TestAcrValuesNotConfigured(t *testing.T) {

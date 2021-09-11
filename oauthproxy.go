@@ -15,12 +15,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/redirect"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
@@ -38,6 +40,14 @@ const (
 	schemeHTTP      = "http"
 	schemeHTTPS     = "https"
 	applicationJSON = "application/json"
+
+	robotsPath        = "/robots.txt"
+	signInPath        = "/sign_in"
+	signOutPath       = "/sign_out"
+	oauthStartPath    = "/start"
+	oauthCallbackPath = "/callback"
+	authOnlyPath      = "/auth"
+	userInfoPath      = "/userinfo"
 )
 
 var (
@@ -46,10 +56,6 @@ var (
 
 	// ErrAccessDenied means the user should receive a 401 Unauthorized response
 	ErrAccessDenied = errors.New("access denied")
-
-	// Used to check final redirects are not susceptible to open redirects.
-	// Matches //, /\ and both of these with whitespace in between (eg / / or / \).
-	invalidRedirectRegex = regexp.MustCompile(`[/\\](?:[\s\v]*|\.{1,2})[/\\]`)
 )
 
 // allowedRoute manages method + path based allowlists
@@ -63,13 +69,7 @@ type OAuthProxy struct {
 	CookieOptions *options.Cookie
 	Validator     func(string) bool
 
-	RobotsPath        string
-	SignInPath        string
-	SignOutPath       string
-	OAuthStartPath    string
-	OAuthCallbackPath string
-	AuthOnlyPath      string
-	UserInfoPath      string
+	SignInPath string
 
 	allowedRoutes       []allowedRoute
 	redirectURL         *url.URL // the url to receive requests at
@@ -78,18 +78,21 @@ type OAuthProxy struct {
 	sessionStore        sessionsapi.SessionStore
 	ProxyPrefix         string
 	basicAuthValidator  basic.Validator
-	serveMux            http.Handler
 	SkipProviderButton  bool
 	skipAuthPreflight   bool
 	skipJwtBearerTokens bool
 	realClientIPParser  ipapi.RealClientIPParser
 	trustedIPs          *ip.NetSet
 
-	sessionChain alice.Chain
-	headersChain alice.Chain
-	preAuthChain alice.Chain
-	pageWriter   pagewriter.Writer
-	server       proxyhttp.Server
+	sessionChain      alice.Chain
+	headersChain      alice.Chain
+	preAuthChain      alice.Chain
+	pageWriter        pagewriter.Writer
+	server            proxyhttp.Server
+	upstreamProxy     http.Handler
+	serveMux          *mux.Router
+	redirectValidator redirect.Validator
+	appDirector       redirect.AppDirector
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -172,22 +175,21 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
 	}
 
+	redirectValidator := redirect.NewValidator(opts.WhitelistDomains)
+	appDirector := redirect.NewAppDirector(redirect.AppDirectorOpts{
+		ProxyPrefix: opts.ProxyPrefix,
+		Validator:   redirectValidator,
+	})
+
 	p := &OAuthProxy{
 		CookieOptions: &opts.Cookie,
 		Validator:     validator,
 
-		RobotsPath:        "/robots.txt",
-		SignInPath:        fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
-		SignOutPath:       fmt.Sprintf("%s/sign_out", opts.ProxyPrefix),
-		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
-		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
-		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
-		UserInfoPath:      fmt.Sprintf("%s/userinfo", opts.ProxyPrefix),
+		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
 		ProxyPrefix:         opts.ProxyPrefix,
 		provider:            opts.GetProvider(),
 		sessionStore:        sessionStore,
-		serveMux:            upstreamProxy,
 		redirectURL:         redirectURL,
 		allowedRoutes:       allowedRoutes,
 		whitelistDomains:    opts.WhitelistDomains,
@@ -202,7 +204,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		headersChain:       headersChain,
 		preAuthChain:       preAuthChain,
 		pageWriter:         pageWriter,
+		upstreamProxy:      upstreamProxy,
+		redirectValidator:  redirectValidator,
+		appDirector:        appDirector,
 	}
+	p.buildServeMux(opts.ProxyPrefix)
 
 	if err := p.setupServer(opts); err != nil {
 		return nil, fmt.Errorf("error setting up server: %v", err)
@@ -256,6 +262,41 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 
 	p.server = proxyhttp.NewServerGroup(appServer, metricsServer)
 	return nil
+}
+
+func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
+	r := mux.NewRouter()
+	// Everything served by the router must go through the preAuthChain first.
+	r.Use(p.preAuthChain.Then)
+
+	// Register the robots path writer
+	r.Path(robotsPath).HandlerFunc(p.pageWriter.WriteRobotsTxt)
+
+	// The authonly path should be registered separately to prevent it from getting no-cache headers.
+	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
+	// likelihood of multiple reuests trying to referesh sessions simultaneously.
+	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
+
+	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
+	// are not applied.
+	p.buildProxySubrouter(r.PathPrefix(proxyPrefix).Subrouter())
+
+	// Register serveHTTP last so it catches anything that isn't already caught earlier.
+	// Anything that got to this point needs to have a session loaded.
+	r.PathPrefix("/").Handler(p.sessionChain.ThenFunc(p.Proxy))
+	p.serveMux = r
+}
+
+func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
+	s.Use(prepareNoCacheMiddleware)
+
+	s.Path(signInPath).HandlerFunc(p.SignIn)
+	s.Path(signOutPath).HandlerFunc(p.SignOut)
+	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
+	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
+
+	// The userinfo endpoint needs to load sessions before handling the request
+	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -320,10 +361,10 @@ func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:           sessionStore,
-		RefreshPeriod:          opts.Cookie.Refresh,
-		RefreshSessionIfNeeded: opts.GetProvider().RefreshSessionIfNeeded,
-		ValidateSessionState:   opts.GetProvider().ValidateSession,
+		SessionStore:    sessionStore,
+		RefreshPeriod:   opts.Cookie.Refresh,
+		RefreshSession:  opts.GetProvider().RefreshSession,
+		ValidateSession: opts.GetProvider().ValidateSession,
 	}))
 
 	return chain
@@ -431,91 +472,13 @@ func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *s
 	return p.sessionStore.Save(rw, req, s)
 }
 
-// IsValidRedirect checks whether the redirect URL is whitelisted
-func (p *OAuthProxy) IsValidRedirect(redirect string) bool {
-	switch {
-	case redirect == "":
-		// The user didn't specify a redirect, should fallback to `/`
-		return false
-	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !invalidRedirectRegex.MatchString(redirect):
-		return true
-	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
-		redirectURL, err := url.Parse(redirect)
-		if err != nil {
-			logger.Printf("Rejecting invalid redirect %q: scheme unsupported or missing", redirect)
-			return false
-		}
-		redirectHostname := redirectURL.Hostname()
-
-		for _, allowedDomain := range p.whitelistDomains {
-			allowedHost, allowedPort := splitHostPort(allowedDomain)
-			if allowedHost == "" {
-				continue
-			}
-
-			if redirectHostname == strings.TrimPrefix(allowedHost, ".") ||
-				(strings.HasPrefix(allowedHost, ".") &&
-					strings.HasSuffix(redirectHostname, allowedHost)) {
-				// the domain names match, now validate the ports
-				// if the whitelisted domain's port is '*', allow all ports
-				// if the whitelisted domain contains a specific port, only allow that port
-				// if the whitelisted domain doesn't contain a port at all, only allow empty redirect ports ie http and https
-				redirectPort := redirectURL.Port()
-				if allowedPort == "*" ||
-					allowedPort == redirectPort ||
-					(allowedPort == "" && redirectPort == "") {
-					return true
-				}
-			}
-		}
-
-		logger.Printf("Rejecting invalid redirect %q: domain / port not in whitelist", redirect)
-		return false
-	default:
-		logger.Printf("Rejecting invalid redirect %q: not an absolute or relative URL", redirect)
-		return false
-	}
-}
-
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	p.preAuthChain.Then(http.HandlerFunc(p.serveHTTP)).ServeHTTP(rw, req)
-}
-
-func (p *OAuthProxy) serveHTTP(rw http.ResponseWriter, req *http.Request) {
-	if req.URL.Path != p.AuthOnlyPath && strings.HasPrefix(req.URL.Path, p.ProxyPrefix) {
-		prepareNoCache(rw)
-	}
-
-	switch path := req.URL.Path; {
-	case path == p.RobotsPath:
-		p.RobotsTxt(rw, req)
-	case p.IsAllowedRequest(req):
-		p.SkipAuthProxy(rw, req)
-	case path == p.SignInPath:
-		p.SignIn(rw, req)
-	case path == p.SignOutPath:
-		p.SignOut(rw, req)
-	case path == p.OAuthStartPath:
-		p.OAuthStart(rw, req)
-	case path == p.OAuthCallbackPath:
-		p.OAuthCallback(rw, req)
-	case path == p.AuthOnlyPath:
-		p.AuthOnly(rw, req)
-	case path == p.UserInfoPath:
-		p.UserInfo(rw, req)
-	default:
-		p.Proxy(rw, req)
-	}
-}
-
-// RobotsTxt disallows scraping pages from the OAuthProxy
-func (p *OAuthProxy) RobotsTxt(rw http.ResponseWriter, req *http.Request) {
-	p.pageWriter.WriteRobotsTxt(rw, req)
+	p.serveMux.ServeHTTP(rw, req)
 }
 
 // ErrorPage writes an error response
 func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code int, appError string, messages ...interface{}) {
-	redirectURL, err := p.getAppRedirect(req)
+	redirectURL, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 	}
@@ -580,7 +543,7 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	}
 	rw.WriteHeader(code)
 
-	redirectURL, err := p.getAppRedirect(req)
+	redirectURL, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -615,7 +578,7 @@ func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool) {
 
 // SignIn serves a page prompting users to sign in
 func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
-	redirect, err := p.getAppRedirect(req)
+	redirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -643,10 +606,19 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 
 // UserInfo endpoint outputs session email and preferred username in JSON format
 func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
-
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err != nil {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	if session == nil {
+		if _, err := rw.Write([]byte("{}")); err != nil {
+			logger.Printf("Error encoding empty user info: %v", err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 
@@ -662,10 +634,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		PreferredUsername: session.PreferredUsername,
 	}
 
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(rw).Encode(userInfo)
-	if err != nil {
+	if err := json.NewEncoder(rw).Encode(userInfo); err != nil {
 		logger.Printf("Error encoding user info: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
@@ -673,7 +642,7 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 
 // SignOut sends a response to clear the authentication cookie
 func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
-	redirect, err := p.getAppRedirect(req)
+	redirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -699,7 +668,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	appRedirect, err := p.getAppRedirect(req)
+	appRedirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining application redirect: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -782,7 +751,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	csrf.SetSessionNonce(session)
 	p.provider.ValidateSession(req.Context(), session)
 
-	if !p.IsValidRedirect(appRedirect) {
+	if !p.redirectValidator.IsValidRedirect(appRedirect) {
 		appRedirect = "/"
 	}
 
@@ -817,6 +786,15 @@ func (p *OAuthProxy) redeemCode(req *http.Request) (*sessionsapi.SessionState, e
 	if err != nil {
 		return nil, err
 	}
+
+	// Force setting these in case the Provider didn't
+	if s.CreatedAt == nil {
+		s.CreatedAtNow()
+	}
+	if s.ExpiresOn == nil {
+		s.ExpiresIn(p.CookieOptions.Expire)
+	}
+
 	return s, nil
 }
 
@@ -857,11 +835,6 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	})).ServeHTTP(rw, req)
 }
 
-// SkipAuthProxy proxies allowlisted requests and skips authentication
-func (p *OAuthProxy) SkipAuthProxy(rw http.ResponseWriter, req *http.Request) {
-	p.headersChain.Then(p.serveMux).ServeHTTP(rw, req)
-}
-
 // Proxy proxies the user request if the user is authenticated else it prompts
 // them to authenticate
 func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
@@ -870,7 +843,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	case nil:
 		// we are authenticated
 		p.addHeadersForProxying(rw, session)
-		p.headersChain.Then(p.serveMux).ServeHTTP(rw, req)
+		p.headersChain.Then(p.upstreamProxy).ServeHTTP(rw, req)
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
 		if isAjax(req) {
@@ -910,6 +883,13 @@ func prepareNoCache(w http.ResponseWriter) {
 	}
 }
 
+func prepareNoCacheMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		prepareNoCache(rw)
+		next.ServeHTTP(rw, req)
+	})
+}
+
 // getOAuthRedirectURI returns the redirectURL that the upstream OAuth Provider will
 // redirect clients to once authenticated.
 // This is usually the OAuthProxy callback URL.
@@ -937,170 +917,18 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	return rd.String()
 }
 
-// getAppRedirect determines the full URL or URI path to redirect clients to
-// once authenticated with the OAuthProxy
-// Strategy priority (first legal result is used):
-// - `rd` querysting parameter
-// - `X-Auth-Request-Redirect` header
-// - `X-Forwarded-(Proto|Host|Uri)` headers (when ReverseProxy mode is enabled)
-// - `X-Forwarded-(Proto|Host)` if `Uri` has the ProxyPath (i.e. /oauth2/*)
-// - `X-Forwarded-Uri` direct URI path (when ReverseProxy mode is enabled)
-// - `req.URL.RequestURI` if not under the ProxyPath (i.e. /oauth2/*)
-// - `/`
-func (p *OAuthProxy) getAppRedirect(req *http.Request) (string, error) {
-	err := req.ParseForm()
-	if err != nil {
-		return "", err
-	}
-
-	// These redirect getter functions are strategies ordered by priority
-	// for figuring out the redirect URL.
-	type redirectGetter func(req *http.Request) string
-	for _, rdGetter := range []redirectGetter{
-		p.getRdQuerystringRedirect,
-		p.getXAuthRequestRedirect,
-		p.getXForwardedHeadersRedirect,
-		p.getURIRedirect,
-	} {
-		redirect := rdGetter(req)
-		// Call `p.IsValidRedirect` again here a final time to be safe
-		if redirect != "" && p.IsValidRedirect(redirect) {
-			return redirect, nil
-		}
-	}
-
-	return "/", nil
-}
-
-func isForwardedRequest(req *http.Request) bool {
-	return requestutil.IsProxied(req) &&
-		req.Host != requestutil.GetRequestHost(req)
-}
-
-func (p *OAuthProxy) hasProxyPrefix(path string) bool {
-	return strings.HasPrefix(path, fmt.Sprintf("%s/", p.ProxyPrefix))
-}
-
-func (p *OAuthProxy) validateRedirect(redirect string, errorFormat string) string {
-	if p.IsValidRedirect(redirect) {
-		return redirect
-	}
-	if redirect != "" {
-		logger.Errorf(errorFormat, redirect)
-	}
-	return ""
-}
-
-// getRdQuerystringRedirect handles this getAppRedirect strategy:
-// - `rd` querysting parameter
-func (p *OAuthProxy) getRdQuerystringRedirect(req *http.Request) string {
-	return p.validateRedirect(
-		req.Form.Get("rd"),
-		"Invalid redirect provided in rd querystring parameter: %s",
-	)
-}
-
-// getXAuthRequestRedirect handles this getAppRedirect strategy:
-// - `X-Auth-Request-Redirect` Header
-func (p *OAuthProxy) getXAuthRequestRedirect(req *http.Request) string {
-	return p.validateRedirect(
-		req.Header.Get("X-Auth-Request-Redirect"),
-		"Invalid redirect provided in X-Auth-Request-Redirect header: %s",
-	)
-}
-
-// getXForwardedHeadersRedirect handles these getAppRedirect strategies:
-// - `X-Forwarded-(Proto|Host|Uri)` headers (when ReverseProxy mode is enabled)
-// - `X-Forwarded-(Proto|Host)` if `Uri` has the ProxyPath (i.e. /oauth2/*)
-func (p *OAuthProxy) getXForwardedHeadersRedirect(req *http.Request) string {
-	if !isForwardedRequest(req) {
-		return ""
-	}
-
-	uri := requestutil.GetRequestURI(req)
-	if p.hasProxyPrefix(uri) {
-		uri = "/"
-	}
-
-	redirect := fmt.Sprintf(
-		"%s://%s%s",
-		requestutil.GetRequestProto(req),
-		requestutil.GetRequestHost(req),
-		uri,
-	)
-
-	return p.validateRedirect(redirect,
-		"Invalid redirect generated from X-Forwarded-* headers: %s")
-}
-
-// getURIRedirect handles these getAppRedirect strategies:
-// - `X-Forwarded-Uri` direct URI path (when ReverseProxy mode is enabled)
-// - `req.URL.RequestURI` if not under the ProxyPath (i.e. /oauth2/*)
-// - `/`
-func (p *OAuthProxy) getURIRedirect(req *http.Request) string {
-	redirect := p.validateRedirect(
-		requestutil.GetRequestURI(req),
-		"Invalid redirect generated from X-Forwarded-Uri header: %s",
-	)
-	if redirect == "" {
-		redirect = req.URL.RequestURI()
-	}
-
-	if p.hasProxyPrefix(redirect) {
-		return "/"
-	}
-	return redirect
-}
-
-// splitHostPort separates host and port. If the port is not valid, it returns
-// the entire input as host, and it doesn't check the validity of the host.
-// Unlike net.SplitHostPort, but per RFC 3986, it requires ports to be numeric.
-// *** taken from net/url, modified validOptionalPort() to accept ":*"
-func splitHostPort(hostport string) (host, port string) {
-	host = hostport
-
-	colon := strings.LastIndexByte(host, ':')
-	if colon != -1 && validOptionalPort(host[colon:]) {
-		host, port = host[:colon], host[colon+1:]
-	}
-
-	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
-		host = host[1 : len(host)-1]
-	}
-
-	return
-}
-
-// validOptionalPort reports whether port is either an empty string
-// or matches /^:\d*$/
-// *** taken from net/url, modified to accept ":*"
-func validOptionalPort(port string) bool {
-	if port == "" || port == ":*" {
-		return true
-	}
-	if port[0] != ':' {
-		return false
-	}
-	for _, b := range port[1:] {
-		if b < '0' || b > '9' {
-			return false
-		}
-	}
-	return true
-}
-
 // getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
 // Returns:
 // - `nil, ErrNeedsLogin` if user needs to login.
 // - `nil, ErrAccessDenied` if the authenticated user is not authorized
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
 func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
-	var session *sessionsapi.SessionState
+	session := middlewareapi.GetRequestScope(req).Session
 
-	getSession := p.sessionChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		session = middlewareapi.GetRequestScope(req).Session
-	}))
-	getSession.ServeHTTP(rw, req)
+	// Check this after loading the session so that if a valid session exists, we can add headers from it
+	if p.IsAllowedRequest(req) {
+		return session, nil
+	}
 
 	if session == nil {
 		return nil, ErrNeedsLogin
@@ -1190,6 +1018,9 @@ func decodeState(req *http.Request) (string, string, error) {
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
 func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, session *sessionsapi.SessionState) {
+	if session == nil {
+		return
+	}
 	if session.Email == "" {
 		rw.Header().Set("GAP-Auth", session.User)
 	} else {

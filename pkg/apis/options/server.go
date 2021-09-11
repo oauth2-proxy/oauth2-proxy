@@ -2,11 +2,11 @@ package options
 
 // Server represents the configuration for an HTTP(S) server
 type Server struct {
-	// BindAddress is the the address on which to serve traffic.
+	// BindAddress is the address on which to serve traffic.
 	// Leave blank or set to "-" to disable.
 	BindAddress string
 
-	// SecureBindAddress is the the address on which to serve secure traffic.
+	// SecureBindAddress is the address on which to serve secure traffic.
 	// Leave blank or set to "-" to disable.
 	SecureBindAddress string
 
@@ -17,7 +17,7 @@ type Server struct {
 
 // TLS contains the information for loading a TLS certifcate and key.
 type TLS struct {
-	// Key is the the TLS key data to use.
+	// Key is the TLS key data to use.
 	// Typically this will come from a file.
 	Key *SecretSource
 
