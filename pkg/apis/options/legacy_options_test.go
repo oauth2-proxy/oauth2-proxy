@@ -26,8 +26,8 @@ var _ = Describe("Legacy Options", func() {
 
 			truth := true
 			staticCode := 204
-			opts.UpstreamServers = Upstreams{
-				Configs: []Upstream{
+			opts.UpstreamServers = UpstreamConfig{
+				Upstreams: []Upstream{
 					{
 						ID:                    "/baz",
 						Path:                  "/baz",
@@ -221,7 +221,7 @@ var _ = Describe("Legacy Options", func() {
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				Expect(upstreams.Configs).To(ConsistOf(in.expectedUpstreams))
+				Expect(upstreams.Upstreams).To(ConsistOf(in.expectedUpstreams))
 			},
 			Entry("with no upstreams", &convertUpstreamsTableInput{
 				upstreamStrings:   []string{},

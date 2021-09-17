@@ -26,9 +26,9 @@ client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 `
 
 	const testAlphaConfig = `
-upstreams:
+upstreamConfig:
   proxyrawpath: false
-  configs:
+  upstreams:
   - id: /
     path: /
     uri: http://httpbin
@@ -104,8 +104,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts.Cookie.Secure = false
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
-		opts.UpstreamServers = options.Upstreams{
-			Configs: []options.Upstream{
+		opts.UpstreamServers = options.UpstreamConfig{
+			Upstreams: []options.Upstream{
 				{
 					ID:              "/",
 					Path:            "/",

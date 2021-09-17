@@ -22,7 +22,7 @@ type ProxyErrorHandler func(http.ResponseWriter, *http.Request, error)
 
 // NewProxy creates a new multiUpstreamProxy that can serve requests directed to
 // multiple upstreams.
-func NewProxy(upstreams options.Upstreams, sigData *options.SignatureData, writer pagewriter.Writer) (http.Handler, error) {
+func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, writer pagewriter.Writer) (http.Handler, error) {
 	m := &multiUpstreamProxy{
 		serveMux: mux.NewRouter(),
 	}
@@ -31,7 +31,7 @@ func NewProxy(upstreams options.Upstreams, sigData *options.SignatureData, write
 		m.serveMux.UseEncodedPath()
 	}
 
-	for _, upstream := range sortByPathLongest(upstreams.Configs) {
+	for _, upstream := range sortByPathLongest(upstreams.Upstreams) {
 		if upstream.Static {
 			if err := m.registerStaticResponseHandler(upstream, writer); err != nil {
 				return nil, fmt.Errorf("could not register static upstream %q: %v", upstream.ID, err)

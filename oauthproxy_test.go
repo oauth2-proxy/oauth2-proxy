@@ -197,8 +197,8 @@ func TestBasicAuthPassword(t *testing.T) {
 
 	basicAuthPassword := "This is a secure password"
 	opts := baseTestOptions()
-	opts.UpstreamServers = options.Upstreams{
-		Configs: []options.Upstream{
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
 			{
 				ID:   providerServer.URL,
 				Path: "/",
@@ -348,8 +348,8 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 		}))
 
 	patt.opts = baseTestOptions()
-	patt.opts.UpstreamServers = options.Upstreams{
-		Configs: []options.Upstream{
+	patt.opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
 			{
 				ID:   patt.providerServer.URL,
 				Path: "/",
@@ -358,7 +358,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 		},
 	}
 	if opts.ProxyUpstream.ID != "" {
-		patt.opts.UpstreamServers.Configs = append(patt.opts.UpstreamServers.Configs, opts.ProxyUpstream)
+		patt.opts.UpstreamServers.Upstreams = append(patt.opts.UpstreamServers.Upstreams, opts.ProxyUpstream)
 	}
 
 	patt.opts.Cookie.Secure = false
@@ -1273,8 +1273,8 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	t.Cleanup(upstreamServer.Close)
 
 	opts := baseTestOptions()
-	opts.UpstreamServers = options.Upstreams{
-		Configs: []options.Upstream{
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
 			{
 				ID:   upstreamServer.URL,
 				Path: "/",
@@ -1350,8 +1350,8 @@ func NewSignatureTest() (*SignatureTest, error) {
 	if err != nil {
 		return nil, err
 	}
-	opts.UpstreamServers = options.Upstreams{
-		Configs: []options.Upstream{
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
 			{
 				ID:   upstreamServer.URL,
 				Path: "/",
@@ -1788,8 +1788,8 @@ func Test_noCacheHeaders(t *testing.T) {
 	t.Cleanup(upstreamServer.Close)
 
 	opts := baseTestOptions()
-	opts.UpstreamServers = options.Upstreams{
-		Configs: []options.Upstream{
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
 			{
 				ID:   upstreamServer.URL,
 				Path: "/",
@@ -2060,8 +2060,8 @@ func TestTrustedIPs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := baseTestOptions()
-			opts.UpstreamServers = options.Upstreams{
-				Configs: []options.Upstream{
+			opts.UpstreamServers = options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:     "static",
 						Path:   "/",
@@ -2255,8 +2255,8 @@ func TestAllowedRequest(t *testing.T) {
 	t.Cleanup(upstreamServer.Close)
 
 	opts := baseTestOptions()
-	opts.UpstreamServers = options.Upstreams{
-		Configs: []options.Upstream{
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
 			{
 				ID:   upstreamServer.URL,
 				Path: "/",
@@ -2372,8 +2372,8 @@ func TestProxyAllowedGroups(t *testing.T) {
 
 			test, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 				opts.Providers[0].AllowedGroups = tt.allowedGroups
-				opts.UpstreamServers = options.Upstreams{
-					Configs: []options.Upstream{
+				opts.UpstreamServers = options.UpstreamConfig{
+					Upstreams: []options.Upstream{
 						{
 							ID:   upstreamServer.URL,
 							Path: "/",

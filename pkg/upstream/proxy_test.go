@@ -20,7 +20,7 @@ var _ = Describe("Proxy Suite", func() {
 		target    string
 		response  testHTTPResponse
 		upstream  string
-		upstreams options.Upstreams
+		upstreams options.UpstreamConfig
 	}
 
 	Context("multiUpstreamProxy", func() {
@@ -40,8 +40,8 @@ var _ = Describe("Proxy Suite", func() {
 
 				// Allows for specifying settings and even individual upstreams for specific tests and uses the default upstreams/configs otherwise
 				upstreams := in.upstreams
-				if len(in.upstreams.Configs) == 0 {
-					upstreams.Configs = []options.Upstream{
+				if len(in.upstreams.Upstreams) == 0 {
+					upstreams.Upstreams = []options.Upstream{
 						{
 							ID:   "http-backend",
 							Path: "/http/",
@@ -325,7 +325,7 @@ var _ = Describe("Proxy Suite", func() {
 				upstream: "",
 			}),
 			Entry("containing an escaped '/' with ProxyRawPath", &proxyTableInput{
-				upstreams: options.Upstreams{ProxyRawPath: true},
+				upstreams: options.UpstreamConfig{ProxyRawPath: true},
 				target:    "http://example.localhost/%2F/test1/%2F/test2",
 				response: testHTTPResponse{
 					code: 404,

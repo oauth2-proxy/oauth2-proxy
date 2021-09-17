@@ -22,7 +22,7 @@ const (
 
 func testOptions() *options.Options {
 	o := options.NewOptions()
-	o.UpstreamServers.Configs = append(o.UpstreamServers.Configs, options.Upstream{
+	o.UpstreamServers.Upstreams = append(o.UpstreamServers.Upstreams, options.Upstream{
 		ID:   "upstream",
 		Path: "/",
 		URI:  "http://127.0.0.1:8080/",

@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("Upstreams", func() {
 	type validateUpstreamTableInput struct {
-		upstreams  options.Upstreams
+		upstreams  options.UpstreamConfig
 		errStrings []string
 	}
 
@@ -54,12 +54,12 @@ var _ = Describe("Upstreams", func() {
 			Expect(validateUpstreams(o.upstreams)).To(ConsistOf(o.errStrings))
 		},
 		Entry("with no upstreams", &validateUpstreamTableInput{
-			upstreams:  options.Upstreams{},
+			upstreams:  options.UpstreamConfig{},
 			errStrings: []string{},
 		}),
 		Entry("with valid upstreams", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					validHTTPUpstream,
 					validStaticUpstream,
 					validFileUpstream,
@@ -68,8 +68,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{},
 		}),
 		Entry("with an empty ID", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:   "",
 						Path: "/foo",
@@ -80,8 +80,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{emptyIDMsg},
 		}),
 		Entry("with an empty Path", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:   "foo",
 						Path: "",
@@ -92,8 +92,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{emptyPathMsg},
 		}),
 		Entry("with an empty Path", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:   "foo",
 						Path: "",
@@ -104,8 +104,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{emptyPathMsg},
 		}),
 		Entry("with an empty URI", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:   "foo",
 						Path: "/foo",
@@ -116,8 +116,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{emptyURIMsg},
 		}),
 		Entry("with an invalid URI", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:   "foo",
 						Path: "/foo",
@@ -128,8 +128,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{invalidURIMsg},
 		}),
 		Entry("with an invalid URI scheme", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:   "foo",
 						Path: "/foo",
@@ -140,8 +140,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{invalidURISchemeMsg},
 		}),
 		Entry("with a static upstream and invalid optons", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:                    "foo",
 						Path:                  "/foo",
@@ -163,8 +163,8 @@ var _ = Describe("Upstreams", func() {
 			},
 		}),
 		Entry("with duplicate IDs", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:   "foo",
 						Path: "/foo1",
@@ -180,8 +180,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{multipleIDsMsg},
 		}),
 		Entry("with duplicate Paths", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:   "foo1",
 						Path: "/foo",
@@ -197,8 +197,8 @@ var _ = Describe("Upstreams", func() {
 			errStrings: []string{multiplePathsMsg},
 		}),
 		Entry("when a static code is supplied without static", &validateUpstreamTableInput{
-			upstreams: options.Upstreams{
-				Configs: []options.Upstream{
+			upstreams: options.UpstreamConfig{
+				Upstreams: []options.Upstream{
 					{
 						ID:         "foo",
 						Path:       "/foo",
