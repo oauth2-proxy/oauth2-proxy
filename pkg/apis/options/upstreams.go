@@ -7,8 +7,16 @@ const (
 	DefaultUpstreamFlushInterval = 1 * time.Second
 )
 
-// Upstreams is a collection of definitions for upstream servers.
-type Upstreams []Upstream
+// UpstreamConfig is a collection of definitions for upstream servers.
+type UpstreamConfig struct {
+	// ProxyRawPath will pass the raw url path to upstream allowing for url's
+	// like: "/%2F/" which would otherwise be redirected to "/"
+	ProxyRawPath bool `json:"proxyRawPath,omitempty"`
+
+	// Upstreams represents the configuration for the upstream servers.
+	// Requests will be proxied to this upstream if the path matches the request path.
+	Upstreams []Upstream `json:"upstreams,omitempty"`
+}
 
 // Upstream represents the configuration for an upstream server.
 // Requests will be proxied to this upstream if the path matches the request path.
