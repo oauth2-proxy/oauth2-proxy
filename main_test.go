@@ -2,8 +2,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -19,10 +21,14 @@ http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
 set_basic_auth="true"
 basic_auth_password="super-secret-password"
+client_id="oauth2-proxy"
+client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 `
 
 	const testAlphaConfig = `
-upstreams:
+upstreamConfig:
+  proxyrawpath: false
+  upstreams:
   - id: /
     path: /
     uri: http://httpbin
@@ -57,15 +63,24 @@ injectResponseHeaders:
       value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 server:
   bindAddress: "127.0.0.1:4180"
+providers:
+- provider: google
+  ID: google=oauth2-proxy
+  clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
+  clientID: oauth2-proxy
+  approvalPrompt: force
+  azureConfig:
+    tenant: common
+  oidcConfig:
+    groupsClaim: groups
+    emailClaim: email
+    userIDClaim: email
+    insecureSkipNonce: true
 `
 
 	const testCoreConfig = `
 cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
-provider="oidc"
 email_domains="example.com"
-oidc_issuer_url="http://dex.localhost:4190/dex"
-client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
-client_id="oauth2-proxy"
 cookie_secure="false"
 
 redirect_url="http://localhost:4180/oauth2/callback"
@@ -85,22 +100,20 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		Expect(err).ToNot(HaveOccurred())
 
 		opts.Cookie.Secret = "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
-		opts.ProviderType = "oidc"
 		opts.EmailDomains = []string{"example.com"}
-		opts.OIDCIssuerURL = "http://dex.localhost:4190/dex"
-		opts.ClientSecret = "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
-		opts.ClientID = "oauth2-proxy"
 		opts.Cookie.Secure = false
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
-		opts.UpstreamServers = options.Upstreams{
-			{
-				ID:              "/",
-				Path:            "/",
-				URI:             "http://httpbin",
-				FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
-				PassHostHeader:  boolPtr(true),
-				ProxyWebSockets: boolPtr(true),
+		opts.UpstreamServers = options.UpstreamConfig{
+			Upstreams: []options.Upstream{
+				{
+					ID:              "/",
+					Path:            "/",
+					URI:             "http://httpbin",
+					FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
+					PassHostHeader:  boolPtr(true),
+					ProxyWebSockets: boolPtr(true),
+				},
 			},
 		}
 
@@ -121,6 +134,25 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 		opts.InjectRequestHeaders = append([]options.Header{authHeader}, opts.InjectRequestHeaders...)
 		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, authHeader)
+
+		opts.Providers = options.Providers{
+			options.Provider{
+				ID:           "google=oauth2-proxy",
+				Type:         "google",
+				ClientSecret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
+				ClientID:     "oauth2-proxy",
+				AzureConfig: options.AzureOptions{
+					Tenant: "common",
+				},
+				OIDCConfig: options.OIDCOptions{
+					GroupsClaim:       "groups",
+					EmailClaim:        "email",
+					UserIDClaim:       "email",
+					InsecureSkipNonce: true,
+				},
+				ApprovalPrompt: "force",
+			},
+		}
 		return opts
 	}
 
@@ -204,7 +236,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig,
 			alphaConfigContent: testAlphaConfig + ":",
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line 36: did not find expected key"),
+			expectedErr:        fmt.Errorf("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testAlphaConfig, "\n")),
 		}),
 		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig + "unknown_field=\"something\"",

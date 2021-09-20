@@ -7,7 +7,62 @@ title: Overview
 
 ### Generating a Cookie Secret
 
-To generate a strong cookie secret use `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(16)).decode())'`
+To generate a strong cookie secret use one of the below commands:
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs
+  defaultValue="python"
+  values={[
+    {label: 'Python', value: 'python'},
+    {label: 'Bash', value: 'bash'},
+    {label: 'OpenSSL', value: 'openssl'},
+    {label: 'PowerShell', value: 'powershell'},
+    {label: 'Terraform', value: 'terraform'},
+  ]}>
+  <TabItem value="python">
+
+  ```shell
+  python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
+  ```
+
+  </TabItem>
+  <TabItem value="bash">
+
+  ```shell
+  cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 | base64
+  ```
+
+  </TabItem>
+  <TabItem value="openssl">
+
+  ```shell
+  openssl rand -base64 32 | tr -- '+/' '-_'
+  ```
+
+  </TabItem>
+  <TabItem value="powershell">
+
+  ```shell
+  # Add System.Web assembly to session, just in case
+  Add-Type -AssemblyName System.Web
+  [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
+  ```
+
+  </TabItem>
+  <TabItem value="terraform">
+
+  ```shell
+  # Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
+  resource "random_password" "cookie_secret" {
+    length           = 32
+    override_special = "-_"
+  }
+  ```
+
+  </TabItem>
+</Tabs>
 
 ### Config File
 
@@ -40,7 +95,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
 | `--custom-templates-dir` | string | path to custom html templates | |
-| `--custom-sign-in-logo` | string | path to an custom image for the sign_in page logo. Use \"-\" to disable default logo. |
+| `--custom-sign-in-logo` | string | path or a URL to an custom image for the sign_in page logo. Use \"-\" to disable default logo. |
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
@@ -50,7 +105,6 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--force-https` | bool | enforce https redirect | `false` |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
 | `--footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
-| `--gcp-healthchecks` | bool | will enable `/liveness_check`, `/readiness_check`, and `/` (with the proper user-agent) endpoints that will make it work well with GCP App Engine and GKE Ingresses | false |
 | `--github-org` | string | restrict logins to members of this organisation | |
 | `--github-team` | string | restrict logins to members of any of these teams (slug), separated by a comma | |
 | `--github-repo` | string | restrict logins to collaborators of this repository formatted as `orgname/repo` | |
@@ -76,6 +130,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--login-url` | string | Authentication endpoint | |
 | `--insecure-oidc-allow-unverified-email` | bool | don't fail if an email address in an id_token is not verified | false |
 | `--insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
+| `--insecure-oidc-skip-nonce` | bool | skip verifying the OIDC ID Token's nonce claim | true |
 | `--oidc-issuer-url` | string | the OpenID Connect issuer URL, e.g. `"https://accounts.google.com"` | |
 | `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `--oidc-email-claim` | string | which OIDC claim contains the user's email | `"email"` |
@@ -108,6 +163,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
+| `--request-id-header` | string | Request header to use as the request ID in logging | X-Request-Id |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `--resource` | string | The resource that is protected (Azure AD only) | |
@@ -136,6 +192,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--tls-key-file` | string | path to private key file | |
 | `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
 | `--allowed-group` | string \| list | restrict logins to members of this group (may be given multiple times) | |
+| `--allowed-role` | string \| list | restrict logins to users with this role (may be given multiple times). Only works with the keycloak-oidc provider. | |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
 | `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (e.g. `.example.com`)&nbsp;\[[2](#footnote2)\] | |
@@ -184,7 +241,7 @@ Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) can b
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
 
 ```
-<REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] [<STATUS>] <MESSAGE>
+<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] [<STATUS>] <MESSAGE>
 ```
 
 The status block will contain one of the below strings:
@@ -197,7 +254,7 @@ If you require a different format than that, you can configure it with the `--au
 The default format is configured as follows:
 
 ```
-{{.Client}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
+{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] [{{.Status}}] {{.Message}}
 ```
 
 Available variables for auth logging:
@@ -206,26 +263,27 @@ Available variables for auth logging:
 | --- | --- | --- |
 | Client | 74.125.224.72 | The client/remote IP address. Will use the X-Real-IP header it if exists & reverse-proxy is set to true. |
 | Host  | domain.com | The value of the Host header. |
+| Message | Authenticated via OAuth2 | The details of the auth attempt. |
 | Protocol | HTTP/1.0 | The request protocol. |
+| RequestID | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty |
 | RequestMethod | GET | The request method. |
 | Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
 | UserAgent | - | The full user agent as reported by the requesting client. |
 | Username | username@email.com | The email or username of the auth request. |
 | Status | AuthSuccess | The status of the auth request. See above for details. |
-| Message | Authenticated via OAuth2 | The details of the auth attempt. |
 
 ### Request Log Format
 HTTP request logs will output by default in the below format:
 
 ```
-<REMOTE_ADDRESS> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
+<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
 ```
 
 If you require a different format than that, you can configure it with the `--request-logging-format` flag.
 The default format is configured as follows:
 
 ```
-{{.Client}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
+{{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
 ```
 
 Available variables for request logging:
@@ -236,6 +294,7 @@ Available variables for request logging:
 | Host  | domain.com | The value of the Host header. |
 | Protocol | HTTP/1.0 | The request protocol. |
 | RequestDuration | 0.001 | The time in seconds that a request took to process. |
+| RequestID | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty |
 | RequestMethod | GET | The request method. |
 | RequestURI | "/oauth2/auth" | The URI path of the request. |
 | ResponseSize | 12 | The size in bytes of the response. |

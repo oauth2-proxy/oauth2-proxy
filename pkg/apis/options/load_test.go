@@ -14,6 +14,50 @@ import (
 )
 
 var _ = Describe("Load", func() {
+	optionsWithNilProvider := NewOptions()
+	optionsWithNilProvider.Providers = nil
+
+	legacyOptionsWithNilProvider := &LegacyOptions{
+		LegacyUpstreams: LegacyUpstreams{
+			PassHostHeader:  true,
+			ProxyWebSockets: true,
+			FlushInterval:   DefaultUpstreamFlushInterval,
+		},
+
+		LegacyHeaders: LegacyHeaders{
+			PassBasicAuth:        true,
+			PassUserHeaders:      true,
+			SkipAuthStripHeaders: true,
+		},
+
+		LegacyServer: LegacyServer{
+			HTTPAddress:  "127.0.0.1:4180",
+			HTTPSAddress: ":443",
+		},
+
+		LegacyProvider: LegacyProvider{
+			ProviderType:          "google",
+			AzureTenant:           "common",
+			ApprovalPrompt:        "force",
+			UserIDClaim:           "email",
+			OIDCEmailClaim:        "email",
+			OIDCGroupsClaim:       "groups",
+			InsecureOIDCSkipNonce: true,
+		},
+
+		Options: Options{
+			ProxyPrefix:        "/oauth2",
+			PingPath:           "/ping",
+			RealClientIPHeader: "X-Real-IP",
+			ForceHTTPS:         false,
+			Cookie:             cookieDefaults(),
+			Session:            sessionOptionsDefaults(),
+			Templates:          templatesDefaults(),
+			SkipAuthPreflight:  false,
+			Logging:            loggingDefaults(),
+		},
+	}
+
 	Context("with a testOptions structure", func() {
 		type TestOptionSubStruct struct {
 			StringSliceOption []string `flag:"string-slice-option" cfg:"string_slice_option"`
@@ -294,12 +338,12 @@ var _ = Describe("Load", func() {
 			Entry("with an empty Options struct, should return default values", &testOptionsTableInput{
 				flagSet:        NewFlagSet,
 				input:          &Options{},
-				expectedOutput: NewOptions(),
+				expectedOutput: optionsWithNilProvider,
 			}),
 			Entry("with an empty LegacyOptions struct, should return default values", &testOptionsTableInput{
 				flagSet:        NewLegacyFlagSet,
 				input:          &LegacyOptions{},
-				expectedOutput: NewLegacyOptions(),
+				expectedOutput: legacyOptionsWithNilProvider,
 			}),
 		)
 	})
@@ -425,11 +469,12 @@ sub:
 
 	It("should load a full example AlphaOptions", func() {
 		config := []byte(`
-upstreams:
-- id: httpbin
-  path: /
-  uri: http://httpbin
-  flushInterval: 500ms
+upstreamConfig:
+  upstreams:
+  - id: httpbin
+    path: /
+    uri: http://httpbin
+    flushInterval: 500ms
 injectRequestHeaders:
 - name: X-Forwarded-User
   values:
@@ -458,12 +503,14 @@ injectResponseHeaders:
 		flushInterval := Duration(500 * time.Millisecond)
 
 		Expect(into).To(Equal(&AlphaOptions{
-			Upstreams: []Upstream{
-				{
-					ID:            "httpbin",
-					Path:          "/",
-					URI:           "http://httpbin",
-					FlushInterval: &flushInterval,
+			UpstreamConfig: UpstreamConfig{
+				Upstreams: []Upstream{
+					{
+						ID:            "httpbin",
+						Path:          "/",
+						URI:           "http://httpbin",
+						FlushInterval: &flushInterval,
+					},
 				},
 			},
 			InjectRequestHeaders: []Header{

@@ -1,0 +1,57 @@
+http:
+  routers:
+    oauth2-proxy-route:
+      rule: "Host(`oauth2-proxy.oauth2-proxy.localhost`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+    httpbin-route:
+      rule: "Host(`httpbin.oauth2-proxy.localhost`)"
+      service: httpbin-service
+      middlewares:
+        - oauth-auth-redirect # redirects all unauthenticated to oauth2 signin    
+    httpbin-route-2:
+      rule: "Host(`httpbin.oauth2-proxy.localhost`) && PathPrefix(`/no-auto-redirect`)"
+      service: httpbin-service
+      middlewares:
+        - oauth-auth-wo-redirect # unauthenticated session will return a 401
+    services-oauth2-route:
+      rule: "Host(`httpbin.oauth2-proxy.localhost`) && PathPrefix(`/oauth2/`)"
+      middlewares:
+        - auth-headers
+      service: oauth-backend
+
+  services:
+    httpbin-service:
+      loadBalancer:
+        servers:
+          - url: http://httpbin
+    oauth-backend:
+      loadBalancer:
+        servers:
+          - url: http://oauth2-proxy:4180
+
+  middlewares:
+    auth-headers:
+      headers:
+        stsSeconds: 315360000
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        frameDeny: true
+    oauth-auth-redirect:
+      forwardAuth:
+        address: http://oauth2-proxy:4180
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization
+    oauth-auth-wo-redirect:
+      forwardAuth:
+        address: http://oauth2-proxy:4180/oauth2/auth
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-Auth-Request-Access-Token
+          - Authorization

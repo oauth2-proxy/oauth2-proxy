@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2"
@@ -292,7 +292,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 
 func TestLoginGovProviderGetLoginURL(t *testing.T) {
 	p, _, _ := newLoginGovProvider()
-	result := p.GetLoginURL("http://redirect/", "")
+	result := p.GetLoginURL("http://redirect/", "", "")
 	assert.Contains(t, result, "acr_values="+url.QueryEscape("http://idmanagement.gov/ns/assurance/loa/1"))
 	assert.Contains(t, result, "nonce=fakenonce")
 }

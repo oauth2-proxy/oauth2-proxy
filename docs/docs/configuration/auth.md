@@ -9,6 +9,7 @@ Valid providers are :
 
 - [Google](#google-auth-provider) _default_
 - [Azure](#azure-auth-provider)
+- [ADFS](#adfs-auth-provider)
 - [Facebook](#facebook-auth-provider)
 - [GitHub](#github-auth-provider)
 - [Keycloak](#keycloak-auth-provider)
@@ -83,9 +84,25 @@ Note: The user is checked against the group members list on initial authenticati
    --provider=azure
    --client-id=<application ID from step 3>
    --client-secret=<value from step 6>
+   --oidc-issuer-url=https://sts.windows.net/{tenant-id}/
 ```
 
 Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) should resolve this.
+
+### ADFS Auth Provider
+
+1. Open the ADFS administration console on your Windows Server and add a new Application Group
+2. Provide a name for the integration, select Server Application from the Standalone applications section and click Next
+3. Follow the wizard to get the client-id, client-secret and configure the application credentials
+4. Configure the proxy with
+
+```
+   --provider=adfs
+   --client-id=<application ID from step 3>
+   --client-secret=<value from step 3>
+```
+
+Note: When using the ADFS Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) should resolve this.
 
 ### Facebook Auth Provider
 
@@ -129,12 +146,15 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 ### Keycloak Auth Provider
 
-1.  Create new client in your Keycloak with **Access Type** 'confidental' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
+1.  Create new client in your Keycloak realm with **Access Type** 'confidental' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
 2.  Take note of the Secret in the credential tab of the client
 3.  Create a mapper with **Mapper Type** 'Group Membership' and **Token Claim Name** 'groups'.
 
+:::note this is the legacy Keycloak Auth Prodiver, use `keycloak-oidc` if possible. :::
+
 Make sure you set the following to the appropriate url:
 
+```
     --provider=keycloak
     --client-id=<client you have created>
     --client-secret=<your client's secret>
@@ -144,6 +164,7 @@ Make sure you set the following to the appropriate url:
     --validate-url="http(s)://<keycloak host>/auth/realms/<your realm>/protocol/openid-connect/userinfo"
     --keycloak-group=<first_allowed_user_group>
     --keycloak-group=<second_allowed_user_group>
+```
     
 For group based authorization, the optional `--keycloak-group` (legacy) or `--allowed-group` (global standard)
 flags can be used to specify which groups to limit access to.
@@ -154,6 +175,25 @@ Keycloak userinfo endpoint response.
 
 The group management in keycloak is using a tree. If you create a group named admin in keycloak
 you should define the 'keycloak-group' value to /admin.
+
+### Keycloak OIDC Auth Provider
+
+1.  Create new client in your Keycloak realm with **Access Type** 'confidental', **Client protocol**  'openid-connect' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
+2.  Take note of the Secret in the credential tab of the client
+3.  Create a mapper with **Mapper Type** 'Group Membership' and **Token Claim Name** 'groups'.
+4.  Create a mapper with **Mapper Type** 'Audience' and **Included Client Audience** and **Included Custom Audience** set to your client name.
+
+Make sure you set the following to the appropriate url:
+
+```
+    --provider=keycloak-oidc
+    --client-id=<your client's id>
+    --client-secret=<your client's secret>
+    --redirect-url=https://myapp.com/oauth2/callback
+    --oidc-issuer-url=https://<keycloak host>/auth/<your realm>/basic
+    --allowed-role=<realm role name> // Optional, required realm role
+    --allowed-role=<client id>:<client role name> // Optional, required client role
+```
 
 ### GitLab Auth Provider
 

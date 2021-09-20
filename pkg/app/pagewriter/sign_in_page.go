@@ -13,6 +13,7 @@ import (
 	"html/template"
 	"net/http"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
@@ -53,7 +54,7 @@ type signInPageWriter struct {
 
 // WriteSignInPage writes the sign-in page to the given response writer.
 // It uses the redirectURL to be able to set the final destination for the user post login.
-func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, redirectURL string) {
+func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string) {
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	t := struct {
@@ -79,12 +80,19 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, redirectURL s
 	err := s.template.Execute(rw, t)
 	if err != nil {
 		logger.Printf("Error rendering sign-in template: %v", err)
-		s.errorPageWriter.WriteErrorPage(rw, http.StatusInternalServerError, redirectURL, err.Error())
+		scope := middlewareapi.GetRequestScope(req)
+		s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
+			Status:      http.StatusInternalServerError,
+			RedirectURL: redirectURL,
+			RequestID:   scope.RequestID,
+			AppError:    err.Error(),
+		})
 	}
 }
 
 // loadCustomLogo loads the logo file from the path and encodes it to an HTML
-// entity. If no custom logo is provided, the OAuth2 Proxy Icon is used instead.
+// entity or if a URL is provided then it's used directly,
+// otherwise if no custom logo is provided, the OAuth2 Proxy Icon is used instead.
 func loadCustomLogo(logoPath string) (string, error) {
 	if logoPath == "" {
 		// The default logo is an SVG so this will be valid to just return.
@@ -95,6 +103,11 @@ func loadCustomLogo(logoPath string) (string, error) {
 		// Return no logo when the custom logo is set to `-`.
 		// This disables the logo rendering.
 		return "", nil
+	}
+
+	if strings.HasPrefix(logoPath, "https://") {
+		// Return img tag pointing to the URL.
+		return fmt.Sprintf("<img src=\"%s\" alt=\"Logo\" />", logoPath), nil
 	}
 
 	logoData, err := os.ReadFile(logoPath)

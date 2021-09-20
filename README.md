@@ -23,9 +23,9 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.0.1`)
+    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.1.3`)
 
-    b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy` which will put the binary in `$GOROOT/bin`
+    b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy/v7` which will put the binary in `$GOROOT/bin`
 
     c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, ARMv6 and ARM64 tags available)
 
@@ -44,7 +44,7 @@ oauth2-proxy-x.y.z.linux-amd64: OK
 ## Security
 
 If you are running a version older than v6.0.0 we **strongly recommend you please update** to a current version.
-See [open redirect vulnverability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) for details.
+See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) for details.
 
 ## Docs
 
