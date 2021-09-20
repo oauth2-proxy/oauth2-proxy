@@ -60,6 +60,16 @@ docker-all: docker
 docker-push:
 	docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest .
 
+.PHONY: docker-push-all
+docker-push-all: docker-push
+	docker push $(REGISTRY)/oauth2-proxy:latest-amd64
+	docker push $(REGISTRY)/oauth2-proxy:${VERSION}
+	docker push $(REGISTRY)/oauth2-proxy:${VERSION}-amd64
+	docker push $(REGISTRY)/oauth2-proxy:latest-arm64
+	docker push $(REGISTRY)/oauth2-proxy:${VERSION}-arm64
+	docker push $(REGISTRY)/oauth2-proxy:latest-armv6
+	docker push $(REGISTRY)/oauth2-proxy:${VERSION}-armv6
+
 .PHONY: generate
 generate:
 	go generate ./pkg/...
