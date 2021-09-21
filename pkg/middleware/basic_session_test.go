@@ -45,20 +45,12 @@ var _ = Describe("Basic Auth Session Suite", func() {
 
 				rw := httptest.NewRecorder()
 
-				validator := func(user string, password string) (valid bool) {
-					users := map[string]string{
+				validator := fakeBasicValidator{
+					users: map[string]string{
 						adminUser: adminPassword,
 						user1:     user1Password,
 						user2:     user2Password,
-					}
-
-					if users == nil {
-						return false
-					}
-					if realPassword, ok := users[user]; ok {
-						return realPassword == password
-					}
-					return false
+					},
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -136,3 +128,17 @@ var _ = Describe("Basic Auth Session Suite", func() {
 		)
 	})
 })
+
+type fakeBasicValidator struct {
+	users map[string]string
+}
+
+func (f fakeBasicValidator) Validate(user, password string) bool {
+	if f.users == nil {
+		return false
+	}
+	if realPassword, ok := f.users[user]; ok {
+		return realPassword == password
+	}
+	return false
+}

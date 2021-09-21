@@ -77,7 +77,7 @@ type OAuthProxy struct {
 	provider            providers.Provider
 	sessionStore        sessionsapi.SessionStore
 	ProxyPrefix         string
-	basicAuthValidator  func(string, string) bool
+	basicAuthValidator  basic.Validator
 	SkipProviderButton  bool
 	skipAuthPreflight   bool
 	skipJwtBearerTokens bool
@@ -102,11 +102,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
-	var basicAuthValidator func(string, string) bool
+	var basicAuthValidator basic.Validator
 	if opts.HtpasswdFile != "" {
 		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
 		var err error
-		basicAuthValidator = basic.NewHTPasswdValidator(opts.HtpasswdFile)
+		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile, nil, func() {})
 		if err != nil {
 			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
 		}
@@ -340,7 +340,7 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	return chain, nil
 }
 
-func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionStore, validator func(string, string) bool) alice.Chain {
+func buildSessionChain(opts *options.Options, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
 	chain := alice.New()
 
 	if opts.SkipJwtBearerTokens {
@@ -568,7 +568,7 @@ func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool) {
 		return "", false
 	}
 	// check auth
-	if p.basicAuthValidator(user, passwd) {
+	if p.basicAuthValidator.Validate(user, passwd) {
 		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via HtpasswdFile")
 		return user, true
 	}

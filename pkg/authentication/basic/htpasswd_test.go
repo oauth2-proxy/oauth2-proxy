@@ -36,8 +36,8 @@ func (vt *HtpasswdValidatorTest) TearDown() {
 }
 
 func (vt *HtpasswdValidatorTest) NewHtpasswdValidator(
-	updated chan<- bool) func(string, string) bool {
-	return newHTPasswdValidatorImpl(vt.usersFileName,
+	updated chan<- bool) (Validator, error) {
+	return NewHTPasswdValidator(vt.usersFileName,
 		vt.done, func() {
 			if vt.updateSeen == false {
 				updated <- true
@@ -137,12 +137,12 @@ func TestHtpasswdValidatorOverwriteUsersListDirectly(t *testing.T) {
 		"admin1:{SHA}gXQeRH0bcaCfhAk2gOLm1uaePMA=",
 	})
 	updated := make(chan bool)
-	validator := vt.NewHtpasswdValidator(updated)
+	validator, _ := vt.NewHtpasswdValidator(updated)
 
 	for _, tc := range testCasesPreUpdate {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			authorized := validator(tc.user, tc.password)
+			authorized := validator.Validate(tc.user, tc.password)
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})
 	}
@@ -160,7 +160,7 @@ func TestHtpasswdValidatorOverwriteUsersListDirectly(t *testing.T) {
 	for _, tc := range testCasesPostUpdate {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			authorized := validator(tc.user, tc.password)
+			authorized := validator.Validate(tc.user, tc.password)
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})
 	}
