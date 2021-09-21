@@ -265,7 +265,9 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 }
 
 func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
-	r := mux.NewRouter()
+	// Use the encoded path here so we can have the option to pass it on in the upstream mux.
+	// Otherwise something like /%2F/ would be redirected to / here already.
+	r := mux.NewRouter().UseEncodedPath()
 	// Everything served by the router must go through the preAuthChain first.
 	r.Use(p.preAuthChain.Then)
 

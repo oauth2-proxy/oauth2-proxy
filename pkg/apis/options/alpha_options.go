@@ -9,10 +9,10 @@ package options
 // They may change between releases without notice.
 // :::
 type AlphaOptions struct {
-	// Upstreams is used to configure upstream servers.
+	// UpstreamConfig is used to configure upstream servers.
 	// Once a user is authenticated, requests to the server will be proxied to
 	// these upstream servers based on the path mappings defined in this list.
-	Upstreams Upstreams `json:"upstreams,omitempty"`
+	UpstreamConfig UpstreamConfig `json:"upstreamConfig,omitempty"`
 
 	// InjectRequestHeaders is used to configure headers that should be added
 	// to requests to upstream servers.
@@ -48,19 +48,18 @@ type AlphaOptions struct {
 // MergeInto replaces alpha options in the Options struct with the values
 // from the AlphaOptions
 func (a *AlphaOptions) MergeInto(opts *Options) {
-	opts.UpstreamServers = a.Upstreams
+	opts.UpstreamServers = a.UpstreamConfig
 	opts.InjectRequestHeaders = a.InjectRequestHeaders
 	opts.InjectResponseHeaders = a.InjectResponseHeaders
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
-
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from
 // the Options
 func (a *AlphaOptions) ExtractFrom(opts *Options) {
-	a.Upstreams = opts.UpstreamServers
+	a.UpstreamConfig = opts.UpstreamServers
 	a.InjectRequestHeaders = opts.InjectRequestHeaders
 	a.InjectResponseHeaders = opts.InjectResponseHeaders
 	a.Server = opts.Server
