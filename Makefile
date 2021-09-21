@@ -13,8 +13,6 @@ MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
 MINIMUM_SUPPORTED_GO_MINOR_VERSION = 15
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
 
-DOCKER_BUILD := docker build --build-arg VERSION=${VERSION}
-
 ifeq ($(COVER),true)
 TESTCOVER ?= -coverprofile c.out
 endif
@@ -41,9 +39,12 @@ build: validate-go-version clean $(BINARY)
 $(BINARY):
 	GO111MODULE=on CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
 
+DOCKER_BUILD := docker build --build-arg VERSION=${VERSION}
+DOCKER_BUILDX := docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v6 --build-arg VERSION=${VERSION}
+
 .PHONY: docker
 docker:
-	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest .
+	$(DOCKER_BUILDX) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest .
 
 .PHONY: docker-all
 docker-all: docker
@@ -57,7 +58,7 @@ docker-all: docker
 
 .PHONY: docker-push
 docker-push:
-	docker push $(REGISTRY)/oauth2-proxy:latest
+	docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest .
 
 .PHONY: docker-push-all
 docker-push-all: docker-push
