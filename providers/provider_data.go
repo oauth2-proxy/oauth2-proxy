@@ -41,6 +41,7 @@ type ProviderData struct {
 
 	// Common OIDC options for any OIDC-based providers to consume
 	AllowUnverifiedEmail bool
+	UserClaim            string
 	EmailClaim           string
 	GroupsClaim          string
 	Verifier             *oidc.IDTokenVerifier
@@ -155,6 +156,17 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 	ss.User = claims.Subject
 	ss.Email = claims.Email
 	ss.Groups = claims.Groups
+
+	// Allow specialized providers that embed OIDCProvider to control the User
+	// claim. Not exposed as a configuration flag to generic OIDC provider
+	// users (yet).
+	if p.UserClaim != "" {
+		user, ok := claims.raw[p.UserClaim].(string)
+		if !ok {
+			return nil, fmt.Errorf("unable to extract custom UserClaim (%s)", p.UserClaim)
+		}
+		ss.User = user
+	}
 
 	// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
 	if pref, ok := claims.raw["preferred_username"].(string); ok {
