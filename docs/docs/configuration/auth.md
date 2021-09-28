@@ -146,11 +146,13 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 ### Keycloak Auth Provider
 
+:::note 
+This is the legacy provider for Keycloak, use [Keycloak OIDC Auth Provider](#keycloak-oidc-auth-provider) if possible.
+:::
+
 1.  Create new client in your Keycloak realm with **Access Type** 'confidental' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
 2.  Take note of the Secret in the credential tab of the client
 3.  Create a mapper with **Mapper Type** 'Group Membership' and **Token Claim Name** 'groups'.
-
-:::note this is the legacy Keycloak Auth Prodiver, use `keycloak-oidc` if possible. :::
 
 Make sure you set the following to the appropriate url:
 
