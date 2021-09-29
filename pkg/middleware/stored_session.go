@@ -200,7 +200,7 @@ func (s *storedSessionLoader) updateSessionFromStore(req *http.Request, session 
 		return fmt.Errorf("unable to load updated session from store: %v", err)
 	}
 
-	if session == nil || sessionStored == nil {
+	if sessionStored == nil {
 		return fmt.Errorf("no session available to udpate from store")
 	}
 	*session = *sessionStored
