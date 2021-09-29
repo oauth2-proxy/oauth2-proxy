@@ -132,11 +132,8 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	// If session was locked, fetch current state, because
 	// it should be updated after lock is released.
 	if wasLocked {
-		err = s.updateSessionFromStore(req, session)
-		if err != nil {
-			logger.Errorf("Unable to load updated session from store: %v", err)
-		}
-		return err
+		logger.Printf("update session from store")
+		return s.updateSessionFromStore(req, session)
 	}
 
 	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
@@ -200,11 +197,11 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 func (s *storedSessionLoader) updateSessionFromStore(req *http.Request, session *sessionsapi.SessionState) error {
 	sessionStored, err := s.store.Load(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to load updated session from store: %v", err)
 	}
 
 	if session == nil || sessionStored == nil {
-		return nil
+		return fmt.Errorf("no session available to udpate from store")
 	}
 	*session = *sessionStored
 
