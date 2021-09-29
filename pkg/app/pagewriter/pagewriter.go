@@ -52,8 +52,9 @@ type Opts struct {
 	// SignInMessage is the messge displayed above the login button.
 	SignInMessage string
 
-	// CustomLogo is the path to a logo to be displayed on the sign in page.
+	// CustomLogo is the path or URL to a logo to be displayed on the sign in page.
 	// The logo can be either PNG, JPG/JPEG or SVG.
+	// If a URL is used, image support depends on the browser.
 	CustomLogo string
 }
 

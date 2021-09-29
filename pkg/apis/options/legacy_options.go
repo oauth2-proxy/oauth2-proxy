@@ -114,13 +114,13 @@ func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-func (l *LegacyUpstreams) convert() (Upstreams, error) {
-	upstreams := Upstreams{}
+func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
+	upstreams := UpstreamConfig{}
 
 	for _, upstreamString := range l.Upstreams {
 		u, err := url.Parse(upstreamString)
 		if err != nil {
-			return nil, fmt.Errorf("could not parse upstream %q: %v", upstreamString, err)
+			return UpstreamConfig{}, fmt.Errorf("could not parse upstream %q: %v", upstreamString, err)
 		}
 
 		if u.Path == "" {
@@ -169,7 +169,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			upstream.FlushInterval = nil
 		}
 
-		upstreams = append(upstreams, upstream)
+		upstreams.Upstreams = append(upstreams.Upstreams, upstream)
 	}
 
 	return upstreams, nil
@@ -508,6 +508,7 @@ type LegacyProvider struct {
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
+	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -563,6 +564,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 
 	flagSet.String("user-id-claim", providers.OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
+	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 
 	return flagSet
 }
@@ -655,6 +657,11 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Repo:  l.GitHubRepo,
 			Token: l.GitHubToken,
 			Users: l.GitHubUsers,
+		}
+	case "keycloak-oidc":
+		provider.KeycloakConfig = KeycloakOptions{
+			Groups: l.KeycloakGroups,
+			Roles:  l.AllowedRoles,
 		}
 	case "keycloak":
 		provider.KeycloakConfig = KeycloakOptions{

@@ -146,12 +146,17 @@ If you are using GitHub enterprise, make sure you set the following to the appro
 
 ### Keycloak Auth Provider
 
-1.  Create new client in your Keycloak with **Access Type** 'confidental' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
+:::note 
+This is the legacy provider for Keycloak, use [Keycloak OIDC Auth Provider](#keycloak-oidc-auth-provider) if possible.
+:::
+
+1.  Create new client in your Keycloak realm with **Access Type** 'confidental' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
 2.  Take note of the Secret in the credential tab of the client
 3.  Create a mapper with **Mapper Type** 'Group Membership' and **Token Claim Name** 'groups'.
 
 Make sure you set the following to the appropriate url:
 
+```
     --provider=keycloak
     --client-id=<client you have created>
     --client-secret=<your client's secret>
@@ -161,6 +166,7 @@ Make sure you set the following to the appropriate url:
     --validate-url="http(s)://<keycloak host>/auth/realms/<your realm>/protocol/openid-connect/userinfo"
     --keycloak-group=<first_allowed_user_group>
     --keycloak-group=<second_allowed_user_group>
+```
     
 For group based authorization, the optional `--keycloak-group` (legacy) or `--allowed-group` (global standard)
 flags can be used to specify which groups to limit access to.
@@ -171,6 +177,25 @@ Keycloak userinfo endpoint response.
 
 The group management in keycloak is using a tree. If you create a group named admin in keycloak
 you should define the 'keycloak-group' value to /admin.
+
+### Keycloak OIDC Auth Provider
+
+1.  Create new client in your Keycloak realm with **Access Type** 'confidental', **Client protocol**  'openid-connect' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
+2.  Take note of the Secret in the credential tab of the client
+3.  Create a mapper with **Mapper Type** 'Group Membership' and **Token Claim Name** 'groups'.
+4.  Create a mapper with **Mapper Type** 'Audience' and **Included Client Audience** and **Included Custom Audience** set to your client name.
+
+Make sure you set the following to the appropriate url:
+
+```
+    --provider=keycloak-oidc
+    --client-id=<your client's id>
+    --client-secret=<your client's secret>
+    --redirect-url=https://myapp.com/oauth2/callback
+    --oidc-issuer-url=https://<keycloak host>/auth/<your realm>/basic
+    --allowed-role=<realm role name> // Optional, required realm role
+    --allowed-role=<client id>:<client role name> // Optional, required client role
+```
 
 ### GitLab Auth Provider
 

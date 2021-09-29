@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
@@ -247,6 +247,11 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 		if len(o.Providers[0].KeycloakConfig.Groups) > 0 {
 			p.SetAllowedGroups(o.Providers[0].KeycloakConfig.Groups)
 		}
+	case *providers.KeycloakOIDCProvider:
+		if p.Verifier == nil {
+			msgs = append(msgs, "keycloak-oidc provider requires an oidc issuer URL")
+		}
+		p.AddAllowedRoles(o.Providers[0].KeycloakConfig.Roles)
 	case *providers.GoogleProvider:
 		if o.Providers[0].GoogleConfig.ServiceAccountJSON != "" {
 			file, err := os.Open(o.Providers[0].GoogleConfig.ServiceAccountJSON)
@@ -271,13 +276,11 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		}
 	case *providers.GitLabProvider:
-		p.Groups = o.Providers[0].GitLabConfig.Group
-		err := p.AddProjects(o.Providers[0].GitLabConfig.Projects)
+		p.SetAllowedGroups(o.Providers[0].GitLabConfig.Group)
+		err := p.SetAllowedProjects(o.Providers[0].GitLabConfig.Projects)
 		if err != nil {
 			msgs = append(msgs, "failed to setup gitlab project access level")
 		}
-		p.SetAllowedGroups(p.PrefixAllowedGroups())
-		p.SetProjectScope()
 
 		if p.Verifier == nil {
 			// Initialize with default verifier for gitlab.com
