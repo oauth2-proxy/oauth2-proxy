@@ -121,21 +121,6 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 		return nil
 	}
 
-	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
-	err := s.refreshSession(rw, req, session)
-	if err != nil {
-		// If a preemptive refresh fails, we still keep the session
-		// if validateSession succeeds.
-		logger.Errorf("Unable to refresh session: %v", err)
-	}
-
-	// Validate all sessions after any Redeem/Refresh operation (fail or success)
-	return s.validateSession(req.Context(), session)
-}
-
-// refreshSession attempts to refresh the session with the provider
-// and will save the session if it was updated.
-func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
 	var wasLocked bool
 	var err error
 	var isLocked bool
@@ -177,6 +162,21 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 		}
 	}()
 
+	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
+	err = s.refreshSession(rw, req, session)
+	if err != nil {
+		// If a preemptive refresh fails, we still keep the session
+		// if validateSession succeeds.
+		logger.Errorf("Unable to refresh session: %v", err)
+	}
+
+	// Validate all sessions after any Redeem/Refresh operation (fail or success)
+	return s.validateSession(req.Context(), session)
+}
+
+// refreshSession attempts to refresh the session with the provider
+// and will save the session if it was updated.
+func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
 	refreshed, err := s.sessionRefresher(req.Context(), session)
 	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 		return fmt.Errorf("error refreshing tokens: %v", err)
