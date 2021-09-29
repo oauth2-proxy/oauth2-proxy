@@ -14,6 +14,11 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
+const (
+	SessionLockExpireTime = 5 * time.Second
+	SessionLockPeekDelay  = 50 * time.Millisecond
+)
+
 // StoredSessionLoaderOptions contains all of the requirements to construct
 // a stored session loader.
 // All options must be provided.
@@ -137,7 +142,7 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	for isLocked, err = session.PeekLock(req.Context()); isLocked; isLocked, err = session.PeekLock(req.Context()) {
 		wasLocked = true
 		// delay next peek lock
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(SessionLockPeekDelay)
 	}
 
 	if err != nil {
@@ -160,7 +165,7 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 		return nil
 	}
 
-	err = session.ObtainLock(req.Context(), 5*time.Second)
+	err = session.ObtainLock(req.Context(), SessionLockExpireTime)
 	if err != nil {
 		logger.Errorf("unable to obtain lock (skipping refresh): %v", err)
 		return nil
