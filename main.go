@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -45,30 +46,41 @@ func main() {
 
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
 	if err != nil {
-		logger.Fatalf("ERROR: %v", err)
+		klog.Fatalf("ERROR: %v", err)
+	}
+
+	// When running with trace logging, start by logging the observed config.
+	// This will help users to determine if they have configured the proxy correctly.
+	// NOTE: This data is not scrubbed and may contain secrets!
+	if traceLogger.Enabled() {
+		config, err := json.Marshal(opts)
+		if err != nil {
+			klog.Fatalf("ERROR: %v", err)
+		}
+		traceLogger.Infof("Observed configuration: %s", string(config))
 	}
 
 	if *convertConfig {
 		if err := printConvertedConfig(opts); err != nil {
-			logger.Fatalf("ERROR: could not convert config: %v", err)
+			klog.Fatalf("ERROR: could not convert config: %v", err)
 		}
 		return
 	}
 
 	if err = validation.Validate(opts); err != nil {
-		logger.Fatalf("%s", err)
+		klog.Fatalf("%s", err)
 	}
 
 	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
 	oauthproxy, err := NewOAuthProxy(opts, validator)
 	if err != nil {
-		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
+		klog.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
 
 	rand.Seed(time.Now().UnixNano())
 
 	if err := oauthproxy.Start(); err != nil {
-		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)
+		klog.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)
 	}
 }
 
@@ -77,7 +89,7 @@ func main() {
 // or the legacy configuration.
 func loadConfiguration(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
 	if alphaConfig != "" {
-		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
+		klog.Warningf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
 		return loadAlphaOptions(config, alphaConfig, extraFlags, args)
 	}
 	return loadLegacyOptions(config, extraFlags, args)

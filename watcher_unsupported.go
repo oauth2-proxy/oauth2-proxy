@@ -2,9 +2,9 @@
 
 package main
 
-import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+import "k8s.io/klog/v2"
 
 func WatchForUpdates(filename string, done <-chan bool, action func()) {
-	logger.Errorf("file watching not implemented on this platform")
+	klog.Errorf("file watching not implemented on this platform")
 	go func() { <-done }()
 }

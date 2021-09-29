@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"k8s.io/klog/v2"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
@@ -25,7 +26,7 @@ func WaitForReplacement(filename string, op fsnotify.Op,
 	for {
 		if _, err := os.Stat(filename); err == nil {
 			if err := watcher.Add(filename); err == nil {
-				logger.Printf("watching resumed for %s", filename)
+				infoLogger.Infof("watching resumed for %s", filename)
 				return
 			}
 		}
@@ -38,19 +39,19 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 	filename = filepath.Clean(filename)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		logger.Fatal("failed to create watcher for ", filename, ": ", err)
+		klog.Fatalf("failed to create watcher for %s: %v", filename, err)
 	}
 	go func() {
 		defer func(w *fsnotify.Watcher) {
 			cerr := w.Close()
 			if cerr != nil {
-				logger.Fatalf("error closing watcher: %v", err)
+				klog.Fatalf("error closing watcher: %v", err)
 			}
 		}(watcher)
 		for {
 			select {
 			case <-done:
-				logger.Printf("Shutting down watcher for: %s", filename)
+				infoLogger.Infof("Shutting down watcher for: %s", filename)
 				return
 			case event := <-watcher.Events:
 				// On Arch Linux, it appears Chmod events precede Remove events,
@@ -59,14 +60,14 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 				// UserMap.LoadAuthenticatedEmailsFile()) crashes when the file
 				// can't be opened.
 				if event.Op&(fsnotify.Remove|fsnotify.Rename|fsnotify.Chmod) != 0 {
-					logger.Printf("watching interrupted on event: %s", event)
+					infoLogger.Infof("Watching interrupted on event: %s", event)
 					err = watcher.Remove(filename)
 					if err != nil {
-						logger.Printf("error removing watcher on %s: %v", filename, err)
+						klog.Errorf("error removing watcher on %s: %v", filename, err)
 					}
 					WaitForReplacement(filename, event.Op, watcher)
 				}
-				logger.Printf("reloading after event: %s", event)
+				klog.Infof("Reloading after event: %s", event)
 				action()
 			case err = <-watcher.Errors:
 				logger.Errorf("error watching %s: %s", filename, err)
@@ -74,7 +75,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 		}
 	}()
 	if err = watcher.Add(filename); err != nil {
-		logger.Fatal("failed to add ", filename, " to watcher: ", err)
+		klog.Fatalf("Failed to add %s to watcher: %v", filename, err)
 	}
-	logger.Printf("watching %s for updates", filename)
+	infoLogger.Infof("Watching %s for updates", filename)
 }

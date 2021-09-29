@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"k8s.io/klog/v2"
 )
 
 // UserMap holds information from the authenticated emails file
@@ -25,7 +25,7 @@ func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	m := make(map[string]bool)
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
 	if usersFile != "" {
-		logger.Printf("using authenticated emails file %s", usersFile)
+		infoLogger.Infof("Using authenticated emails file %s", usersFile)
 		WatchForUpdates(usersFile, done, func() {
 			um.LoadAuthenticatedEmailsFile()
 			onUpdate()
@@ -47,12 +47,12 @@ func (um *UserMap) IsValid(email string) (result bool) {
 func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	r, err := os.Open(um.usersFile)
 	if err != nil {
-		logger.Fatalf("failed opening authenticated-emails-file=%q, %s", um.usersFile, err)
+		klog.Fatalf("failed opening authenticated-emails-file=%q, %s", um.usersFile, err)
 	}
 	defer func(c io.Closer) {
 		cerr := c.Close()
 		if cerr != nil {
-			logger.Fatalf("Error closing authenticated emails file: %s", cerr)
+			klog.Fatalf("Error closing authenticated emails file: %s", cerr)
 		}
 	}(r)
 	csvReader := csv.NewReader(r)
@@ -61,7 +61,7 @@ func (um *UserMap) LoadAuthenticatedEmailsFile() {
 	csvReader.TrimLeadingSpace = true
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		logger.Errorf("error reading authenticated-emails-file=%q, %s", um.usersFile, err)
+		klog.Errorf("error reading authenticated-emails-file=%q, %s", um.usersFile, err)
 		return
 	}
 	updated := make(map[string]bool)
