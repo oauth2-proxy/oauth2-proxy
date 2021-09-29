@@ -137,13 +137,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	}
 
 	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
-	err = s.refreshSession(rw, req, session)
-	if err != nil {
-		// If a preemptive refresh fails, we still keep the session
-		// if validateSession succeeds.
-		logger.Errorf("Unable to refresh session: %v", err)
-	}
-	return err
+	return s.refreshSession(rw, req, session)
 }
 
 // refreshSession attempts to refresh the session with the provider
