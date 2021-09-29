@@ -132,7 +132,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	// If session was locked, fetch current state, because
 	// it should be updated after lock is released.
 	if wasLocked {
-		logger.Printf("update session from store")
+		logger.Printf("Update session from store instead of refreshing")
 		return s.updateSessionFromStore(req, session)
 	}
 
