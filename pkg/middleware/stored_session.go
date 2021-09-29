@@ -131,6 +131,47 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 // refreshSession attempts to refresh the session with the provider
 // and will save the session if it was updated.
 func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
+	var wasLocked bool
+	var err error
+	var isLocked bool
+	for isLocked, err = session.PeekLock(req.Context()); isLocked; isLocked, err = session.PeekLock(req.Context()) {
+		wasLocked = true
+		// delay next peek lock
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// If session was locked fetch current state
+	if wasLocked {
+		var sessionStored *sessionsapi.SessionState
+		sessionStored, err = s.store.Load(req)
+		if err != nil {
+			return err
+		}
+
+		if session == nil || sessionStored == nil {
+			return nil
+		}
+		*session = *sessionStored
+
+		return nil
+	}
+
+	err = session.ObtainLock(req.Context(), 5*time.Second)
+	if err != nil {
+		logger.Errorf("unable to obtain lock (skipping refresh): %v", err)
+		return nil
+	}
+	defer func() {
+		err = session.ReleaseLock(req.Context())
+		if err != nil {
+			logger.Errorf("unable to release lock: %v", err)
+		}
+	}()
+
 	refreshed, err := s.sessionRefresher(req.Context(), session)
 	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 		return fmt.Errorf("error refreshing tokens: %v", err)
