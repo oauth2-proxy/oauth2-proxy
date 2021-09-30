@@ -114,13 +114,13 @@ func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-func (l *LegacyUpstreams) convert() (Upstreams, error) {
-	upstreams := Upstreams{}
+func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
+	upstreams := UpstreamConfig{}
 
 	for _, upstreamString := range l.Upstreams {
 		u, err := url.Parse(upstreamString)
 		if err != nil {
-			return nil, fmt.Errorf("could not parse upstream %q: %v", upstreamString, err)
+			return UpstreamConfig{}, fmt.Errorf("could not parse upstream %q: %v", upstreamString, err)
 		}
 
 		if u.Path == "" {
@@ -169,7 +169,7 @@ func (l *LegacyUpstreams) convert() (Upstreams, error) {
 			upstream.FlushInterval = nil
 		}
 
-		upstreams = append(upstreams, upstream)
+		upstreams.Upstreams = append(upstreams.Upstreams, upstream)
 	}
 
 	return upstreams, nil

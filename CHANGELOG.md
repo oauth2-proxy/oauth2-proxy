@@ -8,14 +8,19 @@
   deserialization from v6.0.0 (only) has been removed to improve performance. If you are on v6.0.0, either upgrade
   to a version before this first and allow legacy sessions to expire gracefully or change your `cookie-secret`
   value and force all sessions to reauthenticate.
-  
+
 - [#1210](https://github.com/oauth2-proxy/oauth2-proxy/pull/1210) A new `keycloak-oidc` provider has been added with support for role based authentication. The existing keycloak auth provider will eventually be deprecated and removed. Please switch to the new provider `keycloak-oidc`.
 
 ## Breaking Changes
 
+- [#1239](https://github.com/oauth2-proxy/oauth2-proxy/pull/1239) GitLab groups sent in the `X-Forwarded-Groups` header
+  to the upstream server will no longer be prefixed with `group:`
+
 ## Changes since v7.1.3
 
+- [#1379](https://github.com/oauth2-proxy/oauth2-proxy/pull/1379) Fix the manual sign in with --htpasswd-user-group switch (@janrotter)
 - [#1337](https://github.com/oauth2-proxy/oauth2-proxy/pull/1337) Changing user field type to text when using htpasswd (@pburgisser)
+- [#1239](https://github.com/oauth2-proxy/oauth2-proxy/pull/1239) Base GitLab provider implementation on OIDCProvider (@NickMeves)
 - [#1276](https://github.com/oauth2-proxy/oauth2-proxy/pull/1276) Update crypto and switched to new github.com/golang-jwt/jwt (@JVecsei)
 - [#1264](https://github.com/oauth2-proxy/oauth2-proxy/pull/1264) Update go-oidc to v3 (@NickMeves)
 - [#1233](https://github.com/oauth2-proxy/oauth2-proxy/pull/1233) Extend email-domain validation with sub-domain capability (@morarucostel)
@@ -35,6 +40,8 @@
 - [#1317](https://github.com/oauth2-proxy/oauth2-proxy/pull/1317) Fix incorrect `</form>` tag on the sing_in page when *not* using a custom template (@jord1e)
 - [#1330](https://github.com/oauth2-proxy/oauth2-proxy/pull/1330) Allow specifying URL as input for custom sign in logo (@MaikuMori)
 - [#1357](https://github.com/oauth2-proxy/oauth2-proxy/pull/1357) Fix unsafe access to session variable (@harzallah)
+- [#997](https://github.com/oauth2-proxy/oauth2-proxy/pull/997) Allow passing the raw url path when proxying upstream requests - e.g. /%2F/ (@FStelzer)
+- [#1147](https://github.com/oauth2-proxy/oauth2-proxy/pull/1147) Multiarch support for docker image (@goshlanguage)
 
 # V7.1.3
 
