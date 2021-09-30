@@ -13,11 +13,7 @@ import (
 )
 
 var _ = Describe("Verify", func() {
-	var (
-		ctx context.Context
-	)
-
-	ctx = context.Background()
+	ctx := context.Background()
 
 	It("Succeeds with default aud behavior", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
@@ -85,7 +81,7 @@ var _ = Describe("Verify", func() {
 			ExtraAudiences: []string{},
 		}, payload{
 			Iss:      "https://foo",
-			ClientId: "1226737",
+			ClientID: "1226737",
 		})
 
 		Expect(err).ToNot(HaveOccurred())
@@ -100,7 +96,7 @@ var _ = Describe("Verify", func() {
 			ExtraAudiences: []string{},
 		}, payload{
 			Iss:      "https://foo",
-			ClientId: "1226737",
+			ClientID: "1226737",
 		})
 		Expect(err).To(MatchError("audience from claim client_id with value 1226737 does not match with " +
 			"any of allowed audiences map[7817818:{}]"))
@@ -114,7 +110,7 @@ var _ = Describe("Verify", func() {
 			ExtraAudiences: []string{"xyz", "1226737"},
 		}, payload{
 			Iss:      "https://foo",
-			ClientId: "1226737",
+			ClientID: "1226737",
 		})
 
 		Expect(err).ToNot(HaveOccurred())
@@ -129,7 +125,7 @@ var _ = Describe("Verify", func() {
 			ExtraAudiences: []string{"xyz", "abc"},
 		}, payload{
 			Iss:      "https://foo",
-			ClientId: "1226737",
+			ClientID: "1226737",
 		})
 
 		Expect(err).To(MatchError("audience from claim client_id with value 1226737 does not match with any " +
@@ -144,7 +140,7 @@ var _ = Describe("Verify", func() {
 			ExtraAudiences: []string{"xyz", "abc"},
 		}, payload{
 			Iss:      "https://foo",
-			ClientId: "1226737",
+			ClientID: "1226737",
 			Aud:      "1226737",
 		})
 
@@ -157,7 +153,7 @@ var _ = Describe("Verify", func() {
 type payload struct {
 	Iss      string `json:"iss,omitempty"`
 	Aud      string `json:"aud,omitempty"`
-	ClientId string `json:"client_id,omitempty"`
+	ClientID string `json:"client_id,omitempty"`
 }
 
 type jwtToken struct {
