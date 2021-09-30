@@ -11,8 +11,8 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"golang.org/x/oauth2"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -62,7 +62,7 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	// Getting ClientSecret can fail in runtime so we need to report it without returning the file name to the user
 	fileClientSecret, err := ioutil.ReadFile(p.ClientSecretFile)
 	if err != nil {
-		logger.Errorf("error reading client secret file %s: %s", p.ClientSecretFile, err)
+		klog.Errorf("error reading client secret file %s: %s", p.ClientSecretFile, err)
 		return "", errors.New("could not read client secret file")
 	}
 	return string(fileClientSecret), nil
@@ -240,7 +240,7 @@ func (p *ProviderData) extractGroups(claims map[string]interface{}) []string {
 	for _, rawGroup := range claimGroups {
 		formattedGroup, err := formatGroup(rawGroup)
 		if err != nil {
-			logger.Errorf("Warning: unable to format group of type %s with error %s",
+			klog.Warningf("Warning: unable to format group of type %s with error %s",
 				reflect.TypeOf(rawGroup), err)
 			continue
 		}

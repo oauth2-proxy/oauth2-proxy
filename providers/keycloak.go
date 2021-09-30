@@ -6,8 +6,8 @@ import (
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"k8s.io/klog/v2"
 )
 
 type KeycloakProvider struct {
@@ -75,7 +75,7 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 		Do().
 		UnmarshalJSON()
 	if err != nil {
-		logger.Errorf("failed making request %v", err)
+		klog.Errorf("failed making request %v", err)
 		return err
 	}
 

@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -177,12 +177,12 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 	for _, project := range p.allowedProjects {
 		projectInfo, err := p.getProjectInfo(ctx, s, project.Name)
 		if err != nil {
-			logger.Errorf("Warning: project info request failed: %v", err)
+			klog.Warningf("Warning: project info request failed: %v", err)
 			continue
 		}
 
 		if projectInfo.Archived {
-			logger.Errorf("Warning: project %s is archived", project.Name)
+			klog.Warningf("Warning: project %s is archived", project.Name)
 			continue
 		}
 
@@ -192,14 +192,14 @@ func (p *GitLabProvider) addProjectsToSession(ctx context.Context, s *sessions.S
 			perms = projectInfo.Permissions.GroupAccess
 			// group project access is not set for this user then we give up
 			if perms == nil {
-				logger.Errorf("Warning: user %q has no project level access to %s",
+				klog.Warningf("Warning: user %q has no project level access to %s",
 					s.Email, project.Name)
 				continue
 			}
 		}
 
 		if perms.AccessLevel < project.AccessLevel {
-			logger.Errorf(
+			klog.Warningf(
 				"Warning: user %q does not have the minimum required access level for project %q",
 				s.Email,
 				project.Name,

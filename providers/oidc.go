@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
+	"k8s.io/klog/v2"
 )
 
 // OIDCProvider represents an OIDC based Identity Provider
@@ -79,7 +79,7 @@ func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionSta
 	if s.Email == "" || s.Groups == nil {
 		err := p.enrichFromProfileURL(ctx, s)
 		if err != nil {
-			logger.Errorf("Warning: Profile URL request failed: %v", err)
+			klog.Warningf("Warning: Profile URL request failed: %v", err)
 		}
 	}
 
@@ -113,7 +113,7 @@ func (p *OIDCProvider) enrichFromProfileURL(ctx context.Context, s *sessions.Ses
 	for _, group := range coerceArray(respJSON, p.GroupsClaim) {
 		formatted, err := formatGroup(group)
 		if err != nil {
-			logger.Errorf("Warning: unable to format group of type %s with error %s",
+			klog.Warningf("Warning: unable to format group of type %s with error %s",
 				reflect.TypeOf(group), err)
 			continue
 		}
@@ -127,7 +127,7 @@ func (p *OIDCProvider) enrichFromProfileURL(ctx context.Context, s *sessions.Ses
 func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
 	if err != nil {
-		logger.Errorf("id_token verification failed: %v", err)
+		klog.Errorf("id_token verification failed: %v", err)
 		return false
 	}
 
@@ -136,7 +136,7 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	}
 	err = p.checkNonce(s, idToken)
 	if err != nil {
-		logger.Errorf("nonce verification failed: %v", err)
+		klog.Errorf("nonce verification failed: %v", err)
 		return false
 	}
 

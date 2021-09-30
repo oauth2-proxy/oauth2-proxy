@@ -14,12 +14,12 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
+	"k8s.io/klog/v2"
 )
 
 // GoogleProvider represents an Google based Identity Provider
@@ -213,11 +213,11 @@ func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string,
 func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Service {
 	data, err := ioutil.ReadAll(credentialsReader)
 	if err != nil {
-		logger.Fatal("can't read Google credentials file:", err)
+		klog.Fatalf("can't read Google credentials file:", err)
 	}
 	conf, err := google.JWTConfigFromJSON(data, admin.AdminDirectoryUserReadonlyScope, admin.AdminDirectoryGroupReadonlyScope)
 	if err != nil {
-		logger.Fatal("can't load Google credentials file:", err)
+		klog.Fatalf("can't load Google credentials file:", err)
 	}
 	conf.Subject = adminEmail
 
@@ -225,7 +225,7 @@ func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Serv
 	client := conf.Client(ctx)
 	adminService, err := admin.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		logger.Fatal(err)
+		klog.Fatalf("cannot create admin service: %v", err)
 	}
 	return adminService
 }
@@ -241,7 +241,7 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 	gerr, ok := err.(*googleapi.Error)
 	switch {
 	case ok && gerr.Code == 404:
-		logger.Errorf("error checking membership in group %s: group does not exist", group)
+		klog.Errorf("error checking membership in group %s: group does not exist", group)
 	case ok && gerr.Code == 400:
 		// It is possible for Members.HasMember to return false even if the email is a group member.
 		// One case that can cause this is if the user email is from a different domain than the group,
@@ -250,7 +250,7 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 		req := service.Members.Get(group, email)
 		r, err := req.Do()
 		if err != nil {
-			logger.Errorf("error using get API to check member %s of google group %s: user not in the group", email, group)
+			klog.Errorf("error using get API to check member %s of google group %s: user not in the group", email, group)
 			return false
 		}
 
@@ -260,7 +260,7 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 			return true
 		}
 	default:
-		logger.Errorf("error checking group membership: %v", err)
+		klog.Errorf("error checking group membership: %v", err)
 	}
 	return false
 }

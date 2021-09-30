@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"k8s.io/klog/v2"
 )
 
 // BitbucketProvider represents an Bitbucket based Identity Provider
@@ -107,7 +107,7 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
-		logger.Errorf("failed making request: %v", err)
+		klog.Errorf("Failed making request: %v", err)
 		return "", err
 	}
 
@@ -123,7 +123,7 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 			Do().
 			UnmarshalInto(&teams)
 		if err != nil {
-			logger.Errorf("failed requesting teams membership: %v", err)
+			klog.Errorf("Failed requesting teams membership: %v", err)
 			return "", err
 		}
 		var found = false
@@ -134,7 +134,7 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 			}
 		}
 		if !found {
-			logger.Error("team membership test failed, access denied")
+			klog.Error("Team membership test failed, access denied")
 			return "", nil
 		}
 	}
@@ -153,7 +153,7 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 			Do().
 			UnmarshalInto(&repositories)
 		if err != nil {
-			logger.Errorf("failed checking repository access: %v", err)
+			klog.Errorf("Failed checking repository access: %v", err)
 			return "", err
 		}
 
@@ -165,7 +165,7 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 			}
 		}
 		if !found {
-			logger.Error("repository access test failed, access denied")
+			klog.Error("Repository access test failed, access denied")
 			return "", nil
 		}
 	}
