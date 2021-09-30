@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 
@@ -32,9 +33,18 @@ func getAccessToken() string {
 }
 
 func newTestKeycloakOIDCSetup() (*httptest.Server, *KeycloakOIDCProvider) {
-	redeemURL, server := newOIDCServer([]byte(fmt.Sprintf(`{"email": "new@thing.com", "expires_in": 300, "access_token": "%v"}`, getAccessToken())))
+	redeemURL, server := newKeycloakOIDCServer([]byte(fmt.Sprintf(`{"email": "new@thing.com", "expires_in": 300, "access_token": "%v"}`, getAccessToken())))
 	provider := newKeycloakOIDCProvider(redeemURL)
 	return server, provider
+}
+
+func newKeycloakOIDCServer(body []byte) (*url.URL, *httptest.Server) {
+	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Add("content-type", "application/json")
+		_, _ = rw.Write(body)
+	}))
+	u, _ := url.Parse(s.URL)
+	return u, s
 }
 
 func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
@@ -52,6 +62,10 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 				Scheme: "https",
 				Host:   "keycloak-oidc.com",
 				Path:   "/api/v3/user"},
+			IntrospectURL: &url.URL{
+				Scheme: "https",
+				Host:   "keycloak-oidc.com",
+				Path:   "/api/v3/introspect"},
 			ValidateURL: &url.URL{
 				Scheme: "https",
 				Host:   "keycloak-oidc.com",

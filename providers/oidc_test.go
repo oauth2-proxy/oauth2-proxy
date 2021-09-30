@@ -25,6 +25,12 @@ type redeemTokenResponse struct {
 	IDToken      string `json:"id_token,omitempty"`
 }
 
+const LoginPath = "/login/oauth/authorize"
+const RedeemPath = "/login/oauth/access_token"
+const ProfilePath = "/profile"
+const IntrospectPath = "/introspect"
+const ValidatePath = "/validate"
+
 func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 	providerData := &ProviderData{
 		ProviderName: "oidc",
@@ -33,23 +39,23 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 		LoginURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
-			Path:   "/login/oauth/authorize"},
+			Path:   LoginPath},
 		RedeemURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
-			Path:   "/login/oauth/access_token"},
+			Path:   RedeemPath},
 		ProfileURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
-			Path:   "/profile"},
+			Path:   ProfilePath},
 		IntrospectURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
-			Path:   "/introspect"},
+			Path:   IntrospectPath},
 		ValidateURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
-			Path:   "/api"},
+			Path:   ValidatePath},
 		Scope:       "openid profile offline_access",
 		EmailClaim:  "email",
 		GroupsClaim: "groups",
@@ -68,19 +74,19 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 func newOIDCServer(redeemJSON []byte, profileJSON []byte, introspectJSON []byte) *httptest.Server {
 	mux := http.NewServeMux()
 	if len(redeemJSON) > 0 {
-		mux.HandleFunc("/login/oauth/access_token", func(rw http.ResponseWriter, req *http.Request) {
+		mux.HandleFunc(RedeemPath, func(rw http.ResponseWriter, req *http.Request) {
 			rw.Header().Add("content-type", "application/json")
 			_, _ = rw.Write(redeemJSON)
 		})
 	}
 	if len(profileJSON) > 0 {
-		mux.HandleFunc("/profile", func(rw http.ResponseWriter, req *http.Request) {
+		mux.HandleFunc(ProfilePath, func(rw http.ResponseWriter, req *http.Request) {
 			rw.Header().Add("content-type", "application/json")
 			_, _ = rw.Write(profileJSON)
 		})
 	}
 	if len(introspectJSON) > 0 {
-		mux.HandleFunc("/introspect", func(rw http.ResponseWriter, req *http.Request) {
+		mux.HandleFunc(IntrospectPath, func(rw http.ResponseWriter, req *http.Request) {
 			rw.Header().Add("content-type", "application/json")
 			_, _ = rw.Write(introspectJSON)
 		})
