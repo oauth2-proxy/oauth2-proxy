@@ -3,7 +3,8 @@ package oidc
 import (
 	"context"
 	"fmt"
-	"github.com/coreos/go-oidc"
+
+	"github.com/coreos/go-oidc/v3/oidc"
 )
 
 // IDTokenVerifier Used to verify an ID Token and extends oidc.IDTokenVerifier from the underlying oidc library

@@ -6,7 +6,8 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
-	"github.com/coreos/go-oidc"
+
+	"github.com/coreos/go-oidc/v3/oidc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/square/go-jose.v2"
