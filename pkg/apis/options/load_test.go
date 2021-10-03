@@ -469,11 +469,12 @@ sub:
 
 	It("should load a full example AlphaOptions", func() {
 		config := []byte(`
-upstreams:
-- id: httpbin
-  path: /
-  uri: http://httpbin
-  flushInterval: 500ms
+upstreamConfig:
+  upstreams:
+  - id: httpbin
+    path: /
+    uri: http://httpbin
+    flushInterval: 500ms
 injectRequestHeaders:
 - name: X-Forwarded-User
   values:
@@ -502,12 +503,14 @@ injectResponseHeaders:
 		flushInterval := Duration(500 * time.Millisecond)
 
 		Expect(into).To(Equal(&AlphaOptions{
-			Upstreams: []Upstream{
-				{
-					ID:            "httpbin",
-					Path:          "/",
-					URI:           "http://httpbin",
-					FlushInterval: &flushInterval,
+			UpstreamConfig: UpstreamConfig{
+				Upstreams: []Upstream{
+					{
+						ID:            "httpbin",
+						Path:          "/",
+						URI:           "http://httpbin",
+						FlushInterval: &flushInterval,
+					},
 				},
 			},
 			InjectRequestHeaders: []Header{

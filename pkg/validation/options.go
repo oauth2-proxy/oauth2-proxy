@@ -276,13 +276,11 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 			msgs = append(msgs, "oidc provider requires an oidc issuer URL")
 		}
 	case *providers.GitLabProvider:
-		p.Groups = o.Providers[0].GitLabConfig.Group
-		err := p.AddProjects(o.Providers[0].GitLabConfig.Projects)
+		p.SetAllowedGroups(o.Providers[0].GitLabConfig.Group)
+		err := p.SetAllowedProjects(o.Providers[0].GitLabConfig.Projects)
 		if err != nil {
 			msgs = append(msgs, "failed to setup gitlab project access level")
 		}
-		p.SetAllowedGroups(p.PrefixAllowedGroups())
-		p.SetProjectScope()
 
 		if p.Verifier == nil {
 			// Initialize with default verifier for gitlab.com

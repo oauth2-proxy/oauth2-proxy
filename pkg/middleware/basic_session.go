@@ -31,7 +31,9 @@ func loadBasicAuthSession(validator basic.Validator, sessionGroups []string, pre
 	if preferEmail {
 		getSession = func(validator basic.Validator, sessionGroups []string, req *http.Request) (*sessionsapi.SessionState, error) {
 			session, err := getBasicSession(validator, sessionGroups, req)
-			session.Email = session.User
+			if session != nil {
+				session.Email = session.User
+			}
 			return session, err
 		}
 	}
