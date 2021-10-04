@@ -10,7 +10,6 @@ import (
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/yhat/wsutil"
 )
 
 const (
@@ -156,14 +155,12 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 
 // newWebSocketReverseProxy creates a new reverse proxy for proxying websocket connections.
 func newWebSocketReverseProxy(u *url.URL, skipTLSVerify bool) http.Handler {
-	// This should create the correct scheme for insecure vs secure connections
-	wsScheme := "ws" + strings.TrimPrefix(u.Scheme, "http")
-	wsURL := &url.URL{Scheme: wsScheme, Host: u.Host}
-
-	wsProxy := wsutil.NewSingleHostReverseProxy(wsURL)
+	wsProxy := httputil.NewSingleHostReverseProxy(u)
 	/* #nosec G402 */
 	if skipTLSVerify {
-		wsProxy.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		wsProxy.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 	}
 	return wsProxy
 }
