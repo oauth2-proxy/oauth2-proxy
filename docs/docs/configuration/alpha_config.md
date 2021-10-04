@@ -124,7 +124,7 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `upstreams` | _[Upstreams](#upstreams)_ | Upstreams is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list. |
+| `upstreamConfig` | _[UpstreamConfig](#upstreamconfig)_ | UpstreamConfig is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list. |
 | `injectRequestHeaders` | _[[]Header](#header)_ | InjectRequestHeaders is used to configure headers that should be added<br/>to requests to upstream servers.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
@@ -364,7 +364,7 @@ TLS contains the information for loading a TLS certifcate and key.
 
 ### Upstream
 
-(**Appears on:** [Upstreams](#upstreams))
+(**Appears on:** [UpstreamConfig](#upstreamconfig))
 
 Upstream represents the configuration for an upstream server.
 Requests will be proxied to this upstream if the path matches the request path.
@@ -382,11 +382,13 @@ Requests will be proxied to this upstream if the path matches the request path.
 | `passHostHeader` | _bool_ | PassHostHeader determines whether the request host header should be proxied<br/>to the upstream server.<br/>Defaults to true. |
 | `proxyWebSockets` | _bool_ | ProxyWebSockets enables proxying of websockets to upstream servers<br/>Defaults to true. |
 
-### Upstreams
-
-#### ([[]Upstream](#upstream) alias)
+### UpstreamConfig
 
 (**Appears on:** [AlphaOptions](#alphaoptions))
 
-Upstreams is a collection of definitions for upstream servers.
+UpstreamConfig is a collection of definitions for upstream servers.
 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `proxyRawPath` | _bool_ | ProxyRawPath will pass the raw url path to upstream allowing for url's<br/>like: "/%2F/" which would otherwise be redirected to "/" |
+| `upstreams` | _[[]Upstream](#upstream)_ | Upstreams represents the configuration for the upstream servers.<br/>Requests will be proxied to this upstream if the path matches the request path. |

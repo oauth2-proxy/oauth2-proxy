@@ -22,12 +22,16 @@ type ProxyErrorHandler func(http.ResponseWriter, *http.Request, error)
 
 // NewProxy creates a new multiUpstreamProxy that can serve requests directed to
 // multiple upstreams.
-func NewProxy(upstreams options.Upstreams, sigData *options.SignatureData, writer pagewriter.Writer) (http.Handler, error) {
+func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, writer pagewriter.Writer) (http.Handler, error) {
 	m := &multiUpstreamProxy{
 		serveMux: mux.NewRouter(),
 	}
 
-	for _, upstream := range sortByPathLongest(upstreams) {
+	if upstreams.ProxyRawPath {
+		m.serveMux.UseEncodedPath()
+	}
+
+	for _, upstream := range sortByPathLongest(upstreams.Upstreams) {
 		if upstream.Static {
 			if err := m.registerStaticResponseHandler(upstream, writer); err != nil {
 				return nil, fmt.Errorf("could not register static upstream %q: %v", upstream.ID, err)
@@ -153,7 +157,7 @@ func registerTrailingSlashHandler(serveMux *mux.Router) {
 // precedence (note this is the input to the rewrite logic).
 // This does not account for when a rewrite would actually make the path shorter.
 // This should maintain the sorting behaviour of the standard go serve mux.
-func sortByPathLongest(in options.Upstreams) options.Upstreams {
+func sortByPathLongest(in []options.Upstream) []options.Upstream {
 	sort.Slice(in, func(i, j int) bool {
 		iRW := in[i].RewriteTarget
 		jRW := in[j].RewriteTarget
