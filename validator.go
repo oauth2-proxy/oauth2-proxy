@@ -25,7 +25,7 @@ func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	m := make(map[string]bool)
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
 	if usersFile != "" {
-		infoLogger.Infof("Using authenticated emails file %s", usersFile)
+		infoLogger().Infof("Using authenticated emails file %s", usersFile)
 		WatchForUpdates(usersFile, done, func() {
 			um.LoadAuthenticatedEmailsFile()
 			onUpdate()

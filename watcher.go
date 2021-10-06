@@ -26,7 +26,7 @@ func WaitForReplacement(filename string, op fsnotify.Op,
 	for {
 		if _, err := os.Stat(filename); err == nil {
 			if err := watcher.Add(filename); err == nil {
-				infoLogger.Infof("watching resumed for %s", filename)
+				infoLogger().Infof("watching resumed for %s", filename)
 				return
 			}
 		}
@@ -51,7 +51,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 		for {
 			select {
 			case <-done:
-				infoLogger.Infof("Shutting down watcher for: %s", filename)
+				infoLogger().Infof("Shutting down watcher for: %s", filename)
 				return
 			case event := <-watcher.Events:
 				// On Arch Linux, it appears Chmod events precede Remove events,
@@ -60,7 +60,7 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 				// UserMap.LoadAuthenticatedEmailsFile()) crashes when the file
 				// can't be opened.
 				if event.Op&(fsnotify.Remove|fsnotify.Rename|fsnotify.Chmod) != 0 {
-					infoLogger.Infof("Watching interrupted on event: %s", event)
+					infoLogger().Infof("Watching interrupted on event: %s", event)
 					err = watcher.Remove(filename)
 					if err != nil {
 						klog.Errorf("error removing watcher on %s: %v", filename, err)
@@ -77,5 +77,5 @@ func WatchForUpdates(filename string, done <-chan bool, action func()) {
 	if err = watcher.Add(filename); err != nil {
 		klog.Fatalf("Failed to add %s to watcher: %v", filename, err)
 	}
-	infoLogger.Infof("Watching %s for updates", filename)
+	infoLogger().Infof("Watching %s for updates", filename)
 }
