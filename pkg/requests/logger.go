@@ -6,6 +6,6 @@ import (
 )
 
 var (
-	debugLogger = klog.V(logger.RequestDebug)
-	traceLogger = klog.V(logger.RequestTrace)
+	debugLogger = func() klog.Verbose { return klog.V(logger.RequestDebug) }
+	traceLogger = func() klog.Verbose { return klog.V(logger.RequestTrace) }
 )
