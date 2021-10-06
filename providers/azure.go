@@ -89,7 +89,7 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 func (p *AzureProvider) Configure(tenant string) {
 	if tenant == "" || tenant == "common" {
 		// tenant is empty or default, remain on the default "common" tenant
-		infoLogger.Infof("Azure provider configured for common tenant")
+		infoLogger().Infof("Azure provider configured for common tenant")
 		return
 	}
 
@@ -97,7 +97,7 @@ func (p *AzureProvider) Configure(tenant string) {
 	p.Tenant = tenant
 	overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
 	overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
-	infoLogger.Infof("Azure provider configured for tenant: %s", tenant)
+	infoLogger().Infof("Azure provider configured for tenant: %s", tenant)
 }
 
 func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
@@ -161,7 +161,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 	if err == nil && email != "" {
 		session.Email = email
 	} else {
-		debugLogger.Infof("Unable to get email claim from id_token: %v", err)
+		debugLogger().Infof("Unable to get email claim from id_token: %v", err)
 	}
 
 	if session.Email == "" {
@@ -169,7 +169,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 		if err == nil && email != "" {
 			session.Email = email
 		} else {
-			debugLogger.Infof("Unable to get email claim from access token: %v", err)
+			debugLogger().Infof("Unable to get email claim from access token: %v", err)
 		}
 	}
 
@@ -228,10 +228,10 @@ func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, token st
 			if err == nil {
 				email = claims.Email
 			} else {
-				debugLogger.Infof("Unable to get claims from token: %v", err)
+				debugLogger().Infof("Unable to get claims from token: %v", err)
 			}
 		} else {
-			debugLogger.Infof("Unable to verify token: %v", err)
+			debugLogger().Infof("Unable to verify token: %v", err)
 		}
 	}
 
@@ -298,7 +298,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	if err == nil && email != "" {
 		s.Email = email
 	} else {
-		debugLogger.Infof("Unable to get email claim from id_token: %v", err)
+		debugLogger().Infof("Unable to get email claim from id_token: %v", err)
 	}
 
 	if s.Email == "" {
@@ -306,7 +306,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 		if err == nil && email != "" {
 			s.Email = email
 		} else {
-			debugLogger.Infof("Unable to get email claim from access token: %v", err)
+			debugLogger().Infof("Unable to get email claim from access token: %v", err)
 		}
 	}
 

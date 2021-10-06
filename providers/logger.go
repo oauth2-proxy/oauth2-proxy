@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	infoLogger  = klog.V(logger.ProviderInfo)
-	debugLogger = klog.V(logger.ProviderDebug)
-	traceLogger = klog.V(logger.ProviderTrace)
+	infoLogger  = func() klog.Verbose { return klog.V(logger.ProviderInfo) }
+	debugLogger = func() klog.Verbose { return klog.V(logger.ProviderDebug) }
+	traceLogger = func() klog.Verbose { return klog.V(logger.ProviderTrace) }
 )
