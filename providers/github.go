@@ -161,13 +161,13 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 	presentOrgs := make([]string, 0, len(orgs))
 	for _, org := range orgs {
 		if p.Org == org.Login {
-			debugLogger().Infof("Found Github Organization: %q", org.Login)
+			debugLogger.Infof("Found Github Organization: %q", org.Login)
 			return true, nil
 		}
 		presentOrgs = append(presentOrgs, org.Login)
 	}
 
-	debugLogger().Infof("Missing Organization:%q in %v", p.Org, presentOrgs)
+	debugLogger.Infof("Missing Organization:%q in %v", p.Org, presentOrgs)
 	return false, nil
 }
 
@@ -269,7 +269,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			ts := strings.Split(p.Team, ",")
 			for _, t := range ts {
 				if t == team.Slug {
-					debugLogger().Infof("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
+					debugLogger.Infof("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
 					return true, nil
 				}
 			}
@@ -277,13 +277,13 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 		}
 	}
 	if hasOrg {
-		debugLogger().Infof("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
+		debugLogger.Infof("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
 	} else {
 		var allOrgs []string
 		for org := range presentOrgs {
 			allOrgs = append(allOrgs, org)
 		}
-		debugLogger().Infof("Missing Organization:%q in %#v", p.Org, allOrgs)
+		debugLogger.Infof("Missing Organization:%q in %#v", p.Org, allOrgs)
 	}
 	return false, nil
 }
@@ -372,7 +372,7 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 			result.StatusCode(), endpoint.String(), result.Body())
 	}
 
-	traceLogger().Infof("Checking collaborator status: Got %d from %q %s", result.StatusCode(), endpoint.String(), result.Body())
+	traceLogger.Infof("Checking collaborator status: Got %d from %q %s", result.StatusCode(), endpoint.String(), result.Body())
 
 	return true, nil
 }

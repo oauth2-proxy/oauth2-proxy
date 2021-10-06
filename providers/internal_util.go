@@ -61,12 +61,12 @@ func validateToken(ctx context.Context, p Provider, accessToken string, header h
 		WithHeaders(header).
 		Do()
 	if result.Error() != nil {
-		debugLogger().Infof("GET %s", stripToken(endpoint))
-		debugLogger().Infof("token validation request failed: %s", result.Error())
+		debugLogger.Infof("GET %s", stripToken(endpoint))
+		debugLogger.Infof("token validation request failed: %s", result.Error())
 		return false
 	}
 
-	traceLogger().Infof("%d GET %s %s", result.StatusCode(), stripToken(endpoint), result.Body())
+	traceLogger.Infof("%d GET %s %s", result.StatusCode(), stripToken(endpoint), result.Body())
 
 	if result.StatusCode() == 200 {
 		return true
