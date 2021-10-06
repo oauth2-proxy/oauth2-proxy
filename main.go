@@ -41,7 +41,7 @@ func main() {
 	}
 
 	if *convertConfig && *alphaConfig != "" {
-		logger.Fatal("cannot use alpha-config and conver-config-to-alpha together")
+		klog.Fatal("cannot use alpha-config and conver-config-to-alpha together")
 	}
 
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
@@ -187,6 +187,9 @@ func configureKlog(logLevel int) {
 		panic(err)
 	}
 	if err := klogFlags.Lookup("skip_headers").Value.Set("true"); err != nil {
+		panic(err)
+	}
+	if err := klogFlags.Lookup("stderrthreshold").Value.Set("4"); err != nil {
 		panic(err)
 	}
 

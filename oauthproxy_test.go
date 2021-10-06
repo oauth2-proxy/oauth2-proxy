@@ -17,6 +17,7 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/mbland/hmacauth"
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
@@ -35,6 +36,7 @@ const (
 	base64CookieSecret = "c2VjcmV0dGhpcnR5dHdvYnl0ZXMrYWJjZGVmZ2hpams"
 	clientID           = "3984n253984d7348dm8234yf982t"
 	clientSecret       = "gv3498mfc9t23y23974dm2394dm9"
+	testRequestID      = "11111111-2222-4333-8444-555555555555"
 )
 
 func init() {
@@ -2371,6 +2373,9 @@ func TestAllowedRequest(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req, err := http.NewRequest(tc.method, tc.url, nil)
+			req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{
+				RequestID: testRequestID,
+			})
 			assert.NoError(t, err)
 			assert.Equal(t, tc.allowed, proxy.isAllowedRoute(req))
 
