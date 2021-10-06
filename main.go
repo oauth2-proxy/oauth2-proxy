@@ -199,13 +199,4 @@ func configureKlog(logLevel int) {
 	}
 	klog.SetOutput(logger.StdKlogErrorLogger)
 	klog.SetOutputBySeverity("INFO", logger.StdKlogInfoLogger)
-
-	klog.V(1).Infof("Klog level 1")
-	klog.V(2).Infof("Klog level 2")
-	klog.V(3).Infof("Klog level 3")
-	klog.V(4).Infof("Klog level 4")
-	klog.V(5).Infof("Klog level 5")
-	klog.V(6).Infof("Klog level 6")
-	klog.V(7).Infof("Klog level 7")
-	klog.V(8).Infof("Klog level 8")
 }
