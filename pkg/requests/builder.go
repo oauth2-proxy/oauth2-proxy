@@ -95,13 +95,16 @@ func (r *builder) Do() Result {
 func (r *builder) do() Result {
 	req, err := http.NewRequestWithContext(r.context, r.method, r.endpoint, r.body)
 	if err != nil {
+		debugLogger.Infof("Error creating request: %v", err)
 		r.result = &result{err: fmt.Errorf("error creating request: %v", err)}
 		return r.result
 	}
 	req.Header = r.header
 
+	traceLogger.Infof("Executing request: Method: %v, Endpoint: %v, Header: %+v", r.method, r.endpoint, r.header)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		debugLogger.Infof("Error performing request: %v", err)
 		r.result = &result{err: fmt.Errorf("error performing request: %v", err)}
 		return r.result
 	}
@@ -109,10 +112,12 @@ func (r *builder) do() Result {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		debugLogger.Infof("Error reading response body: %v", err)
 		r.result = &result{err: fmt.Errorf("error reading response body: %v", err)}
 		return r.result
 	}
 
+	traceLogger.Infof("Request result: Status: %s (%d), Body: %s", resp.Status, resp.StatusCode, string(body))
 	r.result = &result{response: resp, body: body}
 	return r.result
 }
