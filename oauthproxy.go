@@ -106,7 +106,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	var basicAuthValidator basic.Validator
 	if opts.HtpasswdFile != "" {
-		infoLogger().Infof("using htpasswd file: %s", opts.HtpasswdFile)
+		infoLogger.Infof("using htpasswd file: %s", opts.HtpasswdFile)
 		var err error
 		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
 		if err != nil {
@@ -135,9 +135,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	if opts.SkipJwtBearerTokens {
-		infoLogger().Infof("Skipping JWT tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
+		infoLogger.Infof("Skipping JWT tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
 		for _, issuer := range opts.ExtraJwtIssuers {
-			infoLogger().Infof("Skipping JWT tokens from extra JWT issuer: %q", issuer)
+			infoLogger.Infof("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
 	}
 	redirectURL := opts.GetRedirectURL()
@@ -145,13 +145,13 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 	}
 
-	infoLogger().Infof("OAuthProxy configured for %s Client ID: %s", opts.GetProvider().Data().ProviderName, opts.Providers[0].ClientID)
+	infoLogger.Infof("OAuthProxy configured for %s Client ID: %s", opts.GetProvider().Data().ProviderName, opts.Providers[0].ClientID)
 	refresh := "disabled"
 	if opts.Cookie.Refresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
 	}
 
-	infoLogger().Infof("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	infoLogger.Infof("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -425,7 +425,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		if err != nil {
 			return nil, err
 		}
-		infoLogger().Infof("Skipping auth - Method: ALL | Path: %s", path)
+		infoLogger.Infof("Skipping auth - Method: ALL | Path: %s", path)
 		routes = append(routes, allowedRoute{
 			method:    "",
 			pathRegex: compiledRegex,
@@ -451,7 +451,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		if err != nil {
 			return nil, err
 		}
-		infoLogger().Infof("Skipping auth - Method: %s | Path: %s", method, path)
+		infoLogger.Infof("Skipping auth - Method: %s | Path: %s", method, path)
 		routes = append(routes, allowedRoute{
 			method:    method,
 			pathRegex: compiledRegex,
@@ -491,7 +491,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
-	debugLogger().Infof("Rendering error page (status %d) for application error: %v", code, appError)
+	debugLogger.Infof("Rendering error page (status %d) for application error: %v", code, appError)
 
 	scope := middlewareapi.GetRequestScope(req)
 	p.pageWriter.WriteErrorPage(rw, pagewriter.ErrorPageOpts{
@@ -507,7 +507,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
 	if isPreflightRequestAllowed {
-		traceLogger().Infof("Request %s: Allowed as preflight request", middlewareapi.GetRequestScope(req).RequestID)
+		traceLogger.Infof("Request %s: Allowed as preflight request", middlewareapi.GetRequestScope(req).RequestID)
 	}
 	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.isTrustedIP(req)
 }
@@ -516,7 +516,7 @@ func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
 		if (route.method == "" || req.Method == route.method) && route.pathRegex.MatchString(req.URL.Path) {
-			traceLogger().Infof("Request %s: Allowed by route match", middlewareapi.GetRequestScope(req).RequestID)
+			traceLogger.Infof("Request %s: Allowed by route match", middlewareapi.GetRequestScope(req).RequestID)
 			return true
 		}
 	}
@@ -541,7 +541,7 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 	}
 
 	if p.trustedIPs.Has(remoteAddr) {
-		traceLogger().Infof("Request %s: allowed by trusted IP", middlewareapi.GetRequestScope(req).RequestID)
+		traceLogger.Infof("Request %s: allowed by trusted IP", middlewareapi.GetRequestScope(req).RequestID)
 		return true
 	}
 	return false
@@ -767,7 +767,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	p.provider.ValidateSession(req.Context(), session)
 
 	if !p.redirectValidator.IsValidRedirect(appRedirect) {
-		debugLogger().Infof("Request %s: Rejected invalid redirect: %s", middlewareapi.GetRequestScope(req).RequestID, appRedirect)
+		debugLogger.Infof("Request %s: Rejected invalid redirect: %s", middlewareapi.GetRequestScope(req).RequestID, appRedirect)
 		appRedirect = "/"
 	}
 

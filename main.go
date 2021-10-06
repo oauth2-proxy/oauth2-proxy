@@ -52,12 +52,12 @@ func main() {
 	// When running with trace logging, start by logging the observed config.
 	// This will help users to determine if they have configured the proxy correctly.
 	// NOTE: This data is not scrubbed and may contain secrets!
-	if traceLogger().Enabled() {
+	if traceLogger.Enabled() {
 		config, err := json.Marshal(opts)
 		if err != nil {
 			klog.Fatalf("ERROR: %v", err)
 		}
-		traceLogger().Infof("Observed configuration: %s", string(config))
+		traceLogger.Infof("Observed configuration: %s", string(config))
 	}
 
 	if *convertConfig {
