@@ -111,7 +111,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 // is older than the refresh period.
 // Success or fail, we will then validate the session.
 func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	if s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod {
+	if !session.IsExpired() && (s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod) {
 		// Refresh is disabled or the session is not old enough, do nothing
 		return nil
 	}
