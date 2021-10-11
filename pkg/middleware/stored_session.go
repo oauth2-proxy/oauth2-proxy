@@ -103,7 +103,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 
 	err = s.refreshSessionIfNeeded(rw, req, session)
 	if err != nil {
-		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
+		logger.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
 
 	// Validate all sessions after any Redeem/Refresh operation (fail or success)
