@@ -103,13 +103,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 
 	err = s.refreshSessionIfNeeded(rw, req, session)
 	if err != nil {
-		logger.Errorf("error refreshing access token for session (%s): %v", session, err)
-	}
-
-	// Validate all sessions after any Redeem/Refresh operation (fail or success)
-	err = s.validateSession(req.Context(), session)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
 
 	return session, nil
@@ -133,11 +127,22 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	// it should be updated after lock is released.
 	if wasLocked {
 		logger.Printf("Update session from store instead of refreshing")
-		return s.updateSessionFromStore(req, session)
+		err = s.updateSessionFromStore(req, session)
+		if err != nil {
+			logger.Errorf("Unable to update session from store: %v", err)
+		}
+	} else {
+		logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
+		err = s.refreshSession(rw, req, session)
+		if err != nil {
+			// If a preemptive refresh fails, we still keep the session
+			// if validateSession succeeds.
+			logger.Errorf("Unable to refresh session: %v", err)
+		}
 	}
 
-	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
-	return s.refreshSession(rw, req, session)
+	// Validate all sessions after any Redeem/Refresh operation (fail or success)
+	return s.validateSession(req.Context(), session)
 }
 
 // refreshSession attempts to refresh the session with the provider
