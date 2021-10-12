@@ -44,6 +44,7 @@
 - [#1357](https://github.com/oauth2-proxy/oauth2-proxy/pull/1357) Fix unsafe access to session variable (@harzallah)
 - [#997](https://github.com/oauth2-proxy/oauth2-proxy/pull/997) Allow passing the raw url path when proxying upstream requests - e.g. /%2F/ (@FStelzer)
 - [#1147](https://github.com/oauth2-proxy/oauth2-proxy/pull/1147) Multiarch support for docker image (@goshlanguage)
+- [#1385](https://github.com/oauth2-proxy/oauth2-proxy/pull/1385) Add redis lock usage for refreshing session (@Bibob7)
 
 # V7.1.3
 
