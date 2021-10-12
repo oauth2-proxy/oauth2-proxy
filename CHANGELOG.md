@@ -18,6 +18,7 @@
 
 ## Changes since v7.1.3
 
+- [#1385](https://github.com/oauth2-proxy/oauth2-proxy/pull/1385) Add redis lock usage for refreshing session (@Bibob7)
 - [#1315](https://github.com/oauth2-proxy/oauth2-proxy/pull/1315) linkedin: Update provider to v2 (@wuurrd)
 - [#1348](https://github.com/oauth2-proxy/oauth2-proxy/pull/1348) Using the native httputil proxy code for websockets rather than yhat/wsutil to properly handle HTTP-level failures (@thetrime)
 - [#1379](https://github.com/oauth2-proxy/oauth2-proxy/pull/1379) Fix the manual sign in with --htpasswd-user-group switch (@janrotter)
@@ -44,7 +45,6 @@
 - [#1357](https://github.com/oauth2-proxy/oauth2-proxy/pull/1357) Fix unsafe access to session variable (@harzallah)
 - [#997](https://github.com/oauth2-proxy/oauth2-proxy/pull/997) Allow passing the raw url path when proxying upstream requests - e.g. /%2F/ (@FStelzer)
 - [#1147](https://github.com/oauth2-proxy/oauth2-proxy/pull/1147) Multiarch support for docker image (@goshlanguage)
-- [#1385](https://github.com/oauth2-proxy/oauth2-proxy/pull/1385) Add redis lock usage for refreshing session (@Bibob7)
 
 # V7.1.3
 
