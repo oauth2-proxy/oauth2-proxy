@@ -89,28 +89,40 @@ func NewRedisClient(opts options.RedisStoreOptions) (Client, error) {
 // buildSentinelClient makes a redis.Client that connects to Redis Sentinel
 // for Primary/Replica Redis node coordination
 func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
-	addrs, err := parseRedisURLs(opts.SentinelConnectionURLs)
+	addrs, opt, err := parseRedisURLs(opts.SentinelConnectionURLs)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
 	}
+
+	if err := setupTLSConfig(opts, opt); err != nil {
+		return nil, err
+	}
+
 	client := redis.NewFailoverClient(&redis.FailoverOptions{
 		MasterName:       opts.SentinelMasterName,
 		SentinelAddrs:    addrs,
 		SentinelPassword: opts.SentinelPassword,
 		Password:         opts.Password,
+		TLSConfig:        opt.TLSConfig,
 	})
 	return newClient(client), nil
 }
 
 // buildClusterClient makes a redis.Client that is Redis Cluster aware
 func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
-	addrs, err := parseRedisURLs(opts.ClusterConnectionURLs)
+	addrs, opt, err := parseRedisURLs(opts.ClusterConnectionURLs)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
 	}
+
+	if err := setupTLSConfig(opts, opt); err != nil {
+		return nil, err
+	}
+
 	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:    addrs,
-		Password: opts.Password,
+		Addrs:     addrs,
+		Password:  opts.Password,
+		TLSConfig: opt.TLSConfig,
 	})
 	return newClusterClient(client), nil
 }
@@ -127,6 +139,16 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 		opt.Password = opts.Password
 	}
 
+	if err := setupTLSConfig(opts, opt); err != nil {
+		return nil, err
+	}
+
+	client := redis.NewClient(opt)
+	return newClient(client), nil
+}
+
+// setupTLSConfig sets the TLSConfig if the TLS option is given in redis.Options
+func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 	if opts.InsecureSkipTLSVerify {
 		if opt.TLSConfig == nil {
 			/* #nosec */
@@ -146,7 +168,7 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 		}
 		certs, err := ioutil.ReadFile(opts.CAPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load %q, %v", opts.CAPath, err)
+			return fmt.Errorf("failed to load %q, %v", opts.CAPath, err)
 		}
 
 		// Append our cert to the system pool
@@ -161,21 +183,21 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 
 		opt.TLSConfig.RootCAs = rootCAs
 	}
-
-	client := redis.NewClient(opt)
-	return newClient(client), nil
+	return nil
 }
 
 // parseRedisURLs parses a list of redis urls and returns a list
-// of addresses in the form of host:port that can be used to connect to Redis
-func parseRedisURLs(urls []string) ([]string, error) {
+// of addresses in the form of host:port and redis.Options that can be used to connect to Redis
+func parseRedisURLs(urls []string) ([]string, *redis.Options, error) {
 	addrs := []string{}
+	var redisOptions *redis.Options
 	for _, u := range urls {
 		parsedURL, err := redis.ParseURL(u)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse redis url: %v", err)
+			return nil, nil, fmt.Errorf("unable to parse redis url: %v", err)
 		}
 		addrs = append(addrs, parsedURL.Addr)
+		redisOptions = parsedURL
 	}
-	return addrs, nil
+	return addrs, redisOptions, nil
 }
