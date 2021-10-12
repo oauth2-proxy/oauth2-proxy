@@ -12,6 +12,7 @@
 - [#1433](https://github.com/oauth2-proxy/oauth2-proxy/pull/1433) Let authentication fail when session validation fails (@stippi2)
 - [#1445](https://github.com/oauth2-proxy/oauth2-proxy/pull/1445) Fix docker container multi arch build issue by passing GOARCH details to make build (@jkandasa)
 - [#1444](https://github.com/oauth2-proxy/oauth2-proxy/pull/1444) Update LinkedIn provider validate URL (@jkandasa)
+- [#1385](https://github.com/oauth2-proxy/oauth2-proxy/pull/1385) Add redis lock usage for refreshing session (@Bibob7)
 
 # V7.2.0
 
