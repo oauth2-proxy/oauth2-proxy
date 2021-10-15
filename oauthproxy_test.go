@@ -1535,9 +1535,10 @@ type ajaxRequestTest struct {
 	proxy *OAuthProxy
 }
 
-func newAjaxRequestTest() (*ajaxRequestTest, error) {
+func newAjaxRequestTest(forceJSONErrors bool) (*ajaxRequestTest, error) {
 	test := &ajaxRequestTest{}
 	test.opts = baseTestOptions()
+	test.opts.ForceJSONErrors = forceJSONErrors
 	err := validation.Validate(test.opts)
 	if err != nil {
 		return nil, err
@@ -1552,59 +1553,64 @@ func newAjaxRequestTest() (*ajaxRequestTest, error) {
 	return test, nil
 }
 
-func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (int, http.Header, error) {
+func (test *ajaxRequestTest) getEndpoint(endpoint string, header http.Header) (int, http.Header, []byte, error) {
 	rw := httptest.NewRecorder()
 	req, err := http.NewRequest(http.MethodGet, endpoint, strings.NewReader(""))
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, nil, err
 	}
 	req.Header = header
 	test.proxy.ServeHTTP(rw, req)
-	return rw.Code, rw.Header(), nil
+	return rw.Code, rw.Header(), rw.Body.Bytes(), nil
 }
 
-func testAjaxUnauthorizedRequest(t *testing.T, header http.Header) {
-	test, err := newAjaxRequestTest()
+func testAjaxUnauthorizedRequest(t *testing.T, header http.Header, forceJSONErrors bool) {
+	test, err := newAjaxRequestTest(forceJSONErrors)
 	if err != nil {
 		t.Fatal(err)
 	}
 	endpoint := "/test"
 
-	code, rh, err := test.getEndpoint(endpoint, header)
+	code, rh, body, err := test.getEndpoint(endpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusUnauthorized, code)
 	mime := rh.Get("Content-Type")
 	assert.Equal(t, applicationJSON, mime)
+	assert.Equal(t, []byte("{}"), body)
 }
 func TestAjaxUnauthorizedRequest1(t *testing.T) {
 	header := make(http.Header)
 	header.Add("accept", applicationJSON)
 
-	testAjaxUnauthorizedRequest(t, header)
+	testAjaxUnauthorizedRequest(t, header, false)
 }
 
 func TestAjaxUnauthorizedRequest2(t *testing.T) {
 	header := make(http.Header)
 	header.Add("Accept", applicationJSON)
 
-	testAjaxUnauthorizedRequest(t, header)
+	testAjaxUnauthorizedRequest(t, header, false)
 }
 
 func TestAjaxUnauthorizedRequestAccept1(t *testing.T) {
 	header := make(http.Header)
 	header.Add("Accept", "application/json, text/plain, */*")
 
-	testAjaxUnauthorizedRequest(t, header)
+	testAjaxUnauthorizedRequest(t, header, false)
+}
+
+func TestForceJSONErrorsUnauthorizedRequest(t *testing.T) {
+	testAjaxUnauthorizedRequest(t, nil, true)
 }
 
 func TestAjaxForbiddendRequest(t *testing.T) {
-	test, err := newAjaxRequestTest()
+	test, err := newAjaxRequestTest(false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	endpoint := "/test"
 	header := make(http.Header)
-	code, rh, err := test.getEndpoint(endpoint, header)
+	code, rh, _, err := test.getEndpoint(endpoint, header)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, code)
 	mime := rh.Get("Content-Type")
