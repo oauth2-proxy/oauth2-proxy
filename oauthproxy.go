@@ -853,11 +853,13 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
 		if p.forceJSONErrors || isAjax(req) {
+			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
 			p.errorJSON(rw, http.StatusUnauthorized)
 			return
 		}
 
+		logger.Printf("No valid authentication in request. Initiating login.")
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
