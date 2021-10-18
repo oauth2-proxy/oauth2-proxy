@@ -22,8 +22,8 @@ all: lint $(BINARY)
 
 .PHONY: clean
 clean:
-	rm -rf release
-	rm -f $(BINARY)
+	-rm -rf release
+	-rm -f $(BINARY)
 
 .PHONY: distclean
 distclean: clean
@@ -37,10 +37,12 @@ lint: validate-go-version
 build: validate-go-version clean $(BINARY)
 
 $(BINARY):
-	GO111MODULE=on CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
+	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
 
+DOCKER_BUILD_PLATFORM ?= linux/amd64,linux/arm64,linux/arm/v6
+DOCKER_BUILDX_ARGS ?=
 DOCKER_BUILD := docker build --build-arg VERSION=${VERSION}
-DOCKER_BUILDX := docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v6 --build-arg VERSION=${VERSION}
+DOCKER_BUILDX := docker buildx build ${DOCKER_BUILDX_ARGS} --platform ${DOCKER_BUILD_PLATFORM} --build-arg VERSION=${VERSION}
 
 .PHONY: docker
 docker:
@@ -58,7 +60,7 @@ docker-all: docker
 
 .PHONY: docker-push
 docker-push:
-	docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest .
+	docker buildx build --push --platform ${DOCKER_BUILD_PLATFORM} -t $(REGISTRY)/oauth2-proxy:latest .
 
 .PHONY: docker-push-all
 docker-push-all: docker-push
