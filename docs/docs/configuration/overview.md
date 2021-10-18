@@ -495,7 +495,7 @@ Redirect to sign_in functionality provided without the use of `errors` middlewar
 
 **Following options need to be set on `oauth2-proxy`:**
 - `--upstream=static://202`: Configures a static response for authenticated sessions
-- `--reverseproxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
+- `--reverse-proxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
 
 ```yaml
 http:
