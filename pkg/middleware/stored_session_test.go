@@ -19,15 +19,16 @@ import (
 )
 
 type TestLock struct {
-	Locked       bool
-	WasObtained  bool
-	WasRefreshed bool
-	WasReleased  bool
-	PeekedCount  int
-	ObtainError  error
-	PeekError    error
-	RefreshError error
-	ReleaseError error
+	Locked            bool
+	WasObtained       bool
+	WasRefreshed      bool
+	WasReleased       bool
+	PeekedCount       int
+	LockedOnPeekCount int
+	ObtainError       error
+	PeekError         error
+	RefreshError      error
+	ReleaseError      error
 }
 
 func (l *TestLock) Obtain(_ context.Context, _ time.Duration) error {
@@ -46,6 +47,11 @@ func (l *TestLock) Peek(_ context.Context) (bool, error) {
 	locked := l.Locked
 	l.Locked = false
 	l.PeekedCount++
+	// mainly used to test case when peek initially returns false,
+	// but when trying to obtain lock, it returns true.
+	if l.LockedOnPeekCount == l.PeekedCount {
+		return true, nil
+	}
 	return locked, nil
 }
 
@@ -588,6 +594,25 @@ var _ = Describe("Stored Session Suite", func() {
 					PeekedCount: 2,
 				},
 			}),
+			Entry("when obtaining lock failed, but concurrent request refreshed", refreshSessionIfNeededTableInput{
+				refreshPeriod: 1 * time.Minute,
+				session: &sessionsapi.SessionState{
+					RefreshToken: noRefresh,
+					CreatedAt:    &createdPast,
+					Lock: &TestLock{
+						ObtainError:       errors.New("not able to obtain lock"),
+						LockedOnPeekCount: 2,
+					},
+				},
+				expectedErr:     nil,
+				expectRefreshed: false,
+				expectValidated: true,
+				expectedLockState: TestLock{
+					PeekedCount:       3,
+					LockedOnPeekCount: 2,
+					ObtainError:       errors.New("not able to obtain lock"),
+				},
+			}),
 			Entry("when obtaining lock failed", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
@@ -601,7 +626,7 @@ var _ = Describe("Stored Session Suite", func() {
 				expectRefreshed: false,
 				expectValidated: true,
 				expectedLockState: TestLock{
-					PeekedCount: 1,
+					PeekedCount: 2,
 					ObtainError: errors.New("not able to obtain lock"),
 				},
 			}),

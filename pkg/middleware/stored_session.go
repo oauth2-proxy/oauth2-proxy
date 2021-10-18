@@ -118,20 +118,14 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 		return nil
 	}
 
-	wasLocked, err := s.waitForPossibleSessionLock(session, req)
+	wasRefreshed, err := s.checkForConcurrentRefresh(session, req)
 	if err != nil {
 		return err
 	}
 
-	// If session was locked, fetch current state, because
-	// it should be updated after lock is released.
-	if wasLocked {
-		logger.Printf("Update session from store instead of refreshing")
-		err = s.updateSessionFromStore(req, session)
-		if err != nil {
-			logger.Errorf("Unable to update session from store: %v", err)
-		}
-	} else {
+	// If session was already refreshed via a concurrent request locked skip refreshing,
+	// because the refreshed session is already loaded from storage
+	if !wasRefreshed {
 		logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
 		err = s.refreshSession(rw, req, session)
 		if err != nil {
@@ -150,7 +144,15 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
 	err := session.ObtainLock(req.Context(), SessionLockExpireTime)
 	if err != nil {
-		logger.Errorf("unable to obtain lock (skipping refresh): %v", err)
+		logger.Errorf("Unable to obtain lock: %v", err)
+		wasRefreshed, err := s.checkForConcurrentRefresh(session, req)
+		if err != nil {
+			logger.Errorf("Unable to wait for obtained lock: %v", err)
+			return err
+		}
+		if !wasRefreshed {
+			return errors.New("unable to obtain lock and session was also not refreshed via concurrent request")
+		}
 		return nil
 	}
 	defer func() {
@@ -222,6 +224,27 @@ func (s *storedSessionLoader) waitForPossibleSessionLock(session *sessionsapi.Se
 	}
 
 	return wasLocked, nil
+}
+
+// checkForConcurrentRefresh returns true if the session is already refreshed via a concurrent request.
+func (s *storedSessionLoader) checkForConcurrentRefresh(session *sessionsapi.SessionState, req *http.Request) (bool, error) {
+	wasLocked, err := s.waitForPossibleSessionLock(session, req)
+	if err != nil {
+		return false, err
+	}
+
+	refreshed := false
+	if wasLocked {
+		logger.Printf("Update session from store instead of refreshing")
+		err = s.updateSessionFromStore(req, session)
+		if err != nil {
+			logger.Errorf("Unable to update session from store: %v", err)
+			return false, err
+		}
+		refreshed = true
+	}
+
+	return refreshed, nil
 }
 
 // validateSession checks whether the session has expired and performs
