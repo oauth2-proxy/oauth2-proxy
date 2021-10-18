@@ -20,10 +20,11 @@ type VerifyFunc func(ctx context.Context, token string) (*oidc.IDToken, error)
 func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 	return func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
 		var claims struct {
-			Subject           string `json:"sub"`
-			Email             string `json:"email"`
-			Verified          *bool  `json:"email_verified"`
-			PreferredUsername string `json:"preferred_username"`
+			Subject           string   `json:"sub"`
+			Email             string   `json:"email"`
+			Verified          *bool    `json:"email_verified"`
+			PreferredUsername string   `json:"preferred_username"`
+			Groups            []string `json:"groups"`
 		}
 
 		idToken, err := verify(ctx, token)
@@ -47,6 +48,7 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 			Email:             claims.Email,
 			User:              claims.Subject,
 			PreferredUsername: claims.PreferredUsername,
+			Groups:            claims.Groups,
 			AccessToken:       token,
 			IDToken:           token,
 			RefreshToken:      "",
