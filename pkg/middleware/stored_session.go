@@ -210,11 +210,12 @@ func (s *storedSessionLoader) updateSessionFromStore(req *http.Request, session 
 func (s *storedSessionLoader) waitForPossibleSessionLock(session *sessionsapi.SessionState, req *http.Request) (bool, error) {
 	var wasLocked bool
 	var err error
-	var isLocked bool
-	for isLocked, err = session.PeekLock(req.Context()); isLocked; isLocked, err = session.PeekLock(req.Context()) {
+	isLocked, err := session.PeekLock(req.Context())
+	for isLocked {
 		wasLocked = true
 		// delay next peek lock
 		time.Sleep(SessionLockPeekDelay)
+		isLocked, err = session.PeekLock(req.Context())
 	}
 
 	if err != nil {
