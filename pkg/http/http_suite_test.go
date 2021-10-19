@@ -2,20 +2,15 @@ package http
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
-	"math/big"
-	"net"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -34,38 +29,14 @@ func TestHTTPSuite(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	By("Generating a self-signed cert for TLS tests", func() {
-		priv, err := rsa.GenerateKey(rand.Reader, 2048)
-		Expect(err).ToNot(HaveOccurred())
-
-		keyOut := bytes.NewBuffer(nil)
-		privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes})).To(Succeed())
-		keyDataSource.Value = keyOut.Bytes()
-
-		serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-		serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-		Expect(err).ToNot(HaveOccurred())
-
-		template := x509.Certificate{
-			SerialNumber: serialNumber,
-			Subject: pkix.Name{
-				Organization: []string{"OAuth2 Proxy Test Suite"},
-			},
-			NotBefore:   time.Now(),
-			NotAfter:    time.Now().Add(time.Hour),
-			IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
-			KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		}
-
-		certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+		certBytes, keyData, err := util.GenerateCert()
 		Expect(err).ToNot(HaveOccurred())
 		certData = certBytes
 
-		certOut := bytes.NewBuffer(nil)
+		certOut := new(bytes.Buffer)
 		Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
 		certDataSource.Value = certOut.Bytes()
+		keyDataSource.Value = keyData
 	})
 
 	By("Setting up a http client", func() {

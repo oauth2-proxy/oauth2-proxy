@@ -1,8 +1,10 @@
 package redis
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/pem"
 	"log"
 	"os"
 	"testing"
@@ -16,6 +18,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -227,18 +230,33 @@ var _ = Describe("Redis SessionStore Tests", func() {
 	})
 
 	Context("with custom CA path", func() {
+		var caPath string
+
 		BeforeEach(func() {
+			certBytes, keyData, err := util.GenerateCert()
+			Expect(err).ToNot(HaveOccurred())
+			certOut := new(bytes.Buffer)
+			Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
+			certData := certOut.Bytes()
+			cert, err := tls.X509KeyPair(certData, keyData)
+			Expect(err).ToNot(HaveOccurred())
+
+			certFile, err := os.CreateTemp("", "cert.*.pem")
+			Expect(err).ToNot(HaveOccurred())
+			caPath = certFile.Name()
+			_, err = certFile.Write(certData)
+			defer certFile.Close()
+			Expect(err).ToNot(HaveOccurred())
+
 			mr.Close()
 
-			var cert tls.Certificate
-			var err error
-			cert, err = tls.LoadX509KeyPair("testdata/cert.pem", "testdata/key.pem")
-			Expect(err).ToNot(HaveOccurred())
 			mr, err = miniredis.RunTLS(&tls.Config{Certificates: []tls.Certificate{cert}})
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
+			Expect(os.Remove(caPath)).ToNot(HaveOccurred())
+
 			mr.Close()
 
 			var err error
@@ -251,7 +269,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				// Set the connection URL
 				opts.Type = options.RedisSessionStoreType
 				opts.Redis.ConnectionURL = "redis://" + mr.Addr()
-				opts.Redis.CAPath = "testdata/cert.pem"
+				opts.Redis.CAPath = caPath
 
 				// Capture the session store so that we can close the client
 				var err error
@@ -267,12 +285,15 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 	Context("with insecure TLS connection", func() {
 		BeforeEach(func() {
+			certBytes, keyData, err := util.GenerateCert()
+			Expect(err).ToNot(HaveOccurred())
+			certOut := new(bytes.Buffer)
+			Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
+			cert, err := tls.X509KeyPair(certOut.Bytes(), keyData)
+			Expect(err).ToNot(HaveOccurred())
+
 			mr.Close()
 
-			var cert tls.Certificate
-			var err error
-			cert, err = tls.LoadX509KeyPair("testdata/cert.pem", "testdata/key.pem")
-			Expect(err).ToNot(HaveOccurred())
 			mr, err = miniredis.RunTLS(&tls.Config{Certificates: []tls.Certificate{cert}})
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -289,7 +310,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 				// Set the connection URL
 				opts.Type = options.RedisSessionStoreType
-				opts.Redis.ConnectionURL = "redis://" + mr.Addr()
+				opts.Redis.ConnectionURL = "redis://127.0.0.1:" + mr.Port() // func (*Miniredis) StartTLS listens on 127.0.0.1
 				opts.Redis.InsecureSkipTLSVerify = true
 
 				// Capture the session store so that we can close the client
