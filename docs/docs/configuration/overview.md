@@ -100,7 +100,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
 | `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
-| `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
+| `--exclude-logging-path` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
 | `--force-json-errors` | force JSON errors instead of HTTP error pages or redirects | `false` |
@@ -496,7 +496,7 @@ Redirect to sign_in functionality provided without the use of `errors` middlewar
 
 **Following options need to be set on `oauth2-proxy`:**
 - `--upstream=static://202`: Configures a static response for authenticated sessions
-- `--reverseproxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
+- `--reverse-proxy=true`: Enables the use of `X-Forwarded-*` headers to determine redirects correctly
 
 ```yaml
 http:
