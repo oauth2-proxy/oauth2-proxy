@@ -37,6 +37,9 @@ type Provider struct {
 	// LoginGovConfig holds all configurations for LoginGov provider.
 	LoginGovConfig LoginGovOptions `json:"loginGovConfig,omitempty"`
 
+	// PhabricatorConfig holds all configurations for Phabricator provider.
+	PhabricatorConfig PhabricatorOptions `json:"phabricatorConfig,omitempty"`
+
 	// ID should be a unique identifier for the provider.
 	// This value is required for all providers.
 	ID string `json:"id,omitempty"`
@@ -173,6 +176,13 @@ type LoginGovOptions struct {
 	JWTKeyFile string `json:"jwtKeyFile,omitempty"`
 	// PubJWKURL is the JWK pubkey access endpoint
 	PubJWKURL string `json:"pubjwkURL,omitempty"`
+}
+
+type PhabricatorOptions struct {
+	// Token is the conduit token to use when listing user groups
+	Token string `json:"token,omitempty"`
+	// GroupFilter is a regular expression to filter user groups
+	GroupFilter string `json:"groupFilter,omitempty"`
 }
 
 func providerDefaults() Providers {

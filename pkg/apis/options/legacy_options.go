@@ -485,6 +485,9 @@ type LegacyProvider struct {
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
 
+	PhabricatorToken       string `flag:"phabricator-token" cfg:"phabricator_token"`
+	PhabricatorGroupFilter string `flag:"phabricator-group-filter" cfg:"phabricator_group_filter"`
+
 	// These options allow for other providers besides Google, with
 	// potential overrides.
 	ProviderType                       string   `flag:"provider" cfg:"provider"`
@@ -536,6 +539,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
+
+	flagSet.String("phabricator-token", "", "the token to use when obtaining group information")
+	flagSet.String("phabricator-group-filter", "", "regex to filter phabricator groups")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
@@ -688,6 +694,11 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Groups:             l.GoogleGroups,
 			AdminEmail:         l.GoogleAdminEmail,
 			ServiceAccountJSON: l.GoogleServiceAccountJSON,
+		}
+	case "phabricator":
+		provider.PhabricatorConfig = PhabricatorOptions{
+			Token:       l.PhabricatorToken,
+			GroupFilter: l.PhabricatorGroupFilter,
 		}
 	}
 

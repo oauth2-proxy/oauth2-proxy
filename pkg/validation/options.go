@@ -328,6 +328,19 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 				p.JWTKey = signKey
 			}
 		}
+	case *providers.PhabricatorProvider:
+		if o.Providers[0].PhabricatorConfig.Token == "" {
+			msgs = append(msgs, "phabricator provider requires a conduit token")
+		}
+		p.Token = o.Providers[0].PhabricatorConfig.Token
+
+		if o.Providers[0].PhabricatorConfig.GroupFilter != "" {
+			err := p.AddGroupFilter(o.Providers[0].PhabricatorConfig.GroupFilter)
+			if err != nil {
+				msgs = append(msgs, fmt.Sprintf("group_filter (%s) not valid regular expression: %v", o.Providers[0].PhabricatorConfig.GroupFilter, err))
+			}
+		}
+
 	}
 	return msgs
 }
