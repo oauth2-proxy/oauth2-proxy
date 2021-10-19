@@ -48,6 +48,7 @@
 - [#997](https://github.com/oauth2-proxy/oauth2-proxy/pull/997) Allow passing the raw url path when proxying upstream requests - e.g. /%2F/ (@FStelzer)
 - [#1147](https://github.com/oauth2-proxy/oauth2-proxy/pull/1147) Multiarch support for docker image (@goshlanguage)
 - [#1296](https://github.com/oauth2-proxy/oauth2-proxy/pull/1296) Fixed `panic` when connecting to Redis with TLS (@mstrzele)
+- [#1403](https://github.com/oauth2-proxy/oauth2-proxy/pull/1403) Improve TLS handling for Redis to support non-standalone mode with TLS (@wadahiro)
 
 # V7.1.3
 
