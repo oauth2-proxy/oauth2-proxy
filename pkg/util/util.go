@@ -1,12 +1,10 @@
 package util
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -41,21 +39,14 @@ func GenerateCert() ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	keyBytes, err := x509.MarshalPKCS8PrivateKey(priv)
 	if err != nil {
-		return nil, nil, err
+		return nil, keyBytes, err
 	}
-
-	keyOut := new(bytes.Buffer)
-	err = pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes})
-	if err != nil {
-		return nil, nil, err
-	}
-	keyData := keyOut.Bytes()
 
 	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
-		return nil, nil, err
+		return nil, keyBytes, err
 	}
 
 	notBefore := time.Now()
@@ -73,9 +64,5 @@ func GenerateCert() ([]byte, []byte, error) {
 		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
 	}
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return certBytes, keyData, nil
+	return certBytes, keyBytes, err
 }

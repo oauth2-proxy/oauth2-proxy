@@ -29,14 +29,16 @@ func TestHTTPSuite(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	By("Generating a self-signed cert for TLS tests", func() {
-		certBytes, keyData, err := util.GenerateCert()
+		certBytes, keyBytes, err := util.GenerateCert()
 		Expect(err).ToNot(HaveOccurred())
 		certData = certBytes
 
 		certOut := new(bytes.Buffer)
 		Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
 		certDataSource.Value = certOut.Bytes()
-		keyDataSource.Value = keyData
+		keyOut := new(bytes.Buffer)
+		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
+		keyDataSource.Value = keyOut.Bytes()
 	})
 
 	By("Setting up a http client", func() {

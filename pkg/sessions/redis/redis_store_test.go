@@ -233,12 +233,14 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		var caPath string
 
 		BeforeEach(func() {
-			certBytes, keyData, err := util.GenerateCert()
+			certBytes, keyBytes, err := util.GenerateCert()
 			Expect(err).ToNot(HaveOccurred())
 			certOut := new(bytes.Buffer)
 			Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
 			certData := certOut.Bytes()
-			cert, err := tls.X509KeyPair(certData, keyData)
+			keyOut := new(bytes.Buffer)
+			Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
+			cert, err := tls.X509KeyPair(certData, keyOut.Bytes())
 			Expect(err).ToNot(HaveOccurred())
 
 			certFile, err := os.CreateTemp("", "cert.*.pem")
@@ -285,11 +287,13 @@ var _ = Describe("Redis SessionStore Tests", func() {
 
 	Context("with insecure TLS connection", func() {
 		BeforeEach(func() {
-			certBytes, keyData, err := util.GenerateCert()
+			certBytes, keyBytes, err := util.GenerateCert()
 			Expect(err).ToNot(HaveOccurred())
 			certOut := new(bytes.Buffer)
 			Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
-			cert, err := tls.X509KeyPair(certOut.Bytes(), keyData)
+			keyOut := new(bytes.Buffer)
+			Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
+			cert, err := tls.X509KeyPair(certOut.Bytes(), keyOut.Bytes())
 			Expect(err).ToNot(HaveOccurred())
 
 			mr.Close()
