@@ -65,7 +65,7 @@ func sendRedisConnectionTest(client redis.Client, key string, val string) []stri
 	msgs := []string{}
 	ctx := context.Background()
 
-	err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
+	_, err := client.SetNX(ctx, key, []byte(val), time.Duration(60)*time.Second)
 	if err != nil {
 		msgs = append(msgs, fmt.Sprintf("unable to set a redis initialization key: %v", err))
 	} else {

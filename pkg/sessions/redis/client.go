@@ -12,6 +12,8 @@ import (
 type Client interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Lock(key string) sessions.Lock
+	SetNX(ctx context.Context, key string, value []byte, expiration time.Duration) (bool, error)
+	SetXX(ctx context.Context, key string, value []byte, expiration time.Duration) (bool, error)
 	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
 	Del(ctx context.Context, key string) error
 }
@@ -30,6 +32,14 @@ func newClient(c *redis.Client) Client {
 
 func (c *client) Get(ctx context.Context, key string) ([]byte, error) {
 	return c.Client.Get(ctx, key).Bytes()
+}
+
+func (c *client) SetNX(ctx context.Context, key string, value []byte, expiration time.Duration) (bool, error) {
+	return c.Client.SetNX(ctx, key, value, expiration).Result()
+}
+
+func (c *client) SetXX(ctx context.Context, key string, value []byte, expiration time.Duration) (bool, error) {
+	return c.Client.SetXX(ctx, key, value, expiration).Result()
 }
 
 func (c *client) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {
@@ -58,6 +68,14 @@ func newClusterClient(c *redis.ClusterClient) Client {
 
 func (c *clusterClient) Get(ctx context.Context, key string) ([]byte, error) {
 	return c.ClusterClient.Get(ctx, key).Bytes()
+}
+
+func (c *clusterClient) SetNX(ctx context.Context, key string, value []byte, expiration time.Duration) (bool, error) {
+	return c.ClusterClient.SetNX(ctx, key, value, expiration).Result()
+}
+
+func (c *clusterClient) SetXX(ctx context.Context, key string, value []byte, expiration time.Duration) (bool, error) {
+	return c.ClusterClient.SetXX(ctx, key, value, expiration).Result()
 }
 
 func (c *clusterClient) Set(ctx context.Context, key string, value []byte, expiration time.Duration) error {

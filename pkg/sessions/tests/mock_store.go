@@ -17,9 +17,11 @@ type entry struct {
 // MockStore is a generic in-memory implementation of persistence.Store
 // for mocking in tests
 type MockStore struct {
-	cache     map[string]entry
-	lockCache map[string]*MockLock
-	elapsed   time.Duration
+	cache            map[string]entry
+	lockCache        map[string]*MockLock
+	elapsed          time.Duration
+	beforeCreateFunc func(c context.Context, key string, value []byte, exp time.Duration) error
+	beforeUpdateFunc func(c context.Context, key string, value []byte, exp time.Duration) error
 }
 
 // NewMockStore creates a MockStore
@@ -31,8 +33,50 @@ func NewMockStore() *MockStore {
 	}
 }
 
-// Save sets a key to the data to the memory cache
-func (s *MockStore) Save(_ context.Context, key string, value []byte, exp time.Duration) error {
+func (s *MockStore) BeforeCreateFunc(crerateFunc func(c context.Context, key string, value []byte, exp time.Duration) error) {
+	s.beforeCreateFunc = crerateFunc
+}
+
+func (s *MockStore) BeforeUpdateFunc(updateFunc func(c context.Context, key string, value []byte, exp time.Duration) error) {
+	s.beforeUpdateFunc = updateFunc
+}
+
+// Create creates a key to the data to the memory cache
+func (s *MockStore) Create(c context.Context, key string, value []byte, exp time.Duration) error {
+	if s.beforeCreateFunc != nil {
+		if err := s.beforeCreateFunc(c, key, value, exp); err != nil {
+			return err
+		}
+	}
+	if _, ok := s.cache[key]; ok {
+		return sessions.ErrDuplicateSessionKey
+	}
+	s.cache[key] = entry{
+		data:       value,
+		expiration: exp,
+	}
+	return nil
+}
+
+// Update updates a key to the data to the memory cache
+func (s *MockStore) Update(c context.Context, key string, value []byte, exp time.Duration) error {
+	if s.beforeUpdateFunc != nil {
+		if err := s.beforeUpdateFunc(c, key, value, exp); err != nil {
+			return err
+		}
+	}
+	if _, ok := s.cache[key]; !ok {
+		return sessions.ErrNotFoundSessionKey
+	}
+	s.cache[key] = entry{
+		data:       value,
+		expiration: exp,
+	}
+	return nil
+}
+
+// CreateOrUpdate creates/updates a key to the data to the memory cache
+func (s *MockStore) CreateOrUpdate(_ context.Context, key string, value []byte, exp time.Duration) error {
 	s.cache[key] = entry{
 		data:       value,
 		expiration: exp,

@@ -1,6 +1,7 @@
 package persistence
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -25,24 +26,63 @@ func NewManager(store Store, cookieOpts *options.Cookie) *Manager {
 	}
 }
 
-// Save saves a session in a persistent Store. Save will generate (or reuse an
+// Create creates a session in a persistent Store. Create will generate (or reuse an
 // existing) ticket which manages unique per session encryption & retrieval
 // from the persistent data store.
-func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
+func (m *Manager) Create(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
 	if s.CreatedAt == nil || s.CreatedAt.IsZero() {
 		s.CreatedAtNow()
 	}
 
 	tckt, err := decodeTicketFromRequest(req, m.Options)
 	if err != nil {
-		tckt, err = newTicket(m.Options)
-		if err != nil {
-			return fmt.Errorf("error creating a session ticket: %v", err)
+		retry := 0
+		for {
+			tckt, err = newTicket(m.Options)
+			if err != nil {
+				return fmt.Errorf("error creating a session ticket: %v", err)
+			}
+
+			err = tckt.saveSession(s, func(key string, val []byte, exp time.Duration) error {
+				return m.Store.Create(req.Context(), key, val, exp)
+			})
+			if err != nil {
+				// Retry creating a session if it returns duplicate session key error
+				// since it should generate non-duplicate key next time
+				if errors.Is(err, sessions.ErrDuplicateSessionKey) && retry < 1 {
+					retry++
+					continue
+				}
+				return err
+			}
+			return tckt.setCookie(rw, req, s)
 		}
+	} else {
+		err = tckt.saveSession(s, func(key string, val []byte, exp time.Duration) error {
+			return m.Store.CreateOrUpdate(req.Context(), key, val, exp)
+		})
+		if err != nil {
+			return err
+		}
+		return tckt.setCookie(rw, req, s)
+	}
+}
+
+// Update saves a session existing in a persistent Store. Update will reuse an
+// existing ticket which manages unique per session encryption & retrieval
+// from the persistent data store.
+func (m *Manager) Update(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
+	if s.CreatedAt == nil || s.CreatedAt.IsZero() {
+		s.CreatedAtNow()
+	}
+
+	tckt, err := decodeTicketFromRequest(req, m.Options)
+	if err != nil {
+		return fmt.Errorf("error decoding ticket to update session: %v", err)
 	}
 
 	err = tckt.saveSession(s, func(key string, val []byte, exp time.Duration) error {
-		return m.Store.Save(req.Context(), key, val, exp)
+		return m.Store.Update(req.Context(), key, val, exp)
 	})
 	if err != nil {
 		return err

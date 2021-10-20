@@ -32,17 +32,16 @@ type SessionStore struct {
 	Minimal      bool
 }
 
+// Create takes a sessions.SessionState and stores the information from it
+// within Cookies set on the HTTP response writer
+func (s *SessionStore) Create(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
+	return s.save(rw, req, ss)
+}
+
 // Save takes a sessions.SessionState and stores the information from it
 // within Cookies set on the HTTP response writer
-func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
-	if ss.CreatedAt == nil || ss.CreatedAt.IsZero() {
-		ss.CreatedAtNow()
-	}
-	value, err := s.cookieForSession(ss)
-	if err != nil {
-		return err
-	}
-	return s.setSessionCookie(rw, req, value, *ss.CreatedAt)
+func (s *SessionStore) Update(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
+	return s.save(rw, req, ss)
 }
 
 // Load reads sessions.SessionState information from Cookies within the
@@ -80,6 +79,17 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 	}
 
 	return nil
+}
+
+func (s *SessionStore) save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
+	if ss.CreatedAt == nil || ss.CreatedAt.IsZero() {
+		ss.CreatedAtNow()
+	}
+	value, err := s.cookieForSession(ss)
+	if err != nil {
+		return err
+	}
+	return s.setSessionCookie(rw, req, value, *ss.CreatedAt)
 }
 
 // cookieForSession serializes a session state for storage in a cookie

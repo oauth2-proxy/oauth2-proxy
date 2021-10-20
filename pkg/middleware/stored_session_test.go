@@ -418,10 +418,17 @@ var _ = Describe("Stored Session Suite", func() {
 
 				s := &storedSessionLoader{
 					store: &fakeSessionStore{
-						SaveFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
+						CreateFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
 							saved = true
 							if ss.AccessToken == "NoSave" {
-								return errors.New("unable to save session")
+								return errors.New("unable to create session")
+							}
+							return nil
+						},
+						UpdateFunc: func(_ http.ResponseWriter, _ *http.Request, ss *sessionsapi.SessionState) error {
+							saved = true
+							if ss.AccessToken == "NoSave" {
+								return errors.New("unable to update session")
 							}
 							return nil
 						},
@@ -480,12 +487,12 @@ var _ = Describe("Stored Session Suite", func() {
 				expectedErr: errors.New("error refreshing tokens: error refreshing session"),
 				expectSaved: false,
 			}),
-			Entry("when the saving the session returns an error", refreshSessionWithProviderTableInput{
+			Entry("when the updating the session returns an error", refreshSessionWithProviderTableInput{
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					AccessToken:  "NoSave",
 				},
-				expectedErr: errors.New("error saving session: unable to save session"),
+				expectedErr: errors.New("error saving session: unable to update session"),
 				expectSaved: true,
 			}),
 		)
@@ -540,14 +547,21 @@ var _ = Describe("Stored Session Suite", func() {
 })
 
 type fakeSessionStore struct {
-	SaveFunc  func(http.ResponseWriter, *http.Request, *sessionsapi.SessionState) error
-	LoadFunc  func(req *http.Request) (*sessionsapi.SessionState, error)
-	ClearFunc func(rw http.ResponseWriter, req *http.Request) error
+	CreateFunc func(http.ResponseWriter, *http.Request, *sessionsapi.SessionState) error
+	UpdateFunc func(http.ResponseWriter, *http.Request, *sessionsapi.SessionState) error
+	LoadFunc   func(req *http.Request) (*sessionsapi.SessionState, error)
+	ClearFunc  func(rw http.ResponseWriter, req *http.Request) error
 }
 
-func (f *fakeSessionStore) Save(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) error {
-	if f.SaveFunc != nil {
-		return f.SaveFunc(rw, req, s)
+func (f *fakeSessionStore) Create(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) error {
+	if f.CreateFunc != nil {
+		return f.CreateFunc(rw, req, s)
+	}
+	return nil
+}
+func (f *fakeSessionStore) Update(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) error {
+	if f.UpdateFunc != nil {
+		return f.UpdateFunc(rw, req, s)
 	}
 	return nil
 }

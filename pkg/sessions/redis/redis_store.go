@@ -35,12 +35,40 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 	return persistence.NewManager(rs, cookieOpts), nil
 }
 
-// Save takes a sessions.SessionState and stores the information from it
+// Create takes a sessions.SessionState and creates the information from it
 // to redis, and adds a new persistence cookie on the HTTP response writer
-func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
+func (store *SessionStore) Create(ctx context.Context, key string, value []byte, exp time.Duration) error {
+	isSet, err := store.Client.SetNX(ctx, key, value, exp)
+	if err != nil {
+		return fmt.Errorf("error creating redis session: %v", err)
+	}
+	// Detected duplicate session key
+	if !isSet {
+		return sessions.ErrDuplicateSessionKey
+	}
+	return nil
+}
+
+// Update takes a sessions.SessionState and updates the information from it
+// to redis, and adds a new persistence cookie on the HTTP response writer
+func (store *SessionStore) Update(ctx context.Context, key string, value []byte, exp time.Duration) error {
+	isSet, err := store.Client.SetXX(ctx, key, value, exp)
+	if err != nil {
+		return fmt.Errorf("error updating redis session: %v", err)
+	}
+	// Detected the session has already been deleted
+	if !isSet {
+		return sessions.ErrNotFoundSessionKey
+	}
+	return nil
+}
+
+// CreateOrUpdate takes a sessions.SessionState and creates or updates the information from it
+// to redis, and adds a new persistence cookie on the HTTP response writer
+func (store *SessionStore) CreateOrUpdate(ctx context.Context, key string, value []byte, exp time.Duration) error {
 	err := store.Client.Set(ctx, key, value, exp)
 	if err != nil {
-		return fmt.Errorf("error saving redis session: %v", err)
+		return fmt.Errorf("error creating/updating redis session: %v", err)
 	}
 	return nil
 }

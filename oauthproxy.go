@@ -473,9 +473,9 @@ func (p *OAuthProxy) LoadCookiedSession(req *http.Request) (*sessionsapi.Session
 	return p.sessionStore.Load(req)
 }
 
-// SaveSession creates a new session cookie value and sets this on the response
-func (p *OAuthProxy) SaveSession(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) error {
-	return p.sessionStore.Save(rw, req, s)
+// CreateSession creates a new session cookie value and sets this on the response
+func (p *OAuthProxy) CreateSession(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) error {
+	return p.sessionStore.Create(rw, req, s)
 }
 
 func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -594,7 +594,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 	user, ok := p.ManualSignIn(req)
 	if ok {
 		session := &sessionsapi.SessionState{User: user, Groups: p.basicAuthGroups}
-		err = p.SaveSession(rw, req, session)
+		err = p.CreateSession(rw, req, session)
 		if err != nil {
 			logger.Printf("Error saving session: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -768,7 +768,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 	if p.Validator(session.Email) && authorized {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
-		err := p.SaveSession(rw, req, session)
+		err := p.CreateSession(rw, req, session)
 		if err != nil {
 			logger.Errorf("Error saving session state for %s: %v", remoteAddr, err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())

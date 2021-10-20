@@ -7,9 +7,13 @@ import (
 	"time"
 )
 
+var ErrDuplicateSessionKey = errors.New("duplicate session key")
+var ErrNotFoundSessionKey = errors.New("not found session key")
+
 // SessionStore is an interface to storing user sessions in the proxy
 type SessionStore interface {
-	Save(rw http.ResponseWriter, req *http.Request, s *SessionState) error
+	Create(rw http.ResponseWriter, req *http.Request, s *SessionState) error
+	Update(rw http.ResponseWriter, req *http.Request, s *SessionState) error
 	Load(req *http.Request) (*SessionState, error)
 	Clear(rw http.ResponseWriter, req *http.Request) error
 }

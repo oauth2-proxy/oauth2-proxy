@@ -11,7 +11,9 @@ import (
 // Implementing this interface allows it to easily use the persistence.Manager
 // for session ticket + encryption details.
 type Store interface {
-	Save(context.Context, string, []byte, time.Duration) error
+	Create(context.Context, string, []byte, time.Duration) error
+	Update(context.Context, string, []byte, time.Duration) error
+	CreateOrUpdate(context.Context, string, []byte, time.Duration) error
 	Load(context.Context, string) ([]byte, error)
 	Clear(context.Context, string) error
 	Lock(key string) sessions.Lock

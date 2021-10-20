@@ -101,6 +101,10 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 
 	err = s.refreshSessionIfNeeded(rw, req, session)
 	if err != nil {
+		if errors.Is(err, sessionsapi.ErrNotFoundSessionKey) {
+			// Treat as no session
+			return nil, nil
+		}
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
 
@@ -119,6 +123,9 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
 	err := s.refreshSession(rw, req, session)
 	if err != nil {
+		if errors.Is(err, sessionsapi.ErrNotFoundSessionKey) {
+			return err
+		}
 		// If a preemptive refresh fails, we still keep the session
 		// if validateSession succeeds.
 		logger.Errorf("Unable to refresh session: %v", err)
@@ -155,9 +162,12 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	// (In case underlying provider implementations forget)
 	session.CreatedAtNow()
 
-	// Because the session was refreshed, make sure to save it
-	err = s.store.Save(rw, req, session)
+	// Because the session was refreshed, make sure to update it
+	err = s.store.Update(rw, req, session)
 	if err != nil {
+		if errors.Is(err, sessionsapi.ErrNotFoundSessionKey) {
+			return err
+		}
 		logger.PrintAuthf(session.Email, req, logger.AuthError, "error saving session: %v", err)
 		return fmt.Errorf("error saving session: %v", err)
 	}
