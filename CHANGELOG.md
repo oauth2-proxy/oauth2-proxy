@@ -4,11 +4,27 @@
 
 ## Important Notes
 
+## Breaking Changes
+
+## Changes since v7.2.0
+
+# V7.2.0
+
+## Release Highlights
+
+- LinkedIn provider updated to support the new v2 API
+- Introduce `--force-json-errors` to allow OAuth2 Proxy to protect JSON APIs and disable authentication redirection
+- Add URL rewrite capabilities to the upstream proxy
+- New ADFS provider integration
+- New Keycloak OIDC provider integration
+- Introduced Multiarch Docker images on the standard image tags
+
+## Important Notes
+
 - [#1086](https://github.com/oauth2-proxy/oauth2-proxy/pull/1086) The extra validation to protect invalid session
   deserialization from v6.0.0 (only) has been removed to improve performance. If you are on v6.0.0, either upgrade
   to a version before this first and allow legacy sessions to expire gracefully or change your `cookie-secret`
   value and force all sessions to reauthenticate.
-
 - [#1210](https://github.com/oauth2-proxy/oauth2-proxy/pull/1210) A new `keycloak-oidc` provider has been added with support for role based authentication. The existing keycloak auth provider will eventually be deprecated and removed. Please switch to the new provider `keycloak-oidc`.
 
 ## Breaking Changes
