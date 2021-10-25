@@ -192,7 +192,7 @@ Make sure you set the following to the appropriate url:
     --client-id=<your client's id>
     --client-secret=<your client's secret>
     --redirect-url=https://myapp.com/oauth2/callback
-    --oidc-issuer-url=https://<keycloak host>/auth/<your realm>/basic
+    --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
     --allowed-role=<realm role name> // Optional, required realm role
     --allowed-role=<client id>:<client role name> // Optional, required client role
 ```
