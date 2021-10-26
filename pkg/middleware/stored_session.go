@@ -76,7 +76,7 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 		}
 
 		session, err := s.getValidatedSession(rw, req)
-		if err != nil {
+		if err != nil && !errors.Is(err, http.ErrNoCookie) {
 			// In the case when there was an error loading the session,
 			// we should clear the session
 			logger.Errorf("Error loading cookied session: %v, removing session", err)
