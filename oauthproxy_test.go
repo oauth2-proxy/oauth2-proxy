@@ -322,6 +322,7 @@ type PassAccessTokenTest struct {
 
 type PassAccessTokenTestOptions struct {
 	PassAccessToken bool
+	ValidToken      bool
 	ProxyUpstream   options.Upstream
 }
 
@@ -385,7 +386,9 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 	providerURL, _ := url.Parse(patt.providerServer.URL)
 	const emailAddress = "michael.bland@gsa.gov"
 
-	patt.opts.SetProvider(NewTestProvider(providerURL, emailAddress))
+	testProvider := NewTestProvider(providerURL, emailAddress)
+	testProvider.ValidToken = opts.ValidToken
+	patt.opts.SetProvider(testProvider)
 	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
 		return email == emailAddress
 	})
@@ -470,6 +473,7 @@ func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoin
 func TestForwardAccessTokenUpstream(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
+		ValidToken:      true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -496,6 +500,7 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 func TestStaticProxyUpstream(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
+		ValidToken:      true,
 		ProxyUpstream: options.Upstream{
 			ID:     "static-proxy",
 			Path:   "/static-proxy",
@@ -526,6 +531,7 @@ func TestStaticProxyUpstream(t *testing.T) {
 func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: false,
+		ValidToken:      true,
 	})
 	if err != nil {
 		t.Fatal(err)
