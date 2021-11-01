@@ -431,7 +431,11 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 
 	patTest.proxy.ServeHTTP(rw, req)
 
-	return rw.Code, rw.Header().Values("Set-Cookie")[1]
+	if len(rw.Header().Values("Set-Cookie")) >= 2 {
+		cookie = rw.Header().Values("Set-Cookie")[1]
+	}
+
+	return rw.Code, cookie
 }
 
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
@@ -552,6 +556,23 @@ func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 		t.Fatalf("expected 200; got %d", code)
 	}
 	assert.Equal(t, "No access token found.", payload)
+}
+
+func TestSessionValidationFailure(t *testing.T) {
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		ValidToken: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(patTest.Close)
+
+	// An unsuccessful validation will return 403 and not set the auth cookie.
+	code, cookie := patTest.getCallbackEndpoint()
+	if code != http.StatusForbidden {
+		t.Fatalf("expected 403; got %d", code)
+	}
+	assert.Equal(t, "", cookie)
 }
 
 type SignInPageTest struct {
