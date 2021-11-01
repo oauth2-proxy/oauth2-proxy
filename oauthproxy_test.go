@@ -26,6 +26,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -562,16 +563,12 @@ func TestSessionValidationFailure(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		ValidToken: false,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	t.Cleanup(patTest.Close)
 
 	// An unsuccessful validation will return 403 and not set the auth cookie.
 	code, cookie := patTest.getCallbackEndpoint()
-	if code != http.StatusForbidden {
-		t.Fatalf("expected 403; got %d", code)
-	}
+	assert.Equal(t, http.StatusForbidden, code)
 	assert.Equal(t, "", cookie)
 }
 
