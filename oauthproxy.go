@@ -755,7 +755,11 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	csrf.SetSessionNonce(session)
-	p.provider.ValidateSession(req.Context(), session)
+	if !p.provider.ValidateSession(req.Context(), session) {
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Session validation failed: %s", session)
+		p.ErrorPage(rw, req, http.StatusForbidden, "Session validation failed")
+		return
+	}
 
 	if !p.redirectValidator.IsValidRedirect(appRedirect) {
 		appRedirect = "/"
