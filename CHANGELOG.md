@@ -8,6 +8,8 @@
 
 ## Changes since v7.2.0
 
+- [#1433](https://github.com/oauth2-proxy/oauth2-proxy/pull/1433) Let authentication fail when session validation fails ((@stippi2)
+
 # V7.2.0
 
 ## Release Highlights
