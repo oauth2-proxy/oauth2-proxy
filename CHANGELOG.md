@@ -4,18 +4,44 @@
 
 ## Important Notes
 
+## Breaking Changes
+
+## Changes since v7.2.0
+
+# V7.2.0
+
+## Release Highlights
+
+- LinkedIn provider updated to support the new v2 API
+- Introduce `--force-json-errors` to allow OAuth2 Proxy to protect JSON APIs and disable authentication redirection
+- Add URL rewrite capabilities to the upstream proxy
+- New ADFS provider integration
+- New Keycloak OIDC provider integration
+- Introduced Multiarch Docker images on the standard image tags
+
+## Important Notes
+
 - [#1086](https://github.com/oauth2-proxy/oauth2-proxy/pull/1086) The extra validation to protect invalid session
   deserialization from v6.0.0 (only) has been removed to improve performance. If you are on v6.0.0, either upgrade
   to a version before this first and allow legacy sessions to expire gracefully or change your `cookie-secret`
   value and force all sessions to reauthenticate.
-  
 - [#1210](https://github.com/oauth2-proxy/oauth2-proxy/pull/1210) A new `keycloak-oidc` provider has been added with support for role based authentication. The existing keycloak auth provider will eventually be deprecated and removed. Please switch to the new provider `keycloak-oidc`.
 
 ## Breaking Changes
 
+- [#1239](https://github.com/oauth2-proxy/oauth2-proxy/pull/1239) GitLab groups sent in the `X-Forwarded-Groups` header
+  to the upstream server will no longer be prefixed with `group:`
+
 ## Changes since v7.1.3
 
+- [#1391](https://github.com/oauth2-proxy/oauth2-proxy/pull/1391) Improve build times by sharing cache and allowing platform selection (@JoelSpeed)
+- [#1404](https://github.com/oauth2-proxy/oauth2-proxy/pull/1404) Improve error message when no cookie is found (@JoelSpeed)
+- [#1315](https://github.com/oauth2-proxy/oauth2-proxy/pull/1315) linkedin: Update provider to v2 (@wuurrd)
+- [#1348](https://github.com/oauth2-proxy/oauth2-proxy/pull/1348) Using the native httputil proxy code for websockets rather than yhat/wsutil to properly handle HTTP-level failures (@thetrime)
+- [#1379](https://github.com/oauth2-proxy/oauth2-proxy/pull/1379) Fix the manual sign in with --htpasswd-user-group switch (@janrotter)
+- [#1375](https://github.com/oauth2-proxy/oauth2-proxy/pull/1375) Added `--force-json-errors` flag (@bancek)
 - [#1337](https://github.com/oauth2-proxy/oauth2-proxy/pull/1337) Changing user field type to text when using htpasswd (@pburgisser)
+- [#1239](https://github.com/oauth2-proxy/oauth2-proxy/pull/1239) Base GitLab provider implementation on OIDCProvider (@NickMeves)
 - [#1276](https://github.com/oauth2-proxy/oauth2-proxy/pull/1276) Update crypto and switched to new github.com/golang-jwt/jwt (@JVecsei)
 - [#1264](https://github.com/oauth2-proxy/oauth2-proxy/pull/1264) Update go-oidc to v3 (@NickMeves)
 - [#1233](https://github.com/oauth2-proxy/oauth2-proxy/pull/1233) Extend email-domain validation with sub-domain capability (@morarucostel)
@@ -34,6 +60,11 @@
 - [#1244](https://github.com/oauth2-proxy/oauth2-proxy/pull/1244) Update Alpine image version to 3.14 (@ahovgaard)
 - [#1317](https://github.com/oauth2-proxy/oauth2-proxy/pull/1317) Fix incorrect `</form>` tag on the sing_in page when *not* using a custom template (@jord1e)
 - [#1330](https://github.com/oauth2-proxy/oauth2-proxy/pull/1330) Allow specifying URL as input for custom sign in logo (@MaikuMori)
+- [#1357](https://github.com/oauth2-proxy/oauth2-proxy/pull/1357) Fix unsafe access to session variable (@harzallah)
+- [#997](https://github.com/oauth2-proxy/oauth2-proxy/pull/997) Allow passing the raw url path when proxying upstream requests - e.g. /%2F/ (@FStelzer)
+- [#1147](https://github.com/oauth2-proxy/oauth2-proxy/pull/1147) Multiarch support for docker image (@goshlanguage)
+- [#1296](https://github.com/oauth2-proxy/oauth2-proxy/pull/1296) Fixed `panic` when connecting to Redis with TLS (@mstrzele)
+- [#1403](https://github.com/oauth2-proxy/oauth2-proxy/pull/1403) Improve TLS handling for Redis to support non-standalone mode with TLS (@wadahiro)
 
 # V7.1.3
 

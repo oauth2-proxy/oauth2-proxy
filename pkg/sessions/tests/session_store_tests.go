@@ -452,21 +452,38 @@ func SessionStoreInterfaceTests(in *testInput) {
 	})
 
 	Context("when Load is called", func() {
-		BeforeEach(func() {
-			req := httptest.NewRequest("GET", "http://example.com/", nil)
-			resp := httptest.NewRecorder()
-			err := in.ss().Save(resp, req, in.session)
-			Expect(err).ToNot(HaveOccurred())
+		Context("with a valid session cookie in the request", func() {
+			BeforeEach(func() {
+				req := httptest.NewRequest("GET", "http://example.com/", nil)
+				resp := httptest.NewRecorder()
+				err := in.ss().Save(resp, req, in.session)
+				Expect(err).ToNot(HaveOccurred())
+				for _, cookie := range resp.Result().Cookies() {
+					in.request.AddCookie(cookie)
+				}
+			})
 
-			for _, cookie := range resp.Result().Cookies() {
-				in.request.AddCookie(cookie)
-			}
+			Context("before the refresh period", func() {
+				LoadSessionTests(in)
+			})
 		})
 
-		Context("before the refresh period", func() {
-			LoadSessionTests(in)
-		})
+		Context("with no cookies in the request", func() {
+			var loadedSession *sessionsapi.SessionState
+			var loadErr error
 
+			BeforeEach(func() {
+				loadedSession, loadErr = in.ss().Load(in.request)
+			})
+
+			It("returns an empty session", func() {
+				Expect(loadedSession).To(BeNil())
+			})
+
+			It("should return a no cookie error", func() {
+				Expect(loadErr).To(MatchError(http.ErrNoCookie))
+			})
+		})
 	})
 }
 

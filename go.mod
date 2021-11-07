@@ -29,7 +29,6 @@ require (
 	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.6.1
 	github.com/vmihailenco/msgpack/v4 v4.3.11
-	github.com/yhat/wsutil v0.0.0-20170731153501-1d66fa95c997
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

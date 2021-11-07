@@ -2,8 +2,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -24,7 +26,9 @@ client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 `
 
 	const testAlphaConfig = `
-upstreams:
+upstreamConfig:
+  proxyrawpath: false
+  upstreams:
   - id: /
     path: /
     uri: http://httpbin
@@ -100,14 +104,16 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts.Cookie.Secure = false
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
-		opts.UpstreamServers = options.Upstreams{
-			{
-				ID:              "/",
-				Path:            "/",
-				URI:             "http://httpbin",
-				FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
-				PassHostHeader:  boolPtr(true),
-				ProxyWebSockets: boolPtr(true),
+		opts.UpstreamServers = options.UpstreamConfig{
+			Upstreams: []options.Upstream{
+				{
+					ID:              "/",
+					Path:            "/",
+					URI:             "http://httpbin",
+					FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
+					PassHostHeader:  boolPtr(true),
+					ProxyWebSockets: boolPtr(true),
+				},
 			},
 		}
 
@@ -130,7 +136,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, authHeader)
 
 		opts.Providers = options.Providers{
-			{
+			options.Provider{
 				ID:           "google=oauth2-proxy",
 				Type:         "google",
 				ClientSecret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
@@ -230,7 +236,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig,
 			alphaConfigContent: testAlphaConfig + ":",
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line 49: did not find expected key"),
+			expectedErr:        fmt.Errorf("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testAlphaConfig, "\n")),
 		}),
 		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
