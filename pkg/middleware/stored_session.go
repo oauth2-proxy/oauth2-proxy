@@ -145,15 +145,7 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	err := session.ObtainLock(req.Context(), SessionLockExpireTime)
 	if err != nil {
 		logger.Errorf("Unable to obtain lock: %v", err)
-		wasRefreshed, err := s.checkForConcurrentRefresh(session, req)
-		if err != nil {
-			logger.Errorf("Unable to wait for obtained lock: %v", err)
-			return err
-		}
-		if !wasRefreshed {
-			return errors.New("unable to obtain lock and session was also not refreshed via concurrent request")
-		}
-		return nil
+		return s.handleObtainLockError(req, session)
 	}
 	defer func() {
 		err = session.ReleaseLock(req.Context())
@@ -193,6 +185,18 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 		err = fmt.Errorf("error saving session: %v", err)
 	}
 	return err
+}
+
+func (s *storedSessionLoader) handleObtainLockError(req *http.Request, session *sessionsapi.SessionState) error {
+	wasRefreshed, err := s.checkForConcurrentRefresh(session, req)
+	if err != nil {
+		logger.Errorf("Unable to wait for obtained lock: %v", err)
+		return err
+	}
+	if !wasRefreshed {
+		return errors.New("unable to obtain lock and session was also not refreshed via concurrent request")
+	}
+	return nil
 }
 
 func (s *storedSessionLoader) updateSessionFromStore(req *http.Request, session *sessionsapi.SessionState) error {
