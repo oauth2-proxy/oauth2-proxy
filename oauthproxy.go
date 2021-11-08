@@ -82,6 +82,7 @@ type OAuthProxy struct {
 	SkipProviderButton  bool
 	skipAuthPreflight   bool
 	skipJwtBearerTokens bool
+	forceJSONErrors     bool
 	realClientIPParser  ipapi.RealClientIPParser
 	trustedIPs          *ip.NetSet
 
@@ -198,6 +199,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
 		realClientIPParser:  opts.GetRealClientIPParser(),
 		SkipProviderButton:  opts.SkipProviderButton,
+		forceJSONErrors:     opts.ForceJSONErrors,
 		trustedIPs:          trustedIPs,
 
 		basicAuthValidator: basicAuthValidator,
@@ -850,12 +852,14 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		p.headersChain.Then(p.upstreamProxy).ServeHTTP(rw, req)
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
-		if isAjax(req) {
+		if p.forceJSONErrors || isAjax(req) {
+			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
 			p.errorJSON(rw, http.StatusUnauthorized)
 			return
 		}
 
+		logger.Printf("No valid authentication in request. Initiating login.")
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
@@ -863,7 +867,11 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		}
 
 	case ErrAccessDenied:
-		p.ErrorPage(rw, req, http.StatusForbidden, "The session failed authorization checks")
+		if p.forceJSONErrors {
+			p.errorJSON(rw, http.StatusForbidden)
+		} else {
+			p.ErrorPage(rw, req, http.StatusForbidden, "The session failed authorization checks")
+		}
 
 	default:
 		// unknown error
@@ -1056,4 +1064,7 @@ func isAjax(req *http.Request) bool {
 func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
 	rw.WriteHeader(code)
+	// we need to send some JSON response because we set the Content-Type to
+	// application/json
+	rw.Write([]byte("{}"))
 }
