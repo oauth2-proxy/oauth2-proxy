@@ -8,7 +8,8 @@
 
 ## Changes since v7.2.0
 
-- [#1433](https://github.com/oauth2-proxy/oauth2-proxy/pull/1433) Let authentication fail when session validation fails ((@stippi2)
+- [#1433](https://github.com/oauth2-proxy/oauth2-proxy/pull/1433) Let authentication fail when session validation fails (@stippi2)
+- [#1445](https://github.com/oauth2-proxy/oauth2-proxy/pull/1445) Fix docker container multi arch build issue by passing GOARCH details to make build (@jkandasa)
 
 # V7.2.0
 
