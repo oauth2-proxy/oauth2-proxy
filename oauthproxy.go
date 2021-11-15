@@ -755,7 +755,11 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	csrf.SetSessionNonce(session)
-	p.provider.ValidateSession(req.Context(), session)
+	if !p.provider.ValidateSession(req.Context(), session) {
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Session validation failed: %s", session)
+		p.ErrorPage(rw, req, http.StatusForbidden, "Session validation failed")
+		return
+	}
 
 	if !p.redirectValidator.IsValidRedirect(appRedirect) {
 		appRedirect = "/"
@@ -853,11 +857,13 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
 		if p.forceJSONErrors || isAjax(req) {
+			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
 			p.errorJSON(rw, http.StatusUnauthorized)
 			return
 		}
 
+		logger.Printf("No valid authentication in request. Initiating login.")
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
