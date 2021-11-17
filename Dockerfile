@@ -34,7 +34,7 @@ RUN case ${TARGETPLATFORM} in \
          "linux/arm/v6") GOARCH=arm GOARM=6  ;; \
     esac && \
     printf "Building OAuth2 Proxy for arch ${GOARCH}\n" && \
-    VERSION=${VERSION} make build && touch jwt_signing_key.pem
+    GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem
 
 # Copy binary to alpine
 FROM alpine:3.14
