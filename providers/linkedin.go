@@ -46,6 +46,13 @@ var (
 		Host:   "api.linkedin.com",
 		Path:   "/v2/emailAddress",
 	}
+
+	// Default Validate URL for LinkedIn.
+	linkedinDefaultValidateURL = &url.URL{
+		Scheme: "https",
+		Host:   "api.linkedin.com",
+		Path:   "/v2/me",
+	}
 )
 
 // NewLinkedInProvider initiates a new LinkedInProvider
@@ -55,7 +62,7 @@ func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
 		loginURL:    linkedinDefaultLoginURL,
 		redeemURL:   linkedinDefaultRedeemURL,
 		profileURL:  linkedinDefaultProfileURL,
-		validateURL: linkedinDefaultProfileURL,
+		validateURL: linkedinDefaultValidateURL,
 		scope:       linkedinDefaultScope,
 	})
 	return &LinkedInProvider{ProviderData: p}
