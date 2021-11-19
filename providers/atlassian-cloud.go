@@ -83,7 +83,6 @@ func (p *AtlassianProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&email)
-
 	if err != nil {
 		return "", err
 	}
