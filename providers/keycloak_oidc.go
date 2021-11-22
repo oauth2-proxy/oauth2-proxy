@@ -26,6 +26,18 @@ func NewKeycloakOIDCProvider(p *ProviderData) *KeycloakOIDCProvider {
 
 var _ Provider = (*KeycloakOIDCProvider)(nil)
 
+// CreateSessionFromToken converts Bearer IDTokens into sessions, extracting keycloak' roles
+func (p *KeycloakOIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+
+	ss, err := p.OIDCProvider.CreateSessionFromToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	return ss, p.extractRoles(ctx, ss)
+
+}
+
 // AddAllowedRoles sets Keycloak roles that are authorized.
 // Assumes `SetAllowedGroups` is already called on groups and appends to that
 // with `role:` prefixed roles.
