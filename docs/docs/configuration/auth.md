@@ -22,6 +22,7 @@ Valid providers are :
 - [DigitalOcean](#digitalocean-auth-provider)
 - [Bitbucket](#bitbucket-auth-provider)
 - [Gitea](#gitea-auth-provider)
+- [Atlassian Cloud](#atlassian-cloud-auth-provider)
 
 The provider can be selected using the `provider` configuration value.
 
@@ -538,6 +539,25 @@ The default configuration allows everyone with Bitbucket account to authenticate
     --redeem-url="https://< your gitea host >/login/oauth/access_token"
     --validate-url="https://< your gitea host >/api/v1"
 ```
+
+
+### Atlassian Cloud Auth Provider
+
+1. Create a new OAuth2.0 integration app in the Atlassian Developer console as described [here](https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/#enabling-oauth-2-0--3lo-)
+2. Under Permissions add access to the User REST API and User identity API
+3. Under Authorization configure your callback url to match the proxy url, like `https://<proxy_host>/oauth2/callback`
+4. Get Authentication details under Setting
+5. Run proxy with the following options:
+```
+  --provider atlassian 
+  --provider-display-name "Atlassian" 
+  --client-id <client ID from step 4> 
+  --client-secret <secret from step 4> 
+  --redirect-url http://<proxy_host>/oauth2/callback 
+  --cookie-secret <cookie secret>
+```
+
+Note: By default the app is limited to the user who created it. To start sharing the app with your team you must first Enable sharing under the Distribution settings in the Developer console.
 
 
 ## Email Authentication
