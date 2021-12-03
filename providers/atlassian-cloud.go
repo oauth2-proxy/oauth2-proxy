@@ -2,8 +2,8 @@ package providers
 
 import (
 	"context"
-	"net/url"
 	"errors"
+	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -19,8 +19,8 @@ var _ Provider = (*AtlassianProvider)(nil)
 const (
 	atlassianProviderName = "Atlassian"
 	atlassianDefaultScope = "read:me"
-	atlassianPrompt = "consent"
-	atlassianAudience = "api.atlassian.com"
+	atlassianPrompt       = "consent"
+	atlassianAudience     = "api.atlassian.com"
 )
 
 var (
@@ -74,21 +74,21 @@ func (p *AtlassianProvider) ValidateSession(ctx context.Context, s *sessions.Ses
 	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }
 func (p *AtlassianProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
-	type me_email struct {
+	type meEmail struct {
 		Email string `json:"email"`
 	}
-	var email me_email
+	var email meEmail
 	err := requests.New(atlassianDefaultValidateURL.String()).
 		WithContext(ctx).
 		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&email)
-	
+
 	if err != nil {
 		return "", err
 	}
 	if email.Email == "" {
-		return "", errors.New("No email in respose")
+		return "", errors.New("no email in respose")
 	}
 	return email.Email, nil
 }
