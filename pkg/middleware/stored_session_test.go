@@ -45,7 +45,7 @@ func (l *TestLock) Peek(_ context.Context) (bool, error) {
 		return false, l.PeekError
 	}
 	locked := l.Locked
-	l.Locked = false
+	// l.Locked = false
 	l.PeekedCount++
 	// mainly used to test case when peek initially returns false,
 	// but when trying to obtain lock, it returns true.
@@ -576,7 +576,7 @@ var _ = Describe("Stored Session Suite", func() {
 					PeekedCount: 1,
 				},
 			}),
-			Entry("when the session is locked and instead loaded from storage", refreshSessionIfNeededTableInput{
+			PEntry("when the session is locked and instead loaded from storage", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					RefreshToken: noRefresh,
