@@ -197,16 +197,58 @@ func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionSta
 // TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
 func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
 	adminService := getAdminService(adminEmail, credentialsReader)
+	adminEmailParts := strings.Split(adminEmail, "@")
+	// It's not possible to register Google users with an @ in the username
+	// component so we could probably be less pessimistic for this split being in
+	// the typical username@domain format.
+	if len(adminEmailParts) < 2 {
+		logger.Fatal("unexpected admin email format:", adminEmail)
+	}
+	domain := adminEmailParts[len(adminEmailParts) - 1]
+
+	groupsAsSet := make(map[string]bool)
+	for _, group := range groups {
+		groupsAsSet[group] = true
+	}
+
 	p.groupValidator = func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
 		s.Groups = make([]string, 0, len(groups))
-		for _, group := range groups {
-			if userInGroup(adminService, group, s.Email) {
-				s.Groups = append(s.Groups, group)
+
+		matchesGroup := false
+		pageToken := ""
+		for {
+			response, err :=
+					adminService.Groups.
+							List().
+							Domain(domain).
+							UserKey(s.Email).
+							MaxResults(200).
+							PageToken(pageToken).
+							Do()
+			if err != nil {
+				logger.Errorf("error checking memberships: %s", err)
+				return false
+			}
+
+			for _, group := range response.Groups {
+				name := group.Email
+				s.Groups = append(s.Groups, name)
+
+				if groupsAsSet[name] {
+					matchesGroup = true
+				}
+			}
+
+			if response.NextPageToken == "" {
+				break
+			} else {
+				pageToken = response.NextPageToken
 			}
 		}
-		return len(s.Groups) > 0
+
+		return matchesGroup
 	}
 }
 
