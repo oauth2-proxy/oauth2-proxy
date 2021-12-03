@@ -613,7 +613,7 @@ var _ = Describe("Stored Session Suite", func() {
 					ObtainError:       errors.New("not able to obtain lock"),
 				},
 			}),
-			Entry("when obtaining lock failed", refreshSessionIfNeededTableInput{
+			Entry("when obtaining lock failed with a valid session", refreshSessionIfNeededTableInput{
 				refreshPeriod: 1 * time.Minute,
 				session: &sessionsapi.SessionState{
 					RefreshToken: noRefresh,
@@ -625,6 +625,24 @@ var _ = Describe("Stored Session Suite", func() {
 				expectedErr:     nil,
 				expectRefreshed: false,
 				expectValidated: true,
+				expectedLockState: TestLock{
+					PeekedCount: 2,
+					ObtainError: errors.New("not able to obtain lock"),
+				},
+			}),
+			Entry("when obtaining lock failed with an invalid session", refreshSessionIfNeededTableInput{
+				refreshPeriod: 1 * time.Minute,
+				session: &sessionsapi.SessionState{
+					RefreshToken: noRefresh,
+					CreatedAt:    &createdPast,
+					ExpiresOn:    &createdPast,
+					Lock: &TestLock{
+						ObtainError: errors.New("not able to obtain lock"),
+					},
+				},
+				expectedErr:     nil,
+				expectRefreshed: true,
+				expectValidated: false,
 				expectedLockState: TestLock{
 					PeekedCount: 2,
 					ObtainError: errors.New("not able to obtain lock"),
