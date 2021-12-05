@@ -15,8 +15,20 @@ import (
 )
 
 const (
-	SessionLockExpireTime = 5 * time.Second
-	SessionLockPeekDelay  = 50 * time.Millisecond
+	// When attempting to obtain the lock, if it's not done before this timeout
+	// then exit and fail the refresh attempt.
+	// TODO: This should probably be configurable by the end user.
+	sessionRefreshObtainTimeout = 5 * time.Second
+
+	// Maximum time allowed for a session refresh attempt.
+	// If the refresh request isn't finished within this time, the lock will be
+	// released.
+	// TODO: This should probably be configurable by the end user.
+	sessionRefreshLockDuration = 2 * time.Second
+
+	// How long to wait after failing to obtain the lock before trying again.
+	// TODO: This should probably be configurable by the end user.
+	sessionRefreshRetryPeriod = 10 * time.Millisecond
 )
 
 // StoredSessionLoaderOptions contains all of the requirements to construct
@@ -113,47 +125,86 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 // is older than the refresh period.
 // Success or fail, we will then validate the session.
 func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	if s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod {
+	if !needsRefresh(s.refreshPeriod, session) {
 		// Refresh is disabled or the session is not old enough, do nothing
 		return nil
 	}
 
-	wasRefreshed, err := s.checkForConcurrentRefresh(session, req)
-	if err != nil {
-		return err
+	var lockObtained bool
+	ctx, cancel := context.WithTimeout(context.Background(), sessionRefreshObtainTimeout)
+	defer cancel()
+
+	for !lockObtained {
+		select {
+		case <-ctx.Done():
+			return errors.New("timeout obtaining session lock")
+		default:
+			err := session.ObtainLock(req.Context(), sessionRefreshLockDuration)
+			if err != nil && !errors.Is(err, sessionsapi.ErrLockNotObtained) {
+				return fmt.Errorf("error occurred while trying to obtain lock: %v", err)
+			} else if errors.Is(err, sessionsapi.ErrLockNotObtained) {
+				time.Sleep(sessionRefreshRetryPeriod)
+				continue
+			}
+			// No error means we obtained the lock
+			lockObtained = true
+		}
 	}
 
-	// If session was already refreshed via a concurrent request locked skip refreshing,
-	// because the refreshed session is already loaded from storage
-	if !wasRefreshed {
-		logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
-		err = s.refreshSession(rw, req, session)
-		if err != nil {
-			// If a preemptive refresh fails, we still keep the session
-			// if validateSession succeeds.
-			logger.Errorf("Unable to refresh session: %v", err)
+	// The rest of this function is carried out under lock, but we must release it
+	// wherever we exit from this function.
+	defer func() {
+		if session == nil {
+			return
 		}
+		if err := session.ReleaseLock(req.Context()); err != nil {
+			logger.Errorf("unable to release lock: %v", err)
+		}
+	}()
+
+	// Reload the session in case it was changed underneath us.
+	freshSession, err := s.store.Load(req)
+	if err != nil {
+		return fmt.Errorf("could not load session: %v", err)
+	}
+	if freshSession == nil {
+		return errors.New("session no longer exists, it may have been removed by another request")
+	}
+	// Restore the state of the fresh session into the original pointer.
+	// This is important so that changes are passed up the to the parent scope.
+	lock := session.Lock
+	*session = *freshSession
+
+	// Ensure we maintain the session lock after we have refreshed the session.
+	// Loading from the session store creates a new lock in the session.
+	session.Lock = lock
+
+	if !needsRefresh(s.refreshPeriod, session) {
+		// The session must have already been refreshed while we were waiting to
+		// obtain the lock.
+		return nil
+	}
+
+	// We are holding the lock and the session needs a refresh
+	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
+	if err := s.refreshSession(rw, req, session); err != nil {
+		// If a preemptive refresh fails, we still keep the session
+		// if validateSession succeeds.
+		logger.Errorf("Unable to refresh session: %v", err)
 	}
 
 	// Validate all sessions after any Redeem/Refresh operation (fail or success)
 	return s.validateSession(req.Context(), session)
 }
 
+// needsRefresh determines whether we should attempt to refresh a session or not.
+func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState) bool {
+	return refreshPeriod > time.Duration(0) && session.Age() > refreshPeriod
+}
+
 // refreshSession attempts to refresh the session with the provider
 // and will save the session if it was updated.
 func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	err := session.ObtainLock(req.Context(), SessionLockExpireTime)
-	if err != nil {
-		logger.Errorf("Unable to obtain lock: %v", err)
-		return s.handleObtainLockError(req, session)
-	}
-	defer func() {
-		err = session.ReleaseLock(req.Context())
-		if err != nil {
-			logger.Errorf("unable to release lock: %v", err)
-		}
-	}()
-
 	refreshed, err := s.sessionRefresher(req.Context(), session)
 	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 		return fmt.Errorf("error refreshing tokens: %v", err)
@@ -182,73 +233,9 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 	err = s.store.Save(rw, req, session)
 	if err != nil {
 		logger.PrintAuthf(session.Email, req, logger.AuthError, "error saving session: %v", err)
-		err = fmt.Errorf("error saving session: %v", err)
-	}
-	return err
-}
-
-func (s *storedSessionLoader) handleObtainLockError(req *http.Request, session *sessionsapi.SessionState) error {
-	wasRefreshed, err := s.checkForConcurrentRefresh(session, req)
-	if err != nil {
-		logger.Errorf("Unable to wait for obtained lock: %v", err)
-		return err
-	}
-	if !wasRefreshed {
-		return errors.New("unable to obtain lock and session was also not refreshed via concurrent request")
+		return fmt.Errorf("error saving session: %v", err)
 	}
 	return nil
-}
-
-func (s *storedSessionLoader) updateSessionFromStore(req *http.Request, session *sessionsapi.SessionState) error {
-	sessionStored, err := s.store.Load(req)
-	if err != nil {
-		return fmt.Errorf("unable to load updated session from store: %v", err)
-	}
-
-	if sessionStored == nil {
-		return fmt.Errorf("no session available to udpate from store")
-	}
-	*session = *sessionStored
-
-	return nil
-}
-
-func (s *storedSessionLoader) waitForPossibleSessionLock(session *sessionsapi.SessionState, req *http.Request) (bool, error) {
-	var wasLocked bool
-	isLocked, err := session.PeekLock(req.Context())
-	for isLocked {
-		wasLocked = true
-		// delay next peek lock
-		time.Sleep(SessionLockPeekDelay)
-		isLocked, err = session.PeekLock(req.Context())
-	}
-
-	if err != nil {
-		return false, err
-	}
-
-	return wasLocked, nil
-}
-
-// checkForConcurrentRefresh returns true if the session is already refreshed via a concurrent request.
-func (s *storedSessionLoader) checkForConcurrentRefresh(session *sessionsapi.SessionState, req *http.Request) (bool, error) {
-	wasLocked, err := s.waitForPossibleSessionLock(session, req)
-	if err != nil {
-		return false, err
-	}
-
-	refreshed := false
-	if wasLocked {
-		logger.Printf("Update session from store instead of refreshing")
-		err = s.updateSessionFromStore(req, session)
-		if err != nil {
-			logger.Errorf("Unable to update session from store: %v", err)
-			return false, err
-		}
-		refreshed = true
-	}
-
-	return refreshed, nil
 }
 
 // validateSession checks whether the session has expired and performs
