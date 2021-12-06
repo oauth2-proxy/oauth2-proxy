@@ -3,7 +3,7 @@ id: overview
 title: Overview
 ---
 
-`oauth2-proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
+`oauth2-proxy` can be configured via [command line options](#command-line-options), [environment variables](#environment-variables) or [config file](#config-file) (in decreasing order of precedence, i.e. command line options will overwrite environment variables and environment variables will overwrite configuration file settings).
 
 ### Generating a Cookie Secret
 
