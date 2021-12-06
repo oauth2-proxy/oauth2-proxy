@@ -15,8 +15,10 @@ import (
 )
 
 const (
-	SessionLockExpireTime = 5 * time.Second
-	SessionLockPeekDelay  = 50 * time.Millisecond
+	SessionLockExpireTime    = 5 * time.Second
+	SessionLockPeekDelay     = 50 * time.Millisecond
+	GetValidatedSessionRetry = 3
+	GetValidatedSessionDelay = 50 * time.Millisecond
 )
 
 // StoredSessionLoaderOptions contains all of the requirements to construct
@@ -75,8 +77,21 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 			return
 		}
 
-		session, err := s.getValidatedSession(rw, req)
-		if err != nil && !errors.Is(err, http.ErrNoCookie) {
+		var session *sessionsapi.SessionState
+		var err error
+		for i := 0; i < GetValidatedSessionRetry; i++ {
+			session, err = s.getValidatedSession(rw, req)
+			if err == nil || errors.Is(err, http.ErrNoCookie) {
+				err = nil
+				break
+			}
+			if err != nil {
+				logger.Errorf("Unable to get validated session in %d attempt: %v", i+1, err)
+			}
+			// delay next attempt of getting validated session
+			time.Sleep(GetValidatedSessionDelay)
+		}
+		if err != nil {
 			// In the case when there was an error loading the session,
 			// we should clear the session
 			logger.Errorf("Error loading cookied session: %v, removing session", err)
@@ -93,7 +108,7 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 }
 
 // getValidatedSession is responsible for loading a session and making sure
-// that is is valid.
+// that it is valid.
 func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	session, err := s.store.Load(req)
 	if err != nil || session == nil {
@@ -253,7 +268,7 @@ func (s *storedSessionLoader) checkForConcurrentRefresh(session *sessionsapi.Ses
 
 // validateSession checks whether the session has expired and performs
 // provider validation on the session.
-// An error implies the session is not longer valid.
+// An error implies the session is no longer valid.
 func (s *storedSessionLoader) validateSession(ctx context.Context, session *sessionsapi.SessionState) error {
 	if session.IsExpired() {
 		return errors.New("session is expired")

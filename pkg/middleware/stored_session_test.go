@@ -19,23 +19,23 @@ import (
 )
 
 type TestLock struct {
-	Locked            bool
-	WasObtained       bool
-	WasRefreshed      bool
-	WasReleased       bool
-	PeekedCount       int
-	LockedOnPeekCount int
-	ObtainError       error
-	PeekError         error
-	RefreshError      error
-	ReleaseError      error
+	LastLockTime       time.Time
+	LockExpireDuration time.Duration
+	WasObtained        bool
+	WasRefreshed       bool
+	WasReleased        bool
+	WasPeeked          bool
+	ObtainError        error
+	PeekError          error
+	RefreshError       error
+	ReleaseError       error
 }
 
 func (l *TestLock) Obtain(_ context.Context, _ time.Duration) error {
 	if l.ObtainError != nil {
 		return l.ObtainError
 	}
-	l.Locked = true
+	l.LastLockTime = time.Now()
 	l.WasObtained = true
 	return nil
 }
@@ -44,14 +44,8 @@ func (l *TestLock) Peek(_ context.Context) (bool, error) {
 	if l.PeekError != nil {
 		return false, l.PeekError
 	}
-	locked := l.Locked
-	l.Locked = false
-	l.PeekedCount++
-	// mainly used to test case when peek initially returns false,
-	// but when trying to obtain lock, it returns true.
-	if l.LockedOnPeekCount == l.PeekedCount {
-		return true, nil
-	}
+	locked := l.LastLockTime.Add(l.LockExpireDuration).After(time.Now())
+	l.WasPeeked = true
 	return locked, nil
 }
 
@@ -67,7 +61,7 @@ func (l *TestLock) Release(_ context.Context) error {
 	if l.ReleaseError != nil {
 		return l.ReleaseError
 	}
-	l.Locked = false
+	l.LastLockTime = time.Time{}
 	l.WasReleased = true
 	return nil
 }
@@ -521,14 +515,34 @@ var _ = Describe("Stored Session Suite", func() {
 				testLock, ok := in.session.Lock.(*TestLock)
 				Expect(ok).To(Equal(true))
 
-				Expect(testLock).To(Equal(&in.expectedLockState))
+				Expect(testLock.WasObtained).To(Equal(in.expectedLockState.WasObtained))
+				Expect(testLock.WasReleased).To(Equal(in.expectedLockState.WasReleased))
+				Expect(testLock.WasRefreshed).To(Equal(in.expectedLockState.WasRefreshed))
+				Expect(testLock.WasPeeked).To(Equal(in.expectedLockState.WasPeeked))
+				if in.expectedLockState.ObtainError == nil {
+					Expect(testLock.ObtainError).To(BeNil())
+				} else {
+					Expect(testLock.ObtainError).To(Equal(in.expectedLockState.ObtainError))
+				}
+				if in.expectedLockState.RefreshError == nil {
+					Expect(testLock.RefreshError).To(BeNil())
+				} else {
+					Expect(testLock.RefreshError).To(Equal(in.expectedLockState.RefreshError))
+				}
+				if in.expectedLockState.ReleaseError == nil {
+					Expect(testLock.ReleaseError).To(BeNil())
+				} else {
+					Expect(testLock.ReleaseError).To(Equal(in.expectedLockState.ReleaseError))
+				}
 			},
 			Entry("when the refresh period is 0, and the session does not need refreshing", refreshSessionIfNeededTableInput{
 				refreshPeriod: time.Duration(0),
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					CreatedAt:    &createdFuture,
-					Lock:         &TestLock{},
+					Lock: &TestLock{
+						LockExpireDuration: time.Second * 10,
+					},
 				},
 				expectedErr:       nil,
 				expectRefreshed:   false,
@@ -540,7 +554,9 @@ var _ = Describe("Stored Session Suite", func() {
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					CreatedAt:    &createdPast,
-					Lock:         &TestLock{},
+					Lock: &TestLock{
+						LockExpireDuration: time.Second * 10,
+					},
 				},
 				expectedErr:       nil,
 				expectRefreshed:   false,
@@ -552,7 +568,9 @@ var _ = Describe("Stored Session Suite", func() {
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					CreatedAt:    &createdFuture,
-					Lock:         &TestLock{},
+					Lock: &TestLock{
+						LockExpireDuration: time.Second * 10,
+					},
 				},
 				expectedErr:       nil,
 				expectRefreshed:   false,
@@ -564,16 +582,17 @@ var _ = Describe("Stored Session Suite", func() {
 				session: &sessionsapi.SessionState{
 					RefreshToken: refresh,
 					CreatedAt:    &createdPast,
-					Lock:         &TestLock{},
+					Lock: &TestLock{
+						LockExpireDuration: time.Second * 10,
+					},
 				},
 				expectedErr:     nil,
 				expectRefreshed: true,
 				expectValidated: true,
 				expectedLockState: TestLock{
-					Locked:      false,
 					WasObtained: true,
 					WasReleased: true,
-					PeekedCount: 1,
+					WasPeeked:   true,
 				},
 			}),
 			Entry("when the session is locked and instead loaded from storage", refreshSessionIfNeededTableInput{
@@ -582,7 +601,8 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: noRefresh,
 					CreatedAt:    &createdPast,
 					Lock: &TestLock{
-						Locked: true,
+						LastLockTime:       time.Now(),
+						LockExpireDuration: time.Second * 1,
 					},
 				},
 				sessionStored:   true,
@@ -590,8 +610,8 @@ var _ = Describe("Stored Session Suite", func() {
 				expectRefreshed: false,
 				expectValidated: true,
 				expectedLockState: TestLock{
-					Locked:      false,
-					PeekedCount: 2,
+					WasObtained: false,
+					WasPeeked:   true,
 				},
 			}),
 			Entry("when obtaining lock failed, but concurrent request refreshed", refreshSessionIfNeededTableInput{
@@ -600,17 +620,16 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: noRefresh,
 					CreatedAt:    &createdPast,
 					Lock: &TestLock{
-						ObtainError:       errors.New("not able to obtain lock"),
-						LockedOnPeekCount: 2,
+						ObtainError:        errors.New("not able to obtain lock"),
+						LockExpireDuration: time.Second * 10,
 					},
 				},
 				expectedErr:     nil,
 				expectRefreshed: false,
 				expectValidated: true,
 				expectedLockState: TestLock{
-					PeekedCount:       3,
-					LockedOnPeekCount: 2,
-					ObtainError:       errors.New("not able to obtain lock"),
+					WasPeeked:   true,
+					ObtainError: errors.New("not able to obtain lock"),
 				},
 			}),
 			Entry("when obtaining lock failed", refreshSessionIfNeededTableInput{
@@ -619,14 +638,15 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: noRefresh,
 					CreatedAt:    &createdPast,
 					Lock: &TestLock{
-						ObtainError: errors.New("not able to obtain lock"),
+						ObtainError:        errors.New("not able to obtain lock"),
+						LockExpireDuration: time.Second * 10,
 					},
 				},
 				expectedErr:     nil,
 				expectRefreshed: false,
 				expectValidated: true,
 				expectedLockState: TestLock{
-					PeekedCount: 2,
+					WasPeeked:   true,
 					ObtainError: errors.New("not able to obtain lock"),
 				},
 			}),
@@ -636,16 +656,17 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: noRefresh,
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
-					Lock:         &TestLock{},
+					Lock: &TestLock{
+						LockExpireDuration: time.Second * 10,
+					},
 				},
 				expectedErr:     nil,
 				expectRefreshed: true,
 				expectValidated: true,
 				expectedLockState: TestLock{
-					Locked:      false,
 					WasObtained: true,
 					WasReleased: true,
-					PeekedCount: 1,
+					WasPeeked:   true,
 				},
 			}),
 			Entry("when the provider doesn't implement refresh", refreshSessionIfNeededTableInput{
@@ -653,16 +674,17 @@ var _ = Describe("Stored Session Suite", func() {
 				session: &sessionsapi.SessionState{
 					RefreshToken: notImplemented,
 					CreatedAt:    &createdPast,
-					Lock:         &TestLock{},
+					Lock: &TestLock{
+						LockExpireDuration: time.Second * 10,
+					},
 				},
 				expectedErr:     nil,
 				expectRefreshed: true,
 				expectValidated: true,
 				expectedLockState: TestLock{
-					Locked:      false,
 					WasObtained: true,
 					WasReleased: true,
-					PeekedCount: 1,
+					WasPeeked:   true,
 				},
 			}),
 			Entry("when the session is not refreshed by the provider", refreshSessionIfNeededTableInput{
@@ -672,16 +694,17 @@ var _ = Describe("Stored Session Suite", func() {
 					RefreshToken: noRefresh,
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
-					Lock:         &TestLock{},
+					Lock: &TestLock{
+						LockExpireDuration: time.Second * 10,
+					},
 				},
 				expectedErr:     errors.New("session is invalid"),
 				expectRefreshed: true,
 				expectValidated: true,
 				expectedLockState: TestLock{
-					Locked:      false,
 					WasObtained: true,
 					WasReleased: true,
-					PeekedCount: 1,
+					WasPeeked:   true,
 				},
 			}),
 		)
