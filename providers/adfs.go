@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -13,23 +12,27 @@ import (
 // ADFSProvider represents an ADFS based Identity Provider
 type ADFSProvider struct {
 	*OIDCProvider
-	SkipScope bool
+
+	skipScope bool
+	// Expose for unit testing
+	oidcEnrichFunc  func(context.Context, *sessions.SessionState) error
+	oidcRefreshFunc func(context.Context, *sessions.SessionState) (bool, error)
 }
 
 var _ Provider = (*ADFSProvider)(nil)
 
 const (
-	ADFSProviderName = "ADFS"
-	ADFSDefaultScope = "openid email profile"
-	ADFSSkipScope    = false
+	adfsProviderName = "ADFS"
+	adfsDefaultScope = "openid email profile"
+	adfsSkipScope    = false
+	adfsUPNClaim     = "upn"
 )
 
 // NewADFSProvider initiates a new ADFSProvider
 func NewADFSProvider(p *ProviderData) *ADFSProvider {
-
 	p.setProviderDefaults(providerDefaults{
-		name:  ADFSProviderName,
-		scope: ADFSDefaultScope,
+		name:  adfsProviderName,
+		scope: adfsDefaultScope,
 	})
 
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
@@ -43,18 +46,22 @@ func NewADFSProvider(p *ProviderData) *ADFSProvider {
 		}
 	}
 
+	oidcProvider := &OIDCProvider{
+		ProviderData: p,
+		SkipNonce:    false,
+	}
+
 	return &ADFSProvider{
-		OIDCProvider: &OIDCProvider{
-			ProviderData: p,
-			SkipNonce:    true,
-		},
-		SkipScope: ADFSSkipScope,
+		OIDCProvider:    oidcProvider,
+		skipScope:       adfsSkipScope,
+		oidcEnrichFunc:  oidcProvider.EnrichSession,
+		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
 }
 
 // Configure defaults the ADFSProvider configuration options
 func (p *ADFSProvider) Configure(skipScope bool) {
-	p.SkipScope = skipScope
+	p.skipScope = skipScope
 }
 
 // GetLoginURL Override to double encode the state parameter. If not query params are lost
@@ -65,7 +72,7 @@ func (p *ADFSProvider) GetLoginURL(redirectURI, state, nonce string) string {
 		extraParams.Add("nonce", nonce)
 	}
 	loginURL := makeLoginURL(p.Data(), redirectURI, url.QueryEscape(state), extraParams)
-	if p.SkipScope {
+	if p.skipScope {
 		q := loginURL.Query()
 		q.Del("scope")
 		loginURL.RawQuery = q.Encode()
@@ -73,28 +80,40 @@ func (p *ADFSProvider) GetLoginURL(redirectURI, state, nonce string) string {
 	return loginURL.String()
 }
 
-// EnrichSession to add email
+// EnrichSession calls the OIDC ProfileURL to backfill any fields missing
+// from the claims. If Email is missing, falls back to ADFS `upn` claim.
 func (p *ADFSProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if s.Email != "" {
-		return nil
+	err := p.oidcEnrichFunc(ctx, s)
+	if err != nil || s.Email == "" {
+		// OIDC only errors if email is missing
+		return p.fallbackUPN(ctx, s)
 	}
+	return nil
+}
 
+// RefreshSession refreshes via the OIDC implementation. If email is missing,
+// falls back to ADFS `upn` claim.
+func (p *ADFSProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	refreshed, err := p.oidcRefreshFunc(ctx, s)
+	if err != nil || s.Email != "" {
+		return refreshed, err
+	}
+	err = p.fallbackUPN(ctx, s)
+	return refreshed, err
+}
+
+func (p *ADFSProvider) fallbackUPN(ctx context.Context, s *sessions.SessionState) error {
 	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
 	if err != nil {
 		return err
 	}
-
-	p.EmailClaim = "upn"
-	c, err := p.getClaims(idToken)
-
+	claims, err := p.getClaims(idToken)
 	if err != nil {
 		return fmt.Errorf("couldn't extract claims from id_token (%v)", err)
 	}
-	s.Email = c.Email
-
-	if s.Email == "" {
-		err = errors.New("email not set")
+	upn := claims.raw[adfsUPNClaim]
+	if upn != nil {
+		s.Email = fmt.Sprint(upn)
 	}
-
-	return err
+	return nil
 }
