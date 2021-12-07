@@ -602,7 +602,7 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:    &createdPast,
 					Lock: &TestLock{
 						LastLockTime:       time.Now(),
-						LockExpireDuration: time.Second * 1,
+						LockExpireDuration: time.Second * 2,
 					},
 				},
 				sessionStored:   true,
