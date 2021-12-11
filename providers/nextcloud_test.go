@@ -67,7 +67,12 @@ func TestNextcloudProviderOverrides(t *testing.T) {
 }
 
 func TestNextcloudProviderEnrichSession(t *testing.T) {
-	b := testNextcloudBackend("{\"ocs\": {\"data\": { \"email\": \"michael.bland@gsa.gov\"}}}")
+	b := testNextcloudBackend(`{ "ocs": { "data": {
+    "id": "ausername",
+    "email": "myemail@example.com",
+    "groups": ["admin", "testgroup"],
+    "displayname": "Test User"
+  }}}`)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -78,7 +83,9 @@ func TestNextcloudProviderEnrichSession(t *testing.T) {
 	session := CreateAuthorizedSession()
 	err := p.EnrichSession(context.Background(), session)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "myemail@example.com", session.Email)
+	assert.Equal(t, "ausername", session.User)
+	assert.Equal(t, []string{"admin", "testgroup"}, session.Groups)
 }
 
 // Note that trying to trigger the "failed building request" case is not
@@ -99,10 +106,11 @@ func TestNextcloudProviderEnrichSessionFailedRequest(t *testing.T) {
 	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", session.Email)
+	assert.Equal(t, "", session.User)
 }
 
 func TestNextcloudProviderEnrichSessionEmailNotPresentInPayload(t *testing.T) {
-	b := testNextcloudBackend("{\"foo\": \"bar\"}")
+	b := testNextcloudBackend(`{"foo": "bar"}`)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
@@ -114,4 +122,5 @@ func TestNextcloudProviderEnrichSessionEmailNotPresentInPayload(t *testing.T) {
 	err := p.EnrichSession(context.Background(), session)
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", session.Email)
+	assert.Equal(t, "", session.User)
 }
