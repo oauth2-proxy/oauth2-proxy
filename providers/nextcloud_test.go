@@ -107,6 +107,7 @@ func TestNextcloudProviderEnrichSessionFailedRequest(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", session.Email)
 	assert.Equal(t, "", session.User)
+	assert.Equal(t, []string(nil), session.Groups)
 }
 
 func TestNextcloudProviderEnrichSessionEmailNotPresentInPayload(t *testing.T) {
@@ -123,4 +124,5 @@ func TestNextcloudProviderEnrichSessionEmailNotPresentInPayload(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 	assert.Equal(t, "", session.Email)
 	assert.Equal(t, "", session.User)
+	assert.Equal(t, []string(nil), session.Groups)
 }
