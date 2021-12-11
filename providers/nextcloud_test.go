@@ -65,3 +65,53 @@ func TestNextcloudProviderOverrides(t *testing.T) {
 	assert.Equal(t, "https://example.com/test/ocs/v2.php/cloud/user?"+formatJSON,
 		p.Data().ValidateURL.String())
 }
+
+func TestNextcloudProviderEnrichSession(t *testing.T) {
+	b := testNextcloudBackend("{\"ocs\": {\"data\": { \"email\": \"michael.bland@gsa.gov\"}}}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testNextcloudProvider(bURL.Host)
+	p.ValidateURL.Path = userPath
+	p.ValidateURL.RawQuery = formatJSON
+
+	session := CreateAuthorizedSession()
+	err := p.EnrichSession(context.Background(), session)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+}
+
+// Note that trying to trigger the "failed building request" case is not
+// practical, since the only way it can fail is if the URL fails to parse.
+func TestNextcloudProviderEnrichSessionFailedRequest(t *testing.T) {
+	b := testNextcloudBackend("unused payload")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testNextcloudProvider(bURL.Host)
+	p.ValidateURL.Path = userPath
+	p.ValidateURL.RawQuery = formatJSON
+
+	// We'll trigger a request failure by using an unexpected access
+	// token. Alternatively, we could allow the parsing of the payload as
+	// JSON to fail.
+	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
+	err := p.EnrichSession(context.Background(), session)
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "", session.Email)
+}
+
+func TestNextcloudProviderEnrichSessionEmailNotPresentInPayload(t *testing.T) {
+	b := testNextcloudBackend("{\"foo\": \"bar\"}")
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testNextcloudProvider(bURL.Host)
+	p.ValidateURL.Path = userPath
+	p.ValidateURL.RawQuery = formatJSON
+
+	session := CreateAuthorizedSession()
+	err := p.EnrichSession(context.Background(), session)
+	assert.NotEqual(t, nil, err)
+	assert.Equal(t, "", session.Email)
+}
