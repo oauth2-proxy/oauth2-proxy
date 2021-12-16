@@ -448,6 +448,7 @@ type LegacyServer struct {
 	HTTPSAddress         string `flag:"https-address" cfg:"https_address"`
 	TLSCertFile          string `flag:"tls-cert-file" cfg:"tls_cert_file"`
 	TLSKeyFile           string `flag:"tls-key-file" cfg:"tls_key_file"`
+	TLSMinVersion        string `flag:"tls-min-version" cfg:"tls_min_version"`
 }
 
 func legacyServerFlagset() *pflag.FlagSet {
@@ -461,6 +462,7 @@ func legacyServerFlagset() *pflag.FlagSet {
 	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
+	flagSet.String("tls-min-version", "", "minimal TLS version for HTTPS clients (either \"TLS1.2\" or \"TLS1.3\")")
 
 	return flagSet
 }
@@ -582,6 +584,7 @@ func (l LegacyServer) convert() (Server, Server) {
 			Cert: &SecretSource{
 				FromFile: l.TLSCertFile,
 			},
+			MinVersion: l.TLSMinVersion,
 		}
 		// Preserve backwards compatibility, only run one server
 		appServer.BindAddress = ""

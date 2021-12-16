@@ -785,6 +785,7 @@ var _ = Describe("Legacy Options", func() {
 			secureMetricsAddr   = ":9443"
 			crtPath             = "tls.crt"
 			keyPath             = "tls.key"
+			minVersion          = "TLS1.3"
 		)
 
 		var tlsConfig = &TLS{
@@ -794,6 +795,12 @@ var _ = Describe("Legacy Options", func() {
 			Key: &SecretSource{
 				FromFile: keyPath,
 			},
+		}
+
+		var tlsConfigMinVersion = &TLS{
+			Cert:       tlsConfig.Cert,
+			Key:        tlsConfig.Key,
+			MinVersion: minVersion,
 		}
 
 		DescribeTable("should convert to app and metrics servers",
@@ -821,6 +828,19 @@ var _ = Describe("Legacy Options", func() {
 				expectedAppServer: Server{
 					SecureBindAddress: secureAddr,
 					TLS:               tlsConfig,
+				},
+			}),
+			Entry("with TLS options specified with MinVersion", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:   insecureAddr,
+					HTTPSAddress:  secureAddr,
+					TLSKeyFile:    keyPath,
+					TLSCertFile:   crtPath,
+					TLSMinVersion: minVersion,
+				},
+				expectedAppServer: Server{
+					SecureBindAddress: secureAddr,
+					TLS:               tlsConfigMinVersion,
 				},
 			}),
 			Entry("with metrics HTTP and HTTPS addresses", legacyServersTableInput{
