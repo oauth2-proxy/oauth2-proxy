@@ -38,12 +38,11 @@ RUN case ${TARGETPLATFORM} in \
     GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem
 
 # Copy binary to alpine
-FROM alpine:3.15
+FROM gcr.io/distroless/static-debian11:nonroot
 COPY nsswitch.conf /etc/nsswitch.conf
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/jwt_signing_key.pem /etc/ssl/private/jwt_signing_key.pem
 
-USER 2000:2000
+USER nonroot
 
 ENTRYPOINT ["/bin/oauth2-proxy"]
