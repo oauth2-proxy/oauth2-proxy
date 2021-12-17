@@ -15,7 +15,6 @@ Valid providers are :
 - [Keycloak](#keycloak-auth-provider)
 - [GitLab](#gitlab-auth-provider)
 - [LinkedIn](#linkedin-auth-provider)
-- [Microsoft Azure AD](#microsoft-azure-ad-provider)
 - [OpenID Connect](#openid-connect-provider)
 - [login.gov](#logingov-provider)
 - [Nextcloud](#nextcloud-provider)
@@ -233,12 +232,6 @@ For LinkedIn, the registration steps are:
     - In "OAuth 2.0 Redirect URLs", enter `https://internal.yourcompany.com/oauth2/callback`
 3.  Fill in the remaining required fields and Save.
 4.  Take note of the **Consumer Key / API Key** and **Consumer Secret / Secret Key**
-
-### Microsoft Azure AD Provider
-
-For adding an application to the Microsoft Azure AD follow [these steps to add an application](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app).
-
-Take note of your `TenantId` if applicable for your situation. The `TenantId` can be used to override the default `common` authorization server with a tenant specific server.
 
 ### OpenID Connect Provider
 
