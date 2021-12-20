@@ -3,7 +3,7 @@ id: overview
 title: Overview
 ---
 
-`oauth2-proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
+`oauth2-proxy` can be configured via [command line options](#command-line-options), [environment variables](#environment-variables) or [config file](#config-file) (in decreasing order of precedence, i.e. command line options will overwrite environment variables and environment variables will overwrite configuration file settings).
 
 ### Generating a Cookie Secret
 
@@ -99,7 +99,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
 | `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
-| `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
+| `--exclude-logging-path` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |

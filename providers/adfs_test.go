@@ -2,13 +2,17 @@ package providers
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/golang-jwt/jwt"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	. "github.com/onsi/ginkgo"
@@ -26,11 +30,23 @@ func (fakeADFSJwks) VerifySignature(_ context.Context, jwt string) (payload []by
 	return decodeString, nil
 }
 
+type adfsClaims struct {
+	UPN string `json:"upn,omitempty"`
+	idTokenClaims
+}
+
+func newSignedTestADFSToken(tokenClaims adfsClaims) (string, error) {
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	standardClaims := jwt.NewWithClaims(jwt.SigningMethodRS256, tokenClaims)
+	return standardClaims.SignedString(key)
+}
+
 func testADFSProvider(hostname string) *ADFSProvider {
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+  verificationOptions := &internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{"aud"},
 		ClientID:       "https://test.myapp.com",
 	}
+  
 	o := internaloidc.NewVerifier(oidc.NewVerifier(
 		"https://issuer.example.com",
 		fakeADFSJwks{},
@@ -45,6 +61,7 @@ func testADFSProvider(hostname string) *ADFSProvider {
 		ValidateURL:  &url.URL{},
 		Scope:        "",
 		Verifier:     o,
+		EmailClaim:   OIDCEmailClaim,
 	})
 
 	if hostname != "" {
@@ -58,7 +75,6 @@ func testADFSProvider(hostname string) *ADFSProvider {
 }
 
 func testADFSBackend() *httptest.Server {
-
 	authResponse := `
 		{
 			"access_token": "my_access_token",
@@ -133,13 +149,12 @@ var _ = Describe("ADFS Provider Tests", func() {
 
 	Context("with valid token", func() {
 		It("should not throw an error", func() {
-			p.EmailClaim = "email"
 			rawIDToken, _ := newSignedTestIDToken(defaultIDToken)
 			idToken, err := p.Verifier.Verify(context.Background(), rawIDToken)
 			Expect(err).To(BeNil())
 			session, err := p.buildSessionFromClaims(idToken)
-			session.IDToken = rawIDToken
 			Expect(err).To(BeNil())
+			session.IDToken = rawIDToken
 			err = p.EnrichSession(context.Background(), session)
 			Expect(session.Email).To(Equal("janed@me.com"))
 			Expect(err).To(BeNil())
@@ -153,7 +168,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 				ProtectedResource: resource,
 				Scope:             "",
 			})
-			p.SkipScope = true
+			p.skipScope = true
 
 			result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "")
 			Expect(result).NotTo(ContainSubstring("scope="))
@@ -205,5 +220,79 @@ var _ = Describe("ADFS Provider Tests", func() {
 				expectedScope: "http://resource.com/openid",
 			}),
 		)
+	})
+
+	Context("UPN Fallback", func() {
+		var idToken string
+		var session *sessions.SessionState
+
+		BeforeEach(func() {
+			var err error
+			idToken, err = newSignedTestADFSToken(adfsClaims{
+				UPN:           "upn@company.com",
+				idTokenClaims: minimalIDToken,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			session = &sessions.SessionState{
+				IDToken: idToken,
+			}
+		})
+
+		Describe("EnrichSession", func() {
+			It("uses email claim if present", func() {
+				p.oidcEnrichFunc = func(_ context.Context, s *sessions.SessionState) error {
+					s.Email = "person@company.com"
+					return nil
+				}
+
+				err := p.EnrichSession(context.Background(), session)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(session.Email).To(Equal("person@company.com"))
+			})
+
+			It("falls back to UPN claim if Email is missing", func() {
+				p.oidcEnrichFunc = func(_ context.Context, s *sessions.SessionState) error {
+					return nil
+				}
+
+				err := p.EnrichSession(context.Background(), session)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(session.Email).To(Equal("upn@company.com"))
+			})
+
+			It("falls back to UPN claim on errors", func() {
+				p.oidcEnrichFunc = func(_ context.Context, s *sessions.SessionState) error {
+					return errors.New("neither the id_token nor the profileURL set an email")
+				}
+
+				err := p.EnrichSession(context.Background(), session)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(session.Email).To(Equal("upn@company.com"))
+			})
+		})
+
+		Describe("RefreshSession", func() {
+			It("uses email claim if present", func() {
+				p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+					s.Email = "person@company.com"
+					return true, nil
+				}
+
+				_, err := p.RefreshSession(context.Background(), session)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(session.Email).To(Equal("person@company.com"))
+			})
+
+			It("falls back to UPN claim if Email is missing", func() {
+				p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+					return true, nil
+				}
+
+				_, err := p.RefreshSession(context.Background(), session)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(session.Email).To(Equal("upn@company.com"))
+			})
+		})
 	})
 })
