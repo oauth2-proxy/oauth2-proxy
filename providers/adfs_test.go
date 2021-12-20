@@ -28,8 +28,8 @@ func (fakeADFSJwks) VerifySignature(_ context.Context, jwt string) (payload []by
 
 func testADFSProvider(hostname string) *ADFSProvider {
 	verificationOptions := &internaloidc.IDTokenVerificationOptions{
-		AudienceClaim: "aud",
-		ClientID:      "https://test.myapp.com",
+		AudienceClaims: []string{"aud"},
+		ClientID:       "https://test.myapp.com",
 	}
 	o := internaloidc.NewVerifier(oidc.NewVerifier(
 		"https://issuer.example.com",

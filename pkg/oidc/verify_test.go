@@ -18,7 +18,7 @@ var _ = Describe("Verify", func() {
 
 	It("Succeeds with default aud behavior", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "aud",
+			AudienceClaims: []string{"aud"},
 			ClientID:       "1226737",
 			ExtraAudiences: []string{},
 		}, payload{
@@ -33,21 +33,21 @@ var _ = Describe("Verify", func() {
 
 	It("Fails with default aud behavior", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "aud",
+			AudienceClaims: []string{"aud"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{},
 		}, payload{
 			Iss: "https://foo",
 			Aud: "1226737",
 		})
-		Expect(err).To(MatchError("audience from claim aud with value 1226737 does not match with " +
+		Expect(err).To(MatchError("audience from claim aud with value [1226737] does not match with " +
 			"any of allowed audiences map[7817818:{}]"))
 		Expect(result).To(BeNil())
 	})
 
 	It("Succeeds with extra audiences", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "aud",
+			AudienceClaims: []string{"aud"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "1226737"},
 		}, payload{
@@ -62,7 +62,7 @@ var _ = Describe("Verify", func() {
 
 	It("Fails with extra audiences", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "aud",
+			AudienceClaims: []string{"aud"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "abc"},
 		}, payload{
@@ -70,14 +70,14 @@ var _ = Describe("Verify", func() {
 			Aud: "1226737",
 		})
 
-		Expect(err).To(MatchError("audience from claim aud with value 1226737 does not match with any " +
+		Expect(err).To(MatchError("audience from claim aud with value [1226737] does not match with any " +
 			"of allowed audiences map[7817818:{} abc:{} xyz:{}]"))
 		Expect(result).To(BeNil())
 	})
 
 	It("Succeeds with non default aud behavior", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "client_id",
+			AudienceClaims: []string{"client_id"},
 			ClientID:       "1226737",
 			ExtraAudiences: []string{},
 		}, payload{
@@ -92,21 +92,21 @@ var _ = Describe("Verify", func() {
 
 	It("Fails with non default aud behavior", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "client_id",
+			AudienceClaims: []string{"client_id"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{},
 		}, payload{
 			Iss:      "https://foo",
 			ClientID: "1226737",
 		})
-		Expect(err).To(MatchError("audience from claim client_id with value 1226737 does not match with " +
+		Expect(err).To(MatchError("audience from claim client_id with value [1226737] does not match with " +
 			"any of allowed audiences map[7817818:{}]"))
 		Expect(result).To(BeNil())
 	})
 
 	It("Succeeds with non default aud behavior and extra audiences", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "client_id",
+			AudienceClaims: []string{"client_id"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "1226737"},
 		}, payload{
@@ -121,7 +121,7 @@ var _ = Describe("Verify", func() {
 
 	It("Fails with non default aud behavior and extra audiences", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "client_id",
+			AudienceClaims: []string{"client_id"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "abc"},
 		}, payload{
@@ -129,14 +129,14 @@ var _ = Describe("Verify", func() {
 			ClientID: "1226737",
 		})
 
-		Expect(err).To(MatchError("audience from claim client_id with value 1226737 does not match with any " +
+		Expect(err).To(MatchError("audience from claim client_id with value [1226737] does not match with any " +
 			"of allowed audiences map[7817818:{} abc:{} xyz:{}]"))
 		Expect(result).To(BeNil())
 	})
 
 	It("Fails if audience claim does not exist", func() {
 		result, err := verify(ctx, &IDTokenVerificationOptions{
-			AudienceClaim:  "not_exists",
+			AudienceClaims: []string{"not_exists"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "abc"},
 		}, payload{
@@ -145,16 +145,48 @@ var _ = Describe("Verify", func() {
 			Aud:      "1226737",
 		})
 
-		Expect(err).To(MatchError("audience claim not_exists does not exist in claims: " +
+		Expect(err).To(MatchError("audience claims [not_exists] do not exist in claims: " +
 			"map[aud:1226737 client_id:1226737 iss:https://foo]"))
 		Expect(result).To(BeNil())
+	})
+
+	It("Succeeds with multiple audiences", func() {
+		var result, err = verify(ctx, &IDTokenVerificationOptions{
+			AudienceClaims: []string{"client_id", "aud"},
+			ClientID:       "123456789",
+			ExtraAudiences: []string{"1226737"},
+		}, payload{
+			Iss:      "https://foo",
+			ClientID: "123456789",
+			Aud:      []string{"1226737", "123456789"},
+		})
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.Issuer).To(Equal("https://foo"))
+		Expect(result.Audience).To(Equal([]string{"123456789"}))
+	})
+
+	It("Succeeds if aud claim match", func() {
+		result, err := verify(ctx, &IDTokenVerificationOptions{
+			AudienceClaims: []string{"client_id", "aud"},
+			ClientID:       "1226737",
+			ExtraAudiences: []string{"xyz", "abc"},
+		}, payload{
+			Iss:      "https://foo",
+			ClientID: "1226737",
+			Aud:      "1226737",
+		})
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.Issuer).To(Equal("https://foo"))
+		Expect(result.Audience).To(Equal([]string{"1226737"}))
 	})
 })
 
 type payload struct {
-	Iss      string `json:"iss,omitempty"`
-	Aud      string `json:"aud,omitempty"`
-	ClientID string `json:"client_id,omitempty"`
+	Iss      string      `json:"iss,omitempty"`
+	Aud      interface{} `json:"aud,omitempty"`
+	ClientID string      `json:"client_id,omitempty"`
 }
 
 type jwtToken struct {

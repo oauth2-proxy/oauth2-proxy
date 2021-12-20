@@ -17,10 +17,11 @@ import (
 )
 
 const (
-	OIDCEmailClaim    = "email"
-	OIDCGroupsClaim   = "groups"
-	OIDCAudienceClaim = "aud"
+	OIDCEmailClaim  = "email"
+	OIDCGroupsClaim = "groups"
 )
+
+var OIDCAudienceClaims = []string{"aud"}
 
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers

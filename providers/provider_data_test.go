@@ -189,8 +189,8 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 			provider := &ProviderData{}
 			if tc.Verifier {
 				verificationOptions := &internaloidc.IDTokenVerificationOptions{
-					AudienceClaim: "aud",
-					ClientID:      oidcClientID,
+					AudienceClaims: []string{"aud"},
+					ClientID:       oidcClientID,
 				}
 				provider.Verifier = internaloidc.NewVerifier(oidc.NewVerifier(
 					oidcIssuer,
@@ -353,8 +353,8 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			g := NewWithT(t)
 
 			verificationOptions := &internaloidc.IDTokenVerificationOptions{
-				AudienceClaim: "aud",
-				ClientID:      oidcClientID,
+				AudienceClaims: []string{"aud"},
+				ClientID:       oidcClientID,
 			}
 			provider := &ProviderData{
 				Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
@@ -419,8 +419,8 @@ func TestProviderData_checkNonce(t *testing.T) {
 			g := NewWithT(t)
 
 			verificationOptions := &internaloidc.IDTokenVerificationOptions{
-				AudienceClaim: "aud",
-				ClientID:      oidcClientID,
+				AudienceClaims: []string{"aud"},
+				ClientID:       oidcClientID,
 			}
 			provider := &ProviderData{
 				Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
@@ -516,8 +516,8 @@ func TestProviderData_extractGroups(t *testing.T) {
 			g := NewWithT(t)
 
 			verificationOptions := &internaloidc.IDTokenVerificationOptions{
-				AudienceClaim: "aud",
-				ClientID:      oidcClientID,
+				AudienceClaims: []string{"aud"},
+				ClientID:       oidcClientID,
 			}
 			provider := &ProviderData{
 				Verifier: internaloidc.NewVerifier(oidc.NewVerifier(

@@ -28,8 +28,8 @@ type redeemTokenResponse struct {
 
 func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 	verificationOptions := &internaloidc.IDTokenVerificationOptions{
-		AudienceClaim: "aud",
-		ClientID:      "https://test.myapp.com",
+		AudienceClaims: []string{"aud"},
+		ClientID:       "https://test.myapp.com",
 	}
 	providerData := &ProviderData{
 		ProviderName: "oidc",

@@ -76,7 +76,7 @@ providers:
     emailClaim: email
     userIDClaim: email
     insecureSkipNonce: true
-    audienceClaim: aud
+    audienceClaims: [aud]
     extraAudiences: []
 `
 
@@ -150,7 +150,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					GroupsClaim:       "groups",
 					EmailClaim:        "email",
 					UserIDClaim:       "email",
-					AudienceClaim:     "aud",
+					AudienceClaims:    []string{"aud"},
 					ExtraAudiences:    []string{},
 					InsecureSkipNonce: true,
 				},

@@ -1711,7 +1711,7 @@ func TestGetJwtSession(t *testing.T) {
 		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true,
 			SkipClientIDCheck: true})
 	verificationOptions := &internaloidc.IDTokenVerificationOptions{
-		AudienceClaim:  "aud",
+		AudienceClaims: []string{"aud"},
 		ClientID:       "https://test.myapp.com",
 		ExtraAudiences: []string{},
 	}

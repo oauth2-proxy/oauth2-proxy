@@ -110,7 +110,7 @@ func Validate(o *options.Options) error {
 		}
 
 		verificationOptions := &internaloidc.IDTokenVerificationOptions{
-			AudienceClaim:  o.Providers[0].OIDCConfig.AudienceClaim,
+			AudienceClaims: o.Providers[0].OIDCConfig.AudienceClaims,
 			ClientID:       o.Providers[0].ClientID,
 			ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
 		}
@@ -299,7 +299,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 				msgs = append(msgs, "failed to initialize oidc provider for gitlab.com")
 			} else {
 				verificationOptions := &internaloidc.IDTokenVerificationOptions{
-					AudienceClaim:  o.Providers[0].OIDCConfig.AudienceClaim,
+					AudienceClaims: o.Providers[0].OIDCConfig.AudienceClaims,
 					ClientID:       o.Providers[0].ClientID,
 					ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
 				}
@@ -405,8 +405,8 @@ func newVerifierFromJwtIssuer(o *options.Options, jwtIssuer jwtIssuer) (*interna
 		verifier = provider.Verifier(config)
 	}
 	verificationOptions := &internaloidc.IDTokenVerificationOptions{
-		AudienceClaim:  o.Providers[0].OIDCConfig.AudienceClaim,
-		ClientID:       o.Providers[0].ClientID,
+		AudienceClaims: o.Providers[0].OIDCConfig.AudienceClaims,
+		ClientID:       jwtIssuer.audience,
 		ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
 	}
 	return internaloidc.NewVerifier(verifier, verificationOptions), nil

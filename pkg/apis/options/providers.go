@@ -166,7 +166,7 @@ type OIDCOptions struct {
 	UserIDClaim string `json:"userIDClaim,omitempty"`
 	// AudienceClaim allows to define any claim that is verified against the client id
 	// By default `aud` claim is used for verification.
-	AudienceClaim string `json:"audienceClaim,omitempty"`
+	AudienceClaims []string `json:"audienceClaims,omitempty"`
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
@@ -197,7 +197,7 @@ func providerDefaults() Providers {
 				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   providers.OIDCEmailClaim,
 				GroupsClaim:                  providers.OIDCGroupsClaim,
-				AudienceClaim:                providers.OIDCAudienceClaim,
+				AudienceClaims:               providers.OIDCAudienceClaims,
 				ExtraAudiences:               []string{},
 			},
 		},
