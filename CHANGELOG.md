@@ -6,6 +6,24 @@
 
 ## Breaking Changes
 
+## Changes since v7.2.1
+
+- [#1477](https://github.com/oauth2-proxy/oauth2-proxy/pull/1477) Remove provider documentation for `Microsoft Azure AD` (@omBratteng)
+
+# V7.2.1
+
+## Release Highlights
+
+This release contains a number of bug and security fixes, but has no feature additions.
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.2.0
 
 - [#1247](https://github.com/oauth2-proxy/oauth2-proxy/pull/1247) Use `upn` claim consistently in ADFSProvider (@NickMeves)
@@ -14,7 +32,7 @@
 - [#1445](https://github.com/oauth2-proxy/oauth2-proxy/pull/1445) Fix docker container multi arch build issue by passing GOARCH details to make build (@jkandasa)
 - [#1444](https://github.com/oauth2-proxy/oauth2-proxy/pull/1444) Update LinkedIn provider validate URL (@jkandasa)
 - [#1471](https://github.com/oauth2-proxy/oauth2-proxy/pull/1471) Update alpine to 3.15 (@AlexanderBabel)
-- [#1477](https://github.com/oauth2-proxy/oauth2-proxy/pull/1477) Remove provider documentation for `Microsoft Azure AD` (@omBratteng)
+- [#1479](https://github.com/oauth2-proxy/oauth2-proxy/pull/1479) Update to Go 1.17 (@polarctos)
 
 # V7.2.0
 
