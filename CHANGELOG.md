@@ -8,6 +8,8 @@
 
 ## Changes since v7.2.1
 
+- [#1477](https://github.com/oauth2-proxy/oauth2-proxy/pull/1477) Remove provider documentation for `Microsoft Azure AD` (@omBratteng)
+
 # V7.2.1
 
 ## Release Highlights
