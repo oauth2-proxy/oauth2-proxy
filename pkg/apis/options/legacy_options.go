@@ -472,7 +472,7 @@ type LegacyProvider struct {
 
 	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
 	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
-	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
+	BitbucketWorkspace       string   `flag:"bitbucket-workspace" cfg:"bitbucket_workspace"`
 	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
@@ -521,7 +521,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
-	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
+	flagSet.String("bitbucket-workspace", "", "restrict logins to members of this workspace")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
@@ -680,7 +680,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 	case "bitbucket":
 		provider.BitbucketConfig = BitbucketOptions{
-			Team:       l.BitbucketTeam,
+			Workspace:  l.BitbucketWorkspace,
 			Repository: l.BitbucketRepository,
 		}
 	case "google":

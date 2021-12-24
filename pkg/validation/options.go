@@ -268,7 +268,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 			}
 		}
 	case *providers.BitbucketProvider:
-		p.SetTeam(o.Providers[0].BitbucketConfig.Team)
+		p.SetWorkspace(o.Providers[0].BitbucketConfig.Workspace)
 		p.SetRepository(o.Providers[0].BitbucketConfig.Repository)
 	case *providers.OIDCProvider:
 		p.SkipNonce = o.Providers[0].OIDCConfig.InsecureSkipNonce

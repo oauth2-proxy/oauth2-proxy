@@ -96,8 +96,8 @@ type ADFSOptions struct {
 }
 
 type BitbucketOptions struct {
-	// Team sets restrict logins to members of this team
-	Team string `json:"team,omitempty"`
+	// Workspace sets restrict logins to members of this workspace
+	Workspace string `json:"workspace,omitempty"`
 	// Repository sets restrict logins to user with access to this repository
 	Repository string `json:"repository,omitempty"`
 }

@@ -13,7 +13,7 @@ import (
 // BitbucketProvider represents an Bitbucket based Identity Provider
 type BitbucketProvider struct {
 	*ProviderData
-	Team       string
+	Workspace  string
 	Repository string
 }
 
@@ -65,9 +65,10 @@ func NewBitbucketProvider(p *ProviderData) *BitbucketProvider {
 	return &BitbucketProvider{ProviderData: p}
 }
 
-// SetTeam defines the Bitbucket team the user must be part of
-func (p *BitbucketProvider) SetTeam(team string) {
-	p.Team = team
+// SetWorkspace defines the Bitbucket workspace the user must be part of
+func (p *BitbucketProvider) SetWorkspace(workspace string) {
+	p.Workspace = workspace
+	// Bitbucket docs doesn't have an alternative scope yet.
 	if !strings.Contains(p.Scope, "team") {
 		p.Scope += " team"
 	}
@@ -90,9 +91,9 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 			Primary bool   `json:"is_primary"`
 		}
 	}
-	var teams struct {
+	var workspaces struct {
 		Values []struct {
-			Name string `json:"username"`
+			Name string `json:"slug"`
 		}
 	}
 	var repositories struct {
@@ -111,30 +112,30 @@ func (p *BitbucketProvider) GetEmailAddress(ctx context.Context, s *sessions.Ses
 		return "", err
 	}
 
-	if p.Team != "" {
-		teamURL := &url.URL{}
-		*teamURL = *p.ValidateURL
-		teamURL.Path = "/2.0/teams"
+	if p.Workspace != "" {
+		workspaceURL := &url.URL{}
+		*workspaceURL = *p.ValidateURL
+		workspaceURL.Path = "/2.0/workspaces"
 
-		requestURL := teamURL.String() + "?role=member&access_token=" + s.AccessToken
+		requestURL := workspaceURL.String() + "?role=member&access_token=" + s.AccessToken
 
 		err := requests.New(requestURL).
 			WithContext(ctx).
 			Do().
-			UnmarshalInto(&teams)
+			UnmarshalInto(&workspaces)
 		if err != nil {
-			logger.Errorf("failed requesting teams membership: %v", err)
+			logger.Errorf("failed requesting workspaces membership: %v", err)
 			return "", err
 		}
 		var found = false
-		for _, team := range teams.Values {
-			if p.Team == team.Name {
+		for _, workspace := range workspaces.Values {
+			if p.Workspace == workspace.Name {
 				found = true
 				break
 			}
 		}
 		if !found {
-			logger.Error("team membership test failed, access denied")
+			logger.Error("workspaces membership test failed, access denied")
 			return "", nil
 		}
 	}

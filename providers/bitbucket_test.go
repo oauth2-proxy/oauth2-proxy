@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testBitbucketProvider(hostname, team string, repository string) *BitbucketProvider {
+func testBitbucketProvider(hostname, workspace string, repository string) *BitbucketProvider {
 	p := NewBitbucketProvider(
 		&ProviderData{
 			ProviderName: "",
@@ -23,8 +23,8 @@ func testBitbucketProvider(hostname, team string, repository string) *BitbucketP
 			ValidateURL:  &url.URL{},
 			Scope:        ""})
 
-	if team != "" {
-		p.SetTeam(team)
+	if workspace != "" {
+		p.SetWorkspace(workspace)
 	}
 
 	if repository != "" {
@@ -43,7 +43,7 @@ func testBitbucketProvider(hostname, team string, repository string) *BitbucketP
 func testBitbucketBackend(payload string) *httptest.Server {
 	paths := map[string]bool{
 		"/2.0/user/emails": true,
-		"/2.0/teams":       true,
+		"/2.0/workspaces":  true,
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -74,10 +74,10 @@ func TestNewBitbucketProvider(t *testing.T) {
 	g.Expect(providerData.Scope).To(Equal("email"))
 }
 
-func TestBitbucketProviderScopeAdjustForTeam(t *testing.T) {
-	p := testBitbucketProvider("", "test-team", "")
+func TestBitbucketProviderScopeAdjustForWorkspace(t *testing.T) {
+	p := testBitbucketProvider("", "test-workspace", "")
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "email team", p.Data().Scope)
+	assert.Equal(t, "email workspace", p.Data().Scope)
 }
 
 func TestBitbucketProviderScopeAdjustForRepository(t *testing.T) {
