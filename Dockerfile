@@ -1,3 +1,5 @@
+ARG RUNTIME_IMAGE=alpine:3.15
+
 # All builds should be done using the platform native to the build node to allow
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
@@ -38,7 +40,7 @@ RUN case ${TARGETPLATFORM} in \
     GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem
 
 # Copy binary to alpine
-FROM gcr.io/distroless/static-debian11:nonroot
+FROM ${RUNTIME_IMAGE}
 COPY nsswitch.conf /etc/nsswitch.conf
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/jwt_signing_key.pem /etc/ssl/private/jwt_signing_key.pem
