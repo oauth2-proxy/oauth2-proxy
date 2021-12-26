@@ -41,13 +41,15 @@ const (
 	schemeHTTPS     = "https"
 	applicationJSON = "application/json"
 
-	robotsPath        = "/robots.txt"
-	signInPath        = "/sign_in"
-	signOutPath       = "/sign_out"
-	oauthStartPath    = "/start"
-	oauthCallbackPath = "/callback"
-	authOnlyPath      = "/auth"
-	userInfoPath      = "/userinfo"
+	robotsPath         = "/robots.txt"
+	bulmaCssPath       = "/css/bulma/bulma.min.css"
+	fontAwesomeCssPath = "/css/font-awesome/all.min.css"
+	signInPath         = "/sign_in"
+	signOutPath        = "/sign_out"
+	oauthStartPath     = "/start"
+	oauthCallbackPath  = "/callback"
+	authOnlyPath       = "/auth"
+	userInfoPath       = "/userinfo"
 )
 
 var (
@@ -277,6 +279,8 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 
 	// Register the robots path writer
 	r.Path(robotsPath).HandlerFunc(p.pageWriter.WriteRobotsTxt)
+	r.Path(bulmaCssPath).HandlerFunc(p.pageWriter.WriteBulmaCss)
+	r.Path(fontAwesomeCssPath).HandlerFunc(p.pageWriter.WriteFontAwesomeCss)
 
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the

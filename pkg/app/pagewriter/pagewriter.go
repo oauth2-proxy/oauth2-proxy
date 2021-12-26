@@ -14,6 +14,8 @@ type Writer interface {
 	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
+	WriteBulmaCss(rw http.ResponseWriter, req *http.Request)
+	WriteFontAwesomeCss(rw http.ResponseWriter, req *http.Request)
 }
 
 // pageWriter implements the Writer interface
@@ -108,10 +110,12 @@ func NewWriter(opts Opts) (Writer, error) {
 // If any of the funcs are not provided, a default implementation will be used.
 // This is primarily for us in testing.
 type WriterFuncs struct {
-	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string)
-	ErrorPageFunc  func(rw http.ResponseWriter, opts ErrorPageOpts)
-	ProxyErrorFunc func(rw http.ResponseWriter, req *http.Request, proxyErr error)
-	RobotsTxtfunc  func(rw http.ResponseWriter, req *http.Request)
+	SignInPageFunc     func(rw http.ResponseWriter, req *http.Request, redirectURL string)
+	ErrorPageFunc      func(rw http.ResponseWriter, opts ErrorPageOpts)
+	ProxyErrorFunc     func(rw http.ResponseWriter, req *http.Request, proxyErr error)
+	RobotsTxtfunc      func(rw http.ResponseWriter, req *http.Request)
+	bulmaCssFunc       func(rw http.ResponseWriter, req *http.Request)
+	fontAwesomeCssFunc func(rw http.ResponseWriter, req *http.Request)
 }
 
 // WriteSignInPage implements the Writer interface.
@@ -169,6 +173,28 @@ func (w *WriterFuncs) WriteRobotsTxt(rw http.ResponseWriter, req *http.Request) 
 	}
 
 	if _, err := rw.Write([]byte("Allow: *")); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (w *WriterFuncs) WriteBulmaCss(rw http.ResponseWriter, req *http.Request) {
+	if w.bulmaCssFunc != nil {
+		w.bulmaCssFunc(rw, req)
+		return
+	}
+
+	if _, err := rw.Write([]byte("")); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (w *WriterFuncs) WriteFontAwesomeCss(rw http.ResponseWriter, req *http.Request) {
+	if w.fontAwesomeCssFunc != nil {
+		w.fontAwesomeCssFunc(rw, req)
+		return
+	}
+
+	if _, err := rw.Write([]byte("")); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }

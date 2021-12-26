@@ -13,11 +13,19 @@ import (
 )
 
 const (
-	robotsTxtName = "robots.txt"
+	robotsTxtName      = "robots.txt"
+	bulmaCssName       = "css/bulma/bulma.min.css"
+	fontAwesomeCssName = "css/font-awesome/all.min.css"
 )
 
 //go:embed robots.txt
 var defaultRobotsTxt []byte
+
+//go:embed css/bulma/bulma.min.css
+var bulmaCss []byte
+
+//go:embed css/font-awesome/all.min.css
+var fontAwesomeCss []byte
 
 // staticPageWriter is used to write static pages.
 type staticPageWriter struct {
@@ -27,7 +35,19 @@ type staticPageWriter struct {
 
 // WriteRobotsTxt writes the robots.txt content to the response writer.
 func (s *staticPageWriter) WriteRobotsTxt(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Add("content-type", "text/css; charset=utf-8")
 	s.writePage(rw, req, robotsTxtName)
+}
+
+// WriteBulmaCss writes the bulma css content to the response writer.
+func (s *staticPageWriter) WriteBulmaCss(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Add("content-type", "text/css; charset=utf-8")
+	s.writePage(rw, req, bulmaCssName)
+}
+
+// WriteFontAwesomeCss writes the font awesome css content to the response writer.
+func (s *staticPageWriter) WriteFontAwesomeCss(rw http.ResponseWriter, req *http.Request) {
+	s.writePage(rw, req, fontAwesomeCssName)
 }
 
 // writePage writes the content of the page to the response writer.
@@ -62,11 +82,19 @@ func newStaticPageWriter(customDir string, errorWriter *errorPageWriter) (*stati
 // instead.
 // Statis files include:
 // - robots.txt
+// - css/bulma/bulma.min.css
+// - css/font-awesome/all.min.css
 func loadStaticPages(customDir string) (*pageGetter, error) {
 	pages := newPageGetter(customDir)
 
 	if err := pages.addPage(robotsTxtName, defaultRobotsTxt); err != nil {
 		return nil, fmt.Errorf("could not add robots.txt: %v", err)
+	}
+	if err := pages.addPage(bulmaCssName, bulmaCss); err != nil {
+		return nil, fmt.Errorf("could not add bulma: %v", err)
+	}
+	if err := pages.addPage(fontAwesomeCssName, fontAwesomeCss); err != nil {
+		return nil, fmt.Errorf("could not add fontawesome: %v", err)
 	}
 
 	return pages, nil

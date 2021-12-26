@@ -101,6 +101,58 @@ var _ = Describe("Static Pages", func() {
 					Expect(recorder.Result().StatusCode).To(Equal(http.StatusInternalServerError))
 				})
 			})
+
+			Context("WriteBulmaCss", func() {
+				It("Should write the bulma css file", func() {
+					recorder := httptest.NewRecorder()
+					pageWriter.WriteBulmaCss(recorder, request)
+
+					body, err := ioutil.ReadAll(recorder.Result().Body)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(body)).To(Equal(string(bulmaCss)))
+					Expect(recorder.Header().Get("content-type")).To(Equal("text/css; charset=utf-8"))
+					Expect(recorder.Result().StatusCode).To(Equal(http.StatusOK))
+				})
+
+				It("Should serve an error if it cannot write the page", func() {
+					recorder := &testBadResponseWriter{
+						ResponseRecorder: httptest.NewRecorder(),
+					}
+					pageWriter.WriteBulmaCss(recorder, request)
+
+					body, err := ioutil.ReadAll(recorder.Result().Body)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(body)).To(Equal(string("Internal Server Error")))
+
+					Expect(recorder.Result().StatusCode).To(Equal(http.StatusInternalServerError))
+				})
+			})
+
+			Context("WriteFontAwesomeCss", func() {
+				It("Should write the font awesome css file", func() {
+					recorder := httptest.NewRecorder()
+					pageWriter.WriteFontAwesomeCss(recorder, request)
+
+					body, err := ioutil.ReadAll(recorder.Result().Body)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(body)).To(Equal(string(fontAwesomeCss)))
+					Expect(recorder.Header().Get("content-type")).To(Equal("text/css; charset=utf-8"))
+					Expect(recorder.Result().StatusCode).To(Equal(http.StatusOK))
+				})
+
+				It("Should serve an error if it cannot write the page", func() {
+					recorder := &testBadResponseWriter{
+						ResponseRecorder: httptest.NewRecorder(),
+					}
+					pageWriter.WriteFontAwesomeCss(recorder, request)
+
+					body, err := ioutil.ReadAll(recorder.Result().Body)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(body)).To(Equal(string("Internal Server Error")))
+
+					Expect(recorder.Result().StatusCode).To(Equal(http.StatusInternalServerError))
+				})
+			})
 		})
 	})
 
