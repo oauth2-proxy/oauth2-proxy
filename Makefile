@@ -4,7 +4,7 @@ GOLANGCILINT ?= golangci-lint
 BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
-REGISTRY ?= quay.io/oauth2-proxy
+REGISTRY ?= gcr.io/devsentient-infra/oauth2-proxy
 .NOTPARALLEL:
 
 GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
@@ -39,7 +39,7 @@ build: validate-go-version clean $(BINARY)
 $(BINARY):
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
 
-DOCKER_BUILD_PLATFORM ?= linux/amd64,linux/arm64,linux/arm/v6
+DOCKER_BUILD_PLATFORM ?= linux/amd64
 DOCKER_BUILDX_ARGS ?=
 DOCKER_BUILDX := docker buildx build ${DOCKER_BUILDX_ARGS} --build-arg VERSION=${VERSION}
 DOCKER_BUILDX_X_PLATFORM := $(DOCKER_BUILDX) --platform ${DOCKER_BUILD_PLATFORM}

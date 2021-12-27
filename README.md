@@ -1,3 +1,6 @@
+# Shakduo notes
+Run `make docker-push` to build an push to GCR.
+
 ![OAuth2 Proxy](/docs/static/img/logos/OAuth2_Proxy_horizontal.svg)
 
 [![Build Status](https://secure.travis-ci.org/oauth2-proxy/oauth2-proxy.svg?branch=master)](http://travis-ci.org/oauth2-proxy/oauth2-proxy)
