@@ -1,6 +1,10 @@
 .PHONY: up
 up:
-	docker-compose up -d
+	docker-compose up
+
+.PHONY: build-up
+build-up:
+	docker-compose -f docker-compose.yaml -f docker-compose-build-oauth.yaml up --build
 
 .PHONY: %
 %:
@@ -8,7 +12,19 @@ up:
 
 .PHONY: alpha-config-up
 alpha-config-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml up -d
+	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml up
+
+.PHONY: alpha-config-build-up
+alpha-config-build-up:
+	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
+
+.PHONY: alpha-config-multiple-providers-build-up
+alpha-config-multiple-providers-build-up:
+	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
+
+.PHONY: alpha-config-multiple-providers-up
+alpha-config-multiple-providers-up:
+	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml up
 
 .PHONY: alpha-config-%
 alpha-config-%:
@@ -16,7 +32,7 @@ alpha-config-%:
 
 .PHONY: nginx-up
 nginx-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml up -d
+	docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml up
 
 .PHONY: nginx-%
 nginx-%:
@@ -24,7 +40,7 @@ nginx-%:
 
 .PHONY: keycloak-up
 keycloak-up:
-	docker-compose -f docker-compose-keycloak.yaml up -d
+	docker-compose -f docker-compose-keycloak.yaml up
 
 .PHONY: keycloak-%
 keycloak-%:
@@ -41,7 +57,7 @@ kubernetes-down:
 
 .PHONY: traefik-up
 traefik-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml up -d
+	docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml up
 
 .PHONY: traefik-%
 traefik-%:

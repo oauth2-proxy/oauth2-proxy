@@ -31,15 +31,20 @@
         {{.LogoData}}
       </div>
       {{ end }}
+      
+      {{ $name := .ProviderName }}
+      {{ range $index,$id   := .ProviderID }}
 
-      <form method="GET" action="{{.ProxyPrefix}}/start">
-        <input type="hidden" name="rd" value="{{.Redirect}}">
-          {{ if .SignInMessage }}
-          <p class="block">{{.SignInMessage}}</p>
+      <form method="GET" action="{{$.ProxyPrefix}}/{{$id}}/start">
+        <input type="hidden" name="rd" value="{{$.Redirect}}">
+          {{ if and ($.SignInMessage) (eq $index 0 ) }}
+          <p class="block">{{$.SignInMessage}}</p>
           {{ end}}
-          <button type="submit" class="button block is-primary">Sign in with {{.ProviderName}}</button>
+          <button type="submit" class="button block is-primary">Sign in with {{index $name $index}}</button>
+          <p class="block"></p>
       </form>
-
+      {{ end }}
+      
       {{ if .CustomLogin }}
       <hr>
 

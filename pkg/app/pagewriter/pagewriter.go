@@ -47,7 +47,10 @@ type Opts struct {
 	DisplayLoginForm bool
 
 	// ProviderName is the name of the provider that should be displayed on the login button.
-	ProviderName string
+	ProviderName []string
+
+	// ProviderID is the unique ID of each provider that we use to create the start path for each provider.
+	ProviderID []string
 
 	// SignInMessage is the messge displayed above the login button.
 	SignInMessage string
@@ -84,6 +87,7 @@ func NewWriter(opts Opts) (Writer, error) {
 		errorPageWriter:  errorPage,
 		proxyPrefix:      opts.ProxyPrefix,
 		providerName:     opts.ProviderName,
+		providerID:       opts.ProviderID,
 		signInMessage:    opts.SignInMessage,
 		footer:           opts.Footer,
 		version:          opts.Version,

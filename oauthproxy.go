@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -114,6 +115,18 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
+	providerNameArray := make([]string, 0)
+	providerIdArray := make([]string, 0)
+
+	for i := range opts.Providers {
+
+		providerName := opts.Providers[i].Name
+		providerNameArray = append(providerNameArray, providerName)
+
+		providerId := opts.Providers[i].ID
+		providerIdArray = append(providerIdArray, providerId)
+	}
+
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
 		TemplatesPath:    opts.Templates.Path,
 		CustomLogo:       opts.Templates.CustomLogo,
@@ -121,7 +134,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Footer:           opts.Templates.Footer,
 		Version:          VERSION,
 		Debug:            opts.Templates.Debug,
-		ProviderName:     buildProviderName(opts.GetProvider(), opts.Providers[0].Name),
+		ProviderName:     providerNameArray,
+		ProviderID:       providerIdArray,
 		SignInMessage:    buildSignInMessage(opts),
 		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	})
@@ -296,10 +310,12 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Use(prepareNoCacheMiddleware)
 
+	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
+	s.Path("/{id}" + oauthStartPath).HandlerFunc(p.OAuthStart)
+	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
+	s.Path("/{id}" + oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 	s.Path(signInPath).HandlerFunc(p.SignIn)
 	s.Path(signOutPath).HandlerFunc(p.SignOut)
-	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
-	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
 	// The userinfo endpoint needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
@@ -667,6 +683,22 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	prepareNoCache(rw)
 
+	var id int
+	params := mux.Vars(req)
+	idString := (params["id"])
+	if len(idString) > 0 {
+		id, err := strconv.Atoi(idString)
+		if err != nil {
+			logger.Errorf("Error while converting id %v from path: %v", id, err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		id = 0
+	}
+
+	fmt.Println(id)
+
 	csrf, err := cookies.NewCSRF(p.CookieOptions)
 	if err != nil {
 		logger.Errorf("Error creating CSRF nonce: %v", err)
@@ -701,6 +733,22 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
+
+	var id int
+	params := mux.Vars(req)
+	idString := (params["id"])
+	if len(idString) > 0 {
+		id, err := strconv.Atoi(idString)
+		if err != nil {
+			logger.Errorf("Error while converting id %v from path: %v", id, err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		id = 0
+	}
+
+	fmt.Println(id)
 
 	// finish the oauth cycle
 	err := req.ParseForm()
