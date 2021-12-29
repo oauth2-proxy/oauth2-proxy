@@ -208,6 +208,7 @@ func Validate(o *options.Options) error {
 func parseProviderInfo(o *options.Options, msgs []string, i int) []string {
 	p := &providers.ProviderData{
 		Scope:            o.Providers[i].Scope,
+		ProviderID:       o.Providers[i].ID,
 		ClientID:         o.Providers[i].ClientID,
 		ClientSecret:     o.Providers[i].ClientSecret,
 		ClientSecretFile: o.Providers[i].ClientSecretFile,
