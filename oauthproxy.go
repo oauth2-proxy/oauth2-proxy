@@ -452,7 +452,13 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		if err != nil {
 			return nil, err
 		}
-		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
+
+		var displayMethod = "ALL"
+		if method != "" {
+			displayMethod = method
+		}
+		logger.Printf("Skipping auth - Method: %s | Path: %s", displayMethod, path)
+
 		routes = append(routes, allowedRoute{
 			method:    method,
 			pathRegex: compiledRegex,
