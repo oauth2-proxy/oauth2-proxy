@@ -426,7 +426,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		if err != nil {
 			return nil, err
 		}
-		logger.Printf("Skipping auth - Method: ALL | Path: %s", path)
+		logger.Printf("Configuring the skip auth - Method: ALL | Path: %s", path)
 		routes = append(routes, allowedRoute{
 			method:    "",
 			pathRegex: compiledRegex,
@@ -457,7 +457,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		if method != "" {
 			displayMethod = method
 		}
-		logger.Printf("Skipping auth - Method: %s | Path: %s", displayMethod, path)
+		logger.Printf("configuring the skip auth - Method: %s | Path: %s", displayMethod, path)
 
 		routes = append(routes, allowedRoute{
 			method:    method,
@@ -518,6 +518,7 @@ func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
 		if (route.method == "" || req.Method == route.method) && route.pathRegex.MatchString(req.URL.Path) {
+			logger.Printf("Skipping auth - Request method: %s | Request path: %s | Matched route path: %s ", req.Method, req.URL.Path, route.pathRegex)
 			return true
 		}
 	}
