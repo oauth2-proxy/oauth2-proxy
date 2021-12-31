@@ -6,6 +6,7 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/spf13/pflag"
 )
@@ -68,7 +69,7 @@ type Options struct {
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
-	provider           providers.Provider
+	provider           []providers.Provider
 	signatureData      *SignatureData
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
@@ -77,19 +78,28 @@ type Options struct {
 
 // Options for Getting internal values
 func (o *Options) GetRedirectURL() *url.URL                        { return o.redirectURL }
-func (o *Options) GetProvider() providers.Provider                 { return o.provider }
+func (o *Options) GetProvider(i int) providers.Provider            { return o.provider[i] }
 func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
 func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
 func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jwtBearerVerifiers }
 func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
+func (o *Options) GetAllProviders() []providers.Provider           { return o.provider }
 
 // Options for Setting internal values
 func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
-func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
 func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
 func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
 func (o *Options) SetJWTBearerVerifiers(s []*oidc.IDTokenVerifier)  { o.jwtBearerVerifiers = s }
 func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClientIPParser = s }
+func (o *Options) InitProviders() *Options {
+	i := len(o.Providers)
+	o.provider = make([]providers.Provider, i)
+	return o
+}
+func (o *Options) SetProvider(s providers.Provider, i int) {
+	logger.Printf("Setting provider %v", i)
+	o.provider[i] = s
+}
 
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {

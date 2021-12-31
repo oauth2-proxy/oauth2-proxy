@@ -1,6 +1,6 @@
 .PHONY: up
 up:
-	docker-compose up
+	docker-compose up -d
 
 .PHONY: build-up
 build-up:
@@ -12,7 +12,7 @@ build-up:
 
 .PHONY: alpha-config-up
 alpha-config-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml up
+	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml up -d
 
 .PHONY: alpha-config-build-up
 alpha-config-build-up:
@@ -24,7 +24,7 @@ alpha-config-multiple-providers-build-up:
 
 .PHONY: alpha-config-multiple-providers-up
 alpha-config-multiple-providers-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml up
+	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml up -d
 
 .PHONY: alpha-config-%
 alpha-config-%:

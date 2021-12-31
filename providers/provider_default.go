@@ -21,6 +21,9 @@ var (
 	// code
 	ErrMissingCode = errors.New("missing code")
 
+	// ErrMissingState is returned when a Redeem method is called with an empty state
+	ErrMissingState = errors.New("missing state")
+
 	// ErrMissingIDToken is returned when an oidc.Token does not contain the
 	// extra `id_token` field for an IDToken.
 	ErrMissingIDToken = errors.New("missing id_token")

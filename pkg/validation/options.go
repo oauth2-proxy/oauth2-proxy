@@ -68,6 +68,8 @@ func Validate(o *options.Options) error {
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 
+	o = o.InitProviders()
+
 	for i := range o.Providers {
 		if o.Providers[i].OIDCConfig.IssuerURL != "" {
 
@@ -242,9 +244,9 @@ func parseProviderInfo(o *options.Options, msgs []string, i int) []string {
 		msgs = append(msgs, fmt.Sprintf("invalid setting: provider '%s' is not available", o.Providers[i].Type))
 		return msgs
 	}
-	o.SetProvider(provider)
+	o.SetProvider(provider, i)
 
-	switch p := o.GetProvider().(type) {
+	switch p := o.GetProvider(i).(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.Providers[i].AzureConfig.Tenant)
 	case *providers.ADFSProvider:
