@@ -32,7 +32,7 @@ alpha-config-%:
 
 .PHONY: nginx-up
 nginx-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml up
+	docker-compose -f docker-compose.yaml -f docker-compose-nginx.yaml up -d
 
 .PHONY: nginx-%
 nginx-%:
@@ -40,7 +40,7 @@ nginx-%:
 
 .PHONY: keycloak-up
 keycloak-up:
-	docker-compose -f docker-compose-keycloak.yaml up
+	docker-compose -f docker-compose-keycloak.yaml up -d
 
 .PHONY: keycloak-%
 keycloak-%:
@@ -57,7 +57,7 @@ kubernetes-down:
 
 .PHONY: traefik-up
 traefik-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml up
+	docker-compose -f docker-compose.yaml -f docker-compose-traefik.yaml up -d
 
 .PHONY: traefik-%
 traefik-%:
