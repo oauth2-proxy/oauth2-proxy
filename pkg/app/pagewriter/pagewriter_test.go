@@ -20,7 +20,9 @@ var _ = Describe("Writer", func() {
 		var opts Opts
 		var request *http.Request
 		providerName := make([]string, 0)
-		providerName[0] = "<ProviderName>"
+		providerName = append(providerName, "<ProviderName>")
+		providerIDArray := make([]string, 0)
+		providerIDArray = append(providerIDArray, "0")
 
 		BeforeEach(func() {
 			opts = Opts{
@@ -31,6 +33,7 @@ var _ = Describe("Writer", func() {
 				Debug:            false,
 				DisplayLoginForm: false,
 				ProviderName:     providerName,
+				ProviderID:       providerIDArray,
 				SignInMessage:    "<SignInMessage>",
 			}
 

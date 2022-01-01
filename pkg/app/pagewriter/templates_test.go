@@ -33,6 +33,10 @@ var _ = Describe("Templates", func() {
 	Context("loadTemplates", func() {
 		var data interface{}
 		var t *template.Template
+		providerNameArray := make([]string, 0)
+		providerIDArray := make([]string, 0)
+		providerNameArray = append(providerNameArray, "<provider-name>")
+		providerIDArray = append(providerIDArray, "0")
 
 		BeforeEach(func() {
 			data = struct {
@@ -43,7 +47,8 @@ var _ = Describe("Templates", func() {
 
 				// For default sign_in template
 				SignInMessage string
-				ProviderName  string
+				ProviderName  []string
+				ProviderID    []string
 				CustomLogin   bool
 				LogoData      string
 
@@ -61,7 +66,8 @@ var _ = Describe("Templates", func() {
 				Footer:      "<footer>",
 
 				SignInMessage: "<sign-in-message>",
-				ProviderName:  "<provider-name>",
+				ProviderName:  providerNameArray,
+				ProviderID:    providerIDArray,
 				CustomLogin:   false,
 				LogoData:      "<logo>",
 

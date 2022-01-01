@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -687,14 +686,16 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	idString := (params["id"])
 
 	var providerSlice int
-	id, err := strconv.Atoi(idString)
-	if err != nil {
-		logger.Printf("Error Converting String, setting provider as default provider 0: %s", err)
-		providerSlice = id
+	var err error
+
+	if idString == "" {
+		logger.Printf("Path Parameter empty: setting provider as default provider 0:")
+		providerSlice = 0
 	} else {
 		providerSlice, err = getProviderSlice(p, idString)
 		if err != nil {
-			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			p.ErrorPage(rw, req, http.StatusNotFound, err.Error())
+			return
 		}
 
 	}
@@ -1117,5 +1118,5 @@ func getProviderSlice(p *OAuthProxy, idString string) (int, error) {
 			return i, nil
 		}
 	}
-	return -1, fmt.Errorf("could not find providerslice with id: %v", idString)
+	return 0, fmt.Errorf("could not find providerslice with id: %v", idString)
 }
