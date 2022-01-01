@@ -71,6 +71,7 @@ func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 	return &TestProvider{
 		ProviderData: &providers.ProviderData{
 			ProviderName: "Test Provider",
+			ProviderID:   "0",
 			LoginURL: &url.URL{
 				Scheme: "http",
 				Host:   providerURL.Host,
@@ -114,7 +115,7 @@ func Test_redeemCode(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	_, err = proxy.redeemCode(req)
+	_, err = proxy.redeemCode(req, 0)
 	assert.Equal(t, providers.ErrMissingCode, err)
 }
 
@@ -162,13 +163,13 @@ func Test_enrichSession(t *testing.T) {
 
 			// intentionally set after validation.Validate(opts) since it will clobber
 			// our TestProvider and call `providers.New` defaulting to `providers.GoogleProvider`
-			opts.SetProvider(NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail))
+			opts.SetProvider(NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail), 0)
 			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			err = proxy.enrichSessionState(context.Background(), tc.session)
+			err = proxy.enrichSessionState(context.Background(), tc.session, 0)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedUser, tc.session.User)
 			assert.Equal(t, tc.expectedEmail, tc.session.Email)
@@ -231,7 +232,9 @@ func TestBasicAuthPassword(t *testing.T) {
 	providerURL, _ := url.Parse(providerServer.URL)
 	const emailAddress = "john.doe@example.com"
 
-	opts.SetProvider(NewTestProvider(providerURL, emailAddress))
+	opts = opts.InitProviders()
+
+	opts.SetProvider(NewTestProvider(providerURL, emailAddress), 0)
 	proxy, err := NewOAuthProxy(opts, func(email string) bool {
 		return email == emailAddress
 	})
@@ -389,7 +392,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 
 	testProvider := NewTestProvider(providerURL, emailAddress)
 	testProvider.ValidToken = opts.ValidToken
-	patt.opts.SetProvider(testProvider)
+	patt.opts.SetProvider(testProvider, 0)
 	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
 		return email == emailAddress
 	})
@@ -415,7 +418,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 		http.MethodGet,
 		fmt.Sprintf(
 			"/oauth2/callback?code=callback_code&state=%s",
-			encodeState(csrf.HashOAuthState(), "%2F"),
+			encodeState(csrf.HashOAuthState(), "%2F", "0"),
 		),
 		strings.NewReader(""),
 	)
@@ -768,11 +771,12 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	if err != nil {
 		return nil, err
 	}
-	pcTest.proxy.provider = &TestProvider{
+
+	pcTest.proxy.provider[0] = &TestProvider{
 		ProviderData: &providers.ProviderData{},
 		ValidToken:   opts.providerValidateCookieResponse,
 	}
-	pcTest.proxy.provider.(*TestProvider).SetAllowedGroups(pcTest.opts.Providers[0].AllowedGroups)
+	pcTest.proxy.provider[0].(*TestProvider).SetAllowedGroups(pcTest.opts.Providers[0].AllowedGroups)
 
 	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
 	// access_token validation.
@@ -1136,7 +1140,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pcTest.proxy.provider = &TestProvider{
+	pcTest.proxy.provider[0] = &TestProvider{
 		ProviderData: &providers.ProviderData{},
 		ValidToken:   true,
 	}
@@ -1229,7 +1233,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pcTest.proxy.provider = &TestProvider{
+	pcTest.proxy.provider[0] = &TestProvider{
 		ProviderData: &providers.ProviderData{},
 		ValidToken:   true,
 	}
@@ -1309,7 +1313,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pcTest.proxy.provider = &TestProvider{
+	pcTest.proxy.provider[0] = &TestProvider{
 		ProviderData: &providers.ProviderData{},
 		ValidToken:   true,
 	}
@@ -1358,7 +1362,7 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	assert.NoError(t, err)
 
 	upstreamURL, _ := url.Parse(upstreamServer.URL)
-	opts.SetProvider(NewTestProvider(upstreamURL, ""))
+	opts.SetProvider(NewTestProvider(upstreamURL, ""), 0)
 
 	proxy, err := NewOAuthProxy(opts, func(string) bool { return false })
 	if err != nil {
@@ -1442,7 +1446,10 @@ func NewSignatureTest() (*SignatureTest, error) {
 	if err != nil {
 		return nil, err
 	}
-	opts.SetProvider(NewTestProvider(providerURL, "mbland@acm.org"))
+
+	opts = opts.InitProviders()
+
+	opts.SetProvider(NewTestProvider(providerURL, "mbland@acm.org"), 0)
 
 	return &SignatureTest{
 		opts,
@@ -1813,7 +1820,7 @@ func TestGetJwtSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tp, _ := test.proxy.provider.(*TestProvider)
+	tp, _ := test.proxy.provider[0].(*TestProvider)
 	tp.GroupValidator = func(s string) bool {
 		return true
 	}

@@ -116,15 +116,12 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	providerNameArray := make([]string, 0)
-	providerIdArray := make([]string, 0)
+	providerIDArray := make([]string, 0)
 
 	for i := range opts.Providers {
 
-		providerName := opts.Providers[i].Name
-		providerNameArray = append(providerNameArray, providerName)
-
-		providerId := opts.Providers[i].ID
-		providerIdArray = append(providerIdArray, providerId)
+		providerNameArray = append(providerNameArray, opts.Providers[i].Name)
+		providerIDArray = append(providerIDArray, opts.Providers[i].ID)
 	}
 
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
@@ -135,7 +132,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Version:          VERSION,
 		Debug:            opts.Templates.Debug,
 		ProviderName:     providerNameArray,
-		ProviderID:       providerIdArray,
+		ProviderID:       providerIDArray,
 		SignInMessage:    buildSignInMessage(opts),
 		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	})
@@ -427,12 +424,12 @@ func buildSignInMessage(opts *options.Options) string {
 	return msg
 }
 
-func buildProviderName(p providers.Provider, override string) string {
-	if override != "" {
-		return override
-	}
-	return p.Data().ProviderName
-}
+// func buildProviderName(p providers.Provider, override string) string {
+// 	if override != "" {
+// 		return override
+// 	}
+// 	return p.Data().ProviderName
+// }
 
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
 // SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
@@ -692,7 +689,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	var providerSlice int
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		logger.Print("Error Converting String, setting provider as default provider 0: %v", err)
+		logger.Printf("Error Converting String, setting provider as default provider 0: %s", err)
 		providerSlice = id
 	} else {
 		providerSlice, err = getProviderSlice(p, idString)
@@ -772,7 +769,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = p.enrichSessionState(req.Context(), session)
+	err = p.enrichSessionState(req.Context(), session, providerSlice)
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -831,8 +828,6 @@ func (p *OAuthProxy) redeemCode(req *http.Request, providerSlice int) (*sessions
 		return nil, providers.ErrMissingCode
 	}
 
-	//TODO - unmarshall code
-
 	redirectURI := p.getOAuthRedirectURI(req)
 	s, err := p.provider[providerSlice].Redeem(req.Context(), redirectURI, code)
 	if err != nil {
@@ -850,12 +845,12 @@ func (p *OAuthProxy) redeemCode(req *http.Request, providerSlice int) (*sessions
 	return s, nil
 }
 
-func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
+func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState, providerSlice int) error {
 	var err error
 	if s.Email == "" {
 		// TODO(@NickMeves): Remove once all provider are updated to implement EnrichSession
 		// nolint:staticcheck
-		s.Email, err = p.provider[0].GetEmailAddress(ctx, s)
+		s.Email, err = p.provider[providerSlice].GetEmailAddress(ctx, s)
 		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 			return err
 		}

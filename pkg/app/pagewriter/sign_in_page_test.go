@@ -22,6 +22,8 @@ var _ = Describe("SignIn Page", func() {
 	Context("SignIn Page Writer", func() {
 		var request *http.Request
 		var signInPage *signInPageWriter
+		ProviderName := make([]string, 0)
+		ProviderName[0] = "My Provider"
 
 		BeforeEach(func() {
 			errorTmpl, err := template.New("").Parse("{{.Title}} | {{.RequestID}}")
@@ -37,7 +39,7 @@ var _ = Describe("SignIn Page", func() {
 				template:         tmpl,
 				errorPageWriter:  errorPage,
 				proxyPrefix:      "/prefix/",
-				providerName:     "My Provider",
+				providerName:     ProviderName,
 				signInMessage:    "Sign In Here",
 				footer:           "Custom Footer Text",
 				version:          "v0.0.0-test",

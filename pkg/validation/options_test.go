@@ -66,7 +66,7 @@ func TestClientSecretFileOptionFails(t *testing.T) {
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
-	p := o.GetProvider().Data()
+	p := o.GetProvider(0).Data()
 	assert.Equal(t, clientSecret, p.ClientSecretFile)
 	assert.Equal(t, "", p.ClientSecret)
 
@@ -104,7 +104,7 @@ func TestClientSecretFileOption(t *testing.T) {
 	err = Validate(o)
 	assert.Equal(t, nil, err)
 
-	p := o.GetProvider().Data()
+	p := o.GetProvider(0).Data()
 	assert.Equal(t, clientSecretFileName, p.ClientSecretFile)
 	assert.Equal(t, "", p.ClientSecret)
 
@@ -158,7 +158,7 @@ func TestRedirectURL(t *testing.T) {
 func TestDefaultProviderApiSettings(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, Validate(o))
-	p := o.GetProvider().Data()
+	p := o.GetProvider(0).Data()
 	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth?access_type=offline",
 		p.LoginURL.String())
 	assert.Equal(t, "https://www.googleapis.com/oauth2/v3/token",
