@@ -109,7 +109,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 	server, provider := newTestOIDCSetup(body)
 	defer server.Close()
 
-	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "Provider0")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Email, session.Email)
 	assert.Equal(t, accessToken, session.AccessToken)
@@ -132,7 +132,7 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 	provider.EmailClaim = "phone_number"
 	defer server.Close()
 
-	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "Provider0")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Phone, session.Email)
 }
