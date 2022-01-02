@@ -22,6 +22,7 @@ type SessionState struct {
 	AccessToken  string `msgpack:"at,omitempty"`
 	IDToken      string `msgpack:"it,omitempty"`
 	RefreshToken string `msgpack:"rt,omitempty"`
+	ProviderID   string `msgpack:"pi,omitempty"`
 
 	Nonce []byte `msgpack:"n,omitempty"`
 
@@ -102,7 +103,7 @@ func (s *SessionState) Age() time.Duration {
 
 // String constructs a summary of the session state
 func (s *SessionState) String() string {
-	o := fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s", s.Email, s.User, s.PreferredUsername)
+	o := fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s ProviderID:%s", s.Email, s.User, s.PreferredUsername, s.ProviderID)
 	if s.AccessToken != "" {
 		o += " token:true"
 	}
@@ -149,6 +150,8 @@ func (s *SessionState) GetClaim(claim string) []string {
 		return groups
 	case "preferred_username":
 		return []string{s.PreferredUsername}
+	case "provider_id":
+		return []string{s.ProviderID}
 	default:
 		return []string{}
 	}

@@ -124,7 +124,7 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string, idString string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -169,6 +169,7 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		RefreshToken: jsonResponse.RefreshToken,
 		Email:        c.Email,
 		User:         c.Subject,
+		ProviderID:   idString,
 	}
 	ss.CreatedAtNow()
 	ss.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)

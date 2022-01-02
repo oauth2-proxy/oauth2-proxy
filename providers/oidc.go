@@ -43,7 +43,7 @@ func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string) string {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string, idString string) (*sessions.SessionState, error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*s
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
 
-	return p.createSession(ctx, token, false)
+	return p.createSession(ctx, token, false, idString)
 }
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields
@@ -181,7 +181,9 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		return fmt.Errorf("failed to get token: %v", err)
 	}
 
-	newSession, err := p.createSession(ctx, token, true)
+	idString := "notfound"
+
+	newSession, err := p.createSession(ctx, token, true, idString)
 	if err != nil {
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
@@ -234,7 +236,7 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 
 // createSession takes an oauth2.Token and creates a SessionState from it.
 // It alters behavior if called from Redeem vs Refresh
-func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {
+func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool, idString string) (*sessions.SessionState, error) {
 	idToken, err := p.verifyIDToken(ctx, token)
 	if err != nil {
 		switch err {
@@ -256,6 +258,7 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.AccessToken = token.AccessToken
 	ss.RefreshToken = token.RefreshToken
 	ss.IDToken = getIDToken(token)
+	ss.ProviderID = idString
 
 	ss.CreatedAtNow()
 	ss.SetExpiresOn(token.Expiry)

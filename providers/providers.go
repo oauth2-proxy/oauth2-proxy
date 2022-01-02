@@ -10,7 +10,7 @@ import (
 type Provider interface {
 	Data() *ProviderData
 	GetLoginURL(redirectURI, finalRedirect string, nonce string) string
-	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
+	Redeem(ctx context.Context, redirectURI, code string, idString string) (*sessions.SessionState, error)
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error

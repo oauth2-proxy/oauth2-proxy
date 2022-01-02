@@ -763,7 +763,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
 
-	session, err := p.redeemCode(req, providerSlice)
+	session, err := p.redeemCode(req, providerSlice, idString)
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -823,14 +823,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (p *OAuthProxy) redeemCode(req *http.Request, providerSlice int) (*sessionsapi.SessionState, error) {
+func (p *OAuthProxy) redeemCode(req *http.Request, providerSlice int, idString string) (*sessionsapi.SessionState, error) {
 	code := req.Form.Get("code")
 	if code == "" {
 		return nil, providers.ErrMissingCode
 	}
 
 	redirectURI := p.getOAuthRedirectURI(req)
-	s, err := p.provider[providerSlice].Redeem(req.Context(), redirectURI, code)
+	s, err := p.provider[providerSlice].Redeem(req.Context(), redirectURI, code, idString)
 	if err != nil {
 		return nil, err
 	}
@@ -857,7 +857,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 		}
 	}
 
-	return p.provider[0].EnrichSession(ctx, s)
+	return p.provider[providerSlice].EnrichSession(ctx, s)
 }
 
 // AuthOnly checks whether the user is currently logged in (both authentication
