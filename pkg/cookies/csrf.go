@@ -42,6 +42,9 @@ type csrf struct {
 	time       clock.Clock
 }
 
+// csrtStateTrim will indicate the length of the state trimmed for the name of the csrf cookie
+const csrfStateLength int = 9
+
 // NewCSRF creates a CSRF with random nonces
 func NewCSRF(opts *options.Cookie) (CSRF, error) {
 	state, err := encryption.Nonce()
@@ -63,7 +66,10 @@ func NewCSRF(opts *options.Cookie) (CSRF, error) {
 
 // LoadCSRFCookie loads a CSRF object from a request's CSRF cookie
 func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
-	cookie, err := req.Cookie(csrfCookieName(opts))
+	
+	// csrfCookieName will include state to have multiple csrf in case of parallel requests
+	state := req.URL.Query()["state"][0][0:csrfStateLength - 1]	
+	cookie, err := req.Cookie(csrfCookieName(opts, state))
 	if err != nil {
 		return nil, err
 	}
@@ -171,11 +177,11 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 // cookieName returns the CSRF cookie's name derived from the base
 // session cookie name
 func (c *csrf) cookieName() string {
-	return csrfCookieName(c.cookieOpts)
+	return csrfCookieName(c.cookieOpts, encryption.HashNonce(c.OAuthState)[0:csrfStateLength - 1])
 }
 
-func csrfCookieName(opts *options.Cookie) string {
-	return fmt.Sprintf("%v_csrf", opts.Name)
+func csrfCookieName(opts *options.Cookie, state string) string {
+	return fmt.Sprintf("%v_%v_csrf", opts.Name, state)
 }
 
 func encrypt(data []byte, opts *options.Cookie) ([]byte, error) {
