@@ -751,7 +751,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	nonce, appRedirect, idString, err := decodeState(req)
+	nonce, idString, appRedirect, err := decodeState(req)
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -1057,7 +1057,7 @@ func extractAllowedGroups(req *http.Request) map[string]struct{} {
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce string, redirect string, id string) string {
-	return fmt.Sprintf("%v:%v:%v", nonce, redirect, id)
+	return fmt.Sprintf("%v:%v:%v", nonce, id, redirect)
 }
 
 // decodeState splits the reflected OAuth state response back into
