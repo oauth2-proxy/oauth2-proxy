@@ -1,0 +1,29 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Fortify scan
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: builder_blr
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: main
+      - name: Fortify scan
+        run: powershell -ExecutionPolicy RemoteSigned -NoExit -File ${{ github.workspace }}\build\ps\Invoke-FortifyScan.ps1
