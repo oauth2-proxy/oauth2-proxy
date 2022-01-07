@@ -1,5 +1,5 @@
 param(
-    $FortifyProjectId = "oauth2-proxy",
+    $FortifyProjectId = "edifoundation-oauth2Proxy",
     $FortifyVersionId = "Main",
     $FortifyBuildId = "fortify_fl",
     $FortifyFprPath = "$PSScriptRoot\$FortifyProjectId.$FortifyVersionId.fpr",
