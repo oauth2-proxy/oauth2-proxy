@@ -84,7 +84,7 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 		loginURL:    loginGovDefaultLoginURL,
 		redeemURL:   loginGovDefaultRedeemURL,
 		profileURL:  loginGovDefaultProfileURL,
-		validateURL: nil,
+		validateURL: loginGovDefaultProfileURL,
 		scope:       loginGovDefaultScope,
 	})
 	return &LoginGovProvider{
@@ -236,4 +236,9 @@ func (p *LoginGovProvider) GetLoginURL(redirectURI, state, _ string) string {
 	extraParams.Add("nonce", p.Nonce)
 	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
 	return a.String()
+}
+
+// ValidateSession validates the AccessToken
+func (p *LoginGovProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }
