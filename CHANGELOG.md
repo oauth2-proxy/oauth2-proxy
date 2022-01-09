@@ -6,8 +6,11 @@
 
 ## Breaking Changes
 
-## Changes since v7.2.1
+- [#1500] The flag/config --provider-display-name no longer works - replaced by a required Name in the provider Alpha config
+- [#1500] Provider Name and ID are now required fields in the Alpha struct.
 
+## Changes since v7.2.1
+- [#1500] (https://github.com/oauth2-proxy/oauth2-proxy/pull/1500) Added support for multiple providers (@hevans-dglcom)
 - [#1477](https://github.com/oauth2-proxy/oauth2-proxy/pull/1477) Remove provider documentation for `Microsoft Azure AD` (@omBratteng)
 
 # V7.2.1
