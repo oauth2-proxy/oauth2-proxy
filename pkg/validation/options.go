@@ -184,6 +184,8 @@ func Validate(o *options.Options) error {
 		msgs = parseProviderInfo(o, msgs, i)
 	}
 
+	o.SetProviderMap()
+
 	if o.ReverseProxy {
 		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
 		if err != nil {

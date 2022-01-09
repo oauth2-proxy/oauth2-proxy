@@ -95,6 +95,7 @@ type OAuthProxy struct {
 	serveMux          *mux.Router
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
+	providerMap       map[string]int
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -225,6 +226,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
+		providerMap:        opts.GetProviderMap(),
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -642,11 +644,13 @@ func (p *OAuthProxy) UserInfo(rw http.ResponseWriter, req *http.Request) {
 		Email             string   `json:"email"`
 		Groups            []string `json:"groups,omitempty"`
 		PreferredUsername string   `json:"preferredUsername,omitempty"`
+		ProviderID        string   `json:"providerID"`
 	}{
 		User:              session.User,
 		Email:             session.Email,
 		Groups:            session.Groups,
 		PreferredUsername: session.PreferredUsername,
+		ProviderID:        session.ProviderID,
 	}
 
 	if err := json.NewEncoder(rw).Encode(userInfo); err != nil {
@@ -680,15 +684,15 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	idString := (params["id"])
 
 	var providerSlice int
-	var err error
+	var ok bool
 
 	if idString == "" {
 		logger.Printf("Path Parameter empty: setting provider as default provider 0:")
 		providerSlice = 0
 	} else {
-		providerSlice, err = getProviderSlice(p, idString)
-		if err != nil {
-			p.ErrorPage(rw, req, http.StatusNotFound, err.Error())
+		providerSlice, ok = p.providerMap[idString]
+		if !ok {
+			p.ErrorPage(rw, req, http.StatusNotFound, "ProviderID not found")
 			return
 		}
 
@@ -752,9 +756,10 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	providerSlice, err := getProviderSlice(p, idString)
-	if err != nil {
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+	providerSlice, ok := p.providerMap[idString]
+	if !ok {
+		p.ErrorPage(rw, req, http.StatusNotFound, "ProviderID not found")
+		return
 	}
 
 	session, err := p.redeemCode(req, providerSlice, idString)
@@ -1103,14 +1108,4 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	// we need to send some JSON response because we set the Content-Type to
 	// application/json
 	rw.Write([]byte("{}"))
-}
-
-func getProviderSlice(p *OAuthProxy, idString string) (int, error) {
-
-	for i := range p.provider {
-		if p.provider[i].Data().ProviderID == idString {
-			return i, nil
-		}
-	}
-	return 0, fmt.Errorf("could not find providerslice with id: %v", idString)
 }

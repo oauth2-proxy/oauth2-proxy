@@ -74,6 +74,7 @@ type Options struct {
 	oidcVerifier       *oidc.IDTokenVerifier
 	jwtBearerVerifiers []*oidc.IDTokenVerifier
 	realClientIPParser ipapi.RealClientIPParser
+	providerMap        map[string]int
 }
 
 // Options for Getting internal values
@@ -84,6 +85,7 @@ func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oi
 func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jwtBearerVerifiers }
 func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
 func (o *Options) GetAllProviders() []providers.Provider           { return o.provider }
+func (o *Options) GetProviderMap() map[string]int                  { return o.providerMap }
 
 // Options for Setting internal values
 func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
@@ -99,6 +101,17 @@ func (o *Options) InitProviders() *Options {
 func (o *Options) SetProvider(s providers.Provider, i int) {
 	logger.Printf("Setting provider %v", i)
 	o.provider[i] = s
+}
+func (o *Options) SetProviderMap() *Options {
+	m := make(map[string]int)
+
+	for i := range o.Providers {
+		m[o.Providers[i].ID] = i
+		m[o.Providers[i].Name] = i
+		m[o.GetProvider(i).Data().ValidateURL.String()] = i
+	}
+	o.providerMap = m
+	return o
 }
 
 // NewOptions constructs a new Options with defaulted values
