@@ -9,6 +9,7 @@ import (
 
 	"github.com/justinas/alice"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
@@ -21,16 +22,7 @@ type StoredSessionLoaderOptions struct {
 	// Session storage backend
 	SessionStore sessionsapi.SessionStore
 
-	// How often should sessions be refreshed
-	RefreshPeriod time.Duration
-
-	// Provider based session refreshing
-	RefreshSession func(context.Context, *sessionsapi.SessionState) (bool, error)
-
-	// Provider based session validation.
-	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
-	// refresh it, we must re-validate using this validation.
-	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
+	Options *options.Options
 }
 
 // NewStoredSessionLoader creates a new storedSessionLoader which loads
@@ -39,10 +31,8 @@ type StoredSessionLoaderOptions struct {
 // If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
 	ss := &storedSessionLoader{
-		store:            opts.SessionStore,
-		refreshPeriod:    opts.RefreshPeriod,
-		sessionRefresher: opts.RefreshSession,
-		sessionValidator: opts.ValidateSession,
+		store:   opts.SessionStore,
+		options: opts.Options,
 	}
 	return ss.loadSession
 }
@@ -50,10 +40,8 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 // storedSessionLoader is responsible for loading sessions from cookie
 // identified sessions in the session store.
 type storedSessionLoader struct {
-	store            sessionsapi.SessionStore
-	refreshPeriod    time.Duration
-	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
-	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	store   sessionsapi.SessionStore
+	options *options.Options
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -111,12 +99,12 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 // is older than the refresh period.
 // Success or fail, we will then validate the session.
 func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	if s.refreshPeriod <= time.Duration(0) || session.Age() < s.refreshPeriod {
+	if s.options.Cookie.Refresh <= time.Duration(0) || session.Age() < s.options.Cookie.Refresh {
 		// Refresh is disabled or the session is not old enough, do nothing
 		return nil
 	}
 
-	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
+	logger.Printf("Refreshing session - User: %s; SessionAge: %s, Provider: %s", session.User, session.Age(), session.ProviderID)
 	err := s.refreshSession(rw, req, session)
 	if err != nil {
 		// If a preemptive refresh fails, we still keep the session
@@ -131,7 +119,12 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 // refreshSession attempts to refresh the session with the provider
 // and will save the session if it was updated.
 func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	refreshed, err := s.sessionRefresher(req.Context(), session)
+
+	providerSlice, ok := s.options.GetProviderMapValue(session.ProviderID)
+	if !ok {
+		return fmt.Errorf("ProviderID not found")
+	}
+	refreshed, err := s.options.GetProvider(providerSlice).RefreshSession(req.Context(), session)
 	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 		return fmt.Errorf("error refreshing tokens: %v", err)
 	}
@@ -172,7 +165,11 @@ func (s *storedSessionLoader) validateSession(ctx context.Context, session *sess
 		return errors.New("session is expired")
 	}
 
-	if !s.sessionValidator(ctx, session) {
+	providerSlice, ok := s.options.GetProviderMapValue(session.ProviderID)
+	if !ok {
+		return fmt.Errorf("ProviderID not found")
+	}
+	if !s.options.GetProvider(providerSlice).ValidateSession(ctx, session) {
 		return errors.New("session is invalid")
 	}
 

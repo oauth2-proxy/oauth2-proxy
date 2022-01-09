@@ -86,6 +86,10 @@ func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jw
 func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
 func (o *Options) GetAllProviders() []providers.Provider           { return o.provider }
 func (o *Options) GetProviderMap() map[string]int                  { return o.providerMap }
+func (o *Options) GetProviderMapValue(value string) (int, bool) {
+	i, ok := o.providerMap[value]
+	return i, ok
+}
 
 // Options for Setting internal values
 func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
