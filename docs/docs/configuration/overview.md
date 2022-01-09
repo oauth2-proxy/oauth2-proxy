@@ -146,7 +146,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `--provider` | string | OAuth provider | google |
 | `--provider-ca-file` |  string \| list |  Paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead. |
-| `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
+| `--provider-display-name` | string | Displayname for the provider; used for the sign-in page<br/> This value is required | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |
 | `--metrics-address` | string | the address prometheus metrics will be scraped from | `""` |

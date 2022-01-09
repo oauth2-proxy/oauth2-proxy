@@ -628,6 +628,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ApprovalPrompt:    l.ApprovalPrompt,
 		AllowedGroups:     l.AllowedGroups,
 		AcrValues:         l.AcrValues,
+		Name:              l.ProviderName,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC
