@@ -211,6 +211,7 @@ func parseProviderInfo(o *options.Options, msgs []string, i int) []string {
 	p := &providers.ProviderData{
 		Scope:            o.Providers[i].Scope,
 		ProviderID:       o.Providers[i].ID,
+		ProviderName:     o.Providers[i].Name,
 		ClientID:         o.Providers[i].ClientID,
 		ClientSecret:     o.Providers[i].ClientSecret,
 		ClientSecretFile: o.Providers[i].ClientSecretFile,
@@ -235,6 +236,14 @@ func parseProviderInfo(o *options.Options, msgs []string, i int) []string {
 	if o.Providers[i].OIDCConfig.EmailClaim == providers.OIDCEmailClaim &&
 		o.Providers[i].OIDCConfig.UserIDClaim != providers.OIDCEmailClaim {
 		p.EmailClaim = o.Providers[i].OIDCConfig.UserIDClaim
+	}
+
+	if p.ProviderName == "" {
+		msgs = append(msgs, "invalid setting: provider must have a name")
+	}
+
+	if p.ProviderID == "" {
+		msgs = append(msgs, "invalid setting: provider must have an ID")
 	}
 
 	p.SetAllowedGroups(o.Providers[i].AllowedGroups)

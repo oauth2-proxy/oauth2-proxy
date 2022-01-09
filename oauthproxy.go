@@ -423,16 +423,10 @@ func buildSignInMessage(opts *options.Options) string {
 	return msg
 }
 
-// func buildProviderName(p providers.Provider, override string) string {
-// 	if override != "" {
-// 		return override
-// 	}
-// 	return p.Data().ProviderName
-// }
-
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
 // SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
 // (method=path support)
+
 func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 	routes := make([]allowedRoute, 0, len(opts.SkipAuthRegex)+len(opts.SkipAuthRoutes))
 

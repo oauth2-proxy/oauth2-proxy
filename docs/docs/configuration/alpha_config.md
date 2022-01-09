@@ -304,7 +304,7 @@ Provider holds all configuration for a single provider
 | `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
 | `provider` | _string_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
-| `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
+| `name` | _string_ | Name is the providers display name<br/>It will be shown to the users in the login page.<br/> This value is required for all providers |
 | `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
