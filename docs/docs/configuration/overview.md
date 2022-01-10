@@ -31,7 +31,7 @@ import TabItem from '@theme/TabItem';
   <TabItem value="bash">
 
   ```shell
-  cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 | base64
+  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_'; echo
   ```
 
   </TabItem>
