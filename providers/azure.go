@@ -53,6 +53,14 @@ var (
 		Path:   "/v1.0/me",
 	}
 
+	// Default Groipe URL for Azure.
+	// Pre-parsed URL of https://graph.microsoft.com/v1.0/me.
+	azureDefaultGroupURL = &url.URL{
+		Scheme: "https",
+		Host:   "graph.microsoft.com",
+		Path:   "/v1.0/me/transitiveMemberOf/microsoft.graph.group",
+	}
+
 	// Default ProtectedResource URL for Azure.
 	// Pre-parsed URL of https://graph.microsoft.com.
 	azureDefaultProtectResourceURL = &url.URL{
@@ -68,6 +76,7 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 		loginURL:    azureDefaultLoginURL,
 		redeemURL:   azureDefaultRedeemURL,
 		profileURL:  azureDefaultProfileURL,
+		groupURL:    azureDefaultGroupURL,
 		validateURL: nil,
 		scope:       azureDefaultScope,
 	})
@@ -176,19 +185,27 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 
 // EnrichSession finds the email to enrich the session state
 func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	if s.Email != "" {
-		return nil
+	if s.Email == "" {
+		email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
+		if err != nil {
+			return fmt.Errorf("unable to get email address: %v", err)
+		}
+		if email == "" {
+			return errors.New("unable to get email address")
+		}
+		s.Email = email
 	}
 
-	email, err := p.getEmailFromProfileAPI(ctx, s.AccessToken)
-	if err != nil {
-		return fmt.Errorf("unable to get email address: %v", err)
+	if len(s.Groups) == 0 {
+		groups, err := p.getGroupsFromGroupsAPI(ctx, s.AccessToken)
+		if err != nil {
+			return fmt.Errorf("unable to get groups: %v", err)
+		}
+		if len(groups) == 0 {
+			return errors.New("unable to get any groups")
+		}
+		s.Groups = groups
 	}
-	if email == "" {
-		return errors.New("unable to get email address")
-	}
-	s.Email = email
-
 	return nil
 }
 
@@ -338,6 +355,35 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 	}
 
 	return email, err
+}
+
+func getGroupsFromJSON(json *simplejson.Json) ([]string, error) {
+	var groups []string
+	for _, doc := range json.Get("value").MustArray() {
+		for k, v := range doc.(map[string]interface{}) {
+			if k == "displayName" {
+				groups = append(groups, v.(string))
+			}
+		}
+	}
+	return groups, nil
+}
+
+func (p *AzureProvider) getGroupsFromGroupsAPI(ctx context.Context, accessToken string) ([]string, error) {
+	if accessToken == "" {
+		return nil, errors.New("missing access token")
+	}
+
+	json, err := requests.New(p.GroupURL.String()).
+		WithContext(ctx).
+		WithHeaders(makeAzureHeader(accessToken)).
+		Do().
+		UnmarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	return getGroupsFromJSON(json)
 }
 
 func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
