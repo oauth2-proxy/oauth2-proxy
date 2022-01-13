@@ -373,17 +373,30 @@ func (p *AzureProvider) getGroupsFromGroupsAPI(ctx context.Context, accessToken 
 	if accessToken == "" {
 		return nil, errors.New("missing access token")
 	}
-
-	json, err := requests.New(p.GroupURL.String()).
-		WithContext(ctx).
-		WithHeaders(makeAzureHeader(accessToken)).
-		Do().
-		UnmarshalJSON()
-	if err != nil {
-		return nil, err
+	var url = p.GroupURL.String()
+	var groups []string
+	for url != "" {
+		logger.Printf("Calling Group API: %s", url)
+		json, err := requests.New(url).
+			WithContext(ctx).
+			WithHeaders(makeAzureHeader(accessToken)).
+			Do().
+			UnmarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		url, err = json.Get("@odata.nextLink").String()
+		if err != nil {
+			url = ""
+		}
+		groupsPage, err := getGroupsFromJSON(json)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, groupsPage...)
 	}
+	return groups, nil
 
-	return getGroupsFromJSON(json)
 }
 
 func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
