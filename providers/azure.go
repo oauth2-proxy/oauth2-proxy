@@ -190,9 +190,6 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 		if err != nil {
 			return fmt.Errorf("unable to get email address: %v", err)
 		}
-		if email == "" {
-			return errors.New("unable to get email address")
-		}
 		s.Email = email
 	}
 
@@ -200,9 +197,6 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 		groups, err := p.getGroupsFromGroupsAPI(ctx, s.AccessToken)
 		if err != nil {
 			return fmt.Errorf("unable to get groups: %v", err)
-		}
-		if len(groups) == 0 {
-			return errors.New("unable to get any groups")
 		}
 		s.Groups = groups
 	}
@@ -395,6 +389,9 @@ func (p *AzureProvider) getGroupsFromGroupsAPI(ctx context.Context, accessToken 
 		}
 		groups = append(groups, groupsPage...)
 	}
+	if len(groups) == 0 {
+		return groups, errors.New("unable to get any groups")
+	}
 	return groups, nil
 
 }
@@ -413,7 +410,12 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 		return "", err
 	}
 
-	return getEmailFromJSON(json)
+	email, err := getEmailFromJSON(json)
+	if email == "" && err == nil {
+		err = errors.New("unable to get email address")
+	}
+	return email, err
+
 }
 
 // ValidateSession validates the AccessToken
