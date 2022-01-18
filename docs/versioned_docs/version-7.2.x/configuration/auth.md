@@ -336,7 +336,7 @@ you may wish to configure an authorization server for each application. Otherwis
 
 The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com .
 The `client_id` and `client_secret` are configured in the application settings.
-Generate a unique `client_secret` to encrypt the cookie.
+Generate a unique `cookie_secret` to encrypt the cookie.
 
 Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.cfg`
 
