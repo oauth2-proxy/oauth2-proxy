@@ -389,10 +389,11 @@ func (p *AzureProvider) getGroupsFromGroupsAPI(ctx context.Context, accessToken 
 		}
 		groups = append(groups, groupsPage...)
 	}
+	var err error = nil
 	if len(groups) == 0 {
-		return groups, errors.New("unable to get any groups")
+		err = errors.New("unable to get any groups")
 	}
-	return groups, nil
+	return groups, err
 
 }
 
