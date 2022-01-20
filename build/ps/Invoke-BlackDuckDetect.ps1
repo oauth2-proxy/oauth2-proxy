@@ -1,5 +1,5 @@
 param(
-    $ProjectName = "EDI-FoundationLayer",
+    $ProjectName = "edifoundation-oauth2proxy",
     $ProjectVersionName = "1.0",
     $SourcePath,
     $BlackduckUrl = "https://blackduck.philips.com/",
