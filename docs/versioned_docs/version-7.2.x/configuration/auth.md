@@ -15,7 +15,6 @@ Valid providers are :
 - [Keycloak](#keycloak-auth-provider)
 - [GitLab](#gitlab-auth-provider)
 - [LinkedIn](#linkedin-auth-provider)
-- [Microsoft Azure AD](#microsoft-azure-ad-provider)
 - [OpenID Connect](#openid-connect-provider)
 - [login.gov](#logingov-provider)
 - [Nextcloud](#nextcloud-provider)
@@ -87,7 +86,7 @@ Note: The user is checked against the group members list on initial authenticati
    --oidc-issuer-url=https://sts.windows.net/{tenant-id}/
 ```
 
-Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) should resolve this.
+Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the `proxy_buffer_size` in nginx or implementing the [redis session storage](sessions.md#redis-storage) should resolve this.
 
 ### ADFS Auth Provider
 
@@ -192,7 +191,7 @@ Make sure you set the following to the appropriate url:
     --client-id=<your client's id>
     --client-secret=<your client's secret>
     --redirect-url=https://myapp.com/oauth2/callback
-    --oidc-issuer-url=https://<keycloak host>/auth/<your realm>/basic
+    --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
     --allowed-role=<realm role name> // Optional, required realm role
     --allowed-role=<client id>:<client role name> // Optional, required client role
 ```
@@ -233,12 +232,6 @@ For LinkedIn, the registration steps are:
     - In "OAuth 2.0 Redirect URLs", enter `https://internal.yourcompany.com/oauth2/callback`
 3.  Fill in the remaining required fields and Save.
 4.  Take note of the **Consumer Key / API Key** and **Consumer Secret / Secret Key**
-
-### Microsoft Azure AD Provider
-
-For adding an application to the Microsoft Azure AD follow [these steps to add an application](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app).
-
-Take note of your `TenantId` if applicable for your situation. The `TenantId` can be used to override the default `common` authorization server with a tenant specific server.
 
 ### OpenID Connect Provider
 
@@ -343,7 +336,7 @@ you may wish to configure an authorization server for each application. Otherwis
 
 The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com .
 The `client_id` and `client_secret` are configured in the application settings.
-Generate a unique `client_secret` to encrypt the cookie.
+Generate a unique `cookie_secret` to encrypt the cookie.
 
 Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.cfg`
 

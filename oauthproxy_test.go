@@ -26,6 +26,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -322,6 +323,7 @@ type PassAccessTokenTest struct {
 
 type PassAccessTokenTestOptions struct {
 	PassAccessToken bool
+	ValidToken      bool
 	ProxyUpstream   options.Upstream
 }
 
@@ -385,7 +387,9 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 	providerURL, _ := url.Parse(patt.providerServer.URL)
 	const emailAddress = "michael.bland@gsa.gov"
 
-	patt.opts.SetProvider(NewTestProvider(providerURL, emailAddress))
+	testProvider := NewTestProvider(providerURL, emailAddress)
+	testProvider.ValidToken = opts.ValidToken
+	patt.opts.SetProvider(testProvider)
 	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
 		return email == emailAddress
 	})
@@ -428,7 +432,11 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 
 	patTest.proxy.ServeHTTP(rw, req)
 
-	return rw.Code, rw.Header().Values("Set-Cookie")[1]
+	if len(rw.Header().Values("Set-Cookie")) >= 2 {
+		cookie = rw.Header().Values("Set-Cookie")[1]
+	}
+
+	return rw.Code, cookie
 }
 
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
@@ -470,6 +478,7 @@ func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoin
 func TestForwardAccessTokenUpstream(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
+		ValidToken:      true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -496,6 +505,7 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 func TestStaticProxyUpstream(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
+		ValidToken:      true,
 		ProxyUpstream: options.Upstream{
 			ID:     "static-proxy",
 			Path:   "/static-proxy",
@@ -526,6 +536,7 @@ func TestStaticProxyUpstream(t *testing.T) {
 func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: false,
+		ValidToken:      true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -546,6 +557,19 @@ func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 		t.Fatalf("expected 200; got %d", code)
 	}
 	assert.Equal(t, "No access token found.", payload)
+}
+
+func TestSessionValidationFailure(t *testing.T) {
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		ValidToken: false,
+	})
+	require.NoError(t, err)
+	t.Cleanup(patTest.Close)
+
+	// An unsuccessful validation will return 403 and not set the auth cookie.
+	code, cookie := patTest.getCallbackEndpoint()
+	assert.Equal(t, http.StatusForbidden, code)
+	assert.Equal(t, "", cookie)
 }
 
 type SignInPageTest struct {
