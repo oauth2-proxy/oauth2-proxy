@@ -138,31 +138,31 @@ type OIDCOptions struct {
 	// eg: https://accounts.google.com
 	IssuerURL string `json:"issuerURL,omitempty"`
 	// InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified
-	// default set to 'false'
+	// default set to 'false' when no other field in OIDCOptions has been overwritten
 	InsecureAllowUnverifiedEmail bool `json:"insecureAllowUnverifiedEmail,omitempty"`
 	// InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
-	// default set to 'false'
+	// default set to 'false' when no other field in OIDCOptions has been overwritten
 	InsecureSkipIssuerVerification bool `json:"insecureSkipIssuerVerification,omitempty"`
 	// InsecureSkipNonce skips verifying the ID Token's nonce claim that must match
 	// the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked
 	// after the initial OAuth redeem & subsequent token refreshes.
-	// default set to 'true'
+	// default set to 'true' when no other field in OIDCOptions has been overwritten
 	// Warning: In a future release, this will change to 'false' by default for enhanced security.
 	InsecureSkipNonce bool `json:"insecureSkipNonce,omitempty"`
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
-	// default set to 'false'
+	// default set to 'false'  when no other field in OIDCOptions has been overwritten
 	SkipDiscovery bool `json:"skipDiscovery,omitempty"`
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `json:"jwksURL,omitempty"`
 	// EmailClaim indicates which claim contains the user email,
-	// default set to 'email'
+	// default set to 'email' when no other field in OIDCOptions has been overwritten
 	EmailClaim string `json:"emailClaim,omitempty"`
 	// GroupsClaim indicates which claim contains the user groups
-	// default set to 'groups'
+	// default set to 'groups' when no other field in OIDCOptions has been overwritten
 	GroupsClaim string `json:"groupsClaim,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
-	// default set to 'email'
+	// default set to 'email' when no other field in OIDCOptions has been overwritten
 	UserIDClaim string `json:"userIDClaim,omitempty"`
 }
 
