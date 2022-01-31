@@ -6,6 +6,24 @@
 
 ## Breaking Changes
 
+## Changes since v7.2.1
+
+- [#1477](https://github.com/oauth2-proxy/oauth2-proxy/pull/1477) Remove provider documentation for `Microsoft Azure AD` (@omBratteng)
+
+# V7.2.1
+
+## Release Highlights
+
+This release contains a number of bug and security fixes, but has no feature additions.
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.2.0
 
 - [#1247](https://github.com/oauth2-proxy/oauth2-proxy/pull/1247) Use `upn` claim consistently in ADFSProvider (@NickMeves)
