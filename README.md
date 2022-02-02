@@ -59,3 +59,18 @@ If you would like to reach out to the maintainers, come talk to us in the `#oaut
 ## Contributing
 
 Please see our [Contributing](CONTRIBUTING.md) guidelines. For releasing see our [release creation guide](RELEASE.md).
+
+## Olcod building
+```
+docker build \
+    -t olcod/oauth2-proxy:debug \
+    --build-arg VERSION=1.15 \
+    --build-arg TARGETPLATFORM=linux/amd64 \
+    --build-arg BUILDPLATFORM=linux/amd64 . && \
+docker push olcod/oauth2-proxy:debug
+```
+
+**Or better yet, use `docker-compose` file:**
+```
+docker-compose build local
+docker-compose push local

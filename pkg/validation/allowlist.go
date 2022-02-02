@@ -30,6 +30,7 @@ func validateAllowlists(o *options.Options) []string {
 // validateRoutes validates method=path routes passed with options.SkipAuthRoutes
 func validateRoutes(o *options.Options) []string {
 	msgs := []string{}
+	// fmt.Sprintf("[OLCOD]: Validating routes ...")
 	for _, route := range o.SkipAuthRoutes {
 		var regex string
 		parts := strings.SplitN(route, "=", 2)

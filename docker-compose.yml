@@ -1,0 +1,19 @@
+version: '3'
+services:
+  local:
+    image: olcod/oauth2-proxy:debug
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+      args:
+        - VERSION=1.15
+        - TARGETPLATFORM=linux/amd64
+        - BUILDPLATFORM=linux/amd64
+
+  golang:
+    image: golang:1.16-buster
+    volumes:
+      - ./:/work
+    working_dir: /work
+    entrypoint: /bin/sh

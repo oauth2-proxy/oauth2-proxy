@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
@@ -505,17 +506,55 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 // IsAllowedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.isTrustedIP(req)
+	// if isPreflightRequestAllowed == false {
+	// 	logger.Printf("[OLCOD]: Preflight requests are not allowed")
+	// }
+
+	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.hasValidBearerToken(req) || p.isTrustedIP(req)
 }
 
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
+	logger.Printf("[OLCOD]: Checking if the requst is allowed")
+	// logger.Printf("%v", req)
+	// logger.Printf("%v", p.allowedRoutes)
+	logger.Printf("[OLCOD] Request path: %v", req.URL.Path)
+
 	for _, route := range p.allowedRoutes {
 		if (route.method == "" || req.Method == route.method) && route.pathRegex.MatchString(req.URL.Path) {
 			return true
 		}
 	}
 	return false
+}
+
+func (p *OAuthProxy) hasValidBearerToken (req *http.Request) bool {
+	// logger.Printf("[OLCOD] Will check the bearer token here")
+	logger.Printf("[OLCOD] Authorization header: %v", req.Header.Get("Authorization"))
+
+	authorization := req.Header.Get("Authorization")
+	if (authorization == "") {
+		return false
+	}
+	splitToken := strings.Split(authorization, "Bearer ")
+	token, err := jwt.Parse(splitToken[1], func(t *jwt.Token) (interface{}, error) {
+		return []byte("dev_secret"), nil
+	})
+
+	if (err == nil) {
+		logger.Errorf("[ERROR]: %v", err)
+		return false
+	}
+
+	// logger.Printf("[OLCOD]: %v", splitToken)
+	logger.Printf("[OLCOD]: %v", token)
+	logger.Printf("[OLCOD]: %v", token.Valid)
+	logger.Printf("[OLCOD]: %v", token.Header)
+	logger.Printf("[OLCOD]: %v", token.Claims)
+	logger.Printf("[OLCOD]: %v", token.Claims.Valid())
+	// logger.Printf("[OLCOD]: %v", err)
+
+	return true
 }
 
 // isTrustedIP is used to check if a request comes from a trusted client IP address.
@@ -944,6 +983,10 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	// Check this after loading the session so that if a valid session exists, we can add headers from it
 	if p.IsAllowedRequest(req) {
 		return session, nil
+		// logger.Printf("[DEBUG]: Request is ALLOWED")
+		// logger.Printf("[DEBUG]: ===============")
+		// logger.Printf("[DEBUG]: %v", req)
+		// logger.Printf("[DEBUG]: ===============")
 	}
 
 	if session == nil {
