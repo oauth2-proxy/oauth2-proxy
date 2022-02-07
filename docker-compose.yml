@@ -1,15 +1,16 @@
 version: '3'
 services:
   local:
-    image: olcod/oauth2-proxy:debug
+    image: quay.io/intellihr/lapis-oauth2-proxy:latest
     build:
       context: .
       dockerfile: Dockerfile
-
       args:
         - VERSION=1.15
         - TARGETPLATFORM=linux/amd64
         - BUILDPLATFORM=linux/amd64
+    environment:
+      - JWT_SECRET=dev_secret
 
   golang:
     image: golang:1.16-buster
