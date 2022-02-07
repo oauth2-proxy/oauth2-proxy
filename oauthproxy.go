@@ -521,29 +521,31 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 }
 
 func (p *OAuthProxy) hasValidBearerToken (req *http.Request) bool {
+	res := true
+
 	authorization := req.Header.Get("Authorization")
-	if (authorization == "") {
+	if (authorization != "") {
+		jwtSecret, jwtSecretOk := os.LookupEnv("JWT_SECRET")
+		if (jwtSecretOk) {
+			splitToken := strings.Split(authorization, "Bearer ")
+			_, err := jwt.Parse(splitToken[1], func(t *jwt.Token) (interface{}, error) {
+				return []byte(jwtSecret), nil
+			})
+
+			if (err != nil) {
+				logger.Errorf("[ERROR]: %v", err)
+				res = false
+			}
+		} else {
+			logger.Errorf("[ERROR]: JWT_SECRET env variable is not provided")
+			res = false
+		}
+	} else {
 		logger.Errorf("[ERROR]: Authentication header is not provided")
-		return false
-	}
-	
-	jwtSecret, jwtSecretOk := os.LookupEnv("JWT_SECRET")
-	if (!jwtSecretOk) {
-		logger.Errorf("[ERROR]: JWT_SECRET env variable is not provided")
-		return false
+		res = false
 	}
 
-	splitToken := strings.Split(authorization, "Bearer ")
-	_, err := jwt.Parse(splitToken[1], func(t *jwt.Token) (interface{}, error) {
-		return []byte(jwtSecret), nil
-	})
-
-	if (err != nil) {
-		logger.Errorf("[ERROR]: %v", err)
-		return false
-	}
-
-	return true
+	return res
 }
 
 // isTrustedIP is used to check if a request comes from a trusted client IP address.
