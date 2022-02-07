@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	// "fmt"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -48,9 +47,6 @@ func stripParam(param, endpoint string) string {
 
 // validateToken returns true if token is valid
 func validateToken(ctx context.Context, p Provider, accessToken string, header http.Header) bool {
-	// fmt.Printf(p.Data().ValidateURL.String())
-	// fmt.Printf(accessToken)
-
 	if accessToken == "" || p.Data().ValidateURL == nil || p.Data().ValidateURL.String() == "" {
 		return false
 	}

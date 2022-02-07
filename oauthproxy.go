@@ -527,14 +527,15 @@ func (p *OAuthProxy) hasValidBearerToken (req *http.Request) bool {
 		return false
 	}
 	
-	if (os.Getenv("JWT_SECRET") == nil) {
+	jwtSecret, jwtSecretOk := os.LookupEnv("JWT_SECRET")
+	if (!jwtSecretOk) {
 		logger.Errorf("[ERROR]: JWT_SECRET env variable is not provided")
 		return false
 	}
 
 	splitToken := strings.Split(authorization, "Bearer ")
-	token, err := jwt.Parse(splitToken[1], func(t *jwt.Token) (interface{}, error) {
-		return []byte(os.Getenv("JWT_SECRET")), nil
+	_, err := jwt.Parse(splitToken[1], func(t *jwt.Token) (interface{}, error) {
+		return []byte(jwtSecret), nil
 	})
 
 	if (err != nil) {
@@ -971,10 +972,6 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	// Check this after loading the session so that if a valid session exists, we can add headers from it
 	if p.IsAllowedRequest(req) {
 		return session, nil
-		// logger.Printf("[DEBUG]: Request is ALLOWED")
-		// logger.Printf("[DEBUG]: ===============")
-		// logger.Printf("[DEBUG]: %v", req)
-		// logger.Printf("[DEBUG]: ===============")
 	}
 
 	if session == nil {

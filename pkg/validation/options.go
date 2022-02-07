@@ -153,7 +153,6 @@ func Validate(o *options.Options) error {
 			var jwtIssuers []jwtIssuer
 			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
 			for _, jwtIssuer := range jwtIssuers {
-				// logger.Print("Got here")
 				verifier, err := newVerifierFromJwtIssuer(jwtIssuer)
 				if err != nil {
 					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
