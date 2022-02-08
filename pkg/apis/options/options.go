@@ -9,6 +9,11 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const (
+	CodeChallengeMethodPlain = "plain"
+	CodeChallengeMethodS256  = "S256"
+)
+
 // SignatureData holds hmacauth signature hash and key
 type SignatureData struct {
 	Hash crypto.Hash

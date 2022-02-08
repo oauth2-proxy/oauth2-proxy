@@ -235,7 +235,7 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 	defer pubjwkserver.Close()
 
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
 	assert.NoError(t, err)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "timothy.spencer@gsa.gov", session.Email)
@@ -329,7 +329,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 	p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 	defer pubjwkserver.Close()
 
-	_, err = p.Redeem(context.Background(), "http://redirect/", "code1234")
+	_, err = p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
 
 	// The "badfakenonce" in the idtoken above should cause this to error out
 	assert.Error(t, err)
@@ -337,7 +337,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 
 func TestLoginGovProviderGetLoginURL(t *testing.T) {
 	p, _, _ := newLoginGovProvider()
-	result := p.GetLoginURL("http://redirect/", "", "", url.Values{})
+	result := p.GetLoginURL("http://redirect/", "", "", "", "", url.Values{})
 	assert.Contains(t, result, "acr_values="+url.QueryEscape("http://idmanagement.gov/ns/assurance/loa/1"))
 	assert.Contains(t, result, "nonce=fakenonce")
 }

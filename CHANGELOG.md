@@ -2,6 +2,10 @@
 
 ## Release Highlights
 
+- [#1361](https://github.com/oauth2-proxy/oauth2-proxy/issues/1361) PKCE Code Challenge Support - RFC-7636 (@braunsonm)
+  - The `--force-code-challenge-method` flag can be used when the providers discovery document does not advertise PKCE support.
+- Parital support for OAuth2 Authorization Server Metadata for detecting code challenge methods (@braunsonm)
+
 ## Important Notes
 
 ## Breaking Changes

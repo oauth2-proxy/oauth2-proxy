@@ -33,13 +33,16 @@ var (
 )
 
 // GetLoginURL with typical oauth parameters
-func (p *ProviderData) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
-	loginURL := makeLoginURL(p, redirectURI, state, extraParams)
+// codeChallenge and codeChallengeMethod are the PKCE challenge and method to append to the URL params.
+//   they will be empty strings if no code challenge should be presented
+func (p *ProviderData) GetLoginURL(redirectURI, state, _, codeChallenge, codeChallengeMethod string, extraParams url.Values) string {
+	loginURL := makeLoginURL(p, redirectURI, state, codeChallenge, codeChallengeMethod, extraParams)
 	return loginURL.String()
 }
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+// The codeVerifier is set if a code_verifier parameter should be sent for PKCE
+func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -54,6 +57,9 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*s
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}

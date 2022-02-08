@@ -104,6 +104,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
 | `--force-json-errors` | bool | force JSON errors instead of HTTP error pages or redirects | `false` |
+| `--force-code-challenge-method` | will force PKCE code challenges with the specified method (if not automatically detected by the discovery document). Either 'plain' or 'S256' | |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
 | `--footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
 | `--github-org` | string | restrict logins to members of this organisation | |

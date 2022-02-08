@@ -96,12 +96,14 @@ func TestOIDCProviderGetLoginURL(t *testing.T) {
 	nonce := base64.RawURLEncoding.EncodeToString(n)
 
 	// SkipNonce defaults to true
-	skipNonce := provider.GetLoginURL("http://redirect/", "", nonce, url.Values{})
+	skipNonce := provider.GetLoginURL("http://redirect/", "", nonce, "", "", url.Values{})
 	assert.NotContains(t, skipNonce, "nonce")
 
 	provider.SkipNonce = false
-	withNonce := provider.GetLoginURL("http://redirect/", "", nonce, url.Values{})
+	withNonce := provider.GetLoginURL("http://redirect/", "", nonce, "", "", url.Values{})
 	assert.Contains(t, withNonce, fmt.Sprintf("nonce=%s", nonce))
+	assert.NotContains(t, withNonce, "code_challenge")
+	assert.NotContains(t, withNonce, "code_challenge_method")
 }
 
 func TestOIDCProviderRedeem(t *testing.T) {
@@ -117,7 +119,7 @@ func TestOIDCProviderRedeem(t *testing.T) {
 	server, provider := newTestOIDCSetup(body)
 	defer server.Close()
 
-	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Email, session.Email)
 	assert.Equal(t, accessToken, session.AccessToken)
@@ -140,7 +142,7 @@ func TestOIDCProviderRedeem_custom_userid(t *testing.T) {
 	provider.EmailClaim = "phone_number"
 	defer server.Close()
 
-	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234")
+	session, err := provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, defaultIDToken.Phone, session.Email)
 }

@@ -34,19 +34,24 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 var _ Provider = (*OIDCProvider)(nil)
 
 // GetLoginURL makes the LoginURL with optional nonce support
-func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string, extraParams url.Values) string {
+func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce, codeChallenge, codeChallengeMethod string, extraParams url.Values) string {
 	if !p.SkipNonce {
 		extraParams.Add("nonce", nonce)
 	}
-	loginURL := makeLoginURL(p.Data(), redirectURI, state, extraParams)
+	loginURL := makeLoginURL(p.Data(), redirectURI, state, codeChallenge, codeChallengeMethod, extraParams)
 	return loginURL.String()
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return nil, err
+	}
+
+	var opts []oauth2.AuthCodeOption
+	if codeVerifier != "" {
+		opts = append(opts, oauth2.SetAuthURLParam("code_verifier", codeVerifier))
 	}
 
 	c := oauth2.Config{
@@ -57,7 +62,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*s
 		},
 		RedirectURL: redirectURL,
 	}
-	token, err := c.Exchange(ctx, code)
+	token, err := c.Exchange(ctx, code, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}

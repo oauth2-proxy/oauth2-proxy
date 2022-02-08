@@ -115,7 +115,7 @@ func Test_redeemCode(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	_, err = proxy.redeemCode(req)
+	_, err = proxy.redeemCode(req, "")
 	assert.Equal(t, providers.ErrMissingCode, err)
 }
 
@@ -242,7 +242,8 @@ func TestBasicAuthPassword(t *testing.T) {
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/", nil)
 	err = proxy.sessionStore.Save(rw, req, &sessions.SessionState{
-		Email: emailAddress,
+		Email:         emailAddress,
+		Authenticated: true,
 	})
 	assert.NoError(t, err)
 
@@ -285,11 +286,12 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 	groups := []string{"a", "b"}
 	created := time.Now()
 	session := &sessions.SessionState{
-		User:        userName,
-		Groups:      groups,
-		Email:       emailAddress,
-		AccessToken: "oauth_token",
-		CreatedAt:   &created,
+		User:          userName,
+		Groups:        groups,
+		Email:         emailAddress,
+		AccessToken:   "oauth_token",
+		CreatedAt:     &created,
+		Authenticated: true,
 	}
 
 	proxy, err := NewOAuthProxy(opts, func(email string) bool {
@@ -930,28 +932,31 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 		{
 			name: "Full session",
 			session: &sessions.SessionState{
-				User:        "john.doe",
-				Email:       "john.doe@example.com",
-				Groups:      []string{"example", "groups"},
-				AccessToken: "my_access_token",
+				User:          "john.doe",
+				Email:         "john.doe@example.com",
+				Groups:        []string{"example", "groups"},
+				AccessToken:   "my_access_token",
+				Authenticated: true,
 			},
 			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"]}\n",
 		},
 		{
 			name: "Minimal session",
 			session: &sessions.SessionState{
-				User:   "john.doe",
-				Email:  "john.doe@example.com",
-				Groups: []string{"example", "groups"},
+				User:          "john.doe",
+				Email:         "john.doe@example.com",
+				Groups:        []string{"example", "groups"},
+				Authenticated: true,
 			},
 			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"]}\n",
 		},
 		{
 			name: "No groups",
 			session: &sessions.SessionState{
-				User:        "john.doe",
-				Email:       "john.doe@example.com",
-				AccessToken: "my_access_token",
+				User:          "john.doe",
+				Email:         "john.doe@example.com",
+				AccessToken:   "my_access_token",
+				Authenticated: true,
 			},
 			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\"}\n",
 		},
@@ -963,6 +968,7 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 				Email:             "john.doe@example.com",
 				Groups:            []string{"example", "groups"},
 				AccessToken:       "my_access_token",
+				Authenticated:     true,
 			},
 			expectedResponse: "{\"user\":\"john.doe\",\"email\":\"john.doe@example.com\",\"groups\":[\"example\",\"groups\"],\"preferredUsername\":\"john\"}\n",
 		},
@@ -1024,7 +1030,7 @@ func TestAuthOnlyEndpointAccepted(t *testing.T) {
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
-		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &created}
+		Email: "michael.bland@gsa.gov", AccessToken: "my_access_token", CreatedAt: &created, Authenticated: true}
 	err = test.SaveSession(startSession)
 	assert.NoError(t, err)
 
@@ -1154,7 +1160,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Groups: []string{"oauth_groups"}, Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
+		User: "oauth_user", Groups: []string{"oauth_groups"}, Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created, Authenticated: true}
 	err = pcTest.SaveSession(startSession)
 	assert.NoError(t, err)
 
@@ -1247,7 +1253,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
+		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created, Authenticated: true}
 	err = pcTest.SaveSession(startSession)
 	assert.NoError(t, err)
 
@@ -1327,7 +1333,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 
 	created := time.Now()
 	startSession := &sessions.SessionState{
-		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created}
+		User: "oauth_user", Email: "oauth_user@example.com", AccessToken: "oauth_token", CreatedAt: &created, Authenticated: true}
 	err = pcTest.SaveSession(startSession)
 	assert.NoError(t, err)
 
@@ -1502,7 +1508,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) er
 	req.Header = st.header
 
 	state := &sessions.SessionState{
-		Email: "mbland@acm.org", AccessToken: "my_access_token"}
+		Email: "mbland@acm.org", AccessToken: "my_access_token", Authenticated: true}
 	err = proxy.SaveSession(st.rw, req, state)
 	if err != nil {
 		return err
@@ -2451,10 +2457,11 @@ func TestProxyAllowedGroups(t *testing.T) {
 			created := time.Now()
 
 			session := &sessions.SessionState{
-				Groups:      tt.groups,
-				Email:       emailAddress,
-				AccessToken: "oauth_token",
-				CreatedAt:   &created,
+				Groups:        tt.groups,
+				Email:         emailAddress,
+				AccessToken:   "oauth_token",
+				CreatedAt:     &created,
+				Authenticated: true,
 			}
 
 			upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2587,10 +2594,11 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 			created := time.Now()
 
 			session := &sessions.SessionState{
-				Groups:      tc.groups,
-				Email:       emailAddress,
-				AccessToken: "oauth_token",
-				CreatedAt:   &created,
+				Groups:        tc.groups,
+				Email:         emailAddress,
+				AccessToken:   "oauth_token",
+				CreatedAt:     &created,
+				Authenticated: true,
 			}
 
 			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {
@@ -2683,10 +2691,11 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
 			if tc.withSession {
 				created := time.Now()
 				session := &sessions.SessionState{
-					Groups:      tc.groups,
-					Email:       "test",
-					AccessToken: "oauth_token",
-					CreatedAt:   &created,
+					Groups:        tc.groups,
+					Email:         "test",
+					AccessToken:   "oauth_token",
+					CreatedAt:     &created,
+					Authenticated: true,
 				}
 				err = test.SaveSession(session)
 			}
@@ -2769,10 +2778,11 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			created := time.Now()
 
 			session := &sessions.SessionState{
-				Groups:      groups,
-				Email:       tc.email,
-				AccessToken: "oauth_token",
-				CreatedAt:   &created,
+				Groups:        groups,
+				Email:         tc.email,
+				AccessToken:   "oauth_token",
+				CreatedAt:     &created,
+				Authenticated: true,
 			}
 
 			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {})

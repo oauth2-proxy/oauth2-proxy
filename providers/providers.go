@@ -11,11 +11,16 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
+const (
+	CodeChallengeMethodPlain = "plain"
+	CodeChallengeMethodS256  = "S256"
+)
+
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
-	GetLoginURL(redirectURI, finalRedirect string, nonce string, extraParams url.Values) string
-	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
+	GetLoginURL(redirectURI, finalRedirect, nonce, codeChallenge, codeChallengeMethod string, extraParams url.Values) string
+	Redeem(ctx context.Context, redirectURI, code, codeVerifier string) (*sessions.SessionState, error)
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
@@ -95,10 +100,12 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		if pv.DiscoveryEnabled() {
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
+			pkce := pv.Provider().PKCE()
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
 			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
+			providerConfig.CodeChallengeMethods = pkce.CodeChallengeAlgs
 		}
 	}
 
@@ -131,6 +138,9 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
 
+	// Set PKCE enabled or disabled based on discovery and force options
+	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
+
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option
 	if providerConfig.OIDCConfig.EmailClaim == options.OIDCEmailClaim &&
@@ -152,6 +162,28 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
 
 	return p, nil
+}
+
+func stringInSlice(element string, list []string) bool {
+	for _, x := range list {
+		if x == element {
+			return true
+		}
+	}
+	return false
+}
+
+// Pick the most appropriate code challenge method for PKCE
+func parseCodeChallengeMethod(providerConfig options.Provider) string {
+	switch {
+	case providerConfig.ForceCodeChallengeMethod != "":
+		return providerConfig.ForceCodeChallengeMethod
+	case providerConfig.CodeChallengeMethods == nil:
+		return ""
+	case stringInSlice(CodeChallengeMethodS256, providerConfig.CodeChallengeMethods):
+		return CodeChallengeMethodS256
+	}
+	return CodeChallengeMethodPlain
 }
 
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {

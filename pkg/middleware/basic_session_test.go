@@ -75,8 +75,8 @@ var _ = Describe("Basic Auth Session Suite", func() {
 			}),
 			Entry("abcdef (with existing session)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
-				existingSession:     &sessionsapi.SessionState{User: "user"},
-				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				existingSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
+				expectedSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
 			}),
 			Entry("Bearer <password>", basicAuthSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", adminPassword),
@@ -90,13 +90,13 @@ var _ = Describe("Basic Auth Session Suite", func() {
 			}),
 			Entry("Basic Base64(:<password>) (with existing session)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic OlVzRXJPbjNQNDU1",
-				existingSession:     &sessionsapi.SessionState{User: "user"},
-				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				existingSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
+				expectedSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
 			}),
 			Entry("Basic Base64(user1:<user1Password>)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic dXNlcjE6VXNFck9uM1A0NTU=",
 				existingSession:     nil,
-				expectedSession:     &sessionsapi.SessionState{User: "user1"},
+				expectedSession:     &sessionsapi.SessionState{User: "user1", Authenticated: true},
 			}),
 			Entry("Basic Base64(user2:<user1Password>)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic dXNlcjI6VXNFck9uM1A0NTU=",
@@ -106,24 +106,24 @@ var _ = Describe("Basic Auth Session Suite", func() {
 			Entry("Basic Base64(user2:<user2Password>)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic dXNlcjI6dXMzcjJQNDU1VzBSZCE=",
 				existingSession:     nil,
-				expectedSession:     &sessionsapi.SessionState{User: "user2"},
+				expectedSession:     &sessionsapi.SessionState{User: "user2", Authenticated: true},
 			}),
 			Entry("Basic Base64(admin:<adminPassword>)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic YWRtaW46QWRtMW4xc3RyJHQwcg==",
 				existingSession:     nil,
-				expectedSession:     &sessionsapi.SessionState{User: "admin"},
+				expectedSession:     &sessionsapi.SessionState{User: "admin", Authenticated: true},
 			}),
 			Entry("Basic with groups", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic YWRtaW46QWRtMW4xc3RyJHQwcg==",
 				sessionGroups:       []string{"a", "b"},
 				existingSession:     nil,
-				expectedSession:     &sessionsapi.SessionState{User: "admin", Groups: []string{"a", "b"}},
+				expectedSession:     &sessionsapi.SessionState{User: "admin", Groups: []string{"a", "b"}, Authenticated: true},
 			}),
 			Entry("Basic Base64(user1:<user1Password>) (with PreferEmailToUser)", basicAuthSessionLoaderTableInput{
 				authorizationHeader: "Basic dXNlcjE6VXNFck9uM1A0NTU=",
 				preferEmail:         true,
 				existingSession:     nil,
-				expectedSession:     &sessionsapi.SessionState{User: "user1", Email: "user1"},
+				expectedSession:     &sessionsapi.SessionState{User: "user1", Email: "user1", Authenticated: true},
 			}),
 		)
 	})

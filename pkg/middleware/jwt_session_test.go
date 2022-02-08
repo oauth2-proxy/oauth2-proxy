@@ -62,11 +62,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 	var verifiedSessionExpiry = time.Unix(1912151821, 0)
 	var verifiedSession = &sessionsapi.SessionState{
-		AccessToken: verifiedToken,
-		IDToken:     verifiedToken,
-		Email:       "john@example.com",
-		User:        "1234567890",
-		ExpiresOn:   &verifiedSessionExpiry,
+		AccessToken:   verifiedToken,
+		IDToken:       verifiedToken,
+		Email:         "john@example.com",
+		User:          "1234567890",
+		ExpiresOn:     &verifiedSessionExpiry,
+		Authenticated: true,
 	}
 
 	// validToken will pass the token regex so can be used to check token fetching
@@ -133,8 +134,8 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("abcdef  (with existing session)", jwtSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
-				existingSession:     &sessionsapi.SessionState{User: "user"},
-				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				existingSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
+				expectedSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
 			}),
 			Entry("Bearer <verifiedToken>", jwtSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
@@ -148,8 +149,8 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("Bearer <verifiedToken> (with existing session)", jwtSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
-				existingSession:     &sessionsapi.SessionState{User: "user"},
-				expectedSession:     &sessionsapi.SessionState{User: "user"},
+				existingSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
+				expectedSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
 			}),
 			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", jwtSessionLoaderTableInput{
 				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",

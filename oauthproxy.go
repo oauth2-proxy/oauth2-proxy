@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -280,6 +284,7 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	r := mux.NewRouter().UseEncodedPath()
 	// Everything served by the router must go through the preAuthChain first.
 	r.Use(p.preAuthChain.Then)
+	r.Use(p.sessionChain.Then)
 
 	// Register the robots path writer
 	r.Path(robotsPath).HandlerFunc(p.pageWriter.WriteRobotsTxt)
@@ -694,16 +699,46 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		return
 	}
 
+	var codeChallenge, codeVerifier, codeChallengeMethod string
+	if p.provider.Data().CodeChallengeMethod != "" {
+		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
+		codeVerifier, err = generateRandomString(128)
+		if err != nil {
+			logger.Errorf("Unable to build random string: %v", err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		codeChallenge, err = generateCodeChallenge(p.provider.Data().CodeChallengeMethod, codeVerifier)
+		if err != nil {
+			logger.Errorf("Error creating code challenge: %v", err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
 		encodeState(csrf.HashOAuthState(), appRedirect),
 		csrf.HashOIDCNonce(),
+		codeChallenge,
+		codeChallengeMethod,
 		extraParams,
 	)
 
 	if _, err := csrf.SetCookie(rw, req); err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// A session is created with `Authenticated: false` to store the code verifier
+	// for token redemption
+	session := &sessionsapi.SessionState{CodeVerifier: codeVerifier}
+	err = p.SaveSession(rw, req, session)
+	if err != nil {
+		logger.Errorf("Error saving session state for %s: %v", req.RemoteAddr, err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -732,7 +767,22 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, err := p.redeemCode(req)
+	session := middlewareapi.GetRequestScope(req).Session
+	var codeVerifier string
+	if session == nil {
+		logger.Errorf("Error retrieving session containing code verifier")
+		if p.provider.Data().CodeChallengeMethod != "" {
+			// Only error the whole callback if code verifier is required
+			p.ErrorPage(rw, req, http.StatusInternalServerError, "")
+			return
+		}
+	} else {
+		codeVerifier = session.CodeVerifier
+	}
+
+	logger.Printf("Test %s", p.provider.Data().CodeChallengeMethod)
+	logger.Printf("Test2 %s", codeVerifier)
+	session, err = p.redeemCode(req, codeVerifier)
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -799,14 +849,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (p *OAuthProxy) redeemCode(req *http.Request) (*sessionsapi.SessionState, error) {
+func (p *OAuthProxy) redeemCode(req *http.Request, codeVerifier string) (*sessionsapi.SessionState, error) {
 	code := req.Form.Get("code")
 	if code == "" {
 		return nil, providers.ErrMissingCode
 	}
 
 	redirectURI := p.getOAuthRedirectURI(req)
-	s, err := p.provider.Redeem(req.Context(), redirectURI, code)
+	s, err := p.provider.Redeem(req.Context(), redirectURI, code, codeVerifier)
 	if err != nil {
 		return nil, err
 	}
@@ -818,8 +868,41 @@ func (p *OAuthProxy) redeemCode(req *http.Request) (*sessionsapi.SessionState, e
 	if s.ExpiresOn == nil {
 		s.ExpiresIn(p.CookieOptions.Expire)
 	}
+	s.Authenticated = true
 
 	return s, nil
+}
+
+func generateCodeChallenge(method, codeVerifier string) (string, error) {
+	switch method {
+	case options.CodeChallengeMethodPlain:
+		return codeVerifier, nil
+	case options.CodeChallengeMethodS256:
+		shaSum := sha256.Sum256([]byte(codeVerifier))
+		return base64.RawURLEncoding.EncodeToString(shaSum[:]), nil
+	default:
+		return "", fmt.Errorf("unknown challenge method: %v", method)
+	}
+}
+
+const runes string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_~"
+
+// generateRandomString returns a securely generated random ASCII string.
+// It reads random numbers from crypto/rand and searches for printable characters.
+// It will return an error if the system's secure random number generator fails to
+// function correctly, in which case the caller must not continue.
+// From: https://gist.github.com/dopey/c69559607800d2f2f90b1b1ed4e550fb
+func generateRandomString(n int) (string, error) {
+	ret := make([]byte, n)
+	for i := 0; i < n; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
+		if err != nil {
+			return "", err
+		}
+		ret[i] = runes[num.Int64()]
+	}
+
+	return string(ret), nil
 }
 
 func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
@@ -963,7 +1046,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return session, nil
 	}
 
-	if session == nil {
+	if session == nil || !session.Authenticated {
 		return nil, ErrNeedsLogin
 	}
 

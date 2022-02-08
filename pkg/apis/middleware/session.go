@@ -51,6 +51,7 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 			IDToken:           token,
 			RefreshToken:      "",
 			ExpiresOn:         &idToken.Expiry,
+			Authenticated:     true,
 		}
 
 		return newSession, nil

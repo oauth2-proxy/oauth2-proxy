@@ -202,7 +202,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*sessions.SessionState, error) {
+func (p *LoginGovProvider) Redeem(ctx context.Context, _, code, codeVerifier string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -225,6 +225,9 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*session
 	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
 
 	// Get the token from the body that we got from the token endpoint.
 	var jsonResponse struct {
@@ -270,13 +273,13 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*session
 }
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
-func (p *LoginGovProvider) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
+func (p *LoginGovProvider) GetLoginURL(redirectURI, state, _, codeChallenge, codeChallengeMethod string, extraParams url.Values) string {
 	if len(extraParams["acr_values"]) == 0 {
 		acr := "http://idmanagement.gov/ns/assurance/loa/1"
 		extraParams.Add("acr_values", acr)
 	}
 	extraParams.Add("nonce", p.Nonce)
-	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
+	a := makeLoginURL(p.ProviderData, redirectURI, state, codeChallenge, codeChallengeMethod, extraParams)
 	return a.String()
 }
 

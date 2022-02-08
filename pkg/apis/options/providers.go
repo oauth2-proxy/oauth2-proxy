@@ -76,6 +76,10 @@ type Provider struct {
 	Scope string `json:"scope,omitempty"`
 	// AllowedGroups is a list of restrict logins to members of this group
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
+	// Code challenge methods supported by the Provider
+	CodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
+	// The forced code challenge method
+	ForceCodeChallengeMethod string `json:"force_chode_challenge_method,omitempty"`
 }
 
 // ProviderType is used to enumerate the different provider type options

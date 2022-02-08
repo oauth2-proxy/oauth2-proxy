@@ -326,7 +326,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 			bURL, _ := url.Parse(b.URL)
 			p := testAzureProvider(bURL.Host, options.AzureOptions{})
 			p.Data().RedeemURL.Path = "/common/oauth2/token"
-			s, err := p.Redeem(context.Background(), "https://localhost", "1234")
+			s, err := p.Redeem(context.Background(), "https://localhost", "1234", "123")
 			if testCase.InjectRedeemURLError {
 				assert.NotNil(t, err)
 			} else {
@@ -348,7 +348,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
 	p := testAzureProvider("", options.AzureOptions{})
 	p.ProtectedResource, _ = url.Parse("http://my.resource.test")
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", "", "", url.Values{})
 	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
 }
 

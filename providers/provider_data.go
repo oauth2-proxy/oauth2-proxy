@@ -27,16 +27,17 @@ const (
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
 type ProviderData struct {
-	ProviderName      string
-	LoginURL          *url.URL
-	RedeemURL         *url.URL
-	ProfileURL        *url.URL
-	ProtectedResource *url.URL
-	ValidateURL       *url.URL
-	ClientID          string
-	ClientSecret      string
-	ClientSecretFile  string
-	Scope             string
+	ProviderName        string
+	LoginURL            *url.URL
+	RedeemURL           *url.URL
+	ProfileURL          *url.URL
+	ProtectedResource   *url.URL
+	ValidateURL         *url.URL
+	ClientID            string
+	ClientSecret        string
+	ClientSecretFile    string
+	Scope               string
+	CodeChallengeMethod string // Although multiple methods may be supported, we pick the most secure
 
 	// Common OIDC options for any OIDC-based providers to consume
 	AllowUnverifiedEmail bool

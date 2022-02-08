@@ -103,17 +103,17 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
-func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
+func (p *AzureProvider) GetLoginURL(redirectURI, state, _, codeChallenge, codeChallengeMethod string, extraParams url.Values) string {
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		extraParams.Add("resource", p.ProtectedResource.String())
 	}
-	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
+	a := makeLoginURL(p.ProviderData, redirectURI, state, codeChallenge, codeChallengeMethod, extraParams)
 	return a.String()
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
-	params, err := p.prepareRedeem(redirectURL, code)
+func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	params, err := p.prepareRedeem(redirectURL, code, codeVerifier)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 	return nil
 }
 
-func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, error) {
+func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (url.Values, error) {
 	params := url.Values{}
 	if code == "" {
 		return params, ErrMissingCode
@@ -202,6 +202,9 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}
