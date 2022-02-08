@@ -2594,3 +2594,92 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
+	testCases := []struct {
+		name               string
+		groups             []string
+		method             string
+		ip                 string
+		withSession        bool
+		expectedStatusCode int
+	}{
+		{
+			name:               "UserWithGroupSkipAuthPreflight",
+			groups:             []string{"a", "c"},
+			method:             "OPTIONS",
+			ip:                 "1.2.3.5:43670",
+			withSession:        true,
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserWithGroupTrustedIp",
+			groups:             []string{"a", "c"},
+			method:             "GET",
+			ip:                 "1.2.3.4:43670",
+			withSession:        true,
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserWithoutGroupSkipAuthPreflight",
+			groups:             []string{"c"},
+			method:             "OPTIONS",
+			ip:                 "1.2.3.5:43670",
+			withSession:        true,
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserWithoutGroupTrustedIp",
+			groups:             []string{"c"},
+			method:             "GET",
+			ip:                 "1.2.3.4:43670",
+			withSession:        true,
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserWithoutSessionSkipAuthPreflight",
+			method:             "OPTIONS",
+			ip:                 "1.2.3.5:43670",
+			withSession:        false,
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserWithoutSessionTrustedIp",
+			method:             "GET",
+			ip:                 "1.2.3.4:43670",
+			withSession:        false,
+			expectedStatusCode: http.StatusAccepted,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewAuthOnlyEndpointTest("?allowed_groups=a,b", func(opts *options.Options) {
+				opts.SkipAuthPreflight = true
+				opts.TrustedIPs = []string{"1.2.3.4"}
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			test.req.Method = tc.method
+			test.req.RemoteAddr = tc.ip
+
+			if tc.withSession {
+				created := time.Now()
+				session := &sessions.SessionState{
+					Groups:      tc.groups,
+					Email:       "test",
+					AccessToken: "oauth_token",
+					CreatedAt:   &created,
+				}
+				err = test.SaveSession(session)
+			}
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
