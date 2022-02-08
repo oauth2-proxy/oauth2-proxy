@@ -34,3 +34,17 @@ X-Auth-Request-Redirect: https://my-oidc-provider/sign_out_page
 (The "sign_out_page" should be the [`end_session_endpoint`](https://openid.net/specs/openid-connect-session-1_0.html#rfc.section.2.1) from [the metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) if your OIDC provider supports Session Management and Discovery.)
 
 BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` in the example) must be added to the [`--whitelist-domain`](../configuration/overview) configuration option otherwise the redirect will be ignored.
+
+### Auth-only allowed_groups query string
+
+The /oauth2/auth endpoint supports a query string `allowed_groups` that can be used to further limit users by their assigned groups on a per location or hostname level from one oauth2-proxy instance.
+
+This can be provided as a list via both or either `?allowed_groups=frontend,backend` or `?allowed_groups=frontend&allowed_groups=backend` format
+
+This also can be paired with the global `allowed_groups` setting, which then requires the user to be in both lists to not get a 401 or 403 response code.
+
+- Example:
+  - OAuth2-Proxy globally sets the `allowed_groups` as `engineering`.
+  - An application using Kubernetes ingress uses the `/oauth2/auth` endpoint with `allowed_groups` querystring set to `backend`.
+  - A user must have a session with the groups `["engineering", "backend"]` to pass authorization.
+  - Another user with the groups `["engineering", "frontend"]` would fail the querystring authorization portion.
