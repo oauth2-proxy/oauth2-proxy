@@ -71,6 +71,7 @@ providers:
   approvalPrompt: force
   azureConfig:
     tenant: common
+    domainhint: ""
   oidcConfig:
     groupsClaim: groups
     emailClaim: email
@@ -143,6 +144,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				ClientID:     "oauth2-proxy",
 				AzureConfig: options.AzureOptions{
 					Tenant: "common",
+					DomainHint: "",
 				},
 				OIDCConfig: options.OIDCOptions{
 					GroupsClaim:       "groups",

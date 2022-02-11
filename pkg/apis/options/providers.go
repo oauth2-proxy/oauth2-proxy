@@ -87,6 +87,8 @@ type AzureOptions struct {
 	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
 	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
+	// DomainHint sets up direct sign-in in selected identity provider
+	DomainHint string `json:"domainhint,omitempty"`
 }
 
 type ADFSOptions struct {
@@ -183,6 +185,7 @@ func providerDefaults() Providers {
 			ApprovalPrompt: "force",
 			AzureConfig: AzureOptions{
 				Tenant: "common",
+				DomainHint: "",
 			},
 			OIDCConfig: OIDCOptions{
 				InsecureAllowUnverifiedEmail: false,

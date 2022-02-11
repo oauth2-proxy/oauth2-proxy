@@ -138,6 +138,13 @@ func TestAzureSetTenant(t *testing.T) {
 	assert.Equal(t, "openid", p.Data().Scope)
 }
 
+func TestAzureSetDomainHint(t *testing.T) {
+	p := testAzureProvider("")
+	p.SetDomainHint("example.com")
+	assert.Equal(t, "Azure", p.Data().ProviderName)
+	assert.Equal(t, "example.com", p.DomainHint)
+}
+
 func testAzureBackend(payload string) *httptest.Server {
 	return testAzureBackendWithError(payload, false)
 }

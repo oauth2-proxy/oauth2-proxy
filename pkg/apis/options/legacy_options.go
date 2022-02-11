@@ -50,6 +50,7 @@ func NewLegacyOptions() *LegacyOptions {
 		LegacyProvider: LegacyProvider{
 			ProviderType:          "google",
 			AzureTenant:           "common",
+			AzureDomainHint:       "",
 			ApprovalPrompt:        "force",
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
@@ -474,6 +475,7 @@ type LegacyProvider struct {
 
 	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
 	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
+	AzureDomainHint          string   `flag:"azure-domainhint" cfg:"azure_domainhint"`
 	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
@@ -522,7 +524,8 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("provider", pflag.ExitOnError)
 
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
-	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
+	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint")
+	flagSet.String("azure-domainhint", "", "set domain_hint for direct sign-in")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
@@ -650,6 +653,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	// that needs to be added from legacy options
 	provider.AzureConfig = AzureOptions{
 		Tenant: l.AzureTenant,
+		DomainHint: l.AzureDomainHint,
 	}
 
 	switch provider.Type {

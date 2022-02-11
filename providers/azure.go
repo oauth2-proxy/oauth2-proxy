@@ -19,6 +19,7 @@ import (
 type AzureProvider struct {
 	*ProviderData
 	Tenant string
+	DomainHint string
 }
 
 var _ Provider = (*AzureProvider)(nil)
@@ -82,6 +83,7 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 	return &AzureProvider{
 		ProviderData: p,
 		Tenant:       "common",
+		DomainHint:   "",
 	}
 }
 
@@ -112,8 +114,21 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string) string {
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		extraParams.Add("resource", p.ProtectedResource.String())
 	}
+	if p.DomainHint != "" {
+		extraParams.Add("domain_hint", p.DomainHint)
+	}
 	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
 	return a.String()
+}
+
+// SetDomainHint sets up the domain_hint parameter for direct sign-in
+func (p *AzureProvider) SetDomainHint(domainhint string) {
+	if domainhint == "" {
+		// domainhint is empty
+		return
+	}
+	// Specific domainhint specified
+	p.DomainHint = domainhint
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token

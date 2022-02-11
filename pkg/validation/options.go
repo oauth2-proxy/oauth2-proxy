@@ -236,6 +236,7 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 	switch p := o.GetProvider().(type) {
 	case *providers.AzureProvider:
 		p.Configure(o.Providers[0].AzureConfig.Tenant)
+		p.SetDomainHint(o.Providers[0].AzureConfig.DomainHint)
 	case *providers.ADFSProvider:
 		p.Configure(o.Providers[0].ADFSConfig.SkipScope)
 	case *providers.GitHubProvider:
