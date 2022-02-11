@@ -250,7 +250,7 @@ To configure the OIDC provider for Dex, perform the following steps:
     go get github.com/dexidp/dex
     ```
 
-    See the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md) for more details.
+    See the [getting started guide](https://dexidp.io/docs/getting-started/) for more details.
 
 2. Setup oauth2-proxy with the correct provider and using the default ports and callbacks. Add a configuration block to the `staticClients` section of `examples/config-dev.yaml`:
 
