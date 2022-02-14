@@ -8,6 +8,7 @@
 
 ## Changes since v7.2.1
 
+- [#1554](https://github.com/oauth2-proxy/oauth2-proxy/pull/1465) Add Atlassian Cloud provider (@Alex-Sizov)
 - [#1489](https://github.com/oauth2-proxy/oauth2-proxy/pull/1489) Fix Docker Buildx push to include build version (@JoelSpeed)
 - [#1477](https://github.com/oauth2-proxy/oauth2-proxy/pull/1477) Remove provider documentation for `Microsoft Azure AD` (@omBratteng)
 - [#1509](https://github.com/oauth2-proxy/oauth2-proxy/pull/1509) Update LoginGovProvider ValidateSession to pass access_token in Header (@pksheldon4)
