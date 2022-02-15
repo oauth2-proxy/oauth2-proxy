@@ -161,7 +161,11 @@ func Validate(o *options.Options) error {
 			var jwtIssuers []jwtIssuer
 			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
 			for _, jwtIssuer := range jwtIssuers {
-				verifier, err := newVerifierFromJwtIssuer(o, jwtIssuer)
+				verifier, err := newVerifierFromJwtIssuer(
+					o.Providers[0].OIDCConfig.AudienceClaims,
+					o.Providers[0].OIDCConfig.ExtraAudiences,
+					jwtIssuer,
+				)
 				if err != nil {
 					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
 				}
@@ -385,7 +389,7 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(o *options.Options, jwtIssuer jwtIssuer) (*internaloidc.IDTokenVerifier, error) {
+func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer) (*internaloidc.IDTokenVerifier, error) {
 	config := &oidc.Config{
 		ClientID:          jwtIssuer.audience,
 		SkipClientIDCheck: true, // client id check is done within oauth2-proxy: IDTokenVerifier.Verify
@@ -405,9 +409,10 @@ func newVerifierFromJwtIssuer(o *options.Options, jwtIssuer jwtIssuer) (*interna
 		verifier = provider.Verifier(config)
 	}
 	verificationOptions := &internaloidc.IDTokenVerificationOptions{
-		AudienceClaims: o.Providers[0].OIDCConfig.AudienceClaims,
+		AudienceClaims: audienceClaims,
 		ClientID:       jwtIssuer.audience,
-		ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
+		ExtraAudiences: extraAudiences,
+		// ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
 	}
 	return internaloidc.NewVerifier(verifier, verificationOptions), nil
 }
