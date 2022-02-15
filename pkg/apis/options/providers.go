@@ -1,6 +1,15 @@
 package options
 
-import "github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+const (
+	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
+	OIDCEmailClaim = "email"
+
+	// OIDCGroupsClaim is the generic groups claim used by the OIDC provider.
+	OIDCGroupsClaim = "groups"
+)
+
+// OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
+var OIDCAudienceClaims = []string{"aud"}
 
 // Providers is a collection of definitions for providers.
 type Providers []Provider
@@ -194,10 +203,10 @@ func providerDefaults() Providers {
 				InsecureAllowUnverifiedEmail: false,
 				InsecureSkipNonce:            true,
 				SkipDiscovery:                false,
-				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
-				EmailClaim:                   providers.OIDCEmailClaim,
-				GroupsClaim:                  providers.OIDCGroupsClaim,
-				AudienceClaims:               providers.OIDCAudienceClaims,
+				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
+				EmailClaim:                   OIDCEmailClaim,
+				GroupsClaim:                  OIDCGroupsClaim,
+				AudienceClaims:               OIDCAudienceClaims,
 				ExtraAudiences:               []string{},
 			},
 		},
