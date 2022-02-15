@@ -12,13 +12,19 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 )
 
 const (
 	accessTokenHeader    = "ewogICJhbGciOiAiUlMyNTYiLAogICJ0eXAiOiAiSldUIgp9"
-	accessTokenPayload   = "eyJyZWFsbV9hY2Nlc3MiOiB7InJvbGVzIjogWyJ3cml0ZSJdfSwgInJlc291cmNlX2FjY2VzcyI6IHsiZGVmYXVsdCI6IHsicm9sZXMiOiBbInJlYWQiXX19fQ"
 	accessTokenSignature = "dyt0CoTl4WoVjAHI9Q_CwSKhl6d_9rhM3NrXuJttkao"
+	defaultAudienceClaim = "aud"
+	mockClientID         = "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"
 )
+
+var accessTokenPayload = base64.StdEncoding.EncodeToString([]byte(
+	fmt.Sprintf(`{"%s": "%s", "realm_access": {"roles": ["write"]}, "resource_access": {"default": {"roles": ["read"]}}}`, defaultAudienceClaim, mockClientID)))
 
 type DummyKeySet struct{}
 
@@ -38,6 +44,10 @@ func newTestKeycloakOIDCSetup() (*httptest.Server, *KeycloakOIDCProvider) {
 }
 
 func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{defaultAudienceClaim},
+		ClientID:       mockClientID,
+	}
 	p := NewKeycloakOIDCProvider(
 		&ProviderData{
 			LoginURL: &url.URL{
@@ -64,12 +74,12 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 	}
 
 	keyset := DummyKeySet{}
-	p.Verifier = oidc.NewVerifier("", keyset, &oidc.Config{
+	p.Verifier = internaloidc.NewVerifier(oidc.NewVerifier("", keyset, &oidc.Config{
 		ClientID:          "client",
 		SkipIssuerCheck:   true,
 		SkipClientIDCheck: true,
 		SkipExpiryCheck:   true,
-	})
+	}), verificationOptions)
 	p.EmailClaim = "email"
 	p.GroupsClaim = "groups"
 	return p

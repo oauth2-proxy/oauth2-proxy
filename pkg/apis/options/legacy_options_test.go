@@ -116,6 +116,8 @@ var _ = Describe("Legacy Options", func() {
 			opts.Providers[0].ClientID = "oauth-proxy"
 			opts.Providers[0].ID = "google=oauth-proxy"
 			opts.Providers[0].OIDCConfig.InsecureSkipNonce = true
+			opts.Providers[0].OIDCConfig.AudienceClaims = []string{"aud"}
+			opts.Providers[0].OIDCConfig.ExtraAudiences = []string{}
 
 			converted, err := legacyOpts.ToOptions()
 			Expect(err).ToNot(HaveOccurred())

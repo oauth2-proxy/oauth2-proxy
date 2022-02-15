@@ -76,6 +76,8 @@ providers:
     emailClaim: email
     userIDClaim: email
     insecureSkipNonce: true
+    audienceClaims: [aud]
+    extraAudiences: []
 `
 
 	const testCoreConfig = `
@@ -148,6 +150,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					GroupsClaim:       "groups",
 					EmailClaim:        "email",
 					UserIDClaim:       "email",
+					AudienceClaims:    []string{"aud"},
+					ExtraAudiences:    []string{},
 					InsecureSkipNonce: true,
 				},
 				ApprovalPrompt: "force",

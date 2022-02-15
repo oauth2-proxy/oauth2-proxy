@@ -16,6 +16,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
@@ -102,6 +103,18 @@ func Validate(o *options.Options) error {
 			}
 		}
 
+		config := &oidc.Config{
+			ClientID:          o.Providers[0].ClientID,
+			SkipIssuerCheck:   o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
+			SkipClientIDCheck: true, // client id check is done within oauth2-proxy: IDTokenVerifier.Verify
+		}
+
+		verificationOptions := &internaloidc.IDTokenVerificationOptions{
+			AudienceClaims: o.Providers[0].OIDCConfig.AudienceClaims,
+			ClientID:       o.Providers[0].ClientID,
+			ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
+		}
+
 		// Construct a manual IDTokenVerifier from issuer URL & JWKS URI
 		// instead of metadata discovery if we enable -skip-oidc-discovery.
 		// In this case we need to make sure the required endpoints for
@@ -117,21 +130,16 @@ func Validate(o *options.Options) error {
 				msgs = append(msgs, "missing setting: oidc-jwks-url")
 			}
 			keySet := oidc.NewRemoteKeySet(ctx, o.Providers[0].OIDCConfig.JwksURL)
-			o.SetOIDCVerifier(oidc.NewVerifier(o.Providers[0].OIDCConfig.IssuerURL, keySet, &oidc.Config{
-				ClientID:        o.Providers[0].ClientID,
-				SkipIssuerCheck: o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
-			}))
+			o.SetOIDCVerifier(internaloidc.NewVerifier(
+				oidc.NewVerifier(o.Providers[0].OIDCConfig.IssuerURL, keySet, config), verificationOptions))
 		} else {
 			// Configure discoverable provider data.
 			provider, err := oidc.NewProvider(ctx, o.Providers[0].OIDCConfig.IssuerURL)
 			if err != nil {
 				return err
 			}
-			o.SetOIDCVerifier(provider.Verifier(&oidc.Config{
-				ClientID:        o.Providers[0].ClientID,
-				SkipIssuerCheck: o.Providers[0].OIDCConfig.InsecureSkipIssuerVerification,
-			}))
 
+			o.SetOIDCVerifier(internaloidc.NewVerifier(provider.Verifier(config), verificationOptions))
 			o.Providers[0].LoginURL = provider.Endpoint().AuthURL
 			o.Providers[0].RedeemURL = provider.Endpoint().TokenURL
 		}
@@ -153,7 +161,11 @@ func Validate(o *options.Options) error {
 			var jwtIssuers []jwtIssuer
 			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
 			for _, jwtIssuer := range jwtIssuers {
-				verifier, err := newVerifierFromJwtIssuer(jwtIssuer)
+				verifier, err := newVerifierFromJwtIssuer(
+					o.Providers[0].OIDCConfig.AudienceClaims,
+					o.Providers[0].OIDCConfig.ExtraAudiences,
+					jwtIssuer,
+				)
 				if err != nil {
 					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
 				}
@@ -290,9 +302,14 @@ func parseProviderInfo(o *options.Options, msgs []string) []string {
 			if err != nil {
 				msgs = append(msgs, "failed to initialize oidc provider for gitlab.com")
 			} else {
-				p.Verifier = provider.Verifier(&oidc.Config{
+				verificationOptions := &internaloidc.IDTokenVerificationOptions{
+					AudienceClaims: o.Providers[0].OIDCConfig.AudienceClaims,
+					ClientID:       o.Providers[0].ClientID,
+					ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
+				}
+				p.Verifier = internaloidc.NewVerifier(provider.Verifier(&oidc.Config{
 					ClientID: o.Providers[0].ClientID,
-				})
+				}), verificationOptions)
 
 				p.LoginURL, msgs = parseURL(provider.Endpoint().AuthURL, "login", msgs)
 				p.RedeemURL, msgs = parseURL(provider.Endpoint().TokenURL, "redeem", msgs)
@@ -372,9 +389,10 @@ func parseJwtIssuers(issuers []string, msgs []string) ([]jwtIssuer, []string) {
 
 // newVerifierFromJwtIssuer takes in issuer information in jwtIssuer info and returns
 // a verifier for that issuer.
-func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error) {
+func newVerifierFromJwtIssuer(audienceClaims []string, extraAudiences []string, jwtIssuer jwtIssuer) (*internaloidc.IDTokenVerifier, error) {
 	config := &oidc.Config{
-		ClientID: jwtIssuer.audience,
+		ClientID:          jwtIssuer.audience,
+		SkipClientIDCheck: true, // client id check is done within oauth2-proxy: IDTokenVerifier.Verify
 	}
 	// Try as an OpenID Connect Provider first
 	var verifier *oidc.IDTokenVerifier
@@ -390,7 +408,13 @@ func newVerifierFromJwtIssuer(jwtIssuer jwtIssuer) (*oidc.IDTokenVerifier, error
 	} else {
 		verifier = provider.Verifier(config)
 	}
-	return verifier, nil
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: audienceClaims,
+		ClientID:       jwtIssuer.audience,
+		ExtraAudiences: extraAudiences,
+		// ExtraAudiences: o.Providers[0].OIDCConfig.ExtraAudiences,
+	}
+	return internaloidc.NewVerifier(verifier, verificationOptions), nil
 }
 
 // jwtIssuer hold parsed JWT issuer info that's used to construct a verifier.

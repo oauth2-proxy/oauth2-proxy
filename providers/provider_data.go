@@ -12,6 +12,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	"golang.org/x/oauth2"
 )
 
@@ -19,6 +20,8 @@ const (
 	OIDCEmailClaim  = "email"
 	OIDCGroupsClaim = "groups"
 )
+
+var OIDCAudienceClaims = []string{"aud"}
 
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
@@ -44,7 +47,7 @@ type ProviderData struct {
 	UserClaim            string
 	EmailClaim           string
 	GroupsClaim          string
-	Verifier             *oidc.IDTokenVerifier
+	Verifier             *internaloidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
