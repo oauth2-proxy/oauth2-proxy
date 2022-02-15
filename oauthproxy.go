@@ -977,6 +977,11 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 //
 //nolint:gosimple
 func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
+	// Allow requests previously allowed to be bypassed
+	if s == nil {
+		return true
+	}
+
 	// Allow secondary group restrictions based on the `allowed_groups`
 	// querystring parameter
 	if !checkAllowedGroups(req, s) {

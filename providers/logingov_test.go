@@ -75,7 +75,7 @@ func TestNewLoginGovProvider(t *testing.T) {
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://secure.login.gov/openid_connect/authorize"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://secure.login.gov/api/openid_connect/token"))
 	g.Expect(providerData.ProfileURL.String()).To(Equal("https://secure.login.gov/api/openid_connect/userinfo"))
-	g.Expect(providerData.ValidateURL.String()).To(Equal(""))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://secure.login.gov/api/openid_connect/userinfo"))
 	g.Expect(providerData.Scope).To(Equal("email openid"))
 }
 

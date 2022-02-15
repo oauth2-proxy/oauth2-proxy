@@ -43,7 +43,7 @@ DOCKER_BUILD_PLATFORM ?= linux/amd64,linux/arm64,linux/arm/v6
 DOCKER_BUILDX_ARGS ?=
 DOCKER_BUILDX := docker buildx build ${DOCKER_BUILDX_ARGS} --build-arg VERSION=${VERSION}
 DOCKER_BUILDX_X_PLATFORM := $(DOCKER_BUILDX) --platform ${DOCKER_BUILD_PLATFORM}
-DOCKER_BUILDX_PUSH := docker buildx build --push
+DOCKER_BUILDX_PUSH := docker buildx build --push ${DOCKER_BUILDX_ARGS} --build-arg VERSION=${VERSION}
 DOCKER_BUILDX_PUSH_X_PLATFORM := $(DOCKER_BUILDX_PUSH) --platform ${DOCKER_BUILD_PLATFORM}
 
 .PHONY: docker
