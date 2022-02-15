@@ -14,6 +14,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,6 +27,10 @@ type redeemTokenResponse struct {
 }
 
 func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       "https://test.myapp.com",
+	}
 	providerData := &ProviderData{
 		ProviderName: "oidc",
 		ClientID:     oidcClientID,
@@ -49,11 +54,11 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 		Scope:       "openid profile offline_access",
 		EmailClaim:  "email",
 		GroupsClaim: "groups",
-		Verifier: oidc.NewVerifier(
+		Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 			oidcIssuer,
 			mockJWKS{},
 			&oidc.Config{ClientID: oidcClientID},
-		),
+		), verificationOptions),
 	}
 
 	p := NewOIDCProvider(providerData)

@@ -21,6 +21,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
@@ -1737,7 +1738,14 @@ func TestGetJwtSession(t *testing.T) {
 
 	keyset := NoOpKeySet{}
 	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
-		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true,
+			SkipClientIDCheck: true})
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       "https://test.myapp.com",
+		ExtraAudiences: []string{},
+	}
+	internalVerifier := internaloidc.NewVerifier(verifier, verificationOptions)
 
 	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.InjectRequestHeaders = []options.Header{
@@ -1808,7 +1816,7 @@ func TestGetJwtSession(t *testing.T) {
 			},
 		}
 		opts.SkipJwtBearerTokens = true
-		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), verifier))
+		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), internalVerifier))
 	})
 	if err != nil {
 		t.Fatal(err)

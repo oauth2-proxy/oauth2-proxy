@@ -13,8 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/golang-jwt/jwt"
+
+	oidc "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +41,10 @@ type azureOAuthPayload struct {
 }
 
 func testAzureProvider(hostname string) *AzureProvider {
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
+	}
 	p := NewAzureProvider(
 		&ProviderData{
 			ProviderName:      "",
@@ -48,7 +55,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 			ProtectedResource: &url.URL{},
 			Scope:             "",
 			EmailClaim:        "email",
-			Verifier: oidc.NewVerifier(
+			Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 				"https://issuer.example.com",
 				fakeAzureKeySetStub{},
 				&oidc.Config{
@@ -57,7 +64,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 					SkipIssuerCheck:   true,
 					SkipExpiryCheck:   true,
 				},
-			),
+			), verificationOptions),
 		})
 
 	if hostname != "" {
@@ -285,13 +292,17 @@ func TestAzureProviderRedeem(t *testing.T) {
 			accessTokenString := ""
 			if testCase.EmailFromIDToken != "" {
 				var err error
-				token := idTokenClaims{Email: testCase.EmailFromIDToken}
+				token := idTokenClaims{
+					StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
+					Email:          testCase.EmailFromIDToken}
 				idTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
 			}
 			if testCase.EmailFromAccessToken != "" {
 				var err error
-				token := idTokenClaims{Email: testCase.EmailFromAccessToken}
+				token := idTokenClaims{
+					StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
+					Email:          testCase.EmailFromAccessToken}
 				accessTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
 			}
@@ -342,7 +353,9 @@ func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
 
 func TestAzureProviderRefresh(t *testing.T) {
 	email := "foo@example.com"
-	idToken := idTokenClaims{Email: email}
+	idToken := idTokenClaims{
+		StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
+		Email:          email}
 	idTokenString, err := newSignedTestIDToken(idToken)
 	assert.NoError(t, err)
 	timestamp, err := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
