@@ -161,13 +161,11 @@ func Test_enrichSession(t *testing.T) {
 			err := validation.Validate(opts)
 			assert.NoError(t, err)
 
-			// intentionally set after validation.Validate(opts) since it will clobber
-			// our TestProvider and call `providers.New` defaulting to `providers.GoogleProvider`
-			opts.SetProvider(NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail))
 			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
 			if err != nil {
 				t.Fatal(err)
 			}
+			proxy.provider = NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail)
 
 			err = proxy.enrichSessionState(context.Background(), tc.session)
 			assert.NoError(t, err)
@@ -232,13 +230,13 @@ func TestBasicAuthPassword(t *testing.T) {
 	providerURL, _ := url.Parse(providerServer.URL)
 	const emailAddress = "john.doe@example.com"
 
-	opts.SetProvider(NewTestProvider(providerURL, emailAddress))
 	proxy, err := NewOAuthProxy(opts, func(email string) bool {
 		return email == emailAddress
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	proxy.provider = NewTestProvider(providerURL, emailAddress)
 
 	// Save the required session
 	rw := httptest.NewRecorder()
@@ -390,10 +388,10 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 
 	testProvider := NewTestProvider(providerURL, emailAddress)
 	testProvider.ValidToken = opts.ValidToken
-	patt.opts.SetProvider(testProvider)
 	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
 		return email == emailAddress
 	})
+	patt.proxy.provider = testProvider
 	if err != nil {
 		return nil, err
 	}
@@ -769,11 +767,17 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	if err != nil {
 		return nil, err
 	}
-	pcTest.proxy.provider = &TestProvider{
+	testProvider := &TestProvider{
 		ProviderData: &providers.ProviderData{},
 		ValidToken:   opts.providerValidateCookieResponse,
 	}
-	pcTest.proxy.provider.(*TestProvider).SetAllowedGroups(pcTest.opts.Providers[0].AllowedGroups)
+
+	groups := pcTest.opts.Providers[0].AllowedGroups
+	testProvider.AllowedGroups = make(map[string]struct{}, len(groups))
+	for _, group := range groups {
+		testProvider.AllowedGroups[group] = struct{}{}
+	}
+	pcTest.proxy.provider = testProvider
 
 	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
 	// access_token validation.
@@ -1359,12 +1363,12 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	assert.NoError(t, err)
 
 	upstreamURL, _ := url.Parse(upstreamServer.URL)
-	opts.SetProvider(NewTestProvider(upstreamURL, ""))
 
 	proxy, err := NewOAuthProxy(opts, func(string) bool { return false })
 	if err != nil {
 		t.Fatal(err)
 	}
+	proxy.provider = NewTestProvider(upstreamURL, "")
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("OPTIONS", "/preflight-request", nil)
 	proxy.ServeHTTP(rw, req)
@@ -1409,6 +1413,7 @@ type SignatureTest struct {
 	header        http.Header
 	rw            *httptest.ResponseRecorder
 	authenticator *SignatureAuthenticator
+	authProvider  providers.Provider
 }
 
 func NewSignatureTest() (*SignatureTest, error) {
@@ -1443,7 +1448,7 @@ func NewSignatureTest() (*SignatureTest, error) {
 	if err != nil {
 		return nil, err
 	}
-	opts.SetProvider(NewTestProvider(providerURL, "mbland@acm.org"))
+	testProvider := NewTestProvider(providerURL, "mbland@acm.org")
 
 	return &SignatureTest{
 		opts,
@@ -1453,6 +1458,7 @@ func NewSignatureTest() (*SignatureTest, error) {
 		make(http.Header),
 		httptest.NewRecorder(),
 		authenticator,
+		testProvider,
 	}, nil
 }
 
@@ -1486,6 +1492,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) er
 	if err != nil {
 		return err
 	}
+	proxy.provider = st.authProvider
 
 	var bodyBuf io.ReadCloser
 	if body != "" {
