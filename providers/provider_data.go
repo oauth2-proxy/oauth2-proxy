@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
@@ -18,13 +19,9 @@ import (
 )
 
 const (
-	OIDCEmailClaim  = "email"
-	OIDCGroupsClaim = "groups"
 	// This is not exported as it's not currently user configurable
 	oidcUserClaim = "sub"
 )
-
-var OIDCAudienceClaims = []string{"aud"}
 
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
@@ -76,9 +73,9 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	return string(fileClientSecret), nil
 }
 
-// SetAllowedGroups organizes a group list into the AllowedGroups map
+// setAllowedGroups organizes a group list into the AllowedGroups map
 // to be consumed by Authorize implementations
-func (p *ProviderData) SetAllowedGroups(groups []string) {
+func (p *ProviderData) setAllowedGroups(groups []string) {
 	p.AllowedGroups = make(map[string]struct{}, len(groups))
 	for _, group := range groups {
 		p.AllowedGroups[group] = struct{}{}
@@ -172,7 +169,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
-	verifyEmail := (p.EmailClaim == OIDCEmailClaim) && !p.AllowUnverifiedEmail
+	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
 
 	var verified bool
 	exists, err := extractor.GetClaimInto("email_verified", &verified)

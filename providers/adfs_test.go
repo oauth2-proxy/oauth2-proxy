@@ -13,6 +13,7 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	. "github.com/onsi/ginkgo"
@@ -61,8 +62,8 @@ func testADFSProvider(hostname string) *ADFSProvider {
 		ValidateURL:  &url.URL{},
 		Scope:        "",
 		Verifier:     o,
-		EmailClaim:   OIDCEmailClaim,
-	})
+		EmailClaim:   options.OIDCEmailClaim,
+	}, options.ADFSOptions{})
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
@@ -133,7 +134,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 
 	Context("New Provider Init", func() {
 		It("uses defaults", func() {
-			providerData := NewADFSProvider(&ProviderData{}).Data()
+			providerData := NewADFSProvider(&ProviderData{}, options.ADFSOptions{}).Data()
 			Expect(providerData.ProviderName).To(Equal("ADFS"))
 			Expect(providerData.Scope).To(Equal("openid email profile"))
 		})
@@ -165,8 +166,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 			p := NewADFSProvider(&ProviderData{
 				ProtectedResource: resource,
 				Scope:             "",
-			})
-			p.skipScope = true
+			}, options.ADFSOptions{SkipScope: true})
 
 			result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "")
 			Expect(result).NotTo(ContainSubstring("scope="))
@@ -186,7 +186,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 				p := NewADFSProvider(&ProviderData{
 					ProtectedResource: resource,
 					Scope:             in.scope,
-				})
+				}, options.ADFSOptions{})
 
 				Expect(p.Data().Scope).To(Equal(in.expectedScope))
 				result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "")

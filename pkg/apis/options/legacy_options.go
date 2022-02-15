@@ -624,7 +624,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientID:          l.ClientID,
 		ClientSecret:      l.ClientSecret,
 		ClientSecretFile:  l.ClientSecretFile,
-		Type:              l.ProviderType,
+		Type:              ProviderType(l.ProviderType),
 		CAFiles:           l.ProviderCAFiles,
 		LoginURL:          l.LoginURL,
 		RedeemURL:         l.RedeemURL,

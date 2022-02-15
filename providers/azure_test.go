@@ -15,6 +15,7 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 
@@ -39,7 +40,7 @@ type azureOAuthPayload struct {
 	IDToken      string `json:"id_token,omitempty"`
 }
 
-func testAzureProvider(hostname string) *AzureProvider {
+func testAzureProvider(hostname string, opts options.AzureOptions) *AzureProvider {
 	verificationOptions := &internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{"aud"},
 		ClientID:       "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
@@ -64,7 +65,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 					SkipExpiryCheck:   true,
 				},
 			), verificationOptions),
-		})
+		}, opts)
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
@@ -80,7 +81,7 @@ func TestNewAzureProvider(t *testing.T) {
 	g := NewWithT(t)
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewAzureProvider(&ProviderData{}).Data()
+	providerData := NewAzureProvider(&ProviderData{}, options.AzureOptions{}).Data()
 	g.Expect(providerData.ProviderName).To(Equal("Azure"))
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://login.microsoftonline.com/common/oauth2/authorize"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://login.microsoftonline.com/common/oauth2/token"))
@@ -111,7 +112,8 @@ func TestAzureProviderOverrides(t *testing.T) {
 			ProtectedResource: &url.URL{
 				Scheme: "https",
 				Host:   "example.com"},
-			Scope: "profile"})
+			Scope: "profile"},
+		options.AzureOptions{})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Azure", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/oauth/auth",
@@ -128,8 +130,7 @@ func TestAzureProviderOverrides(t *testing.T) {
 }
 
 func TestAzureSetTenant(t *testing.T) {
-	p := testAzureProvider("")
-	p.Configure("example")
+	p := testAzureProvider("", options.AzureOptions{Tenant: "example"})
 	assert.Equal(t, "Azure", p.Data().ProviderName)
 	assert.Equal(t, "example", p.Tenant)
 	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/authorize",
@@ -230,7 +231,7 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 				bURL, _ := url.Parse(b.URL)
 				host = bURL.Host
 			}
-			p := testAzureProvider(host)
+			p := testAzureProvider(host, options.AzureOptions{})
 			session := CreateAuthorizedSession()
 			session.Email = testCase.Email
 			err := p.EnrichSession(context.Background(), session)
@@ -323,7 +324,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 			defer b.Close()
 
 			bURL, _ := url.Parse(b.URL)
-			p := testAzureProvider(bURL.Host)
+			p := testAzureProvider(bURL.Host, options.AzureOptions{})
 			p.Data().RedeemURL.Path = "/common/oauth2/token"
 			s, err := p.Redeem(context.Background(), "https://localhost", "1234")
 			if testCase.InjectRedeemURLError {
@@ -345,7 +346,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 }
 
 func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
-	p := testAzureProvider("")
+	p := testAzureProvider("", options.AzureOptions{})
 	p.ProtectedResource, _ = url.Parse("http://my.resource.test")
 	result := p.GetLoginURL("https://my.test.app/oauth", "", "")
 	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
@@ -381,7 +382,7 @@ func TestAzureProviderRefresh(t *testing.T) {
 	b := testAzureBackend(string(payloadBytes), newAccessToken, refreshToken)
 	defer b.Close()
 	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
+	p := testAzureProvider(bURL.Host, options.AzureOptions{})
 
 	expires := time.Now().Add(time.Duration(-1) * time.Hour)
 	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: refreshToken, IDToken: "some_id_token", ExpiresOn: &expires}

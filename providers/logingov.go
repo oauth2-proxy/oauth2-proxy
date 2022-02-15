@@ -5,12 +5,15 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net/url"
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"gopkg.in/square/go-jose.v2"
@@ -78,7 +81,7 @@ var (
 )
 
 // NewLoginGovProvider initiates a new LoginGovProvider
-func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
+func NewLoginGovProvider(p *ProviderData, opts options.LoginGovOptions) (*LoginGovProvider, error) {
 	p.setProviderDefaults(providerDefaults{
 		name:        loginGovProviderName,
 		loginURL:    loginGovDefaultLoginURL,
@@ -87,10 +90,50 @@ func NewLoginGovProvider(p *ProviderData) *LoginGovProvider {
 		validateURL: loginGovDefaultProfileURL,
 		scope:       loginGovDefaultScope,
 	})
-	return &LoginGovProvider{
+	provider := &LoginGovProvider{
 		ProviderData: p,
 		Nonce:        randSeq(32),
 	}
+
+	if err := provider.configure(opts); err != nil {
+		return nil, fmt.Errorf("could not configure login.gov provider: %v", err)
+	}
+	return provider, nil
+}
+
+func (p *LoginGovProvider) configure(opts options.LoginGovOptions) error {
+	pubJWKURL, err := url.Parse(opts.PubJWKURL)
+	if err != nil {
+		return fmt.Errorf("could not parse Public JWK URL: %v", err)
+	}
+	p.PubJWKURL = pubJWKURL
+
+	// JWT key can be supplied via env variable or file in the filesystem, but not both.
+	switch {
+	case opts.JWTKey != "" && opts.JWTKeyFile != "":
+		return errors.New("cannot set both jwt-key and jwt-key-file options")
+	case opts.JWTKey == "" && opts.JWTKeyFile == "":
+		return errors.New("login.gov provider requires a private key for signing JWTs")
+	case opts.JWTKey != "":
+		// The JWT Key is in the commandline argument
+		signKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(opts.JWTKey))
+		if err != nil {
+			return fmt.Errorf("could not parse RSA Private Key PEM: %v", err)
+		}
+		p.JWTKey = signKey
+	case opts.JWTKeyFile != "":
+		// The JWT key is in the filesystem
+		keyData, err := ioutil.ReadFile(opts.JWTKeyFile)
+		if err != nil {
+			return fmt.Errorf("could not read key file: %v", opts.JWTKeyFile)
+		}
+		signKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyData)
+		if err != nil {
+			return fmt.Errorf("could not parse private key from PEM file: %v", opts.JWTKeyFile)
+		}
+		p.JWTKey = signKey
+	}
+	return nil
 }
 
 type loginGovCustomClaims struct {

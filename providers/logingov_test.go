@@ -1,11 +1,14 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,6 +16,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2"
@@ -32,12 +36,35 @@ func newLoginGovServer(body []byte) (*url.URL, *httptest.Server) {
 	return u, s
 }
 
-func newLoginGovProvider() (l *LoginGovProvider, serverKey *MyKeyData, err error) {
+func newPrivateKeyBytes() ([]byte, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	keyBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	privateKeyBlock := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: keyBytes,
+	}
+	b := &bytes.Buffer{}
+	if err := pem.Encode(b, privateKeyBlock); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
+
+func newLoginGovProvider() (*LoginGovProvider, *MyKeyData, error) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
-	serverKey = &MyKeyData{
+	serverKey := &MyKeyData{
 		PubKey:  key.Public(),
 		PrivKey: key,
 		PubJWK: jose.JSONWebKey{
@@ -48,29 +75,40 @@ func newLoginGovProvider() (l *LoginGovProvider, serverKey *MyKeyData, err error
 		},
 	}
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privKey, err := newPrivateKeyBytes()
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
-	l = NewLoginGovProvider(
+	l, err := NewLoginGovProvider(
 		&ProviderData{
 			ProviderName: "",
 			LoginURL:     &url.URL{},
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""})
-	l.JWTKey = privateKey
+			Scope:        ""},
+		options.LoginGovOptions{
+			JWTKey: string(privKey),
+		},
+	)
 	l.Nonce = "fakenonce"
-	return
+	return l, serverKey, err
 }
 
 func TestNewLoginGovProvider(t *testing.T) {
 	g := NewWithT(t)
 
+	privKey, err := newPrivateKeyBytes()
+	g.Expect(err).ToNot(HaveOccurred())
+
 	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewLoginGovProvider(&ProviderData{}).Data()
+	provider, err := NewLoginGovProvider(&ProviderData{}, options.LoginGovOptions{
+		JWTKey: string(privKey),
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	providerData := provider.Data()
 	g.Expect(providerData.ProviderName).To(Equal("login.gov"))
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://secure.login.gov/openid_connect/authorize"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://secure.login.gov/api/openid_connect/token"))
@@ -80,7 +118,10 @@ func TestNewLoginGovProvider(t *testing.T) {
 }
 
 func TestLoginGovProviderOverrides(t *testing.T) {
-	p := NewLoginGovProvider(
+	privKey, err := newPrivateKeyBytes()
+	assert.NoError(t, err)
+
+	p, err := NewLoginGovProvider(
 		&ProviderData{
 			LoginURL: &url.URL{
 				Scheme: "https",
@@ -94,7 +135,11 @@ func TestLoginGovProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/profile"},
-			Scope: "profile"})
+			Scope: "profile"},
+		options.LoginGovOptions{
+			JWTKey: string(privKey),
+		})
+	assert.NoError(t, err)
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "login.gov", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/oauth/auth",

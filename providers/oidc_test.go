@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
@@ -25,7 +26,7 @@ type redeemTokenResponse struct {
 	IDToken      string `json:"id_token,omitempty"`
 }
 
-func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
+func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
 	verificationOptions := &internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{"aud"},
 		ClientID:       "https://test.myapp.com",
@@ -61,7 +62,9 @@ func newOIDCProvider(serverURL *url.URL) *OIDCProvider {
 		), verificationOptions),
 	}
 
-	p := NewOIDCProvider(providerData)
+	p := NewOIDCProvider(providerData, options.OIDCOptions{
+		InsecureSkipNonce: skipNonce,
+	})
 
 	return p
 }
@@ -77,7 +80,7 @@ func newOIDCServer(body []byte) (*url.URL, *httptest.Server) {
 
 func newTestOIDCSetup(body []byte) (*httptest.Server, *OIDCProvider) {
 	redeemURL, server := newOIDCServer(body)
-	provider := newOIDCProvider(redeemURL)
+	provider := newOIDCProvider(redeemURL, false)
 	return server, provider
 }
 
@@ -86,7 +89,7 @@ func TestOIDCProviderGetLoginURL(t *testing.T) {
 		Scheme: "https",
 		Host:   "oauth2proxy.oidctest",
 	}
-	provider := newOIDCProvider(serverURL)
+	provider := newOIDCProvider(serverURL, true)
 
 	n, err := encryption.Nonce()
 	assert.NoError(t, err)
