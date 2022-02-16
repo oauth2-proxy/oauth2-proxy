@@ -107,7 +107,7 @@ func TestProviderDataAuthorize(t *testing.T) {
 				Groups: tc.groups,
 			}
 			p := &ProviderData{}
-			p.SetAllowedGroups(tc.allowedGroups)
+			p.setAllowedGroups(tc.allowedGroups)
 
 			authorized, err := p.Authorize(context.Background(), session)
 			g.Expect(err).ToNot(HaveOccurred())

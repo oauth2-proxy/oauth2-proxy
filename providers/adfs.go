@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -24,12 +25,11 @@ var _ Provider = (*ADFSProvider)(nil)
 const (
 	adfsProviderName = "ADFS"
 	adfsDefaultScope = "openid email profile"
-	adfsSkipScope    = false
 	adfsUPNClaim     = "upn"
 )
 
 // NewADFSProvider initiates a new ADFSProvider
-func NewADFSProvider(p *ProviderData) *ADFSProvider {
+func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:  adfsProviderName,
 		scope: adfsDefaultScope,
@@ -53,15 +53,10 @@ func NewADFSProvider(p *ProviderData) *ADFSProvider {
 
 	return &ADFSProvider{
 		OIDCProvider:    oidcProvider,
-		skipScope:       adfsSkipScope,
+		skipScope:       opts.SkipScope,
 		oidcEnrichFunc:  oidcProvider.EnrichSession,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
-}
-
-// Configure defaults the ADFSProvider configuration options
-func (p *ADFSProvider) Configure(skipScope bool) {
-	p.skipScope = skipScope
 }
 
 // GetLoginURL Override to double encode the state parameter. If not query params are lost

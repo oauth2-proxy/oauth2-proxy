@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -53,7 +54,7 @@ var (
 )
 
 // NewBitbucketProvider initiates a new BitbucketProvider
-func NewBitbucketProvider(p *ProviderData) *BitbucketProvider {
+func NewBitbucketProvider(p *ProviderData, opts options.BitbucketOptions) *BitbucketProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        bitbucketProviderName,
 		loginURL:    bitbucketDefaultLoginURL,
@@ -62,19 +63,28 @@ func NewBitbucketProvider(p *ProviderData) *BitbucketProvider {
 		validateURL: bitbucketDefaultValidateURL,
 		scope:       bitbucketDefaultScope,
 	})
-	return &BitbucketProvider{ProviderData: p}
+
+	provider := &BitbucketProvider{ProviderData: p}
+
+	if opts.Team != "" {
+		provider.setTeam(opts.Team)
+	}
+	if opts.Repository != "" {
+		provider.setRepository(opts.Repository)
+	}
+	return provider
 }
 
-// SetTeam defines the Bitbucket team the user must be part of
-func (p *BitbucketProvider) SetTeam(team string) {
+// setTeam defines the Bitbucket team the user must be part of
+func (p *BitbucketProvider) setTeam(team string) {
 	p.Team = team
 	if !strings.Contains(p.Scope, "team") {
 		p.Scope += " team"
 	}
 }
 
-// SetRepository defines the repository the user must have access to
-func (p *BitbucketProvider) SetRepository(repository string) {
+// setRepository defines the repository the user must have access to
+func (p *BitbucketProvider) setRepository(repository string) {
 	p.Repository = repository
 	if !strings.Contains(p.Scope, "repository") {
 		p.Scope += " repository"

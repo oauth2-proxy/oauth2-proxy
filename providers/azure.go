@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -62,7 +63,7 @@ var (
 )
 
 // NewAzureProvider initiates a new AzureProvider
-func NewAzureProvider(p *ProviderData) *AzureProvider {
+func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        azureProviderName,
 		loginURL:    azureDefaultLoginURL,
@@ -80,23 +81,17 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 	}
 	p.getAuthorizationHeaderFunc = makeAzureHeader
 
+	tenant := "common"
+	if opts.Tenant != "" {
+		tenant = opts.Tenant
+		overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
+		overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
+	}
+
 	return &AzureProvider{
 		ProviderData: p,
-		Tenant:       "common",
+		Tenant:       tenant,
 	}
-}
-
-// Configure defaults the AzureProvider configuration options
-func (p *AzureProvider) Configure(tenant string) {
-	if tenant == "" || tenant == "common" {
-		// tenant is empty or default, remain on the default "common" tenant
-		return
-	}
-
-	// Specific tennant specified, override the Login and RedeemURLs
-	p.Tenant = tenant
-	overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
-	overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
 }
 
 func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {

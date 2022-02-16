@@ -305,7 +305,7 @@ Provider holds all configuration for a single provider
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
 | `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
-| `provider` | _string_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
+| `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
 | `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
@@ -318,6 +318,17 @@ Provider holds all configuration for a single provider
 | `approvalPrompt` | _string_ | ApprovalPrompt is the OAuth approval_prompt<br/>default is set to 'force' |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
 | `acrValues` | _string_ | AcrValues is a string of acr values |
+
+### ProviderType
+#### (`string` alias)
+
+(**Appears on:** [Provider](#provider))
+
+ProviderType is used to enumerate the different provider type options
+Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
+gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+and oidc.
+
 
 ### Providers
 
