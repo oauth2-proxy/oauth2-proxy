@@ -68,26 +68,26 @@ type Options struct {
 	// internal values that are set after config validation
 	redirectURL        *url.URL
 	signatureData      *SignatureData
-	oidcVerifier       *internaloidc.IDTokenVerifier
-	jwtBearerVerifiers []*internaloidc.IDTokenVerifier
+	oidcVerifier       internaloidc.IDTokenVerifier
+	jwtBearerVerifiers []internaloidc.IDTokenVerifier
 	realClientIPParser ipapi.RealClientIPParser
 }
 
 // Options for Getting internal values
-func (o *Options) GetRedirectURL() *url.URL                       { return o.redirectURL }
-func (o *Options) GetSignatureData() *SignatureData               { return o.signatureData }
-func (o *Options) GetOIDCVerifier() *internaloidc.IDTokenVerifier { return o.oidcVerifier }
-func (o *Options) GetJWTBearerVerifiers() []*internaloidc.IDTokenVerifier {
+func (o *Options) GetRedirectURL() *url.URL                      { return o.redirectURL }
+func (o *Options) GetSignatureData() *SignatureData              { return o.signatureData }
+func (o *Options) GetOIDCVerifier() internaloidc.IDTokenVerifier { return o.oidcVerifier }
+func (o *Options) GetJWTBearerVerifiers() []internaloidc.IDTokenVerifier {
 	return o.jwtBearerVerifiers
 }
 func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
 
 // Options for Setting internal values
-func (o *Options) SetRedirectURL(s *url.URL)                               { o.redirectURL = s }
-func (o *Options) SetSignatureData(s *SignatureData)                       { o.signatureData = s }
-func (o *Options) SetOIDCVerifier(s *internaloidc.IDTokenVerifier)         { o.oidcVerifier = s }
-func (o *Options) SetJWTBearerVerifiers(s []*internaloidc.IDTokenVerifier) { o.jwtBearerVerifiers = s }
-func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)        { o.realClientIPParser = s }
+func (o *Options) SetRedirectURL(s *url.URL)                              { o.redirectURL = s }
+func (o *Options) SetSignatureData(s *SignatureData)                      { o.signatureData = s }
+func (o *Options) SetOIDCVerifier(s internaloidc.IDTokenVerifier)         { o.oidcVerifier = s }
+func (o *Options) SetJWTBearerVerifiers(s []internaloidc.IDTokenVerifier) { o.jwtBearerVerifiers = s }
+func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.realClientIPParser = s }
 
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
