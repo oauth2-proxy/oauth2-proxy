@@ -45,7 +45,7 @@ func newTestKeycloakOIDCSetup() (*httptest.Server, *KeycloakOIDCProvider) {
 }
 
 func newKeycloakOIDCProvider(serverURL *url.URL, opts options.KeycloakOptions) *KeycloakOIDCProvider {
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{defaultAudienceClaim},
 		ClientID:       mockClientID,
 	}

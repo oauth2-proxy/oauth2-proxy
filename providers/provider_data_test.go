@@ -202,7 +202,7 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 
 			provider := &ProviderData{}
 			if tc.Verifier {
-				verificationOptions := &internaloidc.IDTokenVerificationOptions{
+				verificationOptions := internaloidc.IDTokenVerificationOptions{
 					AudienceClaims: []string{"aud"},
 					ClientID:       oidcClientID,
 				}
@@ -409,7 +409,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
 
-			verificationOptions := &internaloidc.IDTokenVerificationOptions{
+			verificationOptions := internaloidc.IDTokenVerificationOptions{
 				AudienceClaims: []string{"aud"},
 				ClientID:       oidcClientID,
 			}
@@ -478,7 +478,7 @@ func TestProviderData_checkNonce(t *testing.T) {
 			g.Expect(err).ToNot(HaveOccurred())
 			tc.Session.IDToken = rawIDToken
 
-			verificationOptions := &internaloidc.IDTokenVerificationOptions{
+			verificationOptions := internaloidc.IDTokenVerificationOptions{
 				AudienceClaims: []string{"aud"},
 				ClientID:       oidcClientID,
 			}

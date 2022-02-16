@@ -41,7 +41,7 @@ type azureOAuthPayload struct {
 }
 
 func testAzureProvider(hostname string, opts options.AzureOptions) *AzureProvider {
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{"aud"},
 		ClientID:       "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
 	}

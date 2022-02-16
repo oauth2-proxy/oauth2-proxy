@@ -43,7 +43,7 @@ func newSignedTestADFSToken(tokenClaims adfsClaims) (string, error) {
 }
 
 func testADFSProvider(hostname string) *ADFSProvider {
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{"aud"},
 		ClientID:       "https://test.myapp.com",
 	}

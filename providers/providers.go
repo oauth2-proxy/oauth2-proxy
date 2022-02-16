@@ -160,7 +160,7 @@ func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bo
 	}
 }
 
-func newOIDCProviderVerifier(providerConfig options.Provider) (*oidc.Provider, *internaloidc.IDTokenVerifier, error) {
+func newOIDCProviderVerifier(providerConfig options.Provider) (*oidc.Provider, internaloidc.IDTokenVerifier, error) {
 	// If the issuer isn't set, default it for platforms where it makes sense
 	if providerConfig.OIDCConfig.IssuerURL == "" {
 		switch providerConfig.Type {
@@ -183,13 +183,13 @@ func newOIDCProviderVerifier(providerConfig options.Provider) (*oidc.Provider, *
 	}
 }
 
-func newDiscoveryOIDCProviderVerifier(providerConfig options.Provider) (*oidc.Provider, *internaloidc.IDTokenVerifier, error) {
+func newDiscoveryOIDCProviderVerifier(providerConfig options.Provider) (*oidc.Provider, internaloidc.IDTokenVerifier, error) {
 	// Configure discoverable provider data.
 	provider, err := oidc.NewProvider(context.TODO(), providerConfig.OIDCConfig.IssuerURL)
 	if err != nil {
 		return nil, nil, err
 	}
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: providerConfig.OIDCConfig.AudienceClaims,
 		ClientID:       providerConfig.ClientID,
 		ExtraAudiences: providerConfig.OIDCConfig.ExtraAudiences,
@@ -203,7 +203,7 @@ func newDiscoveryOIDCProviderVerifier(providerConfig options.Provider) (*oidc.Pr
 	return provider, verifier, nil
 }
 
-func newInsecureSkipIssuerVerificationOIDCVerifier(providerConfig options.Provider) (*internaloidc.IDTokenVerifier, error) {
+func newInsecureSkipIssuerVerificationOIDCVerifier(providerConfig options.Provider) (internaloidc.IDTokenVerifier, error) {
 	// go-oidc doesn't let us pass bypass the issuer check this in the oidc.NewProvider call
 	// (which uses discovery to get the URLs), so we'll do a quick check ourselves and if
 	// we get the URLs, we'll just use the non-discovery path.
@@ -241,7 +241,7 @@ func newInsecureSkipIssuerVerificationOIDCVerifier(providerConfig options.Provid
 	return newSkipDiscoveryOIDCVerifier(providerConfig)
 }
 
-func newSkipDiscoveryOIDCVerifier(providerConfig options.Provider) (*internaloidc.IDTokenVerifier, error) {
+func newSkipDiscoveryOIDCVerifier(providerConfig options.Provider) (internaloidc.IDTokenVerifier, error) {
 	var errs []error
 
 	// Construct a manual IDTokenVerifier from issuer URL & JWKS URI
@@ -262,7 +262,7 @@ func newSkipDiscoveryOIDCVerifier(providerConfig options.Provider) (*internaloid
 	}
 
 	keySet := oidc.NewRemoteKeySet(context.TODO(), providerConfig.OIDCConfig.JwksURL)
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: providerConfig.OIDCConfig.AudienceClaims,
 		ClientID:       providerConfig.ClientID,
 		ExtraAudiences: providerConfig.OIDCConfig.ExtraAudiences,

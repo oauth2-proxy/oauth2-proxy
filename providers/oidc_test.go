@@ -27,7 +27,7 @@ type redeemTokenResponse struct {
 }
 
 func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{"aud"},
 		ClientID:       "https://test.myapp.com",
 	}
