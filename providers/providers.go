@@ -101,17 +101,17 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	errs := []error{}
 	for name, u := range map[string]struct {
-		dst *url.URL
+		dst **url.URL
 		raw string
 	}{
-		"login":    {dst: p.LoginURL, raw: providerConfig.LoginURL},
-		"redeem":   {dst: p.RedeemURL, raw: providerConfig.RedeemURL},
-		"profile":  {dst: p.ProfileURL, raw: providerConfig.ProfileURL},
-		"validate": {dst: p.ValidateURL, raw: providerConfig.ValidateURL},
-		"resource": {dst: p.ProtectedResource, raw: providerConfig.ProtectedResource},
+		"login":    {dst: &p.LoginURL, raw: providerConfig.LoginURL},
+		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
+		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
+		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
+		"resource": {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
 	} {
 		var err error
-		u.dst, err = url.Parse(u.raw)
+		*u.dst, err = url.Parse(u.raw)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("could not parse %s URL: %v", name, err))
 		}
@@ -132,11 +132,11 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		p.EmailClaim = providerConfig.OIDCConfig.UserIDClaim
 	}
 
-	if providerConfig.Scope == "" {
-		providerConfig.Scope = "openid email profile"
+	if p.Scope == "" {
+		p.Scope = "openid email profile"
 
 		if len(providerConfig.AllowedGroups) > 0 {
-			providerConfig.Scope += " groups"
+			p.Scope += " groups"
 		}
 	}
 	if providerConfig.OIDCConfig.UserIDClaim == "" {
