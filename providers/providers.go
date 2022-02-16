@@ -2,17 +2,12 @@ package providers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -86,16 +81,27 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 
 	if needsVerifier {
-		oidcProvider, verifier, err := newOIDCProviderVerifier(providerConfig)
+		pv, err := internaloidc.NewProviderVerifier(context.TODO(), internaloidc.ProviderVerifierOptions{
+			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
+			ClientID:               providerConfig.ClientID,
+			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
+			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
+			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
+			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
+			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
+		})
 		if err != nil {
-			return nil, fmt.Errorf("error setting OIDC configuration: %v", err)
+			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
 		}
 
-		p.Verifier = verifier
-		if oidcProvider != nil {
+		p.Verifier = pv.Verifier()
+		if pv.DiscoveryEnabled() {
 			// Use the discovered values rather than any specified values
-			providerConfig.LoginURL = oidcProvider.Endpoint().AuthURL
-			providerConfig.RedeemURL = oidcProvider.Endpoint().TokenURL
+			endpoints := pv.Provider().Endpoints()
+			providerConfig.LoginURL = endpoints.AuthURL
+			providerConfig.RedeemURL = endpoints.TokenURL
+			providerConfig.ProfileURL = endpoints.UserInfoURL
+			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
 		}
 	}
 
@@ -158,119 +164,4 @@ func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bo
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)
 	}
-}
-
-func newOIDCProviderVerifier(providerConfig options.Provider) (*oidc.Provider, internaloidc.IDTokenVerifier, error) {
-	// If the issuer isn't set, default it for platforms where it makes sense
-	if providerConfig.OIDCConfig.IssuerURL == "" {
-		switch providerConfig.Type {
-		case "gitlab":
-			providerConfig.OIDCConfig.IssuerURL = "https://gitlab.com"
-		case "oidc":
-			return nil, nil, errors.New("missing required setting: OIDC Issuer URL cannot be empty")
-		}
-	}
-
-	switch {
-	case providerConfig.OIDCConfig.InsecureSkipIssuerVerification && !providerConfig.OIDCConfig.SkipDiscovery:
-		verifier, err := newInsecureSkipIssuerVerificationOIDCVerifier(providerConfig)
-		return nil, verifier, err
-	case providerConfig.OIDCConfig.SkipDiscovery:
-		verifier, err := newSkipDiscoveryOIDCVerifier(providerConfig)
-		return nil, verifier, err
-	default:
-		return newDiscoveryOIDCProviderVerifier(providerConfig)
-	}
-}
-
-func newDiscoveryOIDCProviderVerifier(providerConfig options.Provider) (*oidc.Provider, internaloidc.IDTokenVerifier, error) {
-	// Configure discoverable provider data.
-	provider, err := oidc.NewProvider(context.TODO(), providerConfig.OIDCConfig.IssuerURL)
-	if err != nil {
-		return nil, nil, err
-	}
-	verificationOptions := internaloidc.IDTokenVerificationOptions{
-		AudienceClaims: providerConfig.OIDCConfig.AudienceClaims,
-		ClientID:       providerConfig.ClientID,
-		ExtraAudiences: providerConfig.OIDCConfig.ExtraAudiences,
-	}
-	verifier := internaloidc.NewVerifier(provider.Verifier(&oidc.Config{
-		ClientID:          providerConfig.ClientID,
-		SkipIssuerCheck:   providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
-		SkipClientIDCheck: true, // client id check is done within oauth2-proxy: IDTokenVerifier.Verify
-	}), verificationOptions)
-
-	return provider, verifier, nil
-}
-
-func newInsecureSkipIssuerVerificationOIDCVerifier(providerConfig options.Provider) (internaloidc.IDTokenVerifier, error) {
-	// go-oidc doesn't let us pass bypass the issuer check this in the oidc.NewProvider call
-	// (which uses discovery to get the URLs), so we'll do a quick check ourselves and if
-	// we get the URLs, we'll just use the non-discovery path.
-
-	logger.Printf("Performing OIDC Discovery...")
-
-	requestURL := strings.TrimSuffix(providerConfig.OIDCConfig.IssuerURL, "/") + "/.well-known/openid-configuration"
-	body, err := requests.New(requestURL).
-		Do().
-		UnmarshalJSON()
-	if err != nil {
-		return nil, fmt.Errorf("failed to discover OIDC configuration: %v", err)
-	}
-
-	// Prefer manually configured URLs. It's a bit unclear
-	// why you'd be doing discovery and also providing the URLs
-	// explicitly though...
-	if providerConfig.LoginURL == "" {
-		providerConfig.LoginURL = body.Get("authorization_endpoint").MustString()
-	}
-
-	if providerConfig.RedeemURL == "" {
-		providerConfig.RedeemURL = body.Get("token_endpoint").MustString()
-	}
-
-	if providerConfig.OIDCConfig.JwksURL == "" {
-		providerConfig.OIDCConfig.JwksURL = body.Get("jwks_uri").MustString()
-	}
-
-	if providerConfig.ProfileURL == "" {
-		providerConfig.ProfileURL = body.Get("userinfo_endpoint").MustString()
-	}
-
-	// Now we have performed the discovery, construct the verifier manually
-	return newSkipDiscoveryOIDCVerifier(providerConfig)
-}
-
-func newSkipDiscoveryOIDCVerifier(providerConfig options.Provider) (internaloidc.IDTokenVerifier, error) {
-	var errs []error
-
-	// Construct a manual IDTokenVerifier from issuer URL & JWKS URI
-	// instead of metadata discovery if we enable -skip-oidc-discovery.
-	// In this case we need to make sure the required endpoints for
-	// the provider are configured.
-	if providerConfig.LoginURL == "" {
-		errs = append(errs, errors.New("missing required setting: login-url"))
-	}
-	if providerConfig.RedeemURL == "" {
-		errs = append(errs, errors.New("missing required setting: redeem-url"))
-	}
-	if providerConfig.OIDCConfig.JwksURL == "" {
-		errs = append(errs, errors.New("missing required setting: oidc-jwks-url"))
-	}
-	if len(errs) > 0 {
-		return nil, k8serrors.NewAggregate(errs)
-	}
-
-	keySet := oidc.NewRemoteKeySet(context.TODO(), providerConfig.OIDCConfig.JwksURL)
-	verificationOptions := internaloidc.IDTokenVerificationOptions{
-		AudienceClaims: providerConfig.OIDCConfig.AudienceClaims,
-		ClientID:       providerConfig.ClientID,
-		ExtraAudiences: providerConfig.OIDCConfig.ExtraAudiences,
-	}
-	verifier := internaloidc.NewVerifier(oidc.NewVerifier(providerConfig.OIDCConfig.IssuerURL, keySet, &oidc.Config{
-		ClientID:          providerConfig.ClientID,
-		SkipIssuerCheck:   providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
-		SkipClientIDCheck: true, // client id check is done within oauth2-proxy: IDTokenVerifier.Verify
-	}), verificationOptions)
-	return verifier, nil
 }
