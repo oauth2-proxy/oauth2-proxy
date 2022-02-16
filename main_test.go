@@ -68,7 +68,6 @@ providers:
   ID: google=oauth2-proxy
   clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
-  approvalPrompt: force
   azureConfig:
     tenant: common
   oidcConfig:
@@ -78,6 +77,10 @@ providers:
     insecureSkipNonce: true
     audienceClaims: [aud]
     extraAudiences: []
+  loginURLParameters:
+  - name: approval_prompt
+    default:
+    - force
 `
 
 	const testCoreConfig = `
@@ -154,7 +157,9 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					ExtraAudiences:    []string{},
 					InsecureSkipNonce: true,
 				},
-				ApprovalPrompt: "force",
+				LoginURLParameters: []options.LoginURLParameter{
+					{Name: "approval_prompt", Default: []string{"force"}},
+				},
 			},
 		}
 		return opts
