@@ -13,9 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt"
-
-	oidc "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 
@@ -145,11 +144,11 @@ func TestAzureSetTenant(t *testing.T) {
 	assert.Equal(t, "openid", p.Data().Scope)
 }
 
-func testAzureBackend(payload string) *httptest.Server {
-	return testAzureBackendWithError(payload, false)
+func testAzureBackend(payload string, accessToken, refreshToken string) *httptest.Server {
+	return testAzureBackendWithError(payload, accessToken, refreshToken, false)
 }
 
-func testAzureBackendWithError(payload string, injectError bool) *httptest.Server {
+func testAzureBackendWithError(payload string, accessToken, refreshToken string, injectError bool) *httptest.Server {
 	path := "/v1.0/me"
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -163,7 +162,8 @@ func testAzureBackendWithError(payload string, injectError bool) *httptest.Serve
 					w.WriteHeader(200)
 				}
 				w.Write([]byte(payload))
-			} else if !IsAuthorizedInHeader(r.Header) {
+			} else if !IsAuthorizedInHeaderWithToken(r.Header, accessToken) &&
+				!isAuthorizedRefreshInURLWithToken(r.URL, refreshToken) {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
@@ -224,7 +224,7 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 				host string
 			)
 			if testCase.PayloadFromAzureBackend != "" {
-				b = testAzureBackend(testCase.PayloadFromAzureBackend)
+				b = testAzureBackend(testCase.PayloadFromAzureBackend, authorizedAccessToken, "")
 				defer b.Close()
 
 				bURL, _ := url.Parse(b.URL)
@@ -319,7 +319,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 			payloadBytes, err := json.Marshal(payload)
 			assert.NoError(t, err)
 
-			b := testAzureBackendWithError(string(payloadBytes), testCase.InjectRedeemURLError)
+			b := testAzureBackendWithError(string(payloadBytes), accessTokenString, testCase.RefreshToken, testCase.InjectRedeemURLError)
 			defer b.Close()
 
 			bURL, _ := url.Parse(b.URL)
@@ -353,35 +353,44 @@ func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
 
 func TestAzureProviderRefresh(t *testing.T) {
 	email := "foo@example.com"
+	subject := "foo"
 	idToken := idTokenClaims{
-		StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
-		Email:          email}
+		Email: email,
+		StandardClaims: jwt.StandardClaims{
+			Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
+			Subject:  subject,
+		},
+	}
 	idTokenString, err := newSignedTestIDToken(idToken)
 	assert.NoError(t, err)
+
 	timestamp, err := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
 	assert.NoError(t, err)
+
+	newAccessToken := "new_some_access_token"
 	payload := azureOAuthPayload{
 		IDToken:      idTokenString,
 		RefreshToken: "new_some_refresh_token",
-		AccessToken:  "new_some_access_token",
+		AccessToken:  newAccessToken,
 		ExpiresOn:    timestamp.Unix(),
 	}
-
 	payloadBytes, err := json.Marshal(payload)
 	assert.NoError(t, err)
-	b := testAzureBackend(string(payloadBytes))
+
+	refreshToken := "some_refresh_token"
+	b := testAzureBackend(string(payloadBytes), newAccessToken, refreshToken)
 	defer b.Close()
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host)
 
 	expires := time.Now().Add(time.Duration(-1) * time.Hour)
-	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: &expires}
+	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: refreshToken, IDToken: "some_id_token", ExpiresOn: &expires}
 
 	refreshed, err := p.RefreshSession(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.True(t, refreshed)
 	assert.NotEqual(t, session, nil)
-	assert.Equal(t, "new_some_access_token", session.AccessToken)
+	assert.Equal(t, newAccessToken, session.AccessToken)
 	assert.Equal(t, "new_some_refresh_token", session.RefreshToken)
 	assert.Equal(t, idTokenString, session.IDToken)
 	assert.Equal(t, email, session.Email)
