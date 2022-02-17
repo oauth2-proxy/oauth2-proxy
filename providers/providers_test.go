@@ -13,6 +13,11 @@ const (
 	clientID     = "bazquux"
 	clientSecret = "xyzzyplugh"
 	providerID   = "providerID"
+
+	msIssuerURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/v2.0/"
+	msKeysURL   = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/discovery/v2.0/keys"
+	msAuthURL   = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/authorize?p=b2c_1_sign_in"
+	msTokenURL  = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/token?p=b2c_1_sign_in"
 )
 
 func TestClientSecretFileOptionFails(t *testing.T) {
@@ -76,7 +81,7 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 		ClientID:         clientID,
 		ClientSecretFile: clientSecret,
 		OIDCConfig: options.OIDCOptions{
-			IssuerURL:     "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/v2.0/",
+			IssuerURL:     msIssuerURL,
 			SkipDiscovery: true,
 		},
 	}
@@ -84,10 +89,85 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 	_, err := newProviderDataFromConfig(providerConfig)
 	g.Expect(err).To(MatchError("error setting OIDC configuration: [missing required setting: login-url, missing required setting: redeem-url, missing required setting: oidc-jwks-url]"))
 
-	providerConfig.LoginURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/authorize?p=b2c_1_sign_in"
-	providerConfig.RedeemURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/token?p=b2c_1_sign_in"
-	providerConfig.OIDCConfig.JwksURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/discovery/v2.0/keys"
+	providerConfig.LoginURL = msAuthURL
+	providerConfig.RedeemURL = msTokenURL
+	providerConfig.OIDCConfig.JwksURL = msKeysURL
 
 	_, err = newProviderDataFromConfig(providerConfig)
 	g.Expect(err).ToNot(HaveOccurred())
+}
+
+func TestURLsCorrectlyParsed(t *testing.T) {
+	g := NewWithT(t)
+
+	providerConfig := options.Provider{
+		ID:               providerID,
+		Type:             "oidc",
+		ClientID:         clientID,
+		ClientSecretFile: clientSecret,
+		LoginURL:         msAuthURL,
+		RedeemURL:        msTokenURL,
+		OIDCConfig: options.OIDCOptions{
+			IssuerURL:     msIssuerURL,
+			SkipDiscovery: true,
+			JwksURL:       msKeysURL,
+		},
+	}
+
+	pd, err := newProviderDataFromConfig(providerConfig)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	g.Expect(pd.LoginURL.String()).To(Equal(msAuthURL))
+	g.Expect(pd.RedeemURL.String()).To(Equal(msTokenURL))
+}
+
+func TestScope(t *testing.T) {
+	g := NewWithT(t)
+
+	testCases := []struct {
+		name            string
+		configuredScope string
+		expectedScope   string
+		allowedGroups   []string
+	}{
+		{
+			name:            "with no scope provided",
+			configuredScope: "",
+			expectedScope:   "openid email profile",
+		},
+		{
+			name:            "with no scope provided and groups",
+			configuredScope: "",
+			expectedScope:   "openid email profile groups",
+			allowedGroups:   []string{"foo"},
+		},
+		{
+			name:            "with a configured scope provided",
+			configuredScope: "openid",
+			expectedScope:   "openid",
+		},
+	}
+
+	for _, tc := range testCases {
+		providerConfig := options.Provider{
+			ID:               providerID,
+			Type:             "oidc",
+			ClientID:         clientID,
+			ClientSecretFile: clientSecret,
+			LoginURL:         msAuthURL,
+			RedeemURL:        msTokenURL,
+			Scope:            tc.configuredScope,
+			AllowedGroups:    tc.allowedGroups,
+			OIDCConfig: options.OIDCOptions{
+				IssuerURL:     msIssuerURL,
+				SkipDiscovery: true,
+				JwksURL:       msKeysURL,
+			},
+		}
+
+		pd, err := newProviderDataFromConfig(providerConfig)
+		g.Expect(err).ToNot(HaveOccurred())
+
+		g.Expect(pd.Scope).To(Equal(tc.expectedScope))
+	}
 }
