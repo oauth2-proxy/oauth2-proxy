@@ -188,7 +188,7 @@ Take note of your `TenantId` if applicable for your situation. The `TenantId` ca
 
 OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects. This provider was originally built against CoreOS Dex and we will use it as an example.
 
-1. Launch a Dex instance using the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md).
+1. Launch a Dex instance using the [getting started guide](https://dexidp.io/docs/getting-started/).
 2. Setup oauth2-proxy with the correct provider and using the default ports and callbacks.
 3. Login with the fixture use in the dex guide and run the oauth2-proxy with the following args:
 

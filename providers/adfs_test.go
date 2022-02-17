@@ -13,7 +13,9 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -41,11 +43,16 @@ func newSignedTestADFSToken(tokenClaims adfsClaims) (string, error) {
 }
 
 func testADFSProvider(hostname string) *ADFSProvider {
-	o := oidc.NewVerifier(
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       "https://test.myapp.com",
+	}
+
+	o := internaloidc.NewVerifier(oidc.NewVerifier(
 		"https://issuer.example.com",
 		fakeADFSJwks{},
 		&oidc.Config{ClientID: "https://test.myapp.com"},
-	)
+	), verificationOptions)
 
 	p := NewADFSProvider(&ProviderData{
 		ProviderName: "",
@@ -55,8 +62,8 @@ func testADFSProvider(hostname string) *ADFSProvider {
 		ValidateURL:  &url.URL{},
 		Scope:        "",
 		Verifier:     o,
-		EmailClaim:   OIDCEmailClaim,
-	})
+		EmailClaim:   options.OIDCEmailClaim,
+	}, options.ADFSOptions{})
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
@@ -73,7 +80,7 @@ func testADFSBackend() *httptest.Server {
 		{
 			"access_token": "my_access_token",
 			"id_token": "my_id_token",
-			"refresh_token": "my_refresh_token" 
+			"refresh_token": "my_refresh_token"
 		 }
 	`
 	userInfo := `
@@ -127,7 +134,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 
 	Context("New Provider Init", func() {
 		It("uses defaults", func() {
-			providerData := NewADFSProvider(&ProviderData{}).Data()
+			providerData := NewADFSProvider(&ProviderData{}, options.ADFSOptions{}).Data()
 			Expect(providerData.ProviderName).To(Equal("ADFS"))
 			Expect(providerData.Scope).To(Equal("openid email profile"))
 		})
@@ -144,9 +151,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 	Context("with valid token", func() {
 		It("should not throw an error", func() {
 			rawIDToken, _ := newSignedTestIDToken(defaultIDToken)
-			idToken, err := p.Verifier.Verify(context.Background(), rawIDToken)
-			Expect(err).To(BeNil())
-			session, err := p.buildSessionFromClaims(idToken)
+			session, err := p.buildSessionFromClaims(rawIDToken, "")
 			Expect(err).To(BeNil())
 			session.IDToken = rawIDToken
 			err = p.EnrichSession(context.Background(), session)
@@ -161,8 +166,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 			p := NewADFSProvider(&ProviderData{
 				ProtectedResource: resource,
 				Scope:             "",
-			})
-			p.skipScope = true
+			}, options.ADFSOptions{SkipScope: true})
 
 			result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "")
 			Expect(result).NotTo(ContainSubstring("scope="))
@@ -182,7 +186,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 				p := NewADFSProvider(&ProviderData{
 					ProtectedResource: resource,
 					Scope:             in.scope,
-				})
+				}, options.ADFSOptions{})
 
 				Expect(p.Data().Scope).To(Equal(in.expectedScope))
 				result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "")

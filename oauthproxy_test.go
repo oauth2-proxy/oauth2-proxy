@@ -21,6 +21,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
@@ -160,13 +161,11 @@ func Test_enrichSession(t *testing.T) {
 			err := validation.Validate(opts)
 			assert.NoError(t, err)
 
-			// intentionally set after validation.Validate(opts) since it will clobber
-			// our TestProvider and call `providers.New` defaulting to `providers.GoogleProvider`
-			opts.SetProvider(NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail))
 			proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
 			if err != nil {
 				t.Fatal(err)
 			}
+			proxy.provider = NewTestProvider(&url.URL{Host: "www.example.com"}, providerEmail)
 
 			err = proxy.enrichSessionState(context.Background(), tc.session)
 			assert.NoError(t, err)
@@ -231,13 +230,13 @@ func TestBasicAuthPassword(t *testing.T) {
 	providerURL, _ := url.Parse(providerServer.URL)
 	const emailAddress = "john.doe@example.com"
 
-	opts.SetProvider(NewTestProvider(providerURL, emailAddress))
 	proxy, err := NewOAuthProxy(opts, func(email string) bool {
 		return email == emailAddress
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	proxy.provider = NewTestProvider(providerURL, emailAddress)
 
 	// Save the required session
 	rw := httptest.NewRecorder()
@@ -389,10 +388,10 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 
 	testProvider := NewTestProvider(providerURL, emailAddress)
 	testProvider.ValidToken = opts.ValidToken
-	patt.opts.SetProvider(testProvider)
 	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
 		return email == emailAddress
 	})
+	patt.proxy.provider = testProvider
 	if err != nil {
 		return nil, err
 	}
@@ -768,11 +767,17 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	if err != nil {
 		return nil, err
 	}
-	pcTest.proxy.provider = &TestProvider{
+	testProvider := &TestProvider{
 		ProviderData: &providers.ProviderData{},
 		ValidToken:   opts.providerValidateCookieResponse,
 	}
-	pcTest.proxy.provider.(*TestProvider).SetAllowedGroups(pcTest.opts.Providers[0].AllowedGroups)
+
+	groups := pcTest.opts.Providers[0].AllowedGroups
+	testProvider.AllowedGroups = make(map[string]struct{}, len(groups))
+	for _, group := range groups {
+		testProvider.AllowedGroups[group] = struct{}{}
+	}
+	pcTest.proxy.provider = testProvider
 
 	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
 	// access_token validation.
@@ -1358,12 +1363,12 @@ func TestAuthSkippedForPreflightRequests(t *testing.T) {
 	assert.NoError(t, err)
 
 	upstreamURL, _ := url.Parse(upstreamServer.URL)
-	opts.SetProvider(NewTestProvider(upstreamURL, ""))
 
 	proxy, err := NewOAuthProxy(opts, func(string) bool { return false })
 	if err != nil {
 		t.Fatal(err)
 	}
+	proxy.provider = NewTestProvider(upstreamURL, "")
 	rw := httptest.NewRecorder()
 	req, _ := http.NewRequest("OPTIONS", "/preflight-request", nil)
 	proxy.ServeHTTP(rw, req)
@@ -1408,6 +1413,7 @@ type SignatureTest struct {
 	header        http.Header
 	rw            *httptest.ResponseRecorder
 	authenticator *SignatureAuthenticator
+	authProvider  providers.Provider
 }
 
 func NewSignatureTest() (*SignatureTest, error) {
@@ -1442,7 +1448,7 @@ func NewSignatureTest() (*SignatureTest, error) {
 	if err != nil {
 		return nil, err
 	}
-	opts.SetProvider(NewTestProvider(providerURL, "mbland@acm.org"))
+	testProvider := NewTestProvider(providerURL, "mbland@acm.org")
 
 	return &SignatureTest{
 		opts,
@@ -1452,6 +1458,7 @@ func NewSignatureTest() (*SignatureTest, error) {
 		make(http.Header),
 		httptest.NewRecorder(),
 		authenticator,
+		testProvider,
 	}, nil
 }
 
@@ -1485,6 +1492,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) er
 	if err != nil {
 		return err
 	}
+	proxy.provider = st.authProvider
 
 	var bodyBuf io.ReadCloser
 	if body != "" {
@@ -1737,7 +1745,14 @@ func TestGetJwtSession(t *testing.T) {
 
 	keyset := NoOpKeySet{}
 	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
-		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true})
+		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true,
+			SkipClientIDCheck: true})
+	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       "https://test.myapp.com",
+		ExtraAudiences: []string{},
+	}
+	internalVerifier := internaloidc.NewVerifier(verifier, verificationOptions)
 
 	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.InjectRequestHeaders = []options.Header{
@@ -1808,7 +1823,7 @@ func TestGetJwtSession(t *testing.T) {
 			},
 		}
 		opts.SkipJwtBearerTokens = true
-		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), verifier))
+		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), internalVerifier))
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2586,6 +2601,95 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 			}
 
 			err = test.SaveSession(session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
+func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
+	testCases := []struct {
+		name               string
+		groups             []string
+		method             string
+		ip                 string
+		withSession        bool
+		expectedStatusCode int
+	}{
+		{
+			name:               "UserWithGroupSkipAuthPreflight",
+			groups:             []string{"a", "c"},
+			method:             "OPTIONS",
+			ip:                 "1.2.3.5:43670",
+			withSession:        true,
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserWithGroupTrustedIp",
+			groups:             []string{"a", "c"},
+			method:             "GET",
+			ip:                 "1.2.3.4:43670",
+			withSession:        true,
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserWithoutGroupSkipAuthPreflight",
+			groups:             []string{"c"},
+			method:             "OPTIONS",
+			ip:                 "1.2.3.5:43670",
+			withSession:        true,
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserWithoutGroupTrustedIp",
+			groups:             []string{"c"},
+			method:             "GET",
+			ip:                 "1.2.3.4:43670",
+			withSession:        true,
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserWithoutSessionSkipAuthPreflight",
+			method:             "OPTIONS",
+			ip:                 "1.2.3.5:43670",
+			withSession:        false,
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserWithoutSessionTrustedIp",
+			method:             "GET",
+			ip:                 "1.2.3.4:43670",
+			withSession:        false,
+			expectedStatusCode: http.StatusAccepted,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewAuthOnlyEndpointTest("?allowed_groups=a,b", func(opts *options.Options) {
+				opts.SkipAuthPreflight = true
+				opts.TrustedIPs = []string{"1.2.3.4"}
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			test.req.Method = tc.method
+			test.req.RemoteAddr = tc.ip
+
+			if tc.withSession {
+				created := time.Now()
+				session := &sessions.SessionState{
+					Groups:      tc.groups,
+					Email:       "test",
+					AccessToken: "oauth_token",
+					CreatedAt:   &created,
+				}
+				err = test.SaveSession(session)
+			}
 			assert.NoError(t, err)
 
 			test.proxy.ServeHTTP(test.rw, test.req)

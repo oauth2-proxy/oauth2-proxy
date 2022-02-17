@@ -91,7 +91,7 @@ func (s *server) setupTLSListener(opts Opts) error {
 	}
 
 	config := &tls.Config{
-		MinVersion: tls.VersionTLS12,
+		MinVersion: tls.VersionTLS12, // default, override below
 		MaxVersion: tls.VersionTLS13,
 		NextProtos: []string{"http/1.1"},
 	}
@@ -103,6 +103,17 @@ func (s *server) setupTLSListener(opts Opts) error {
 		return fmt.Errorf("could not load certificate: %v", err)
 	}
 	config.Certificates = []tls.Certificate{cert}
+
+	if len(opts.TLS.MinVersion) > 0 {
+		switch opts.TLS.MinVersion {
+		case "TLS1.2":
+			config.MinVersion = tls.VersionTLS12
+		case "TLS1.3":
+			config.MinVersion = tls.VersionTLS13
+		default:
+			return errors.New("unknown TLS MinVersion config provided")
+		}
+	}
 
 	listenAddr := getListenAddress(opts.SecureBindAddress)
 

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -24,12 +25,11 @@ var _ Provider = (*ADFSProvider)(nil)
 const (
 	adfsProviderName = "ADFS"
 	adfsDefaultScope = "openid email profile"
-	adfsSkipScope    = false
 	adfsUPNClaim     = "upn"
 )
 
 // NewADFSProvider initiates a new ADFSProvider
-func NewADFSProvider(p *ProviderData) *ADFSProvider {
+func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:  adfsProviderName,
 		scope: adfsDefaultScope,
@@ -53,15 +53,10 @@ func NewADFSProvider(p *ProviderData) *ADFSProvider {
 
 	return &ADFSProvider{
 		OIDCProvider:    oidcProvider,
-		skipScope:       adfsSkipScope,
+		skipScope:       opts.SkipScope,
 		oidcEnrichFunc:  oidcProvider.EnrichSession,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
-}
-
-// Configure defaults the ADFSProvider configuration options
-func (p *ADFSProvider) Configure(skipScope bool) {
-	p.skipScope = skipScope
 }
 
 // GetLoginURL Override to double encode the state parameter. If not query params are lost
@@ -103,16 +98,17 @@ func (p *ADFSProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 }
 
 func (p *ADFSProvider) fallbackUPN(ctx context.Context, s *sessions.SessionState) error {
-	idToken, err := p.Verifier.Verify(ctx, s.IDToken)
+	claims, err := p.getClaimExtractor(s.IDToken, s.AccessToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not extract claims: %v", err)
 	}
-	claims, err := p.getClaims(idToken)
+
+	upn, found, err := claims.GetClaim(adfsUPNClaim)
 	if err != nil {
-		return fmt.Errorf("couldn't extract claims from id_token (%v)", err)
+		return fmt.Errorf("could not extract %s claim: %v", adfsUPNClaim, err)
 	}
-	upn := claims.raw[adfsUPNClaim]
-	if upn != nil {
+
+	if found && fmt.Sprint(upn) != "" {
 		s.Email = fmt.Sprint(upn)
 	}
 	return nil

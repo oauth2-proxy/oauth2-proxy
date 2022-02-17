@@ -5,19 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
 	"golang.org/x/oauth2"
 )
 
 const (
-	OIDCEmailClaim  = "email"
-	OIDCGroupsClaim = "groups"
+	// This is not exported as it's not currently user configurable
+	oidcUserClaim = "sub"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -44,11 +47,13 @@ type ProviderData struct {
 	UserClaim            string
 	EmailClaim           string
 	GroupsClaim          string
-	Verifier             *oidc.IDTokenVerifier
+	Verifier             *internaloidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
 	AllowedGroups map[string]struct{}
+
+	getAuthorizationHeaderFunc func(string) http.Header
 }
 
 // Data returns the ProviderData
@@ -68,9 +73,9 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	return string(fileClientSecret), nil
 }
 
-// SetAllowedGroups organizes a group list into the AllowedGroups map
+// setAllowedGroups organizes a group list into the AllowedGroups map
 // to be consumed by Authorize implementations
-func (p *ProviderData) SetAllowedGroups(groups []string) {
+func (p *ProviderData) setAllowedGroups(groups []string) {
 	p.AllowedGroups = make(map[string]struct{}, len(groups))
 	for _, group := range groups {
 		p.AllowedGroups[group] = struct{}{}
@@ -96,6 +101,10 @@ func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
 	if p.Scope == "" {
 		p.Scope = defaults.scope
 	}
+
+	if p.UserClaim == "" {
+		p.UserClaim = oidcUserClaim
+	}
 }
 
 // defaultURL will set return a default value if the given value is not set.
@@ -117,17 +126,6 @@ func defaultURL(u *url.URL, d *url.URL) *url.URL {
 // OIDC compliant
 // ****************************************************************************
 
-// OIDCClaims is a struct to unmarshal the OIDC claims from an ID Token payload
-type OIDCClaims struct {
-	Subject  string   `json:"sub"`
-	Email    string   `json:"-"`
-	Groups   []string `json:"-"`
-	Verified *bool    `json:"email_verified"`
-	Nonce    string   `json:"nonce"`
-
-	raw map[string]interface{}
-}
-
 func (p *ProviderData) verifyIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
 	rawIDToken := getIDToken(token)
 	if strings.TrimSpace(rawIDToken) == "" {
@@ -141,110 +139,80 @@ func (p *ProviderData) verifyIDToken(ctx context.Context, token *oauth2.Token) (
 
 // buildSessionFromClaims uses IDToken claims to populate a fresh SessionState
 // with non-Token related fields.
-func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*sessions.SessionState, error) {
 	ss := &sessions.SessionState{}
 
-	if idToken == nil {
+	if rawIDToken == "" {
 		return ss, nil
 	}
 
-	claims, err := p.getClaims(idToken)
+	extractor, err := p.getClaimExtractor(rawIDToken, accessToken)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
+		return nil, err
 	}
 
-	ss.User = claims.Subject
-	ss.Email = claims.Email
-	ss.Groups = claims.Groups
-
-	// Allow specialized providers that embed OIDCProvider to control the User
-	// claim. Not exposed as a configuration flag to generic OIDC provider
-	// users (yet).
-	if p.UserClaim != "" {
-		user, ok := claims.raw[p.UserClaim].(string)
-		if !ok {
-			return nil, fmt.Errorf("unable to extract custom UserClaim (%s)", p.UserClaim)
+	// Use a slice of a struct (vs map) here in case the same claim is used twice
+	for _, c := range []struct {
+		claim string
+		dst   interface{}
+	}{
+		{p.UserClaim, &ss.User},
+		{p.EmailClaim, &ss.Email},
+		{p.GroupsClaim, &ss.Groups},
+		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
+		{"preferred_username", &ss.PreferredUsername},
+	} {
+		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
+			return nil, err
 		}
-		ss.User = user
-	}
-
-	// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
-	if pref, ok := claims.raw["preferred_username"].(string); ok {
-		ss.PreferredUsername = pref
 	}
 
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
-	verifyEmail := (p.EmailClaim == OIDCEmailClaim) && !p.AllowUnverifiedEmail
-	if verifyEmail && claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
+
+	var verified bool
+	exists, err := extractor.GetClaimInto("email_verified", &verified)
+	if err != nil {
+		return nil, err
+	}
+
+	if verifyEmail && exists && !verified {
+		return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
 	}
 
 	return ss, nil
 }
 
-// getClaims extracts IDToken claims into an OIDCClaims
-func (p *ProviderData) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
-	claims := &OIDCClaims{}
-
-	// Extract default claims.
-	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
-	}
-	// Extract custom claims.
-	if err := idToken.Claims(&claims.raw); err != nil {
-		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)
+func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {
+	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, p.ProfileURL, p.getAuthorizationHeader(accessToken))
+	if err != nil {
+		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}
 
-	email := claims.raw[p.EmailClaim]
-	if email != nil {
-		claims.Email = fmt.Sprint(email)
-	}
-	claims.Groups = p.extractGroups(claims.raw)
-
-	return claims, nil
+	return extractor, nil
 }
 
 // checkNonce compares the session's nonce with the IDToken's nonce claim
-func (p *ProviderData) checkNonce(s *sessions.SessionState, idToken *oidc.IDToken) error {
-	claims, err := p.getClaims(idToken)
+func (p *ProviderData) checkNonce(s *sessions.SessionState) error {
+	extractor, err := p.getClaimExtractor(s.IDToken, "")
 	if err != nil {
 		return fmt.Errorf("id_token claims extraction failed: %v", err)
 	}
-	if !s.CheckNonce(claims.Nonce) {
+	var nonce string
+	if _, err := extractor.GetClaimInto("nonce", &nonce); err != nil {
+		return fmt.Errorf("could not extract nonce from ID Token: %v", err)
+	}
+
+	if !s.CheckNonce(nonce) {
 		return errors.New("id_token nonce claim does not match the session nonce")
 	}
 	return nil
 }
 
-// extractGroups extracts groups from a claim to a list in a type safe manner.
-// If the claim isn't present, `nil` is returned. If the groups claim is
-// present but empty, `[]string{}` is returned.
-func (p *ProviderData) extractGroups(claims map[string]interface{}) []string {
-	rawClaim, ok := claims[p.GroupsClaim]
-	if !ok {
-		return nil
+func (p *ProviderData) getAuthorizationHeader(accessToken string) http.Header {
+	if p.getAuthorizationHeaderFunc != nil && accessToken != "" {
+		return p.getAuthorizationHeaderFunc(accessToken)
 	}
-
-	// Handle traditional list-based groups as well as non-standard singleton
-	// based groups. Both variants support complex objects if needed.
-	var claimGroups []interface{}
-	switch raw := rawClaim.(type) {
-	case []interface{}:
-		claimGroups = raw
-	case interface{}:
-		claimGroups = []interface{}{raw}
-	}
-
-	groups := []string{}
-	for _, rawGroup := range claimGroups {
-		formattedGroup, err := formatGroup(rawGroup)
-		if err != nil {
-			logger.Errorf("Warning: unable to format group of type %s with error %s",
-				reflect.TypeOf(rawGroup), err)
-			continue
-		}
-		groups = append(groups, formattedGroup)
-	}
-	return groups
+	return nil
 }

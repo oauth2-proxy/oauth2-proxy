@@ -281,6 +281,8 @@ make up the header value
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
 | `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
+| `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
+| `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 
 ### Provider
 
@@ -303,7 +305,7 @@ Provider holds all configuration for a single provider
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
 | `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
-| `provider` | _string_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
+| `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
 | `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
@@ -316,6 +318,17 @@ Provider holds all configuration for a single provider
 | `approvalPrompt` | _string_ | ApprovalPrompt is the OAuth approval_prompt<br/>default is set to 'force' |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
 | `acrValues` | _string_ | AcrValues is a string of acr values |
+
+### ProviderType
+#### (`string` alias)
+
+(**Appears on:** [Provider](#provider))
+
+ProviderType is used to enumerate the different provider type options
+Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
+gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+and oidc.
+
 
 ### Providers
 
@@ -349,18 +362,20 @@ Server represents the configuration for an HTTP(S) server
 | ----- | ---- | ----------- |
 | `BindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
 | `SecureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
-| `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic. |
+| `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
 
 ### TLS
 
 (**Appears on:** [Server](#server))
 
-TLS contains the information for loading a TLS certifcate and key.
+TLS contains the information for loading a TLS certificate and key
+as well as an optional minimal TLS version that is acceptable.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `Key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
 | `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
+| `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
 
 ### Upstream
 

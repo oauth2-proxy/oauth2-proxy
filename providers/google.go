@@ -10,9 +10,11 @@ import (
 	"io"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -79,7 +81,7 @@ var (
 )
 
 // NewGoogleProvider initiates a new GoogleProvider
-func NewGoogleProvider(p *ProviderData) *GoogleProvider {
+func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProvider, error) {
 	p.setProviderDefaults(providerDefaults{
 		name:        googleProviderName,
 		loginURL:    googleDefaultLoginURL,
@@ -88,7 +90,7 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 		validateURL: googleDefaultValidateURL,
 		scope:       googleDefaultScope,
 	})
-	return &GoogleProvider{
+	provider := &GoogleProvider{
 		ProviderData: p,
 		// Set a default groupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
@@ -96,6 +98,21 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 			return true
 		},
 	}
+
+	if opts.ServiceAccountJSON != "" {
+		file, err := os.Open(opts.ServiceAccountJSON)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Google credentials file: %s", opts.ServiceAccountJSON)
+		}
+
+		// Backwards compatibility with `--google-group` option
+		if len(opts.Groups) > 0 {
+			provider.setAllowedGroups(opts.Groups)
+		}
+		provider.setGroupRestriction(opts.Groups, opts.AdminEmail, file)
+	}
+
+	return provider, nil
 }
 
 func claimsFromIDToken(idToken string) (*claims, error) {
@@ -195,7 +212,7 @@ func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionSta
 // account credentials.
 //
 // TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
-func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
+func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
 	adminService := getAdminService(adminEmail, credentialsReader)
 	p.groupValidator = func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed

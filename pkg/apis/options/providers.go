@@ -1,6 +1,15 @@
 package options
 
-import "github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+const (
+	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
+	OIDCEmailClaim = "email"
+
+	// OIDCGroupsClaim is the generic groups claim used by the OIDC provider.
+	OIDCGroupsClaim = "groups"
+)
+
+// OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
+var OIDCAudienceClaims = []string{"aud"}
 
 // Providers is a collection of definitions for providers.
 type Providers []Provider
@@ -43,7 +52,7 @@ type Provider struct {
 	// Type is the OAuth provider
 	// must be set from the supported providers group,
 	// otherwise 'Google' is set as default
-	Type string `json:"provider,omitempty"`
+	Type ProviderType `json:"provider,omitempty"`
 	// Name is the providers display name
 	// if set, it will be shown to the users in the login page.
 	Name string `json:"name,omitempty"`
@@ -74,6 +83,56 @@ type Provider struct {
 	// AcrValues is a string of acr values
 	AcrValues string `json:"acrValues,omitempty"`
 }
+
+// ProviderType is used to enumerate the different provider type options
+// Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
+// gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+// and oidc.
+type ProviderType string
+
+const (
+	// ADFSProvider is the provider type for ADFS
+	ADFSProvider ProviderType = "adfs"
+
+	// AzureProvider is the provider type for Azure
+	AzureProvider ProviderType = "azure"
+
+	// BitbucketProvider is the provider type for Bitbucket
+	BitbucketProvider ProviderType = "bitbucket"
+
+	// DigitalOceanProvider is the provider type for DigitalOcean
+	DigitalOceanProvider ProviderType = "digitalocean"
+
+	// FacebookProvider is the provider type for Facebook
+	FacebookProvider ProviderType = "facebook"
+
+	// GitHubProvider is the provider type for GitHub
+	GitHubProvider ProviderType = "github"
+
+	// GitLabProvider is the provider type for GitLab
+	GitLabProvider ProviderType = "gitlab"
+
+	// GoogleProvider is the provider type for GoogleProvider
+	GoogleProvider ProviderType = "google"
+
+	// KeycloakProvider is the provider type for Keycloak
+	KeycloakProvider ProviderType = "keycloak"
+
+	// KeycloakOIDCProvider is the provider type for Keycloak OIDC
+	KeycloakOIDCProvider ProviderType = "keycloak-oidc"
+
+	// LinkedInProvider is the provider type for LinkedIn
+	LinkedInProvider ProviderType = "linkedin"
+
+	// LoginGovProvider is the provider type for LoginGov
+	LoginGovProvider ProviderType = "login.gov"
+
+	// NextCloudProvider is the provider type for NextCloud
+	NextCloudProvider ProviderType = "nextcloud"
+
+	// OIDCProvider is the provider type for OIDC
+	OIDCProvider ProviderType = "oidc"
+)
 
 type KeycloakOptions struct {
 	// Group enables to restrict login to members of indicated group
@@ -164,6 +223,12 @@ type OIDCOptions struct {
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
+	// AudienceClaim allows to define any claim that is verified against the client id
+	// By default `aud` claim is used for verification.
+	AudienceClaims []string `json:"audienceClaims,omitempty"`
+	// ExtraAudiences is a list of additional audiences that are allowed
+	// to pass verification in addition to the client id.
+	ExtraAudiences []string `json:"extraAudiences,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -188,9 +253,11 @@ func providerDefaults() Providers {
 				InsecureAllowUnverifiedEmail: false,
 				InsecureSkipNonce:            true,
 				SkipDiscovery:                false,
-				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
-				EmailClaim:                   providers.OIDCEmailClaim,
-				GroupsClaim:                  providers.OIDCGroupsClaim,
+				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
+				EmailClaim:                   OIDCEmailClaim,
+				GroupsClaim:                  OIDCGroupsClaim,
+				AudienceClaims:               OIDCAudienceClaims,
+				ExtraAudiences:               []string{},
 			},
 		},
 	}

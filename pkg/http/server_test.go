@@ -233,6 +233,34 @@ var _ = Describe("Server", func() {
 				expectHTTPListener: false,
 				expectTLSListener:  true,
 			}),
+			Entry("with a valid https bind address, and valid TLS config with MinVersion", &newServerTableInput{
+				opts: Opts{
+					Handler:           handler,
+					SecureBindAddress: "127.0.0.1:0",
+					TLS: &options.TLS{
+						Key:        &keyDataSource,
+						Cert:       &certDataSource,
+						MinVersion: "TLS1.3",
+					},
+				},
+				expectedErr:        nil,
+				expectHTTPListener: false,
+				expectTLSListener:  true,
+			}),
+			Entry("with a valid https bind address, and invalid TLS config with unknown MinVersion", &newServerTableInput{
+				opts: Opts{
+					Handler:           handler,
+					SecureBindAddress: "127.0.0.1:0",
+					TLS: &options.TLS{
+						Key:        &keyDataSource,
+						Cert:       &certDataSource,
+						MinVersion: "TLS1.42",
+					},
+				},
+				expectedErr:        errors.New("error setting up TLS listener: unknown TLS MinVersion config provided"),
+				expectHTTPListener: false,
+				expectTLSListener:  true,
+			}),
 		)
 	})
 

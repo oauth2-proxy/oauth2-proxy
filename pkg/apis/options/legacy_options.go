@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/spf13/pflag"
 )
 
@@ -54,6 +53,8 @@ func NewLegacyOptions() *LegacyOptions {
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
+			OIDCAudienceClaims:    []string{"aud"},
+			OIDCExtraAudiences:    []string{},
 			InsecureOIDCSkipNonce: true,
 		},
 
@@ -448,6 +449,7 @@ type LegacyServer struct {
 	HTTPSAddress         string `flag:"https-address" cfg:"https_address"`
 	TLSCertFile          string `flag:"tls-cert-file" cfg:"tls_cert_file"`
 	TLSKeyFile           string `flag:"tls-key-file" cfg:"tls_key_file"`
+	TLSMinVersion        string `flag:"tls-min-version" cfg:"tls_min_version"`
 }
 
 func legacyServerFlagset() *pflag.FlagSet {
@@ -461,6 +463,7 @@ func legacyServerFlagset() *pflag.FlagSet {
 	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
+	flagSet.String("tls-min-version", "", "minimal TLS version for HTTPS clients (either \"TLS1.2\" or \"TLS1.3\")")
 
 	return flagSet
 }
@@ -498,6 +501,8 @@ type LegacyProvider struct {
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
+	OIDCAudienceClaims                 []string `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
+	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
@@ -546,8 +551,10 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("insecure-oidc-skip-nonce", true, "skip verifying the OIDC ID Token's nonce claim")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
-	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
-	flagSet.String("oidc-email-claim", providers.OIDCEmailClaim, "which OIDC claim contains the user's email")
+	flagSet.String("oidc-groups-claim", OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
+	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
+	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -562,7 +569,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 
-	flagSet.String("user-id-claim", providers.OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
+	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 
@@ -582,6 +589,7 @@ func (l LegacyServer) convert() (Server, Server) {
 			Cert: &SecretSource{
 				FromFile: l.TLSCertFile,
 			},
+			MinVersion: l.TLSMinVersion,
 		}
 		// Preserve backwards compatibility, only run one server
 		appServer.BindAddress = ""
@@ -616,7 +624,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientID:          l.ClientID,
 		ClientSecret:      l.ClientSecret,
 		ClientSecretFile:  l.ClientSecretFile,
-		Type:              l.ProviderType,
+		Type:              ProviderType(l.ProviderType),
 		CAFiles:           l.ProviderCAFiles,
 		LoginURL:          l.LoginURL,
 		RedeemURL:         l.RedeemURL,
@@ -641,6 +649,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
+		AudienceClaims:                 l.OIDCAudienceClaims,
+		ExtraAudiences:                 l.OIDCExtraAudiences,
 	}
 
 	// This part is out of the switch section because azure has a default tenant
