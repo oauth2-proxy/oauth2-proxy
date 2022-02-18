@@ -9,6 +9,7 @@
 ## Changes since v7.2.1
 
 - [#1561](https://github.com/oauth2-proxy/oauth2-proxy/pull/1561) Add ppc64le support (@mgiessing)
+- [#1563](https://github.com/oauth2-proxy/oauth2-proxy/pull/1563) Ensure claim extractor does not attempt profile call when URL is empty (@JoelSpeed)
 - [#1560](https://github.com/oauth2-proxy/oauth2-proxy/pull/1560) Fix provider data initialisation (@JoelSpeed)
 - [#1555](https://github.com/oauth2-proxy/oauth2-proxy/pull/1555) Refactor provider configuration into providers package (@JoelSpeed)
 - [#1394](https://github.com/oauth2-proxy/oauth2-proxy/pull/1394) Add generic claim extractor to get claims from ID Tokens (@JoelSpeed)
