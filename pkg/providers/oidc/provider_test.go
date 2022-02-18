@@ -84,6 +84,25 @@ var _ = Describe("Provider", func() {
 			expectedError: "failed to discover OIDC configuration: unexpected status \"400\"",
 		}),
 	)
+
+	It("with code challenges supported on the provider, shold populate PKCE information", func() {
+		m, err := mockoidc.NewServer(nil)
+		Expect(err).ToNot(HaveOccurred())
+		m.AddMiddleware(newCodeChallengeIssuerMiddleware(m))
+
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(m.Start(ln, nil)).To(Succeed())
+		defer func() {
+			Expect(m.Shutdown()).To(Succeed())
+		}()
+
+		provider, err := NewProvider(context.Background(), m.Issuer(), false)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(provider.PKCE().CodeChallengeAlgs).To(ConsistOf("S256", "plain"))
+	})
 })
 
 func newInvalidIssuerMiddleware(m *mockoidc.MockOIDC) func(http.Handler) http.Handler {
@@ -95,6 +114,26 @@ func newInvalidIssuerMiddleware(m *mockoidc.MockOIDC) func(http.Handler) http.Ha
 				TokenURL:    m.TokenEndpoint(),
 				JWKsURL:     m.JWKSEndpoint(),
 				UserInfoURL: m.UserinfoEndpoint(),
+			}
+			data, err := json.Marshal(p)
+			if err != nil {
+				rw.WriteHeader(500)
+			}
+			rw.Write(data)
+		})
+	}
+}
+
+func newCodeChallengeIssuerMiddleware(m *mockoidc.MockOIDC) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			p := providerJSON{
+				Issuer:            m.Issuer(),
+				AuthURL:           m.AuthorizationEndpoint(),
+				TokenURL:          m.TokenEndpoint(),
+				JWKsURL:           m.JWKSEndpoint(),
+				UserInfoURL:       m.UserinfoEndpoint(),
+				CodeChallengeAlgs: []string{"S256", "plain"},
 			}
 			data, err := json.Marshal(p)
 			if err != nil {
