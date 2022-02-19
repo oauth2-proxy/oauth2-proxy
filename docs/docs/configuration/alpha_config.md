@@ -91,7 +91,31 @@ longer available when using alpha configuration:
 - `basic-auth-password`/`basic_auth_password`
 - `skip-auth-strip-headers`/`skip_auth_strip_headers`
 
-Attempting to use these options via flags or via config when `--alpha-config`
+<!-- Legacy provider FlagSet -->
+- `client-id`/`client_id`
+- `client-secret`/`client_secret`, and `client-secret-file`/`client_secret_file`
+- `provider`
+- `provider-display-name`/`provider_display_name`
+- `provider-ca-file`/`provider_ca_files`
+- `login-url`/`login_url`
+- `redeem-url`/`redeem_url`
+- `profile-url`/`profile_url`
+- `resource`
+- `validate-url`/`validate_url`
+- `scope`
+- `prompt`
+- `approval-prompt`/`approval_prompt`
+- `acr-values`/`acr_values`
+- `user-id-claim`/`user_id_claim`
+- `allowed-group`/`allowed_groups`
+- `allowed-role`/`allowed_roles`
+- `jwt-key`/`jwt_key`
+- `jwt-key-file`/`jwt_key_file`
+- `pubjwk-url`/`pubjwk_url`
+
+and all provider-specific options, i.e. any option whose name includes `oidc`,
+`azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
+use any of these options via flags or via config when `--alpha-config` is
 set will result in an error.
 
 :::important
