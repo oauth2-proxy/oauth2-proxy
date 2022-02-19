@@ -16,7 +16,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	. "github.com/onsi/gomega"
 	"golang.org/x/oauth2"
 )
@@ -202,7 +202,7 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 
 			provider := &ProviderData{}
 			if tc.Verifier {
-				verificationOptions := &internaloidc.IDTokenVerificationOptions{
+				verificationOptions := internaloidc.IDTokenVerificationOptions{
 					AudienceClaims: []string{"aud"},
 					ClientID:       oidcClientID,
 				}
@@ -409,7 +409,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
 
-			verificationOptions := &internaloidc.IDTokenVerificationOptions{
+			verificationOptions := internaloidc.IDTokenVerificationOptions{
 				AudienceClaims: []string{"aud"},
 				ClientID:       oidcClientID,
 			}
@@ -478,7 +478,7 @@ func TestProviderData_checkNonce(t *testing.T) {
 			g.Expect(err).ToNot(HaveOccurred())
 			tc.Session.IDToken = rawIDToken
 
-			verificationOptions := &internaloidc.IDTokenVerificationOptions{
+			verificationOptions := internaloidc.IDTokenVerificationOptions{
 				AudienceClaims: []string{"aud"},
 				ClientID:       oidcClientID,
 			}

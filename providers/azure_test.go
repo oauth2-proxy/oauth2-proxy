@@ -17,7 +17,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
@@ -41,7 +41,7 @@ type azureOAuthPayload struct {
 }
 
 func testAzureProvider(hostname string, opts options.AzureOptions) *AzureProvider {
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{"aud"},
 		ClientID:       "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
 	}
