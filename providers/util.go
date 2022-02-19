@@ -38,14 +38,6 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-	if p.AcrValues != "" {
-		params.Add("acr_values", p.AcrValues)
-	}
-	if p.Prompt != "" {
-		params.Set("prompt", p.Prompt)
-	} else { // Legacy variant of the prompt param:
-		params.Set("approval_prompt", p.ApprovalPrompt)
-	}
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")

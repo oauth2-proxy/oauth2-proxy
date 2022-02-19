@@ -103,8 +103,7 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
-func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string) string {
-	extraParams := url.Values{}
+func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		extraParams.Add("resource", p.ProtectedResource.String())
 	}

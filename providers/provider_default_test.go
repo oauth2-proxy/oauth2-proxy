@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"net/url"
 	"testing"
 	"time"
 
@@ -28,33 +27,6 @@ func TestRefresh(t *testing.T) {
 	refreshed, err = p.RefreshSession(context.Background(), nil)
 	assert.False(t, refreshed)
 	assert.Equal(t, ErrNotImplemented, err)
-}
-
-func TestAcrValuesNotConfigured(t *testing.T) {
-	p := &ProviderData{
-		LoginURL: &url.URL{
-			Scheme: "http",
-			Host:   "my.test.idp",
-			Path:   "/oauth/authorize",
-		},
-	}
-
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "")
-	assert.NotContains(t, result, "acr_values")
-}
-
-func TestAcrValuesConfigured(t *testing.T) {
-	p := &ProviderData{
-		LoginURL: &url.URL{
-			Scheme: "http",
-			Host:   "my.test.idp",
-			Path:   "/oauth/authorize",
-		},
-		AcrValues: "testValue",
-	}
-
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "")
-	assert.Contains(t, result, "acr_values=testValue")
 }
 
 func TestProviderDataEnrichSession(t *testing.T) {

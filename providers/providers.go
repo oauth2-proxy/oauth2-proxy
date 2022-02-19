@@ -14,7 +14,7 @@ import (
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
-	GetLoginURL(redirectURI, finalRedirect string, nonce string) string
+	GetLoginURL(redirectURI, finalRedirect string, nonce string, extraParams url.Values) string
 	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
@@ -70,9 +70,6 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientID:         providerConfig.ClientID,
 		ClientSecret:     providerConfig.ClientSecret,
 		ClientSecretFile: providerConfig.ClientSecretFile,
-		Prompt:           providerConfig.Prompt,
-		ApprovalPrompt:   providerConfig.ApprovalPrompt,
-		AcrValues:        providerConfig.AcrValues,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
@@ -122,6 +119,9 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			errs = append(errs, fmt.Errorf("could not parse %s URL: %v", name, err))
 		}
 	}
+	// handle LoginURLParameters
+	errs = append(errs, p.compileLoginParams(providerConfig.LoginURLParameters)...)
+
 	if len(errs) > 0 {
 		return nil, k8serrors.NewAggregate(errs)
 	}
