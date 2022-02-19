@@ -7,7 +7,7 @@ if [[ -z ${BINARY} ]] || [[ -z ${VERSION} ]]; then
 	exit 1
 fi
 
-ARCHS=(darwin-amd64 linux-amd64 linux-arm64 linux-armv6 freebsd-amd64 windows-amd64)
+ARCHS=(darwin-amd64 linux-amd64 linux-arm64 linux-ppc64le linux-armv6 freebsd-amd64 windows-amd64)
 
 mkdir -p release
 

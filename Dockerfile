@@ -31,6 +31,7 @@ ARG BUILDPLATFORM
 RUN case ${TARGETPLATFORM} in \
          "linux/amd64")  GOARCH=amd64  ;; \
          "linux/arm64")  GOARCH=arm64  ;; \
+         "linux/ppc64le")  GOARCH=ppc64le  ;; \
          "linux/arm/v6") GOARCH=arm GOARM=6  ;; \
     esac && \
     printf "Building OAuth2 Proxy for arch ${GOARCH}\n" && \
