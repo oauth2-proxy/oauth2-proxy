@@ -53,7 +53,8 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.InjectResponseHeaders = a.InjectResponseHeaders
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
-	opts.Providers = a.Providers
+	// NOTICE: Providers is the only config with suitable defaults
+	opts.Providers = a.Providers.enrichWithDefaults()
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from

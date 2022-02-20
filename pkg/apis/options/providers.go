@@ -1,5 +1,10 @@
 package options
 
+import (
+	"encoding/json"
+	"github.com/imdario/mergo"
+)
+
 const (
 	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
 	OIDCEmailClaim = "email"
@@ -235,6 +240,8 @@ type LoginGovOptions struct {
 }
 
 func providerDefaults() Providers {
+	// NOTICE: when default is google, then why set AzureConfig?
+	// TODO: hint that other providers have no sensible defaults
 	providers := Providers{
 		{
 			Type: "google",
@@ -254,4 +261,39 @@ func providerDefaults() Providers {
 		},
 	}
 	return providers
+}
+
+// enrichWithDefaults enriches all Providers' config with values from the
+// single default
+func (providers Providers) enrichWithDefaults() Providers {
+	var enrichedProviders []Provider
+
+	for _, provider := range providers {
+		var (
+			enrichedProvider              Provider
+			newGenericMap, provGenericMap map[string]interface{}
+		)
+
+		provJSON, _ := json.Marshal(provider)
+		if err := json.Unmarshal(provJSON, &provGenericMap); err != nil {
+			println(err)
+		}
+
+		defJSON, _ := json.Marshal(providerDefaults()[0])
+		if err := json.Unmarshal(defJSON, &newGenericMap); err != nil {
+			println(err)
+		}
+
+		if err := mergo.Merge(&newGenericMap, provGenericMap); err != nil {
+			println(err)
+		}
+
+		newJSON, _ := json.Marshal(newGenericMap)
+		if err := json.Unmarshal(newJSON, &enrichedProvider); err != nil {
+			println(err)
+		}
+		enrichedProviders = append(enrichedProviders, enrichedProvider)
+	}
+
+	return enrichedProviders
 }

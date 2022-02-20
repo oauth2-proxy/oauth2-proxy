@@ -16,6 +16,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
+	github.com/imdario/mergo v0.3.12
 	github.com/justinas/alice v1.2.0
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
 	github.com/mitchellh/mapstructure v1.1.2
