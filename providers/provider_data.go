@@ -7,13 +7,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
 	"golang.org/x/oauth2"
 )
@@ -32,28 +33,25 @@ type ProviderData struct {
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
-	// Auth request params & related, see
-	//https://openid.net/specs/openid-connect-basic-1_0.html#rfc.section.2.1.1.1
-	AcrValues        string
-	ApprovalPrompt   string // NOTE: Renamed to "prompt" in OAuth2
-	ClientID         string
-	ClientSecret     string
-	ClientSecretFile string
-	Scope            string
-	Prompt           string
+	ClientID          string
+	ClientSecret      string
+	ClientSecretFile  string
+	Scope             string
 
 	// Common OIDC options for any OIDC-based providers to consume
 	AllowUnverifiedEmail bool
 	UserClaim            string
 	EmailClaim           string
 	GroupsClaim          string
-	Verifier             *internaloidc.IDTokenVerifier
+	Verifier             internaloidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
 	AllowedGroups map[string]struct{}
 
 	getAuthorizationHeaderFunc func(string) http.Header
+	loginURLParameterDefaults  url.Values
+	loginURLParameterOverrides map[string]*regexp.Regexp
 }
 
 // Data returns the ProviderData
@@ -71,6 +69,100 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 		return "", errors.New("could not read client secret file")
 	}
 	return string(fileClientSecret), nil
+}
+
+// LoginURLParams returns the parameter values that should be passed to the IdP
+// login URL.  This is the default set of parameters configured for this provider,
+// optionally overridden by the given overrides (typically from the URL of the
+// /oauth2/start request) according to the configured rules for this provider.
+func (p *ProviderData) LoginURLParams(overrides url.Values) url.Values {
+	// the returned url.Values may be modified later in the request handling process
+	// so shallow clone the default map
+	params := url.Values{}
+	for k, v := range p.loginURLParameterDefaults {
+		params[k] = v
+	}
+	if len(overrides) > 0 {
+		for param, re := range p.loginURLParameterOverrides {
+			if reqValues, ok := overrides[param]; ok {
+				actualValues := make([]string, 0, len(reqValues))
+				for _, val := range reqValues {
+					if re.MatchString(val) {
+						actualValues = append(actualValues, val)
+					}
+				}
+				if len(actualValues) > 0 {
+					params.Del(param)
+					params[param] = actualValues
+				}
+			}
+		}
+	}
+	return params
+}
+
+// Compile the given set of LoginURLParameter options into the internal defaults
+// and regular expressions used to validate any overrides.
+func (p *ProviderData) compileLoginParams(paramConfig []options.LoginURLParameter) []error {
+	var errs []error
+	p.loginURLParameterDefaults = url.Values{}
+	p.loginURLParameterOverrides = make(map[string]*regexp.Regexp)
+
+	for _, param := range paramConfig {
+		if p.seenParameter(param.Name) {
+			errs = append(errs, fmt.Errorf("parameter %s provided more than once in loginURLParameters", param.Name))
+		} else {
+			// record default if parameter declares one
+			if len(param.Default) > 0 {
+				p.loginURLParameterDefaults[param.Name] = param.Default
+			}
+			// record allow rules if any
+			if len(param.Allow) > 0 {
+				errs = p.convertAllowRules(errs, param)
+			}
+		}
+	}
+	return errs
+}
+
+// Converts the list of allow rules for the given parameter into a regexp
+// and store it for use at runtime when validating overrides of that parameter.
+func (p *ProviderData) convertAllowRules(errs []error, param options.LoginURLParameter) []error {
+	var allowREs []string
+	for idx, rule := range param.Allow {
+		if (rule.Value == nil) == (rule.Pattern == nil) {
+			errs = append(errs, fmt.Errorf("rule %d in LoginURLParameter %s must have exactly one of value or pattern", idx, param.Name))
+		} else {
+			allowREs = append(allowREs, regexpForRule(rule))
+		}
+	}
+	if re, err := regexp.Compile(strings.Join(allowREs, "|")); err != nil {
+		errs = append(errs, err)
+	} else {
+		p.loginURLParameterOverrides[param.Name] = re
+	}
+	return errs
+}
+
+// Check whether we have already processed a configuration for the given parameter name
+func (p *ProviderData) seenParameter(name string) bool {
+	_, seenDefault := p.loginURLParameterDefaults[name]
+	_, seenOverride := p.loginURLParameterOverrides[name]
+	return seenDefault || seenOverride
+}
+
+// Generate a validating regular expression pattern for a given URLParameterRule.
+// If the rule is for a fixed value then returns a regexp that matches exactly
+// that value, if the rule is itself a regexp just use that as-is.
+func regexpForRule(rule options.URLParameterRule) string {
+	if rule.Value != nil {
+		// convert literal value into an equivalent regexp,
+		// anchored at start and end
+		return "^" + regexp.QuoteMeta(*rule.Value) + "$"
+	}
+	// just use the pattern as-is, but wrap in a non-capture group
+	// to avoid any possibility of confusing the outer disjunction.
+	return "(?:" + *rule.Pattern + ")"
 }
 
 // setAllowedGroups organizes a group list into the AllowedGroups map

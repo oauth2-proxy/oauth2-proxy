@@ -270,9 +270,8 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*session
 }
 
 // GetLoginURL overrides GetLoginURL to add login.gov parameters
-func (p *LoginGovProvider) GetLoginURL(redirectURI, state, _ string) string {
-	extraParams := url.Values{}
-	if p.AcrValues == "" {
+func (p *LoginGovProvider) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
+	if len(extraParams["acr_values"]) == 0 {
 		acr := "http://idmanagement.gov/ns/assurance/loa/1"
 		extraParams.Add("acr_values", acr)
 	}

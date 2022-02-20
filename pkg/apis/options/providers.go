@@ -62,6 +62,8 @@ type Provider struct {
 
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
+	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
+	LoginURLParameters []LoginURLParameter `json:"loginURLParameters,omitempty"`
 	// RedeemURL is the token redemption endpoint
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
@@ -72,16 +74,8 @@ type Provider struct {
 	ValidateURL string `json:"validateURL,omitempty"`
 	// Scope is the OAuth scope specification
 	Scope string `json:"scope,omitempty"`
-	// Prompt is OIDC prompt
-	Prompt string `json:"prompt,omitempty"`
-	// ApprovalPrompt is the OAuth approval_prompt
-	// default is set to 'force'
-	ApprovalPrompt string `json:"approvalPrompt,omitempty"`
 	// AllowedGroups is a list of restrict logins to members of this group
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
-
-	// AcrValues is a string of acr values
-	AcrValues string `json:"acrValues,omitempty"`
 }
 
 // ProviderType is used to enumerate the different provider type options
@@ -243,9 +237,7 @@ type LoginGovOptions struct {
 func providerDefaults() Providers {
 	providers := Providers{
 		{
-			Type:           "google",
-			Prompt:         "", // Change to "login" when ApprovalPrompt officially deprecated
-			ApprovalPrompt: "force",
+			Type: "google",
 			AzureConfig: AzureOptions{
 				Tenant: "common",
 			},

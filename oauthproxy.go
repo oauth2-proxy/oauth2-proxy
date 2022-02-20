@@ -611,6 +611,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		if p.SkipProviderButton {
 			p.OAuthStart(rw, req)
 		} else {
+			// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
 			p.SignInPage(rw, req, http.StatusOK)
 		}
 	}
@@ -671,6 +672,12 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 
 // OAuthStart starts the OAuth2 authentication flow
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
+	// start the flow permitting login URL query parameters to be overridden from the request URL
+	p.doOAuthStart(rw, req, req.URL.Query())
+}
+
+func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values) {
+	extraParams := p.provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
 
 	csrf, err := cookies.NewCSRF(p.CookieOptions)
@@ -692,6 +699,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 		callbackRedirect,
 		encodeState(csrf.HashOAuthState(), appRedirect),
 		csrf.HashOIDCNonce(),
+		extraParams,
 	)
 
 	if _, err := csrf.SetCookie(rw, req); err != nil {
@@ -871,7 +879,10 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 		logger.Printf("No valid authentication in request. Initiating login.")
 		if p.SkipProviderButton {
-			p.OAuthStart(rw, req)
+			// start OAuth flow, but only with the default login URL params - do not
+			// consider this request's query params as potential overrides, since
+			// the user did not explicitly start the login flow
+			p.doOAuthStart(rw, req, nil)
 		} else {
 			p.SignInPage(rw, req, http.StatusForbidden)
 		}

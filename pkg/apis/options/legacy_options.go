@@ -632,10 +632,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ProtectedResource: l.ProtectedResource,
 		ValidateURL:       l.ValidateURL,
 		Scope:             l.Scope,
-		Prompt:            l.Prompt,
-		ApprovalPrompt:    l.ApprovalPrompt,
 		AllowedGroups:     l.AllowedGroups,
-		AcrValues:         l.AcrValues,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC
@@ -707,6 +704,24 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	} else {
 		provider.ID = l.ProviderType + "=" + l.ClientID
 	}
+
+	// handle AcrValues, Prompt and ApprovalPrompt
+	var urlParams []LoginURLParameter
+	if l.AcrValues != "" {
+		urlParams = append(urlParams, LoginURLParameter{Name: "acr_values", Default: []string{l.AcrValues}})
+	}
+	switch {
+	case l.Prompt != "":
+		urlParams = append(urlParams, LoginURLParameter{Name: "prompt", Default: []string{l.Prompt}})
+	case l.ApprovalPrompt != "":
+		urlParams = append(urlParams, LoginURLParameter{Name: "approval_prompt", Default: []string{l.ApprovalPrompt}})
+	default:
+		// match legacy behaviour by default - if neither prompt nor approval_prompt
+		// specified, use approval_prompt=force
+		urlParams = append(urlParams, LoginURLParameter{Name: "approval_prompt", Default: []string{"force"}})
+	}
+
+	provider.LoginURLParameters = urlParams
 
 	providers = append(providers, provider)
 
