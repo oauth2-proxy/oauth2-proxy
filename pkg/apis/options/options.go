@@ -91,9 +91,12 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.re
 
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
+	providers := new(Providers)
+	providers.Default()
+
 	return &Options{
 		ProxyPrefix:        "/oauth2",
-		Providers:          providerDefaults(),
+		Providers:          *providers,
 		PingPath:           "/ping",
 		RealClientIPHeader: "X-Real-IP",
 		ForceHTTPS:         false,

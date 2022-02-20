@@ -81,16 +81,12 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	}
 	p.getAuthorizationHeaderFunc = makeAzureHeader
 
-	tenant := "common"
-	if opts.Tenant != "" {
-		tenant = opts.Tenant
-		overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
-		overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
-	}
+	overrideTenantURL(p.LoginURL, azureDefaultLoginURL, opts.Tenant, "authorize")
+	overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, opts.Tenant, "token")
 
 	return &AzureProvider{
 		ProviderData: p,
-		Tenant:       tenant,
+		Tenant:       opts.Tenant,
 	}
 }
 

@@ -149,13 +149,13 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				AzureConfig: options.AzureOptions{
 					Tenant: "common",
 				},
-				OIDCConfig: options.OIDCOptions{
+				OIDCConfig: &options.OIDCOptions{
 					GroupsClaim:       "groups",
 					EmailClaim:        "email",
 					UserIDClaim:       "email",
 					AudienceClaims:    []string{"aud"},
 					ExtraAudiences:    []string{},
-					InsecureSkipNonce: true,
+					InsecureSkipNonce: boolPtr(true),
 				},
 				LoginURLParameters: []options.LoginURLParameter{
 					{Name: "approval_prompt", Default: []string{"force"}},

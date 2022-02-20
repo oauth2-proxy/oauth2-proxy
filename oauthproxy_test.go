@@ -1964,9 +1964,14 @@ func Test_noCacheHeaders(t *testing.T) {
 func baseTestOptions() *options.Options {
 	opts := options.NewOptions()
 	opts.Cookie.Secret = rawCookieSecret
+
+	opts.Providers = options.Providers{{Type: "google"}}
+
 	opts.Providers[0].ID = "providerID"
 	opts.Providers[0].ClientID = clientID
 	opts.Providers[0].ClientSecret = clientSecret
+	opts.Providers.Default()
+
 	opts.EmailDomains = []string{"*"}
 
 	// Default injected headers for legacy configuration

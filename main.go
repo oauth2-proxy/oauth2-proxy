@@ -114,6 +114,7 @@ func loadAlphaOptions(config, alphaConfig string, extraFlags *pflag.FlagSet, arg
 		return nil, fmt.Errorf("failed to load alpha options: %v", err)
 	}
 
+	alphaOpts.Default()
 	alphaOpts.MergeInto(opts)
 	return opts, nil
 }

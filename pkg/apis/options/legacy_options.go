@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/spf13/pflag"
 )
 
@@ -48,14 +49,14 @@ func NewLegacyOptions() *LegacyOptions {
 
 		LegacyProvider: LegacyProvider{
 			ProviderType:          "google",
-			AzureTenant:           "common",
+			AzureTenant:           "",
 			ApprovalPrompt:        "force",
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
 			OIDCAudienceClaims:    []string{"aud"},
 			OIDCExtraAudiences:    []string{},
-			InsecureOIDCSkipNonce: true,
+			InsecureOIDCSkipNonce: util.BoolPtr(true),
 		},
 
 		Options: *NewOptions(),
@@ -496,7 +497,7 @@ type LegacyProvider struct {
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
-	InsecureOIDCSkipNonce              bool     `flag:"insecure-oidc-skip-nonce" cfg:"insecure_oidc_skip_nonce"`
+	InsecureOIDCSkipNonce              *bool    `flag:"insecure-oidc-skip-nonce" cfg:"insecure_oidc_skip_nonce"`
 	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
@@ -640,7 +641,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	}
 
 	// This part is out of the switch section for all providers that support OIDC
-	provider.OIDCConfig = OIDCOptions{
+	provider.OIDCConfig = &OIDCOptions{
 		IssuerURL:                      l.OIDCIssuerURL,
 		InsecureAllowUnverifiedEmail:   l.InsecureOIDCAllowUnverifiedEmail,
 		InsecureSkipIssuerVerification: l.InsecureOIDCSkipIssuerVerification,

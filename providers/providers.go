@@ -31,7 +31,11 @@ type Provider interface {
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
 }
 
+// NewProvider returns an upstream identity provider
 func NewProvider(providerConfig options.Provider) (Provider, error) {
+	if providerConfig.OIDCConfig == nil {
+		logger.Fatalf("failed to create %v provider without OIDC options", providerConfig.Type)
+	}
 	providerData, err := newProviderDataFromConfig(providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
@@ -64,7 +68,7 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	case options.NextCloudProvider:
 		return NewNextcloudProvider(providerData), nil
 	case options.OIDCProvider:
-		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
+		return NewOIDCProvider(providerData, *providerConfig.OIDCConfig), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}

@@ -1,5 +1,9 @@
 package options
 
+import (
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+)
+
 const (
 	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
 	OIDCEmailClaim = "email"
@@ -42,7 +46,7 @@ type Provider struct {
 	GoogleConfig GoogleOptions `json:"googleConfig,omitempty"`
 	// OIDCConfig holds all configurations for OIDC provider
 	// or providers utilize OIDC configurations.
-	OIDCConfig OIDCOptions `json:"oidcConfig,omitempty"`
+	OIDCConfig *OIDCOptions `json:"oidcConfig,omitempty"`
 	// LoginGovConfig holds all configurations for LoginGov provider.
 	LoginGovConfig LoginGovOptions `json:"loginGovConfig,omitempty"`
 
@@ -81,7 +85,7 @@ type Provider struct {
 }
 
 // ProviderType is used to enumerate the different provider type options
-// Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
+// Valid options are: adfs, azure, bitbucket, digitalocean, facebook, github,
 // gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
 // and oidc.
 type ProviderType string
@@ -140,6 +144,8 @@ type KeycloakOptions struct {
 
 type AzureOptions struct {
 	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
+	// most permissive, anybody (single person or organization) with an Azure AD account
+	// https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc#fetch-the-openid-connect-metadata-document
 	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
 }
@@ -188,6 +194,8 @@ type GoogleOptions struct {
 	ServiceAccountJSON string `json:"serviceAccountJson,omitempty"`
 }
 
+// OIDCOptions set options for a generic OIDC provider or the generic OIDC part
+// of a specific (i.e. google or gitlab) provider
 type OIDCOptions struct {
 	// IssuerURL is the OpenID Connect issuer URL
 	// eg: https://accounts.google.com
@@ -203,7 +211,7 @@ type OIDCOptions struct {
 	// after the initial OAuth redeem & subsequent token refreshes.
 	// default set to 'true'
 	// Warning: In a future release, this will change to 'false' by default for enhanced security.
-	InsecureSkipNonce bool `json:"insecureSkipNonce,omitempty"`
+	InsecureSkipNonce *bool `json:"insecureSkipNonce,omitempty"`
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
 	SkipDiscovery bool `json:"skipDiscovery,omitempty"`
@@ -236,16 +244,67 @@ type LoginGovOptions struct {
 	PubJWKURL string `json:"pubjwkURL,omitempty"`
 }
 
+// Default sets sensible defaults for the AzureProvider when they have not been
+// set from the config
+func (azureOptions *AzureOptions) Default() {
+	if azureOptions.Tenant == "" {
+		azureOptions.Tenant = "common"
+	}
+}
+
+// Default sets sensible defaults for the generic OIDCProvider when they have
+// not been set from the config
+func (oidcOptions *OIDCOptions) Default() {
+	if oidcOptions.InsecureSkipNonce == nil {
+		oidcOptions.InsecureSkipNonce = util.BoolPtr(true)
+	}
+
+	if oidcOptions.UserIDClaim == "" {
+		// Deprecated: Use OIDCEmailClaim
+		oidcOptions.UserIDClaim = OIDCEmailClaim
+	}
+
+	if oidcOptions.EmailClaim == "" {
+		oidcOptions.EmailClaim = OIDCEmailClaim
+	}
+
+	if oidcOptions.GroupsClaim == "" {
+		oidcOptions.GroupsClaim = OIDCGroupsClaim
+	}
+
+	if oidcOptions.AudienceClaims == nil {
+		oidcOptions.AudienceClaims = OIDCAudienceClaims
+	}
+}
+
+// Default sets sensible defaults for fields which have not been set from the
+// config including nested structs
+func (providers *Providers) Default() {
+	for idx, _ := range *providers {
+		if (*providers)[idx].Type == "" {
+			(*providers)[idx].Type = "google"
+		}
+
+		if (*providers)[idx].OIDCConfig == nil {
+			(*providers)[idx].OIDCConfig = new(OIDCOptions)
+		}
+		(*providers)[idx].OIDCConfig.Default()
+
+		switch (*providers)[idx].Type {
+		case "azure":
+			(*providers)[idx].AzureConfig.Default()
+		}
+
+	}
+}
+
 func providerDefaults() Providers {
 	providers := Providers{
 		{
 			Type: "google",
-			AzureConfig: AzureOptions{
-				Tenant: "common",
-			},
-			OIDCConfig: OIDCOptions{
+			OIDCConfig: &OIDCOptions{
 				InsecureAllowUnverifiedEmail: false,
-				InsecureSkipNonce:            true,
+				InsecureSkipNonce:            util.BoolPtr(true),
 				SkipDiscovery:                false,
 				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
