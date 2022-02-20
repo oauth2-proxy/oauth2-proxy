@@ -14,7 +14,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +27,7 @@ type redeemTokenResponse struct {
 }
 
 func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{"aud"},
 		ClientID:       "https://test.myapp.com",
 	}
@@ -96,11 +96,11 @@ func TestOIDCProviderGetLoginURL(t *testing.T) {
 	nonce := base64.RawURLEncoding.EncodeToString(n)
 
 	// SkipNonce defaults to true
-	skipNonce := provider.GetLoginURL("http://redirect/", "", nonce)
+	skipNonce := provider.GetLoginURL("http://redirect/", "", nonce, url.Values{})
 	assert.NotContains(t, skipNonce, "nonce")
 
 	provider.SkipNonce = false
-	withNonce := provider.GetLoginURL("http://redirect/", "", nonce)
+	withNonce := provider.GetLoginURL("http://redirect/", "", nonce, url.Values{})
 	assert.Contains(t, withNonce, fmt.Sprintf("nonce=%s", nonce))
 }
 

@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/oidc"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 )
 
 const (
@@ -45,7 +45,7 @@ func newTestKeycloakOIDCSetup() (*httptest.Server, *KeycloakOIDCProvider) {
 }
 
 func newKeycloakOIDCProvider(serverURL *url.URL, opts options.KeycloakOptions) *KeycloakOIDCProvider {
-	verificationOptions := &internaloidc.IDTokenVerificationOptions{
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{defaultAudienceClaim},
 		ClientID:       mockClientID,
 	}

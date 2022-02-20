@@ -259,6 +259,24 @@ var _ = Describe("Claim Extractor Suite", func() {
 		Expect(counter).To(BeEquivalentTo(1))
 	})
 
+	It("GetClaim should not return an error with a non-nil empty ProfileURL", func() {
+		claims, serverClose, err := newTestClaimExtractor(testClaimExtractorOpts{
+			idTokenPayload:        "{}",
+			profileRequestHeaders: newAuthorizedHeader(),
+		})
+		Expect(err).ToNot(HaveOccurred())
+		if serverClose != nil {
+			defer serverClose()
+		}
+		// Set the ProfileURL to be empty, but not nil
+		claims.(*claimExtractor).profileURL = &url.URL{}
+
+		value, exists, err := claims.GetClaim("user")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(exists).To(BeFalse())
+		Expect(value).To(BeNil())
+	})
+
 	type getClaimIntoTableInput struct {
 		testClaimExtractorOpts
 		into          interface{}

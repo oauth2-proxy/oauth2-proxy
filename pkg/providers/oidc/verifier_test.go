@@ -17,7 +17,7 @@ var _ = Describe("Verify", func() {
 	ctx := context.Background()
 
 	It("Succeeds with default aud behavior", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"aud"},
 			ClientID:       "1226737",
 			ExtraAudiences: []string{},
@@ -32,7 +32,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Fails with default aud behavior", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"aud"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{},
@@ -46,7 +46,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Succeeds with extra audiences", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"aud"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "1226737"},
@@ -61,7 +61,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Fails with extra audiences", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"aud"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "abc"},
@@ -76,7 +76,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Succeeds with non default aud behavior", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"client_id"},
 			ClientID:       "1226737",
 			ExtraAudiences: []string{},
@@ -91,7 +91,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Fails with non default aud behavior", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"client_id"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{},
@@ -105,7 +105,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Succeeds with non default aud behavior and extra audiences", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"client_id"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "1226737"},
@@ -120,7 +120,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Fails with non default aud behavior and extra audiences", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"client_id"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "abc"},
@@ -135,7 +135,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Fails if audience claim does not exist", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"not_exists"},
 			ClientID:       "7817818",
 			ExtraAudiences: []string{"xyz", "abc"},
@@ -151,7 +151,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Succeeds with multiple audiences", func() {
-		var result, err = verify(ctx, &IDTokenVerificationOptions{
+		var result, err = verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"client_id", "aud"},
 			ClientID:       "123456789",
 			ExtraAudiences: []string{"1226737"},
@@ -167,7 +167,7 @@ var _ = Describe("Verify", func() {
 	})
 
 	It("Succeeds if aud claim match", func() {
-		result, err := verify(ctx, &IDTokenVerificationOptions{
+		result, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"client_id", "aud"},
 			ClientID:       "1226737",
 			ExtraAudiences: []string{"xyz", "abc"},
@@ -207,7 +207,7 @@ func (t *testVerifier) VerifySignature(ctx context.Context, jwt string) ([]byte,
 	return jws.Verify(&t.jwk)
 }
 
-func verify(ctx context.Context, verificationOptions *IDTokenVerificationOptions, payload payload) (*oidc.IDToken, error) {
+func verify(ctx context.Context, verificationOptions IDTokenVerificationOptions, payload payload) (*oidc.IDToken, error) {
 	config := &oidc.Config{
 		ClientID:          "1226737",
 		SkipClientIDCheck: true,

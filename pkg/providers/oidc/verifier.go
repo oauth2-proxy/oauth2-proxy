@@ -8,33 +8,42 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 )
 
-// IDTokenVerifier Used to verify an ID Token and extends oidc.IDTokenVerifier from the underlying oidc library
-type IDTokenVerifier struct {
-	*oidc.IDTokenVerifier
-	*IDTokenVerificationOptions
-	allowedAudiences map[string]struct{}
+// idTokenVerifier allows an ID Token to be verified against the issue and provided keys.
+type IDTokenVerifier interface {
+	Verify(context.Context, string) (*oidc.IDToken, error)
 }
 
-// IDTokenVerificationOptions options for the oidc.IDTokenVerifier that are required to verify an ID Token
+// idTokenVerifier Used to verify an ID Token and extends oidc.idTokenVerifier from the underlying oidc library
+type idTokenVerifier struct {
+	verifier            *oidc.IDTokenVerifier
+	verificationOptions IDTokenVerificationOptions
+	allowedAudiences    map[string]struct{}
+}
+
+// IDTokenVerificationOptions options for the oidc.idTokenVerifier that are required to verify an ID Token
 type IDTokenVerificationOptions struct {
 	AudienceClaims []string
 	ClientID       string
 	ExtraAudiences []string
 }
 
-// NewVerifier constructs a new IDTokenVerifier
-func NewVerifier(iv *oidc.IDTokenVerifier, vo *IDTokenVerificationOptions) *IDTokenVerifier {
+// NewVerifier constructs a new idTokenVerifier
+func NewVerifier(iv *oidc.IDTokenVerifier, vo IDTokenVerificationOptions) IDTokenVerifier {
 	allowedAudiences := make(map[string]struct{})
 	allowedAudiences[vo.ClientID] = struct{}{}
 	for _, extraAudience := range vo.ExtraAudiences {
 		allowedAudiences[extraAudience] = struct{}{}
 	}
-	return &IDTokenVerifier{iv, vo, allowedAudiences}
+	return &idTokenVerifier{
+		verifier:            iv,
+		verificationOptions: vo,
+		allowedAudiences:    allowedAudiences,
+	}
 }
 
 // Verify verifies incoming ID Token
-func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.IDToken, error) {
-	token, err := v.IDTokenVerifier.Verify(ctx, rawIDToken)
+func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.IDToken, error) {
+	token, err := v.verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify token: %v", err)
 	}
@@ -51,8 +60,8 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 	return token, err
 }
 
-func (v *IDTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
-	for _, audienceClaim := range v.AudienceClaims {
+func (v *idTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
+	for _, audienceClaim := range v.verificationOptions.AudienceClaims {
 		if audienceClaimValue, audienceClaimExists := claims[audienceClaim]; audienceClaimExists {
 
 			// audience claim value can be either interface{} or []interface{},
@@ -72,10 +81,10 @@ func (v *IDTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]
 	}
 
 	return false, fmt.Errorf("audience claims %v do not exist in claims: %v",
-		v.AudienceClaims, claims)
+		v.verificationOptions.AudienceClaims, claims)
 }
 
-func (v *IDTokenVerifier) isValidAudience(claim string, audience []string, allowedAudiences map[string]struct{}) (bool, error) {
+func (v *idTokenVerifier) isValidAudience(claim string, audience []string, allowedAudiences map[string]struct{}) (bool, error) {
 	for _, aud := range audience {
 		if _, allowedAudienceExists := allowedAudiences[aud]; allowedAudienceExists {
 			return true, nil
@@ -87,7 +96,7 @@ func (v *IDTokenVerifier) isValidAudience(claim string, audience []string, allow
 		claim, audience, allowedAudiences)
 }
 
-func (v *IDTokenVerifier) interfaceSliceToString(slice interface{}) []string {
+func (v *idTokenVerifier) interfaceSliceToString(slice interface{}) []string {
 	s := reflect.ValueOf(slice)
 	if s.Kind() != reflect.Slice {
 		panic(fmt.Sprintf("given a non-slice type %s", s.Kind()))
