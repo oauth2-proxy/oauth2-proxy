@@ -42,24 +42,30 @@ func (p *NextcloudProvider) EnrichSession(ctx context.Context, s *sessions.Sessi
 		return fmt.Errorf("error making request: %v", err)
 	}
 
-	email, err := json.GetPath("ocs", "data", "email").String()
-	if err != nil {
-		return fmt.Errorf("error retrieving email address: %v", err)
-	}
-	if email != "" {
-		s.Email = email
-	}
-
-	username, err := json.GetPath("ocs", "data", "id").String()
-	if err == nil && username != "" {
-		s.User = username
+	if s.Email == "" {
+		email, err := json.GetPath("ocs", "data", "email").String()
+		if err != nil {
+			return fmt.Errorf("error retrieving email address: %v", err)
+		}
+		if email != "" {
+			s.Email = email
+		}
 	}
 
-	groups, err := json.GetPath("ocs", "data", "groups").StringArray()
-	if err == nil {
-		for _, group := range groups {
-			if group != "" {
-				s.Groups = append(s.Groups, group)
+	if s.User == "" {
+		username, err := json.GetPath("ocs", "data", "id").String()
+		if err == nil && username != "" {
+			s.User = username
+		}
+	}
+
+	if len(s.Groups) == 0 {
+		groups, err := json.GetPath("ocs", "data", "groups").StringArray()
+		if err == nil {
+			for _, group := range groups {
+				if group != "" {
+					s.Groups = append(s.Groups, group)
+				}
 			}
 		}
 	}
