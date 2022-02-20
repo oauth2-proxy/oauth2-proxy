@@ -16,7 +16,7 @@ import (
 
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	Authenticated bool       `msgpack:"au,omitempty"`
+	Authenticated bool       `msgpack:"a,omitempty"`
 	CreatedAt     *time.Time `msgpack:"ca,omitempty"`
 	ExpiresOn     *time.Time `msgpack:"eo,omitempty"`
 

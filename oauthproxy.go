@@ -2,13 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -29,6 +25,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/redirect"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 
@@ -292,7 +289,7 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
 	// likelihood of multiple reuests trying to referesh sessions simultaneously.
-	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
+	r.Path(proxyPrefix + authOnlyPath).HandlerFunc(p.AuthOnly)
 
 	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
 	// are not applied.
@@ -702,14 +699,14 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	var codeChallenge, codeVerifier, codeChallengeMethod string
 	if p.provider.Data().CodeChallengeMethod != "" {
 		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
-		codeVerifier, err = generateRandomString(128)
+		codeVerifier, err = encryption.GenerateRandomString(128)
 		if err != nil {
 			logger.Errorf("Unable to build random string: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		codeChallenge, err = generateCodeChallenge(p.provider.Data().CodeChallengeMethod, codeVerifier)
+		codeChallenge, err = encryption.GenerateCodeChallenge(p.provider.Data().CodeChallengeMethod, codeVerifier)
 		if err != nil {
 			logger.Errorf("Error creating code challenge: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -871,38 +868,6 @@ func (p *OAuthProxy) redeemCode(req *http.Request, codeVerifier string) (*sessio
 	s.Authenticated = true
 
 	return s, nil
-}
-
-func generateCodeChallenge(method, codeVerifier string) (string, error) {
-	switch method {
-	case options.CodeChallengeMethodPlain:
-		return codeVerifier, nil
-	case options.CodeChallengeMethodS256:
-		shaSum := sha256.Sum256([]byte(codeVerifier))
-		return base64.RawURLEncoding.EncodeToString(shaSum[:]), nil
-	default:
-		return "", fmt.Errorf("unknown challenge method: %v", method)
-	}
-}
-
-const runes string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_~"
-
-// generateRandomString returns a securely generated random ASCII string.
-// It reads random numbers from crypto/rand and searches for printable characters.
-// It will return an error if the system's secure random number generator fails to
-// function correctly, in which case the caller must not continue.
-// From: https://gist.github.com/dopey/c69559607800d2f2f90b1b1ed4e550fb
-func generateRandomString(n int) (string, error) {
-	ret := make([]byte, n)
-	for i := 0; i < n; i++ {
-		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
-		if err != nil {
-			return "", err
-		}
-		ret[i] = runes[num.Int64()]
-	}
-
-	return string(ret), nil
 }
 
 func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {

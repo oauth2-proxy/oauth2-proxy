@@ -30,32 +30,6 @@ func TestRefresh(t *testing.T) {
 	assert.Equal(t, ErrNotImplemented, err)
 }
 
-func TestAcrValuesNotConfigured(t *testing.T) {
-	p := &ProviderData{
-		LoginURL: &url.URL{
-			Scheme: "http",
-			Host:   "my.test.idp",
-			Path:   "/oauth/authorize",
-		},
-	}
-
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "", "", "", url.Values{})
-	assert.NotContains(t, result, "acr_values")
-}
-
-func TestAcrValuesConfigured(t *testing.T) {
-	p := &ProviderData{
-		LoginURL: &url.URL{
-			Scheme: "http",
-			Host:   "my.test.idp",
-			Path:   "/oauth/authorize",
-		},
-	}
-
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "", "", "", url.Values{})
-	assert.Contains(t, result, "acr_values=testValue")
-}
-
 func TestCodeChallengeConfigured(t *testing.T) {
 	p := &ProviderData{
 		LoginURL: &url.URL{
