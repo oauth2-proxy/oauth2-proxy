@@ -7,6 +7,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
@@ -105,7 +106,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
 			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
-			providerConfig.CodeChallengeMethods = pkce.CodeChallengeAlgs
+			providerConfig.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
 		}
 	}
 
@@ -140,6 +141,9 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
+	if len(providerConfig.SupportedCodeChallengeMethods) != 0 && p.CodeChallengeMethod == "" {
+		logger.Printf("Warning: Your provider supports PKCE methods %+q, but you have not enabled one with --code-challenge-method", providerConfig.SupportedCodeChallengeMethods)
+	}
 
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option
@@ -164,26 +168,16 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	return p, nil
 }
 
-func stringInSlice(element string, list []string) bool {
-	for _, x := range list {
-		if x == element {
-			return true
-		}
-	}
-	return false
-}
-
 // Pick the most appropriate code challenge method for PKCE
+// At this time we do not consider what the server supports to be safe and
+// only enable PKCE if the user opts-in
 func parseCodeChallengeMethod(providerConfig options.Provider) string {
 	switch {
-	case providerConfig.ForceCodeChallengeMethod != "":
-		return providerConfig.ForceCodeChallengeMethod
-	case providerConfig.CodeChallengeMethods == nil:
+	case providerConfig.CodeChallengeMethod != "":
+		return providerConfig.CodeChallengeMethod
+	default:
 		return ""
-	case stringInSlice(CodeChallengeMethodS256, providerConfig.CodeChallengeMethods):
-		return CodeChallengeMethodS256
 	}
-	return CodeChallengeMethodPlain
 }
 
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {

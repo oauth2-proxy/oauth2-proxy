@@ -175,7 +175,7 @@ func TestScope(t *testing.T) {
 func TestForcedMethodS256(t *testing.T) {
 	g := NewWithT(t)
 	options := options.NewOptions()
-	options.Providers[0].ForceCodeChallengeMethod = CodeChallengeMethodS256
+	options.Providers[0].CodeChallengeMethod = CodeChallengeMethodS256
 	method := parseCodeChallengeMethod(options.Providers[0])
 
 	g.Expect(method).To(Equal(CodeChallengeMethodS256))
@@ -184,7 +184,7 @@ func TestForcedMethodS256(t *testing.T) {
 func TestForcedMethodPlain(t *testing.T) {
 	g := NewWithT(t)
 	options := options.NewOptions()
-	options.Providers[0].ForceCodeChallengeMethod = CodeChallengeMethodPlain
+	options.Providers[0].CodeChallengeMethod = CodeChallengeMethodPlain
 	method := parseCodeChallengeMethod(options.Providers[0])
 
 	g.Expect(method).To(Equal(CodeChallengeMethodPlain))
@@ -193,17 +193,18 @@ func TestForcedMethodPlain(t *testing.T) {
 func TestPrefersS256(t *testing.T) {
 	g := NewWithT(t)
 	options := options.NewOptions()
-	options.Providers[0].CodeChallengeMethods = []string{"plain", "S256"}
+	options.Providers[0].SupportedCodeChallengeMethods = []string{"plain", "S256"}
 	method := parseCodeChallengeMethod(options.Providers[0])
 
-	g.Expect(method).To(Equal(CodeChallengeMethodS256))
+	// Do not enable PKCE even if provider supports it at this time
+	g.Expect(method).To(Equal(""))
 }
 
 func TestCanOverwriteS256(t *testing.T) {
 	g := NewWithT(t)
 	options := options.NewOptions()
-	options.Providers[0].CodeChallengeMethods = []string{"plain", "S256"}
-	options.Providers[0].ForceCodeChallengeMethod = "plain"
+	options.Providers[0].SupportedCodeChallengeMethods = []string{"plain", "S256"}
+	options.Providers[0].CodeChallengeMethod = "plain"
 	method := parseCodeChallengeMethod(options.Providers[0])
 
 	g.Expect(method).To(Equal(CodeChallengeMethodPlain))

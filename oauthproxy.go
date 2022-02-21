@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -699,12 +700,13 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	var codeChallenge, codeVerifier, codeChallengeMethod string
 	if p.provider.Data().CodeChallengeMethod != "" {
 		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
-		codeVerifier, err = encryption.GenerateRandomString(128)
+		preEncodedCodeVerifier, err := encryption.Nonce(96)
 		if err != nil {
 			logger.Errorf("Unable to build random string: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
+		codeVerifier = base64.RawURLEncoding.EncodeToString(preEncodedCodeVerifier)
 
 		codeChallenge, err = encryption.GenerateCodeChallenge(p.provider.Data().CodeChallengeMethod, codeVerifier)
 		if err != nil {

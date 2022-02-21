@@ -44,11 +44,11 @@ type csrf struct {
 
 // NewCSRF creates a CSRF with random nonces
 func NewCSRF(opts *options.Cookie) (CSRF, error) {
-	state, err := encryption.Nonce()
+	state, err := encryption.Nonce(32)
 	if err != nil {
 		return nil, err
 	}
-	nonce, err := encryption.Nonce()
+	nonce, err := encryption.Nonce(32)
 	if err != nil {
 		return nil, err
 	}

@@ -91,7 +91,7 @@ func TestOIDCProviderGetLoginURL(t *testing.T) {
 	}
 	provider := newOIDCProvider(serverURL, true)
 
-	n, err := encryption.Nonce()
+	n, err := encryption.Nonce(32)
 	assert.NoError(t, err)
 	nonce := base64.RawURLEncoding.EncodeToString(n)
 

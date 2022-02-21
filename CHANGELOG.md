@@ -3,8 +3,9 @@
 ## Release Highlights
 
 - [#1361](https://github.com/oauth2-proxy/oauth2-proxy/issues/1361) PKCE Code Challenge Support - RFC-7636 (@braunsonm)
-  - The `--force-code-challenge-method` flag can be used when the providers discovery document does not advertise PKCE support.
+  - At this time the `--code-challenge-method` flag can be used to enable it with the method of your choice.
 - Parital support for OAuth2 Authorization Server Metadata for detecting code challenge methods (@braunsonm)
+  - A warning will be displayed when your provider advertises support for PKCE but you have not enabled it.
 
 ## Important Notes
 
@@ -12,13 +13,10 @@
 
 ## Changes since v7.2.1
 
-<<<<<<< HEAD
-=======
 - [#1418](https://github.com/oauth2-proxy/oauth2-proxy/pull/1418) Support for passing arbitrary query parameters through from `/oauth2/start` to the identity provider's login URL. Configuration settings control which parameters are passed by default and precisely which values can be overridden per-request (@ianroberts)
 - [#1559](https://github.com/oauth2-proxy/oauth2-proxy/pull/1559) Introduce ProviderVerifier to clean up OIDC discovery code (@JoelSpeed)
 - [#1561](https://github.com/oauth2-proxy/oauth2-proxy/pull/1561) Add ppc64le support (@mgiessing)
 - [#1563](https://github.com/oauth2-proxy/oauth2-proxy/pull/1563) Ensure claim extractor does not attempt profile call when URL is empty (@JoelSpeed)
->>>>>>> cc94be0314a274d4291aaae8282aedf10c619904
 - [#1560](https://github.com/oauth2-proxy/oauth2-proxy/pull/1560) Fix provider data initialisation (@JoelSpeed)
 - [#1555](https://github.com/oauth2-proxy/oauth2-proxy/pull/1555) Refactor provider configuration into providers package (@JoelSpeed)
 - [#1394](https://github.com/oauth2-proxy/oauth2-proxy/pull/1394) Add generic claim extractor to get claims from ID Tokens (@JoelSpeed)
