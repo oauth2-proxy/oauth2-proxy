@@ -519,8 +519,8 @@ type LegacyProvider struct {
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
 	JWTKeyFile string `flag:"jwt-key-file" cfg:"jwt_key_file"`
 	PubJWKURL  string `flag:"pubjwk-url" cfg:"pubjwk_url"`
-	// Force PKCE Code Challenges if method is not detected via RFC-8414 metadata document
-	ForceCodeChallengeMethod string `flag:"force-code-challenge-method" cfg:"force_code_challenge_method"`
+	// PKCE Code Challenge method to use (either S256 or plain)
+	CodeChallengeMethod string `flag:"code-challenge-method" cfg:"force_code_challenge_method"`
 }
 
 func legacyProviderFlagSet() *pflag.FlagSet {
@@ -565,7 +565,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
-	flagSet.String("force-code-challenge-method", "", "will force PKCE code challenges with the specified method. Either 'plain' or 'S256'")
+	flagSet.String("code-challenge-method", "", "use PKCE code challenges with the specified method. Either 'plain' or 'S256'")
 
 	flagSet.String("acr-values", "", "acr values string:  optional")
 	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
@@ -624,19 +624,19 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers := Providers{}
 
 	provider := Provider{
-		ClientID:                 l.ClientID,
-		ClientSecret:             l.ClientSecret,
-		ClientSecretFile:         l.ClientSecretFile,
-		Type:                     ProviderType(l.ProviderType),
-		CAFiles:                  l.ProviderCAFiles,
-		LoginURL:                 l.LoginURL,
-		RedeemURL:                l.RedeemURL,
-		ProfileURL:               l.ProfileURL,
-		ProtectedResource:        l.ProtectedResource,
-		ValidateURL:              l.ValidateURL,
-		Scope:                    l.Scope,
-		AllowedGroups:            l.AllowedGroups,
-		ForceCodeChallengeMethod: l.ForceCodeChallengeMethod,
+		ClientID:            l.ClientID,
+		ClientSecret:        l.ClientSecret,
+		ClientSecretFile:    l.ClientSecretFile,
+		Type:                ProviderType(l.ProviderType),
+		CAFiles:             l.ProviderCAFiles,
+		LoginURL:            l.LoginURL,
+		RedeemURL:           l.RedeemURL,
+		ProfileURL:          l.ProfileURL,
+		ProtectedResource:   l.ProtectedResource,
+		ValidateURL:         l.ValidateURL,
+		Scope:               l.Scope,
+		AllowedGroups:       l.AllowedGroups,
+		CodeChallengeMethod: l.CodeChallengeMethod,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC

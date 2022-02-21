@@ -2,12 +2,10 @@ package encryption
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"hash"
-	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -92,26 +90,6 @@ func GenerateCodeChallenge(method, codeVerifier string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown challenge method: %v", method)
 	}
-}
-
-const runes string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_~"
-
-// generateRandomString returns a securely generated random ASCII string.
-// It reads random numbers from crypto/rand and searches for printable characters.
-// It will return an error if the system's secure random number generator fails to
-// function correctly, in which case the caller must not continue.
-// From: https://gist.github.com/dopey/c69559607800d2f2f90b1b1ed4e550fb
-func GenerateRandomString(n int) (string, error) {
-	ret := make([]byte, n)
-	for i := 0; i < n; i++ {
-		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(runes))))
-		if err != nil {
-			return "", err
-		}
-		ret[i] = runes[num.Int64()]
-	}
-
-	return string(ret), nil
 }
 
 func cookieSignature(signer func() hash.Hash, args ...string) (string, error) {

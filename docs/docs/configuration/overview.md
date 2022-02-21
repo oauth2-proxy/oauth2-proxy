@@ -84,6 +84,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
 | `--client-secret` | string | the OAuth Client Secret | |
 | `--client-secret-file` | string | the file with OAuth Client Secret | |
+| `--code-challenge-method` | string | use PKCE code challenges with the specified method. Either 'plain' or 'S256' (recommended) | |
 | `--config` | string | path to config file | |
 | `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
 | `--cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
@@ -104,7 +105,6 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
 | `--force-json-errors` | bool | force JSON errors instead of HTTP error pages or redirects | `false` |
-| `--force-code-challenge-method` | will force PKCE code challenges with the specified method (if not automatically detected by the discovery document). Either 'plain' or 'S256' | |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
 | `--footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
 | `--github-org` | string | restrict logins to members of this organisation | |
