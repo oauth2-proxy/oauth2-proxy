@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
@@ -511,7 +512,8 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 // IsAllowedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.isTrustedIP(req)
+
+	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.hasValidBearerToken(req) || p.isTrustedIP(req)
 }
 
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
@@ -522,6 +524,34 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 		}
 	}
 	return false
+}
+
+func (p *OAuthProxy) hasValidBearerToken (req *http.Request) bool {
+	res := true
+
+	authorization := req.Header.Get("Authorization")
+	if (authorization != "") {
+		jwtSecret, jwtSecretOk := os.LookupEnv("JWT_SECRET")
+		if (jwtSecretOk) {
+			splitToken := strings.Split(authorization, "Bearer ")
+			_, err := jwt.Parse(splitToken[1], func(t *jwt.Token) (interface{}, error) {
+				return []byte(jwtSecret), nil
+			})
+
+			if (err != nil) {
+				logger.Errorf("[ERROR]: %v", err)
+				res = false
+			}
+		} else {
+			logger.Errorf("[ERROR]: JWT_SECRET env variable is not provided")
+			res = false
+		}
+	} else {
+		logger.Errorf("[ERROR]: Authentication header is not provided")
+		res = false
+	}
+
+	return res
 }
 
 // isTrustedIP is used to check if a request comes from a trusted client IP address.

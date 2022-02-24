@@ -1,3 +1,9 @@
+# Arguments go here so that the previous steps can be cached if no external
+#  sources have changed.
+ARG VERSION
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
 # All builds should be done using the platform native to the build node to allow
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
@@ -14,11 +20,6 @@ RUN go mod download
 # Now pull in our code
 COPY . .
 
-# Arguments go here so that the previous steps can be cached if no external
-#  sources have changed.
-ARG VERSION
-ARG TARGETPLATFORM
-ARG BUILDPLATFORM
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because
