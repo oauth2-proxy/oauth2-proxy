@@ -35,7 +35,7 @@ func main() {
 	}
 
 	if *convertConfig && *alphaConfig != "" {
-		logger.Fatal("cannot use alpha-config and conver-config-to-alpha together")
+		logger.Fatal("cannot use alpha-config and convert-config-to-alpha together")
 	}
 
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
