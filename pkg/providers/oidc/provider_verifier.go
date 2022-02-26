@@ -79,6 +79,19 @@ func (p ProviderVerifierOptions) toOIDCConfig() *oidc.Config {
 		ClientID:          p.ClientID,
 		SkipIssuerCheck:   p.SkipIssuerVerification,
 		SkipClientIDCheck: true,
+		// support all signing algorithms for backwards compatibility
+		// there is no security value in this config, either you trust the issuer or you do not
+		SupportedSigningAlgs: []string{
+			oidc.RS256,
+			oidc.RS384,
+			oidc.RS512,
+			oidc.ES256,
+			oidc.ES384,
+			oidc.ES512,
+			oidc.PS256,
+			oidc.PS384,
+			oidc.PS512,
+		},
 	}
 }
 
