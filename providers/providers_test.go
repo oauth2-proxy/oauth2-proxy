@@ -171,3 +171,44 @@ func TestScope(t *testing.T) {
 		g.Expect(pd.Scope).To(Equal(tc.expectedScope))
 	}
 }
+
+func TestUserIDClaim(t *testing.T) {
+	g := NewWithT(t)
+
+	testCases := []struct {
+		name                  string
+		configuredUserIDClaim string
+		expectedUserIDClaim   string
+	}{
+		{
+			name:                  "with no user ID claim provided",
+			configuredUserIDClaim: "",
+			expectedUserIDClaim:   "email",
+		},
+		{
+			name:                  "with a configured user ID claim provided",
+			configuredUserIDClaim: "sub",
+			expectedUserIDClaim:   "sub",
+		},
+	}
+
+	for _, tc := range testCases {
+		providerConfig := options.Provider{
+			ID:               providerID,
+			Type:             "oidc",
+			ClientID:         clientID,
+			ClientSecretFile: clientSecret,
+			OIDCConfig: options.OIDCOptions{
+				IssuerURL:     msIssuerURL,
+				SkipDiscovery: true,
+				JwksURL:       msKeysURL,
+				UserIDClaim:   tc.configuredUserIDClaim,
+			},
+		}
+
+		pd, err := newProviderDataFromConfig(providerConfig)
+		g.Expect(err).ToNot(HaveOccurred())
+
+		g.Expect(pd.UserClaim).To(Equal(tc.expectedUserIDClaim))
+	}
+}

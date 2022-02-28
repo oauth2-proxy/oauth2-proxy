@@ -148,6 +148,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	if providerConfig.OIDCConfig.UserIDClaim == "" {
 		providerConfig.OIDCConfig.UserIDClaim = "email"
 	}
+	p.UserClaim = providerConfig.OIDCConfig.UserIDClaim
 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
 
