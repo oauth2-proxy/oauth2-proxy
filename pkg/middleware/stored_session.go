@@ -24,7 +24,7 @@ const (
 	// If the refresh request isn't finished within this time, the lock will be
 	// released.
 	// TODO: This should probably be configurable by the end user.
-	sessionRefreshLockDuration = 2 * time.Second
+	sessionRefreshLockDuration = 10 * time.Second
 
 	// How long to wait after failing to obtain the lock before trying again.
 	// TODO: This should probably be configurable by the end user.
