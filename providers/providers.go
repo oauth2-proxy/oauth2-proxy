@@ -106,7 +106,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
 			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
-			providerConfig.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
+			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
 		}
 	}
 
@@ -141,8 +141,8 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
-	if len(providerConfig.SupportedCodeChallengeMethods) != 0 && p.CodeChallengeMethod == "" {
-		logger.Printf("Warning: Your provider supports PKCE methods %+q, but you have not enabled one with --code-challenge-method", providerConfig.SupportedCodeChallengeMethods)
+	if len(p.SupportedCodeChallengeMethods) != 0 && p.CodeChallengeMethod == "" {
+		logger.Printf("Warning: Your provider supports PKCE methods %+q, but you have not enabled one with --code-challenge-method", p.SupportedCodeChallengeMethods)
 	}
 
 	// TODO (@NickMeves) - Remove This

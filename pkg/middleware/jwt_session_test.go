@@ -133,8 +133,8 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("abcdef  (with existing session)", jwtSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
-				existingSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
-				expectedSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
+				existingSession:     &sessionsapi.SessionState{User: "user"},
+				expectedSession:     &sessionsapi.SessionState{User: "user"},
 			}),
 			Entry("Bearer <verifiedToken>", jwtSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
@@ -148,8 +148,8 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			}),
 			Entry("Bearer <verifiedToken> (with existing session)", jwtSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
-				existingSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
-				expectedSession:     &sessionsapi.SessionState{User: "user", Authenticated: true},
+				existingSession:     &sessionsapi.SessionState{User: "user"},
+				expectedSession:     &sessionsapi.SessionState{User: "user"},
 			}),
 			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", jwtSessionLoaderTableInput{
 				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",

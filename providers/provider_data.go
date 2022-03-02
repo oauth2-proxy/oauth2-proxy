@@ -27,17 +27,20 @@ const (
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
 type ProviderData struct {
-	ProviderName        string
-	LoginURL            *url.URL
-	RedeemURL           *url.URL
-	ProfileURL          *url.URL
-	ProtectedResource   *url.URL
-	ValidateURL         *url.URL
-	ClientID            string
-	ClientSecret        string
-	ClientSecretFile    string
-	Scope               string
-	CodeChallengeMethod string // Although multiple methods may be supported, we pick the most secure
+	ProviderName      string
+	LoginURL          *url.URL
+	RedeemURL         *url.URL
+	ProfileURL        *url.URL
+	ProtectedResource *url.URL
+	ValidateURL       *url.URL
+	ClientID          string
+	ClientSecret      string
+	ClientSecretFile  string
+	Scope             string
+	// The picked CodeChallenge Method or empty if none.
+	CodeChallengeMethod string
+	// Code challenge methods supported by the Provider
+	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
 
 	// Common OIDC options for any OIDC-based providers to consume
 	AllowUnverifiedEmail bool
