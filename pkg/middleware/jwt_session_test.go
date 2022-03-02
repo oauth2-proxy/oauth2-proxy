@@ -62,12 +62,11 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 	var verifiedSessionExpiry = time.Unix(1912151821, 0)
 	var verifiedSession = &sessionsapi.SessionState{
-		AccessToken:   verifiedToken,
-		IDToken:       verifiedToken,
-		Email:         "john@example.com",
-		User:          "1234567890",
-		ExpiresOn:     &verifiedSessionExpiry,
-		Authenticated: true,
+		AccessToken: verifiedToken,
+		IDToken:     verifiedToken,
+		Email:       "john@example.com",
+		User:        "1234567890",
+		ExpiresOn:   &verifiedSessionExpiry,
 	}
 
 	// validToken will pass the token regex so can be used to check token fetching

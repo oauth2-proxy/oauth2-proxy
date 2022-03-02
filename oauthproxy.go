@@ -282,7 +282,6 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	r := mux.NewRouter().UseEncodedPath()
 	// Everything served by the router must go through the preAuthChain first.
 	r.Use(p.preAuthChain.Then)
-	r.Use(p.sessionChain.Then)
 
 	// Register the robots path writer
 	r.Path(robotsPath).HandlerFunc(p.pageWriter.WriteRobotsTxt)
@@ -290,7 +289,7 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
 	// likelihood of multiple reuests trying to referesh sessions simultaneously.
-	r.Path(proxyPrefix + authOnlyPath).HandlerFunc(p.AuthOnly)
+	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
 
 	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
 	// are not applied.
@@ -683,20 +682,6 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	extraParams := p.provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
 
-	csrf, err := cookies.NewCSRF(p.CookieOptions)
-	if err != nil {
-		logger.Errorf("Error creating CSRF nonce: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	appRedirect, err := p.appDirector.GetRedirect(req)
-	if err != nil {
-		logger.Errorf("Error obtaining application redirect: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	var codeChallenge, codeVerifier, codeChallengeMethod string
 	if p.provider.Data().CodeChallengeMethod != "" {
 		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
@@ -716,6 +701,20 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		}
 	}
 
+	csrf, err := cookies.NewCSRF(p.CookieOptions, codeVerifier)
+	if err != nil {
+		logger.Errorf("Error creating CSRF nonce: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	appRedirect, err := p.appDirector.GetRedirect(req)
+	if err != nil {
+		logger.Errorf("Error obtaining application redirect: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
@@ -728,16 +727,6 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 
 	if _, err := csrf.SetCookie(rw, req); err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// A session is created with `Authenticated: false` to store the code verifier
-	// for token redemption
-	session := &sessionsapi.SessionState{CodeVerifier: codeVerifier}
-	err = p.SaveSession(rw, req, session)
-	if err != nil {
-		logger.Errorf("Error saving session state for %s: %v", req.RemoteAddr, err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -766,22 +755,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session := middlewareapi.GetRequestScope(req).Session
-	var codeVerifier string
-	if session == nil {
-		logger.Errorf("Error retrieving session containing code verifier")
-		if p.provider.Data().CodeChallengeMethod != "" {
-			// Only error the whole callback if code verifier is required
-			p.ErrorPage(rw, req, http.StatusInternalServerError, "")
-			return
-		}
-	} else {
-		codeVerifier = session.CodeVerifier
+	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
+	if err != nil {
+		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
+		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
+		return
 	}
 
-	logger.Printf("Test %s", p.provider.Data().CodeChallengeMethod)
-	logger.Printf("Test2 %s", codeVerifier)
-	session, err = p.redeemCode(req, codeVerifier)
+	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -792,13 +773,6 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
-	if err != nil {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
-		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
 
@@ -867,7 +841,6 @@ func (p *OAuthProxy) redeemCode(req *http.Request, codeVerifier string) (*sessio
 	if s.ExpiresOn == nil {
 		s.ExpiresIn(p.CookieOptions.Expire)
 	}
-	s.Authenticated = true
 
 	return s, nil
 }
@@ -1013,7 +986,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return session, nil
 	}
 
-	if session == nil || !session.Authenticated {
+	if session == nil {
 		return nil, ErrNeedsLogin
 	}
 

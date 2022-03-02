@@ -16,9 +16,8 @@ import (
 
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	Authenticated bool       `msgpack:"a,omitempty"`
-	CreatedAt     *time.Time `msgpack:"ca,omitempty"`
-	ExpiresOn     *time.Time `msgpack:"eo,omitempty"`
+	CreatedAt *time.Time `msgpack:"ca,omitempty"`
+	ExpiresOn *time.Time `msgpack:"eo,omitempty"`
 
 	AccessToken  string `msgpack:"at,omitempty"`
 	IDToken      string `msgpack:"it,omitempty"`
@@ -30,7 +29,6 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
-	CodeVerifier      string   `msgpack:"cv,omitempty"`
 
 	// Internal helpers, not serialized
 	Clock clock.Clock `msgpack:"-"`

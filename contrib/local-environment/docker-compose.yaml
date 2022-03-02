@@ -29,8 +29,8 @@ services:
       - httpbin
   dex:
     container_name: dex
-    image: quay.io/dexidp/dex:v2.23.0
-    command: serve /dex.yaml
+    image: ghcr.io/dexidp/dex:v2.30.3
+    command: dex serve /dex.yaml
     ports:
       - 4190:4190/tcp
     hostname: dex
@@ -47,6 +47,8 @@ services:
   httpbin:
     container_name: httpbin
     image: kennethreitz/httpbin
+    ports:
+      - 8080:80/tcp
     networks:
       httpbin: {}
   etcd:

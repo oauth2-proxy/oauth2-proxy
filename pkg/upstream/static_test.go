@@ -55,31 +55,26 @@ var _ = Describe("Static Response Suite", func() {
 		Entry("with no given code", &serveHTTPTableInput{
 			requestPath:  "/",
 			staticCode:   0, // Placeholder for nil
-			expectedBody: authenticated,
 			expectedCode: http.StatusOK,
 		}),
 		Entry("with status OK", &serveHTTPTableInput{
 			requestPath:  "/abc",
 			staticCode:   http.StatusOK,
-			expectedBody: authenticated,
 			expectedCode: http.StatusOK,
 		}),
 		Entry("with status NoContent", &serveHTTPTableInput{
 			requestPath:  "/def",
 			staticCode:   http.StatusNoContent,
-			expectedBody: authenticated,
 			expectedCode: http.StatusNoContent,
 		}),
 		Entry("with status NotFound", &serveHTTPTableInput{
 			requestPath:  "/ghi",
 			staticCode:   http.StatusNotFound,
-			expectedBody: authenticated,
 			expectedCode: http.StatusNotFound,
 		}),
 		Entry("with status Teapot", &serveHTTPTableInput{
 			requestPath:  "/jkl",
 			staticCode:   http.StatusTeapot,
-			expectedBody: authenticated,
 			expectedCode: http.StatusTeapot,
 		}),
 	)
