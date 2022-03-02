@@ -65,7 +65,6 @@ func (p *ADFSProvider) GetLoginURL(redirectURI, state, nonce string, extraParams
 	if !p.SkipNonce {
 		extraParams.Add("nonce", nonce)
 	}
-
 	loginURL := makeLoginURL(p.Data(), redirectURI, url.QueryEscape(state), extraParams)
 	if p.skipScope {
 		q := loginURL.Query()
