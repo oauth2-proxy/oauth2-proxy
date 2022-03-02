@@ -20,7 +20,7 @@ const (
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
-	GetLoginURL(redirectURI, finalRedirect, nonce, codeChallenge, codeChallengeMethod string, extraParams url.Values) string
+	GetLoginURL(redirectURI, finalRedirect, nonce string, extraParams url.Values) string
 	Redeem(ctx context.Context, redirectURI, code, codeVerifier string) (*sessions.SessionState, error)
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)

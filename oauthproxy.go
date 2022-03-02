@@ -699,6 +699,9 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		extraParams.Add("code_challenge", codeChallenge)
+		extraParams.Add("code_challenge_method", codeChallengeMethod)
 	}
 
 	csrf, err := cookies.NewCSRF(p.CookieOptions, codeVerifier)
@@ -720,8 +723,6 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		callbackRedirect,
 		encodeState(csrf.HashOAuthState(), appRedirect),
 		csrf.HashOIDCNonce(),
-		codeChallenge,
-		codeChallengeMethod,
 		extraParams,
 	)
 

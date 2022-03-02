@@ -348,7 +348,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
 	p := testAzureProvider("", options.AzureOptions{})
 	p.ProtectedResource, _ = url.Parse("http://my.resource.test")
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "", "", "", url.Values{})
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
 	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
 }
 

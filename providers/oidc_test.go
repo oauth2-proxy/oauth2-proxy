@@ -96,11 +96,11 @@ func TestOIDCProviderGetLoginURL(t *testing.T) {
 	nonce := base64.RawURLEncoding.EncodeToString(n)
 
 	// SkipNonce defaults to true
-	skipNonce := provider.GetLoginURL("http://redirect/", "", nonce, "", "", url.Values{})
+	skipNonce := provider.GetLoginURL("http://redirect/", "", nonce, url.Values{})
 	assert.NotContains(t, skipNonce, "nonce")
 
 	provider.SkipNonce = false
-	withNonce := provider.GetLoginURL("http://redirect/", "", nonce, "", "", url.Values{})
+	withNonce := provider.GetLoginURL("http://redirect/", "", nonce, url.Values{})
 	assert.Contains(t, withNonce, fmt.Sprintf("nonce=%s", nonce))
 	assert.NotContains(t, withNonce, "code_challenge")
 	assert.NotContains(t, withNonce, "code_challenge_method")

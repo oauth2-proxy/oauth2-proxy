@@ -337,7 +337,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 
 func TestLoginGovProviderGetLoginURL(t *testing.T) {
 	p, _, _ := newLoginGovProvider()
-	result := p.GetLoginURL("http://redirect/", "", "", "", "", url.Values{})
+	result := p.GetLoginURL("http://redirect/", "", "", url.Values{})
 	assert.Contains(t, result, "acr_values="+url.QueryEscape("http://idmanagement.gov/ns/assurance/loa/1"))
 	assert.Contains(t, result, "nonce=fakenonce")
 }

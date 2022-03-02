@@ -39,7 +39,10 @@ func TestCodeChallengeConfigured(t *testing.T) {
 		},
 	}
 
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "", "challenge", "method", url.Values{})
+	extraValues := url.Values{}
+	extraValues["code_challenge"] = []string{"challenge"}
+	extraValues["code_challenge_method"] = []string{"method"}
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", extraValues)
 	assert.Contains(t, result, "code_challenge=challenge")
 	assert.Contains(t, result, "code_challenge_method=method")
 }
@@ -53,7 +56,7 @@ func TestCodeChallengeNotConfigured(t *testing.T) {
 		},
 	}
 
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "", "", "", url.Values{})
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
 	assert.NotContains(t, result, "code_challenge")
 	assert.NotContains(t, result, "code_challenge_method")
 }

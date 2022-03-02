@@ -34,15 +34,10 @@ func makeOIDCHeader(accessToken string) http.Header {
 	return makeAuthorizationHeader(tokenTypeBearer, accessToken, extraHeaders)
 }
 
-func makeLoginURL(p *ProviderData, redirectURI, state, codeChallenge, codeChallengeMethod string, extraParams url.Values) url.URL {
+func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Values) url.URL {
 	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-
-	if codeChallenge != "" && codeChallengeMethod != "" {
-		params.Add("code_challenge", codeChallenge)
-		params.Add("code_challenge_method", codeChallengeMethod)
-	}
 
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)

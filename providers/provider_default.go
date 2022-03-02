@@ -35,8 +35,8 @@ var (
 // GetLoginURL with typical oauth parameters
 // codeChallenge and codeChallengeMethod are the PKCE challenge and method to append to the URL params.
 //   they will be empty strings if no code challenge should be presented
-func (p *ProviderData) GetLoginURL(redirectURI, state, _, codeChallenge, codeChallengeMethod string, extraParams url.Values) string {
-	loginURL := makeLoginURL(p, redirectURI, state, codeChallenge, codeChallengeMethod, extraParams)
+func (p *ProviderData) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
+	loginURL := makeLoginURL(p, redirectURI, state, extraParams)
 	return loginURL.String()
 }
 
