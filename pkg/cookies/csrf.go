@@ -20,6 +20,7 @@ type CSRF interface {
 	HashOIDCNonce() string
 	CheckOAuthState(string) bool
 	CheckOIDCNonce(string) bool
+	GetCodeVerifier() string
 
 	SetSessionNonce(s *sessions.SessionState)
 
@@ -38,24 +39,30 @@ type csrf struct {
 	// is used to mitigate replay attacks.
 	OIDCNonce []byte `msgpack:"n,omitempty"`
 
+	// CodeVerifier holds the unobfuscated PKCE code verification string
+	// which is used to compare the code challenge when exchanging the
+	// authentication code.
+	CodeVerifier string `msgpack:"cv,omitempty"`
+
 	cookieOpts *options.Cookie
 	time       clock.Clock
 }
 
 // NewCSRF creates a CSRF with random nonces
-func NewCSRF(opts *options.Cookie) (CSRF, error) {
-	state, err := encryption.Nonce()
+func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
+	state, err := encryption.Nonce(32)
 	if err != nil {
 		return nil, err
 	}
-	nonce, err := encryption.Nonce()
+	nonce, err := encryption.Nonce(32)
 	if err != nil {
 		return nil, err
 	}
 
 	return &csrf{
-		OAuthState: state,
-		OIDCNonce:  nonce,
+		OAuthState:   state,
+		OIDCNonce:    nonce,
+		CodeVerifier: codeVerifier,
 
 		cookieOpts: opts,
 	}, nil
@@ -69,6 +76,10 @@ func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
 	}
 
 	return decodeCSRFCookie(cookie, opts)
+}
+
+func (c *csrf) GetCodeVerifier() string {
+	return c.CodeVerifier
 }
 
 // HashOAuthState returns the hash of the OAuth state nonce

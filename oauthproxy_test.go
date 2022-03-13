@@ -115,7 +115,7 @@ func Test_redeemCode(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	_, err = proxy.redeemCode(req)
+	_, err = proxy.redeemCode(req, "")
 	assert.Equal(t, providers.ErrMissingCode, err)
 }
 
@@ -405,7 +405,7 @@ func (patTest *PassAccessTokenTest) Close() {
 func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie string) {
 	rw := httptest.NewRecorder()
 
-	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions)
+	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions, "")
 	if err != nil {
 		panic(err)
 	}

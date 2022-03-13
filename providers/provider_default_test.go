@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"net/url"
 	"testing"
 	"time"
 
@@ -27,6 +28,37 @@ func TestRefresh(t *testing.T) {
 	refreshed, err = p.RefreshSession(context.Background(), nil)
 	assert.False(t, refreshed)
 	assert.Equal(t, ErrNotImplemented, err)
+}
+
+func TestCodeChallengeConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+
+	extraValues := url.Values{}
+	extraValues["code_challenge"] = []string{"challenge"}
+	extraValues["code_challenge_method"] = []string{"method"}
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", extraValues)
+	assert.Contains(t, result, "code_challenge=challenge")
+	assert.Contains(t, result, "code_challenge_method=method")
+}
+
+func TestCodeChallengeNotConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.NotContains(t, result, "code_challenge")
+	assert.NotContains(t, result, "code_challenge_method")
 }
 
 func TestProviderDataEnrichSession(t *testing.T) {

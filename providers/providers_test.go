@@ -171,3 +171,38 @@ func TestScope(t *testing.T) {
 		g.Expect(pd.Scope).To(Equal(tc.expectedScope))
 	}
 }
+
+func TestForcedMethodS256(t *testing.T) {
+	g := NewWithT(t)
+	options := options.NewOptions()
+	options.Providers[0].CodeChallengeMethod = CodeChallengeMethodS256
+	method := parseCodeChallengeMethod(options.Providers[0])
+
+	g.Expect(method).To(Equal(CodeChallengeMethodS256))
+}
+
+func TestForcedMethodPlain(t *testing.T) {
+	g := NewWithT(t)
+	options := options.NewOptions()
+	options.Providers[0].CodeChallengeMethod = CodeChallengeMethodPlain
+	method := parseCodeChallengeMethod(options.Providers[0])
+
+	g.Expect(method).To(Equal(CodeChallengeMethodPlain))
+}
+
+func TestPrefersS256(t *testing.T) {
+	g := NewWithT(t)
+	options := options.NewOptions()
+	method := parseCodeChallengeMethod(options.Providers[0])
+
+	g.Expect(method).To(Equal(""))
+}
+
+func TestCanOverwriteS256(t *testing.T) {
+	g := NewWithT(t)
+	options := options.NewOptions()
+	options.Providers[0].CodeChallengeMethod = "plain"
+	method := parseCodeChallengeMethod(options.Providers[0])
+
+	g.Expect(method).To(Equal(CodeChallengeMethodPlain))
+}
