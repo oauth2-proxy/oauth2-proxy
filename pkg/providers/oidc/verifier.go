@@ -22,9 +22,10 @@ type idTokenVerifier struct {
 
 // IDTokenVerificationOptions options for the oidc.idTokenVerifier that are required to verify an ID Token
 type IDTokenVerificationOptions struct {
-	AudienceClaims []string
-	ClientID       string
-	ExtraAudiences []string
+	AudienceClaims  []string
+	ClientID        string
+	ExtraAudiences  []string
+	SkipExpiryCheck bool
 }
 
 // NewVerifier constructs a new idTokenVerifier
