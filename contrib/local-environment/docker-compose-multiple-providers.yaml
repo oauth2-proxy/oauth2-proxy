@@ -1,0 +1,101 @@
+# This docker-compose file can be used to bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features.
+# Alongside OAuth2-Proxy, this file also starts Keycloak to act as the identity provider,
+# HTTPBin as an example upstream.
+#
+# This can either be created using docker-compose
+#    docker-compose -f docker-compose-keycloak.yaml <command>
+# Or:
+#    make keycloak-<command> (eg. make keycloak-up, make keycloak-down)
+#
+# Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle using user=admin@example.com, password=password
+# Access http://keycloak.localtest.me:9080 with the same credentials to check out the settings
+version: '3.0'
+services:
+
+  oauth2-proxy:
+    container_name: oauth2-proxy
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.2.1
+    command: --config /oauth2-proxy.cfg
+    hostname: oauth2-proxy
+    volumes:
+      - "./oauth2-proxy-keycloak.cfg:/oauth2-proxy.cfg"
+    restart: unless-stopped
+    networks:
+      keycloak: {}
+      httpbin: {}
+      oauth2-proxy: {}
+    depends_on:
+      - httpbin
+      - keycloak
+      - dex
+    ports:
+      - 4180:4180/tcp
+
+  httpbin:
+    container_name: httpbin
+    image: kennethreitz/httpbin:latest
+    hostname: httpbin
+    networks:
+      httpbin: {}
+
+  keycloak:
+    container_name: keycloak
+    image: jboss/keycloak:10.0.0
+    hostname: keycloak
+    command:
+      [
+        '-b',
+        '0.0.0.0',
+        '-Djboss.socket.binding.port-offset=1000',
+        '-Dkeycloak.migration.action=import',
+        '-Dkeycloak.migration.provider=dir',
+        '-Dkeycloak.migration.dir=/realm-config',
+        '-Dkeycloak.migration.strategy=IGNORE_EXISTING',
+      ]
+    volumes:
+      - ./keycloak:/realm-config
+    environment:
+      KEYCLOAK_USER: admin@example.com
+      KEYCLOAK_PASSWORD: password
+    networks:
+      keycloak:
+        aliases:
+          - keycloak.localtest.me
+    ports:
+      - 9080:9080/tcp
+  
+  dex:
+    container_name: dex
+    image: quay.io/dexidp/dex:v2.23.0
+    command: serve /dex.yaml
+    ports:
+      - 4190:4190/tcp
+    hostname: dex
+    volumes:
+      - "./dex.yaml:/dex.yaml"
+    restart: unless-stopped
+    networks:
+      dex:
+        aliases:
+        - dex.localhost
+      etcd: {}
+    depends_on:
+      - etcd
+  
+  etcd:
+    container_name: etcd
+    image: gcr.io/etcd-development/etcd:v3.4.7
+    entrypoint: /usr/local/bin/etcd
+    command:
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+    networks:
+      etcd: {}
+      
+networks:
+  httpbin: {}
+  keycloak: {}
+  oauth2-proxy: {}
+  dex: {}
+  etcd: {}
