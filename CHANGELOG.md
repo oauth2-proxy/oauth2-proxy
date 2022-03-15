@@ -13,6 +13,7 @@
 
 ## Changes since v7.2.1
 
+- [#1590](https://github.com/oauth2-proxy/oauth2-proxy/pull/1590) Add --skip-expiry-check flag to skip the token expiration check (@jeremyvanhove)
 - [#1583](https://github.com/oauth2-proxy/oauth2-proxy/pull/1583) Add groups to session too when creating session from bearer token (@adriananeci)
 - [#1418](https://github.com/oauth2-proxy/oauth2-proxy/pull/1418) Support for passing arbitrary query parameters through from `/oauth2/start` to the identity provider's login URL. Configuration settings control which parameters are passed by default and precisely which values can be overridden per-request (@ianroberts)
 - [#1559](https://github.com/oauth2-proxy/oauth2-proxy/pull/1559) Introduce ProviderVerifier to clean up OIDC discovery code (@JoelSpeed)
