@@ -61,6 +61,8 @@ docker-all: docker
 	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:${VERSION}-ppc64le .
 	$(DOCKER_BUILDX) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 .
 	$(DOCKER_BUILDX) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
+	$(DOCKER_BUILDX) --platform linux/arm/v8 -t $(REGISTRY)/oauth2-proxy:latest-armv8 .
+	$(DOCKER_BUILDX) --platform linux/arm/v8 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv8 .
 
 .PHONY: docker-push
 docker-push:
