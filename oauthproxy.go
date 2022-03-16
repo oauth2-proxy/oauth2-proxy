@@ -70,7 +70,7 @@ type allowedRoute struct {
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
 	CookieOptions *options.Cookie
-	Validator     func(string) bool
+	Validator     func(string, string) bool
 
 	SignInPath string
 
@@ -101,7 +101,7 @@ type OAuthProxy struct {
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
-func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
+func NewOAuthProxy(opts *options.Options, validator func(string, string) bool) (*OAuthProxy, error) {
 	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising session store: %v", err)
@@ -808,7 +808,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.Errorf("Error with authorization: %v", err)
 	}
-	if p.Validator(session.Email) && authorized {
+	if p.Validator(session.Email, req.Host) && authorized {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -991,7 +991,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return nil, ErrNeedsLogin
 	}
 
-	invalidEmail := session.Email != "" && !p.Validator(session.Email)
+	invalidEmail := session.Email != "" && !p.Validator(session.Email, req.Host)
 	authorized, err := p.provider.Authorize(req.Context(), session)
 	if err != nil {
 		logger.Errorf("Error with authorization: %v", err)

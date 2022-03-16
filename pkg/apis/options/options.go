@@ -33,6 +33,9 @@ type Options struct {
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 
+	UseKubernetesAnnotations bool   `flag:"kubernetes-annotations" cfg:"kubernetes-annotations"`
+	KubeConfig               string `flag:"kubeconfig" cfg:"kubeconfig"`
+
 	Cookie    Cookie         `cfg:",squash"`
 	Session   SessionOptions `cfg:",squash"`
 	Logging   Logging        `cfg:",squash"`
@@ -146,6 +149,9 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+
+	flagSet.Bool("kubernetes-annotations", false, "If run in Kubernetes environment, use ingress anotation 'oauth2-proxy.github.io/users' to specify allowed emails rather than using an email file")
+	flagSet.String("kubeconfig", "", "Location of kubeconfig file (optional)")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())

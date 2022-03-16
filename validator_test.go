@@ -36,8 +36,8 @@ func (vt *ValidatorTest) TearDown() {
 }
 
 func (vt *ValidatorTest) NewValidator(domains []string,
-	updated chan<- bool) func(string) bool {
-	return newValidatorImpl(domains, vt.authEmailFileName,
+	updated chan<- bool) func(string, string) bool {
+	return newValidatorImpl(domains, vt.authEmailFileName, false, "",
 		vt.done, func() {
 			if vt.updateSeen == false {
 				updated <- true
@@ -118,7 +118,7 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 	for _, tc := range testCasesPreUpdate {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			authorized := validator(tc.email)
+			authorized := validator(tc.email, "")
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})
 	}
@@ -132,7 +132,7 @@ func TestValidatorOverwriteEmailListDirectly(t *testing.T) {
 	for _, tc := range testCasesPostUpdate {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			authorized := validator(tc.email)
+			authorized := validator(tc.email, "")
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})
 	}
@@ -415,7 +415,7 @@ func TestValidatorCases(t *testing.T) {
 			g := NewWithT(t)
 			vt.WriteEmails(t, tc.allowedEmails)
 			validator := vt.NewValidator(tc.allowedDomains, nil)
-			authorized := validator(tc.email)
+			authorized := validator(tc.email, "")
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})
 	}
