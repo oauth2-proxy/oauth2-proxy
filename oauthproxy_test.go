@@ -2725,7 +2725,7 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{
-			name:               "UserInAllowedEmailDomains",
+			name:               "UserNotInAllowedEmailDomains",
 			email:              "toto@example.com",
 			querystring:        "?allowed_email_domains=a.example.com,b.example.com",
 			expectedStatusCode: http.StatusForbidden,
@@ -2759,6 +2759,140 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			email:              "toto@c.example.com",
 			querystring:        "?allowed_email_domains=a.b.c.example.com,*.c.example.com",
 			expectedStatusCode: http.StatusAccepted,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			groups := []string{}
+
+			created := time.Now()
+
+			session := &sessions.SessionState{
+				Groups:      groups,
+				Email:       tc.email,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = test.SaveSession(session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
+func TestAuthOnlyAllowedEmails(t *testing.T) {
+	testCases := []struct {
+		name               string
+		email              string
+		querystring        string
+		expectedStatusCode int
+	}{
+		{
+			name:               "NotEmailRestriction",
+			email:              "toto@example.com",
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInAllowedEmail",
+			email:              "toto@example.com",
+			querystring:        "?allowed_emails=toto@example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserNotInAllowedEmail",
+			email:              "toto@example.com",
+			querystring:        "?allowed_emails=tete@example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserNotInAllowedEmails",
+			email:              "toto@example.com",
+			querystring:        "?allowed_emails=tete@example.com,tutu@example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserInAllowedEmails",
+			email:              "toto@example.com",
+			querystring:        "?allowed_emails=tete@example.com,toto@example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			groups := []string{}
+
+			created := time.Now()
+
+			session := &sessions.SessionState{
+				Groups:      groups,
+				Email:       tc.email,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = test.SaveSession(session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
+func TestAuthOnlyAllowedEmailsOrDomains(t *testing.T) {
+	testCases := []struct {
+		name               string
+		email              string
+		querystring        string
+		expectedStatusCode int
+	}{
+		{
+			name:               "NotEmailRestriction",
+			email:              "toto@example.com",
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInAllowedEmailDomainAndEmail",
+			email:              "toto@example.com",
+			querystring:        "?allowed_email_domains=example.com&allowed_emails=toto@example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInAllowedEmailDomainButNotEmail",
+			email:              "toto@example.com",
+			querystring:        "?allowed_email_domains=example.com&allowed_email=tete@example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInAllowedEmailButNotDomain",
+			email:              "toto@example.com",
+			querystring:        "?allowed_email_domains=notexample.com&allowed_emails=toto@example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserNotInAllowedEmailDomainAndNotEmail",
+			email:              "toto@example.com",
+			querystring:        "?allowed_email_domains=notexample.com&allowed_emails=tete@example.com",
+			expectedStatusCode: http.StatusForbidden,
 		},
 	}
 
