@@ -74,20 +74,22 @@ type OAuthProxy struct {
 
 	SignInPath string
 
-	allowedRoutes       []allowedRoute
-	redirectURL         *url.URL // the url to receive requests at
-	whitelistDomains    []string
-	provider            providers.Provider
-	sessionStore        sessionsapi.SessionStore
-	ProxyPrefix         string
-	basicAuthValidator  basic.Validator
-	basicAuthGroups     []string
-	SkipProviderButton  bool
-	skipAuthPreflight   bool
-	skipJwtBearerTokens bool
-	forceJSONErrors     bool
-	realClientIPParser  ipapi.RealClientIPParser
-	trustedIPs          *ip.NetSet
+	allowedRoutes         []allowedRoute
+	redirectURL           *url.URL // the url to receive requests at
+	requestRedirectURLs   map[string]*url.URL
+	masqueradeRequestHost bool
+	whitelistDomains      []string
+	provider              providers.Provider
+	sessionStore          sessionsapi.SessionStore
+	ProxyPrefix           string
+	basicAuthValidator    basic.Validator
+	basicAuthGroups       []string
+	SkipProviderButton    bool
+	skipAuthPreflight     bool
+	skipJwtBearerTokens   bool
+	forceJSONErrors       bool
+	realClientIPParser    ipapi.RealClientIPParser
+	trustedIPs            *ip.NetSet
 
 	sessionChain      alice.Chain
 	headersChain      alice.Chain
@@ -197,18 +199,20 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
-		ProxyPrefix:         opts.ProxyPrefix,
-		provider:            provider,
-		sessionStore:        sessionStore,
-		redirectURL:         redirectURL,
-		allowedRoutes:       allowedRoutes,
-		whitelistDomains:    opts.WhitelistDomains,
-		skipAuthPreflight:   opts.SkipAuthPreflight,
-		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
-		realClientIPParser:  opts.GetRealClientIPParser(),
-		SkipProviderButton:  opts.SkipProviderButton,
-		forceJSONErrors:     opts.ForceJSONErrors,
-		trustedIPs:          trustedIPs,
+		ProxyPrefix:           opts.ProxyPrefix,
+		provider:              provider,
+		sessionStore:          sessionStore,
+		redirectURL:           redirectURL,
+		requestRedirectURLs:   make(map[string]*url.URL),
+		masqueradeRequestHost: opts.MasqueradeRequestHost,
+		allowedRoutes:         allowedRoutes,
+		whitelistDomains:      opts.WhitelistDomains,
+		skipAuthPreflight:     opts.SkipAuthPreflight,
+		skipJwtBearerTokens:   opts.SkipJwtBearerTokens,
+		realClientIPParser:    opts.GetRealClientIPParser(),
+		SkipProviderButton:    opts.SkipProviderButton,
+		forceJSONErrors:       opts.ForceJSONErrors,
+		trustedIPs:            trustedIPs,
 
 		basicAuthValidator: basicAuthValidator,
 		basicAuthGroups:    opts.HtpasswdUserGroups,
@@ -719,6 +723,16 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	}
 
 	callbackRedirect := p.getOAuthRedirectURI(req)
+	if p.masqueradeRequestHost {
+		requestRedirect, err := url.Parse(p.getOAuthRedirectURIFromRequest(req))
+		if err != nil {
+			logger.Errorf("Error parsing request URL: %v", err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			return
+		}
+		p.requestRedirectURLs[csrf.HashOAuthState()] = requestRedirect
+	}
+
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
 		encodeState(csrf.HashOAuthState(), appRedirect),
@@ -738,6 +752,21 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+	if req.Host == p.redirectURL.Host && p.masqueradeRequestHost {
+		values, err := url.ParseQuery(req.URL.RawQuery)
+		if err != nil {
+			logger.Errorf("Error while parsing OAuth2 callback: %v", err)
+			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		nonce := strings.SplitN(values.Get("state"), ":", 2)[0]
+
+		if destHost, ok := p.requestRedirectURLs[nonce]; ok && req.Host != destHost.Host {
+			http.Redirect(rw, req, destHost.String()+"?"+req.URL.RawQuery, http.StatusTemporaryRedirect)
+			return
+		}
+	}
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
 
 	// finish the oauth cycle
@@ -947,16 +976,8 @@ func prepareNoCacheMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// getOAuthRedirectURI returns the redirectURL that the upstream OAuth Provider will
-// redirect clients to once authenticated.
-// This is usually the OAuthProxy callback URL.
-func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
-	// if `p.redirectURL` already has a host, return it
-	if p.redirectURL.Host != "" {
-		return p.redirectURL.String()
-	}
-
-	// Otherwise figure out the scheme + host from the request
+// returns redirect URL created from the incoming http request
+func (p *OAuthProxy) getOAuthRedirectURIFromRequest(req *http.Request) string {
 	rd := *p.redirectURL
 	rd.Host = requestutil.GetRequestHost(req)
 	rd.Scheme = requestutil.GetRequestProto(req)
@@ -972,6 +993,19 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 		rd.Scheme = schemeHTTPS
 	}
 	return rd.String()
+}
+
+// getOAuthRedirectURI returns the redirectURL that the upstream OAuth Provider will
+// redirect clients to once authenticated.
+// This is usually the OAuthProxy callback URL.
+func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
+	// if `p.redirectURL` already has a host, return it
+	if p.redirectURL.Host != "" {
+		return p.redirectURL.String()
+	}
+
+	// Otherwise figure out the scheme + host from the request
+	return p.getOAuthRedirectURIFromRequest(req)
 }
 
 // getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
