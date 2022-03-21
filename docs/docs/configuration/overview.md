@@ -130,6 +130,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--jwt-key` | string | private key in PEM format used to sign JWT, so that you can say something like `--jwt-key="${OAUTH2_PROXY_JWT_KEY}"`: required by login.gov | |
 | `--jwt-key-file` | string | path to the private key file in PEM format used to sign the JWT so that you can say something like `--jwt-key-file=/etc/ssl/private/jwt_signing_key.pem`: required by login.gov | |
 | `--login-url` | string | Authentication endpoint | |
+| `--masquerade-request-host` | bool | if the `redirect-url` is set to the proxy's URL, redirect to the original request's host after the callback is finished (useful when you want to use the proxy for authorization only) | false |
 | `--insecure-oidc-allow-unverified-email` | bool | don't fail if an email address in an id_token is not verified | false |
 | `--insecure-oidc-skip-issuer-verification` | bool | allow the OIDC issuer URL to differ from the expected (currently required for Azure multi-tenant compatibility) | false |
 | `--insecure-oidc-skip-nonce` | bool | skip verifying the OIDC ID Token's nonce claim | true |
