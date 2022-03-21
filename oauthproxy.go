@@ -1053,20 +1053,24 @@ func extractAllowedEntities(req *http.Request, key string) map[string]struct{} {
 // if user's email or emaildomain is allowed, they should be let in, they don't
 // need to satisfy both conditions
 func checkAllowedEmailsOrDomains(req *http.Request, s *sessionsapi.SessionState) bool {
-	return checkAllowedEmailDomains(req, s) || checkAllowedEmails(req, s)
+	valid, domainsEmpty := checkAllowedEmailDomains(req, s)
+	if !valid || domainsEmpty {
+		valid = checkAllowedEmails(req, s)
+	}
+	return valid
 }
 
 // checkAllowedEmailDomains allow email domain restrictions based on the `allowed_email_domains`
 // querystring parameter
-func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) bool {
+func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) (allowed bool, wasEmpty bool) {
 	allowedEmailDomains := extractAllowedEntities(req, "allowed_email_domains")
 	if len(allowedEmailDomains) == 0 {
-		return true
+		return true, true
 	}
 
 	splitEmail := strings.Split(s.Email, "@")
 	if len(splitEmail) != 2 {
-		return false
+		return false, false
 	}
 
 	endpoint, _ := url.Parse("")
@@ -1077,7 +1081,7 @@ func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) bo
 		allowedEmailDomainsList = append(allowedEmailDomainsList, ed)
 	}
 
-	return util.IsEndpointAllowed(endpoint, allowedEmailDomainsList)
+	return util.IsEndpointAllowed(endpoint, allowedEmailDomainsList), false
 }
 
 // checkAllowedGroups allow secondary group restrictions based on the `allowed_groups`
