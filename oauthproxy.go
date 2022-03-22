@@ -67,6 +67,12 @@ type allowedRoute struct {
 	pathRegex *regexp.Regexp
 }
 
+type codeChallenge struct {
+	challenge string
+	verifier  string
+	method    string
+}
+
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
 	CookieOptions *options.Cookie
@@ -682,33 +688,41 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	p.doOAuthStart(rw, req, req.URL.Query())
 }
 
+func (p *OAuthProxy) createCodeChallenge(extraParams *url.Values) (codeChallenge, error) {
+	var challenge codeChallenge
+	challenge.method = p.provider.Data().CodeChallengeMethod
+	preEncodedCodeVerifier, err := encryption.Nonce(96)
+	if err != nil {
+		logger.Errorf("Unable to build random string: %v", err)
+		return challenge, err
+	}
+	challenge.verifier = base64.RawURLEncoding.EncodeToString(preEncodedCodeVerifier)
+
+	challenge.challenge, err = encryption.GenerateCodeChallenge(p.provider.Data().CodeChallengeMethod, challenge.verifier)
+	if err != nil {
+		logger.Errorf("Error creating code challenge: %v", err)
+		return challenge, err
+	}
+
+	extraParams.Add("code_challenge", challenge.challenge)
+	extraParams.Add("code_challenge_method", challenge.method)
+	return challenge, nil
+}
+
 func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values) {
 	extraParams := p.provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
 
-	var codeChallenge, codeVerifier, codeChallengeMethod string
+	var challenge codeChallenge
+	var err error
 	if p.provider.Data().CodeChallengeMethod != "" {
-		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
-		preEncodedCodeVerifier, err := encryption.Nonce(96)
-		if err != nil {
-			logger.Errorf("Unable to build random string: %v", err)
+		if challenge, err = p.createCodeChallenge(&extraParams); err != nil {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
-		codeVerifier = base64.RawURLEncoding.EncodeToString(preEncodedCodeVerifier)
-
-		codeChallenge, err = encryption.GenerateCodeChallenge(p.provider.Data().CodeChallengeMethod, codeVerifier)
-		if err != nil {
-			logger.Errorf("Error creating code challenge: %v", err)
-			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		extraParams.Add("code_challenge", codeChallenge)
-		extraParams.Add("code_challenge_method", codeChallengeMethod)
 	}
 
-	csrf, err := cookies.NewCSRF(p.CookieOptions, codeVerifier)
+	csrf, err := cookies.NewCSRF(p.CookieOptions, challenge.verifier)
 	if err != nil {
 		logger.Errorf("Error creating CSRF nonce: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
