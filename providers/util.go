@@ -40,7 +40,7 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	params.Set("redirect_uri", redirectURI)
 	params.Add("scope", p.Scope)
 	params.Set("client_id", p.ClientID)
-	params.Set("response_type", "code")
+	params.Set("response_type", getResponseType(p))
 	params.Add("state", state)
 	for n, p := range extraParams {
 		for _, v := range p {
@@ -73,4 +73,11 @@ func formatGroup(rawGroup interface{}) (string, error) {
 		return "", err
 	}
 	return string(jsonGroup), nil
+}
+
+func getResponseType(p *ProviderData) string {
+	if p.ResponseType != "" {
+		return p.ResponseType
+	}
+	return "code"
 }

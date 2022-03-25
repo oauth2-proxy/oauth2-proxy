@@ -172,6 +172,51 @@ func TestScope(t *testing.T) {
 	}
 }
 
+func TestResponseType(t *testing.T) {
+	g := NewWithT(t)
+
+	testCases := []struct {
+		name                   string
+		configuredResponseType string
+		expectedResponseType   string
+		allowedGroups          []string
+	}{
+		{
+			name:                   "with no ResponseType provided",
+			configuredResponseType: "",
+			expectedResponseType:   "code",
+		},
+		{
+			name:                   "with a configured ResponseType provided",
+			configuredResponseType: "code id_token",
+			expectedResponseType:   "code id_token",
+		},
+	}
+
+	for _, tc := range testCases {
+		providerConfig := options.Provider{
+			ID:               providerID,
+			Type:             "oidc",
+			ClientID:         clientID,
+			ClientSecretFile: clientSecret,
+			LoginURL:         msAuthURL,
+			RedeemURL:        msTokenURL,
+			ResponseType:     tc.configuredResponseType,
+			AllowedGroups:    tc.allowedGroups,
+			OIDCConfig: options.OIDCOptions{
+				IssuerURL:     msIssuerURL,
+				SkipDiscovery: true,
+				JwksURL:       msKeysURL,
+			},
+		}
+
+		pd, err := newProviderDataFromConfig(providerConfig)
+		g.Expect(err).ToNot(HaveOccurred())
+
+		g.Expect(pd.ResponseType).To(Equal(tc.expectedResponseType))
+	}
+}
+
 func TestForcedMethodS256(t *testing.T) {
 	g := NewWithT(t)
 	options := options.NewOptions()

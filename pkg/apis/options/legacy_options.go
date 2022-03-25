@@ -509,6 +509,7 @@ type LegacyProvider struct {
 	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
 	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
 	Scope                              string   `flag:"scope" cfg:"scope"`
+	ResponseType                       string   `flag:"response-type" cfg:"response_type"`
 	Prompt                             string   `flag:"prompt" cfg:"prompt"`
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
@@ -563,6 +564,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
+	flagSet.String("response-type", "", "OAuth response_type parameter in authorization request")
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 	flagSet.String("code-challenge-method", "", "use PKCE code challenges with the specified method. Either 'plain' or 'S256'")
@@ -637,6 +639,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		Scope:               l.Scope,
 		AllowedGroups:       l.AllowedGroups,
 		CodeChallengeMethod: l.CodeChallengeMethod,
+		ResponseType:        l.ResponseType,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC

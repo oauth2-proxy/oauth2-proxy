@@ -37,6 +37,7 @@ type ProviderData struct {
 	ClientSecret      string
 	ClientSecretFile  string
 	Scope             string
+	ResponseType      string
 	// The picked CodeChallenge Method or empty if none.
 	CodeChallengeMethod string
 	// Code challenge methods supported by the Provider
@@ -179,12 +180,13 @@ func (p *ProviderData) setAllowedGroups(groups []string) {
 }
 
 type providerDefaults struct {
-	name        string
-	loginURL    *url.URL
-	redeemURL   *url.URL
-	profileURL  *url.URL
-	validateURL *url.URL
-	scope       string
+	name         string
+	loginURL     *url.URL
+	redeemURL    *url.URL
+	profileURL   *url.URL
+	validateURL  *url.URL
+	scope        string
+	responseType string
 }
 
 func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
@@ -193,6 +195,10 @@ func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
 	p.RedeemURL = defaultURL(p.RedeemURL, defaults.redeemURL)
 	p.ProfileURL = defaultURL(p.ProfileURL, defaults.profileURL)
 	p.ValidateURL = defaultURL(p.ValidateURL, defaults.validateURL)
+
+	if p.ResponseType == "" {
+		p.ResponseType = defaults.responseType
+	}
 
 	if p.Scope == "" {
 		p.Scope = defaults.scope

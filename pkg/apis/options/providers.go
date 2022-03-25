@@ -74,6 +74,8 @@ type Provider struct {
 	ValidateURL string `json:"validateURL,omitempty"`
 	// Scope is the OAuth scope specification
 	Scope string `json:"scope,omitempty"`
+	// ResponseType tells the authorization server which grant to execute
+	ResponseType string `json:"responseType,omitempty"`
 	// AllowedGroups is a list of restrict logins to members of this group
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
 	// The forced code challenge method

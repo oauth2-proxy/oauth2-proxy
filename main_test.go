@@ -146,6 +146,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				Type:         "google",
 				ClientSecret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
 				ClientID:     "oauth2-proxy",
+				ResponseType: "",
 				AzureConfig: options.AzureOptions{
 					Tenant: "common",
 				},

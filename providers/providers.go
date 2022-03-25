@@ -76,6 +76,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientID:         providerConfig.ClientID,
 		ClientSecret:     providerConfig.ClientSecret,
 		ClientSecretFile: providerConfig.ClientSecretFile,
+		ResponseType:     providerConfig.ResponseType,
 	}
 
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
@@ -161,6 +162,9 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 	if providerConfig.OIDCConfig.UserIDClaim == "" {
 		providerConfig.OIDCConfig.UserIDClaim = "email"
+	}
+	if p.ResponseType == "" {
+		p.ResponseType = "code"
 	}
 
 	p.setAllowedGroups(providerConfig.AllowedGroups)

@@ -70,6 +70,66 @@ func TestProviderDataEnrichSession(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 }
 
+func TestResponseTypeDefaultConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.Contains(t, result, "response_type=code")
+}
+
+func TestResponseTypeIsConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+		ResponseType: "mytype",
+	}
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.Contains(t, result, "response_type=mytype")
+}
+
+func TestResponseTypeDefaultAndDataIsConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+		ResponseType: "mytype",
+	}
+	p.setProviderDefaults(providerDefaults{
+		responseType: "othertype",
+	})
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.Contains(t, result, "response_type=mytype")
+}
+
+func TestResponseTypeDefaultIsConfigured(t *testing.T) {
+	p := &ProviderData{
+		LoginURL: &url.URL{
+			Scheme: "http",
+			Host:   "my.test.idp",
+			Path:   "/oauth/authorize",
+		},
+	}
+	p.setProviderDefaults(providerDefaults{
+		responseType: "othertype",
+	})
+
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
+	assert.Contains(t, result, "response_type=othertype")
+}
+
 func TestProviderDataAuthorize(t *testing.T) {
 	testCases := []struct {
 		name          string
