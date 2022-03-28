@@ -31,7 +31,7 @@ import TabItem from '@theme/TabItem';
   <TabItem value="bash">
 
   ```shell
-  cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 | base64
+  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_'; echo
   ```
 
   </TabItem>
@@ -103,7 +103,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--exclude-logging-path` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
-| `--force-json-errors` | force JSON errors instead of HTTP error pages or redirects | `false` |
+| `--force-json-errors` | bool | force JSON errors instead of HTTP error pages or redirects | `false` |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
 | `--footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
 | `--github-org` | string | restrict logins to members of this organisation | |

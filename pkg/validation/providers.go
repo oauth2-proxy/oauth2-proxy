@@ -3,6 +3,7 @@ package validation
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
@@ -77,7 +78,10 @@ func validateGoogleConfig(provider options.Provider) []string {
 		}
 		if provider.GoogleConfig.ServiceAccountJSON == "" {
 			msgs = append(msgs, "missing setting: google-service-account-json")
+		} else if _, err := os.Stat(provider.GoogleConfig.ServiceAccountJSON); err != nil {
+			msgs = append(msgs, fmt.Sprintf("invalid Google credentials file: %s", provider.GoogleConfig.ServiceAccountJSON))
 		}
 	}
+
 	return msgs
 }

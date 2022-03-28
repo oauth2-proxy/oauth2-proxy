@@ -1,6 +1,15 @@
 package options
 
-import "github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+const (
+	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
+	OIDCEmailClaim = "email"
+
+	// OIDCGroupsClaim is the generic groups claim used by the OIDC provider.
+	OIDCGroupsClaim = "groups"
+)
+
+// OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
+var OIDCAudienceClaims = []string{"aud"}
 
 // Providers is a collection of definitions for providers.
 type Providers []Provider
@@ -43,7 +52,7 @@ type Provider struct {
 	// Type is the OAuth provider
 	// must be set from the supported providers group,
 	// otherwise 'Google' is set as default
-	Type string `json:"provider,omitempty"`
+	Type ProviderType `json:"provider,omitempty"`
 	// Name is the providers display name
 	// if set, it will be shown to the users in the login page.
 	Name string `json:"name,omitempty"`
@@ -53,6 +62,8 @@ type Provider struct {
 
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
+	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
+	LoginURLParameters []LoginURLParameter `json:"loginURLParameters,omitempty"`
 	// RedeemURL is the token redemption endpoint
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
@@ -63,17 +74,61 @@ type Provider struct {
 	ValidateURL string `json:"validateURL,omitempty"`
 	// Scope is the OAuth scope specification
 	Scope string `json:"scope,omitempty"`
-	// Prompt is OIDC prompt
-	Prompt string `json:"prompt,omitempty"`
-	// ApprovalPrompt is the OAuth approval_prompt
-	// default is set to 'force'
-	ApprovalPrompt string `json:"approvalPrompt,omitempty"`
 	// AllowedGroups is a list of restrict logins to members of this group
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
-
-	// AcrValues is a string of acr values
-	AcrValues string `json:"acrValues,omitempty"`
+	// The forced code challenge method
+	CodeChallengeMethod string `json:"force_code_challenge_method,omitempty"`
 }
+
+// ProviderType is used to enumerate the different provider type options
+// Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
+// gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+// and oidc.
+type ProviderType string
+
+const (
+	// ADFSProvider is the provider type for ADFS
+	ADFSProvider ProviderType = "adfs"
+
+	// AzureProvider is the provider type for Azure
+	AzureProvider ProviderType = "azure"
+
+	// BitbucketProvider is the provider type for Bitbucket
+	BitbucketProvider ProviderType = "bitbucket"
+
+	// DigitalOceanProvider is the provider type for DigitalOcean
+	DigitalOceanProvider ProviderType = "digitalocean"
+
+	// FacebookProvider is the provider type for Facebook
+	FacebookProvider ProviderType = "facebook"
+
+	// GitHubProvider is the provider type for GitHub
+	GitHubProvider ProviderType = "github"
+
+	// GitLabProvider is the provider type for GitLab
+	GitLabProvider ProviderType = "gitlab"
+
+	// GoogleProvider is the provider type for GoogleProvider
+	GoogleProvider ProviderType = "google"
+
+	// KeycloakProvider is the provider type for Keycloak
+	KeycloakProvider ProviderType = "keycloak"
+
+	// KeycloakOIDCProvider is the provider type for Keycloak OIDC
+	KeycloakOIDCProvider ProviderType = "keycloak-oidc"
+
+	// LinkedInProvider is the provider type for LinkedIn
+	LinkedInProvider ProviderType = "linkedin"
+
+	// LoginGovProvider is the provider type for LoginGov
+	LoginGovProvider ProviderType = "login.gov"
+
+	// NextCloudProvider is the provider type for NextCloud
+	NextCloudProvider ProviderType = "nextcloud"
+
+	// OIDCProvider is the provider type for OIDC
+	OIDCProvider ProviderType = "oidc"
+)
 
 type KeycloakOptions struct {
 	// Group enables to restrict login to members of indicated group
@@ -164,6 +219,12 @@ type OIDCOptions struct {
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
+	// AudienceClaim allows to define any claim that is verified against the client id
+	// By default `aud` claim is used for verification.
+	AudienceClaims []string `json:"audienceClaims,omitempty"`
+	// ExtraAudiences is a list of additional audiences that are allowed
+	// to pass verification in addition to the client id.
+	ExtraAudiences []string `json:"extraAudiences,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -178,9 +239,7 @@ type LoginGovOptions struct {
 func providerDefaults() Providers {
 	providers := Providers{
 		{
-			Type:           "google",
-			Prompt:         "", // Change to "login" when ApprovalPrompt officially deprecated
-			ApprovalPrompt: "force",
+			Type: "google",
 			AzureConfig: AzureOptions{
 				Tenant: "common",
 			},
@@ -188,9 +247,11 @@ func providerDefaults() Providers {
 				InsecureAllowUnverifiedEmail: false,
 				InsecureSkipNonce:            true,
 				SkipDiscovery:                false,
-				UserIDClaim:                  providers.OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
-				EmailClaim:                   providers.OIDCEmailClaim,
-				GroupsClaim:                  providers.OIDCGroupsClaim,
+				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
+				EmailClaim:                   OIDCEmailClaim,
+				GroupsClaim:                  OIDCGroupsClaim,
+				AudienceClaims:               OIDCAudienceClaims,
+				ExtraAudiences:               []string{},
 			},
 		},
 	}

@@ -116,6 +116,11 @@ var _ = Describe("Legacy Options", func() {
 			opts.Providers[0].ClientID = "oauth-proxy"
 			opts.Providers[0].ID = "google=oauth-proxy"
 			opts.Providers[0].OIDCConfig.InsecureSkipNonce = true
+			opts.Providers[0].OIDCConfig.AudienceClaims = []string{"aud"}
+			opts.Providers[0].OIDCConfig.ExtraAudiences = []string{}
+			opts.Providers[0].LoginURLParameters = []LoginURLParameter{
+				{Name: "approval_prompt", Default: []string{"force"}},
+			}
 
 			converted, err := legacyOpts.ToOptions()
 			Expect(err).ToNot(HaveOccurred())
@@ -785,6 +790,7 @@ var _ = Describe("Legacy Options", func() {
 			secureMetricsAddr   = ":9443"
 			crtPath             = "tls.crt"
 			keyPath             = "tls.key"
+			minVersion          = "TLS1.3"
 		)
 
 		var tlsConfig = &TLS{
@@ -794,6 +800,12 @@ var _ = Describe("Legacy Options", func() {
 			Key: &SecretSource{
 				FromFile: keyPath,
 			},
+		}
+
+		var tlsConfigMinVersion = &TLS{
+			Cert:       tlsConfig.Cert,
+			Key:        tlsConfig.Key,
+			MinVersion: minVersion,
 		}
 
 		DescribeTable("should convert to app and metrics servers",
@@ -821,6 +833,19 @@ var _ = Describe("Legacy Options", func() {
 				expectedAppServer: Server{
 					SecureBindAddress: secureAddr,
 					TLS:               tlsConfig,
+				},
+			}),
+			Entry("with TLS options specified with MinVersion", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:   insecureAddr,
+					HTTPSAddress:  secureAddr,
+					TLSKeyFile:    keyPath,
+					TLSCertFile:   crtPath,
+					TLSMinVersion: minVersion,
+				},
+				expectedAppServer: Server{
+					SecureBindAddress: secureAddr,
+					TLS:               tlsConfigMinVersion,
 				},
 			}),
 			Entry("with metrics HTTP and HTTPS addresses", legacyServersTableInput{
@@ -869,21 +894,41 @@ var _ = Describe("Legacy Options", func() {
 		// Non defaults for these options
 		clientID := "abcd"
 
+		defaultURLParams := []LoginURLParameter{
+			{Name: "approval_prompt", Default: []string{"force"}},
+		}
+
 		defaultProvider := Provider{
-			ID:       "google=" + clientID,
-			ClientID: clientID,
-			Type:     "google",
+			ID:                 "google=" + clientID,
+			ClientID:           clientID,
+			Type:               "google",
+			LoginURLParameters: defaultURLParams,
 		}
 		defaultLegacyProvider := LegacyProvider{
 			ClientID:     clientID,
 			ProviderType: "google",
 		}
 
-		displayNameProvider := Provider{
-			ID:       "displayName",
-			Name:     "displayName",
+		defaultProviderWithPrompt := Provider{
+			ID:       "google=" + clientID,
 			ClientID: clientID,
 			Type:     "google",
+			LoginURLParameters: []LoginURLParameter{
+				{Name: "prompt", Default: []string{"switch_user"}},
+			},
+		}
+		defaultLegacyProviderWithPrompt := LegacyProvider{
+			ClientID:     clientID,
+			ProviderType: "google",
+			Prompt:       "switch_user",
+		}
+
+		displayNameProvider := Provider{
+			ID:                 "displayName",
+			Name:               "displayName",
+			ClientID:           clientID,
+			Type:               "google",
+			LoginURLParameters: defaultURLParams,
 		}
 
 		displayNameLegacyProvider := LegacyProvider{
@@ -901,6 +946,7 @@ var _ = Describe("Legacy Options", func() {
 				ServiceAccountJSON: "test.json",
 				Groups:             []string{"1", "2"},
 			},
+			LoginURLParameters: defaultURLParams,
 		}
 
 		internalConfigLegacyProvider := LegacyProvider{
@@ -926,6 +972,11 @@ var _ = Describe("Legacy Options", func() {
 			Entry("with default provider", &convertProvidersTableInput{
 				legacyProvider:    defaultLegacyProvider,
 				expectedProviders: Providers{defaultProvider},
+				errMsg:            "",
+			}),
+			Entry("with prompt setting", &convertProvidersTableInput{
+				legacyProvider:    defaultLegacyProviderWithPrompt,
+				expectedProviders: Providers{defaultProviderWithPrompt},
 				errMsg:            "",
 			}),
 			Entry("with provider display name", &convertProvidersTableInput{

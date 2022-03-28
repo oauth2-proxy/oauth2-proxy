@@ -14,7 +14,10 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/golang-jwt/jwt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +40,11 @@ type azureOAuthPayload struct {
 	IDToken      string `json:"id_token,omitempty"`
 }
 
-func testAzureProvider(hostname string) *AzureProvider {
+func testAzureProvider(hostname string, opts options.AzureOptions) *AzureProvider {
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{"aud"},
+		ClientID:       "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
+	}
 	p := NewAzureProvider(
 		&ProviderData{
 			ProviderName:      "",
@@ -48,7 +55,7 @@ func testAzureProvider(hostname string) *AzureProvider {
 			ProtectedResource: &url.URL{},
 			Scope:             "",
 			EmailClaim:        "email",
-			Verifier: oidc.NewVerifier(
+			Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 				"https://issuer.example.com",
 				fakeAzureKeySetStub{},
 				&oidc.Config{
@@ -57,8 +64,8 @@ func testAzureProvider(hostname string) *AzureProvider {
 					SkipIssuerCheck:   true,
 					SkipExpiryCheck:   true,
 				},
-			),
-		})
+			), verificationOptions),
+		}, opts)
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
@@ -74,7 +81,7 @@ func TestNewAzureProvider(t *testing.T) {
 	g := NewWithT(t)
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewAzureProvider(&ProviderData{}).Data()
+	providerData := NewAzureProvider(&ProviderData{}, options.AzureOptions{}).Data()
 	g.Expect(providerData.ProviderName).To(Equal("Azure"))
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://login.microsoftonline.com/common/oauth2/authorize"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://login.microsoftonline.com/common/oauth2/token"))
@@ -105,7 +112,8 @@ func TestAzureProviderOverrides(t *testing.T) {
 			ProtectedResource: &url.URL{
 				Scheme: "https",
 				Host:   "example.com"},
-			Scope: "profile"})
+			Scope: "profile"},
+		options.AzureOptions{})
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Azure", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/oauth/auth",
@@ -122,8 +130,7 @@ func TestAzureProviderOverrides(t *testing.T) {
 }
 
 func TestAzureSetTenant(t *testing.T) {
-	p := testAzureProvider("")
-	p.Configure("example")
+	p := testAzureProvider("", options.AzureOptions{Tenant: "example"})
 	assert.Equal(t, "Azure", p.Data().ProviderName)
 	assert.Equal(t, "example", p.Tenant)
 	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/authorize",
@@ -138,11 +145,11 @@ func TestAzureSetTenant(t *testing.T) {
 	assert.Equal(t, "openid", p.Data().Scope)
 }
 
-func testAzureBackend(payload string) *httptest.Server {
-	return testAzureBackendWithError(payload, false)
+func testAzureBackend(payload string, accessToken, refreshToken string) *httptest.Server {
+	return testAzureBackendWithError(payload, accessToken, refreshToken, false)
 }
 
-func testAzureBackendWithError(payload string, injectError bool) *httptest.Server {
+func testAzureBackendWithError(payload string, accessToken, refreshToken string, injectError bool) *httptest.Server {
 	path := "/v1.0/me"
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -156,7 +163,8 @@ func testAzureBackendWithError(payload string, injectError bool) *httptest.Serve
 					w.WriteHeader(200)
 				}
 				w.Write([]byte(payload))
-			} else if !IsAuthorizedInHeader(r.Header) {
+			} else if !IsAuthorizedInHeaderWithToken(r.Header, accessToken) &&
+				!isAuthorizedRefreshInURLWithToken(r.URL, refreshToken) {
 				w.WriteHeader(403)
 			} else {
 				w.WriteHeader(200)
@@ -217,13 +225,13 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 				host string
 			)
 			if testCase.PayloadFromAzureBackend != "" {
-				b = testAzureBackend(testCase.PayloadFromAzureBackend)
+				b = testAzureBackend(testCase.PayloadFromAzureBackend, authorizedAccessToken, "")
 				defer b.Close()
 
 				bURL, _ := url.Parse(b.URL)
 				host = bURL.Host
 			}
-			p := testAzureProvider(host)
+			p := testAzureProvider(host, options.AzureOptions{})
 			session := CreateAuthorizedSession()
 			session.Email = testCase.Email
 			err := p.EnrichSession(context.Background(), session)
@@ -285,13 +293,17 @@ func TestAzureProviderRedeem(t *testing.T) {
 			accessTokenString := ""
 			if testCase.EmailFromIDToken != "" {
 				var err error
-				token := idTokenClaims{Email: testCase.EmailFromIDToken}
+				token := idTokenClaims{
+					StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
+					Email:          testCase.EmailFromIDToken}
 				idTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
 			}
 			if testCase.EmailFromAccessToken != "" {
 				var err error
-				token := idTokenClaims{Email: testCase.EmailFromAccessToken}
+				token := idTokenClaims{
+					StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
+					Email:          testCase.EmailFromAccessToken}
 				accessTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
 			}
@@ -308,13 +320,13 @@ func TestAzureProviderRedeem(t *testing.T) {
 			payloadBytes, err := json.Marshal(payload)
 			assert.NoError(t, err)
 
-			b := testAzureBackendWithError(string(payloadBytes), testCase.InjectRedeemURLError)
+			b := testAzureBackendWithError(string(payloadBytes), accessTokenString, testCase.RefreshToken, testCase.InjectRedeemURLError)
 			defer b.Close()
 
 			bURL, _ := url.Parse(b.URL)
-			p := testAzureProvider(bURL.Host)
+			p := testAzureProvider(bURL.Host, options.AzureOptions{})
 			p.Data().RedeemURL.Path = "/common/oauth2/token"
-			s, err := p.Redeem(context.Background(), "https://localhost", "1234")
+			s, err := p.Redeem(context.Background(), "https://localhost", "1234", "123")
 			if testCase.InjectRedeemURLError {
 				assert.NotNil(t, err)
 			} else {
@@ -334,41 +346,52 @@ func TestAzureProviderRedeem(t *testing.T) {
 }
 
 func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
-	p := testAzureProvider("")
+	p := testAzureProvider("", options.AzureOptions{})
 	p.ProtectedResource, _ = url.Parse("http://my.resource.test")
-	result := p.GetLoginURL("https://my.test.app/oauth", "", "")
+	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
 	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
 }
 
 func TestAzureProviderRefresh(t *testing.T) {
 	email := "foo@example.com"
-	idToken := idTokenClaims{Email: email}
+	subject := "foo"
+	idToken := idTokenClaims{
+		Email: email,
+		StandardClaims: jwt.StandardClaims{
+			Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532",
+			Subject:  subject,
+		},
+	}
 	idTokenString, err := newSignedTestIDToken(idToken)
 	assert.NoError(t, err)
+
 	timestamp, err := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")
 	assert.NoError(t, err)
+
+	newAccessToken := "new_some_access_token"
 	payload := azureOAuthPayload{
 		IDToken:      idTokenString,
 		RefreshToken: "new_some_refresh_token",
-		AccessToken:  "new_some_access_token",
+		AccessToken:  newAccessToken,
 		ExpiresOn:    timestamp.Unix(),
 	}
-
 	payloadBytes, err := json.Marshal(payload)
 	assert.NoError(t, err)
-	b := testAzureBackend(string(payloadBytes))
+
+	refreshToken := "some_refresh_token"
+	b := testAzureBackend(string(payloadBytes), newAccessToken, refreshToken)
 	defer b.Close()
 	bURL, _ := url.Parse(b.URL)
-	p := testAzureProvider(bURL.Host)
+	p := testAzureProvider(bURL.Host, options.AzureOptions{})
 
 	expires := time.Now().Add(time.Duration(-1) * time.Hour)
-	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: &expires}
+	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: refreshToken, IDToken: "some_id_token", ExpiresOn: &expires}
 
 	refreshed, err := p.RefreshSession(context.Background(), session)
 	assert.Equal(t, nil, err)
 	assert.True(t, refreshed)
 	assert.NotEqual(t, session, nil)
-	assert.Equal(t, "new_some_access_token", session.AccessToken)
+	assert.Equal(t, newAccessToken, session.AccessToken)
 	assert.Equal(t, "new_some_refresh_token", session.RefreshToken)
 	assert.Equal(t, idTokenString, session.IDToken)
 	assert.Equal(t, email, session.Email)

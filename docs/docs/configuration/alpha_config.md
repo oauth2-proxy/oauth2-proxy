@@ -91,7 +91,31 @@ longer available when using alpha configuration:
 - `basic-auth-password`/`basic_auth_password`
 - `skip-auth-strip-headers`/`skip_auth_strip_headers`
 
-Attempting to use these options via flags or via config when `--alpha-config`
+<!-- Legacy provider FlagSet -->
+- `client-id`/`client_id`
+- `client-secret`/`client_secret`, and `client-secret-file`/`client_secret_file`
+- `provider`
+- `provider-display-name`/`provider_display_name`
+- `provider-ca-file`/`provider_ca_files`
+- `login-url`/`login_url`
+- `redeem-url`/`redeem_url`
+- `profile-url`/`profile_url`
+- `resource`
+- `validate-url`/`validate_url`
+- `scope`
+- `prompt`
+- `approval-prompt`/`approval_prompt`
+- `acr-values`/`acr_values`
+- `user-id-claim`/`user_id_claim`
+- `allowed-group`/`allowed_groups`
+- `allowed-role`/`allowed_roles`
+- `jwt-key`/`jwt_key`
+- `jwt-key-file`/`jwt_key_file`
+- `pubjwk-url`/`pubjwk_url`
+
+and all provider-specific options, i.e. any option whose name includes `oidc`,
+`azure`, `bitbucket`, `github`, `gitlab`, `google` or `keycloak`.  Attempting to
+use any of these options via flags or via config when `--alpha-config` is
 set will result in an error.
 
 :::important
@@ -264,6 +288,85 @@ make up the header value
 | `jwtKeyFile` | _string_ | JWTKeyFile is a path to the private key file in PEM format used to sign the JWT |
 | `pubjwkURL` | _string_ | PubJWKURL is the JWK pubkey access endpoint |
 
+### LoginURLParameter
+
+(**Appears on:** [Provider](#provider))
+
+LoginURLParameter is the configuration for a single query parameter that
+can be passed through from the `/oauth2/start` endpoint to the IdP login
+URL.  The "default" option specifies the default value or values (if any)
+that will be passed to the IdP for this parameter, and "allow" is a list
+of options for ways in which this parameter can be set or overridden via
+the query string to `/oauth2/start`.
+If _only_ a default is specified and no "allow" then the parameter is
+effectively fixed - the default value will always be used and anything
+passed to the start URL will be ignored.  If _only_ "allow" is specified
+but no default then the parameter will only be passed on to the IdP if
+the caller provides it, and no value will be sent otherwise.
+
+Examples:
+
+A parameter whose value is fixed
+
+```
+name: organization
+default:
+- myorg
+```
+
+A parameter that is not passed by default, but may be set to one of a
+fixed set of values
+
+```
+name: prompt
+allow:
+- value: login
+- value: consent
+- value: select_account
+```
+
+A parameter that is passed by default but may be overridden by one of
+a fixed set of values
+
+```
+name: prompt
+default: ["login"]
+allow:
+- value: consent
+- value: select_account
+```
+
+A parameter that may be overridden, but only by values that match a
+regular expression.  For example to restrict `login_hint` to email
+addresses in your organization's domain:
+
+```
+name: login_hint
+allow:
+- pattern: '^[^@]*@example\.com$'
+# this allows at most one "@" sign, and requires "example.com" domain.
+```
+
+Note that the YAML rules around exactly which characters are allowed
+and/or require escaping in different types of string literals are
+convoluted.  For regular expressions the single quoted form is simplest
+as backslash is not considered to be an escape character.  Alternatively
+use the "chomped block" format `|-`:
+
+```
+- pattern: |-
+    ^[^@]*@example\.com$
+```
+
+The hyphen is important, a `|` block would have a trailing newline
+character.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `name` | _string_ | Name specifies the name of the query parameter. |
+| `default` | _[]string_ |  _(Optional)_ Default specifies a default value or values that will be<br/>passed to the IdP if not overridden. |
+| `allow` | _[[]URLParameterRule](#urlparameterrule)_ |  _(Optional)_ Allow specifies rules about how the default (if any) may be<br/>overridden via the query string to `/oauth2/start`.  Only<br/>values that match one or more of the allow rules will be<br/>forwarded to the IdP. |
+
 ### OIDCOptions
 
 (**Appears on:** [Provider](#provider))
@@ -281,6 +384,8 @@ make up the header value
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
 | `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
+| `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
+| `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 
 ### Provider
 
@@ -303,19 +408,29 @@ Provider holds all configuration for a single provider
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
 | `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
-| `provider` | _string_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
+| `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
 | `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
+| `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
 | `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |
-| `prompt` | _string_ | Prompt is OIDC prompt |
-| `approvalPrompt` | _string_ | ApprovalPrompt is the OAuth approval_prompt<br/>default is set to 'force' |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
-| `acrValues` | _string_ | AcrValues is a string of acr values |
+| `force_code_challenge_method` | _string_ | The forced code challenge method |
+
+### ProviderType
+#### (`string` alias)
+
+(**Appears on:** [Provider](#provider))
+
+ProviderType is used to enumerate the different provider type options
+Valid options are: adfs, azure, bitbucket, digitalocean facebook, github,
+gitlab, google, keycloak, keycloak-oidc, linkedin, login.gov, nextcloud
+and oidc.
+
 
 ### Providers
 
@@ -349,18 +464,34 @@ Server represents the configuration for an HTTP(S) server
 | ----- | ---- | ----------- |
 | `BindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
 | `SecureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
-| `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic. |
+| `TLS` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
 
 ### TLS
 
 (**Appears on:** [Server](#server))
 
-TLS contains the information for loading a TLS certifcate and key.
+TLS contains the information for loading a TLS certificate and key
+as well as an optional minimal TLS version that is acceptable.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `Key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
 | `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
+| `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
+
+### URLParameterRule
+
+(**Appears on:** [LoginURLParameter](#loginurlparameter))
+
+URLParameterRule represents a rule by which query parameters
+passed to the `/oauth2/start` endpoint are checked to determine whether
+they are valid overrides for the given parameter passed to the IdP's
+login URL.  Either Value or Pattern should be supplied, not both.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `value` | _string_ | A Value rule matches just this specific value |
+| `pattern` | _string_ | A Pattern rule gives a regular expression that must be matched by<br/>some substring of the value.  The expression is _not_ automatically<br/>anchored to the start and end of the value, if you _want_ to restrict<br/>the whole parameter value you must anchor it yourself with `^` and `$`. |
 
 ### Upstream
 

@@ -31,7 +31,7 @@ import TabItem from '@theme/TabItem';
   <TabItem value="bash">
 
   ```shell
-  cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1 | base64
+  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_'; echo
   ```
 
   </TabItem>
@@ -84,6 +84,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
 | `--client-secret` | string | the OAuth Client Secret | |
 | `--client-secret-file` | string | the file with OAuth Client Secret | |
+| `--code-challenge-method` | string | use PKCE code challenges with the specified method. Either 'plain' or 'S256' (recommended) | |
 | `--config` | string | path to config file | |
 | `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
 | `--cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
@@ -103,7 +104,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--exclude-logging-path` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
-| `--force-json-errors` | force JSON errors instead of HTTP error pages or redirects | `false` |
+| `--force-json-errors` | bool | force JSON errors instead of HTTP error pages or redirects | `false` |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
 | `--footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
 | `--github-org` | string | restrict logins to members of this organisation | |
@@ -136,6 +137,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--oidc-jwks-url` | string | OIDC JWKS URI for token verification; required if OIDC discovery is disabled | |
 | `--oidc-email-claim` | string | which OIDC claim contains the user's email | `"email"` |
 | `--oidc-groups-claim` | string | which OIDC claim contains the user groups | `"groups"` |
+| `--oidc-audience-claim` | string | which OIDC claim contains the audience | `"aud"` |
+| `--oidc-extra-audience` | string \| list | additional audiences which are allowed to pass verification | `"[]"` |
 | `--pass-access-token` | bool | pass OAuth access_token to upstream via X-Forwarded-Access-Token header. When used with `--set-xauthrequest` this adds the X-Auth-Request-Access-Token header to the response | false |
 | `--pass-authorization-header` | bool | pass OIDC IDToken to upstream via Authorization Bearer header | false |
 | `--pass-basic-auth` | bool | pass HTTP Basic Auth, X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
@@ -191,17 +194,18 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
 | `--tls-cert-file` | string | path to certificate file | |
 | `--tls-key-file` | string | path to private key file | |
+| `--tls-min-version` | string | minimum TLS version that is acceptable, either `"TLS1.2"` or `"TLS1.3"` | `"TLS1.2"` |
 | `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
 | `--allowed-group` | string \| list | restrict logins to members of this group (may be given multiple times) | |
 | `--allowed-role` | string \| list | restrict logins to users with this role (may be given multiple times). Only works with the keycloak-oidc provider. | |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
-| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (e.g. `.example.com`)&nbsp;\[[2](#footnote2)\] | |
+| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` or a `*.` to allow subdomains (e.g. `.example.com`, `*.example.com`)&nbsp;\[[2](#footnote2)\] | |
 | `--trusted-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in an HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
 
 \[<a name="footnote1">1</a>\]: Only these providers support `--cookie-refresh`: GitLab, Google and OIDC
 
-\[<a name="footnote2">2</a>\]: When using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
+\[<a name="footnote2">2</a>\]: When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
 See below for provider specific options
 
