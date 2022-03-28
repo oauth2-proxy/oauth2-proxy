@@ -2,7 +2,7 @@
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
 #  multiple platforms.
-FROM golang:1.17-buster AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.17-buster AS builder
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
