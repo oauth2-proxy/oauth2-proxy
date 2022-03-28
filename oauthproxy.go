@@ -1020,7 +1020,8 @@ func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
 
 	constraints := []func(*http.Request, *sessionsapi.SessionState) bool{
 		checkAllowedGroups,
-		checkAllowedEmailsOrDomains,
+		checkAllowedEmailDomains,
+		checkAllowedEmails,
 	}
 
 	for _, constraint := range constraints {
@@ -1050,31 +1051,17 @@ func extractAllowedEntities(req *http.Request, key string) map[string]struct{} {
 	return entities
 }
 
-// if user's email or emaildomain is allowed, they should be let in, they don't
-// need to satisfy both conditions
-func checkAllowedEmailsOrDomains(req *http.Request, s *sessionsapi.SessionState) bool {
-	domainsAllowed, domainsEmpty := checkAllowedEmailDomains(req, s)
-	emailsAllowed, emailsEmpty := checkAllowedEmails(req, s)
-	if domainsEmpty {
-		return emailsAllowed
-	}
-	if emailsEmpty {
-		return domainsAllowed
-	}
-	return emailsAllowed || domainsAllowed
-}
-
 // checkAllowedEmailDomains allow email domain restrictions based on the `allowed_email_domains`
 // querystring parameter
-func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) (allowed bool, wasEmpty bool) {
+func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) bool {
 	allowedEmailDomains := extractAllowedEntities(req, "allowed_email_domains")
 	if len(allowedEmailDomains) == 0 {
-		return true, true
+		return true
 	}
 
 	splitEmail := strings.Split(s.Email, "@")
 	if len(splitEmail) != 2 {
-		return false, false
+		return false
 	}
 
 	endpoint, _ := url.Parse("")
@@ -1085,7 +1072,7 @@ func checkAllowedEmailDomains(req *http.Request, s *sessionsapi.SessionState) (a
 		allowedEmailDomainsList = append(allowedEmailDomainsList, ed)
 	}
 
-	return util.IsEndpointAllowed(endpoint, allowedEmailDomainsList), false
+	return util.IsEndpointAllowed(endpoint, allowedEmailDomainsList)
 }
 
 // checkAllowedGroups allow secondary group restrictions based on the `allowed_groups`
@@ -1107,13 +1094,13 @@ func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // checkAllowedEmails allow email restrictions based on the `allowed_emails`
 // querystring parameter
-func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) (allowed bool, wasEmpty bool) {
+func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 	allowedEmails := extractAllowedEntities(req, "allowed_emails")
 	if len(allowedEmails) == 0 {
-		return true, true
+		return true
 	}
 
-	allowed = false
+	allowed := false
 
 	for email := range allowedEmails {
 		if email == s.Email {
@@ -1122,7 +1109,7 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) (allowed
 		}
 	}
 
-	return allowed, false
+	return allowed
 }
 
 // encodedState builds the OAuth state param out of our nonce and
