@@ -11,6 +11,10 @@
 
 ## Breaking Changes
 
+- [#1594](https://github.com/oauth2-proxy/oauth2-proxy/pull/1594) oauth2-proxy no longer provides separate
+images for each architecture. Instead, images are cross compiled and pushed as the same tag for every platform.
+If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move to the generic tag instead (ex: v7.2.1 )
+
 ## Changes since v7.2.1
 
 - [#1583](https://github.com/oauth2-proxy/oauth2-proxy/pull/1583) Add groups to session too when creating session from bearer token (@adriananeci)
