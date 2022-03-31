@@ -73,14 +73,14 @@ func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
 
 // LoadCSRFCookie loads a CSRF object from a request's CSRF cookie
 func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
-	
-	// csrfCookieName will include a substring of the state to enable multiple csrf cookies 
+
+	// csrfCookieName will include a substring of the state to enable multiple csrf cookies
 	// in case of parallel requests
 	lastChar := csrfStateLength - 1
-	
+
 	stateSubstring := ""
-	state := req.URL.Query()["state"][0]
-	if state != nil {
+	state := req.URL.Query()["state"]
+	if state[0] != "" {
 		state := state[0]
 		if lastChar <= len(state) {
 			stateSubstring = state[0:lastChar]
@@ -199,7 +199,7 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 // cookieName returns the CSRF cookie's name derived from the base
 // session cookie name
 func (c *csrf) cookieName() string {
-	return csrfCookieName(c.cookieOpts, encryption.HashNonce(c.OAuthState)[0:csrfStateLength - 1])
+	return csrfCookieName(c.cookieOpts, encryption.HashNonce(c.OAuthState)[0:csrfStateLength-1])
 }
 
 func csrfCookieName(opts *options.Cookie, stateSubstring string) string {
