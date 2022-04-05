@@ -2,12 +2,18 @@
 
 ## Release Highlights
 
+- [#1361](https://github.com/oauth2-proxy/oauth2-proxy/pull/1541) PKCE Code Challenge Support - RFC-7636 (@braunsonm)
+  - At this time the `--code-challenge-method` flag can be used to enable it with the method of your choice.
+- Parital support for OAuth2 Authorization Server Metadata for detecting code challenge methods (@braunsonm)
+  - A warning will be displayed when your provider advertises support for PKCE but you have not enabled it.
+
 ## Important Notes
 
 ## Breaking Changes
 
 ## Changes since v7.2.1
 
+- [#1583](https://github.com/oauth2-proxy/oauth2-proxy/pull/1583) Add groups to session too when creating session from bearer token (@adriananeci)
 - [#1418](https://github.com/oauth2-proxy/oauth2-proxy/pull/1418) Support for passing arbitrary query parameters through from `/oauth2/start` to the identity provider's login URL. Configuration settings control which parameters are passed by default and precisely which values can be overridden per-request (@ianroberts)
 - [#1559](https://github.com/oauth2-proxy/oauth2-proxy/pull/1559) Introduce ProviderVerifier to clean up OIDC discovery code (@JoelSpeed)
 - [#1561](https://github.com/oauth2-proxy/oauth2-proxy/pull/1561) Add ppc64le support (@mgiessing)
@@ -23,6 +29,7 @@
 - [#1474](https://github.com/oauth2-proxy/oauth2-proxy/pull/1474) Support configuration of minimal acceptable TLS version (@polarctos)
 - [#1545](https://github.com/oauth2-proxy/oauth2-proxy/pull/1545) Fix issue with query string allowed group panic on skip methods (@andytson)
 - [#1286](https://github.com/oauth2-proxy/oauth2-proxy/pull/1286) Add the `allowed_email_domains` and the `allowed_groups` on the `auth_request` + support standard wildcard char for validation with sub-domain and email-domain. (@w3st3ry @armandpicard)
+- [#1361](https://github.com/oauth2-proxy/oauth2-proxy/pull/1541) PKCE Code Challenge Support - RFC-7636 (@braunsonm)
 
 # V7.2.1
 

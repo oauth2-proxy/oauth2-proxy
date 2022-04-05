@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+const (
+	CodeChallengeMethodPlain = "plain"
+	CodeChallengeMethodS256  = "S256"
+)
+
 // SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
 func SecretBytes(secret string) []byte {
 	b, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(secret, "="))
@@ -73,6 +78,18 @@ func SignedValue(seed string, key string, value []byte, now time.Time) (string, 
 	}
 	cookieVal := fmt.Sprintf("%s|%s|%s", encodedValue, timeStr, sig)
 	return cookieVal, nil
+}
+
+func GenerateCodeChallenge(method, codeVerifier string) (string, error) {
+	switch method {
+	case CodeChallengeMethodPlain:
+		return codeVerifier, nil
+	case CodeChallengeMethodS256:
+		shaSum := sha256.Sum256([]byte(codeVerifier))
+		return base64.RawURLEncoding.EncodeToString(shaSum[:]), nil
+	default:
+		return "", fmt.Errorf("unknown challenge method: %v", method)
+	}
 }
 
 func cookieSignature(signer func() hash.Hash, args ...string) (string, error) {

@@ -37,6 +37,10 @@ type ProviderData struct {
 	ClientSecret      string
 	ClientSecretFile  string
 	Scope             string
+	// The picked CodeChallenge Method or empty if none.
+	CodeChallengeMethod string
+	// Code challenge methods supported by the Provider
+	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
 
 	// Common OIDC options for any OIDC-based providers to consume
 	AllowUnverifiedEmail bool

@@ -7,15 +7,21 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
+)
+
+const (
+	CodeChallengeMethodPlain = "plain"
+	CodeChallengeMethodS256  = "S256"
 )
 
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
-	GetLoginURL(redirectURI, finalRedirect string, nonce string, extraParams url.Values) string
-	Redeem(ctx context.Context, redirectURI, code string) (*sessions.SessionState, error)
+	GetLoginURL(redirectURI, finalRedirect, nonce string, extraParams url.Values) string
+	Redeem(ctx context.Context, redirectURI, code, codeVerifier string) (*sessions.SessionState, error)
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
@@ -95,10 +101,12 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		if pv.DiscoveryEnabled() {
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
+			pkce := pv.Provider().PKCE()
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
 			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
+			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
 		}
 	}
 
@@ -131,6 +139,12 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
 
+	// Set PKCE enabled or disabled based on discovery and force options
+	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
+	if len(p.SupportedCodeChallengeMethods) != 0 && p.CodeChallengeMethod == "" {
+		logger.Printf("Warning: Your provider supports PKCE methods %+q, but you have not enabled one with --code-challenge-method", p.SupportedCodeChallengeMethods)
+	}
+
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option
 	if providerConfig.OIDCConfig.EmailClaim == options.OIDCEmailClaim &&
@@ -153,6 +167,18 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
 
 	return p, nil
+}
+
+// Pick the most appropriate code challenge method for PKCE
+// At this time we do not consider what the server supports to be safe and
+// only enable PKCE if the user opts-in
+func parseCodeChallengeMethod(providerConfig options.Provider) string {
+	switch {
+	case providerConfig.CodeChallengeMethod != "":
+		return providerConfig.CodeChallengeMethod
+	default:
+		return ""
+	}
 }
 
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {

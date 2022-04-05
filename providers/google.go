@@ -141,7 +141,7 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -156,6 +156,9 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
 
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
