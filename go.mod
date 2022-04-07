@@ -1,6 +1,6 @@
 module github.com/oauth2-proxy/oauth2-proxy/v7
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
