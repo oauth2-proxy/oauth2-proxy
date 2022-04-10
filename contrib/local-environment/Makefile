@@ -2,33 +2,37 @@
 up:
 	docker-compose up -d
 
-.PHONY: build-up
-build-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-build-oauth.yaml up --build
-
-.PHONY: %
-%:
-	docker-compose $*
+.PHONY: down
+down:
+	docker-compose down --remove-orphans
 
 .PHONY: alpha-config-up
 alpha-config-up:
 	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml up -d
 
-.PHONY: alpha-config-build-up
-alpha-config-build-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
-
-.PHONY: alpha-config-multiple-providers-build-up
-alpha-config-multiple-providers-build-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
+.PHONY: alpha-config-down
+alpha-config-down:
+	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml down --remove-orphans
 
 .PHONY: alpha-config-multiple-providers-up
 alpha-config-multiple-providers-up:
 	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml up -d
 
-.PHONY: alpha-config-%
-alpha-config-%:
-	docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml $*
+.PHONY: alpha-config-multiple-providers-down
+alpha-config-multiple-providers-down:
+	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml down --remove-orphans
+
+.PHONY: build-up
+build-up:
+	BUILDPLATFORM=$(shell dpkg --print-architecture) DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-build-oauth.yaml up --build
+
+.PHONY: alpha-config-build-up
+alpha-config-build-up:
+	BUILDPLATFORM=$(shell dpkg --print-architecture) DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
+
+.PHONY: alpha-config-multiple-providers-build-up
+alpha-config-multiple-providers-build-up:
+	BUILDPLATFORM=$(shell dpkg --print-architecture) DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
 
 .PHONY: nginx-up
 nginx-up:

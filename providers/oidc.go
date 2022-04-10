@@ -43,7 +43,7 @@ func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string) string {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string, idString string) (*sessions.SessionState, error) {
+func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code string, idS
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
 
-	return p.createSession(ctx, token, false, idString)
+	return p.createSession(ctx, token, false, p.ProviderID)
 }
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields
@@ -181,9 +181,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		return fmt.Errorf("failed to get token: %v", err)
 	}
 
-	idString := "notfound"
-
-	newSession, err := p.createSession(ctx, token, true, idString)
+	newSession, err := p.createSession(ctx, token, true, s.ProviderID)
 	if err != nil {
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}

@@ -312,11 +312,11 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Use(prepareNoCacheMiddleware)
 
+	s.Path(signInPath).HandlerFunc(p.SignIn)
+	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path("/{id}" + oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
-	s.Path(signInPath).HandlerFunc(p.SignIn)
-	s.Path(signOutPath).HandlerFunc(p.SignOut)
 
 	// The userinfo endpoint needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
@@ -685,7 +685,6 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	var ok bool
 
 	if idString == "" {
-		logger.Printf("Path Parameter empty: setting provider as default provider 0:")
 		providerSlice = 0
 	} else {
 		providerSlice, ok = p.providerMap[idString]
@@ -760,7 +759,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, err := p.redeemCode(req, providerSlice, idString)
+	session, err := p.redeemCode(req, providerSlice)
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -820,14 +819,14 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (p *OAuthProxy) redeemCode(req *http.Request, providerSlice int, idString string) (*sessionsapi.SessionState, error) {
+func (p *OAuthProxy) redeemCode(req *http.Request, providerSlice int) (*sessionsapi.SessionState, error) {
 	code := req.Form.Get("code")
 	if code == "" {
 		return nil, providers.ErrMissingCode
 	}
 
 	redirectURI := p.getOAuthRedirectURI(req)
-	s, err := p.provider[providerSlice].Redeem(req.Context(), redirectURI, code, idString)
+	s, err := p.provider[providerSlice].Redeem(req.Context(), redirectURI, code)
 	if err != nil {
 		return nil, err
 	}

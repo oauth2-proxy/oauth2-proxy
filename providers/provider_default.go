@@ -43,7 +43,7 @@ func (p *ProviderData) GetLoginURL(redirectURI, state, _ string) string {
 }
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string, idString string) (*sessions.SessionState, error) {
+func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -91,7 +91,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string, idS
 	if token := values.Get("access_token"); token != "" {
 		ss := &sessions.SessionState{
 			AccessToken: token,
-			ProviderID:  idString,
+			ProviderID:  p.ProviderID,
 		}
 		ss.CreatedAtNow()
 		return ss, nil

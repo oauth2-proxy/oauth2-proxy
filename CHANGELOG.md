@@ -6,7 +6,6 @@
 
 ## Breaking Changes
 
-- [#1500] The flag/config --provider-display-name is now a required field in old config
 - [#1500] Provider Name and ID are now required fields in the Alpha struct.
 
 ## Changes since v7.2.1

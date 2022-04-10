@@ -2,8 +2,6 @@
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
 #  multiple platforms.
-ARG BUILDPLATFORM
-
 FROM --platform=${BUILDPLATFORM} golang:1.17-buster AS builder
 
 # Copy sources

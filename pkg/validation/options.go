@@ -42,14 +42,18 @@ func Validate(o *options.Options) error {
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
 	} else {
 		caFiles := make([]string, 0)
+		defaultCAPoolNeeded := false
+
 		for i := range o.Providers {
 			if len(o.Providers[i].CAFiles) > 0 {
 				caFiles = append(caFiles, o.Providers[i].CAFiles...)
+			} else {
+				defaultCAPoolNeeded = true
 			}
 		}
 
 		if len(caFiles) > 0 {
-			pool, err := util.GetCertPool(caFiles)
+			pool, err := util.GetCertPool(caFiles, defaultCAPoolNeeded)
 			if err == nil {
 				transport := http.DefaultTransport.(*http.Transport).Clone()
 				transport.TLSClientConfig = &tls.Config{
@@ -69,6 +73,13 @@ func Validate(o *options.Options) error {
 	}
 
 	o = o.InitProviders()
+
+	//Temporary fix to allow a provider without a name in the default config
+	//TODO remove once legacy config is removed from the project
+
+	if o.Providers[0].Name == "" {
+		o.Providers[0].Name = o.Providers[0].Type
+	}
 
 	for i := range o.Providers {
 		if o.Providers[i].OIDCConfig.IssuerURL != "" {

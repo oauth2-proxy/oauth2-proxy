@@ -159,7 +159,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string, idString string) (*sessions.SessionState, error) {
+func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -218,7 +218,7 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code string, idString 
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,
 		Email:       email,
-		ProviderID:  idString,
+		ProviderID:  p.ProviderID,
 	}
 
 	session.CreatedAtNow()
