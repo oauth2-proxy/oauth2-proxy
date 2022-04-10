@@ -31,7 +31,9 @@ type Provider interface {
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
 }
 
-func NewProvider(providerConfig options.Provider) (Provider, error) {
+type ProviderMap map[string]Provider
+
+func newProvider(providerConfig options.Provider) (Provider, error) {
 	providerData, err := newProviderDataFromConfig(providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
@@ -68,6 +70,30 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
+}
+
+func NewProviderMap(providersConfig []options.Provider) (ProviderMap, error) {
+
+	newProviderMap := make(map[string]Provider)
+
+	//TODO add an option in the alpha config to specify the default provider - for now we will just map it as #1
+
+	defaultProvider, err := newProvider(providersConfig[0])
+	if err != nil {
+		return nil, fmt.Errorf("error intialising provider: %v", err)
+	}
+
+	newProviderMap["default"] = defaultProvider
+
+	for i := range providersConfig {
+		provider, err := newProvider(providersConfig[i])
+		if err != nil {
+			return nil, fmt.Errorf("error intialising provider: %v", err)
+		}
+		newProviderMap[(providersConfig[i].ID)] = provider
+	}
+
+	return newProviderMap, nil
 }
 
 func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {

@@ -82,12 +82,6 @@ func (o *Options) GetJWTBearerVerifiers() []internaloidc.IDTokenVerifier {
 	return o.jwtBearerVerifiers
 }
 func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
-func (o *Options) GetAllProviders() []providers.Provider           { return o.provider }
-func (o *Options) GetProviderMap() map[string]int                  { return o.providerMap }
-func (o *Options) GetProviderMapValue(value string) (int, bool) {
-	i, ok := o.providerMap[value]
-	return i, ok
-}
 
 // Options for Setting internal values
 func (o *Options) SetRedirectURL(s *url.URL)                              { o.redirectURL = s }
@@ -95,15 +89,6 @@ func (o *Options) SetSignatureData(s *SignatureData)                      { o.si
 func (o *Options) SetOIDCVerifier(s internaloidc.IDTokenVerifier)         { o.oidcVerifier = s }
 func (o *Options) SetJWTBearerVerifiers(s []internaloidc.IDTokenVerifier) { o.jwtBearerVerifiers = s }
 func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.realClientIPParser = s }
-
-	for i := range o.Providers {
-		m[o.Providers[i].ID] = i
-		m[o.Providers[i].Name] = i
-		m[o.GetProvider(i).Data().ValidateURL.String()] = i
-	}
-	o.providerMap = m
-	return o
-}
 
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
