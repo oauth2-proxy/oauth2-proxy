@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -30,7 +31,7 @@ type GitLabProvider struct {
 var _ Provider = (*GitLabProvider)(nil)
 
 // NewGitLabProvider initiates a new GitLabProvider
-func NewGitLabProvider(p *ProviderData) *GitLabProvider {
+func NewGitLabProvider(p *ProviderData, opts options.GitLabOptions) (*GitLabProvider, error) {
 	p.ProviderName = gitlabProviderName
 	if p.Scope == "" {
 		p.Scope = gitlabDefaultScope
@@ -41,15 +42,22 @@ func NewGitLabProvider(p *ProviderData) *GitLabProvider {
 		SkipNonce:    false,
 	}
 
-	return &GitLabProvider{
+	provider := &GitLabProvider{
 		OIDCProvider:    oidcProvider,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
+	provider.setAllowedGroups(opts.Group)
+
+	if err := provider.setAllowedProjects(opts.Projects); err != nil {
+		return nil, fmt.Errorf("could not configure allowed projects: %v", err)
+	}
+
+	return provider, nil
 }
 
-// SetAllowedProjects adds Gitlab projects to the AllowedGroups list
+// setAllowedProjects adds Gitlab projects to the AllowedGroups list
 // and tracks them to do a project API lookup during `EnrichSession`.
-func (p *GitLabProvider) SetAllowedProjects(projects []string) error {
+func (p *GitLabProvider) setAllowedProjects(projects []string) error {
 	for _, project := range projects {
 		gp, err := newGitlabProject(project)
 		if err != nil {

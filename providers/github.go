@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -62,7 +63,7 @@ var (
 )
 
 // NewGitHubProvider initiates a new GitHubProvider
-func NewGitHubProvider(p *ProviderData) *GitHubProvider {
+func NewGitHubProvider(p *ProviderData, opts options.GitHubOptions) *GitHubProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        githubProviderName,
 		loginURL:    githubDefaultLoginURL,
@@ -71,7 +72,13 @@ func NewGitHubProvider(p *ProviderData) *GitHubProvider {
 		validateURL: githubDefaultValidateURL,
 		scope:       githubDefaultScope,
 	})
-	return &GitHubProvider{ProviderData: p}
+
+	provider := &GitHubProvider{ProviderData: p}
+
+	provider.setOrgTeam(opts.Org, opts.Team)
+	provider.setRepo(opts.Repo, opts.Token)
+	provider.setUsers(opts.Users)
+	return provider
 }
 
 func makeGitHubHeader(accessToken string) http.Header {
@@ -82,8 +89,8 @@ func makeGitHubHeader(accessToken string) http.Header {
 	return makeAuthorizationHeader(tokenTypeToken, accessToken, extraHeaders)
 }
 
-// SetOrgTeam adds GitHub org reading parameters to the OAuth2 scope
-func (p *GitHubProvider) SetOrgTeam(org, team string) {
+// setOrgTeam adds GitHub org reading parameters to the OAuth2 scope
+func (p *GitHubProvider) setOrgTeam(org, team string) {
 	p.Org = org
 	p.Team = team
 	if org != "" || team != "" {
@@ -91,14 +98,14 @@ func (p *GitHubProvider) SetOrgTeam(org, team string) {
 	}
 }
 
-// SetRepo configures the target repository and optional token to use
-func (p *GitHubProvider) SetRepo(repo, token string) {
+// setRepo configures the target repository and optional token to use
+func (p *GitHubProvider) setRepo(repo, token string) {
 	p.Repo = repo
 	p.Token = token
 }
 
-// SetUsers configures allowed usernames
-func (p *GitHubProvider) SetUsers(users []string) {
+// setUsers configures allowed usernames
+func (p *GitHubProvider) setUsers(users []string) {
 	p.Users = users
 }
 

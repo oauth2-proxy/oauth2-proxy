@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -15,21 +16,25 @@ type KeycloakOIDCProvider struct {
 }
 
 // NewKeycloakOIDCProvider makes a KeycloakOIDCProvider using the ProviderData
-func NewKeycloakOIDCProvider(p *ProviderData) *KeycloakOIDCProvider {
+func NewKeycloakOIDCProvider(p *ProviderData, opts options.KeycloakOptions) *KeycloakOIDCProvider {
 	p.ProviderName = keycloakOIDCProviderName
-	return &KeycloakOIDCProvider{
+
+	provider := &KeycloakOIDCProvider{
 		OIDCProvider: &OIDCProvider{
 			ProviderData: p,
 		},
 	}
+
+	provider.addAllowedRoles(opts.Roles)
+	return provider
 }
 
 var _ Provider = (*KeycloakOIDCProvider)(nil)
 
-// AddAllowedRoles sets Keycloak roles that are authorized.
+// addAllowedRoles sets Keycloak roles that are authorized.
 // Assumes `SetAllowedGroups` is already called on groups and appends to that
 // with `role:` prefixed roles.
-func (p *KeycloakOIDCProvider) AddAllowedRoles(roles []string) {
+func (p *KeycloakOIDCProvider) addAllowedRoles(roles []string) {
 	if p.AllowedGroups == nil {
 		p.AllowedGroups = make(map[string]struct{})
 	}

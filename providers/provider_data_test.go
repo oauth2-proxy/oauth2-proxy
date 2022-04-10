@@ -8,14 +8,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	. "github.com/onsi/gomega"
 	"golang.org/x/oauth2"
 )
@@ -59,16 +64,30 @@ var (
 		StandardClaims: standardClaims,
 	}
 
+	numericGroupsIDToken = idTokenClaims{
+		Name:           "Jane Dobbs",
+		Email:          "janed@me.com",
+		Phone:          "+4798765432",
+		Picture:        "http://mugbook.com/janed/me.jpg",
+		Groups:         []interface{}{1, 2, 3},
+		Roles:          []string{"test:c", "test:d"},
+		Verified:       &verified,
+		Nonce:          encryption.HashNonce([]byte(oidcNonce)),
+		StandardClaims: standardClaims,
+	}
+
 	complexGroupsIDToken = idTokenClaims{
 		Name:    "Complex Claim",
 		Email:   "complex@claims.com",
 		Phone:   "+5439871234",
 		Picture: "http://mugbook.com/complex/claims.jpg",
-		Groups: []map[string]interface{}{
-			{
+		Groups: []interface{}{
+			map[string]interface{}{
 				"groupId": "Admin Group Id",
 				"roles":   []string{"Admin"},
 			},
+			12345,
+			"Just::A::String",
 		},
 		Roles:          []string{"test:simple", "test:roles"},
 		Verified:       &verified,
@@ -155,7 +174,8 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 			IDToken:       &failureIDToken,
 			Verifier:      true,
 			ExpectIDToken: false,
-			ExpectedError: errors.New("failed to verify signature: the validation failed for subject [123456789]"),
+			ExpectedError: errors.New("failed to verify token: failed to verify signature: " +
+				"the validation failed for subject [123456789]"),
 		},
 		"Missing ID Token": {
 			IDToken:       nil,
@@ -186,11 +206,15 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 
 			provider := &ProviderData{}
 			if tc.Verifier {
-				provider.Verifier = oidc.NewVerifier(
+				verificationOptions := internaloidc.IDTokenVerificationOptions{
+					AudienceClaims: []string{"aud"},
+					ClientID:       oidcClientID,
+				}
+				provider.Verifier = internaloidc.NewVerifier(oidc.NewVerifier(
 					oidcIssuer,
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
-				)
+				), verificationOptions)
 			}
 			verified, err := provider.verifyIDToken(context.Background(), token)
 			if err != nil {
@@ -222,6 +246,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: false,
 			EmailClaim:      "email",
 			GroupsClaim:     "groups",
+			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
@@ -241,6 +266,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: true,
 			EmailClaim:      "email",
 			GroupsClaim:     "groups",
+			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "unverified@email.com",
@@ -253,10 +279,15 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: true,
 			EmailClaim:      "email",
 			GroupsClaim:     "groups",
+			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
-				User:              "123456789",
-				Email:             "complex@claims.com",
-				Groups:            []string{"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}"},
+				User:  "123456789",
+				Email: "complex@claims.com",
+				Groups: []string{
+					"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}",
+					"12345",
+					"Just::A::String",
+				},
 				PreferredUsername: "Complex Claim",
 			},
 		},
@@ -273,19 +304,25 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
-		"User Claim Invalid": {
+		"User Claim switched to non string": {
 			IDToken:         defaultIDToken,
 			AllowUnverified: true,
-			UserClaim:       "groups",
+			UserClaim:       "roles",
 			EmailClaim:      "email",
 			GroupsClaim:     "groups",
-			ExpectedError:   errors.New("unable to extract custom UserClaim (groups)"),
+			ExpectedSession: &sessions.SessionState{
+				User:              "[\"test:c\",\"test:d\"]",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				PreferredUsername: "Jane Dobbs",
+			},
 		},
 		"Email Claim Switched": {
 			IDToken:         unverifiedIDToken,
 			AllowUnverified: true,
 			EmailClaim:      "phone_number",
 			GroupsClaim:     "groups",
+			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "+4025205729",
@@ -298,9 +335,10 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: true,
 			EmailClaim:      "roles",
 			GroupsClaim:     "groups",
+			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
-				Email:             "[test:c test:d]",
+				Email:             "[\"test:c\",\"test:d\"]",
 				Groups:            []string{"test:a", "test:b"},
 				PreferredUsername: "Mystery Man",
 			},
@@ -310,6 +348,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: true,
 			EmailClaim:      "aksjdfhjksadh",
 			GroupsClaim:     "groups",
+			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "",
@@ -322,6 +361,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: false,
 			EmailClaim:      "email",
 			GroupsClaim:     "roles",
+			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
@@ -334,10 +374,37 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: false,
 			EmailClaim:      "email",
 			GroupsClaim:     "alskdjfsalkdjf",
+			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
 				Groups:            nil,
+				PreferredUsername: "Jane Dobbs",
+			},
+		},
+		"Groups Claim Numeric values": {
+			IDToken:         numericGroupsIDToken,
+			AllowUnverified: false,
+			EmailClaim:      "email",
+			GroupsClaim:     "groups",
+			UserClaim:       "sub",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"1", "2", "3"},
+				PreferredUsername: "Jane Dobbs",
+			},
+		},
+		"Groups Claim string values": {
+			IDToken:         defaultIDToken,
+			AllowUnverified: false,
+			EmailClaim:      "email",
+			GroupsClaim:     "email",
+			UserClaim:       "sub",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"janed@me.com"},
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
@@ -346,12 +413,16 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
 
+			verificationOptions := internaloidc.IDTokenVerificationOptions{
+				AudienceClaims: []string{"aud"},
+				ClientID:       oidcClientID,
+			}
 			provider := &ProviderData{
-				Verifier: oidc.NewVerifier(
+				Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 					oidcIssuer,
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
-				),
+				), verificationOptions),
 			}
 			provider.AllowUnverifiedEmail = tc.AllowUnverified
 			provider.UserClaim = tc.UserClaim
@@ -361,10 +432,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			idToken, err := provider.Verifier.Verify(context.Background(), rawIDToken)
-			g.Expect(err).ToNot(HaveOccurred())
-
-			ss, err := provider.buildSessionFromClaims(idToken)
+			ss, err := provider.buildSessionFromClaims(rawIDToken, "")
 			if err != nil {
 				g.Expect(err).To(Equal(tc.ExpectedError))
 			}
@@ -408,22 +476,25 @@ func TestProviderData_checkNonce(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
 
+			// Ensure that the ID token in the session is valid (signed and contains a nonce)
+			// as the nonce claim is extracted to compare with the session nonce
+			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
+			g.Expect(err).ToNot(HaveOccurred())
+			tc.Session.IDToken = rawIDToken
+
+			verificationOptions := internaloidc.IDTokenVerificationOptions{
+				AudienceClaims: []string{"aud"},
+				ClientID:       oidcClientID,
+			}
 			provider := &ProviderData{
-				Verifier: oidc.NewVerifier(
+				Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 					oidcIssuer,
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
-				),
+				), verificationOptions),
 			}
 
-			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
-			g.Expect(err).ToNot(HaveOccurred())
-
-			idToken, err := provider.Verifier.Verify(context.Background(), rawIDToken)
-			g.Expect(err).ToNot(HaveOccurred())
-
-			err = provider.checkNonce(tc.Session, idToken)
-			if err != nil {
+			if err := provider.checkNonce(tc.Session); err != nil {
 				g.Expect(err).To(Equal(tc.ExpectedError))
 			} else {
 				g.Expect(err).ToNot(HaveOccurred())
@@ -432,89 +503,111 @@ func TestProviderData_checkNonce(t *testing.T) {
 	}
 }
 
-func TestProviderData_extractGroups(t *testing.T) {
-	testCases := map[string]struct {
-		Claims         map[string]interface{}
-		GroupsClaim    string
-		ExpectedGroups []string
+func TestProviderData_loginURLParameters(t *testing.T) {
+
+	testCases := []struct {
+		name      string
+		overrides url.Values
+		has       url.Values
+		notHas    []string
 	}{
-		"Standard String Groups": {
-			Claims: map[string]interface{}{
-				"email":  "this@does.not.matter.com",
-				"groups": []interface{}{"three", "string", "groups"},
+		{
+			name:      "no overrides",
+			overrides: url.Values{},
+			has: url.Values{
+				"fixed":             {"fixed-value"},
+				"enum_with_default": {"default-value"},
+				"free_with_default": {"default-value"},
 			},
-			GroupsClaim:    "groups",
-			ExpectedGroups: []string{"three", "string", "groups"},
+			notHas: []string{"enum_no_default", "free_no_default"},
 		},
-		"Different Claim Name": {
-			Claims: map[string]interface{}{
-				"email": "this@does.not.matter.com",
-				"roles": []interface{}{"three", "string", "roles"},
+		{
+			name:      "attempt to override fixed value",
+			overrides: url.Values{"fixed": {"another-value"}},
+			has: url.Values{
+				"fixed":             {"fixed-value"},
+				"enum_with_default": {"default-value"},
+				"free_with_default": {"default-value"},
 			},
-			GroupsClaim:    "roles",
-			ExpectedGroups: []string{"three", "string", "roles"},
+			notHas: []string{"enum_no_default", "free_no_default"},
 		},
-		"Numeric Groups": {
-			Claims: map[string]interface{}{
-				"email":  "this@does.not.matter.com",
-				"groups": []interface{}{1, 2, 3},
+		{
+			name: "set one allowed and one forbidden enum",
+			overrides: url.Values{
+				"enum_no_default": {"allowed1", "not-allowed"},
 			},
-			GroupsClaim:    "groups",
-			ExpectedGroups: []string{"1", "2", "3"},
+			has: url.Values{
+				"fixed":             {"fixed-value"},
+				"enum_with_default": {"default-value"},
+				"free_with_default": {"default-value"},
+				"enum_no_default":   {"allowed1"},
+			},
+			notHas: []string{"free_no_default"},
 		},
-		"Complex Groups": {
-			Claims: map[string]interface{}{
-				"email": "this@does.not.matter.com",
-				"groups": []interface{}{
-					map[string]interface{}{
-						"groupId": "Admin Group Id",
-						"roles":   []string{"Admin"},
-					},
-					12345,
-					"Just::A::String",
-				},
+		{
+			name:      "replace default value",
+			overrides: url.Values{"free_with_default": {"something-else"}},
+			has: url.Values{
+				"fixed":             {"fixed-value"},
+				"enum_with_default": {"default-value"},
+				"free_with_default": {"something-else"},
 			},
-			GroupsClaim: "groups",
-			ExpectedGroups: []string{
-				"{\"groupId\":\"Admin Group Id\",\"roles\":[\"Admin\"]}",
-				"12345",
-				"Just::A::String",
-			},
+			notHas: []string{"enum_no_default", "free_no_default"},
 		},
-		"Missing Groups Claim Returns Nil": {
-			Claims: map[string]interface{}{
-				"email": "this@does.not.matter.com",
+		{
+			name:      "set free text value",
+			overrides: url.Values{"free_no_default": {"some-value"}},
+			has: url.Values{
+				"fixed":             {"fixed-value"},
+				"enum_with_default": {"default-value"},
+				"free_with_default": {"default-value"},
+				"free_no_default":   {"some-value"},
 			},
-			GroupsClaim:    "groups",
-			ExpectedGroups: nil,
+			notHas: []string{"enum_no_default"},
 		},
-		"Non List Groups": {
-			Claims: map[string]interface{}{
-				"email":  "this@does.not.matter.com",
-				"groups": "singleton",
+		{
+			name:      "attempt to set unapproved parameter",
+			overrides: url.Values{"malicious_value": {"evil"}},
+			has: url.Values{
+				"fixed":             {"fixed-value"},
+				"enum_with_default": {"default-value"},
+				"free_with_default": {"default-value"},
 			},
-			GroupsClaim:    "groups",
-			ExpectedGroups: []string{"singleton"},
+			notHas: []string{"enum_no_default", "free_no_default"},
 		},
 	}
-	for testName, tc := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			g := NewWithT(t)
 
-			provider := &ProviderData{
-				Verifier: oidc.NewVerifier(
-					oidcIssuer,
-					mockJWKS{},
-					&oidc.Config{ClientID: oidcClientID},
-				),
+	// fixed list of two allowed values
+	allowed1 := "allowed1"
+	allowed2 := "allowed2"
+	allowEnum := []options.URLParameterRule{
+		{Value: &allowed1},
+		{Value: &allowed2},
+	}
+	// regex that will allow anything
+	anything := "^.*$"
+	allowAnything := []options.URLParameterRule{
+		{Pattern: &anything},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// set up LoginURLParameters for testing
+			data := ProviderData{}
+			data.compileLoginParams([]options.LoginURLParameter{
+				{Name: "fixed", Default: []string{"fixed-value"}},
+				{Name: "enum_with_default", Default: []string{"default-value"}, Allow: allowEnum},
+				{Name: "enum_no_default", Allow: allowEnum},
+				{Name: "free_with_default", Default: []string{"default-value"}, Allow: allowAnything},
+				{Name: "free_no_default", Allow: allowAnything},
+			})
+
+			redirectParams := data.LoginURLParams(tc.overrides)
+			for _, k := range tc.notHas {
+				assert.NotContains(t, redirectParams, k)
 			}
-			provider.GroupsClaim = tc.GroupsClaim
-
-			groups := provider.extractGroups(tc.Claims)
-			if tc.ExpectedGroups != nil {
-				g.Expect(groups).To(Equal(tc.ExpectedGroups))
-			} else {
-				g.Expect(groups).To(BeNil())
+			for k, vs := range tc.has {
+				actualVals := redirectParams[k]
+				assert.ElementsMatch(t, vs, actualVals)
 			}
 		})
 	}

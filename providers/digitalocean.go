@@ -57,6 +57,8 @@ func NewDigitalOceanProvider(p *ProviderData) *DigitalOceanProvider {
 		validateURL: digitalOceanDefaultProfileURL,
 		scope:       digitalOceanDefaultScope,
 	})
+	p.getAuthorizationHeaderFunc = makeOIDCHeader
+
 	return &DigitalOceanProvider{ProviderData: p}
 }
 

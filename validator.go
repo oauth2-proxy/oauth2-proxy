@@ -115,12 +115,15 @@ func isEmailValidWithDomains(email string, allowedDomains []string) bool {
 			return true
 		}
 
-		// allow if the domain is prefixed with . and
+		// allow if the domain is prefixed with . or *. and
 		// the last element (split on @) has the suffix as the domain
 		atoms := strings.Split(email, "@")
-		if strings.HasPrefix(domain, ".") && strings.HasSuffix(atoms[len(atoms)-1], domain) {
+
+		if (strings.HasPrefix(domain, ".") && strings.HasSuffix(atoms[len(atoms)-1], domain)) ||
+			(strings.HasPrefix(domain, "*.") && strings.HasSuffix(atoms[len(atoms)-1], domain[1:])) {
 			return true
 		}
 	}
+
 	return false
 }

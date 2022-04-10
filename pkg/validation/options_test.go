@@ -56,63 +56,6 @@ func TestNewOptions(t *testing.T) {
 	assert.Equal(t, expected, err.Error())
 }
 
-func TestClientSecretFileOptionFails(t *testing.T) {
-	o := options.NewOptions()
-	o.Cookie.Secret = cookieSecret
-	o.Providers[0].ID = providerID
-	o.Providers[0].ClientID = clientID
-	o.Providers[0].ClientSecretFile = clientSecret
-	o.EmailDomains = []string{"*"}
-	err := Validate(o)
-	assert.NotEqual(t, nil, err)
-
-	p := o.GetProvider(0).Data()
-	assert.Equal(t, clientSecret, p.ClientSecretFile)
-	assert.Equal(t, "", p.ClientSecret)
-
-	s, err := p.GetClientSecret()
-	assert.NotEqual(t, nil, err)
-	assert.Equal(t, "", s)
-}
-
-func TestClientSecretFileOption(t *testing.T) {
-	var err error
-	f, err := ioutil.TempFile("", "client_secret_temp_file_")
-	if err != nil {
-		t.Fatalf("failed to create temp file: %v", err)
-	}
-	_, err = f.WriteString("testcase")
-	if err != nil {
-		t.Fatalf("failed to write to temp file: %v", err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatalf("failed to close temp file: %v", err)
-	}
-	clientSecretFileName := f.Name()
-	defer func(t *testing.T) {
-		if err := os.Remove(clientSecretFileName); err != nil {
-			t.Fatalf("failed to delete temp file: %v", err)
-		}
-	}(t)
-
-	o := options.NewOptions()
-	o.Cookie.Secret = cookieSecret
-	o.Providers[0].ID = providerID
-	o.Providers[0].ClientID = clientID
-	o.Providers[0].ClientSecretFile = clientSecretFileName
-	o.EmailDomains = []string{"*"}
-	err = Validate(o)
-	assert.Equal(t, nil, err)
-
-	p := o.GetProvider(0).Data()
-	assert.Equal(t, clientSecretFileName, p.ClientSecretFile)
-	assert.Equal(t, "", p.ClientSecret)
-
-	s, err := p.GetClientSecret()
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "testcase", s)
-}
-
 func TestGoogleGroupOptions(t *testing.T) {
 	o := testOptions()
 	o.Providers[0].GoogleConfig.Groups = []string{"googlegroup"}
@@ -153,18 +96,6 @@ func TestRedirectURL(t *testing.T) {
 	expected := &url.URL{
 		Scheme: "https", Host: "myhost.com", Path: "/oauth2/callback"}
 	assert.Equal(t, expected, o.GetRedirectURL())
-}
-
-func TestDefaultProviderApiSettings(t *testing.T) {
-	o := testOptions()
-	assert.Equal(t, nil, Validate(o))
-	p := o.GetProvider(0).Data()
-	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth?access_type=offline",
-		p.LoginURL.String())
-	assert.Equal(t, "https://www.googleapis.com/oauth2/v3/token",
-		p.RedeemURL.String())
-	assert.Equal(t, "", p.ProfileURL.String())
-	assert.Equal(t, "profile email", p.Scope)
 }
 
 func TestCookieRefreshMustBeLessThanCookieExpire(t *testing.T) {
@@ -226,23 +157,6 @@ func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 	err := Validate(o)
 	assert.Equal(t, err.Error(), "invalid configuration:\n"+
 		"  unsupported signature hash algorithm: "+o.SignatureKey)
-}
-
-func TestSkipOIDCDiscovery(t *testing.T) {
-	o := testOptions()
-	o.Providers[0].Type = "oidc"
-	o.Providers[0].OIDCConfig.IssuerURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/v2.0/"
-	o.Providers[0].OIDCConfig.SkipDiscovery = true
-
-	err := Validate(o)
-	assert.Equal(t, "invalid configuration:\n"+
-		"  missing setting: login-url\n  missing setting: redeem-url\n  missing setting: oidc-jwks-url", err.Error())
-
-	o.Providers[0].LoginURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/authorize?p=b2c_1_sign_in"
-	o.Providers[0].RedeemURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/oauth2/v2.0/token?p=b2c_1_sign_in"
-	o.Providers[0].OIDCConfig.JwksURL = "https://login.microsoftonline.com/fabrikamb2c.onmicrosoft.com/discovery/v2.0/keys"
-
-	assert.Equal(t, nil, Validate(o))
 }
 
 func TestGCPHealthcheck(t *testing.T) {

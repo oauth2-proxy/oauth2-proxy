@@ -257,7 +257,7 @@ To configure the OIDC provider for Dex, perform the following steps:
     go get github.com/dexidp/dex
     ```
 
-    See the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md) for more details.
+    See the [getting started guide](https://dexidp.io/docs/getting-started/) for more details.
 
 2. Setup oauth2-proxy with the correct provider and using the default ports and callbacks. Add a configuration block to the `staticClients` section of `examples/config-dev.yaml`:
 
@@ -343,7 +343,7 @@ you may wish to configure an authorization server for each application. Otherwis
 
 The `oidc_issuer_url` is based on URL from your **Authorization Server**'s **Issuer** field in step 2, or simply https://corp.okta.com .
 The `client_id` and `client_secret` are configured in the application settings.
-Generate a unique `client_secret` to encrypt the cookie.
+Generate a unique `cookie_secret` to encrypt the cookie.
 
 Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.cfg`
 

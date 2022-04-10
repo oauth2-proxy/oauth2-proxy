@@ -9,16 +9,23 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 )
 
 const (
 	accessTokenHeader    = "ewogICJhbGciOiAiUlMyNTYiLAogICJ0eXAiOiAiSldUIgp9"
-	accessTokenPayload   = "eyJyZWFsbV9hY2Nlc3MiOiB7InJvbGVzIjogWyJ3cml0ZSJdfSwgInJlc291cmNlX2FjY2VzcyI6IHsiZGVmYXVsdCI6IHsicm9sZXMiOiBbInJlYWQiXX19fQ"
 	accessTokenSignature = "dyt0CoTl4WoVjAHI9Q_CwSKhl6d_9rhM3NrXuJttkao"
+	defaultAudienceClaim = "aud"
+	mockClientID         = "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"
 )
+
+var accessTokenPayload = base64.StdEncoding.EncodeToString([]byte(
+	fmt.Sprintf(`{"%s": "%s", "realm_access": {"roles": ["write"]}, "resource_access": {"default": {"roles": ["read"]}}}`, defaultAudienceClaim, mockClientID)))
 
 type DummyKeySet struct{}
 
@@ -33,11 +40,15 @@ func getAccessToken() string {
 
 func newTestKeycloakOIDCSetup() (*httptest.Server, *KeycloakOIDCProvider) {
 	redeemURL, server := newOIDCServer([]byte(fmt.Sprintf(`{"email": "new@thing.com", "expires_in": 300, "access_token": "%v"}`, getAccessToken())))
-	provider := newKeycloakOIDCProvider(redeemURL)
+	provider := newKeycloakOIDCProvider(redeemURL, options.KeycloakOptions{})
 	return server, provider
 }
 
-func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
+func newKeycloakOIDCProvider(serverURL *url.URL, opts options.KeycloakOptions) *KeycloakOIDCProvider {
+	verificationOptions := internaloidc.IDTokenVerificationOptions{
+		AudienceClaims: []string{defaultAudienceClaim},
+		ClientID:       mockClientID,
+	}
 	p := NewKeycloakOIDCProvider(
 		&ProviderData{
 			LoginURL: &url.URL{
@@ -56,7 +67,8 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 				Scheme: "https",
 				Host:   "keycloak-oidc.com",
 				Path:   "/api/v3/user"},
-			Scope: "openid email profile"})
+			Scope: "openid email profile"},
+		opts)
 
 	if serverURL != nil {
 		p.RedeemURL.Scheme = serverURL.Scheme
@@ -64,12 +76,12 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 	}
 
 	keyset := DummyKeySet{}
-	p.Verifier = oidc.NewVerifier("", keyset, &oidc.Config{
+	p.Verifier = internaloidc.NewVerifier(oidc.NewVerifier("", keyset, &oidc.Config{
 		ClientID:          "client",
 		SkipIssuerCheck:   true,
 		SkipClientIDCheck: true,
 		SkipExpiryCheck:   true,
-	})
+	}), verificationOptions)
 	p.EmailClaim = "email"
 	p.GroupsClaim = "groups"
 	return p
@@ -78,7 +90,7 @@ func newKeycloakOIDCProvider(serverURL *url.URL) *KeycloakOIDCProvider {
 var _ = Describe("Keycloak OIDC Provider Tests", func() {
 	Context("New Provider Init", func() {
 		It("creates new keycloak oidc provider with expected defaults", func() {
-			p := newKeycloakOIDCProvider(nil)
+			p := newKeycloakOIDCProvider(nil, options.KeycloakOptions{})
 			providerData := p.Data()
 			Expect(providerData.ProviderName).To(Equal(keycloakOIDCProviderName))
 			Expect(providerData.LoginURL.String()).To(Equal("https://keycloak-oidc.com/oauth/auth"))
@@ -91,8 +103,9 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 
 	Context("Allowed Roles", func() {
 		It("should prefix allowed roles and add them to groups", func() {
-			p := newKeycloakOIDCProvider(nil)
-			p.AddAllowedRoles([]string{"admin", "editor"})
+			p := newKeycloakOIDCProvider(nil, options.KeycloakOptions{
+				Roles: []string{"admin", "editor"},
+			})
 			Expect(p.AllowedGroups).To(HaveKey("role:admin"))
 			Expect(p.AllowedGroups).To(HaveKey("role:editor"))
 		})
