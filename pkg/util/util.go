@@ -15,16 +15,14 @@ import (
 )
 
 func GetCertPool(paths []string, isDefaultPoolNeeded bool) (*x509.CertPool, error) {
-	if len(paths) == 0 {
-		return nil, fmt.Errorf("invalid empty list of Root CAs file paths")
-	}
+
 	pool := x509.NewCertPool()
 	var err error
 
-	if isDefaultPoolNeeded == true {
+	if isDefaultPoolNeeded {
 		pool, err = x509.SystemCertPool()
 		if err != nil {
-			return nil, fmt.Errorf("Root System authority files could not be read - %s", err)
+			return nil, fmt.Errorf("root system ca bundle could not be read - %s", err)
 		}
 	}
 
