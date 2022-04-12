@@ -763,23 +763,34 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	http.Redirect(rw, req, loginURL, http.StatusFound)
 }
 
+// try to redirect to a host saved in requestRedirectURLs
+// if redirected to the host or to an error page, return tru
+// if no redirect, return false
+func (p *OAuthProxy) redirectToRealHost(rw http.ResponseWriter, req *http.Request) bool {
+	values, err := url.ParseQuery(req.URL.RawQuery)
+	if err != nil {
+		logger.Errorf("Error while parsing OAuth2 callback: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return true
+	}
+
+	nonce := strings.SplitN(values.Get("state"), ":", 2)[0]
+
+	if destHost, ok := p.requestRedirectURLs[nonce]; ok && req.Host != destHost.Host {
+		http.Redirect(rw, req, destHost.String()+"?"+req.URL.RawQuery, http.StatusTemporaryRedirect)
+		return true
+	}
+
+	return false
+}
+
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
-	if req.Host == p.redirectURL.Host && p.masqueradeRequestHost {
-		values, err := url.ParseQuery(req.URL.RawQuery)
-		if err != nil {
-			logger.Errorf("Error while parsing OAuth2 callback: %v", err)
-			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		nonce := strings.SplitN(values.Get("state"), ":", 2)[0]
-
-		if destHost, ok := p.requestRedirectURLs[nonce]; ok && req.Host != destHost.Host {
-			http.Redirect(rw, req, destHost.String()+"?"+req.URL.RawQuery, http.StatusTemporaryRedirect)
-			return
-		}
+	// relies on late evaluation
+	// if masquerading and successfully redirected to the real host, return from this function
+	if req.Host == p.redirectURL.Host && p.masqueradeRequestHost && p.redirectToRealHost(rw, req) {
+		return
 	}
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
 
