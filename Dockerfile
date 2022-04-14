@@ -33,7 +33,9 @@ ARG BUILDPLATFORM
 #  automatically set by the docker engine.
 RUN case ${TARGETPLATFORM} in \
          "linux/amd64")  GOARCH=amd64  ;; \
-         "linux/arm64")  GOARCH=arm64  ;; \
+         # arm64 and arm64v8 are equivilant in go and do not require a goarm
+         # https://github.com/golang/go/wiki/GoArm
+         "linux/arm64" | "linux/arm64/v8")  GOARCH=arm64  ;; \
          "linux/ppc64le")  GOARCH=ppc64le  ;; \
          "linux/arm/v6") GOARCH=arm GOARM=6  ;; \
     esac && \
