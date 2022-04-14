@@ -9,11 +9,18 @@
 
 ## Important Notes
 
+- [oauth2-proxy](https://quay.io/repository/oauth2-proxy/oauth2-proxy?tab=tags&tag=latest) separate image tags for each architecture is deprecated. Instead, images are cross compiled and pushed as the same tag for every platform.
+If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move to the generic tag instead (ex: v7.2.1 )
+- [#1478](https://github.com/oauth2-proxy/oauth2-proxy/pull/1478) Changes the UID and GID of the runtime user to `65532`.
+  Which also is known as `nonroot` user in [distroless images](https://github.com/GoogleContainerTools/distroless).
+
 ## Breaking Changes
 
 - [#1500] Provider Name and ID are now required fields in the Alpha struct.
 
 ## Changes since v7.2.1
+
+- [#1478](https://github.com/oauth2-proxy/oauth2-proxy/pull/1478) Parameterise the runtime image (@omBratteng)
 - [#1500] (https://github.com/oauth2-proxy/oauth2-proxy/pull/1500) Added support for multiple providers (@hevans-dglcom)
 - [#1583](https://github.com/oauth2-proxy/oauth2-proxy/pull/1583) Add groups to session too when creating session from bearer token (@adriananeci)
 - [#1418](https://github.com/oauth2-proxy/oauth2-proxy/pull/1418) Support for passing arbitrary query parameters through from `/oauth2/start` to the identity provider's login URL. Configuration settings control which parameters are passed by default and precisely which values can be overridden per-request (@ianroberts)
@@ -32,6 +39,7 @@
 - [#1545](https://github.com/oauth2-proxy/oauth2-proxy/pull/1545) Fix issue with query string allowed group panic on skip methods (@andytson)
 - [#1286](https://github.com/oauth2-proxy/oauth2-proxy/pull/1286) Add the `allowed_email_domains` and the `allowed_groups` on the `auth_request` + support standard wildcard char for validation with sub-domain and email-domain. (@w3st3ry @armandpicard)
 - [#1361](https://github.com/oauth2-proxy/oauth2-proxy/pull/1541) PKCE Code Challenge Support - RFC-7636 (@braunsonm)
+- [#1594](https://github.com/oauth2-proxy/oauth2-proxy/pull/1594) Release ARMv8 docker images (@braunsonm)
 
 # V7.2.1
 
