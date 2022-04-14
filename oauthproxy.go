@@ -695,7 +695,14 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	if providerID == "" {
 		p.doOAuthStart(rw, req, "default", req.URL.Query())
 	} else {
-		p.doOAuthStart(rw, req, providerID, req.URL.Query())
+		if _, ok := p.providerMap[providerID]; ok {
+			p.doOAuthStart(rw, req, providerID, req.URL.Query())
+		} else {
+			logger.Errorf("Error while converting id %v from path: %v", providerID, req.URL.Query())
+			p.ErrorPage(rw, req, http.StatusInternalServerError, "Start Path does not match a provider ID")
+			return
+		}
+
 	}
 }
 
@@ -793,7 +800,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = p.enrichSessionState(req.Context(), session)
+	err = p.enrichSessionState(req.Context(), session, providerID)
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -847,6 +854,7 @@ func (p *OAuthProxy) redeemCode(req *http.Request, providerID string, codeVerifi
 
 	redirectURI := p.getOAuthRedirectURI(req)
 	s, err := p.providerMap[providerID].Redeem(req.Context(), redirectURI, code, codeVerifier)
+
 	if err != nil {
 		return nil, err
 	}
@@ -862,12 +870,12 @@ func (p *OAuthProxy) redeemCode(req *http.Request, providerID string, codeVerifi
 	return s, nil
 }
 
-func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
+func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState, providerID string) error {
 	var err error
 	if s.Email == "" {
 		// TODO(@NickMeves): Remove once all provider are updated to implement EnrichSession
 		// nolint:staticcheck
-		s.Email, err = p.providerMap[s.ProviderID].GetEmailAddress(ctx, s)
+		s.Email, err = p.providerMap[providerID].GetEmailAddress(ctx, s)
 		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 			return err
 		}

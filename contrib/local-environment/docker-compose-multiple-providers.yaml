@@ -67,8 +67,8 @@ services:
   
   dex:
     container_name: dex
-    image: quay.io/dexidp/dex:v2.23.0
-    command: serve /dex.yaml
+    image: ghcr.io/dexidp/dex:v2.30.3
+    command: dex serve /dex.yaml
     ports:
       - 4190:4190/tcp
     hostname: dex
@@ -85,7 +85,7 @@ services:
   
   etcd:
     container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.4.7
+    image: gcr.io/etcd-development/etcd:v3.6.0-alpha.0
     entrypoint: /usr/local/bin/etcd
     command:
       - --listen-client-urls=http://0.0.0.0:2379
