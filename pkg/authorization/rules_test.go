@@ -39,7 +39,7 @@ func benchmarkRuleSetMatches(ruleCount int, b *testing.B) {
 		},
 	}
 
-	requestRules := options.RequestRules{}
+	requestRules := []options.AuthorizationRule{}
 	for i := 0; i <= ruleCount; i++ {
 		requestRules = append(requestRules, rule1)
 	}
@@ -55,7 +55,7 @@ func benchmarkRuleSetMatches(ruleCount int, b *testing.B) {
 
 	var r AuthorizationPolicy
 	for n := 0; n < b.N; n++ {
-		r = ruleSet.Matches(req)
+		r = ruleSet.MatchesRequest(req)
 		if r != NonePolicy {
 			b.Fatal("expected policy not to match")
 		}
