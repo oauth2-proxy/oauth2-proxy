@@ -12,11 +12,12 @@ type AuthorizationPolicy int
 const (
 	NonePolicy AuthorizationPolicy = iota
 	AllowPolicy
+	DelegatePolicy
 	DenyPolicy
 )
 
 type RuleSet interface {
-	Matches(req *http.Request) AuthorizationPolicy
+	MatchesRequest(req *http.Request) AuthorizationPolicy
 }
 
 type rule struct {
@@ -63,6 +64,8 @@ func newRule(authRule options.AuthorizationRule, getClientIPFunc func(*http.Requ
 	switch authRule.Policy {
 	case options.AllowPolicy:
 		policy = AllowPolicy
+	case options.DelegatePolicy:
+		policy = DelegatePolicy
 	case options.DenyPolicy:
 		policy = DenyPolicy
 	default:
@@ -80,7 +83,7 @@ type ruleSet struct {
 	rules []rule
 }
 
-func (r ruleSet) Matches(req *http.Request) AuthorizationPolicy {
+func (r ruleSet) MatchesRequest(req *http.Request) AuthorizationPolicy {
 	for _, rule := range r.rules {
 		if policy := rule.matches(req); policy != NonePolicy {
 			// The rule applies to this request, return its policy
@@ -91,7 +94,7 @@ func (r ruleSet) Matches(req *http.Request) AuthorizationPolicy {
 	return NonePolicy
 }
 
-func NewRuleSet(requestRules options.RequestRules, getClientIPFunc func(*http.Request) net.IP) (RuleSet, error) {
+func NewRuleSet(requestRules []options.AuthorizationRule, getClientIPFunc func(*http.Request) net.IP) (RuleSet, error) {
 	rules := []rule{}
 	for _, requestRule := range requestRules {
 		r, err := newRule(requestRule, getClientIPFunc)

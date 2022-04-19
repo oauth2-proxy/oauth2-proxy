@@ -9,6 +9,11 @@ package options
 // They may change between releases without notice.
 // :::
 type AlphaOptions struct {
+	// Authorization is used to configure authorization checks.
+	// Rules can be configured for HTTP requests to allow or deny requests,
+	// or to delegate the authorization to session based authorization.
+	Authorization Authorization `json:"authorization,omitempty"`
+
 	// UpstreamConfig is used to configure upstream servers.
 	// Once a user is authenticated, requests to the server will be proxied to
 	// these upstream servers based on the path mappings defined in this list.
