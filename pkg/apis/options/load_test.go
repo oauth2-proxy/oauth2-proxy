@@ -54,7 +54,6 @@ var _ = Describe("Load", func() {
 			Cookie:             cookieDefaults(),
 			Session:            sessionOptionsDefaults(),
 			Templates:          templatesDefaults(),
-			SkipAuthPreflight:  false,
 			Logging:            loggingDefaults(),
 		},
 	}

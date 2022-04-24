@@ -18,14 +18,13 @@ type SignatureData struct {
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
-	PingPath           string   `flag:"ping-path" cfg:"ping_path"`
-	PingUserAgent      string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
-	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
-	RealClientIPHeader string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
-	TrustedIPs         []string `flag:"trusted-ip" cfg:"trusted_ips"`
-	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https"`
-	RawRedirectURL     string   `flag:"redirect-url" cfg:"redirect_url"`
+	ProxyPrefix        string `flag:"proxy-prefix" cfg:"proxy_prefix"`
+	PingPath           string `flag:"ping-path" cfg:"ping_path"`
+	PingUserAgent      string `flag:"ping-user-agent" cfg:"ping_user_agent"`
+	ReverseProxy       bool   `flag:"reverse-proxy" cfg:"reverse_proxy"`
+	RealClientIPHeader string `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
+	ForceHTTPS         bool   `flag:"force-https" cfg:"force_https"`
+	RawRedirectURL     string `flag:"redirect-url" cfg:"redirect_url"`
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
@@ -51,13 +50,10 @@ type Options struct {
 	Authorization Authorization `cfg:",internal"`
 	Providers     Providers     `cfg:",internal"`
 
-	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
-	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
 	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
 	ExtraJwtIssuers       []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
 	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
-	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
@@ -101,7 +97,6 @@ func NewOptions() *Options {
 		Cookie:             cookieDefaults(),
 		Session:            sessionOptionsDefaults(),
 		Templates:          templatesDefaults(),
-		SkipAuthPreflight:  false,
 		Logging:            loggingDefaults(),
 	}
 }

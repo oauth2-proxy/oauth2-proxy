@@ -12,6 +12,9 @@ import (
 )
 
 type LegacyOptions struct {
+	// LegacyAuthorization options related to authorization
+	LegacyAuthorization LegacyAuthorization `cfg:",squash"`
+
 	// Legacy options related to upstream servers
 	LegacyUpstreams LegacyUpstreams `cfg:",squash"`
 
@@ -65,6 +68,7 @@ func NewLegacyOptions() *LegacyOptions {
 func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet := NewFlagSet()
 
+	flagSet.AddFlagSet(legacyAuthorizationFlagSet())
 	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
 	flagSet.AddFlagSet(legacyHeadersFlagSet())
 	flagSet.AddFlagSet(legacyServerFlagset())
@@ -74,6 +78,8 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 }
 
 func (l *LegacyOptions) ToOptions() (*Options, error) {
+	l.Options.Authorization = l.LegacyAuthorization.convert()
+
 	upstreams, err := l.LegacyUpstreams.convert()
 	if err != nil {
 		return nil, fmt.Errorf("error converting upstreams: %v", err)
