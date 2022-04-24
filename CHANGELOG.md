@@ -18,6 +18,7 @@ If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move
 
 ## Changes since v7.2.1
 
+- [#1595](https://github.com/oauth2-proxy/oauth2-proxy/pull/1595) Add optional `allowed_emails` query parameter to the `auth_request`. (@zv0n)
 - [#1478](https://github.com/oauth2-proxy/oauth2-proxy/pull/1478) Parameterise the runtime image (@omBratteng)
 - [#1583](https://github.com/oauth2-proxy/oauth2-proxy/pull/1583) Add groups to session too when creating session from bearer token (@adriananeci)
 - [#1418](https://github.com/oauth2-proxy/oauth2-proxy/pull/1418) Support for passing arbitrary query parameters through from `/oauth2/start` to the identity provider's login URL. Configuration settings control which parameters are passed by default and precisely which values can be overridden per-request (@ianroberts)
