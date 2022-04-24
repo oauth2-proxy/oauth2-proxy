@@ -34,15 +34,15 @@ var _ = Describe("Scope Suite", func() {
 
 			Context("if the scope is then modified", func() {
 				BeforeEach(func() {
-					Expect(scope.SaveSession).To(BeFalse())
-					scope.SaveSession = true
+					Expect(scope.RequestID).To(BeEmpty())
+					scope.RequestID = "abc123"
 				})
 
 				It("returns the updated session", func() {
 					s := middleware.GetRequestScope(request)
 					Expect(s).ToNot(BeNil())
 					Expect(s).To(Equal(scope))
-					Expect(s.SaveSession).To(BeTrue())
+					Expect(s.RequestID).To(Equal("abc123"))
 				})
 			})
 		})
