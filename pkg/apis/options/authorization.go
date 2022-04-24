@@ -30,8 +30,12 @@ type Authorization struct {
 
 // AuthorizationRule determines the configuration for a particular authorization
 // rule.
-
 type AuthorizationRule struct {
+	// ID is a unique identifier for the authorization rule. Each authorization
+	// rule is expected to have a unique ID.
+	// The ID will be used to identify matched rules for audit purposes.
+	ID string
+
 	// Policy is the authorization policy to apply should the rule match the given
 	// request.
 	// All conditions specified within the rule must match the request for the

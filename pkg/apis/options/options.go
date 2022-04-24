@@ -48,7 +48,8 @@ type Options struct {
 	Server        Server `cfg:",internal"`
 	MetricsServer Server `cfg:",internal"`
 
-	Providers Providers `cfg:",internal"`
+	Authorization Authorization `cfg:",internal"`
+	Providers     Providers     `cfg:",internal"`
 
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
