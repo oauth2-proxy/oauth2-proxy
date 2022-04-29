@@ -1021,6 +1021,7 @@ func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
 	constraints := []func(*http.Request, *sessionsapi.SessionState) bool{
 		checkAllowedGroups,
 		checkAllowedEmailDomains,
+		checkAllowedEmails,
 	}
 
 	for _, constraint := range constraints {
@@ -1089,6 +1090,26 @@ func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
 	}
 
 	return false
+}
+
+// checkAllowedEmails allow email restrictions based on the `allowed_emails`
+// querystring parameter
+func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
+	allowedEmails := extractAllowedEntities(req, "allowed_emails")
+	if len(allowedEmails) == 0 {
+		return true
+	}
+
+	allowed := false
+
+	for email := range allowedEmails {
+		if email == s.Email {
+			allowed = true
+			break
+		}
+	}
+
+	return allowed
 }
 
 // encodedState builds the OAuth state param out of our nonce and
