@@ -478,11 +478,16 @@ var _ = Describe("Server", func() {
 		DescribeTable("should return the scheme", func(in, expected string) {
 			Expect(getNetworkScheme(in)).To(Equal(expected))
 		},
-			Entry("with no scheme", "127.0.0.1:0", "tcp"),
-			Entry("with a tcp scheme", "tcp://127.0.0.1:0", "tcp"),
-			Entry("with a http scheme", "http://192.168.0.1:1", "tcp"),
-			Entry("with a unix scheme", "unix://172.168.16.2:2", "unix"),
-			Entry("with a random scheme", "random://10.10.10.10:10", "random"),
+			Entry("ipv4 address with no scheme", "127.0.0.1:0", "tcp"),
+			Entry("ipv4 address with a tcp scheme", "tcp://127.0.0.1:0", "tcp"),
+			Entry("ipv4 address with a http scheme", "http://192.168.0.1:1", "tcp"),
+			Entry("ipv4 address with a unix scheme", "unix://172.168.16.2:2", "unix"),
+			Entry("ipv4 address with a random scheme", "random://10.10.10.10:10", "random"),
+			Entry("ipv6 address with no scheme", "[::1]:0", "tcp"),
+			Entry("ipv6 address with a tcp scheme", "tcp://[::1]:0", "tcp"),
+			Entry("ipv6 address with a http scheme", "http://[::ffff:c0a8:1]:1", "tcp"),
+			Entry("ipv6 address with a unix scheme", "unix://[::ffff:aca8:1002]:2", "unix"),
+			Entry("ipv6 address with a random scheme", "random://[::ffff:a0a:a0a]:10", "random"),
 		)
 	})
 
@@ -490,11 +495,16 @@ var _ = Describe("Server", func() {
 		DescribeTable("should remove the scheme", func(in, expected string) {
 			Expect(getListenAddress(in)).To(Equal(expected))
 		},
-			Entry("with no scheme", "127.0.0.1:0", "127.0.0.1:0"),
-			Entry("with a tcp scheme", "tcp://127.0.0.1:0", "127.0.0.1:0"),
-			Entry("with a http scheme", "http://192.168.0.1:1", "192.168.0.1:1"),
-			Entry("with a unix scheme", "unix://172.168.16.2:2", "172.168.16.2:2"),
-			Entry("with a random scheme", "random://10.10.10.10:10", "10.10.10.10:10"),
+			Entry("ipv4 address with no scheme", "127.0.0.1:0", "127.0.0.1:0"),
+			Entry("ipv4 address with a tcp scheme", "tcp://127.0.0.1:0", "127.0.0.1:0"),
+			Entry("ipv4 address with a http scheme", "http://192.168.0.1:1", "192.168.0.1:1"),
+			Entry("ipv4 address with a unix scheme", "unix://172.168.16.2:2", "172.168.16.2:2"),
+			Entry("ipv4 address with a random scheme", "random://10.10.10.10:10", "10.10.10.10:10"),
+			Entry("ipv6 address with no scheme", "[::1]:0", "[::1]:0"),
+			Entry("ipv6 address with a tcp scheme", "tcp://[::1]:0", "[::1]:0"),
+			Entry("ipv6 address with a http scheme", "http://[::ffff:c0a8:1]:1", "[::ffff:c0a8:1]:1"),
+			Entry("ipv6 address with a unix scheme", "unix://[::ffff:aca8:1002]:2", "[::ffff:aca8:1002]:2"),
+			Entry("ipv6 address with a random scheme", "random://[::ffff:a0a:a0a]:10", "[::ffff:a0a:a0a]:10"),
 		)
 	})
 })
