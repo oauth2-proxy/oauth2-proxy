@@ -54,7 +54,7 @@ var (
 
 var _ = BeforeSuite(func() {
 	var err error
-	certBytes, keyBytes, err := util.GenerateCert()
+	certBytes, keyBytes, err := util.GenerateCert("127.0.0.1")
 	Expect(err).ToNot(HaveOccurred())
 	certOut := new(bytes.Buffer)
 	Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
