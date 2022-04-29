@@ -35,7 +35,7 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 // https://golang.org/src/crypto/tls/generate_cert.go as a function
 func GenerateCert(ipaddr string) ([]byte, []byte, error) {
 	var err error
-	fmt.Println(ipaddr)
+
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, err
