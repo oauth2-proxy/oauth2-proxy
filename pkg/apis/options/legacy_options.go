@@ -33,6 +33,7 @@ func NewLegacyOptions() *LegacyOptions {
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
 			FlushInterval:   DefaultUpstreamFlushInterval,
+			Timeout:         DefaultUpstreamTimeout,
 		},
 
 		LegacyHeaders: LegacyHeaders{
@@ -101,6 +102,7 @@ type LegacyUpstreams struct {
 	ProxyWebSockets               bool          `flag:"proxy-websockets" cfg:"proxy_websockets"`
 	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify"`
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
+	Timeout                       time.Duration `flag:"upstream-timeout" cfg:"upstream_timeout"`
 }
 
 func legacyUpstreamsFlagSet() *pflag.FlagSet {
@@ -111,6 +113,7 @@ func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
 	flagSet.StringSlice("upstream", []string{}, "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
+	flagSet.Duration("upstream-timeout", DefaultUpstreamTimeout, "maximum amount of time the server will wait for a response from the upstream")
 
 	return flagSet
 }
@@ -129,6 +132,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 		}
 
 		flushInterval := Duration(l.FlushInterval)
+		timeout := Duration(l.Timeout)
 		upstream := Upstream{
 			ID:                    u.Path,
 			Path:                  u.Path,
@@ -137,6 +141,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			PassHostHeader:        &l.PassHostHeader,
 			ProxyWebSockets:       &l.ProxyWebSockets,
 			FlushInterval:         &flushInterval,
+			Timeout:               &timeout,
 		}
 
 		switch u.Scheme {
@@ -168,6 +173,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.PassHostHeader = nil
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
+			upstream.Timeout = nil
 		}
 
 		upstreams.Upstreams = append(upstreams.Upstreams, upstream)

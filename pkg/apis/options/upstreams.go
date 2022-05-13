@@ -5,6 +5,9 @@ import "time"
 const (
 	// DefaultUpstreamFlushInterval is the default value for the Upstream FlushInterval.
 	DefaultUpstreamFlushInterval = 1 * time.Second
+
+	// DefaultUpstreamTimeout is the maximum duration a network dial to a upstream server for a response.
+	DefaultUpstreamTimeout = 30 * time.Second
 )
 
 // UpstreamConfig is a collection of definitions for upstream servers.
@@ -84,4 +87,8 @@ type Upstream struct {
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
 	ProxyWebSockets *bool `json:"proxyWebSockets,omitempty"`
+
+	// Timeout is the maximum duration the server will wait for a response from the upstream server.
+	// Defaults to 30 seconds.
+	Timeout *Duration `json:"timeout,omitempty"`
 }
