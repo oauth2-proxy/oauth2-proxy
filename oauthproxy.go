@@ -714,7 +714,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	appRedirect, err := p.appDirector.GetRedirect(req)
 	if err != nil {
 		logger.Errorf("Error obtaining application redirect: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		p.ErrorPage(rw, req, http.StatusBadRequest, err.Error())
 		return
 	}
 
