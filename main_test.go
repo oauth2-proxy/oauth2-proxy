@@ -35,6 +35,7 @@ upstreamConfig:
     flushInterval: 1s
     passHostHeader: true
     proxyWebSockets: true
+    timeout: 30s
 injectRequestHeaders:
 - name: Authorization
   values:
@@ -118,6 +119,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
 					PassHostHeader:  boolPtr(true),
 					ProxyWebSockets: boolPtr(true),
+					Timeout:         durationPtr(options.DefaultUpstreamTimeout),
 				},
 			},
 		}
