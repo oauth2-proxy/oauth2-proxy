@@ -1,7 +1,6 @@
 package upstream
 
 import (
-	"crypto/tls"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -100,6 +99,14 @@ func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler ProxyErrorHandler) http.Handler {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
+	// Inherit default transport options from Go's stdlib
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	// Change default duration for waiting for an upstream response
+	if upstream.Timeout != nil {
+		transport.ResponseHeaderTimeout = upstream.Timeout.Duration()
+	}
+
 	// Configure options on the SingleHostReverseProxy
 	if upstream.FlushInterval != nil {
 		proxy.FlushInterval = upstream.FlushInterval.Duration()
@@ -110,9 +117,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	// InsecureSkipVerify is a configurable option we allow
 	/* #nosec G402 */
 	if upstream.InsecureSkipTLSVerify {
-		proxy.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	// Ensure we always pass the original request path
@@ -127,6 +132,10 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	if errorHandler != nil {
 		proxy.ErrorHandler = errorHandler
 	}
+
+	// Apply the customized transport to our proxy before returning it
+	proxy.Transport = transport
+
 	return proxy
 }
 
@@ -156,11 +165,17 @@ func setProxyDirector(proxy *httputil.ReverseProxy) {
 // newWebSocketReverseProxy creates a new reverse proxy for proxying websocket connections.
 func newWebSocketReverseProxy(u *url.URL, skipTLSVerify bool) http.Handler {
 	wsProxy := httputil.NewSingleHostReverseProxy(u)
+
+	// Inherit default transport options from Go's stdlib
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
 	/* #nosec G402 */
 	if skipTLSVerify {
-		wsProxy.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
+
+	// Apply the customized transport to our proxy before returning it
+	wsProxy.Transport = transport
+
 	return wsProxy
 }
