@@ -678,6 +678,17 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 	}
 }
 
+func TestSignInPageInvalidQueryStringReturnsBadRequest(t *testing.T) {
+	sipTest, err := NewSignInPageTest(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const endpoint = "/?q=%va"
+
+	code, _ := sipTest.GetEndpoint(endpoint)
+	assert.Equal(t, 400, code)
+}
+
 func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 	sipTest, err := NewSignInPageTest(false)
 	if err != nil {
