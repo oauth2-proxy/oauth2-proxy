@@ -786,10 +786,15 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
-	nonce, providerID, appRedirect, err := decodeState(req)
 	if err != nil {
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
-		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error(), "Login Failed: Unable to load CSRF token. Please try again.")
+		return
+	}
+
+	nonce, appRedirect, providerID, err := decodeState(req)
+	if err != nil {
+		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to decode state")
+		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to decode the state. Please try again.")
 		return
 	}
 
@@ -800,7 +805,9 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = p.enrichSessionState(req.Context(), session, providerID)
+	logger.Println(session)
+
+	err = p.enrichSessionState(req.Context(), session)
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -867,15 +874,17 @@ func (p *OAuthProxy) redeemCode(req *http.Request, providerID string, codeVerifi
 		s.ExpiresIn(p.CookieOptions.Expire)
 	}
 
+	s.ProviderID = providerID
+
 	return s, nil
 }
 
-func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState, providerID string) error {
+func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
 	var err error
 	if s.Email == "" {
 		// TODO(@NickMeves): Remove once all provider are updated to implement EnrichSession
 		// nolint:staticcheck
-		s.Email, err = p.providerMap[providerID].GetEmailAddress(ctx, s)
+		s.Email, err = p.providerMap[s.ProviderID].GetEmailAddress(ctx, s)
 		if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 			return err
 		}
@@ -1118,7 +1127,7 @@ func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce string, redirect string, id string) string {
-	return fmt.Sprintf("%v:%v:%v", nonce, id, redirect)
+	return fmt.Sprintf("%v:%v:%v", nonce, redirect, id)
 }
 
 // decodeState splits the reflected OAuth state response back into

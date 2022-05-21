@@ -28,6 +28,8 @@ providers:
     groupsClaim: groups
     insecureSkipNonce: true
     userIDClaim: email
+    audienceClaims:
+    - aud
 - provider: oidc
   id: keycloak
   name: "@keycloakexample.com"
@@ -38,6 +40,8 @@ providers:
     emailClaim: email
     groupsClaim: groups
     insecureSkipNonce: true
+    audienceClaims:
+    - aud
 server:
   BindAddress: 0.0.0.0:4180
   SecureBindAddress: ""
