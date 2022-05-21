@@ -84,8 +84,8 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	tenant := "common"
 	if opts.Tenant != "" {
 		tenant = opts.Tenant
-		overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
-		overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
+		p.LoginURL = overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
+		p.RedeemURL = overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
 	}
 
 	return &AzureProvider{
@@ -94,13 +94,17 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	}
 }
 
-func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
+func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) *url.URL {
 	if current == nil || current.String() == "" || current.String() == defaultURL.String() {
-		*current = url.URL{
+		b := &url.URL{
 			Scheme: "https",
 			Host:   "login.microsoftonline.com",
 			Path:   "/" + tenant + "/oauth2/" + path}
+
+		return b
 	}
+
+	return current
 }
 
 func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
