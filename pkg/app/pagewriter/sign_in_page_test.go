@@ -22,6 +22,10 @@ var _ = Describe("SignIn Page", func() {
 	Context("SignIn Page Writer", func() {
 		var request *http.Request
 		var signInPage *signInPageWriter
+		ProviderNameArray := make([]string, 0)
+		ProviderIDArray := make([]string, 0)
+		ProviderNameArray = append(ProviderNameArray, "My Provider")
+		ProviderIDArray = append(ProviderIDArray, "0")
 
 		BeforeEach(func() {
 			errorTmpl, err := template.New("").Parse("{{.Title}} | {{.RequestID}}")
@@ -37,7 +41,8 @@ var _ = Describe("SignIn Page", func() {
 				template:         tmpl,
 				errorPageWriter:  errorPage,
 				proxyPrefix:      "/prefix/",
-				providerName:     "My Provider",
+				providerName:     ProviderNameArray,
+				providerID:       ProviderIDArray,
 				signInMessage:    "Sign In Here",
 				footer:           "Custom Footer Text",
 				version:          "v0.0.0-test",
@@ -58,7 +63,7 @@ var _ = Describe("SignIn Page", func() {
 
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(body)).To(Equal("/prefix/ My Provider Sign In Here Custom Footer Text v0.0.0-test /redirect true Logo Data"))
+				Expect(string(body)).To(Equal("/prefix/ [My Provider] Sign In Here Custom Footer Text v0.0.0-test /redirect true Logo Data"))
 			})
 
 			It("Writes an error if the template can't be rendered", func() {

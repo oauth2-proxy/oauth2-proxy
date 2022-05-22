@@ -154,6 +154,7 @@ They may change between releases without notice.
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
+| `defaultProvider`| _string_ | DefaultProvider is used to specify the provider that can still use /oauth2/start in a multiple provider configuration. |
 
 ### AzureOptions
 
@@ -410,8 +411,8 @@ Provider holds all configuration for a single provider
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
 | `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
-| `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
-| `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
+| `provider` | _string_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
+| `name` | _string_ | Name is the providers display name<br/>It will be shown to the users in the login page.<br/> This value is required for all providers |
 | `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |

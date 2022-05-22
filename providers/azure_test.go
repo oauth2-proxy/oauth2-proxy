@@ -347,7 +347,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 			bURL, _ := url.Parse(b.URL)
 			p := testAzureProvider(bURL.Host, options.AzureOptions{})
 			p.Data().RedeemURL.Path = "/common/oauth2/token"
-			s, err := p.Redeem(context.Background(), "https://localhost", "1234", "123")
+			s, err := p.Redeem(context.Background(), "https://localhost", "1234", "Provider12")
 			if testCase.InjectRedeemURLError {
 				assert.NotNil(t, err)
 			} else {

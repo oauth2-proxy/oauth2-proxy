@@ -14,11 +14,18 @@ import (
 	"time"
 )
 
-func GetCertPool(paths []string) (*x509.CertPool, error) {
-	if len(paths) == 0 {
-		return nil, fmt.Errorf("invalid empty list of Root CAs file paths")
-	}
+func GetCertPool(paths []string, isDefaultPoolNeeded bool) (*x509.CertPool, error) {
+
 	pool := x509.NewCertPool()
+	var err error
+
+	if isDefaultPoolNeeded {
+		pool, err = x509.SystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("root system ca bundle could not be read - %s", err)
+		}
+	}
+
 	for _, path := range paths {
 		// Cert paths are a configurable option
 		data, err := os.ReadFile(path) // #nosec G304

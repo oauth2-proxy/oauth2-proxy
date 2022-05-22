@@ -42,7 +42,8 @@ type AlphaOptions struct {
 	MetricsServer Server `json:"metricsServer,omitempty"`
 
 	// Providers is used to configure multiple providers.
-	Providers Providers `json:"providers,omitempty"`
+	Providers       Providers `json:"providers,omitempty"`
+	DefaultProvider string    `json:"defaultprovider,omitempty"`
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -54,6 +55,7 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
+	opts.DefaultProvider = a.DefaultProvider
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from

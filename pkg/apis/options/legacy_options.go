@@ -93,6 +93,8 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 	}
 	l.Options.Providers = providers
 
+	l.Options.DefaultProvider = providers[0].ID
+
 	return &l.Options, nil
 }
 
@@ -728,7 +730,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		provider.ID = l.ProviderName
 		provider.Name = l.ProviderName
 	} else {
-		provider.ID = l.ProviderType + "=" + l.ClientID
+		provider.ID = l.ProviderType
+		provider.Name = l.ProviderType
 	}
 
 	// handle AcrValues, Prompt and ApprovalPrompt

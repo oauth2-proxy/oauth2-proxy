@@ -26,6 +26,8 @@ func validateProviders(o *options.Options) []string {
 		msgs = append(msgs, validateProvider(provider, providerIDs)...)
 	}
 
+	msgs = validateDefaultProvider(o, msgs)
+
 	return msgs
 }
 
@@ -81,6 +83,22 @@ func validateGoogleConfig(provider options.Provider) []string {
 			msgs = append(msgs, fmt.Sprintf("invalid Google credentials file: %s", provider.GoogleConfig.ServiceAccountJSON))
 		}
 	}
+
+	return msgs
+}
+
+func validateDefaultProvider(o *options.Options, msgs []string) []string {
+	if o.DefaultProvider == "" {
+		o.DefaultProvider = o.Providers[0].ID
+	}
+
+	for i := range o.Providers {
+		if o.Providers[i].ID == o.DefaultProvider {
+			return msgs
+		}
+	}
+
+	msgs = append(msgs, "defaultProvider does not match a providerID!")
 
 	return msgs
 }

@@ -74,7 +74,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
 
-	return p.createSession(ctx, token, false)
+	return p.createSession(ctx, token, false, p.ProviderID)
 }
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields
@@ -145,7 +145,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 		return fmt.Errorf("failed to get token: %v", err)
 	}
 
-	newSession, err := p.createSession(ctx, token, true)
+	newSession, err := p.createSession(ctx, token, true, s.ProviderID)
 	if err != nil {
 		return fmt.Errorf("unable create new session state from response: %v", err)
 	}
@@ -198,7 +198,7 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 
 // createSession takes an oauth2.Token and creates a SessionState from it.
 // It alters behavior if called from Redeem vs Refresh
-func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {
+func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool, idString string) (*sessions.SessionState, error) {
 	_, err := p.verifyIDToken(ctx, token)
 	if err != nil {
 		switch err {
@@ -221,6 +221,7 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.AccessToken = token.AccessToken
 	ss.RefreshToken = token.RefreshToken
 	ss.IDToken = rawIDToken
+	ss.ProviderID = idString
 
 	ss.CreatedAtNow()
 	ss.SetExpiresOn(token.Expiry)

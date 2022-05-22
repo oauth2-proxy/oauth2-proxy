@@ -188,6 +188,7 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code, codeVeri
 		RefreshToken: jsonResponse.RefreshToken,
 		Email:        c.Email,
 		User:         c.Subject,
+		ProviderID:   p.ProviderID,
 	}
 	ss.CreatedAtNow()
 	ss.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)

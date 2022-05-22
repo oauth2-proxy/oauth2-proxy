@@ -264,6 +264,7 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code, codeVerifier str
 		AccessToken: jsonResponse.AccessToken,
 		IDToken:     jsonResponse.IDToken,
 		Email:       email,
+		ProviderID:  p.ProviderID,
 	}
 
 	session.CreatedAtNow()

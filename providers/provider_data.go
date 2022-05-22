@@ -28,6 +28,7 @@ const (
 // of OAuth2 providers
 type ProviderData struct {
 	ProviderName      string
+	ProviderID        string
 	LoginURL          *url.URL
 	RedeemURL         *url.URL
 	ProfileURL        *url.URL

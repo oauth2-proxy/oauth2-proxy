@@ -78,8 +78,8 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	tenant := "common"
 	if opts.Tenant != "" {
 		tenant = opts.Tenant
-		overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
-		overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
+		p.LoginURL = overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
+		p.RedeemURL = overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
 	}
 
 	graphGroupField := azureDefaultGraphGroupField
@@ -114,13 +114,17 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	}
 }
 
-func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
+func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) *url.URL {
 	if current == nil || current.String() == "" || current.String() == defaultURL.String() {
-		*current = url.URL{
+		b := &url.URL{
 			Scheme: "https",
 			Host:   "login.microsoftonline.com",
 			Path:   "/" + tenant + "/oauth2/" + path}
+
+		return b
 	}
+
+	return current
 }
 
 func getMicrosoftGraphGroupsURL(graphGroupField string) *url.URL {
@@ -179,6 +183,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
 		RefreshToken: jsonResponse.RefreshToken,
+		ProviderID:   p.ProviderID,
 	}
 	session.CreatedAtNow()
 	session.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))

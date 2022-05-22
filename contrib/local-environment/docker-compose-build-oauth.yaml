@@ -1,0 +1,24 @@
+# This docker-compose file can be used build and then bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features all in one command.
+# Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
+# etcd for storage for Dex  and HTTPBin as an example upstream.
+# This file also uses alpha configuration when configuring OAuth2 Proxy.
+#
+# This file is an extension of the main compose file and must be used with it
+#
+# In order for the system to build the correct docker image for your local architecture, you must use the following command:
+#   BUILDPLATFORM=$(shell dpkg --print-architecture) DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-build-oauth.yaml up --build
+# Alternatively:
+#    make alpha-config-build-<command> (eg make alpha-config-build-up, make alpha-config-multiple-providers-build-up, make build-up etc etc etc )
+#
+# Access http://localhost:4180 to initiate a login cycle
+version: '3.0'
+services:
+  oauth2-proxy:
+    platform: ${BUILDPLATFORM}
+    image: quay.io/oauth2-proxy/oauth2-proxy:${VERSION}
+    build:
+      context: ../../.
+      dockerfile: Dockerfile
+      args:
+          VERSION: ${VERSION}

@@ -19,6 +19,7 @@ import (
 // Validate checks that required options are set and validates those that they
 // are of the correct format
 func Validate(o *options.Options) error {
+
 	msgs := validateCookie(o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
@@ -36,18 +37,30 @@ func Validate(o *options.Options) error {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
-	} else if len(o.Providers[0].CAFiles) > 0 {
-		pool, err := util.GetCertPool(o.Providers[0].CAFiles)
-		if err == nil {
-			transport := http.DefaultTransport.(*http.Transport).Clone()
-			transport.TLSClientConfig = &tls.Config{
-				RootCAs:    pool,
-				MinVersion: tls.VersionTLS12,
-			}
+	} else {
+		caFiles := make([]string, 0)
+		defaultCAPoolNeeded := false
 
-			http.DefaultClient = &http.Client{Transport: transport}
-		} else {
-			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
+		for i := range o.Providers {
+			if len(o.Providers[i].CAFiles) > 0 {
+				caFiles = append(caFiles, o.Providers[i].CAFiles...)
+			} else {
+				defaultCAPoolNeeded = true
+			}
+		}
+
+		if len(caFiles) > 0 {
+			pool, err := util.GetCertPool(caFiles, defaultCAPoolNeeded)
+			if err == nil {
+				transport := http.DefaultTransport.(*http.Transport).Clone()
+				transport.TLSClientConfig = &tls.Config{
+					RootCAs:    pool,
+					MinVersion: tls.VersionTLS12,
+				}
+				http.DefaultClient = &http.Client{Transport: transport}
+			} else {
+				msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
+			}
 		}
 	}
 
@@ -61,16 +74,18 @@ func Validate(o *options.Options) error {
 		if len(o.ExtraJwtIssuers) > 0 {
 			var jwtIssuers []jwtIssuer
 			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
-			for _, jwtIssuer := range jwtIssuers {
-				verifier, err := newVerifierFromJwtIssuer(
-					o.Providers[0].OIDCConfig.AudienceClaims,
-					o.Providers[0].OIDCConfig.ExtraAudiences,
-					jwtIssuer,
-				)
-				if err != nil {
-					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
+			for i := range o.Providers {
+				for _, jwtIssuer := range jwtIssuers {
+					verifier, err := newVerifierFromJwtIssuer(
+						o.Providers[i].OIDCConfig.AudienceClaims,
+						o.Providers[i].OIDCConfig.ExtraAudiences,
+						jwtIssuer,
+					)
+					if err != nil {
+						msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
+					}
+					o.SetJWTBearerVerifiers(append(o.GetJWTBearerVerifiers(), verifier))
 				}
-				o.SetJWTBearerVerifiers(append(o.GetJWTBearerVerifiers(), verifier))
 			}
 		}
 	}

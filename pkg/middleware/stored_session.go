@@ -36,18 +36,9 @@ const (
 // All options must be provided.
 type StoredSessionLoaderOptions struct {
 	// Session storage backend
-	SessionStore sessionsapi.SessionStore
-
-	// How often should sessions be refreshed
+	SessionStore  sessionsapi.SessionStore
 	RefreshPeriod time.Duration
-
-	// Provider based session refreshing
-	RefreshSession func(context.Context, *sessionsapi.SessionState) (bool, error)
-
-	// Provider based session validation.
-	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
-	// refresh it, we must re-validate using this validation.
-	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
+	ProviderMap   providers.ProviderMap
 }
 
 // NewStoredSessionLoader creates a new storedSessionLoader which loads
@@ -56,10 +47,9 @@ type StoredSessionLoaderOptions struct {
 // If a session was loader by a previous handler, it will not be replaced.
 func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor {
 	ss := &storedSessionLoader{
-		store:            opts.SessionStore,
-		refreshPeriod:    opts.RefreshPeriod,
-		sessionRefresher: opts.RefreshSession,
-		sessionValidator: opts.ValidateSession,
+		store:         opts.SessionStore,
+		refreshPeriod: opts.RefreshPeriod,
+		providerMap:   opts.ProviderMap,
 	}
 	return ss.loadSession
 }
@@ -67,10 +57,9 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 // storedSessionLoader is responsible for loading sessions from cookie
 // identified sessions in the session store.
 type storedSessionLoader struct {
-	store            sessionsapi.SessionStore
-	refreshPeriod    time.Duration
-	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
-	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	store         sessionsapi.SessionStore
+	refreshPeriod time.Duration
+	providerMap   providers.ProviderMap
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -87,7 +76,7 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 			return
 		}
 
-		session, err := s.getValidatedSession(rw, req)
+		session, err := s.getValidatedSession(rw, req, s.providerMap)
 		if err != nil && !errors.Is(err, http.ErrNoCookie) {
 			// In the case when there was an error loading the session,
 			// we should clear the session
@@ -106,14 +95,14 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 
 // getValidatedSession is responsible for loading a session and making sure
 // that is is valid.
-func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
+func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *http.Request, providerMap providers.ProviderMap) (*sessionsapi.SessionState, error) {
 	session, err := s.store.Load(req)
 	if err != nil || session == nil {
 		// No session was found in the storage or error occurred, nothing more to do
 		return nil, err
 	}
 
-	err = s.refreshSessionIfNeeded(rw, req, session)
+	err = s.refreshSessionIfNeeded(rw, req, providerMap, session)
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
@@ -124,7 +113,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 // refreshSessionIfNeeded will attempt to refresh a session if the session
 // is older than the refresh period.
 // Success or fail, we will then validate the session.
-func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
+func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, providerMap providers.ProviderMap, session *sessionsapi.SessionState) error {
 	if !needsRefresh(s.refreshPeriod, session) {
 		// Refresh is disabled or the session is not old enough, do nothing
 		return nil
@@ -187,14 +176,14 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 
 	// We are holding the lock and the session needs a refresh
 	logger.Printf("Refreshing session - User: %s; SessionAge: %s", session.User, session.Age())
-	if err := s.refreshSession(rw, req, session); err != nil {
+	if err := s.refreshSession(rw, req, providerMap, session); err != nil {
 		// If a preemptive refresh fails, we still keep the session
 		// if validateSession succeeds.
 		logger.Errorf("Unable to refresh session: %v", err)
 	}
 
 	// Validate all sessions after any Redeem/Refresh operation (fail or success)
-	return s.validateSession(req.Context(), session)
+	return s.validateSession(req.Context(), providerMap, session)
 }
 
 // needsRefresh determines whether we should attempt to refresh a session or not.
@@ -204,8 +193,9 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
 
 // refreshSession attempts to refresh the session with the provider
 // and will save the session if it was updated.
-func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	refreshed, err := s.sessionRefresher(req.Context(), session)
+func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, providerMap providers.ProviderMap, session *sessionsapi.SessionState) error {
+
+	refreshed, err := s.providerMap[session.ProviderID].RefreshSession(req.Context(), session)
 	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
 		return fmt.Errorf("error refreshing tokens: %v", err)
 	}
@@ -241,12 +231,12 @@ func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.R
 // validateSession checks whether the session has expired and performs
 // provider validation on the session.
 // An error implies the session is not longer valid.
-func (s *storedSessionLoader) validateSession(ctx context.Context, session *sessionsapi.SessionState) error {
+func (s *storedSessionLoader) validateSession(ctx context.Context, providerMap providers.ProviderMap, session *sessionsapi.SessionState) error {
 	if session.IsExpired() {
 		return errors.New("session is expired")
 	}
 
-	if !s.sessionValidator(ctx, session) {
+	if !s.providerMap[session.ProviderID].ValidateSession(ctx, session) {
 		return errors.New("session is invalid")
 	}
 

@@ -32,7 +32,10 @@ type signInPageWriter struct {
 	proxyPrefix string
 
 	// ProviderName is the name of the provider that should be displayed on the login button.
-	providerName string
+	providerName []string
+
+	// ProviderID is the unique ID of the provider that we can use to create provider specific start paths
+	providerID []string
 
 	// SignInMessage is the messge displayed above the login button.
 	signInMessage string
@@ -57,8 +60,10 @@ type signInPageWriter struct {
 func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
+
 	t := struct {
-		ProviderName  string
+		ProviderName  []string
+		ProviderID    []string
 		SignInMessage template.HTML
 		StatusCode    int
 		CustomLogin   bool
@@ -69,6 +74,7 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		LogoData      template.HTML
 	}{
 		ProviderName:  s.providerName,
+		ProviderID:    s.providerID,
 		SignInMessage: template.HTML(s.signInMessage),
 		StatusCode:    statusCode,
 		CustomLogin:   s.displayLoginForm,
