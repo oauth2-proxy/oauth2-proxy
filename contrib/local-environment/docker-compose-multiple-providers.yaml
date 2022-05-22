@@ -12,14 +12,13 @@
 # Access http://keycloak.localtest.me:9080 with the same credentials to check out the settings
 version: '3.0'
 services:
-
   oauth2-proxy:
-    container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.2.1
-    command: --config /oauth2-proxy.cfg
-    hostname: oauth2-proxy
+    command: --config /oauth2-proxy.cfg --alpha-config /oauth2-proxy-alpha-config-multiple-providers.yaml
     volumes:
-      - "./oauth2-proxy-keycloak.cfg:/oauth2-proxy.cfg"
+      - "./oauth2-proxy-alpha-config.cfg:/oauth2-proxy.cfg"
+      - "./oauth2-proxy-alpha-config-multiple-providers.yaml:/oauth2-proxy-alpha-config-multiple-providers.yaml"
+    container_name: oauth2-proxy
+    hostname: oauth2-proxy
     restart: unless-stopped
     networks:
       keycloak: {}

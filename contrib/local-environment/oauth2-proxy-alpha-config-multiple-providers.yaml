@@ -30,6 +30,19 @@ providers:
     userIDClaim: email
     audienceClaims:
     - aud
+- provider: oidc
+  id: keycloak
+  name: "@keycloakexample.com"
+  clientSecret: 72341b6d-7065-4518-a0e4-50ee15025608
+  clientID: oauth2-proxy
+  oidcConfig:
+    issuerURL: http://keycloak.localtest.me:9080/auth/realms/master
+    emailClaim: email
+    groupsClaim: groups
+    insecureSkipNonce: true
+    userIDClaim: email
+    audienceClaims:
+    - aud
 server:
   BindAddress: 0.0.0.0:4180
   SecureBindAddress: ""

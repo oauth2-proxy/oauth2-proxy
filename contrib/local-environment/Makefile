@@ -16,11 +16,11 @@ alpha-config-down:
 
 .PHONY: alpha-config-multiple-providers-up
 alpha-config-multiple-providers-up:
-	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml up -d
+	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml up -d
 
 .PHONY: alpha-config-multiple-providers-down
 alpha-config-multiple-providers-down:
-	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml down --remove-orphans
+	docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml down --remove-orphans
 
 .PHONY: build-up
 build-up:
@@ -32,7 +32,7 @@ alpha-config-build-up:
 
 .PHONY: alpha-config-multiple-providers-build-up
 alpha-config-multiple-providers-build-up:
-	BUILDPLATFORM=$(shell dpkg --print-architecture) VERSION=$(shell git rev-parse --abbrev-ref HEAD) DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
+	BUILDPLATFORM=$(shell dpkg --print-architecture) VERSION=$(shell git rev-parse --abbrev-ref HEAD) DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-build-oauth.yaml up --build
 
 .PHONY: nginx-up
 nginx-up:
