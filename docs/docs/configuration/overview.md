@@ -119,8 +119,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--google-service-account-json` | string | the path to the service account json credentials | |
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption | |
 | `--htpasswd-user-group` | string \| list | the groups to be set on sessions for htpasswd users | |
-| `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients | `"127.0.0.1:4180"` |
-| `--https-address` | string | `<addr>:<port>` to listen on for HTTPS clients | `":443"` |
+| `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180` | `"127.0.0.1:4180"` |
+| `--https-address` | string | `[https://]<addr>:<port>` to listen on for HTTPS clients. Square brackets are required for ipv6 address, e.g. `https://[::1]:443` | `":443"` |
 | `--logging-compress` | bool | Should rotated log files be compressed using gzip | false |
 | `--logging-filename` | string | File to log requests to, empty for `stdout` | `""` (stdout) |
 | `--logging-local-time` | bool | Use local time in log files and backup filenames instead of UTC | true (local time) |
