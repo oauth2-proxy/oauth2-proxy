@@ -15,8 +15,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var certData []byte
-var certDataSource, keyDataSource options.SecretSource
+var ipv4CertData, ipv6CertData []byte
+var ipv4CertDataSource, ipv4KeyDataSource options.SecretSource
+var ipv6CertDataSource, ipv6KeyDataSource options.SecretSource
 var client *http.Client
 
 func TestHTTPSuite(t *testing.T) {
@@ -28,28 +29,46 @@ func TestHTTPSuite(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	By("Generating a self-signed cert for TLS tests", func() {
-		certBytes, keyBytes, err := util.GenerateCert()
+	By("Generating a ipv4 self-signed cert for TLS tests", func() {
+		certBytes, keyBytes, err := util.GenerateCert("127.0.0.1")
 		Expect(err).ToNot(HaveOccurred())
-		certData = certBytes
+		ipv4CertData = certBytes
 
 		certOut := new(bytes.Buffer)
 		Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
-		certDataSource.Value = certOut.Bytes()
+		ipv4CertDataSource.Value = certOut.Bytes()
 		keyOut := new(bytes.Buffer)
 		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
-		keyDataSource.Value = keyOut.Bytes()
+		ipv4KeyDataSource.Value = keyOut.Bytes()
+	})
+
+	By("Generating a ipv6 self-signed cert for TLS tests", func() {
+		certBytes, keyBytes, err := util.GenerateCert("::1")
+		Expect(err).ToNot(HaveOccurred())
+		ipv6CertData = certBytes
+
+		certOut := new(bytes.Buffer)
+		Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
+		ipv6CertDataSource.Value = certOut.Bytes()
+		keyOut := new(bytes.Buffer)
+		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
+		ipv6KeyDataSource.Value = keyOut.Bytes()
 	})
 
 	By("Setting up a http client", func() {
-		cert, err := tls.X509KeyPair(certDataSource.Value, keyDataSource.Value)
+		ipv4cert, err := tls.X509KeyPair(ipv4CertDataSource.Value, ipv4KeyDataSource.Value)
+		Expect(err).ToNot(HaveOccurred())
+		ipv6cert, err := tls.X509KeyPair(ipv6CertDataSource.Value, ipv6KeyDataSource.Value)
 		Expect(err).ToNot(HaveOccurred())
 
-		certificate, err := x509.ParseCertificate(cert.Certificate[0])
+		ipv4certificate, err := x509.ParseCertificate(ipv4cert.Certificate[0])
+		Expect(err).ToNot(HaveOccurred())
+		ipv6certificate, err := x509.ParseCertificate(ipv6cert.Certificate[0])
 		Expect(err).ToNot(HaveOccurred())
 
 		certpool := x509.NewCertPool()
-		certpool.AddCert(certificate)
+		certpool.AddCert(ipv4certificate)
+		certpool.AddCert(ipv6certificate)
 
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig.RootCAs = certpool
