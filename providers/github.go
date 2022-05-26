@@ -312,7 +312,7 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 	endpoint := &url.URL{
 		Scheme: p.ValidateURL.Scheme,
 		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/repo/", p.Repo),
+		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo),
 	}
 
 	var repo repository

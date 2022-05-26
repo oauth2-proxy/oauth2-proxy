@@ -119,8 +119,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--google-service-account-json` | string | the path to the service account json credentials | |
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption | |
 | `--htpasswd-user-group` | string \| list | the groups to be set on sessions for htpasswd users | |
-| `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients | `"127.0.0.1:4180"` |
-| `--https-address` | string | `<addr>:<port>` to listen on for HTTPS clients | `":443"` |
+| `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180` | `"127.0.0.1:4180"` |
+| `--https-address` | string | `[https://]<addr>:<port>` to listen on for HTTPS clients. Square brackets are required for ipv6 address, e.g. `https://[::1]:443` | `":443"` |
 | `--logging-compress` | bool | Should rotated log files be compressed using gzip | false |
 | `--logging-filename` | string | File to log requests to, empty for `stdout` | `""` (stdout) |
 | `--logging-local-time` | bool | Use local time in log files and backup filenames instead of UTC | true (local time) |
@@ -196,6 +196,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--tls-key-file` | string | path to private key file | |
 | `--tls-min-version` | string | minimum TLS version that is acceptable, either `"TLS1.2"` or `"TLS1.3"` | `"TLS1.2"` |
 | `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
+| `--upstream-timeout` | duration | maximum amount of time the server will wait for a response from the upstream | 30s |
 | `--allowed-group` | string \| list | restrict logins to members of this group (may be given multiple times) | |
 | `--allowed-role` | string \| list | restrict logins to users with this role (may be given multiple times). Only works with the keycloak-oidc provider. | |
 | `--validate-url` | string | Access token validation endpoint | |
