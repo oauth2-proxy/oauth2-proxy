@@ -222,6 +222,8 @@ If you are using self-hosted GitLab, make sure you set the following to the appr
 
     --oidc-issuer-url="<your gitlab url>"
 
+If your self-hosted GitLab is on a sub-directory (e.g. domain.tld/gitlab), as opposed to its own sub-domain (e.g. gitlab.domain.tld), you may need to add a redirect from domain.tld/oauth pointing at e.g. domain.tld/gitlab/oauth.
+
 ### LinkedIn Auth Provider
 
 For LinkedIn, the registration steps are:
