@@ -43,6 +43,7 @@ If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move
 - [#1638](https://github.com/oauth2-proxy/oauth2-proxy/pull/1638) Implement configurable upstream timeout (@jacksgt)
 - [#1650](https://github.com/oauth2-proxy/oauth2-proxy/pull/1650) Fixed 500 when checking if user has repo (@adamsong)
 - [#1635](https://github.com/oauth2-proxy/oauth2-proxy/pull/1635) Added description and unit tests for ipv6 address (@t-katsumura)
+- [#1502](https://github.com/oauth2-proxy/oauth2-proxy/pull/1502) Unbreak oauth2-proxy for keycloak provider after 2c668a (@ckwalsh)
 
 # V7.2.1
 
