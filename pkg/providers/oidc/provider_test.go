@@ -104,7 +104,7 @@ var _ = Describe("Provider", func() {
 		Expect(provider.PKCE().CodeChallengeAlgs).To(ConsistOf("S256", "plain"))
 	})
 
-	It("with signing algorithms supported on the provider, shold populate signature information", func() {
+	It("with signing algorithms supported on the provider, should populate signature information", func() {
 		m, err := mockoidc.NewServer(nil)
 		Expect(err).ToNot(HaveOccurred())
 		m.AddMiddleware(newSigningAlgsIssuerMiddleware(m))
