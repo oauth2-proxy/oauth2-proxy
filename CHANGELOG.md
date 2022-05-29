@@ -2,10 +2,22 @@
 
 ## Release Highlights
 
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.3.0
+
+# V7.3.0
+
+## Release Highlights
+
 - [#1361](https://github.com/oauth2-proxy/oauth2-proxy/pull/1541) PKCE Code Challenge Support - RFC-7636 (@braunsonm)
   - At this time the `--code-challenge-method` flag can be used to enable it with the method of your choice.
 - Parital support for OAuth2 Authorization Server Metadata for detecting code challenge methods (@braunsonm)
   - A warning will be displayed when your provider advertises support for PKCE but you have not enabled it.
+- Support for the ARMv8 and ppc64le architectures
+- Configurable upstream request timeouts
 
 ## Important Notes
 
@@ -13,8 +25,11 @@
 If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move to the generic tag instead (ex: v7.2.1 )
 - [#1478](https://github.com/oauth2-proxy/oauth2-proxy/pull/1478) Changes the UID and GID of the runtime user to `65532`.
   Which also is known as `nonroot` user in [distroless images](https://github.com/GoogleContainerTools/distroless).
+- This release includes fixes for a number of CVEs, we recomend to upgrade as soon as possible.
 
 ## Breaking Changes
+
+N/A
 
 ## Changes since v7.2.1
 
