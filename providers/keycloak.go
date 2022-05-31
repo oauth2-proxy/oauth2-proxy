@@ -100,3 +100,8 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 
 	return nil
 }
+
+// ValidateSession validates the AccessToken
+func (p *KeycloakProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
+}

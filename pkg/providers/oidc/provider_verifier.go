@@ -43,6 +43,10 @@ type ProviderVerifierOptions struct {
 	// SkipIssuerVerification skips verification of ID token issuers.
 	// When false, ID Token Issuers must match the OIDC discovery URL.
 	SkipIssuerVerification bool
+
+	// SupportedSigningAlgs is the list of signature algorithms supported by the
+	// provider.
+	SupportedSigningAlgs []string
 }
 
 // validate checks that the required options are present before attempting to create
@@ -76,9 +80,10 @@ func (p ProviderVerifierOptions) toVerificationOptions() IDTokenVerificationOpti
 // toOIDCConfig returns an oidc.Config based on the configured options.
 func (p ProviderVerifierOptions) toOIDCConfig() *oidc.Config {
 	return &oidc.Config{
-		ClientID:          p.ClientID,
-		SkipIssuerCheck:   p.SkipIssuerVerification,
-		SkipClientIDCheck: true,
+		ClientID:             p.ClientID,
+		SkipIssuerCheck:      p.SkipIssuerVerification,
+		SkipClientIDCheck:    true,
+		SupportedSigningAlgs: p.SupportedSigningAlgs,
 	}
 }
 
@@ -112,21 +117,25 @@ type verifierBuilder func(*oidc.Config) *oidc.IDTokenVerifier
 func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (verifierBuilder, DiscoveryProvider, error) {
 	if opts.SkipDiscovery {
 		// Instead of discovering the JWKs URK, it needs to be specified in the opts already
-		return newVerifierBuilder(ctx, opts.IssuerURL, opts.JWKsURL), nil, nil
+		return newVerifierBuilder(ctx, opts.IssuerURL, opts.JWKsURL, opts.SupportedSigningAlgs), nil, nil
 	}
 
 	provider, err := NewProvider(ctx, opts.IssuerURL, opts.SkipIssuerVerification)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error while discovery OIDC configuration: %v", err)
 	}
-	verifierBuilder := newVerifierBuilder(ctx, opts.IssuerURL, provider.Endpoints().JWKsURL)
+	verifierBuilder := newVerifierBuilder(ctx, opts.IssuerURL, provider.Endpoints().JWKsURL, provider.SupportedSigningAlgs())
 	return verifierBuilder, provider, nil
 }
 
 // newVerifierBuilder returns a function to create a IDToken verifier from an OIDC config.
-func newVerifierBuilder(ctx context.Context, issuerURL, jwksURL string) verifierBuilder {
+func newVerifierBuilder(ctx context.Context, issuerURL, jwksURL string, supportedSigningAlgs []string) verifierBuilder {
 	keySet := oidc.NewRemoteKeySet(ctx, jwksURL)
 	return func(oidcConfig *oidc.Config) *oidc.IDTokenVerifier {
+		if len(supportedSigningAlgs) > 0 {
+			oidcConfig.SupportedSigningAlgs = supportedSigningAlgs
+		}
+
 		return oidc.NewVerifier(issuerURL, keySet, oidcConfig)
 	}
 }
