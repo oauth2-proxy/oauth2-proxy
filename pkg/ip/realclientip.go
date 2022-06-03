@@ -13,7 +13,7 @@ func GetRealClientIPParser(headerKey string) (ipapi.RealClientIPParser, error) {
 	headerKey = http.CanonicalHeaderKey(headerKey)
 
 	switch headerKey {
-	case http.CanonicalHeaderKey("X-Forwarded-For"), http.CanonicalHeaderKey("X-Real-IP"), http.CanonicalHeaderKey("X-ProxyUser-IP"):
+	case http.CanonicalHeaderKey("X-Forwarded-For"), http.CanonicalHeaderKey("X-Original-Forwarded-For"), http.CanonicalHeaderKey("X-Real-IP"), http.CanonicalHeaderKey("X-ProxyUser-IP"):
 		return &xForwardedForClientIPParser{header: headerKey}, nil
 	}
 
