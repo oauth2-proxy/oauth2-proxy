@@ -4,32 +4,24 @@ import (
 	"net"
 	"net/http"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
-type AuthorizationPolicy int
-
-const (
-	NonePolicy AuthorizationPolicy = iota
-	AllowPolicy
-	DelegatePolicy
-	DenyPolicy
-)
-
 type RuleSet interface {
-	MatchesRequest(req *http.Request) AuthorizationPolicy
+	MatchesRequest(req *http.Request) middlewareapi.AuthorizationPolicy
 }
 
 type rule struct {
 	conditions []condition
-	policy     AuthorizationPolicy
+	policy     middlewareapi.AuthorizationPolicy
 }
 
-func (r rule) matches(req *http.Request) AuthorizationPolicy {
+func (r rule) matches(req *http.Request) middlewareapi.AuthorizationPolicy {
 	for _, condition := range r.conditions {
 		if !condition.matches(req) {
 			// One of the conditions didn't match so this rule does not apply
-			return NonePolicy
+			return middlewareapi.OmittedPolicy
 		}
 	}
 	// If all conditions match, return the configured rule policy
@@ -60,17 +52,17 @@ func newRule(authRule options.AuthorizationRule, getClientIPFunc func(*http.Requ
 		conditions = append(conditions, condition)
 	}
 
-	var policy AuthorizationPolicy
+	var policy middlewareapi.AuthorizationPolicy
 	switch authRule.Policy {
 	case options.AllowPolicy:
-		policy = AllowPolicy
+		policy = middlewareapi.AllowPolicy
 	case options.DelegatePolicy:
-		policy = DelegatePolicy
+		policy = middlewareapi.DelegatePolicy
 	case options.DenyPolicy:
-		policy = DenyPolicy
+		policy = middlewareapi.DenyPolicy
 	default:
 		// This shouldn't be the case and should be prevented by validation
-		policy = NonePolicy
+		policy = middlewareapi.OmittedPolicy
 	}
 
 	return rule{
@@ -83,15 +75,15 @@ type ruleSet struct {
 	rules []rule
 }
 
-func (r ruleSet) MatchesRequest(req *http.Request) AuthorizationPolicy {
+func (r ruleSet) MatchesRequest(req *http.Request) middlewareapi.AuthorizationPolicy {
 	for _, rule := range r.rules {
-		if policy := rule.matches(req); policy != NonePolicy {
+		if policy := rule.matches(req); policy != middlewareapi.OmittedPolicy {
 			// The rule applies to this request, return its policy
 			return policy
 		}
 	}
 	// No rules matched
-	return NonePolicy
+	return middlewareapi.OmittedPolicy
 }
 
 func NewRuleSet(requestRules []options.AuthorizationRule, getClientIPFunc func(*http.Request) net.IP) (RuleSet, error) {

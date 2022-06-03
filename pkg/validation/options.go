@@ -20,6 +20,7 @@ import (
 // are of the correct format
 func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
+	msgs = append(msgs, validateAuthorization(o.Authorization, o.ReverseProxy)...)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
@@ -95,9 +96,6 @@ func Validate(o *options.Options) error {
 			return ip.GetClientString(o.GetRealClientIPParser(), r, false)
 		})
 	}
-
-	// Do this after ReverseProxy validation for TrustedIP coordinated checks
-	msgs = append(msgs, validateAllowlists(o)...)
 
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",

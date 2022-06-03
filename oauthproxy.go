@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -61,12 +60,6 @@ var (
 	ErrAccessDenied = errors.New("access denied")
 )
 
-// allowedRoute manages method + path based allowlists
-type allowedRoute struct {
-	method    string
-	pathRegex *regexp.Regexp
-}
-
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
 	CookieOptions *options.Cookie
@@ -74,7 +67,6 @@ type OAuthProxy struct {
 
 	SignInPath string
 
-	allowedRoutes       []allowedRoute
 	redirectURL         *url.URL // the url to receive requests at
 	whitelistDomains    []string
 	provider            providers.Provider
@@ -83,11 +75,9 @@ type OAuthProxy struct {
 	basicAuthValidator  basic.Validator
 	basicAuthGroups     []string
 	SkipProviderButton  bool
-	skipAuthPreflight   bool
 	skipJwtBearerTokens bool
 	forceJSONErrors     bool
 	realClientIPParser  ipapi.RealClientIPParser
-	trustedIPs          *ip.NetSet
 
 	sessionChain      alice.Chain
 	headersChain      alice.Chain
@@ -161,21 +151,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
-	trustedIPs := ip.NewNetSet()
-	for _, ipStr := range opts.TrustedIPs {
-		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
-			trustedIPs.AddIPNet(*ipNet)
-		} else {
-			return nil, fmt.Errorf("could not parse IP network (%s)", ipStr)
-		}
-	}
-
-	allowedRoutes, err := buildRoutesAllowlist(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	preAuthChain, err := buildPreAuthChain(opts)
+	preAuthChain, err := buildPreAuthChain(opts, pageWriter)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
@@ -201,14 +177,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		provider:            provider,
 		sessionStore:        sessionStore,
 		redirectURL:         redirectURL,
-		allowedRoutes:       allowedRoutes,
 		whitelistDomains:    opts.WhitelistDomains,
-		skipAuthPreflight:   opts.SkipAuthPreflight,
 		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
 		realClientIPParser:  opts.GetRealClientIPParser(),
 		SkipProviderButton:  opts.SkipProviderButton,
 		forceJSONErrors:     opts.ForceJSONErrors,
-		trustedIPs:          trustedIPs,
 
 		basicAuthValidator: basicAuthValidator,
 		basicAuthGroups:    opts.HtpasswdUserGroups,
@@ -316,7 +289,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
+func buildPreAuthChain(opts *options.Options, pageWriter pagewriter.Writer) (alice.Chain, error) {
 	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader))
 
 	if opts.ForceHTTPS {
@@ -350,6 +323,22 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	}
 
 	chain = chain.Append(middleware.NewRequestMetricsWithDefaultRegistry())
+
+	requestAuthorization, err := middleware.NewRequestAuthorization(pageWriter, opts.Authorization.RequestRules, func(req *http.Request) net.IP {
+		if opts.GetRealClientIPParser() == nil {
+			host, _ := util.SplitHostPort(req.RemoteAddr)
+			return net.ParseIP(host)
+		}
+		ip, err := opts.GetRealClientIPParser().GetRealClientIP(req.Header)
+		if err != nil {
+			return nil
+		}
+		return ip
+	})
+	if err != nil {
+		return alice.Chain{}, fmt.Errorf("error initialising request authorization middleware: %w", err)
+	}
+	chain = chain.Append(requestAuthorization)
 
 	return chain, nil
 }
@@ -423,53 +412,6 @@ func buildProviderName(p providers.Provider, override string) string {
 	return p.Data().ProviderName
 }
 
-// buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
-// SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
-// (method=path support)
-func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
-	routes := make([]allowedRoute, 0, len(opts.SkipAuthRegex)+len(opts.SkipAuthRoutes))
-
-	for _, path := range opts.SkipAuthRegex {
-		compiledRegex, err := regexp.Compile(path)
-		if err != nil {
-			return nil, err
-		}
-		logger.Printf("Skipping auth - Method: ALL | Path: %s", path)
-		routes = append(routes, allowedRoute{
-			method:    "",
-			pathRegex: compiledRegex,
-		})
-	}
-
-	for _, methodPath := range opts.SkipAuthRoutes {
-		var (
-			method string
-			path   string
-		)
-
-		parts := strings.SplitN(methodPath, "=", 2)
-		if len(parts) == 1 {
-			method = ""
-			path = parts[0]
-		} else {
-			method = strings.ToUpper(parts[0])
-			path = parts[1]
-		}
-
-		compiledRegex, err := regexp.Compile(path)
-		if err != nil {
-			return nil, err
-		}
-		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
-		routes = append(routes, allowedRoute{
-			method:    method,
-			pathRegex: compiledRegex,
-		})
-	}
-
-	return routes, nil
-}
-
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) error {
@@ -512,38 +454,8 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 
 // IsAllowedRequest is used to check if auth should be skipped for this request
 func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
-	isPreflightRequestAllowed := p.skipAuthPreflight && req.Method == "OPTIONS"
-	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.isTrustedIP(req)
-}
-
-// IsAllowedRoute is used to check if the request method & path is allowed without auth
-func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
-	for _, route := range p.allowedRoutes {
-		if (route.method == "" || req.Method == route.method) && route.pathRegex.MatchString(req.URL.Path) {
-			return true
-		}
-	}
-	return false
-}
-
-// isTrustedIP is used to check if a request comes from a trusted client IP address.
-func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
-	if p.trustedIPs == nil {
-		return false
-	}
-
-	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
-	if err != nil {
-		logger.Errorf("Error obtaining real IP for trusted IP list: %v", err)
-		// Possibly spoofed X-Real-IP header
-		return false
-	}
-
-	if remoteAddr == nil {
-		return false
-	}
-
-	return p.trustedIPs.Has(remoteAddr)
+	scope := middlewareapi.GetRequestScope(req)
+	return scope.Authorization.Policy == middlewareapi.AllowPolicy
 }
 
 // SignInPage writes the sign in template to the response

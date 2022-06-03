@@ -6,10 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
-var result AuthorizationPolicy
+var result middlewareapi.AuthorizationPolicy
 
 func benchmarkRuleSetMatches(ruleCount int, b *testing.B) {
 	rule1 := options.AuthorizationRule{
@@ -53,10 +54,10 @@ func benchmarkRuleSetMatches(ruleCount int, b *testing.B) {
 
 	req := httptest.NewRequest("GET", "/foo/bar/baz", nil)
 
-	var r AuthorizationPolicy
+	var r middlewareapi.AuthorizationPolicy
 	for n := 0; n < b.N; n++ {
 		r = ruleSet.MatchesRequest(req)
-		if r != NonePolicy {
+		if r != middlewareapi.OmittedPolicy {
 			b.Fatal("expected policy not to match")
 		}
 	}
