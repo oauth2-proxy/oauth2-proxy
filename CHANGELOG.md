@@ -7,6 +7,8 @@
 ## Breaking Changes
 
 ## Changes since v7.3.0
+- [#1683](https://github.com/oauth2-proxy/oauth2-proxy/pull/1683) Start publishing scratch images (@sorenmat)
+
 - [#1691](https://github.com/oauth2-proxy/oauth2-proxy/pull/1691) Fix Redis IdleTimeout when Redis timeout option is set to non-zero (@dimss)
 
 - [#1669](https://github.com/oauth2-proxy/oauth2-proxy/pull/1699) Fix method deprecated error in lint (@t-katsumura)
