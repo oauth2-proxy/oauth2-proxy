@@ -83,6 +83,7 @@ func TestGetCertPool(t *testing.T) {
 	certPool, err := GetCertPool([]string{certFile1.Name(), certFile2.Name()})
 	assert.NoError(t, err)
 
+	// nolint:staticcheck // Ignoring certPool.Subjects is deprecated error.
 	subj := certPool.Subjects()
 	got := make([]string, 0)
 	for i := range subj {
