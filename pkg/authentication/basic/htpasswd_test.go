@@ -1,6 +1,9 @@
 package basic
 
 import (
+	"io/ioutil"
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -89,6 +92,66 @@ var _ = Describe("HTPasswd Suite", func() {
 
 				It("returns a nil validator", func() {
 					Expect(validator).To(BeNil())
+				})
+			})
+
+			Context("htpasswd file is updated", func() {
+				const filePathPrefix = "htpasswd-file-updated-"
+				const adminUserHtpasswdEntry = "admin:$2y$05$SXWrNM7ldtbRzBvUC3VXyOvUeiUcP45XPwM93P5eeGOEPIiAZmJjC"
+				const user1HtpasswdEntry = "user1:$2y$05$/sZYJOk8.3Etg4V6fV7puuXfCJLmV5Q7u3xvKpjBSJUka.t2YtmmG"
+
+				assertHtpasswdMapChange := func(entryOne, entryTwo string, remove bool) *htpasswdMap {
+					var validator Validator
+					var file *os.File
+					var fileMask = os.O_RDWR | os.O_APPEND
+					var err error
+
+					// Create a temporary file with at least one entry
+					file, err = ioutil.TempFile("", filePathPrefix)
+					Expect(err).ToNot(HaveOccurred())
+					_, err = file.WriteString(entryOne + "\n")
+					Expect(err).ToNot(HaveOccurred())
+					err = file.Close()
+					Expect(err).ToNot(HaveOccurred())
+
+					validator, err = NewHTPasswdValidator(file.Name())
+					Expect(err).ToNot(HaveOccurred())
+
+					htpasswd, ok := validator.(*htpasswdMap)
+					Expect(ok).To(BeTrue())
+
+					// Remove previous htpasswd entries
+					if remove {
+						fileMask = os.O_RDWR | os.O_TRUNC
+					}
+
+					// Add a new entry to the file in order to trigger an update
+					file, err = os.OpenFile(file.Name(), fileMask, 0644)
+					Expect(err).ToNot(HaveOccurred())
+					_, err = file.WriteString(entryTwo + "\n")
+					Expect(err).ToNot(HaveOccurred())
+					err = file.Close()
+					Expect(err).ToNot(HaveOccurred())
+
+					// Remove the temporary file created
+					err = os.Remove(file.Name())
+					Expect(err).ToNot(HaveOccurred())
+
+					return htpasswd
+				}
+
+				htpasswdAdd := assertHtpasswdMapChange(adminUserHtpasswdEntry, user1HtpasswdEntry, false)
+				It("htpasswdMap entry is present", func() {
+					Expect(len(htpasswdAdd.users)).To(Equal(2))
+					Expect(htpasswdAdd.Validate(user1, user1Password)).To(BeTrue())
+					Expect(htpasswdAdd.Validate(adminUser, adminPassword)).To(BeTrue())
+				})
+
+				htpasswdRemove := assertHtpasswdMapChange(adminUserHtpasswdEntry, user1HtpasswdEntry, true)
+				It("htpasswdMap entry is not present", func() {
+					Expect(len(htpasswdRemove.users)).To(Equal(1))
+					Expect(htpasswdRemove.Validate(user1, user1Password)).To(BeTrue())
+					Expect(htpasswdRemove.Validate(adminUser, adminPassword)).To(BeFalse())
 				})
 			})
 		})
