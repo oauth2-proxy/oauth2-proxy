@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -44,7 +43,7 @@ func NewHTPasswdValidator(path string) (Validator, error) {
 	watcher.WatchFileForUpdates(path, nil, func() {
 		err := h.loadHTPasswdFile(path)
 		if err != nil {
-			logger.Error(err)
+			logger.Errorf("%v: no changes were made to the current htpasswd map", err)
 		}
 	})
 
@@ -98,16 +97,7 @@ func createHtpasswdMap(records [][]string) (*htpasswdMap, error) {
 		switch {
 		case lr == 2:
 			user, realPassword := record[0], record[1]
-			if strings.HasPrefix(realPassword, "{SHA}") {
-				h.users[user] = sha1Pass(realPassword[5:])
-			} else if strings.HasPrefix(realPassword, "$2b$") ||
-				strings.HasPrefix(realPassword, "$2y$") ||
-				strings.HasPrefix(realPassword, "$2x$") ||
-				strings.HasPrefix(realPassword, "$2a$") {
-				h.users[user] = bcryptPass(realPassword)
-			} else {
-				invalidEntries = append(invalidEntries, user)
-			}
+			invalidEntries = passShaOrBcrypt(h, user, realPassword)
 		case lr == 1, lr > 2:
 			invalidRecords = append(invalidRecords, record[0])
 		}
@@ -126,6 +116,26 @@ func createHtpasswdMap(records [][]string) (*htpasswdMap, error) {
 	}
 
 	return h, nil
+}
+
+// passShaOrBcrypt checks if a htpasswd entry is valid and the password is encrypted with SHA or bcrypt.
+// Valid user entries are saved in the htpasswdMap, invalid records are reurned.
+func passShaOrBcrypt(h *htpasswdMap, user, password string) (invalidEntries []string) {
+	passLen := len(password)
+	switch {
+	case passLen > 6 && password[:5] == "{SHA}":
+		h.users[user] = sha1Pass(password[5:])
+	case passLen > 5 &&
+		(password[:4] == "$2b$" ||
+			password[:4] == "$2y$" ||
+			password[:4] == "$2x$" ||
+			password[:4] == "$2a$"):
+		h.users[user] = bcryptPass(password)
+	default:
+		invalidEntries = append(invalidEntries, user)
+	}
+
+	return invalidEntries
 }
 
 // Validate checks a users password against the htpasswd entries

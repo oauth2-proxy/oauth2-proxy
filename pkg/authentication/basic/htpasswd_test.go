@@ -1,7 +1,6 @@
 package basic
 
 import (
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -99,19 +98,25 @@ var _ = Describe("HTPasswd Suite", func() {
 				const filePathPrefix = "htpasswd-file-updated-"
 				const adminUserHtpasswdEntry = "admin:$2y$05$SXWrNM7ldtbRzBvUC3VXyOvUeiUcP45XPwM93P5eeGOEPIiAZmJjC"
 				const user1HtpasswdEntry = "user1:$2y$05$/sZYJOk8.3Etg4V6fV7puuXfCJLmV5Q7u3xvKpjBSJUka.t2YtmmG"
+				var fileNames []string
 
-				assertHtpasswdMapChange := func(entryOne, entryTwo string, remove bool) *htpasswdMap {
+				AfterSuite(func() {
+					for _, v := range fileNames {
+						err := os.Remove(v)
+						Expect(err).ToNot(HaveOccurred())
+					}
+
+				})
+
+				htpasswdMap := func(entry, otherEntry string, remove bool) *htpasswdMap {
 					var validator Validator
 					var file *os.File
-					var fileMask = os.O_RDWR | os.O_APPEND
 					var err error
 
 					// Create a temporary file with at least one entry
-					file, err = ioutil.TempFile("", filePathPrefix)
+					file, err = os.CreateTemp("", filePathPrefix)
 					Expect(err).ToNot(HaveOccurred())
-					_, err = file.WriteString(entryOne + "\n")
-					Expect(err).ToNot(HaveOccurred())
-					err = file.Close()
+					_, err = file.WriteString(entry + "\n")
 					Expect(err).ToNot(HaveOccurred())
 
 					validator, err = NewHTPasswdValidator(file.Name())
@@ -120,39 +125,38 @@ var _ = Describe("HTPasswd Suite", func() {
 					htpasswd, ok := validator.(*htpasswdMap)
 					Expect(ok).To(BeTrue())
 
-					// Remove previous htpasswd entries
 					if remove {
-						fileMask = os.O_RDWR | os.O_TRUNC
+						// Overwrite the original file with another entry
+						err = os.WriteFile(file.Name(), []byte(otherEntry+"\n"), 0644)
+						Expect(err).ToNot(HaveOccurred())
+					} else {
+						// Add another entry to the original file in append mode
+						_, err = file.WriteString(otherEntry + "\n")
+						Expect(err).ToNot(HaveOccurred())
 					}
 
-					// Add a new entry to the file in order to trigger an update
-					file, err = os.OpenFile(file.Name(), fileMask, 0644)
-					Expect(err).ToNot(HaveOccurred())
-					_, err = file.WriteString(entryTwo + "\n")
-					Expect(err).ToNot(HaveOccurred())
 					err = file.Close()
 					Expect(err).ToNot(HaveOccurred())
 
-					// Remove the temporary file created
-					err = os.Remove(file.Name())
-					Expect(err).ToNot(HaveOccurred())
+					fileNames = append(fileNames, file.Name())
 
 					return htpasswd
 				}
 
-				htpasswdAdd := assertHtpasswdMapChange(adminUserHtpasswdEntry, user1HtpasswdEntry, false)
-				It("htpasswdMap entry is present", func() {
+				htpasswdAdd := htpasswdMap(adminUserHtpasswdEntry, user1HtpasswdEntry, false)
+				It("htpasswd entry is added", func() {
 					Expect(len(htpasswdAdd.users)).To(Equal(2))
-					Expect(htpasswdAdd.Validate(user1, user1Password)).To(BeTrue())
 					Expect(htpasswdAdd.Validate(adminUser, adminPassword)).To(BeTrue())
+					Expect(htpasswdAdd.Validate(user1, user1Password)).To(BeTrue())
 				})
 
-				htpasswdRemove := assertHtpasswdMapChange(adminUserHtpasswdEntry, user1HtpasswdEntry, true)
-				It("htpasswdMap entry is not present", func() {
+				htpasswdRemove := htpasswdMap(adminUserHtpasswdEntry, user1HtpasswdEntry, true)
+				It("htpasswd entry is removed", func() {
 					Expect(len(htpasswdRemove.users)).To(Equal(1))
-					Expect(htpasswdRemove.Validate(user1, user1Password)).To(BeTrue())
 					Expect(htpasswdRemove.Validate(adminUser, adminPassword)).To(BeFalse())
+					Expect(htpasswdRemove.Validate(user1, user1Password)).To(BeTrue())
 				})
+
 			})
 		})
 	})
