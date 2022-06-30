@@ -3,10 +3,13 @@
 ## Release Highlights
 
 ## Important Notes
+- [#1504](https://github.com/oauth2-proxy/oauth2-proxy/pull/1583) Rename CSRF cookie to allow parallel callbacks (@YoavOst)
+  - Since the CSRF cookie name is now longer it could potentially break long cookie names (around 1000 characters).
 
 ## Breaking Changes
 
 ## Changes since v7.3.0
+- [#1504](https://github.com/oauth2-proxy/oauth2-proxy/pull/1583) Rename CSRF cookie to allow parallel callbacks (@YoavOst)
 
 # V7.3.0
 
