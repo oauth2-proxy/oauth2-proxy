@@ -2,6 +2,8 @@
 
 ## Release Highlights
 
+- [#1711](https://github.com/oauth2-proxy/oauth2-proxy/pull/1711) Allow Redis keys to be prefixed with a user-configurable string (@chrisnovakovic)
+
 ## Important Notes
 
 ## Breaking Changes
