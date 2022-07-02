@@ -65,3 +65,7 @@ Redis Cluster is available to be the backend store as well. To leverage it, you 
 `--redis-use-cluster=true` flag, and configure the flags `--redis-cluster-connection-urls` appropriately.
 
 Note that flags `--redis-use-sentinel=true` and `--redis-use-cluster=true` are mutually exclusive.
+
+If `--redis-key-prefix` is specified, every key created or queried by oauth2-proxy is prepended with the given
+value. This makes it easier to prevent other users from reading or modifying oauth2-proxy's keys on a multi-tenant
+Redis server using [ACLs with key permissions](https://redis.io/docs/manual/security/acl/#key-permissions).

@@ -18,7 +18,8 @@ import (
 // SessionStore is an implementation of the persistence.Store
 // interface that stores sessions in redis
 type SessionStore struct {
-	Client Client
+	Client    Client
+	keyPrefix string
 }
 
 // NewRedisSessionStore initialises a new instance of the SessionStore and wraps
@@ -30,7 +31,8 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 	}
 
 	rs := &SessionStore{
-		Client: client,
+		Client:    client,
+		keyPrefix: opts.Redis.KeyPrefix,
 	}
 	return persistence.NewManager(rs, cookieOpts), nil
 }
@@ -38,7 +40,7 @@ func NewRedisSessionStore(opts *options.SessionOptions, cookieOpts *options.Cook
 // Save takes a sessions.SessionState and stores the information from it
 // to redis, and adds a new persistence cookie on the HTTP response writer
 func (store *SessionStore) Save(ctx context.Context, key string, value []byte, exp time.Duration) error {
-	err := store.Client.Set(ctx, key, value, exp)
+	err := store.Client.Set(ctx, store.keyPrefix + key, value, exp)
 	if err != nil {
 		return fmt.Errorf("error saving redis session: %v", err)
 	}
@@ -48,7 +50,7 @@ func (store *SessionStore) Save(ctx context.Context, key string, value []byte, e
 // Load reads sessions.SessionState information from a persistence
 // cookie within the HTTP request object
 func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error) {
-	value, err := store.Client.Get(ctx, key)
+	value, err := store.Client.Get(ctx, store.keyPrefix + key)
 	if err != nil {
 		return nil, fmt.Errorf("error loading redis session: %v", err)
 	}
@@ -58,7 +60,7 @@ func (store *SessionStore) Load(ctx context.Context, key string) ([]byte, error)
 // Clear clears any saved session information for a given persistence cookie
 // from redis, and then clears the session
 func (store *SessionStore) Clear(ctx context.Context, key string) error {
-	err := store.Client.Del(ctx, key)
+	err := store.Client.Del(ctx, store.keyPrefix + key)
 	if err != nil {
 		return fmt.Errorf("error clearing the session from redis: %v", err)
 	}
@@ -67,7 +69,7 @@ func (store *SessionStore) Clear(ctx context.Context, key string) error {
 
 // Lock creates a lock object for sessions.SessionState
 func (store *SessionStore) Lock(key string) sessions.Lock {
-	return store.Client.Lock(key)
+	return store.Client.Lock(store.keyPrefix + key)
 }
 
 // NewRedisClient makes a redis.Client (either standalone, sentinel aware, or
