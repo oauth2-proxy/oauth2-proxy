@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("CSRF Cookie Tests", func() {
+var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 	var (
 		cookieOpts  *options.Cookie
 		publicCSRF  CSRF
@@ -30,7 +30,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			Expire:         time.Hour,
 			Secure:         true,
 			HTTPOnly:       true,
-			CSRFPerRequest: false,
+			CSRFPerRequest: true,
+			CSRFExpire:     time.Duration(5) * time.Minute,
 		}
 
 		var err error

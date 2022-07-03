@@ -74,25 +74,26 @@ func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
 // LoadCSRFCookie loads a CSRF object from a request's CSRF cookie
 func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
 
-	// csrfCookieName will include a substring of the state to enable multiple csrf cookies
-	// in case of parallel requests
-	lastChar := csrfStateLength - 1
+	cookieName := GenerateCookieName(req, opts)
 
-	stateSubstring := ""
-	state := req.URL.Query()["state"]
-	if state[0] != "" {
-		state := state[0]
-		if lastChar <= len(state) {
-			stateSubstring = state[0:lastChar]
-		}
-	}
-
-	cookie, err := req.Cookie(csrfCookieName(opts, stateSubstring))
+	cookie, err := req.Cookie(cookieName)
 	if err != nil {
 		return nil, err
 	}
 
 	return decodeCSRFCookie(cookie, opts)
+}
+
+// GenerateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise
+// build name based on the state
+func GenerateCookieName(req *http.Request, opts *options.Cookie) string {
+	stateSubstring := ""
+	if opts.CSRFPerRequest {
+		// csrfCookieName will include a substring of the state to enable multiple csrf cookies
+		// in case of parallel requests
+		stateSubstring = ExtractStateSubstring(req)
+	}
+	return csrfCookieName(opts, stateSubstring)
 }
 
 func (c *csrf) GetCodeVerifier() string {
@@ -137,7 +138,7 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 		c.cookieName(),
 		encoded,
 		c.cookieOpts,
-		c.cookieOpts.Expire,
+		c.cookieOpts.CSRFExpire,
 		c.time.Now(),
 	)
 	http.SetCookie(rw, cookie)
@@ -196,14 +197,35 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 	return csrf, nil
 }
 
-// cookieName returns the CSRF cookie's name derived from the base
-// session cookie name
+// cookieName returns the CSRF cookie's name
 func (c *csrf) cookieName() string {
-	return csrfCookieName(c.cookieOpts, encryption.HashNonce(c.OAuthState)[0:csrfStateLength-1])
+	stateSubstring := ""
+	if c.cookieOpts.CSRFPerRequest {
+		stateSubstring = encryption.HashNonce(c.OAuthState)[0 : csrfStateLength-1]
+	}
+	return csrfCookieName(c.cookieOpts, stateSubstring)
 }
 
 func csrfCookieName(opts *options.Cookie, stateSubstring string) string {
+	if stateSubstring == "" {
+		return fmt.Sprintf("%v_csrf", opts.Name)
+	}
 	return fmt.Sprintf("%v_csrf_%v", opts.Name, stateSubstring)
+}
+
+// ExtractStateSubstring extract the initial state characters, to add it to the CSRF cookie name
+func ExtractStateSubstring(req *http.Request) string {
+	lastChar := csrfStateLength - 1
+	stateSubstring := ""
+
+	state := req.URL.Query()["state"]
+	if state[0] != "" {
+		state := state[0]
+		if lastChar <= len(state) {
+			stateSubstring = state[0:lastChar]
+		}
+	}
+	return stateSubstring
 }
 
 func encrypt(data []byte, opts *options.Cookie) ([]byte, error) {

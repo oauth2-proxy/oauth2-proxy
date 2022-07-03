@@ -3,13 +3,21 @@
 ## Release Highlights
 
 ## Important Notes
-- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Rename CSRF cookie to allow parallel callbacks (@YoavOst)
+- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99)
   - Since the CSRF cookie name is now longer it could potentially break long cookie names (around 1000 characters).
+  - The CSRF cookie expiration time now depends on the time defined in flag "--cookie-csrf-expire".
+    By default, it is 15 minutes.
 
 ## Breaking Changes
+- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99)
+  - The CSRF cookie expiration time now depends on the time defined in flag "--cookie-csrf-expire". 
+    By default, it is 15 minutes.
 
 ## Changes since v7.3.0
-- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Rename CSRF cookie to allow parallel callbacks (@YoavOst)
+- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99) 
+  - Add flag "--cookie-csrf-per-request" which activates an algorithm to name CSRF cookies differently per request. 
+    This feature allows parallel callbacks and by default it is disabled. 
+  - Add flag "--cookie-csrf-expire" to define a different expiration time for the CSRF cookie. By default, it is 15 minutes.
 
 # V7.3.0
 
