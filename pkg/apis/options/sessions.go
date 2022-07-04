@@ -22,17 +22,20 @@ type CookieStoreOptions struct {
 
 // RedisStoreOptions contains configuration options for the RedisSessionStore.
 type RedisStoreOptions struct {
-	ConnectionURL          string   `flag:"redis-connection-url" cfg:"redis_connection_url"`
-	Password               string   `flag:"redis-password" cfg:"redis_password"`
-	UseSentinel            bool     `flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
-	SentinelPassword       string   `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
-	SentinelMasterName     string   `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
-	SentinelConnectionURLs []string `flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls"`
-	UseCluster             bool     `flag:"redis-use-cluster" cfg:"redis_use_cluster"`
-	ClusterConnectionURLs  []string `flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
-	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
-	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
-	KeyPrefix              string   `flag:"redis-key-prefix" cfg:"redis_key_prefix"`
+	ConnectionURL          string   `json:"-" flag:"redis-connection-url" cfg:"redis_connection_url"`
+	Password               string   `json:"-" flag:"redis-password" cfg:"redis_password"`
+	UseSentinel            bool     `json:"-" flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
+	SentinelPassword       string   `json:"-" flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
+	SentinelMasterName     string   `json:"-" flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
+	SentinelConnectionURLs []string `json:"-" flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls"`
+	UseCluster             bool     `json:"-" flag:"redis-use-cluster" cfg:"redis_use_cluster"`
+	ClusterConnectionURLs  []string `json:"-" flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
+	CAPath                 string   `json:"-" flag:"redis-ca-path" cfg:"redis_ca_path"`
+	InsecureSkipTLSVerify  bool     `json:"-" flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
+	// KeyPrefix is a string to prepend to each Redis key created or queried by
+	// oauth2-proxy. This is useful for restricting access to keys used by
+	// oauth2-proxy via Redis ACLs.
+	KeyPrefix string `json:"keyPrefix,omitempty" flag:"redis-key-prefix" cfg:"redis_key_prefix"`
 }
 
 func sessionOptionsDefaults() SessionOptions {

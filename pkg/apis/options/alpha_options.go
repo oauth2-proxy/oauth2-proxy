@@ -43,6 +43,10 @@ type AlphaOptions struct {
 
 	// Providers is used to configure multiple providers.
 	Providers Providers `json:"providers,omitempty"`
+
+	// Redis is used to configure the Redis client. Redis may optionally be used as
+	// a session store.
+	Redis RedisStoreOptions `json:"redis,omitempty"`
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -54,6 +58,7 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
+	opts.Session.Redis = a.Redis
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from
@@ -65,4 +70,5 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.Server = opts.Server
 	a.MetricsServer = opts.MetricsServer
 	a.Providers = opts.Providers
+	a.Redis = opts.Session.Redis
 }
