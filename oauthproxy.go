@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -15,6 +16,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
@@ -51,6 +54,7 @@ const (
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
+	ropcProxyPath     = "/ropc_proxy"
 )
 
 var (
@@ -311,6 +315,8 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 
 	// The userinfo endpoint needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
+
+	s.Path(ropcProxyPath).HandlerFunc(p.ropcProxyAuth)
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -617,6 +623,46 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 			p.SignInPage(rw, req, http.StatusOK)
 		}
 	}
+}
+
+// ROPC request proxyed to idp
+func (p *OAuthProxy) ropcProxyAuth(rw http.ResponseWriter, req *http.Request) {
+	username := req.FormValue("username")
+	password := req.FormValue("password")
+	if username == "" || password == "" {
+		http.Error(rw, "BadRequest", http.StatusBadRequest)
+	}
+
+	params := url.Values{}
+	params.Add("grant_type", "password")
+	params.Add("scope", "openid")
+	params.Add("username", username)
+	params.Add("password", password)
+	jsonResult, err := requests.New(p.provider.Data().RedeemURL.String()).
+		WithHeaders(makeBasicAuthHeader(p.provider.Data().ClientID, p.provider.Data().ClientSecret)).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalJSON()
+
+	if err != nil {
+
+		http.Error(rw, "Unauthorized", http.StatusUnauthorized)
+	} else {
+		jsonStr, _ := jsonResult.EncodePretty()
+		fmt.Println(string(jsonStr))
+		rw.Header().Set("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write(jsonStr)
+		return
+	}
+}
+
+func makeBasicAuthHeader(userName string, password string) http.Header {
+	header := make(http.Header)
+	header.Set("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(userName+":"+password))))
+	return header
 }
 
 // UserInfo endpoint outputs session email and preferred username in JSON format
