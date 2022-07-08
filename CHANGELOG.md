@@ -7,6 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.3.0
+- [#1669](https://github.com/oauth2-proxy/oauth2-proxy/pull/1699) Fix method deprecated error in lint (@t-katsumura)
 
 # V7.3.0
 
