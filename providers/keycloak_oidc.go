@@ -7,8 +7,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/pkg/errors"
-	"golang.org/x/oauth2"
 )
 
 const keycloakOIDCProviderName = "Keycloak OIDC"
@@ -179,42 +177,4 @@ func getClientRoles(claims *accessClaims) []string {
 
 func formatRole(role string) string {
 	return fmt.Sprintf("role:%s", role)
-}
-
-// createSession takes an oauth2.Token and creates a SessionState from it.
-// It alters behavior if called from Redeem vs Refresh
-func (p *KeycloakOIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {
-	logger.Printf("calling createSession: %s", token)
-	_, err := p.verifyIDToken(ctx, token)
-	if err != nil {
-		switch err {
-		case ErrMissingIDToken:
-			// IDToken is mandatory in Redeem but optional in Refresh
-			if !refresh {
-				return nil, errors.New("token response did not contain an id_token")
-			}
-		default:
-			return nil, fmt.Errorf("could not verify id_token: %v", err)
-		}
-	}
-
-	rawIDToken := getIDToken(token)
-	ss, err := p.buildSessionFromClaims(rawIDToken, token.AccessToken)
-	if err != nil {
-		return nil, err
-	}
-
-	ss.AccessToken = token.AccessToken
-	ss.RefreshToken = token.RefreshToken
-	ss.IDToken = rawIDToken
-
-	ss.CreatedAtNow()
-	ss.SetExpiresOn(token.Expiry)
-
-	// Extract custom keycloak roles and enrich session
-	if err := p.extractRoles(ctx, ss); err != nil {
-		return nil, err
-	}
-
-	return ss, nil
 }
