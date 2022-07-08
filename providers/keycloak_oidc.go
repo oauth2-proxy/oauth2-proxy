@@ -6,7 +6,6 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 const keycloakOIDCProviderName = "Keycloak OIDC"
@@ -46,27 +45,10 @@ func (p *KeycloakOIDCProvider) addAllowedRoles(roles []string) {
 
 // CreateSessionFromToken converts Bearer IDTokens into sessions
 func (p *KeycloakOIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
-	logger.Printf("calling CreateSessionFromToken: %s", token)
-
-	idToken, err := p.Verifier.Verify(ctx, token)
+	ss, err := p.OIDCProvider.CreateSessionFromToken(ctx, token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create session from token: %v", err)
 	}
-
-	ss, err := p.buildSessionFromClaims(token, "")
-	if err != nil {
-		return nil, err
-	}
-	// Allow empty Email in Bearer case since we can't hit the ProfileURL
-	if ss.Email == "" {
-		ss.Email = ss.User
-	}
-
-	ss.AccessToken = token
-	ss.IDToken = token
-	ss.RefreshToken = ""
-	ss.CreatedAtNow()
-	ss.SetExpiresOn(idToken.Expiry)
 
 	// Extract custom keycloak roles and enrich session
 	if err := p.extractRoles(ctx, ss); err != nil {
