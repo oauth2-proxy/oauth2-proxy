@@ -90,7 +90,7 @@ js5ESoVXA+e+QfsMsJrI5XfLV1O8ZxXKAVrYxBnC+WQbrNOjI7VBkjcn/QDmDjBw
 sC1lo4YZwxEQ/bE0kEWI7PT/Skml4bTLw0jsgXNV9Nd8
 -----END CERTIFICATE-----		
 `
-	cert1CertSubj = "CN=oauth-proxy test cert1 ca"
+	cert1CertSubj = "CN=oauth2-proxy test cert1 ca"
 	cert1Cert     = `-----BEGIN CERTIFICATE-----
 MIIEwDCCAqgCAQEwDQYJKoZIhvcNAQELBQAwJTEjMCEGA1UEAwwab2F1dGgyLXBy
 b3h5IHRlc3Qgcm9vdDEgY2EwIBcNMjIwNzA3MjMyNzUxWhgPMzAyMTExMDcyMzI3
