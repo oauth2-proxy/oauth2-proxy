@@ -227,7 +227,7 @@ func TestGetCertPool(t *testing.T) {
 		Roots: certPool,
 	}
 
-	// "cert1" and "cert2" should be valid because "root1" and "roo2" are in the certPool
+	// "cert1" and "cert2" should be valid because "root1" and "root2" are in the certPool
 	// "cert3" should not be valid because "root3" is not in the certPool
 	_, err1 := cert1.Verify(opts)
 	assert.NoError(t, err1)
