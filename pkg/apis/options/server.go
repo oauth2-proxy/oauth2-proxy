@@ -29,4 +29,12 @@ type TLS struct {
 	// MinVersion is the minimal TLS version that is acceptable.
 	// E.g. Set to "TLS1.3" to select TLS version 1.3
 	MinVersion string
+
+	// CipherSuites is a list of TLS cipher suites that are allowed.
+	// E.g.:
+	// - TLS_RSA_WITH_RC4_128_SHA
+	// - TLS_RSA_WITH_AES_256_GCM_SHA384
+	// If not specified, the default Go safe cipher list is used.
+	// List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants).
+	CipherSuites []string
 }

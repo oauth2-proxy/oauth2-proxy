@@ -804,6 +804,7 @@ var _ = Describe("Legacy Options", func() {
 			keyPath             = "tls.key"
 			minVersion          = "TLS1.3"
 		)
+		cipherSuites := []string{"TLS_RSA_WITH_AES_128_GCM_SHA256", "TLS_RSA_WITH_AES_256_GCM_SHA384"}
 
 		var tlsConfig = &TLS{
 			Cert: &SecretSource{
@@ -818,6 +819,15 @@ var _ = Describe("Legacy Options", func() {
 			Cert:       tlsConfig.Cert,
 			Key:        tlsConfig.Key,
 			MinVersion: minVersion,
+		}
+
+		var tlsConfigCipherSuites = &TLS{
+			Cert: tlsConfig.Cert,
+			Key:  tlsConfig.Key,
+			CipherSuites: []string{
+				"TLS_RSA_WITH_AES_128_GCM_SHA256",
+				"TLS_RSA_WITH_AES_256_GCM_SHA384",
+			},
 		}
 
 		DescribeTable("should convert to app and metrics servers",
@@ -858,6 +868,19 @@ var _ = Describe("Legacy Options", func() {
 				expectedAppServer: Server{
 					SecureBindAddress: secureAddr,
 					TLS:               tlsConfigMinVersion,
+				},
+			}),
+			Entry("with TLS options specified with CipherSuites", legacyServersTableInput{
+				legacyServer: LegacyServer{
+					HTTPAddress:     insecureAddr,
+					HTTPSAddress:    secureAddr,
+					TLSKeyFile:      keyPath,
+					TLSCertFile:     crtPath,
+					TLSCipherSuites: cipherSuites,
+				},
+				expectedAppServer: Server{
+					SecureBindAddress: secureAddr,
+					TLS:               tlsConfigCipherSuites,
 				},
 			}),
 			Entry("with metrics HTTP and HTTPS addresses", legacyServersTableInput{
