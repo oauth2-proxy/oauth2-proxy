@@ -8,6 +8,7 @@
 
 ## Changes since v7.3.0
 
+- [#1727](https://github.com/oauth2-proxy/oauth2-proxy/pull/1727) Get extra AllowedGroups from header. `--allowed-groups-header` option make oauth2-proxy to use the header value as additionally group-list to authorize users. Usefull if need differents groups for differents paths and applications. Multiple groups in header value is allowed separates by comma. 
 - [#1709](https://github.com/oauth2-proxy/oauth2-proxy/pull/1709) Show an alert message when basic auth credentials are invalid (@aiciobanu)
 
 # V7.3.0
