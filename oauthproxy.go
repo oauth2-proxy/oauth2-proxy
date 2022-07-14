@@ -802,13 +802,21 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if !p.redirectValidator.IsValidRedirect(appRedirect) {
 		appRedirect = "/"
 	}
-
+	allowedGroupsHeader := "x-set-allowed-groups"
+	allowedGroups := req.Header.Get(allowedGroupsHeader)
+	logger.Printf("Allowed groups from header '%s': %v", allowedGroupsHeader, allowedGroups)
+	authorizedWithHeader := checkAllowedGroupsFromHeader(session, allowedGroups)
+	if authorizedWithHeader {
+		logger.Printf("(Allowed) User granted for one of groups %s", allowedGroups)
+	} else {
+		logger.Printf("(Deny) User has no groups %s", allowedGroups)
+	}
 	// set cookie, or deny
 	authorized, err := p.provider.Authorize(req.Context(), session)
 	if err != nil {
 		logger.Errorf("Error with authorization: %v", err)
 	}
-	if p.Validator(session.Email) && authorized {
+	if p.Validator(session.Email) && authorized && authorizedWithHeader {
 		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "Authenticated via OAuth2: %s", session)
 		err := p.SaveSession(rw, req, session)
 		if err != nil {
@@ -1110,6 +1118,22 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 	}
 
 	return allowed
+}
+
+// checkAllowedGroupsFromHeader
+func checkAllowedGroupsFromHeader(s *sessionsapi.SessionState, header string) bool {
+	if len(header) == 0 {
+		return true
+	}
+	for _, allowed_group := range strings.Split(header, ",") {
+		for _, granted_group := range s.Groups {
+			if allowed_group == granted_group {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // encodedState builds the OAuth state param out of our nonce and
