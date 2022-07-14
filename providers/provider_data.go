@@ -51,7 +51,8 @@ type ProviderData struct {
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
-	AllowedGroups map[string]struct{}
+	AllowedGroups       map[string]struct{}
+	AllowedGroupsHeader string
 
 	getAuthorizationHeaderFunc func(string) http.Header
 	loginURLParameterDefaults  url.Values
@@ -176,6 +177,10 @@ func (p *ProviderData) setAllowedGroups(groups []string) {
 	for _, group := range groups {
 		p.AllowedGroups[group] = struct{}{}
 	}
+}
+
+func (p *ProviderData) setAllowedGroupsHeader(groupsHeader string) {
+	p.AllowedGroupsHeader = groupsHeader
 }
 
 type providerDefaults struct {

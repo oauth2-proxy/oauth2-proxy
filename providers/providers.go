@@ -164,6 +164,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
+	p.setAllowedGroupsHeader(providerConfig.AllowedGroupsHeader)
 
 	return p, nil
 }

@@ -160,6 +160,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Printf("Groups settings: allowed_groups:%v allowed_groups_header:%s", opts.Providers[0].AllowedGroups, opts.Providers[0].AllowedGroupsHeader)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -802,15 +803,11 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if !p.redirectValidator.IsValidRedirect(appRedirect) {
 		appRedirect = "/"
 	}
-	allowedGroupsHeader := "x-set-allowed-groups"
+
+	allowedGroupsHeader := p.provider.Data().AllowedGroupsHeader
 	allowedGroups := req.Header.Get(allowedGroupsHeader)
-	logger.Printf("Allowed groups from header '%s': %v", allowedGroupsHeader, allowedGroups)
 	authorizedWithHeader := checkAllowedGroupsFromHeader(session, allowedGroups)
-	if authorizedWithHeader {
-		logger.Printf("(Allowed) User granted for one of groups %s", allowedGroups)
-	} else {
-		logger.Printf("(Deny) User has no groups %s", allowedGroups)
-	}
+
 	// set cookie, or deny
 	authorized, err := p.provider.Authorize(req.Context(), session)
 	if err != nil {
@@ -999,13 +996,17 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return nil, ErrNeedsLogin
 	}
 
+	allowedGroupsHeader := p.provider.Data().AllowedGroupsHeader
+	allowedGroups := req.Header.Get(allowedGroupsHeader)
+	authorizedWithHeader := checkAllowedGroupsFromHeader(session, allowedGroups)
+
 	invalidEmail := session.Email != "" && !p.Validator(session.Email)
 	authorized, err := p.provider.Authorize(req.Context(), session)
 	if err != nil {
 		logger.Errorf("Error with authorization: %v", err)
 	}
 
-	if invalidEmail || !authorized {
+	if invalidEmail || !authorized || !authorizedWithHeader {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authorization via session: removing session %s", session)
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
@@ -1120,19 +1121,26 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 	return allowed
 }
 
-// checkAllowedGroupsFromHeader
-func checkAllowedGroupsFromHeader(s *sessionsapi.SessionState, header string) bool {
-	if len(header) == 0 {
+// checkAllowedGroupsFromHeader check if any group from header is in sessionState groupList
+// if header value empty then allow
+func checkAllowedGroupsFromHeader(s *sessionsapi.SessionState, headerValue string) bool {
+	if len(headerValue) == 0 {
 		return true
 	}
-	for _, allowed_group := range strings.Split(header, ",") {
+	if len(headerValue) > 128 {
+		logger.Errorf("Header '%s' has too long value. Deny for perfomance protection", headerValue)
+		return false
+	}
+	for _, allowed_group := range strings.Split(headerValue, ",") {
 		for _, granted_group := range s.Groups {
 			if allowed_group == granted_group {
+				logger.Printf("(Allowed) User is in %s.", headerValue)
 				return true
 			}
 		}
 	}
 
+	logger.Printf("User %s is not in %s group. Deny access.", s.Email, headerValue)
 	return false
 }
 

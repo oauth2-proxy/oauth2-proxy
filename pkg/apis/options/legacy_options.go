@@ -520,6 +520,7 @@ type LegacyProvider struct {
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
+	AllowedGroupsHeader                string   `flag:"allowed-groups-header" cfg:"allowed_group_header"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -581,6 +582,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
+	flagSet.String("allowed-groups-header", "", "name of the header containing a list of additionally required groups")
 
 	return flagSet
 }
@@ -642,6 +644,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ValidateURL:         l.ValidateURL,
 		Scope:               l.Scope,
 		AllowedGroups:       l.AllowedGroups,
+		AllowedGroupsHeader: l.AllowedGroupsHeader,
 		CodeChallengeMethod: l.CodeChallengeMethod,
 	}
 

@@ -841,6 +841,7 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	for _, group := range groups {
 		testProvider.AllowedGroups[group] = struct{}{}
 	}
+	testProvider.AllowedGroupsHeader = pcTest.opts.Providers[0].AllowedGroupsHeader
 	pcTest.proxy.provider = testProvider
 
 	// Now, zero-out proxy.CookieRefresh for the cases that don't involve
@@ -2917,6 +2918,125 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
 			test.proxy.ServeHTTP(test.rw, test.req)
 
 			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
+func TestProxyAllowedGroupsHeader(t *testing.T) {
+	testCases := []struct {
+		name                     string
+		allowedGroups            []string
+		allowedGroupsHeaderValue string
+		groups                   []string
+		expectUnauthorized       bool
+	}{
+		{
+			name:                     "NoAllowedGroupsNoHeader",
+			allowedGroups:            []string{},
+			allowedGroupsHeaderValue: "",
+			groups:                   []string{},
+			expectUnauthorized:       false,
+		},
+		{
+			name:                     "NoHeaderUserInAllowedGroup",
+			allowedGroups:            []string{"a", "b"},
+			allowedGroupsHeaderValue: "",
+			groups:                   []string{"a"},
+			expectUnauthorized:       false,
+		},
+		{
+			name:                     "NoAllowedGroupsUserInHeader",
+			allowedGroups:            []string{},
+			allowedGroupsHeaderValue: "a",
+			groups:                   []string{"a"},
+			expectUnauthorized:       false,
+		},
+		{
+			name:                     "NoHeaderUserNotInAllowedGroup",
+			allowedGroups:            []string{"a", "b"},
+			allowedGroupsHeaderValue: "",
+			groups:                   []string{"c"},
+			expectUnauthorized:       true,
+		},
+		{
+			name:                     "NoAllowedGroupsUserNotInHeader",
+			allowedGroups:            []string{},
+			allowedGroupsHeaderValue: "a",
+			groups:                   []string{"b"},
+			expectUnauthorized:       true,
+		},
+		{
+			name:                     "UserInAllowedGroupsInHeader",
+			allowedGroups:            []string{"b"},
+			allowedGroupsHeaderValue: "a,c",
+			groups:                   []string{"a", "b"},
+			expectUnauthorized:       false,
+		},
+		{
+			name:                     "UserNotInAllowedGroupInHeader",
+			allowedGroups:            []string{"a"},
+			allowedGroupsHeaderValue: "b,c",
+			groups:                   []string{"b"},
+			expectUnauthorized:       true,
+		},
+		{
+			name:                     "UserInAllowedGroupsNotInHeader",
+			allowedGroups:            []string{"a", "b"},
+			allowedGroupsHeaderValue: "c",
+			groups:                   []string{"a"},
+			expectUnauthorized:       true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			emailAddress := "test"
+			created := time.Now()
+			header := "X-Header-Allowed-Groups"
+
+			session := &sessions.SessionState{
+				Groups:      tc.groups,
+				Email:       emailAddress,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+			}))
+			t.Cleanup(upstreamServer.Close)
+
+			test, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
+				opts.Providers[0].AllowedGroups = tc.allowedGroups
+				opts.Providers[0].AllowedGroupsHeader = header
+				opts.UpstreamServers = options.UpstreamConfig{
+					Upstreams: []options.Upstream{
+						{
+							ID:   upstreamServer.URL,
+							Path: "/",
+							URI:  upstreamServer.URL,
+						},
+					},
+				}
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			test.req, _ = http.NewRequest("GET", "/", nil)
+
+			test.req.Header.Add("accept", applicationJSON)
+			test.req.Header.Add(header, tc.allowedGroupsHeaderValue)
+
+			err = test.SaveSession(session)
+			assert.NoError(t, err)
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			if tc.expectUnauthorized {
+				assert.Equal(t, http.StatusForbidden, test.rw.Code)
+			} else {
+				assert.Equal(t, http.StatusOK, test.rw.Code)
+			}
 		})
 	}
 }
