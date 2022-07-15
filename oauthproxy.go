@@ -1127,20 +1127,20 @@ func checkAllowedGroupsFromHeader(s *sessionsapi.SessionState, headerValue strin
 	if len(headerValue) == 0 {
 		return true
 	}
-	if len(headerValue) > 128 {
-		logger.Errorf("Header '%s' has too long value. Deny for perfomance protection", headerValue)
+	// if user send his own header with long fake list of groups
+	if len(headerValue) > 256 {
+		logger.Errorf("Error with authorization: header '%s' has too long value. Deny for a performance protection", headerValue)
 		return false
 	}
 	for _, allowed_group := range strings.Split(headerValue, ",") {
 		for _, granted_group := range s.Groups {
 			if allowed_group == granted_group {
-				logger.Printf("(Allowed) User is in %s.", headerValue)
 				return true
 			}
 		}
 	}
 
-	logger.Printf("User %s is not in %s group. Deny access.", s.Email, headerValue)
+	logger.Printf("Invalid authorization: %s is not in %s group.", s.Email, headerValue)
 	return false
 }
 
