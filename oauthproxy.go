@@ -568,26 +568,26 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		redirectURL = "/"
 	}
 
-	p.pageWriter.WriteSignInPage(rw, req, redirectURL)
+	p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
 }
 
 // ManualSignIn handles basic auth logins to the proxy
-func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool) {
+func (p *OAuthProxy) ManualSignIn(req *http.Request) (string, bool, int) {
 	if req.Method != "POST" || p.basicAuthValidator == nil {
-		return "", false
+		return "", false, http.StatusOK
 	}
 	user := req.FormValue("username")
 	passwd := req.FormValue("password")
 	if user == "" {
-		return "", false
+		return "", false, http.StatusBadRequest
 	}
 	// check auth
 	if p.basicAuthValidator.Validate(user, passwd) {
 		logger.PrintAuthf(user, req, logger.AuthSuccess, "Authenticated via HtpasswdFile")
-		return user, true
+		return user, true, http.StatusOK
 	}
 	logger.PrintAuthf(user, req, logger.AuthFailure, "Invalid authentication via HtpasswdFile")
-	return "", false
+	return "", false, http.StatusUnauthorized
 }
 
 // SignIn serves a page prompting users to sign in
@@ -599,7 +599,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, ok := p.ManualSignIn(req)
+	user, ok, statusCode := p.ManualSignIn(req)
 	if ok {
 		session := &sessionsapi.SessionState{User: user, Groups: p.basicAuthGroups}
 		err = p.SaveSession(rw, req, session)
@@ -614,7 +614,7 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 			p.OAuthStart(rw, req)
 		} else {
 			// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
-			p.SignInPage(rw, req, http.StatusOK)
+			p.SignInPage(rw, req, statusCode)
 		}
 	}
 }

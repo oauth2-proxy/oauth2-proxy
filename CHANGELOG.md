@@ -19,6 +19,8 @@
     This feature allows parallel callbacks and by default it is disabled. 
   - Add flag "--cookie-csrf-expire" to define a different expiration time for the CSRF cookie. By default, it is 15 minutes.
 
+- [#1709](https://github.com/oauth2-proxy/oauth2-proxy/pull/1709) Show an alert message when basic auth credentials are invalid (@aiciobanu)
+
 # V7.3.0
 
 ## Release Highlights
