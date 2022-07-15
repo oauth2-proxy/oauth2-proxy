@@ -1128,7 +1128,7 @@ func checkAllowedGroupsFromHeader(s *sessionsapi.SessionState, headerValue strin
 		return true
 	}
 	// if user send his own header with long fake list of groups
-	if len(headerValue) > 256 {
+	if len(headerValue) > 1000 {
 		logger.Errorf("Error with authorization: header '%s' has too long value. Deny for a performance protection", headerValue)
 		return false
 	}
