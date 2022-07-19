@@ -520,7 +520,7 @@ type LegacyProvider struct {
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
-	AllowedGroupsHeader                string   `flag:"allowed-groups-header" cfg:"allowed_group_header"`
+	AllowedGroupsHeader                string   `flag:"allowed-groups-header" cfg:"allowed_groups_header"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
