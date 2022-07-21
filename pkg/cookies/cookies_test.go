@@ -83,17 +83,17 @@ var _ = Describe("Cookie Tests", func() {
 	Context("MakeCookieFromOptions", func() {
 		type MakeCookieFromOptionsTableInput struct {
 			host           string
-			name string
-			value string
-			opts options.Cookie
-			expiration time.Duration
-			now time.Time
+			name           string
+			value          string
+			opts           options.Cookie
+			expiration     time.Duration
+			now            time.Time
 			expectedOutput time.Time
 		}
 
 		validName := "_oauth2_proxy"
 		validSecret := "secretthirtytwobytes+abcdefghijk"
-		domains :=  []string{"a.localhost"}
+		domains := []string{"a.localhost"}
 
 		now := time.Now()
 		expectedExpires, e := time.Parse("", "0001-01-01T00:00:00Z")
@@ -113,8 +113,8 @@ var _ = Describe("Cookie Tests", func() {
 				Expect(MakeCookieFromOptions(req, in.name, in.value, &in.opts, in.expiration, in.now).Expires).To(Equal(in.expectedOutput))
 			},
 			Entry("normal cookie", MakeCookieFromOptionsTableInput{
-				host:           "a.localhost",
-				name: validName,
+				host:  "a.localhost",
+				name:  validName,
 				value: "1",
 				opts: options.Cookie{
 					Name:     validName,
@@ -127,13 +127,13 @@ var _ = Describe("Cookie Tests", func() {
 					HTTPOnly: false,
 					SameSite: "",
 				},
-				expiration: 15 * time.Minute,
-				now: now,
+				expiration:     15 * time.Minute,
+				now:            now,
 				expectedOutput: now.Add(15 * time.Minute),
 			}),
 			Entry("session cookie", MakeCookieFromOptionsTableInput{
-				host:           "a.localhost",
-				name: validName,
+				host:  "a.localhost",
+				name:  validName,
 				value: "1",
 				opts: options.Cookie{
 					Name:     validName,
@@ -146,8 +146,8 @@ var _ = Describe("Cookie Tests", func() {
 					HTTPOnly: false,
 					SameSite: "",
 				},
-				expiration: 0,
-				now: now,
+				expiration:     0,
+				now:            now,
 				expectedOutput: expectedExpires,
 			}),
 		)

@@ -5,11 +5,11 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
-	"net/http"
 	"fmt"
 	"io"
-	"time"
+	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -117,9 +117,8 @@ func TestValidate(t *testing.T) {
 		Value: value + "|" + epoch + "|" + sha256sig,
 	}
 
+	validValue, timestamp, ok := Validate(cookie, seed, 0)
 
-	validValue, timestamp, ok := Validate(cookie, seed, 0);
-	
 	expectedValue, err := base64.URLEncoding.DecodeString(value)
 	assert.NoError(t, err)
 	assert.Equal(t, validValue, expectedValue)
