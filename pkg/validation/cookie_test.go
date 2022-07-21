@@ -256,6 +256,21 @@ func TestValidateCookie(t *testing.T) {
 				invalidSameSiteMsg,
 			},
 		},
+		{
+			name: "with session cookie configuration",
+			cookie: options.Cookie{
+				Name:     validName,
+				Secret:   validSecret,
+				Domains:  domains,
+				Path:     "",
+				Expire:   0,
+				Refresh:  15 * time.Minute,
+				Secure:   true,
+				HTTPOnly: false,
+				SameSite: "",
+			},
+			errStrings: []string{},
+		},
 	}
 
 	for _, tc := range testCases {

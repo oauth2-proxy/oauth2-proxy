@@ -5,8 +5,10 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
+	"net/http"
 	"fmt"
 	"io"
+	"time"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -99,4 +101,28 @@ func TestSignAndValidate(t *testing.T) {
 
 	assert.False(t, checkSignature(sha256sig, seed, key, "tampered", epoch))
 	assert.False(t, checkSignature(sha1sig, seed, key, "tampered", epoch))
+}
+
+func TestValidate(t *testing.T) {
+	seed := "0123456789abcdef"
+	key := "cookie-name"
+	value := base64.URLEncoding.EncodeToString([]byte("I am soooo encoded"))
+	epoch := "123456789"
+
+	sha256sig, err := cookieSignature(sha256.New, seed, key, value, epoch)
+	assert.NoError(t, err)
+
+	cookie := &http.Cookie{
+		Name:  key,
+		Value: value + "|" + epoch + "|" + sha256sig,
+	}
+
+
+	validValue, timestamp, ok := Validate(cookie, seed, 0);
+	
+	expectedValue, err := base64.URLEncoding.DecodeString(value)
+	assert.NoError(t, err)
+	assert.Equal(t, validValue, expectedValue)
+	assert.Equal(t, timestamp, time.Time(time.Date(1973, time.November, 29, 21, 33, 9, 0, time.Local)))
+	assert.True(t, ok)
 }
