@@ -657,6 +657,59 @@ func TestManualSignInStoresUserGroupsInTheSession(t *testing.T) {
 	assert.Equal(t, userGroups, s.Groups)
 }
 
+type ManualSignInValidator struct{}
+
+func (ManualSignInValidator) Validate(user, password string) bool {
+	switch {
+	case user == "admin" && password == "adminPass":
+		return true
+	default:
+		return false
+	}
+}
+
+func ManualSignInWithCredentials(t *testing.T, user, pass string) int {
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+		return true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proxy.basicAuthValidator = ManualSignInValidator{}
+
+	rw := httptest.NewRecorder()
+	formData := url.Values{}
+	formData.Set("username", user)
+	formData.Set("password", pass)
+	signInReq, _ := http.NewRequest(http.MethodPost, "/oauth2/sign_in", strings.NewReader(formData.Encode()))
+	signInReq.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	proxy.ServeHTTP(rw, signInReq)
+
+	return rw.Code
+}
+
+func TestManualSignInEmptyUsernameAlert(t *testing.T) {
+	statusCode := ManualSignInWithCredentials(t, "", "")
+	assert.Equal(t, http.StatusBadRequest, statusCode)
+}
+
+func TestManualSignInInvalidCredentialsAlert(t *testing.T) {
+	statusCode := ManualSignInWithCredentials(t, "admin", "")
+	assert.Equal(t, http.StatusUnauthorized, statusCode)
+}
+
+func TestManualSignInCorrectCredentials(t *testing.T) {
+	statusCode := ManualSignInWithCredentials(t, "admin", "adminPass")
+	assert.Equal(t, http.StatusFound, statusCode)
+}
+
 func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 	sipTest, err := NewSignInPageTest(false)
 	if err != nil {
