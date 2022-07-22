@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -10,12 +11,12 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
-// WatchForUpdates performs an action every time a file on disk is updated
-func WatchFileForUpdates(filename string, done <-chan bool, action func()) {
+// WatchFileForUpdates performs an action every time a file on disk is updated
+func WatchFileForUpdates(filename string, done <-chan bool, action func()) error {
 	filename = filepath.Clean(filename)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		logger.Fatalf("failed to create watcher for '%s': %s", filename, err)
+		return fmt.Errorf("failed to create watcher for '%s': %s", filename, err)
 	}
 
 	go func() {
@@ -38,26 +39,28 @@ func WatchFileForUpdates(filename string, done <-chan bool, action func()) {
 		}
 	}()
 	if err = watcher.Add(filename); err != nil {
-		logger.Fatalf("failed to add '%s' to watcher: %v", filename, err)
+		return fmt.Errorf("failed to add '%s' to watcher: %v", filename, err)
 	}
 	logger.Printf("watching '%s' for updates", filename)
+
+	return nil
 }
 
 // Filter file operations based on the events sent by the watcher.
 // Execute the action() function when the following conditions are met:
-//  - the file is modified or created
 //  - the real path of the file was changed (Kubernetes ConfigMap/Secret)
+//  - the file is modified or created
 func filterEvent(watcher *fsnotify.Watcher, event fsnotify.Event, filename string, action func()) {
 	switch filepath.Clean(event.Name) == filename {
-	case event.Op&(fsnotify.Remove|fsnotify.Rename) != 0:
+	// In Kubernetes the file path is a symlink, so we should take action
+	// when the ConfigMap/Secret is replaced.
+	case event.Op&fsnotify.Remove != 0:
 		logger.Printf("watching interrupted on event: %s", event)
 		WaitForReplacement(filename, event.Op, watcher)
 		action()
 	case event.Op&(fsnotify.Create|fsnotify.Write) != 0:
 		logger.Printf("reloading after event: %s", event)
 		action()
-	default:
-		logger.Printf("current event: %s", event)
 	}
 }
 

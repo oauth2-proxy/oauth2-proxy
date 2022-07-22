@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/types"
 )
 
 const (
@@ -108,7 +109,14 @@ var _ = Describe("HTPasswd Suite", func() {
 
 				})
 
-				htpasswdMap := func(entry, otherEntry string, remove bool) *htpasswdMap {
+				type htpasswdUpdate struct {
+					testText              string
+					remove                bool
+					expectedLen           int
+					expectedGomegaMatcher GomegaMatcher
+				}
+
+				assertHtpasswdMapUpdate := func(hu htpasswdUpdate) {
 					var validator Validator
 					var file *os.File
 					var err error
@@ -116,7 +124,7 @@ var _ = Describe("HTPasswd Suite", func() {
 					// Create a temporary file with at least one entry
 					file, err = os.CreateTemp("", filePathPrefix)
 					Expect(err).ToNot(HaveOccurred())
-					_, err = file.WriteString(entry + "\n")
+					_, err = file.WriteString(adminUserHtpasswdEntry + "\n")
 					Expect(err).ToNot(HaveOccurred())
 
 					validator, err = NewHTPasswdValidator(file.Name())
@@ -125,13 +133,13 @@ var _ = Describe("HTPasswd Suite", func() {
 					htpasswd, ok := validator.(*htpasswdMap)
 					Expect(ok).To(BeTrue())
 
-					if remove {
+					if hu.remove {
 						// Overwrite the original file with another entry
-						err = os.WriteFile(file.Name(), []byte(otherEntry+"\n"), 0644)
+						err = os.WriteFile(file.Name(), []byte(user1HtpasswdEntry+"\n"), 0644)
 						Expect(err).ToNot(HaveOccurred())
 					} else {
 						// Add another entry to the original file in append mode
-						_, err = file.WriteString(otherEntry + "\n")
+						_, err = file.WriteString(user1HtpasswdEntry + "\n")
 						Expect(err).ToNot(HaveOccurred())
 					}
 
@@ -140,21 +148,25 @@ var _ = Describe("HTPasswd Suite", func() {
 
 					fileNames = append(fileNames, file.Name())
 
-					return htpasswd
+					It("has the correct number of users", func() {
+						Expect(len(htpasswd.users)).To(Equal(hu.expectedLen))
+					})
+
+					It(hu.testText, func() {
+						Expect(htpasswd.Validate(adminUser, adminPassword)).To(hu.expectedGomegaMatcher)
+					})
+
+					It("new entry is present", func() {
+						Expect(htpasswd.Validate(user1, user1Password)).To(BeTrue())
+					})
 				}
 
-				htpasswdAdd := htpasswdMap(adminUserHtpasswdEntry, user1HtpasswdEntry, false)
-				It("htpasswd entry is added", func() {
-					Expect(len(htpasswdAdd.users)).To(Equal(2))
-					Expect(htpasswdAdd.Validate(adminUser, adminPassword)).To(BeTrue())
-					Expect(htpasswdAdd.Validate(user1, user1Password)).To(BeTrue())
+				Context("htpasswd entry is added", func() {
+					assertHtpasswdMapUpdate(htpasswdUpdate{"initial entry is present", false, 2, BeTrue()})
 				})
 
-				htpasswdRemove := htpasswdMap(adminUserHtpasswdEntry, user1HtpasswdEntry, true)
-				It("htpasswd entry is removed", func() {
-					Expect(len(htpasswdRemove.users)).To(Equal(1))
-					Expect(htpasswdRemove.Validate(adminUser, adminPassword)).To(BeFalse())
-					Expect(htpasswdRemove.Validate(user1, user1Password)).To(BeTrue())
+				Context("htpasswd entry is removed", func() {
+					assertHtpasswdMapUpdate(htpasswdUpdate{"initial entry is removed", true, 1, BeFalse()})
 				})
 
 			})

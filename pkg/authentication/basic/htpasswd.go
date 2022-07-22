@@ -40,12 +40,15 @@ func NewHTPasswdValidator(path string) (Validator, error) {
 		return nil, err
 	}
 
-	watcher.WatchFileForUpdates(path, nil, func() {
+	err = watcher.WatchFileForUpdates(path, nil, func() {
 		err := h.loadHTPasswdFile(path)
 		if err != nil {
 			logger.Errorf("%v: no changes were made to the current htpasswd map", err)
 		}
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return h, nil
 }
@@ -71,7 +74,7 @@ func (h *htpasswdMap) loadHTPasswdFile(filename string) error {
 
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		logger.Fatalf("could not read htpasswd file: %v", err)
+		return fmt.Errorf("could not read htpasswd file: %v", err)
 	}
 
 	updated, err := createHtpasswdMap(records)
@@ -112,7 +115,7 @@ func createHtpasswdMap(records [][]string) (*htpasswdMap, error) {
 	}
 
 	if len(h.users) == 0 {
-		logger.Fatal("could not construct htpasswdMap: htpasswd file doesn't contain a single valid user entry")
+		return nil, fmt.Errorf("could not construct htpasswdMap: htpasswd file doesn't contain a single valid user entry")
 	}
 
 	return h, nil
