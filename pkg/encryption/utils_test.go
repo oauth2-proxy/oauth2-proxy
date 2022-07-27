@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -107,21 +108,22 @@ func TestValidate(t *testing.T) {
 	seed := "0123456789abcdef"
 	key := "cookie-name"
 	value := base64.URLEncoding.EncodeToString([]byte("I am soooo encoded"))
-	epoch := "123456789"
+	epoch := int64(123456789)
+	epochStr := strconv.FormatInt(epoch, 10)
 
-	sha256sig, err := cookieSignature(sha256.New, seed, key, value, epoch)
+	sha256sig, err := cookieSignature(sha256.New, seed, key, value, epochStr)
 	assert.NoError(t, err)
 
 	cookie := &http.Cookie{
 		Name:  key,
-		Value: value + "|" + epoch + "|" + sha256sig,
+		Value: value + "|" + epochStr + "|" + sha256sig,
 	}
 
 	validValue, timestamp, ok := Validate(cookie, seed, 0)
+	assert.True(t, ok)
+	assert.Equal(t, timestamp, time.Unix(epoch, 0))
 
 	expectedValue, err := base64.URLEncoding.DecodeString(value)
 	assert.NoError(t, err)
 	assert.Equal(t, validValue, expectedValue)
-	assert.Equal(t, timestamp, time.Time(time.Date(1973, time.November, 29, 21, 33, 9, 0, time.Local)))
-	assert.True(t, ok)
 }
