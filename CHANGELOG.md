@@ -9,6 +9,7 @@
 ## Changes since v7.3.0
 
 - [#1709](https://github.com/oauth2-proxy/oauth2-proxy/pull/1709) Show an alert message when basic auth credentials are invalid (@aiciobanu)
+- [#1743](https://github.com/oauth2-proxy/oauth2-proxy/pull/1743) Hide bearer token from log on error from the security point of view (@t-katsumura)
 
 # V7.3.0
 
