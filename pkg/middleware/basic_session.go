@@ -93,7 +93,7 @@ func findBasicCredentialsFromHeader(header string) (string, string, error) {
 	}
 
 	if tokenType != "Basic" {
-		return "", "", fmt.Errorf("invalid Authorization header: %q", header)
+		return "", "", fmt.Errorf("invalid token type in Authorization header: %q", tokenType)
 	}
 
 	user, password, err := getBasicAuthCredentials(token)
