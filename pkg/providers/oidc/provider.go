@@ -16,6 +16,7 @@ type providerJSON struct {
 	TokenURL             string   `json:"token_endpoint"`
 	JWKsURL              string   `json:"jwks_uri"`
 	UserInfoURL          string   `json:"userinfo_endpoint"`
+	IntrospectURL        string   `json:"introspection_endpoint"`
 	CodeChallengeAlgs    []string `json:"code_challenge_methods_supported"`
 	SupportedSigningAlgs []string `json:"id_token_signing_alg_values_supported"`
 }
@@ -23,10 +24,11 @@ type providerJSON struct {
 // Endpoints represents the endpoints discovered as part of the OIDC discovery process
 // that will be used by the authentication providers.
 type Endpoints struct {
-	AuthURL     string
-	TokenURL    string
-	JWKsURL     string
-	UserInfoURL string
+	AuthURL       string
+	TokenURL      string
+	JWKsURL       string
+	UserInfoURL   string
+	IntrospectURL string
 }
 
 // PKCE holds information relevant to the PKCE (code challenge) support of the
@@ -69,6 +71,7 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 		tokenURL:             p.TokenURL,
 		jwksURL:              p.JWKsURL,
 		userInfoURL:          p.UserInfoURL,
+		introspectURL:        p.IntrospectURL,
 		codeChallengeAlgs:    p.CodeChallengeAlgs,
 		supportedSigningAlgs: p.SupportedSigningAlgs,
 	}, nil
@@ -80,6 +83,7 @@ type discoveryProvider struct {
 	tokenURL             string
 	jwksURL              string
 	userInfoURL          string
+	introspectURL        string
 	codeChallengeAlgs    []string
 	supportedSigningAlgs []string
 }
@@ -87,10 +91,11 @@ type discoveryProvider struct {
 // Endpoints returns the discovered endpoints needed for an authentication provider.
 func (p *discoveryProvider) Endpoints() Endpoints {
 	return Endpoints{
-		AuthURL:     p.authURL,
-		TokenURL:    p.tokenURL,
-		JWKsURL:     p.jwksURL,
-		UserInfoURL: p.userInfoURL,
+		AuthURL:       p.authURL,
+		TokenURL:      p.tokenURL,
+		JWKsURL:       p.jwksURL,
+		UserInfoURL:   p.userInfoURL,
+		IntrospectURL: p.introspectURL,
 	}
 }
 

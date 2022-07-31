@@ -24,13 +24,13 @@ func validateProviders(o *options.Options) []string {
 	providerIDs := make(map[string]struct{})
 
 	for _, provider := range o.Providers {
-		msgs = append(msgs, validateProvider(provider, providerIDs)...)
+		msgs = append(msgs, validateProvider(o, provider, providerIDs)...)
 	}
 
 	return msgs
 }
 
-func validateProvider(provider options.Provider, providerIDs map[string]struct{}) []string {
+func validateProvider(o *options.Options, provider options.Provider, providerIDs map[string]struct{}) []string {
 	msgs := []string{}
 
 	if provider.ID == "" {
@@ -45,6 +45,10 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 
 	if provider.ClientID == "" {
 		msgs = append(msgs, "provider missing setting: client-id")
+	}
+
+	if o.IntrospectToken && provider.IntrospectURL == "" {
+		msgs = append(msgs, "provider missing setting: introspect-url")
 	}
 
 	// login.gov uses a signed JWT to authenticate, not a client-secret

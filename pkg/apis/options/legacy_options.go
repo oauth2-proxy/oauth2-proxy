@@ -514,6 +514,8 @@ type LegacyProvider struct {
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
 	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
 	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
+	IntrospectURL                      string   `flag:"introspect-url" cfg:"introspect_url"`
+	IntrospectToken                    bool     `flag:"introspect-token" cfg:"introspect-token"`
 	Scope                              string   `flag:"scope" cfg:"scope"`
 	Prompt                             string   `flag:"prompt" cfg:"prompt"`
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
@@ -568,6 +570,8 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("profile-url", "", "Profile access endpoint")
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
+	flagSet.String("introspect-url", "", "Access token introspection endpoint")
+	flagSet.Bool("introspect-token", false, "Validate token with token introspection endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
@@ -640,6 +644,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ProfileURL:          l.ProfileURL,
 		ProtectedResource:   l.ProtectedResource,
 		ValidateURL:         l.ValidateURL,
+		IntrospectURL:       l.IntrospectURL,
 		Scope:               l.Scope,
 		AllowedGroups:       l.AllowedGroups,
 		CodeChallengeMethod: l.CodeChallengeMethod,
