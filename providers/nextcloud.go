@@ -1,6 +1,10 @@
 package providers
 
-import "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+import (
+	"context"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+)
 
 // NextcloudProvider represents an Nextcloud based Identity Provider
 type NextcloudProvider struct {
@@ -21,4 +25,9 @@ func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
 		p.EmailClaim = "ocs.data.email"
 	}
 	return &NextcloudProvider{ProviderData: p}
+}
+
+// ValidateSession validates the AccessToken
+func (p *NextcloudProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }
