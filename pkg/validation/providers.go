@@ -46,9 +46,6 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 	if provider.ClientID == "" {
 		msgs = append(msgs, "provider missing setting: client-id")
 	}
-	// if o.IntrospectToken && provider.IntrospectURL == "" {
-	// 	msgs = append(msgs, "provider missing setting: introspect-url")
-	// }
 
 	// login.gov uses a signed JWT to authenticate, not a client-secret
 	if provider.Type != "login.gov" {
