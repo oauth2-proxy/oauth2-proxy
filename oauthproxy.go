@@ -147,6 +147,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		for _, issuer := range opts.ExtraJwtIssuers {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
+		if opts.IntrospectToken && provider.Data().IntrospectURL.Path == "" {
+			return nil, fmt.Errorf("provider missing setting: introspect-url")
+		}
 	}
 	redirectURL := opts.GetRedirectURL()
 	if redirectURL.Path == "" {
