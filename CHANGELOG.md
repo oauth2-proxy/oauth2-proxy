@@ -20,6 +20,7 @@
   - A warning will be displayed when your provider advertises support for PKCE but you have not enabled it.
 - Support for the ARMv8 and ppc64le architectures
 - Configurable upstream request timeouts
+- [#1751](https://github.com/oauth2-proxy/oauth2-proxy/pull/1751) Token Introspection Support in Resource Server Mode - RFC7662 (@t-katsumura)
 
 ## Important Notes
 
