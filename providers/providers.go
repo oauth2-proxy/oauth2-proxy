@@ -106,6 +106,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
+			providerConfig.IntrospectURL = endpoints.IntrospectURL
 			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
 			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
 		}
