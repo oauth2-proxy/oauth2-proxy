@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
 )
 
@@ -219,4 +221,20 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.SetExpiresOn(token.Expiry)
 
 	return ss, nil
+}
+
+func (p *OIDCProvider) ROPCRedeem(ctx context.Context, username string, password string) (requests.Result, error) {
+	params := url.Values{}
+	params.Add("grant_type", "password")
+	params.Add("scope", "openid")
+	params.Add("username", username)
+	params.Add("password", password)
+
+	return requests.New(p.Data().RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetBasicHeader(p.Data().ClientID, p.Data().ClientSecret).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do(), nil
 }

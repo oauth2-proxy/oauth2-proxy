@@ -51,6 +51,7 @@ const (
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
+	ropcTokenPath     = "/ropc_token"
 )
 
 var (
@@ -308,6 +309,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
+	s.Path(ropcTokenPath).HandlerFunc(p.RopcToken)
 
 	// The userinfo endpoint needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
@@ -821,6 +823,31 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, req, http.StatusForbidden, "Invalid session: unauthorized")
 	}
+}
+
+// RopcToken redeem ROPC at token endpoint with client credentials
+func (p *OAuthProxy) RopcToken(rw http.ResponseWriter, req *http.Request) {
+	username := req.FormValue("username")
+	password := req.FormValue("password")
+	if username == "" || password == "" {
+		http.Error(rw, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	result, err := p.provider.ROPCRedeem(req.Context(), username, password)
+	if err != nil {
+		// Provider does not provide ROPC redemption
+		http.Error(rw, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+	}
+
+	if result.Error() != nil {
+		logger.Errorf("error with ROPC redeem: %v", result.Error())
+		http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	rw.Write(result.Body())
 }
 
 func (p *OAuthProxy) redeemCode(req *http.Request, codeVerifier string) (*sessionsapi.SessionState, error) {

@@ -146,3 +146,8 @@ func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string)
 	}
 	return nil, ErrNotImplemented
 }
+
+// Redeem token with ROPC (Resource Owner Password Credentials)
+func (p *ProviderData) ROPCRedeem(ctx context.Context, username string, password string) (requests.Result, error) {
+	return nil, ErrNotImplemented
+}
