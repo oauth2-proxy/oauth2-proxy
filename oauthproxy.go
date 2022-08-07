@@ -51,7 +51,7 @@ const (
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
-	ropcTokenPath     = "/ropc_token"
+	ropcTokenPath     = "/ropc"
 )
 
 var (
