@@ -7,9 +7,12 @@
 ## Breaking Changes
 
 ## Changes since v7.3.0
+- [#1669](https://github.com/oauth2-proxy/oauth2-proxy/pull/1699) Fix method deprecated error in lint (@t-katsumura)
 
 - [#1727](https://github.com/oauth2-proxy/oauth2-proxy/pull/1727) Get extra AllowedGroups from header. `--allowed-groups-header` option make oauth2-proxy to use the header value as additionally group-list to authorize users. Usefull if need differents groups for differents paths and applications. Multiple groups in header value is allowed separates by comma. 
 - [#1709](https://github.com/oauth2-proxy/oauth2-proxy/pull/1709) Show an alert message when basic auth credentials are invalid (@aiciobanu)
+
+- [#1720](https://github.com/oauth2-proxy/oauth2-proxy/pull/1720) Extract roles from authToken, to allow using allowed roles with Keycloak.
 
 # V7.3.0
 

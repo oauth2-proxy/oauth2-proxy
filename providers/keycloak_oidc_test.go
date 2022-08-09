@@ -199,4 +199,22 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 			Expect(existingSession.Groups).To(BeEquivalentTo([]string{"role:write", "role:default:read"}))
 		})
 	})
+
+	Context("Create new session from token", func() {
+		It("should create a session and extract roles ", func() {
+			server, provider := newTestKeycloakOIDCSetup()
+			url, err := url.Parse(server.URL)
+			Expect(err).To(BeNil())
+			defer server.Close()
+
+			provider.ProfileURL = url
+
+			session, err := provider.CreateSessionFromToken(context.Background(), getAccessToken())
+			Expect(err).To(BeNil())
+			Expect(session.ExpiresOn).ToNot(BeNil())
+			Expect(session.CreatedAt).ToNot(BeNil())
+			Expect(session.Groups).To(BeEquivalentTo([]string{"role:write", "role:default:read"}))
+		})
+	})
+
 })
