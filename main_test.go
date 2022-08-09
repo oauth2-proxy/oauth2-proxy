@@ -35,6 +35,7 @@ upstreamConfig:
     flushInterval: 1s
     passHostHeader: true
     proxyWebSockets: true
+    timeout: 30s
 injectRequestHeaders:
 - name: Authorization
   values:
@@ -68,7 +69,6 @@ providers:
   ID: google=oauth2-proxy
   clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
-  approvalPrompt: force
   azureConfig:
     tenant: common
   oidcConfig:
@@ -76,6 +76,12 @@ providers:
     emailClaim: email
     userIDClaim: email
     insecureSkipNonce: true
+    audienceClaims: [aud]
+    extraAudiences: []
+  loginURLParameters:
+  - name: approval_prompt
+    default:
+    - force
 `
 
 	const testCoreConfig = `
@@ -113,6 +119,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
 					PassHostHeader:  boolPtr(true),
 					ProxyWebSockets: boolPtr(true),
+					Timeout:         durationPtr(options.DefaultUpstreamTimeout),
 				},
 			},
 		}
@@ -148,9 +155,13 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					GroupsClaim:       "groups",
 					EmailClaim:        "email",
 					UserIDClaim:       "email",
+					AudienceClaims:    []string{"aud"},
+					ExtraAudiences:    []string{},
 					InsecureSkipNonce: true,
 				},
-				ApprovalPrompt: "force",
+				LoginURLParameters: []options.LoginURLParameter{
+					{Name: "approval_prompt", Default: []string{"force"}},
+				},
 			},
 		}
 		return opts

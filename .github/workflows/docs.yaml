@@ -16,9 +16,11 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
         with:
-          node-version: '12.x'
+          node-version: '17.x'
       - name: Test Build
         working-directory: ./docs
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
         run: |
           if [ -e yarn.lock ]; then
           yarn install --frozen-lockfile
@@ -35,10 +37,11 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
         with:
-          node-version: '12.x'
+          node-version: '17.x'
       - name: Add key to allow access to repository
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+          NODE_OPTIONS: --openssl-legacy-provider
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
@@ -54,6 +57,7 @@ jobs:
         env:
           USE_SSH: true
           GIT_USER: git
+          NODE_OPTIONS: --openssl-legacy-provider
         run: |
           git config --global user.email "actions@gihub.com"
           git config --global user.name "gh-actions"

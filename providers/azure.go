@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -62,7 +63,7 @@ var (
 )
 
 // NewAzureProvider initiates a new AzureProvider
-func NewAzureProvider(p *ProviderData) *AzureProvider {
+func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        azureProviderName,
 		loginURL:    azureDefaultLoginURL,
@@ -78,24 +79,19 @@ func NewAzureProvider(p *ProviderData) *AzureProvider {
 	if p.ValidateURL == nil || p.ValidateURL.String() == "" {
 		p.ValidateURL = p.ProfileURL
 	}
+	p.getAuthorizationHeaderFunc = makeAzureHeader
+
+	tenant := "common"
+	if opts.Tenant != "" {
+		tenant = opts.Tenant
+		overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
+		overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
+	}
 
 	return &AzureProvider{
 		ProviderData: p,
-		Tenant:       "common",
+		Tenant:       tenant,
 	}
-}
-
-// Configure defaults the AzureProvider configuration options
-func (p *AzureProvider) Configure(tenant string) {
-	if tenant == "" || tenant == "common" {
-		// tenant is empty or default, remain on the default "common" tenant
-		return
-	}
-
-	// Specific tennant specified, override the Login and RedeemURLs
-	p.Tenant = tenant
-	overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
-	overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
 }
 
 func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
@@ -107,8 +103,7 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
-func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string) string {
-	extraParams := url.Values{}
+func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		extraParams.Add("resource", p.ProtectedResource.String())
 	}
@@ -117,8 +112,8 @@ func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string) string {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
-	params, err := p.prepareRedeem(redirectURL, code)
+func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	params, err := p.prepareRedeem(redirectURL, code, codeVerifier)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +145,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 	session.CreatedAtNow()
 	session.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
 
-	email, err := p.verifyTokenAndExtractEmail(ctx, session.IDToken)
+	email, err := p.verifyTokenAndExtractEmail(ctx, session.IDToken, session.AccessToken)
 
 	// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
 	// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
@@ -163,7 +158,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 	}
 
 	if session.Email == "" {
-		email, err = p.verifyTokenAndExtractEmail(ctx, session.AccessToken)
+		email, err = p.verifyTokenAndExtractEmail(ctx, session.AccessToken, session.AccessToken)
 		if err == nil && email != "" {
 			session.Email = email
 		} else {
@@ -192,7 +187,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 	return nil
 }
 
-func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, error) {
+func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (url.Values, error) {
 	params := url.Values{}
 	if code == "" {
 		return params, ErrMissingCode
@@ -207,6 +202,9 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}
@@ -215,16 +213,16 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code string) (url.Values, err
 
 // verifyTokenAndExtractEmail tries to extract email claim from either id_token or access token
 // when oidc verifier is configured
-func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, token string) (string, error) {
+func (p *AzureProvider) verifyTokenAndExtractEmail(ctx context.Context, rawIDToken string, accessToken string) (string, error) {
 	email := ""
 
-	if token != "" && p.Verifier != nil {
-		token, err := p.Verifier.Verify(ctx, token)
+	if rawIDToken != "" && p.Verifier != nil {
+		_, err := p.Verifier.Verify(ctx, rawIDToken)
 		// due to issues mentioned above, id_token may not be signed by AAD
 		if err == nil {
-			claims, err := p.getClaims(token)
+			s, err := p.buildSessionFromClaims(rawIDToken, accessToken)
 			if err == nil {
-				email = claims.Email
+				email = s.Email
 			} else {
 				logger.Printf("unable to get claims from token: %v", err)
 			}
@@ -287,7 +285,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	s.CreatedAtNow()
 	s.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
 
-	email, err := p.verifyTokenAndExtractEmail(ctx, s.IDToken)
+	email, err := p.verifyTokenAndExtractEmail(ctx, s.IDToken, s.AccessToken)
 
 	// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
 	// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
@@ -300,7 +298,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	}
 
 	if s.Email == "" {
-		email, err = p.verifyTokenAndExtractEmail(ctx, s.AccessToken)
+		email, err = p.verifyTokenAndExtractEmail(ctx, s.AccessToken, s.AccessToken)
 		if err == nil && email != "" {
 			s.Email = email
 		} else {

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	"github.com/spf13/pflag"
 )
 
@@ -34,6 +33,7 @@ func NewLegacyOptions() *LegacyOptions {
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
 			FlushInterval:   DefaultUpstreamFlushInterval,
+			Timeout:         DefaultUpstreamTimeout,
 		},
 
 		LegacyHeaders: LegacyHeaders{
@@ -54,6 +54,8 @@ func NewLegacyOptions() *LegacyOptions {
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
+			OIDCAudienceClaims:    []string{"aud"},
+			OIDCExtraAudiences:    []string{},
 			InsecureOIDCSkipNonce: true,
 		},
 
@@ -100,6 +102,7 @@ type LegacyUpstreams struct {
 	ProxyWebSockets               bool          `flag:"proxy-websockets" cfg:"proxy_websockets"`
 	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify"`
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
+	Timeout                       time.Duration `flag:"upstream-timeout" cfg:"upstream_timeout"`
 }
 
 func legacyUpstreamsFlagSet() *pflag.FlagSet {
@@ -110,6 +113,7 @@ func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
 	flagSet.StringSlice("upstream", []string{}, "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
+	flagSet.Duration("upstream-timeout", DefaultUpstreamTimeout, "maximum amount of time the server will wait for a response from the upstream")
 
 	return flagSet
 }
@@ -128,6 +132,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 		}
 
 		flushInterval := Duration(l.FlushInterval)
+		timeout := Duration(l.Timeout)
 		upstream := Upstream{
 			ID:                    u.Path,
 			Path:                  u.Path,
@@ -136,6 +141,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			PassHostHeader:        &l.PassHostHeader,
 			ProxyWebSockets:       &l.ProxyWebSockets,
 			FlushInterval:         &flushInterval,
+			Timeout:               &timeout,
 		}
 
 		switch u.Scheme {
@@ -167,6 +173,7 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.PassHostHeader = nil
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
+			upstream.Timeout = nil
 		}
 
 		upstreams.Upstreams = append(upstreams.Upstreams, upstream)
@@ -448,6 +455,7 @@ type LegacyServer struct {
 	HTTPSAddress         string `flag:"https-address" cfg:"https_address"`
 	TLSCertFile          string `flag:"tls-cert-file" cfg:"tls_cert_file"`
 	TLSKeyFile           string `flag:"tls-key-file" cfg:"tls_key_file"`
+	TLSMinVersion        string `flag:"tls-min-version" cfg:"tls_min_version"`
 }
 
 func legacyServerFlagset() *pflag.FlagSet {
@@ -461,6 +469,7 @@ func legacyServerFlagset() *pflag.FlagSet {
 	flagSet.String("https-address", ":443", "<addr>:<port> to listen on for HTTPS clients")
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
+	flagSet.String("tls-min-version", "", "minimal TLS version for HTTPS clients (either \"TLS1.2\" or \"TLS1.3\")")
 
 	return flagSet
 }
@@ -498,6 +507,8 @@ type LegacyProvider struct {
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
+	OIDCAudienceClaims                 []string `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
+	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
@@ -514,6 +525,8 @@ type LegacyProvider struct {
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
 	JWTKeyFile string `flag:"jwt-key-file" cfg:"jwt_key_file"`
 	PubJWKURL  string `flag:"pubjwk-url" cfg:"pubjwk_url"`
+	// PKCE Code Challenge method to use (either S256 or plain)
+	CodeChallengeMethod string `flag:"code-challenge-method" cfg:"force_code_challenge_method"`
 }
 
 func legacyProviderFlagSet() *pflag.FlagSet {
@@ -546,8 +559,10 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("insecure-oidc-skip-nonce", true, "skip verifying the OIDC ID Token's nonce claim")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
-	flagSet.String("oidc-groups-claim", providers.OIDCGroupsClaim, "which OIDC claim contains the user groups")
-	flagSet.String("oidc-email-claim", providers.OIDCEmailClaim, "which OIDC claim contains the user's email")
+	flagSet.String("oidc-groups-claim", OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
+	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
+	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
@@ -556,13 +571,14 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
+	flagSet.String("code-challenge-method", "", "use PKCE code challenges with the specified method. Either 'plain' or 'S256'")
 
 	flagSet.String("acr-values", "", "acr values string:  optional")
 	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 
-	flagSet.String("user-id-claim", providers.OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
+	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 
@@ -582,6 +598,7 @@ func (l LegacyServer) convert() (Server, Server) {
 			Cert: &SecretSource{
 				FromFile: l.TLSCertFile,
 			},
+			MinVersion: l.TLSMinVersion,
 		}
 		// Preserve backwards compatibility, only run one server
 		appServer.BindAddress = ""
@@ -613,21 +630,19 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers := Providers{}
 
 	provider := Provider{
-		ClientID:          l.ClientID,
-		ClientSecret:      l.ClientSecret,
-		ClientSecretFile:  l.ClientSecretFile,
-		Type:              l.ProviderType,
-		CAFiles:           l.ProviderCAFiles,
-		LoginURL:          l.LoginURL,
-		RedeemURL:         l.RedeemURL,
-		ProfileURL:        l.ProfileURL,
-		ProtectedResource: l.ProtectedResource,
-		ValidateURL:       l.ValidateURL,
-		Scope:             l.Scope,
-		Prompt:            l.Prompt,
-		ApprovalPrompt:    l.ApprovalPrompt,
-		AllowedGroups:     l.AllowedGroups,
-		AcrValues:         l.AcrValues,
+		ClientID:            l.ClientID,
+		ClientSecret:        l.ClientSecret,
+		ClientSecretFile:    l.ClientSecretFile,
+		Type:                ProviderType(l.ProviderType),
+		CAFiles:             l.ProviderCAFiles,
+		LoginURL:            l.LoginURL,
+		RedeemURL:           l.RedeemURL,
+		ProfileURL:          l.ProfileURL,
+		ProtectedResource:   l.ProtectedResource,
+		ValidateURL:         l.ValidateURL,
+		Scope:               l.Scope,
+		AllowedGroups:       l.AllowedGroups,
+		CodeChallengeMethod: l.CodeChallengeMethod,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC
@@ -641,6 +656,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
+		AudienceClaims:                 l.OIDCAudienceClaims,
+		ExtraAudiences:                 l.OIDCExtraAudiences,
 	}
 
 	// This part is out of the switch section because azure has a default tenant
@@ -697,6 +714,24 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	} else {
 		provider.ID = l.ProviderType + "=" + l.ClientID
 	}
+
+	// handle AcrValues, Prompt and ApprovalPrompt
+	var urlParams []LoginURLParameter
+	if l.AcrValues != "" {
+		urlParams = append(urlParams, LoginURLParameter{Name: "acr_values", Default: []string{l.AcrValues}})
+	}
+	switch {
+	case l.Prompt != "":
+		urlParams = append(urlParams, LoginURLParameter{Name: "prompt", Default: []string{l.Prompt}})
+	case l.ApprovalPrompt != "":
+		urlParams = append(urlParams, LoginURLParameter{Name: "approval_prompt", Default: []string{l.ApprovalPrompt}})
+	default:
+		// match legacy behaviour by default - if neither prompt nor approval_prompt
+		// specified, use approval_prompt=force
+		urlParams = append(urlParams, LoginURLParameter{Name: "approval_prompt", Default: []string{"force"}})
+	}
+
+	provider.LoginURLParameters = urlParams
 
 	providers = append(providers, provider)
 

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -27,7 +28,8 @@ func testKeycloakProvider(backend *httptest.Server) (*KeycloakProvider, error) {
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""})
+			Scope:        ""},
+		options.KeycloakOptions{})
 
 	if backend != nil {
 		bURL, err := url.Parse(backend.URL)
@@ -48,7 +50,7 @@ func testKeycloakProvider(backend *httptest.Server) (*KeycloakProvider, error) {
 var _ = Describe("Keycloak Provider Tests", func() {
 	Context("New Provider Init", func() {
 		It("uses defaults", func() {
-			providerData := NewKeycloakProvider(&ProviderData{}).Data()
+			providerData := NewKeycloakProvider(&ProviderData{}, options.KeycloakOptions{}).Data()
 			Expect(providerData.ProviderName).To(Equal("Keycloak"))
 			Expect(providerData.LoginURL.String()).To(Equal("https://keycloak.org/oauth/authorize"))
 			Expect(providerData.RedeemURL.String()).To(Equal("https://keycloak.org/oauth/token"))
@@ -76,7 +78,8 @@ var _ = Describe("Keycloak Provider Tests", func() {
 						Scheme: "https",
 						Host:   "example.com",
 						Path:   "/api/v3/user"},
-					Scope: "profile"})
+					Scope: "profile"},
+				options.KeycloakOptions{})
 			providerData := p.Data()
 
 			Expect(providerData.ProviderName).To(Equal("Keycloak"))

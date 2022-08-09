@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
@@ -25,22 +26,29 @@ func newRedeemServer(body []byte) (*url.URL, *httptest.Server) {
 	return u, s
 }
 
-func newGoogleProvider() *GoogleProvider {
-	return NewGoogleProvider(
+func newGoogleProvider(t *testing.T) *GoogleProvider {
+	g := NewWithT(t)
+	p, err := NewGoogleProvider(
 		&ProviderData{
 			ProviderName: "",
 			LoginURL:     &url.URL{},
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""})
+			Scope:        ""},
+		options.GoogleOptions{})
+	g.Expect(err).ToNot(HaveOccurred())
+	return p
 }
 
 func TestNewGoogleProvider(t *testing.T) {
 	g := NewWithT(t)
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewGoogleProvider(&ProviderData{}).Data()
+	provider, err := NewGoogleProvider(&ProviderData{}, options.GoogleOptions{})
+	g.Expect(err).ToNot(HaveOccurred())
+	providerData := provider.Data()
+
 	g.Expect(providerData.ProviderName).To(Equal("Google"))
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://accounts.google.com/o/oauth2/auth?access_type=offline"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://www.googleapis.com/oauth2/v3/token"))
@@ -50,7 +58,7 @@ func TestNewGoogleProvider(t *testing.T) {
 }
 
 func TestGoogleProviderOverrides(t *testing.T) {
-	p := NewGoogleProvider(
+	p, err := NewGoogleProvider(
 		&ProviderData{
 			LoginURL: &url.URL{
 				Scheme: "https",
@@ -68,7 +76,9 @@ func TestGoogleProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/tokeninfo"},
-			Scope: "profile"})
+			Scope: "profile"},
+		options.GoogleOptions{})
+	assert.NoError(t, err)
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "Google", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/oauth/auth",
@@ -90,7 +100,7 @@ type redeemResponse struct {
 }
 
 func TestGoogleProviderGetEmailAddress(t *testing.T) {
-	p := newGoogleProvider()
+	p := newGoogleProvider(t)
 	body, err := json.Marshal(redeemResponse{
 		AccessToken:  "a1234",
 		ExpiresIn:    10,
@@ -102,7 +112,7 @@ func TestGoogleProviderGetEmailAddress(t *testing.T) {
 	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, session, nil)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
@@ -147,7 +157,7 @@ func TestGoogleProviderGroupValidator(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			g := NewWithT(t)
-			p := newGoogleProvider()
+			p := newGoogleProvider(t)
 			if tc.validatorFunc != nil {
 				p.groupValidator = tc.validatorFunc
 			}
@@ -158,7 +168,7 @@ func TestGoogleProviderGroupValidator(t *testing.T) {
 
 //
 func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
-	p := newGoogleProvider()
+	p := newGoogleProvider(t)
 	body, err := json.Marshal(redeemResponse{
 		AccessToken: "a1234",
 		IDToken:     "ignored prefix." + `{"email": "michael.bland@gsa.gov"}`,
@@ -168,7 +178,7 @@ func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
 	assert.NotEqual(t, nil, err)
 	if session != nil {
 		t.Errorf("expect nill session %#v", session)
@@ -176,10 +186,10 @@ func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 }
 
 func TestGoogleProviderRedeemFailsNoCLientSecret(t *testing.T) {
-	p := newGoogleProvider()
+	p := newGoogleProvider(t)
 	p.ProviderData.ClientSecretFile = "srvnoerre"
 
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
 	assert.NotEqual(t, nil, err)
 	if session != nil {
 		t.Errorf("expect nill session %#v", session)
@@ -188,7 +198,7 @@ func TestGoogleProviderRedeemFailsNoCLientSecret(t *testing.T) {
 }
 
 func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
-	p := newGoogleProvider()
+	p := newGoogleProvider(t)
 
 	body, err := json.Marshal(redeemResponse{
 		AccessToken: "a1234",
@@ -199,7 +209,7 @@ func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
 	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
 	assert.NotEqual(t, nil, err)
 	if session != nil {
 		t.Errorf("expect nill session %#v", session)
@@ -208,7 +218,7 @@ func TestGoogleProviderGetEmailAddressInvalidJson(t *testing.T) {
 }
 
 func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
-	p := newGoogleProvider()
+	p := newGoogleProvider(t)
 	body, err := json.Marshal(redeemResponse{
 		AccessToken: "a1234",
 		IDToken:     "ignored prefix." + base64.URLEncoding.EncodeToString([]byte(`{"not_email": "missing"}`)),
@@ -218,7 +228,7 @@ func TestGoogleProviderGetEmailAddressEmailMissing(t *testing.T) {
 	p.RedeemURL, server = newRedeemServer(body)
 	defer server.Close()
 
-	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234")
+	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
 	assert.NotEqual(t, nil, err)
 	if session != nil {
 		t.Errorf("expect nill session %#v", session)

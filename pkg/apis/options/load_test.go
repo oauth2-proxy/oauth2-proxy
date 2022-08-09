@@ -22,6 +22,7 @@ var _ = Describe("Load", func() {
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
 			FlushInterval:   DefaultUpstreamFlushInterval,
+			Timeout:         DefaultUpstreamTimeout,
 		},
 
 		LegacyHeaders: LegacyHeaders{
@@ -42,6 +43,7 @@ var _ = Describe("Load", func() {
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
+			OIDCAudienceClaims:    []string{"aud"},
 			InsecureOIDCSkipNonce: true,
 		},
 

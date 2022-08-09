@@ -6,6 +6,80 @@
 
 ## Breaking Changes
 
+## Changes since v7.3.0
+- [#1669](https://github.com/oauth2-proxy/oauth2-proxy/pull/1699) Fix method deprecated error in lint (@t-katsumura)
+
+- [#1709](https://github.com/oauth2-proxy/oauth2-proxy/pull/1709) Show an alert message when basic auth credentials are invalid (@aiciobanu)
+
+- [#1720](https://github.com/oauth2-proxy/oauth2-proxy/pull/1720) Extract roles from authToken, to allow using allowed roles with Keycloak.
+
+# V7.3.0
+
+## Release Highlights
+
+- [#1361](https://github.com/oauth2-proxy/oauth2-proxy/pull/1541) PKCE Code Challenge Support - RFC-7636 (@braunsonm)
+  - At this time the `--code-challenge-method` flag can be used to enable it with the method of your choice.
+- Parital support for OAuth2 Authorization Server Metadata for detecting code challenge methods (@braunsonm)
+  - A warning will be displayed when your provider advertises support for PKCE but you have not enabled it.
+- Support for the ARMv8 and ppc64le architectures
+- Configurable upstream request timeouts
+
+## Important Notes
+
+- [oauth2-proxy](https://quay.io/repository/oauth2-proxy/oauth2-proxy?tab=tags&tag=latest) separate image tags for each architecture is deprecated. Instead, images are cross compiled and pushed as the same tag for every platform.
+If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move to the generic tag instead (ex: v7.2.1 )
+- [#1478](https://github.com/oauth2-proxy/oauth2-proxy/pull/1478) Changes the UID and GID of the runtime user to `65532`.
+  Which also is known as `nonroot` user in [distroless images](https://github.com/GoogleContainerTools/distroless).
+- This release includes fixes for a number of CVEs, we recomend to upgrade as soon as possible.
+
+## Breaking Changes
+
+N/A
+
+## Changes since v7.2.1
+
+- [#1662](https://github.com/oauth2-proxy/oauth2-proxy/pull/1662) Discover signature algorithms from OIDC provider (@JoelSpeed)
+- [#1651](https://github.com/oauth2-proxy/oauth2-proxy/pull/1651) Updated go-lang's text, crypto and prometheus dependencies to fix reported security vulnerabilities. (@rkkris75)
+- [#1595](https://github.com/oauth2-proxy/oauth2-proxy/pull/1595) Add optional `allowed_emails` query parameter to the `auth_request`. (@zv0n)
+- [#1478](https://github.com/oauth2-proxy/oauth2-proxy/pull/1478) Parameterise the runtime image (@omBratteng)
+- [#1583](https://github.com/oauth2-proxy/oauth2-proxy/pull/1583) Add groups to session too when creating session from bearer token (@adriananeci)
+- [#1418](https://github.com/oauth2-proxy/oauth2-proxy/pull/1418) Support for passing arbitrary query parameters through from `/oauth2/start` to the identity provider's login URL. Configuration settings control which parameters are passed by default and precisely which values can be overridden per-request (@ianroberts)
+- [#1559](https://github.com/oauth2-proxy/oauth2-proxy/pull/1559) Introduce ProviderVerifier to clean up OIDC discovery code (@JoelSpeed)
+- [#1561](https://github.com/oauth2-proxy/oauth2-proxy/pull/1561) Add ppc64le support (@mgiessing)
+- [#1563](https://github.com/oauth2-proxy/oauth2-proxy/pull/1563) Ensure claim extractor does not attempt profile call when URL is empty (@JoelSpeed)
+- [#1560](https://github.com/oauth2-proxy/oauth2-proxy/pull/1560) Fix provider data initialisation (@JoelSpeed)
+- [#1555](https://github.com/oauth2-proxy/oauth2-proxy/pull/1555) Refactor provider configuration into providers package (@JoelSpeed)
+- [#1394](https://github.com/oauth2-proxy/oauth2-proxy/pull/1394) Add generic claim extractor to get claims from ID Tokens (@JoelSpeed)
+- [#1468](https://github.com/oauth2-proxy/oauth2-proxy/pull/1468) Implement session locking with session state lock (@JoelSpeed, @Bibob7)
+- [#1489](https://github.com/oauth2-proxy/oauth2-proxy/pull/1489) Fix Docker Buildx push to include build version (@JoelSpeed)
+- [#1477](https://github.com/oauth2-proxy/oauth2-proxy/pull/1477) Remove provider documentation for `Microsoft Azure AD` (@omBratteng)
+- [#1204](https://github.com/oauth2-proxy/oauth2-proxy/pull/1204) Added configuration for audience claim (`--oidc-extra-audience`) and ability to specify extra audiences (`--oidc-extra-audience`) allowed passing audience verification. This enables support for AWS Cognito and other issuers that have custom audience claims. Also, this adds the ability to allow multiple audiences. (@kschu91)
+- [#1509](https://github.com/oauth2-proxy/oauth2-proxy/pull/1509) Update LoginGovProvider ValidateSession to pass access_token in Header (@pksheldon4)
+- [#1474](https://github.com/oauth2-proxy/oauth2-proxy/pull/1474) Support configuration of minimal acceptable TLS version (@polarctos)
+- [#1545](https://github.com/oauth2-proxy/oauth2-proxy/pull/1545) Fix issue with query string allowed group panic on skip methods (@andytson)
+- [#1286](https://github.com/oauth2-proxy/oauth2-proxy/pull/1286) Add the `allowed_email_domains` and the `allowed_groups` on the `auth_request` + support standard wildcard char for validation with sub-domain and email-domain. (@w3st3ry @armandpicard)
+- [#1361](https://github.com/oauth2-proxy/oauth2-proxy/pull/1541) PKCE Code Challenge Support - RFC-7636 (@braunsonm)
+- [#1594](https://github.com/oauth2-proxy/oauth2-proxy/pull/1594) Release ARMv8 docker images (@braunsonm)
+- [#1649](https://github.com/oauth2-proxy/oauth2-proxy/pull/1649) Return a 400 instead of a 500 when a request contains an invalid redirect target (@niksko)
+- [#1638](https://github.com/oauth2-proxy/oauth2-proxy/pull/1638) Implement configurable upstream timeout (@jacksgt)
+- [#1650](https://github.com/oauth2-proxy/oauth2-proxy/pull/1650) Fixed 500 when checking if user has repo (@adamsong)
+- [#1635](https://github.com/oauth2-proxy/oauth2-proxy/pull/1635) Added description and unit tests for ipv6 address (@t-katsumura)
+- [#1502](https://github.com/oauth2-proxy/oauth2-proxy/pull/1502) Unbreak oauth2-proxy for keycloak provider after 2c668a (@ckwalsh)
+
+# V7.2.1
+
+## Release Highlights
+
+This release contains a number of bug and security fixes, but has no feature additions.
+
+## Important Notes
+
+N/A
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.2.0
 
 - [#1247](https://github.com/oauth2-proxy/oauth2-proxy/pull/1247) Use `upn` claim consistently in ADFSProvider (@NickMeves)
@@ -13,6 +87,8 @@
 - [#1433](https://github.com/oauth2-proxy/oauth2-proxy/pull/1433) Let authentication fail when session validation fails (@stippi2)
 - [#1445](https://github.com/oauth2-proxy/oauth2-proxy/pull/1445) Fix docker container multi arch build issue by passing GOARCH details to make build (@jkandasa)
 - [#1444](https://github.com/oauth2-proxy/oauth2-proxy/pull/1444) Update LinkedIn provider validate URL (@jkandasa)
+- [#1471](https://github.com/oauth2-proxy/oauth2-proxy/pull/1471) Update alpine to 3.15 (@AlexanderBabel)
+- [#1479](https://github.com/oauth2-proxy/oauth2-proxy/pull/1479) Update to Go 1.17 (@polarctos)
 
 # V7.2.0
 

@@ -7,21 +7,26 @@ import (
 	"net/http/httptest"
 	"net/url"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
-func testGitLabProvider(hostname string) *GitLabProvider {
-	p := NewGitLabProvider(
+func testGitLabProvider(hostname, scope string, opts options.GitLabOptions) (*GitLabProvider, error) {
+	p, err := NewGitLabProvider(
 		&ProviderData{
 			ProviderName: "",
 			LoginURL:     &url.URL{},
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""})
+			Scope:        scope},
+		opts)
+	if err != nil {
+		return nil, err
+	}
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
 		updateURL(p.Data().RedeemURL, hostname)
@@ -29,7 +34,7 @@ func testGitLabProvider(hostname string) *GitLabProvider {
 		updateURL(p.Data().ValidateURL, hostname)
 	}
 
-	return p
+	return p, err
 }
 
 func testGitLabBackend() *httptest.Server {
@@ -157,7 +162,8 @@ var _ = Describe("Gitlab Provider Tests", func() {
 		bURL, err := url.Parse(b.URL)
 		Expect(err).To(BeNil())
 
-		p = testGitLabProvider(bURL.Host)
+		p, err = testGitLabProvider(bURL.Host, "", options.GitLabOptions{})
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -219,21 +225,23 @@ var _ = Describe("Gitlab Provider Tests", func() {
 
 		DescribeTable("should return expected results",
 			func(in entitiesTableInput) {
-				p.AllowUnverifiedEmail = true
-				if in.scope != "" {
-					p.Scope = in.scope
-				}
-				session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
+				bURL, err := url.Parse(b.URL)
+				Expect(err).To(BeNil())
 
-				p.SetAllowedGroups(in.allowedGroups)
-
-				err := p.SetAllowedProjects(in.allowedProjects)
+				p, err := testGitLabProvider(bURL.Host, in.scope, options.GitLabOptions{
+					Group:    in.allowedGroups,
+					Projects: in.allowedProjects,
+				})
 				if in.expectedError == nil {
 					Expect(err).To(BeNil())
 				} else {
 					Expect(err).To(MatchError(in.expectedError))
 					return
 				}
+
+				p.AllowUnverifiedEmail = true
+				session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
+
 				Expect(p.Scope).To(Equal(in.expectedScope))
 
 				err = p.EnrichSession(context.Background(), session)
@@ -302,7 +310,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 			}),
 			Entry("invalid project format", entitiesTableInput{
 				allowedProjects: []string{"my_group/my_invalid_project=123"},
-				expectedError:   errors.New("invalid gitlab project access level specified (my_group/my_invalid_project)"),
+				expectedError:   errors.New("could not configure allowed projects: invalid gitlab project access level specified (my_group/my_invalid_project)"),
 				expectedScope:   "openid email read_api",
 			}),
 		)

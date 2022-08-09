@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -15,27 +16,46 @@ type KeycloakOIDCProvider struct {
 }
 
 // NewKeycloakOIDCProvider makes a KeycloakOIDCProvider using the ProviderData
-func NewKeycloakOIDCProvider(p *ProviderData) *KeycloakOIDCProvider {
+func NewKeycloakOIDCProvider(p *ProviderData, opts options.KeycloakOptions) *KeycloakOIDCProvider {
 	p.ProviderName = keycloakOIDCProviderName
-	return &KeycloakOIDCProvider{
+
+	provider := &KeycloakOIDCProvider{
 		OIDCProvider: &OIDCProvider{
 			ProviderData: p,
 		},
 	}
+
+	provider.addAllowedRoles(opts.Roles)
+	return provider
 }
 
 var _ Provider = (*KeycloakOIDCProvider)(nil)
 
-// AddAllowedRoles sets Keycloak roles that are authorized.
+// addAllowedRoles sets Keycloak roles that are authorized.
 // Assumes `SetAllowedGroups` is already called on groups and appends to that
 // with `role:` prefixed roles.
-func (p *KeycloakOIDCProvider) AddAllowedRoles(roles []string) {
+func (p *KeycloakOIDCProvider) addAllowedRoles(roles []string) {
 	if p.AllowedGroups == nil {
 		p.AllowedGroups = make(map[string]struct{})
 	}
 	for _, role := range roles {
 		p.AllowedGroups[formatRole(role)] = struct{}{}
 	}
+}
+
+// CreateSessionFromToken converts Bearer IDTokens into sessions
+func (p *KeycloakOIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+	ss, err := p.OIDCProvider.CreateSessionFromToken(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("could not create session from token: %v", err)
+	}
+
+	// Extract custom keycloak roles and enrich session
+	if err := p.extractRoles(ctx, ss); err != nil {
+		return nil, err
+	}
+
+	return ss, nil
 }
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields

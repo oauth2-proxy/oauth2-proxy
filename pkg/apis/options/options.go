@@ -4,9 +4,8 @@ import (
 	"crypto"
 	"net/url"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/spf13/pflag"
 )
 
@@ -68,28 +67,27 @@ type Options struct {
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
-	provider           providers.Provider
 	signatureData      *SignatureData
-	oidcVerifier       *oidc.IDTokenVerifier
-	jwtBearerVerifiers []*oidc.IDTokenVerifier
+	oidcVerifier       internaloidc.IDTokenVerifier
+	jwtBearerVerifiers []internaloidc.IDTokenVerifier
 	realClientIPParser ipapi.RealClientIPParser
 }
 
 // Options for Getting internal values
-func (o *Options) GetRedirectURL() *url.URL                        { return o.redirectURL }
-func (o *Options) GetProvider() providers.Provider                 { return o.provider }
-func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
-func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
-func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jwtBearerVerifiers }
+func (o *Options) GetRedirectURL() *url.URL                      { return o.redirectURL }
+func (o *Options) GetSignatureData() *SignatureData              { return o.signatureData }
+func (o *Options) GetOIDCVerifier() internaloidc.IDTokenVerifier { return o.oidcVerifier }
+func (o *Options) GetJWTBearerVerifiers() []internaloidc.IDTokenVerifier {
+	return o.jwtBearerVerifiers
+}
 func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
 
 // Options for Setting internal values
-func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
-func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
-func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
-func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
-func (o *Options) SetJWTBearerVerifiers(s []*oidc.IDTokenVerifier)  { o.jwtBearerVerifiers = s }
-func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClientIPParser = s }
+func (o *Options) SetRedirectURL(s *url.URL)                              { o.redirectURL = s }
+func (o *Options) SetSignatureData(s *SignatureData)                      { o.signatureData = s }
+func (o *Options) SetOIDCVerifier(s internaloidc.IDTokenVerifier)         { o.oidcVerifier = s }
+func (o *Options) SetJWTBearerVerifiers(s []internaloidc.IDTokenVerifier) { o.jwtBearerVerifiers = s }
+func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.realClientIPParser = s }
 
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
@@ -126,7 +124,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
-	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
+	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
 	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -B\" for bcrypt encryption")
 	flagSet.StringSlice("htpasswd-user-group", []string{}, "the groups to be set on sessions for htpasswd users (may be given multiple times)")
