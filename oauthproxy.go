@@ -319,7 +319,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Path(signInPath).HandlerFunc(p.SignIn)
 	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
-	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
+	s.Path(oauthCallbackPath).Handler(p.sessionChain.ThenFunc(p.OAuthCallback))
 
 	// The userinfo endpoint needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
@@ -809,6 +809,24 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		// Set the debug message and override the non debug message to be the same for this case
 		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
 		return
+	}
+
+	existingSession, err := p.getAuthenticatedSession(rw, req)
+	if err == nil {
+		if authOnlyAuthorize(req, existingSession) {
+			_, appRedirect, err := decodeState(req)
+			if err != nil {
+				logger.Errorf("Error while parsing OAuth2 state: %v", err)
+				p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			if !p.redirectValidator.IsValidRedirect(appRedirect) {
+				appRedirect = "/"
+			}
+			logger.Printf("Redirecting user with valid session: %v", appRedirect)
+			http.Redirect(rw, req, appRedirect, http.StatusFound)
+		}
 	}
 
 	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
