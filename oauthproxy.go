@@ -826,6 +826,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			}
 			logger.Printf("Redirecting user with valid session: %v", appRedirect)
 			http.Redirect(rw, req, appRedirect, http.StatusFound)
+			return
 		}
 	}
 
