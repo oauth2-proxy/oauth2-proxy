@@ -815,16 +815,10 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if err == nil {
 		if authOnlyAuthorize(req, existingSession) {
 			_, appRedirect, err := decodeState(req)
-			if err != nil {
-				logger.Errorf("Error while parsing OAuth2 state: %v", err)
-				p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-				return
-			}
-
-			if !p.redirectValidator.IsValidRedirect(appRedirect) {
+			if err != nil || !p.redirectValidator.IsValidRedirect(appRedirect) {
 				appRedirect = "/"
 			}
-			logger.Printf("Redirecting user with valid session: %v", appRedirect)
+			logger.Printf("Redirecting user with valid session: %s", appRedirect)
 			http.Redirect(rw, req, appRedirect, http.StatusFound)
 			return
 		}
