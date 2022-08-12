@@ -5,7 +5,8 @@
 ## Important Notes
 - [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99)
   - Since the CSRF cookie name is now longer it could potentially break long cookie names (around 1000 characters).
-  - The CSRF cookie expiration time now depends on the time defined in flag "--cookie-csrf-expire".
+  - Having unique CSRF cookies per request can lead to quite a number of cookies, in case an application performs a high number of parallel authentication requests in the background. Each call will redirect to /oauth2/start, if the user is not authenticated, and a new cookie will be set. The requests successfully authenticated will have its CSRF cookies immediatly expired, however the failed ones will mantain its CSRF tokens and they expire by default in 15 minutes. 
+  - The user may redefine the CSRF cookie expiration time using flag "--cookie-csrf-expire" (e.g. --cookie-csrf-expire=5m).
     By default, it is 15 minutes.
 
 ## Breaking Changes
