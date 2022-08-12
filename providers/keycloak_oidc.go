@@ -43,6 +43,21 @@ func (p *KeycloakOIDCProvider) addAllowedRoles(roles []string) {
 	}
 }
 
+// CreateSessionFromToken converts Bearer IDTokens into sessions
+func (p *KeycloakOIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+	ss, err := p.OIDCProvider.CreateSessionFromToken(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("could not create session from token: %v", err)
+	}
+
+	// Extract custom keycloak roles and enrich session
+	if err := p.extractRoles(ctx, ss); err != nil {
+		return nil, err
+	}
+
+	return ss, nil
+}
+
 // EnrichSession is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
 func (p *KeycloakOIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {

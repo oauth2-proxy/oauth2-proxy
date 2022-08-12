@@ -65,3 +65,7 @@ Redis Cluster is available to be the backend store as well. To leverage it, you 
 `--redis-use-cluster=true` flag, and configure the flags `--redis-cluster-connection-urls` appropriately.
 
 Note that flags `--redis-use-sentinel=true` and `--redis-use-cluster=true` are mutually exclusive.
+
+Note, if Redis timeout option is set to non-zero, the `--redis-connection-idle-timeout` 
+must be less than [Redis timeout option](https://redis.io/docs/reference/clients/#client-timeouts). For example: if either redis.conf includes 
+`timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14`
