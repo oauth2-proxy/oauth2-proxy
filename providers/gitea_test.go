@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testGitHubProvider(hostname string, opts options.GitHubOptions) *GitHubProvider {
-	p := NewGitHubProvider(
+func testGiteaProvider(hostname string, opts options.GiteaOptions) *GiteaProvider {
+	p := NewGiteaProvider(
 		&ProviderData{
 			ProviderName: "",
 			LoginURL:     &url.URL{},
@@ -32,13 +32,13 @@ func testGitHubProvider(hostname string, opts options.GitHubOptions) *GitHubProv
 	return p
 }
 
-func testGitHubBackend(payloads map[string][]string) *httptest.Server {
+func testGiteaBackend(payloads map[string][]string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
-		"/repos/oauth2-proxy/oauth2-proxy":                      {""},
-		"/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
-		"/user":        {""},
-		"/user/emails": {""},
-		"/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy":                      {""},
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
+		"/api/v1/user":        {""},
+		"/api/v1/user/emails": {""},
+		"/api/v1/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -69,21 +69,21 @@ func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 		}))
 }
 
-func TestNewGitHubProvider(t *testing.T) {
+func TestNewGiteaProvider(t *testing.T) {
 	g := NewWithT(t)
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewGitHubProvider(&ProviderData{}, options.GitHubOptions{}).Data()
-	g.Expect(providerData.ProviderName).To(Equal("GitHub"))
-	g.Expect(providerData.LoginURL.String()).To(Equal("https://github.com/login/oauth/authorize"))
-	g.Expect(providerData.RedeemURL.String()).To(Equal("https://github.com/login/oauth/access_token"))
+	providerData := NewGiteaProvider(&ProviderData{}, options.GiteaOptions{}).Data()
+	g.Expect(providerData.ProviderName).To(Equal("Gitea"))
+	g.Expect(providerData.LoginURL.String()).To(Equal("https://try.gitea.io/login/oauth/authorize"))
+	g.Expect(providerData.RedeemURL.String()).To(Equal("https://try.gitea.io/login/oauth/access_token"))
 	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
-	g.Expect(providerData.ValidateURL.String()).To(Equal("https://api.github.com/"))
-	g.Expect(providerData.Scope).To(Equal("user:email"))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://try.gitea.io/api/v1/user"))
+	g.Expect(providerData.Scope).To(Equal(""))
 }
 
-func TestGitHubProviderOverrides(t *testing.T) {
-	p := NewGitHubProvider(
+func TestGiteaProviderOverrides(t *testing.T) {
+	p := NewGiteaProvider(
 		&ProviderData{
 			LoginURL: &url.URL{
 				Scheme: "https",
@@ -95,29 +95,29 @@ func TestGitHubProviderOverrides(t *testing.T) {
 				Path:   "/login/oauth/access_token"},
 			ValidateURL: &url.URL{
 				Scheme: "https",
-				Host:   "api.example.com",
-				Path:   "/"},
+				Host:   "example.com",
+				Path:   "/api/v1"},
 			Scope: "profile"},
-		options.GitHubOptions{})
+		options.GiteaOptions{})
 	assert.NotEqual(t, nil, p)
-	assert.Equal(t, "GitHub", p.Data().ProviderName)
+	assert.Equal(t, "Gitea", p.Data().ProviderName)
 	assert.Equal(t, "https://example.com/login/oauth/authorize",
 		p.Data().LoginURL.String())
 	assert.Equal(t, "https://example.com/login/oauth/access_token",
 		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://api.example.com/",
+	assert.Equal(t, "https://example.com/api/v1",
 		p.Data().ValidateURL.String())
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestGitHubProvider_getEmail(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+func TestGiteaProvider_getEmail(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+	p := testGiteaProvider(bURL.Host, options.GiteaOptions{})
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -125,14 +125,14 @@ func TestGitHubProvider_getEmail(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailNotVerified(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": false, "primary": true} ]`},
+func TestGiteaProvider_getEmailNotVerified(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": false, "primary": true} ]`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+	p := testGiteaProvider(bURL.Host, options.GiteaOptions{})
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -140,10 +140,10 @@ func TestGitHubProvider_getEmailNotVerified(t *testing.T) {
 	assert.Empty(t, session.Email)
 }
 
-func TestGitHubProvider_getEmailWithOrg(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
-		"/user/orgs": {
+func TestGiteaProvider_getEmailWithOrg(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user/orgs": {
 			`[ {"login":"testorg"} ]`,
 			`[ {"login":"testorg1"} ]`,
 			`[ ]`,
@@ -152,8 +152,8 @@ func TestGitHubProvider_getEmailWithOrg(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Org: "testorg1",
 		},
 	)
@@ -164,16 +164,16 @@ func TestGitHubProvider_getEmailWithOrg(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithWriteAccessToPublicRepo(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": false}`},
-		"/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+func TestGiteaProvider_getEmailWithWriteAccessToPublicRepo(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": false}`},
+		"/api/v1/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Repo:  "oauth2-proxy/oauth2-proxy",
 			Token: "token",
 		},
@@ -185,16 +185,16 @@ func TestGitHubProvider_getEmailWithWriteAccessToPublicRepo(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithReadOnlyAccessToPrivateRepo(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": false}, "private": true}`},
-		"/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+func TestGiteaProvider_getEmailWithReadOnlyAccessToPrivateRepo(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": false}, "private": true}`},
+		"/api/v1/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Repo:  "oauth2-proxy/oauth2-proxy",
 			Token: "token",
 		},
@@ -206,16 +206,16 @@ func TestGitHubProvider_getEmailWithReadOnlyAccessToPrivateRepo(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": true}`},
-		"/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+func TestGiteaProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": true}`},
+		"/api/v1/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Repo:  "oauth2-proxy/oauth2-proxy",
 			Token: "token",
 		},
@@ -227,15 +227,15 @@ func TestGitHubProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/repos/oauth2-proxy/oauth2-proxy": {`{}`},
+func TestGiteaProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy": {`{}`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Repo: "oauth2-proxy/oauth2-proxy",
 		},
 	)
@@ -246,15 +246,15 @@ func TestGitHubProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
 	assert.Empty(t, session.Email)
 }
 
-func TestGitHubProvider_getEmailWithToken(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+func TestGiteaProvider_getEmailWithToken(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Repo:  "oauth2-proxy/oauth2-proxy",
 			Token: "token",
 		},
@@ -268,12 +268,12 @@ func TestGitHubProvider_getEmailWithToken(t *testing.T) {
 
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
-func TestGitHubProvider_getEmailFailedRequest(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{})
+func TestGiteaProvider_getEmailFailedRequest(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+	p := testGiteaProvider(bURL.Host, options.GiteaOptions{})
 
 	// We'll trigger a request failure by using an unexpected access
 	// token. Alternatively, we could allow the parsing of the payload as
@@ -284,14 +284,14 @@ func TestGitHubProvider_getEmailFailedRequest(t *testing.T) {
 	assert.Empty(t, session.Email)
 }
 
-func TestGitHubProvider_getEmailNotPresentInPayload(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user/emails": {`{"foo": "bar"}`},
+func TestGiteaProvider_getEmailNotPresentInPayload(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user/emails": {`{"foo": "bar"}`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+	p := testGiteaProvider(bURL.Host, options.GiteaOptions{})
 
 	session := CreateAuthorizedSession()
 	err := p.getEmail(context.Background(), session)
@@ -299,14 +299,14 @@ func TestGitHubProvider_getEmailNotPresentInPayload(t *testing.T) {
 	assert.Empty(t, session.Email)
 }
 
-func TestGitHubProvider_getUser(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user": {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+func TestGiteaProvider_getUser(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user": {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host, options.GitHubOptions{})
+	p := testGiteaProvider(bURL.Host, options.GiteaOptions{})
 
 	session := CreateAuthorizedSession()
 	err := p.getUser(context.Background(), session)
@@ -314,16 +314,16 @@ func TestGitHubProvider_getUser(t *testing.T) {
 	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGitHubProvider_getUserWithRepoAndToken(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user": {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
-		"/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
+func TestGiteaProvider_getUserWithRepoAndToken(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user": {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Repo:  "oauth2-proxy/oauth2-proxy",
 			Token: "token",
 		},
@@ -335,13 +335,13 @@ func TestGitHubProvider_getUserWithRepoAndToken(t *testing.T) {
 	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGitHubProvider_getUserWithRepoAndTokenWithoutPushAccess(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{})
+func TestGiteaProvider_getUserWithRepoAndTokenWithoutPushAccess(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Repo:  "oauth2-proxy/oauth2-proxy",
 			Token: "token",
 		},
@@ -353,16 +353,16 @@ func TestGitHubProvider_getUserWithRepoAndTokenWithoutPushAccess(t *testing.T) {
 	assert.Empty(t, session.User)
 }
 
-func TestGitHubProvider_getEmailWithUsername(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
-		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+func TestGiteaProvider_getEmailWithUsername(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Users: []string{"mbland", "octocat"},
 		},
 	)
@@ -373,16 +373,16 @@ func TestGitHubProvider_getEmailWithUsername(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithNotAllowedUsername(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
-		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+func TestGiteaProvider_getEmailWithNotAllowedUsername(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Users: []string{"octocat"},
 		},
 	)
@@ -393,11 +393,11 @@ func TestGitHubProvider_getEmailWithNotAllowedUsername(t *testing.T) {
 	assert.Empty(t, session.Email)
 }
 
-func TestGitHubProvider_getEmailWithUsernameAndNotBelongToOrg(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
-		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
-		"/user/orgs": {
+func TestGiteaProvider_getEmailWithUsernameAndNotBelongToOrg(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user/orgs": {
 			`[ {"login":"testorg"} ]`,
 			`[ ]`,
 		},
@@ -405,8 +405,8 @@ func TestGitHubProvider_getEmailWithUsernameAndNotBelongToOrg(t *testing.T) {
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Org:   "not_belog_to",
 			Users: []string{"mbland"},
 		},
@@ -418,17 +418,17 @@ func TestGitHubProvider_getEmailWithUsernameAndNotBelongToOrg(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithUsernameAndNoAccessToPrivateRepo(t *testing.T) {
-	b := testGitHubBackend(map[string][]string{
-		"/user":                           {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
-		"/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
-		"/repo/oauth2-proxy/oauth2-proxy": {`{}`},
+func TestGiteaProvider_getEmailWithUsernameAndNoAccessToPrivateRepo(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user":                           {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/api/v1/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/repo/oauth2-proxy/oauth2-proxy": {`{}`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
-	p := testGitHubProvider(bURL.Host,
-		options.GitHubOptions{
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
 			Repo:  "oauth2-proxy/oauth2-proxy",
 			Token: "token",
 			Users: []string{"mbland"},
