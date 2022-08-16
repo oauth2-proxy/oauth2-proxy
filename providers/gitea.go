@@ -8,7 +8,6 @@ import (
 	"path"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -34,7 +33,7 @@ const (
 
 var (
 	// Default Login URL for Gitea.
-	// Pre-parsed URL of https://gitea.org/login/oauth/authorize.
+	// Pre-parsed URL of https://try.gitea.io/login/oauth/authorize.
 	giteaDefaultLoginURL = &url.URL{
 		Scheme: "https",
 		Host:   "try.gitea.io",
@@ -42,7 +41,7 @@ var (
 	}
 
 	// Default Redeem URL for Gitea.
-	// Pre-parsed URL of https://gitea.org/login/oauth/access_token.
+	// Pre-parsed URL of https://try.gitea.io/login/oauth/access_token.
 	giteaDefaultRedeemURL = &url.URL{
 		Scheme: "https",
 		Host:   "try.gitea.io",
@@ -92,13 +91,10 @@ func (p *GiteaProvider) getApiBase() *url.URL {
 	}
 }
 
-// setOrgTeam adds Gitea org reading parameters to the OAuth2 scope
+// setOrgTeam configures the target org and team
 func (p *GiteaProvider) setOrgTeam(org, team string) {
 	p.Org = org
 	p.Team = team
-	if org != "" || team != "" {
-		p.Scope += " read:org"
-	}
 }
 
 // setRepo configures the target repository and optional token to use
@@ -114,11 +110,17 @@ func (p *GiteaProvider) setUsers(users []string) {
 
 // EnrichSession updates the User & Email after the initial Redeem
 func (p *GiteaProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	err := p.getEmail(ctx, s)
-	if err != nil {
+	if err := p.getEmail(ctx, s); err != nil {
 		return err
 	}
-	return p.getUser(ctx, s)
+	if err := p.getUser(ctx, s); err != nil {
+		return err
+	}
+	if err := p.isAllowed(ctx, s); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ValidateSession validates the AccessToken
@@ -126,78 +128,38 @@ func (p *GiteaProvider) ValidateSession(ctx context.Context, s *sessions.Session
 	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }
 
-func (p *GiteaProvider) hasOrg(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.gitea.com/v3/orgs/#list-your-organizations
+func (p *GiteaProvider) hasOrg(ctx context.Context, accessToken string, userName string) (bool, error) {
+	// https://try.gitea.io/api/swagger#/organization/orgIsMember
 
-	var orgs []struct {
-		Login string `json:"login"`
+	endpoint := &url.URL{
+		Scheme: p.getApiBase().Scheme,
+		Host:   p.getApiBase().Host,
+		Path:   path.Join(p.getApiBase().Path, "/orgs/", p.Org, "/members/", userName),
 	}
 
-	type orgsPage []struct {
-		Login string `json:"login"`
+	result := requests.New(endpoint.String()).
+		WithContext(ctx).
+		WithHeaders(makeOIDCHeader(accessToken)).
+		Do()
+
+	if result.Error() != nil {
+		return false, result.Error()
 	}
 
-	pn := 1
-	for {
-		params := url.Values{
-			"per_page": {"100"},
-			"page":     {strconv.Itoa(pn)},
-		}
-
-		endpoint := &url.URL{
-			Scheme:   p.getApiBase().Scheme,
-			Host:     p.getApiBase().Host,
-			Path:     path.Join(p.getApiBase().Path, "/user/orgs"),
-			RawQuery: params.Encode(),
-		}
-
-		var op orgsPage
-		err := requests.New(endpoint.String()).
-			WithContext(ctx).
-			WithHeaders(makeOIDCHeader(accessToken)).
-			Do().
-			UnmarshalInto(&op)
-		if err != nil {
-			return false, err
-		}
-
-		if len(op) == 0 {
-			break
-		}
-
-		orgs = append(orgs, op...)
-		pn++
+	if result.StatusCode() != 204 {
+		return false, nil
 	}
 
-	presentOrgs := make([]string, 0, len(orgs))
-	for _, org := range orgs {
-		if p.Org == org.Login {
-			logger.Printf("Found Gitea Organization: %q", org.Login)
-			return true, nil
-		}
-		presentOrgs = append(presentOrgs, org.Login)
-	}
-
-	logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
-	return false, nil
+	return true, nil
 }
 
 func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.gitea.com/v3/orgs/teams/#list-user-teams
-
-	var teams []struct {
-		Name string `json:"name"`
-		Slug string `json:"slug"`
-		Org  struct {
-			Login string `json:"login"`
-		} `json:"organization"`
-	}
+	// https://try.gitea.io/api/swagger#/user/userListTeams
 
 	type teamsPage []struct {
-		Name string `json:"name"`
-		Slug string `json:"slug"`
-		Org  struct {
-			Login string `json:"login"`
+		TeamName string `json:"name"`
+		Org      struct {
+			OrgName string `json:"username"`
 		} `json:"organization"`
 	}
 
@@ -258,7 +220,11 @@ func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (
 			break
 		}
 
-		teams = append(teams, tp...)
+		for _, team := range tp {
+			if team.Org.OrgName == p.Org && team.TeamName == p.Team {
+				return true, nil
+			}
+		}
 
 		if pn == last {
 			break
@@ -270,37 +236,11 @@ func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (
 		pn++
 	}
 
-	var hasOrg bool
-	presentOrgs := make(map[string]bool)
-	var presentTeams []string
-	for _, team := range teams {
-		presentOrgs[team.Org.Login] = true
-		if p.Org == team.Org.Login {
-			hasOrg = true
-			ts := strings.Split(p.Team, ",")
-			for _, t := range ts {
-				if t == team.Slug {
-					logger.Printf("Found Gitea Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
-					return true, nil
-				}
-			}
-			presentTeams = append(presentTeams, team.Slug)
-		}
-	}
-	if hasOrg {
-		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
-	} else {
-		var allOrgs []string
-		for org := range presentOrgs {
-			allOrgs = append(allOrgs, org)
-		}
-		logger.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
-	}
 	return false, nil
 }
 
 func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.gitea.com/v3/repos/#get-a-repository
+	// https://try.gitea.io/api/swagger#/repository/repoGet
 
 	type permissions struct {
 		Pull bool `json:"pull"`
@@ -333,37 +273,8 @@ func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, 
 	return repo.Permissions.Push || (repo.Private && repo.Permissions.Pull), nil
 }
 
-func (p *GiteaProvider) hasUser(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.gitea.com/v3/users/#get-the-authenticated-user
-
-	var user struct {
-		Login string `json:"login"`
-		Email string `json:"email"`
-	}
-
-	endpoint := &url.URL{
-		Scheme: p.getApiBase().Scheme,
-		Host:   p.getApiBase().Host,
-		Path:   path.Join(p.getApiBase().Path, "/user"),
-	}
-
-	err := requests.New(endpoint.String()).
-		WithContext(ctx).
-		WithHeaders(makeOIDCHeader(accessToken)).
-		Do().
-		UnmarshalInto(&user)
-	if err != nil {
-		return false, err
-	}
-
-	if p.isVerifiedUser(user.Login) {
-		return true, nil
-	}
-	return false, nil
-}
-
 func (p *GiteaProvider) isCollaborator(ctx context.Context, username, accessToken string) (bool, error) {
-	//https://developer.gitea.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
+	// https://try.gitea.io/api/swagger#/repository/repoCheckCollaborator
 
 	endpoint := &url.URL{
 		Scheme: p.getApiBase().Scheme,
@@ -397,38 +308,6 @@ func (p *GiteaProvider) getEmail(ctx context.Context, s *sessions.SessionState) 
 		Verified bool   `json:"verified"`
 	}
 
-	// If usernames are set, check that first
-	verifiedUser := false
-	if len(p.Users) > 0 {
-		var err error
-		verifiedUser, err = p.hasUser(ctx, s.AccessToken)
-		if err != nil {
-			return err
-		}
-		// org and repository options are not configured
-		if !verifiedUser && p.Org == "" && p.Repo == "" {
-			return errors.New("missing gitea user")
-		}
-	}
-	// If a user is verified by username options, skip the following restrictions
-	if !verifiedUser {
-		if p.Org != "" {
-			if p.Team != "" {
-				if ok, err := p.hasOrgAndTeam(ctx, s.AccessToken); err != nil || !ok {
-					return err
-				}
-			} else {
-				if ok, err := p.hasOrg(ctx, s.AccessToken); err != nil || !ok {
-					return err
-				}
-			}
-		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
-			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
-				return err
-			}
-		}
-	}
-
 	endpoint := &url.URL{
 		Scheme: p.getApiBase().Scheme,
 		Host:   p.getApiBase().Host,
@@ -459,7 +338,6 @@ func (p *GiteaProvider) getEmail(ctx context.Context, s *sessions.SessionState) 
 func (p *GiteaProvider) getUser(ctx context.Context, s *sessions.SessionState) error {
 	var user struct {
 		Login string `json:"login"`
-		Email string `json:"email"`
 	}
 
 	endpoint := &url.URL{
@@ -477,15 +355,37 @@ func (p *GiteaProvider) getUser(ctx context.Context, s *sessions.SessionState) e
 		return err
 	}
 
-	// Now that we have the username we can check collaborator status
-	if !p.isVerifiedUser(user.Login) && p.Org == "" && p.Repo != "" && p.Token != "" {
-		if ok, err := p.isCollaborator(ctx, user.Login, p.Token); err != nil || !ok {
-			return err
+	s.User = user.Login
+	return nil
+}
+
+func (p *GiteaProvider) isAllowed(ctx context.Context, s *sessions.SessionState) error {
+	// If a user is verified by username options, skip the following restrictions
+	if len(p.Users) > 0 && !p.isVerifiedUser(s.User) {
+		return errors.New(fmt.Sprintf("User %s is not verified.", s.User))
+	}
+
+	var ok bool
+	var err error
+	if p.Org != "" {
+		if p.Team != "" {
+			ok, err = p.hasOrgAndTeam(ctx, s.AccessToken)
+		} else {
+			ok, err = p.hasOrg(ctx, s.AccessToken, s.User)
+		}
+	} else if p.Repo != "" {
+		if p.Token != "" {
+			ok, err = p.isCollaborator(ctx, s.User, p.Token)
+		} else {
+			ok, err = p.hasRepo(ctx, s.AccessToken)
 		}
 	}
 
-	s.User = user.Login
-	return nil
+	if err != nil || !ok {
+		return err
+	} else {
+		return nil
+	}
 }
 
 // isVerifiedUser

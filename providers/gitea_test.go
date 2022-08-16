@@ -241,7 +241,7 @@ func TestGiteaProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.isAllowed(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Empty(t, session.Email)
 }
@@ -388,7 +388,7 @@ func TestGiteaProvider_getEmailWithNotAllowedUsername(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.isAllowed(context.Background(), session)
 	assert.Error(t, err)
 	assert.Empty(t, session.Email)
 }
