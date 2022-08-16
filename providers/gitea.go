@@ -37,7 +37,7 @@ var (
 	// Pre-parsed URL of https://gitea.org/login/oauth/authorize.
 	giteaDefaultLoginURL = &url.URL{
 		Scheme: "https",
-		Host:   "gitea.com",
+		Host:   "try.gitea.io",
 		Path:   "/login/oauth/authorize",
 	}
 
@@ -45,18 +45,19 @@ var (
 	// Pre-parsed URL of https://gitea.org/login/oauth/access_token.
 	giteaDefaultRedeemURL = &url.URL{
 		Scheme: "https",
-		Host:   "gitea.com",
+		Host:   "try.gitea.io",
 		Path:   "/login/oauth/access_token",
 	}
 
 	// Default Validation URL for Gitea.
-	// ValidationURL is the API Base URL.
+	// ValidationURL is not the API Base URL, because the API Base URL returns 404.
+	// https://github.com/oauth2-proxy/oauth2-proxy/issues/1636
 	// Other API requests are based off of this (eg to fetch users/groups).
-	// Pre-parsed URL of https://api.gitea.com/.
+	// Pre-parsed URL of https://try.gitea.io/api/v1/user.
 	giteaDefaultValidateURL = &url.URL{
 		Scheme: "https",
-		Host:   "api.gitea.com",
-		Path:   "/",
+		Host:   "try.gitea.io",
+		Path:   "/api/v1/user",
 	}
 )
 
@@ -76,6 +77,19 @@ func NewGiteaProvider(p *ProviderData, opts options.GiteaOptions) *GiteaProvider
 	provider.setRepo(opts.Repo, opts.Token)
 	provider.setUsers(opts.Users)
 	return provider
+}
+
+func (p *GiteaProvider) getApiBase() *url.URL {
+	if p.ValidateURL == nil {
+		return nil
+	} else {
+		apiBase := &url.URL{
+			Scheme: p.ValidateURL.Scheme,
+			Host:   p.ValidateURL.Host,
+			Path:   path.Dir(p.ValidateURL.Path),
+		}
+		return apiBase
+	}
 }
 
 // setOrgTeam adds Gitea org reading parameters to the OAuth2 scope
@@ -131,9 +145,9 @@ func (p *GiteaProvider) hasOrg(ctx context.Context, accessToken string) (bool, e
 		}
 
 		endpoint := &url.URL{
-			Scheme:   p.ValidateURL.Scheme,
-			Host:     p.ValidateURL.Host,
-			Path:     path.Join(p.ValidateURL.Path, "/user/orgs"),
+			Scheme:   p.getApiBase().Scheme,
+			Host:     p.getApiBase().Host,
+			Path:     path.Join(p.getApiBase().Path, "/user/orgs"),
 			RawQuery: params.Encode(),
 		}
 
@@ -196,9 +210,9 @@ func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (
 		}
 
 		endpoint := &url.URL{
-			Scheme:   p.ValidateURL.Scheme,
-			Host:     p.ValidateURL.Host,
-			Path:     path.Join(p.ValidateURL.Path, "/user/teams"),
+			Scheme:   p.getApiBase().Scheme,
+			Host:     p.getApiBase().Host,
+			Path:     path.Join(p.getApiBase().Path, "/user/teams"),
 			RawQuery: params.Encode(),
 		}
 
@@ -299,9 +313,9 @@ func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, 
 	}
 
 	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo),
+		Scheme: p.getApiBase().Scheme,
+		Host:   p.getApiBase().Host,
+		Path:   path.Join(p.getApiBase().Path, "/repos/", p.Repo),
 	}
 
 	var repo repository
@@ -328,9 +342,9 @@ func (p *GiteaProvider) hasUser(ctx context.Context, accessToken string) (bool, 
 	}
 
 	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/user"),
+		Scheme: p.getApiBase().Scheme,
+		Host:   p.getApiBase().Host,
+		Path:   path.Join(p.getApiBase().Path, "/user"),
 	}
 
 	err := requests.New(endpoint.String()).
@@ -352,9 +366,9 @@ func (p *GiteaProvider) isCollaborator(ctx context.Context, username, accessToke
 	//https://developer.gitea.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
 
 	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo, "/collaborators/", username),
+		Scheme: p.getApiBase().Scheme,
+		Host:   p.getApiBase().Host,
+		Path:   path.Join(p.getApiBase().Path, "/repos/", p.Repo, "/collaborators/", username),
 	}
 	result := requests.New(endpoint.String()).
 		WithContext(ctx).
@@ -416,9 +430,9 @@ func (p *GiteaProvider) getEmail(ctx context.Context, s *sessions.SessionState) 
 	}
 
 	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/user/emails"),
+		Scheme: p.getApiBase().Scheme,
+		Host:   p.getApiBase().Host,
+		Path:   path.Join(p.getApiBase().Path, "/user/emails"),
 	}
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
@@ -449,9 +463,9 @@ func (p *GiteaProvider) getUser(ctx context.Context, s *sessions.SessionState) e
 	}
 
 	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/user"),
+		Scheme: p.getApiBase().Scheme,
+		Host:   p.getApiBase().Host,
+		Path:   path.Join(p.getApiBase().Path, "/user"),
 	}
 
 	err := requests.New(endpoint.String()).
