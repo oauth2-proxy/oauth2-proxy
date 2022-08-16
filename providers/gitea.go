@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"path"
 	"regexp"
@@ -17,8 +16,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
-// GitHubProvider represents an GitHub based Identity Provider
-type GitHubProvider struct {
+// GiteaProvider represents a Gitea based Identity Provider
+type GiteaProvider struct {
 	*ProviderData
 	Org   string
 	Team  string
@@ -27,53 +26,51 @@ type GitHubProvider struct {
 	Users []string
 }
 
-var _ Provider = (*GitHubProvider)(nil)
+var _ Provider = (*GiteaProvider)(nil)
 
 const (
-	githubProviderName = "GitHub"
-	githubDefaultScope = "user:email"
+	giteaProviderName = "Gitea"
 )
 
 var (
-	// Default Login URL for GitHub.
-	// Pre-parsed URL of https://github.org/login/oauth/authorize.
-	githubDefaultLoginURL = &url.URL{
+	// Default Login URL for Gitea.
+	// Pre-parsed URL of https://gitea.org/login/oauth/authorize.
+	giteaDefaultLoginURL = &url.URL{
 		Scheme: "https",
-		Host:   "github.com",
+		Host:   "gitea.com",
 		Path:   "/login/oauth/authorize",
 	}
 
-	// Default Redeem URL for GitHub.
-	// Pre-parsed URL of https://github.org/login/oauth/access_token.
-	githubDefaultRedeemURL = &url.URL{
+	// Default Redeem URL for Gitea.
+	// Pre-parsed URL of https://gitea.org/login/oauth/access_token.
+	giteaDefaultRedeemURL = &url.URL{
 		Scheme: "https",
-		Host:   "github.com",
+		Host:   "gitea.com",
 		Path:   "/login/oauth/access_token",
 	}
 
-	// Default Validation URL for GitHub.
+	// Default Validation URL for Gitea.
 	// ValidationURL is the API Base URL.
 	// Other API requests are based off of this (eg to fetch users/groups).
-	// Pre-parsed URL of https://api.github.com/.
-	githubDefaultValidateURL = &url.URL{
+	// Pre-parsed URL of https://api.gitea.com/.
+	giteaDefaultValidateURL = &url.URL{
 		Scheme: "https",
-		Host:   "api.github.com",
+		Host:   "api.gitea.com",
 		Path:   "/",
 	}
 )
 
-// NewGitHubProvider initiates a new GitHubProvider
-func NewGitHubProvider(p *ProviderData, opts options.GitHubOptions) *GitHubProvider {
+// NewGiteaProvider initiates a new GiteaProvider
+func NewGiteaProvider(p *ProviderData, opts options.GiteaOptions) *GiteaProvider {
 	p.setProviderDefaults(providerDefaults{
-		name:        githubProviderName,
-		loginURL:    githubDefaultLoginURL,
-		redeemURL:   githubDefaultRedeemURL,
+		name:        giteaProviderName,
+		loginURL:    giteaDefaultLoginURL,
+		redeemURL:   giteaDefaultRedeemURL,
 		profileURL:  nil,
-		validateURL: githubDefaultValidateURL,
-		scope:       githubDefaultScope,
+		validateURL: giteaDefaultValidateURL,
 	})
 
-	provider := &GitHubProvider{ProviderData: p}
+	provider := &GiteaProvider{ProviderData: p}
 
 	provider.setOrgTeam(opts.Org, opts.Team)
 	provider.setRepo(opts.Repo, opts.Token)
@@ -81,16 +78,8 @@ func NewGitHubProvider(p *ProviderData, opts options.GitHubOptions) *GitHubProvi
 	return provider
 }
 
-func makeGitHubHeader(accessToken string) http.Header {
-	// extra headers required by the GitHub API when making authenticated requests
-	extraHeaders := map[string]string{
-		acceptHeader: "application/vnd.github.v3+json",
-	}
-	return makeAuthorizationHeader(tokenTypeToken, accessToken, extraHeaders)
-}
-
-// setOrgTeam adds GitHub org reading parameters to the OAuth2 scope
-func (p *GitHubProvider) setOrgTeam(org, team string) {
+// setOrgTeam adds Gitea org reading parameters to the OAuth2 scope
+func (p *GiteaProvider) setOrgTeam(org, team string) {
 	p.Org = org
 	p.Team = team
 	if org != "" || team != "" {
@@ -99,18 +88,18 @@ func (p *GitHubProvider) setOrgTeam(org, team string) {
 }
 
 // setRepo configures the target repository and optional token to use
-func (p *GitHubProvider) setRepo(repo, token string) {
+func (p *GiteaProvider) setRepo(repo, token string) {
 	p.Repo = repo
 	p.Token = token
 }
 
 // setUsers configures allowed usernames
-func (p *GitHubProvider) setUsers(users []string) {
+func (p *GiteaProvider) setUsers(users []string) {
 	p.Users = users
 }
 
 // EnrichSession updates the User & Email after the initial Redeem
-func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+func (p *GiteaProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	err := p.getEmail(ctx, s)
 	if err != nil {
 		return err
@@ -119,12 +108,12 @@ func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 }
 
 // ValidateSession validates the AccessToken
-func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
+func (p *GiteaProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }
 
-func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.github.com/v3/orgs/#list-your-organizations
+func (p *GiteaProvider) hasOrg(ctx context.Context, accessToken string) (bool, error) {
+	// https://developer.gitea.com/v3/orgs/#list-your-organizations
 
 	var orgs []struct {
 		Login string `json:"login"`
@@ -151,7 +140,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 		var op orgsPage
 		err := requests.New(endpoint.String()).
 			WithContext(ctx).
-			WithHeaders(makeGitHubHeader(accessToken)).
+			WithHeaders(makeOIDCHeader(accessToken)).
 			Do().
 			UnmarshalInto(&op)
 		if err != nil {
@@ -169,7 +158,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 	presentOrgs := make([]string, 0, len(orgs))
 	for _, org := range orgs {
 		if p.Org == org.Login {
-			logger.Printf("Found Github Organization: %q", org.Login)
+			logger.Printf("Found Gitea Organization: %q", org.Login)
 			return true, nil
 		}
 		presentOrgs = append(presentOrgs, org.Login)
@@ -179,8 +168,8 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 	return false, nil
 }
 
-func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.github.com/v3/orgs/teams/#list-user-teams
+func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (bool, error) {
+	// https://developer.gitea.com/v3/orgs/teams/#list-user-teams
 
 	var teams []struct {
 		Name string `json:"name"`
@@ -218,7 +207,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 		// nolint:bodyclose
 		result := requests.New(endpoint.String()).
 			WithContext(ctx).
-			WithHeaders(makeGitHubHeader(accessToken)).
+			WithHeaders(makeOIDCHeader(accessToken)).
 			Do()
 		if result.Error() != nil {
 			return false, result.Error()
@@ -233,12 +222,12 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			// 2. When it exceeds the paging frame (Example: When there is only 10 records but the second page is called with a page size of 100)
 
 			// link header at not last page
-			// <https://api.github.com/user/teams?page=1&per_page=100>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=100>; rel="last", <https://api.github.com/user/teams?page=1&per_page=100>; rel="first"
+			// <https://api.gitea.com/user/teams?page=1&per_page=100>; rel="prev", <https://api.gitea.com/user/teams?page=1&per_page=100>; rel="last", <https://api.gitea.com/user/teams?page=1&per_page=100>; rel="first"
 			// link header at last page (doesn't exist last info)
-			// <https://api.github.com/user/teams?page=3&per_page=10>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=10>; rel="first"
+			// <https://api.gitea.com/user/teams?page=3&per_page=10>; rel="prev", <https://api.gitea.com/user/teams?page=1&per_page=10>; rel="first"
 
 			link := result.Headers().Get("Link")
-			rep1 := regexp.MustCompile(`(?s).*\<https://api.github.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
+			rep1 := regexp.MustCompile(`(?s).*\<https://api.gitea.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
 			i, converr := strconv.Atoi(rep1.ReplaceAllString(link, "$1"))
 
 			// If the last page cannot be taken from the link in the http header, the last variable remains zero
@@ -277,7 +266,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			ts := strings.Split(p.Team, ",")
 			for _, t := range ts {
 				if t == team.Slug {
-					logger.Printf("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
+					logger.Printf("Found Gitea Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
 					return true, nil
 				}
 			}
@@ -296,8 +285,8 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 	return false, nil
 }
 
-func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.github.com/v3/repos/#get-a-repository
+func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, error) {
+	// https://developer.gitea.com/v3/repos/#get-a-repository
 
 	type permissions struct {
 		Pull bool `json:"pull"`
@@ -318,7 +307,7 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 	var repo repository
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(makeGitHubHeader(accessToken)).
+		WithHeaders(makeOIDCHeader(accessToken)).
 		Do().
 		UnmarshalInto(&repo)
 	if err != nil {
@@ -330,8 +319,8 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 	return repo.Permissions.Push || (repo.Private && repo.Permissions.Pull), nil
 }
 
-func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.github.com/v3/users/#get-the-authenticated-user
+func (p *GiteaProvider) hasUser(ctx context.Context, accessToken string) (bool, error) {
+	// https://developer.gitea.com/v3/users/#get-the-authenticated-user
 
 	var user struct {
 		Login string `json:"login"`
@@ -346,7 +335,7 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(makeGitHubHeader(accessToken)).
+		WithHeaders(makeOIDCHeader(accessToken)).
 		Do().
 		UnmarshalInto(&user)
 	if err != nil {
@@ -359,8 +348,8 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 	return false, nil
 }
 
-func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessToken string) (bool, error) {
-	//https://developer.github.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
+func (p *GiteaProvider) isCollaborator(ctx context.Context, username, accessToken string) (bool, error) {
+	//https://developer.gitea.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
 
 	endpoint := &url.URL{
 		Scheme: p.ValidateURL.Scheme,
@@ -369,7 +358,7 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 	}
 	result := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(makeGitHubHeader(accessToken)).
+		WithHeaders(makeOIDCHeader(accessToken)).
 		Do()
 	if result.Error() != nil {
 		return false, result.Error()
@@ -386,7 +375,7 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 }
 
 // getEmail updates the SessionState Email
-func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState) error {
+func (p *GiteaProvider) getEmail(ctx context.Context, s *sessions.SessionState) error {
 
 	var emails []struct {
 		Email    string `json:"email"`
@@ -404,7 +393,7 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 		}
 		// org and repository options are not configured
 		if !verifiedUser && p.Org == "" && p.Repo == "" {
-			return errors.New("missing github user")
+			return errors.New("missing gitea user")
 		}
 	}
 	// If a user is verified by username options, skip the following restrictions
@@ -433,7 +422,7 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 	}
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(makeGitHubHeader(s.AccessToken)).
+		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&emails)
 	if err != nil {
@@ -453,7 +442,7 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 }
 
 // getUser updates the SessionState User
-func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) error {
+func (p *GiteaProvider) getUser(ctx context.Context, s *sessions.SessionState) error {
 	var user struct {
 		Login string `json:"login"`
 		Email string `json:"email"`
@@ -467,7 +456,7 @@ func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) 
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
-		WithHeaders(makeGitHubHeader(s.AccessToken)).
+		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&user)
 	if err != nil {
@@ -486,7 +475,7 @@ func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) 
 }
 
 // isVerifiedUser
-func (p *GitHubProvider) isVerifiedUser(username string) bool {
+func (p *GiteaProvider) isVerifiedUser(username string) bool {
 	for _, u := range p.Users {
 		if username == u {
 			return true
