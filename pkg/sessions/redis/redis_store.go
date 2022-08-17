@@ -104,6 +104,7 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		SentinelPassword: opts.SentinelPassword,
 		Password:         opts.Password,
 		TLSConfig:        opt.TLSConfig,
+		IdleTimeout:      time.Duration(opts.IdleTimeout) * time.Second,
 	})
 	return newClient(client), nil
 }
@@ -120,9 +121,10 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 	}
 
 	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:     addrs,
-		Password:  opts.Password,
-		TLSConfig: opt.TLSConfig,
+		Addrs:       addrs,
+		Password:    opts.Password,
+		TLSConfig:   opt.TLSConfig,
+		IdleTimeout: time.Duration(opts.IdleTimeout) * time.Second,
 	})
 	return newClusterClient(client), nil
 }
@@ -142,6 +144,8 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 	if err := setupTLSConfig(opts, opt); err != nil {
 		return nil, err
 	}
+
+	opt.IdleTimeout = time.Duration(opts.IdleTimeout) * time.Second
 
 	client := redis.NewClient(opt)
 	return newClient(client), nil
