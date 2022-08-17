@@ -27,11 +27,7 @@ func WatchFileForUpdates(filename string, done <-chan bool, action func()) error
 			case <-done:
 				logger.Printf("shutting down watcher for: %s", filename)
 				return
-			case event, ok := <-watcher.Events:
-				if !ok { // 'Events' channel is closed
-					logger.Errorf("error: cannot start the watcher, events channel is closed")
-					return
-				}
+			case event := <-watcher.Events:
 				filterEvent(watcher, event, filename, action)
 			case err = <-watcher.Errors:
 				logger.Errorf("error watching '%s': %s", filename, err)
