@@ -96,6 +96,8 @@ func Validate(o *options.Options) error {
 		})
 	}
 
+	msgs = append(msgs, validateApiRoutes(o)...)
+
 	// Do this after ReverseProxy validation for TrustedIP coordinated checks
 	msgs = append(msgs, validateAllowlists(o)...)
 

@@ -2400,6 +2400,117 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 	}
 }
 
+func TestApiRoutes(t *testing.T) {
+
+	ajaxApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, err := w.Write([]byte("AJAX API Request"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	t.Cleanup(ajaxApiServer.Close)
+
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, err := w.Write([]byte("API Request"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	t.Cleanup(apiServer.Close)
+
+	uiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, err := w.Write([]byte("API Request"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	t.Cleanup(uiServer.Close)
+
+	opts := baseTestOptions()
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   apiServer.URL,
+				Path: "/api",
+				URI:  apiServer.URL,
+			},
+			{
+				ID:   ajaxApiServer.URL,
+				Path: "/ajaxapi",
+				URI:  ajaxApiServer.URL,
+			},
+			{
+				ID:   uiServer.URL,
+				Path: "/ui",
+				URI:  uiServer.URL,
+			},
+		},
+	}
+	opts.ApiRoutes = []string{
+		"^/api",
+	}
+	opts.SkipProviderButton = true
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name           string
+		contentType    string
+		url            string
+		shouldRedirect bool
+	}{
+		{
+			name:           "AJAX request matching API regex",
+			contentType:    "application/json",
+			url:            "/api/v1/UserInfo",
+			shouldRedirect: false,
+		},
+		{
+			name:           "AJAX request not matching API regex",
+			contentType:    "application/json",
+			url:            "/ajaxapi/v1/UserInfo",
+			shouldRedirect: false,
+		},
+		{
+			name:           "Other Request matching API regex",
+			contentType:    "application/grpcwebtext",
+			url:            "/api/v1/UserInfo",
+			shouldRedirect: false,
+		},
+		{
+			name:           "UI request",
+			contentType:    "html",
+			url:            "/ui/index.html",
+			shouldRedirect: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", tc.url, nil)
+			req.Header.Set("Accept", tc.contentType)
+			assert.NoError(t, err)
+
+			rw := httptest.NewRecorder()
+			proxy.ServeHTTP(rw, req)
+
+			if tc.shouldRedirect {
+				assert.Equal(t, 302, rw.Code)
+				// assert.Equal(t, "Allowed Request", rw.Body.String())
+			} else {
+				assert.Equal(t, 401, rw.Code)
+			}
+		})
+	}
+}
+
 func TestAllowedRequest(t *testing.T) {
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
