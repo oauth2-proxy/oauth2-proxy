@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"path"
-	"regexp"
 	"strconv"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -123,11 +122,6 @@ func (p *GiteaProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 	return nil
 }
 
-// ValidateSession validates the AccessToken
-func (p *GiteaProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
-}
-
 func (p *GiteaProvider) hasOrg(ctx context.Context, accessToken string, userName string) (bool, error) {
 	// https://try.gitea.io/api/swagger#/organization/orgIsMember
 
@@ -147,24 +141,30 @@ func (p *GiteaProvider) hasOrg(ctx context.Context, accessToken string, userName
 	}
 
 	if result.StatusCode() != 204 {
-		return false, nil
+		return false, errors.New(fmt.Sprintf("user is not in org %s", p.Org))
 	}
 
 	return true, nil
 }
 
-func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (bool, error) {
+func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string, userName string) (bool, error) {
 	// https://try.gitea.io/api/swagger#/user/userListTeams
+	// blocked by https://github.com/go-gitea/gitea/issues/20829
+	// http://try.gitea.io/api/swagger#/organization/orgListTeams
+	// consider http://try.gitea.io/api/swagger#/settings/getGeneralAPISettings for getting max_response_items
 
-	type teamsPage []struct {
-		TeamName string `json:"name"`
-		Org      struct {
-			OrgName string `json:"username"`
-		} `json:"organization"`
+	type team struct {
+		Id   int    `json:"id"`
+		Name string `json:"name"`
 	}
 
+	type teamPage []team
+
+	var allowedTeam *team
+
+	// Find the allowedTeam to get the id
 	pn := 1
-	last := 0
+	count := 0
 	for {
 		params := url.Values{
 			"per_page": {"100"},
@@ -174,7 +174,7 @@ func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (
 		endpoint := &url.URL{
 			Scheme:   p.getApiBase().Scheme,
 			Host:     p.getApiBase().Host,
-			Path:     path.Join(p.getApiBase().Path, "/user/teams"),
+			Path:     path.Join(p.getApiBase().Path, "/orgs/", p.Org, "/teams"),
 			RawQuery: params.Encode(),
 		}
 
@@ -188,55 +188,64 @@ func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (
 		if result.Error() != nil {
 			return false, result.Error()
 		}
-
-		if last == 0 {
-			// link header may not be obtained
-			// When paging is not required and all data can be retrieved with a single call
-
-			// Conditions for obtaining the link header.
-			// 1. When paging is required (Example: When the data size is 100 and the page size is 99 or less)
-			// 2. When it exceeds the paging frame (Example: When there is only 10 records but the second page is called with a page size of 100)
-
-			// link header at not last page
-			// <https://api.gitea.com/user/teams?page=1&per_page=100>; rel="prev", <https://api.gitea.com/user/teams?page=1&per_page=100>; rel="last", <https://api.gitea.com/user/teams?page=1&per_page=100>; rel="first"
-			// link header at last page (doesn't exist last info)
-			// <https://api.gitea.com/user/teams?page=3&per_page=10>; rel="prev", <https://api.gitea.com/user/teams?page=1&per_page=10>; rel="first"
-
-			link := result.Headers().Get("Link")
-			rep1 := regexp.MustCompile(`(?s).*\<https://api.gitea.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
-			i, converr := strconv.Atoi(rep1.ReplaceAllString(link, "$1"))
-
-			// If the last page cannot be taken from the link in the http header, the last variable remains zero
-			if converr == nil {
-				last = i
-			}
-		}
-
-		var tp teamsPage
-		if err := result.UnmarshalInto(&tp); err != nil {
+		totalCount, err := strconv.Atoi(result.Headers().Get("x-total-count"))
+		if err != nil {
 			return false, err
 		}
-		if len(tp) == 0 {
+
+		var teamsPage teamPage
+		if err := result.UnmarshalInto(&teamsPage); err != nil {
+			return false, err
+		}
+		if len(teamsPage) == 0 {
 			break
 		}
 
-		for _, team := range tp {
-			if team.Org.OrgName == p.Org && team.TeamName == p.Team {
-				return true, nil
+		for _, team := range teamsPage {
+			count++
+			if team.Name == p.Team {
+				allowedTeam = &team
+				break
 			}
 		}
 
-		if pn == last {
+		if allowedTeam != nil {
 			break
 		}
-		if last == 0 {
+
+		if count == totalCount {
 			break
 		}
 
 		pn++
 	}
 
-	return false, nil
+	if allowedTeam == nil {
+		return false, errors.New(fmt.Sprintf("team %s does not exist in org %s", p.Team, p.Org))
+	}
+
+	// http://try.gitea.io/api/swagger#/organization/orgListTeamMember
+	// Check if the user is a team member
+	endpoint := &url.URL{
+		Scheme: p.getApiBase().Scheme,
+		Host:   p.getApiBase().Host,
+		Path:   path.Join(p.getApiBase().Path, "/teams/", strconv.Itoa(allowedTeam.Id), "/members/", userName),
+	}
+
+	result := requests.New(endpoint.String()).
+		WithContext(ctx).
+		WithHeaders(makeOIDCHeader(accessToken)).
+		Do()
+
+	if result.Error() != nil {
+		return false, result.Error()
+	}
+
+	if result.StatusCode() == 200 {
+		return true, nil
+	} else {
+		return false, errors.New(fmt.Sprintf("user is not in the team %s of org %s", p.Team, p.Org))
+	}
 }
 
 func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, error) {
@@ -270,7 +279,11 @@ func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, 
 
 	// Every user can implicitly pull from a public repo, so only grant access
 	// if they have push access or the repo is private and they can pull
-	return repo.Permissions.Push || (repo.Private && repo.Permissions.Pull), nil
+	if repo.Permissions.Push || (repo.Private && repo.Permissions.Pull) {
+		return true, nil
+	} else {
+		return false, errors.New(fmt.Sprintf("user is not in repo %s", p.Repo))
+	}
 }
 
 func (p *GiteaProvider) isCollaborator(ctx context.Context, username, accessToken string) (bool, error) {
@@ -361,15 +374,17 @@ func (p *GiteaProvider) getUser(ctx context.Context, s *sessions.SessionState) e
 
 func (p *GiteaProvider) isAllowed(ctx context.Context, s *sessions.SessionState) error {
 	// If a user is verified by username options, skip the following restrictions
-	if len(p.Users) > 0 && !p.isVerifiedUser(s.User) {
-		return errors.New(fmt.Sprintf("User %s is not verified.", s.User))
+	if len(p.Users) > 0 && !p.isVerifiedUser(s.User) && p.Org == "" && p.Repo == "" {
+		return errors.New("missing gitea user")
+	} else if len(p.Users) > 0 && !p.isVerifiedUser(s.User) {
+		return nil
 	}
 
-	var ok bool
+	ok := true
 	var err error
 	if p.Org != "" {
 		if p.Team != "" {
-			ok, err = p.hasOrgAndTeam(ctx, s.AccessToken)
+			ok, err = p.hasOrgAndTeam(ctx, s.AccessToken, s.User)
 		} else {
 			ok, err = p.hasOrg(ctx, s.AccessToken, s.User)
 		}
@@ -381,8 +396,10 @@ func (p *GiteaProvider) isAllowed(ctx context.Context, s *sessions.SessionState)
 		}
 	}
 
-	if err != nil || !ok {
+	if err != nil {
 		return err
+	} else if !ok {
+		return errors.New("user is not allowed")
 	} else {
 		return nil
 	}
