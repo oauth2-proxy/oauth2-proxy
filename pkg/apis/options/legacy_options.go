@@ -486,6 +486,11 @@ type LegacyProvider struct {
 	AzureGraphGroupField     string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
 	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
+	GiteaOrg                 string   `flag:"gitea-org" cfg:"gitea_org"`
+	GiteaTeam                string   `flag:"gitea-team" cfg:"gitea_team"`
+	GiteaRepo                string   `flag:"gitea-repo" cfg:"gitea_repo"`
+	GiteaToken               string   `flag:"gitea-token" cfg:"gitea_token"`
+	GiteaUsers               []string `flag:"gitea-user" cfg:"gitea_users"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
 	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
 	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
@@ -542,6 +547,11 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("azure-graph-group-field", "", "configures the group field to be used when building the groups list(`id` or `displayName`. Default is `id`) from Microsoft Graph(available only for v2.0 oidc url). Based on this value, the `allowed-group` config values should be adjusted accordingly. If using `id` as group field, `allowed-group` should contains groups IDs, if using `displayName` as group field, `allowed-group` should contains groups name")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
+	flagSet.String("gitea-org", "", "restrict logins to members of this organisation")
+	flagSet.String("gitea-team", "", "restrict logins to members of this team")
+	flagSet.String("gitea-repo", "", "restrict logins to collaborators of this repository")
+	flagSet.String("gitea-token", "", "the token to use when verifying repository collaborators (must have push access to the repository)")
+	flagSet.StringSlice("gitea-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
 	flagSet.String("github-team", "", "restrict logins to members of this team")
 	flagSet.String("github-repo", "", "restrict logins to collaborators of this repository")
@@ -683,6 +693,14 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	}
 
 	switch provider.Type {
+	case "gitea":
+		provider.GiteaConfig = GiteaOptions{
+			Org:   l.GiteaOrg,
+			Team:  l.GiteaTeam,
+			Repo:  l.GiteaRepo,
+			Token: l.GiteaToken,
+			Users: l.GiteaUsers,
+		}
 	case "github":
 		provider.GitHubConfig = GitHubOptions{
 			Org:   l.GitHubOrg,
