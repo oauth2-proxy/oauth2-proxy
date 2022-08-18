@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -36,9 +37,10 @@ func testGiteaBackend(payloads map[string][]string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
 		"/api/v1/repos/oauth2-proxy/oauth2-proxy":                      {""},
 		"/api/v1/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
-		"/api/v1/user":        {""},
-		"/api/v1/user/emails": {""},
-		"/api/v1/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
+		"/api/v1/user":                         {""},
+		"/api/v1/user/emails":                  {""},
+		"/api/v1/orgs/testorg1/members/mbland": {""},
+		// "/api/v1/user/orgs":   {"page=1&per_page=100", "page=2&per_page=100", "page=3&per_page=100"},
 	}
 
 	return httptest.NewServer(http.HandlerFunc(
@@ -110,9 +112,10 @@ func TestGiteaProviderOverrides(t *testing.T) {
 	assert.Equal(t, "profile", p.Data().Scope)
 }
 
-func TestGiteaProvider_getEmail(t *testing.T) {
+func TestGiteaProvider_EnrichSession(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
 		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user":        {`{"id": 1337, "login": "mbland", "email": "michael.bland@gsa.gov"}`},
 	})
 	defer b.Close()
 
@@ -120,14 +123,16 @@ func TestGiteaProvider_getEmail(t *testing.T) {
 	p := testGiteaProvider(bURL.Host, options.GiteaOptions{})
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getEmailNotVerified(t *testing.T) {
+func TestGiteaProvider_EnrichSessionEmailNotVerified(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
 		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": false, "primary": true} ]`},
+		"/api/v1/user":        {`{"id": 1337, "login": "mbland", "email": "michael.bland@gsa.gov"}`},
 	})
 	defer b.Close()
 
@@ -135,19 +140,16 @@ func TestGiteaProvider_getEmailNotVerified(t *testing.T) {
 	p := testGiteaProvider(bURL.Host, options.GiteaOptions{})
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Empty(t, session.Email)
 }
 
-func TestGiteaProvider_getEmailWithOrg(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithOrg(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
-		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
-		"/api/v1/user/orgs": {
-			`[ {"login":"testorg"} ]`,
-			`[ {"login":"testorg1"} ]`,
-			`[ ]`,
-		},
+		"/api/v1/user/emails":                  {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user":                         {`{"id": 1337, "login": "mbland", "email": "michael.bland@gsa.gov"}`},
+		"/api/v1/orgs/testorg1/members/mbland": {""},
 	})
 	defer b.Close()
 
@@ -159,76 +161,104 @@ func TestGiteaProvider_getEmailWithOrg(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getEmailWithWriteAccessToPublicRepo(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithReadAccessToPublicRepo(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
-		"/api/v1/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": false}`},
-		"/api/v1/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user/emails":                     {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user":                            {`{"id": 1337, "login": "mbland", "email": "michael.bland@gsa.gov"}`},
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": false}, "private": false}`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGiteaProvider(bURL.Host,
 		options.GiteaOptions{
-			Repo:  "oauth2-proxy/oauth2-proxy",
-			Token: "token",
+			Repo: "oauth2-proxy/oauth2-proxy",
 		},
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
-	assert.NoError(t, err)
-	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	err := p.EnrichSession(context.Background(), session)
+	assert.NoError(t, err, errors.New("user is not in repo"))
+	assert.Empty(t, session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getEmailWithReadOnlyAccessToPrivateRepo(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithWriteAccessToPublicRepo(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
-		"/api/v1/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": false}, "private": true}`},
-		"/api/v1/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user/emails":                     {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user":                            {`{"id": 1337, "login": "mbland", "email": "michael.bland@gsa.gov"}`},
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": false}`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGiteaProvider(bURL.Host,
 		options.GiteaOptions{
-			Repo:  "oauth2-proxy/oauth2-proxy",
-			Token: "token",
+			Repo: "oauth2-proxy/oauth2-proxy",
 		},
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithReadOnlyAccessToPrivateRepo(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
-		"/api/v1/repo/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": true}`},
-		"/api/v1/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user/emails":                     {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user":                            {`{"id": 1337, "login": "mbland", "email": "michael.bland@gsa.gov"}`},
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": false}, "private": true}`},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGiteaProvider(bURL.Host,
 		options.GiteaOptions{
-			Repo:  "oauth2-proxy/oauth2-proxy",
-			Token: "token",
+			Repo: "oauth2-proxy/oauth2-proxy",
 		},
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithWriteAccessToPrivateRepo(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user/emails":                     {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user":                            {`{"id": 1337, "login": "mbland", "email": "michael.bland@gsa.gov"}`},
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy": {`{"permissions": {"pull": true, "push": true}, "private": true}`},
+	})
+	defer b.Close()
+
+	bURL, _ := url.Parse(b.URL)
+	p := testGiteaProvider(bURL.Host,
+		options.GiteaOptions{
+			Repo: "oauth2-proxy/oauth2-proxy",
+		},
+	)
+
+	session := CreateAuthorizedSession()
+	err := p.EnrichSession(context.Background(), session)
+	assert.NoError(t, err)
+	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
+}
+
+func TestGiteaProvider_EnrichSessionWithNoAccessToPrivateRepo(t *testing.T) {
+	b := testGiteaBackend(map[string][]string{
+		"/api/v1/user/emails":                     {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/user":                            {`{"id": 1337, "login": "mbland", "email": "michael.bland@gsa.gov"}`},
 		"/api/v1/repos/oauth2-proxy/oauth2-proxy": {`{}`},
 	})
 	defer b.Close()
@@ -241,34 +271,15 @@ func TestGiteaProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.isAllowed(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Empty(t, session.Email)
-}
-
-func TestGiteaProvider_getEmailWithToken(t *testing.T) {
-	b := testGiteaBackend(map[string][]string{
-		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
-	})
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testGiteaProvider(bURL.Host,
-		options.GiteaOptions{
-			Repo:  "oauth2-proxy/oauth2-proxy",
-			Token: "token",
-		},
-	)
-
-	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
-	assert.NoError(t, err)
-	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
 // Note that trying to trigger the "failed building request" case is not
 // practical, since the only way it can fail is if the URL fails to parse.
-func TestGiteaProvider_getEmailFailedRequest(t *testing.T) {
+func TestGiteaProvider_EnrichSessionFailedRequest(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{})
 	defer b.Close()
 
@@ -279,12 +290,13 @@ func TestGiteaProvider_getEmailFailedRequest(t *testing.T) {
 	// token. Alternatively, we could allow the parsing of the payload as
 	// JSON to fail.
 	session := &sessions.SessionState{AccessToken: "unexpected_access_token"}
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Error(t, err)
 	assert.Empty(t, session.Email)
+	assert.Empty(t, session.User)
 }
 
-func TestGiteaProvider_getEmailNotPresentInPayload(t *testing.T) {
+func TestGiteaProvider_EnrichSessionNotPresentInPayload(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
 		"/api/v1/user/emails": {`{"foo": "bar"}`},
 	})
@@ -294,7 +306,7 @@ func TestGiteaProvider_getEmailNotPresentInPayload(t *testing.T) {
 	p := testGiteaProvider(bURL.Host, options.GiteaOptions{})
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.Error(t, err)
 	assert.Empty(t, session.Email)
 }
@@ -314,46 +326,7 @@ func TestGiteaProvider_getUser(t *testing.T) {
 	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getUserWithRepoAndToken(t *testing.T) {
-	b := testGiteaBackend(map[string][]string{
-		"/api/v1/user": {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
-		"/api/v1/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
-	})
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testGiteaProvider(bURL.Host,
-		options.GiteaOptions{
-			Repo:  "oauth2-proxy/oauth2-proxy",
-			Token: "token",
-		},
-	)
-
-	session := CreateAuthorizedSession()
-	err := p.getUser(context.Background(), session)
-	assert.NoError(t, err)
-	assert.Equal(t, "mbland", session.User)
-}
-
-func TestGiteaProvider_getUserWithRepoAndTokenWithoutPushAccess(t *testing.T) {
-	b := testGiteaBackend(map[string][]string{})
-	defer b.Close()
-
-	bURL, _ := url.Parse(b.URL)
-	p := testGiteaProvider(bURL.Host,
-		options.GiteaOptions{
-			Repo:  "oauth2-proxy/oauth2-proxy",
-			Token: "token",
-		},
-	)
-
-	session := CreateAuthorizedSession()
-	err := p.getUser(context.Background(), session)
-	assert.Error(t, err)
-	assert.Empty(t, session.User)
-}
-
-func TestGiteaProvider_getEmailWithUsername(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithUsername(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
 		"/api/v1/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
 		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
@@ -368,12 +341,13 @@ func TestGiteaProvider_getEmailWithUsername(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getEmailWithNotAllowedUsername(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithNotAllowedUsername(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
 		"/api/v1/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
 		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
@@ -388,41 +362,39 @@ func TestGiteaProvider_getEmailWithNotAllowedUsername(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.isAllowed(context.Background(), session)
-	assert.Error(t, err)
+	err := p.EnrichSession(context.Background(), session)
+	assert.NoError(t, err)
 	assert.Empty(t, session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getEmailWithUsernameAndNotBelongToOrg(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithUsernameAndNotBelongToOrg(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
 		"/api/v1/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
 		"/api/v1/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
-		"/api/v1/user/orgs": {
-			`[ {"login":"testorg"} ]`,
-			`[ ]`,
-		},
 	})
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)
 	p := testGiteaProvider(bURL.Host,
 		options.GiteaOptions{
-			Org:   "not_belog_to",
+			Org:   "testorg1",
 			Users: []string{"mbland"},
 		},
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
 
-func TestGiteaProvider_getEmailWithUsernameAndNoAccessToPrivateRepo(t *testing.T) {
+func TestGiteaProvider_EnrichSessionWithUsernameAndNoAccessToPrivateRepo(t *testing.T) {
 	b := testGiteaBackend(map[string][]string{
-		"/api/v1/user":                           {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
-		"/api/v1/user/emails":                    {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
-		"/api/v1/repo/oauth2-proxy/oauth2-proxy": {`{}`},
+		"/api/v1/user":                            {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
+		"/api/v1/user/emails":                     {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
+		"/api/v1/repos/oauth2-proxy/oauth2-proxy": {`{}`},
 	})
 	defer b.Close()
 
@@ -430,13 +402,13 @@ func TestGiteaProvider_getEmailWithUsernameAndNoAccessToPrivateRepo(t *testing.T
 	p := testGiteaProvider(bURL.Host,
 		options.GiteaOptions{
 			Repo:  "oauth2-proxy/oauth2-proxy",
-			Token: "token",
 			Users: []string{"mbland"},
 		},
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.EnrichSession(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
+	assert.Equal(t, "mbland", session.User)
 }
