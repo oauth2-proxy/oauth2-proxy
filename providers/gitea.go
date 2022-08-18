@@ -10,7 +10,6 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
@@ -20,7 +19,6 @@ type GiteaProvider struct {
 	Org   string
 	Team  string
 	Repo  string
-	Token string
 	Users []string
 }
 
@@ -72,7 +70,7 @@ func NewGiteaProvider(p *ProviderData, opts options.GiteaOptions) *GiteaProvider
 	provider := &GiteaProvider{ProviderData: p}
 
 	provider.setOrgTeam(opts.Org, opts.Team)
-	provider.setRepo(opts.Repo, opts.Token)
+	provider.setRepo(opts.Repo)
 	provider.setUsers(opts.Users)
 	return provider
 }
@@ -97,9 +95,8 @@ func (p *GiteaProvider) setOrgTeam(org, team string) {
 }
 
 // setRepo configures the target repository and optional token to use
-func (p *GiteaProvider) setRepo(repo, token string) {
+func (p *GiteaProvider) setRepo(repo string) {
 	p.Repo = repo
-	p.Token = token
 }
 
 // setUsers configures allowed usernames
@@ -122,6 +119,7 @@ func (p *GiteaProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 	return nil
 }
 
+// Checks whether the user is in the organization
 func (p *GiteaProvider) hasOrg(ctx context.Context, accessToken string, userName string) (bool, error) {
 	// https://try.gitea.io/api/swagger#/organization/orgIsMember
 
@@ -147,6 +145,7 @@ func (p *GiteaProvider) hasOrg(ctx context.Context, accessToken string, userName
 	return true, nil
 }
 
+// Checks whether the user is in the team of the organization
 func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string, userName string) (bool, error) {
 	// https://try.gitea.io/api/swagger#/user/userListTeams
 	// blocked by https://github.com/go-gitea/gitea/issues/20829
@@ -187,6 +186,9 @@ func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string, u
 			Do()
 		if result.Error() != nil {
 			return false, result.Error()
+		}
+		if result.StatusCode() == 403 {
+			return false, errors.New(fmt.Sprintf("user is not allowed to access org %s", p.Org))
 		}
 		totalCount, err := strconv.Atoi(result.Headers().Get("x-total-count"))
 		if err != nil {
@@ -248,6 +250,9 @@ func (p *GiteaProvider) hasOrgAndTeam(ctx context.Context, accessToken string, u
 	}
 }
 
+// Checks whether the user has access to the repository.
+// For public repos the user needs push permission.
+// For private repos the user needs pull or push permission.
 func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, error) {
 	// https://try.gitea.io/api/swagger#/repository/repoGet
 
@@ -268,12 +273,17 @@ func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, 
 	}
 
 	var repo repository
-	err := requests.New(endpoint.String()).
+	result := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(makeOIDCHeader(accessToken)).
-		Do().
-		UnmarshalInto(&repo)
-	if err != nil {
+		Do()
+	if result.Error() != nil {
+		return false, result.Error()
+	}
+	if result.StatusCode() == 404 {
+		return false, errors.New(fmt.Sprintf("repo %s is not visible for this user or doesn't exist", p.Repo))
+	}
+	if err := result.UnmarshalInto(&repo); err != nil {
 		return false, err
 	}
 
@@ -284,32 +294,6 @@ func (p *GiteaProvider) hasRepo(ctx context.Context, accessToken string) (bool, 
 	} else {
 		return false, errors.New(fmt.Sprintf("user is not in repo %s", p.Repo))
 	}
-}
-
-func (p *GiteaProvider) isCollaborator(ctx context.Context, username, accessToken string) (bool, error) {
-	// https://try.gitea.io/api/swagger#/repository/repoCheckCollaborator
-
-	endpoint := &url.URL{
-		Scheme: p.getApiBase().Scheme,
-		Host:   p.getApiBase().Host,
-		Path:   path.Join(p.getApiBase().Path, "/repos/", p.Repo, "/collaborators/", username),
-	}
-	result := requests.New(endpoint.String()).
-		WithContext(ctx).
-		WithHeaders(makeOIDCHeader(accessToken)).
-		Do()
-	if result.Error() != nil {
-		return false, result.Error()
-	}
-
-	if result.StatusCode() != 204 {
-		return false, fmt.Errorf("got %d from %q %s",
-			result.StatusCode(), endpoint.String(), result.Body())
-	}
-
-	logger.Printf("got %d from %q %s", result.StatusCode(), endpoint.String(), result.Body())
-
-	return true, nil
 }
 
 // getEmail updates the SessionState Email
@@ -372,11 +356,13 @@ func (p *GiteaProvider) getUser(ctx context.Context, s *sessions.SessionState) e
 	return nil
 }
 
+// Checks whether the user is allowed to pass.
+// Returns an error if the user is not allowed
 func (p *GiteaProvider) isAllowed(ctx context.Context, s *sessions.SessionState) error {
 	// If a user is verified by username options, skip the following restrictions
 	if len(p.Users) > 0 && !p.isVerifiedUser(s.User) && p.Org == "" && p.Repo == "" {
-		return errors.New("missing gitea user")
-	} else if len(p.Users) > 0 && !p.isVerifiedUser(s.User) {
+		return errors.New(fmt.Sprintf("user is not in allowed users %s", p.Users))
+	} else if len(p.Users) > 0 && p.isVerifiedUser(s.User) {
 		return nil
 	}
 
@@ -389,17 +375,13 @@ func (p *GiteaProvider) isAllowed(ctx context.Context, s *sessions.SessionState)
 			ok, err = p.hasOrg(ctx, s.AccessToken, s.User)
 		}
 	} else if p.Repo != "" {
-		if p.Token != "" {
-			ok, err = p.isCollaborator(ctx, s.User, p.Token)
-		} else {
-			ok, err = p.hasRepo(ctx, s.AccessToken)
-		}
+		ok, err = p.hasRepo(ctx, s.AccessToken)
 	}
 
-	if err != nil {
+	if err != nil || !ok {
+		// if s.Email == "" && err == nil { 403 gets returned }
+		s.Email = ""
 		return err
-	} else if !ok {
-		return errors.New("user is not allowed")
 	} else {
 		return nil
 	}
