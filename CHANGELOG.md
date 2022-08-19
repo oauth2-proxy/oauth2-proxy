@@ -26,7 +26,6 @@ N/A
 
 - [#1774](https://github.com/oauth2-proxy/oauth2-proxy/pull/1774) Fix vulnerabilities CVE-2022-27191, CVE-2021-44716 and CVE-2022-29526
 
-
 - [#1667](https://github.com/oauth2-proxy/oauth2-proxy/issues/1667) Rename configuration file flag for PKCE
 to remain consistent with CLI flags. You should specify `code_challenge_method` in your configuration instead of
 `force_code_challenge_method`.
@@ -35,6 +34,8 @@ to remain consistent with CLI flags. You should specify `code_challenge_method` 
   - Add flag "--cookie-csrf-per-request" which activates an algorithm to name CSRF cookies differently per request. 
     This feature allows parallel callbacks and by default it is disabled. 
   - Add flag "--cookie-csrf-expire" to define a different expiration time for the CSRF cookie. By default, it is 15 minutes.
+
+- [#1762](https://github.com/oauth2-proxy/oauth2-proxy/pull/1762) Support negating for skip auth routes
 
 # V7.3.0
 
