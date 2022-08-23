@@ -7,6 +7,8 @@
 ## Breaking Changes
 
 ## Changes since v7.3.0
+- [#1691](https://github.com/oauth2-proxy/oauth2-proxy/pull/1691) Fix Redis IdleTimeout when Redis timeout option is set to non-zero (@dimss)
+
 - [#1669](https://github.com/oauth2-proxy/oauth2-proxy/pull/1699) Fix method deprecated error in lint (@t-katsumura)
 
 - [#1727](https://github.com/oauth2-proxy/oauth2-proxy/pull/1727) Get extra AllowedGroups from header. `--allowed-groups-header` option make oauth2-proxy to use the header value as additionally group-list to authorize users. Usefull if need differents groups for differents paths and applications. Multiple groups in header value is allowed separates by comma. 
