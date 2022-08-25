@@ -48,7 +48,7 @@ var (
 )
 
 // NewTOTVSProvider initiates a new TOTVSProvider
-func NewTOTVSProvider(p *ProviderData) (*TOTVSProvider, error) {
+func NewTOTVSProvider(p *ProviderData) *TOTVSProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        totvsProviderName,
 		loginURL:    totvsDefaultLoginURL,
@@ -58,11 +58,7 @@ func NewTOTVSProvider(p *ProviderData) (*TOTVSProvider, error) {
 		scope:       totvsDefaultScope,
 	})
 
-	provider := &TOTVSProvider{
-		ProviderData: p,
-	}
-
-	return provider, nil
+	return &TOTVSProvider{ProviderData: p}
 }
 
 func (p *TOTVSProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
