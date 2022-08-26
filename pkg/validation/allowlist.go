@@ -48,14 +48,7 @@ func validateAuthRoutes(o *options.Options) []string {
 
 // validateRegex validates regex paths passed with options.SkipAuthRegex
 func validateAuthRegexes(o *options.Options) []string {
-	msgs := []string{}
-	for _, regex := range o.SkipAuthRegex {
-		_, err := regexp.Compile(regex)
-		if err != nil {
-			msgs = append(msgs, fmt.Sprintf("error compiling regex /%s/: %v", regex, err))
-		}
-	}
-	return msgs
+	return validateRegexes(o.SkipAuthRegex)
 }
 
 // validateTrustedIPs validates IP/CIDRs for IP based allowlists
@@ -71,8 +64,13 @@ func validateTrustedIPs(o *options.Options) []string {
 
 // validateApiRoutes validates regex paths passed with options.ApiRoutes
 func validateApiRoutes(o *options.Options) []string {
+	return validateRegexes(o.ApiRoutes)
+}
+
+// validateRegexes validates all regexes and returns a list of messages in case of error
+func validateRegexes(regexes []string) []string {
 	msgs := []string{}
-	for _, regex := range o.ApiRoutes {
+	for _, regex := range regexes {
 		_, err := regexp.Compile(regex)
 		if err != nil {
 			msgs = append(msgs, fmt.Sprintf("error compiling regex /%s/: %v", regex, err))
