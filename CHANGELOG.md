@@ -36,7 +36,7 @@ If you are using an architecture specific tag (ex: v7.2.1-arm64) you should move
 
 ## Breaking Changes
 
-N/A
+- [#1666](https://github.com/oauth2-proxy/oauth2-proxy/issues/1666) Azure provider breaks after upgrading to this version. Please see the issue for more details.
 
 ## Changes since v7.2.1
 
