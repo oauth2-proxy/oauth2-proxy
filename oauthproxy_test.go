@@ -657,6 +657,59 @@ func TestManualSignInStoresUserGroupsInTheSession(t *testing.T) {
 	assert.Equal(t, userGroups, s.Groups)
 }
 
+type ManualSignInValidator struct{}
+
+func (ManualSignInValidator) Validate(user, password string) bool {
+	switch {
+	case user == "admin" && password == "adminPass":
+		return true
+	default:
+		return false
+	}
+}
+
+func ManualSignInWithCredentials(t *testing.T, user, pass string) int {
+	opts := baseTestOptions()
+	err := validation.Validate(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+		return true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proxy.basicAuthValidator = ManualSignInValidator{}
+
+	rw := httptest.NewRecorder()
+	formData := url.Values{}
+	formData.Set("username", user)
+	formData.Set("password", pass)
+	signInReq, _ := http.NewRequest(http.MethodPost, "/oauth2/sign_in", strings.NewReader(formData.Encode()))
+	signInReq.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	proxy.ServeHTTP(rw, signInReq)
+
+	return rw.Code
+}
+
+func TestManualSignInEmptyUsernameAlert(t *testing.T) {
+	statusCode := ManualSignInWithCredentials(t, "", "")
+	assert.Equal(t, http.StatusBadRequest, statusCode)
+}
+
+func TestManualSignInInvalidCredentialsAlert(t *testing.T) {
+	statusCode := ManualSignInWithCredentials(t, "admin", "")
+	assert.Equal(t, http.StatusUnauthorized, statusCode)
+}
+
+func TestManualSignInCorrectCredentials(t *testing.T) {
+	statusCode := ManualSignInWithCredentials(t, "admin", "adminPass")
+	assert.Equal(t, http.StatusFound, statusCode)
+}
+
 func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 	sipTest, err := NewSignInPageTest(false)
 	if err != nil {
@@ -676,6 +729,17 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 		t.Fatal(`expected redirect to "` + endpoint +
 			`", but was "` + match[1] + `"`)
 	}
+}
+
+func TestSignInPageInvalidQueryStringReturnsBadRequest(t *testing.T) {
+	sipTest, err := NewSignInPageTest(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const endpoint = "/?q=%va"
+
+	code, _ := sipTest.GetEndpoint(endpoint)
+	assert.Equal(t, 400, code)
 }
 
 func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
@@ -2725,7 +2789,7 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			expectedStatusCode: http.StatusForbidden,
 		},
 		{
-			name:               "UserInAllowedEmailDomains",
+			name:               "UserNotInAllowedEmailDomains",
 			email:              "toto@example.com",
 			querystring:        "?allowed_email_domains=a.example.com,b.example.com",
 			expectedStatusCode: http.StatusForbidden,
@@ -2758,6 +2822,73 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			name:               "UserInAllowedEmailDomainsWildcard",
 			email:              "toto@c.example.com",
 			querystring:        "?allowed_email_domains=a.b.c.example.com,*.c.example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			groups := []string{}
+
+			created := time.Now()
+
+			session := &sessions.SessionState{
+				Groups:      groups,
+				Email:       tc.email,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = test.SaveSession(session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
+func TestAuthOnlyAllowedEmails(t *testing.T) {
+	testCases := []struct {
+		name               string
+		email              string
+		querystring        string
+		expectedStatusCode int
+	}{
+		{
+			name:               "NotEmailRestriction",
+			email:              "toto@example.com",
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInAllowedEmail",
+			email:              "toto@example.com",
+			querystring:        "?allowed_emails=toto@example.com",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserNotInAllowedEmail",
+			email:              "toto@example.com",
+			querystring:        "?allowed_emails=tete@example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserNotInAllowedEmails",
+			email:              "toto@example.com",
+			querystring:        "?allowed_emails=tete@example.com,tutu@example.com",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserInAllowedEmails",
+			email:              "toto@example.com",
+			querystring:        "?allowed_emails=tete@example.com,toto@example.com",
 			expectedStatusCode: http.StatusAccepted,
 		},
 	}

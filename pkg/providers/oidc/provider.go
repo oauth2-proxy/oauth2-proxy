@@ -11,12 +11,13 @@ import (
 
 // providerJSON resresents the information we need from an OIDC discovery
 type providerJSON struct {
-	Issuer            string   `json:"issuer"`
-	AuthURL           string   `json:"authorization_endpoint"`
-	TokenURL          string   `json:"token_endpoint"`
-	JWKsURL           string   `json:"jwks_uri"`
-	UserInfoURL       string   `json:"userinfo_endpoint"`
-	CodeChallengeAlgs []string `json:"code_challenge_methods_supported"`
+	Issuer               string   `json:"issuer"`
+	AuthURL              string   `json:"authorization_endpoint"`
+	TokenURL             string   `json:"token_endpoint"`
+	JWKsURL              string   `json:"jwks_uri"`
+	UserInfoURL          string   `json:"userinfo_endpoint"`
+	CodeChallengeAlgs    []string `json:"code_challenge_methods_supported"`
+	SupportedSigningAlgs []string `json:"id_token_signing_alg_values_supported"`
 }
 
 // Endpoints represents the endpoints discovered as part of the OIDC discovery process
@@ -39,6 +40,7 @@ type PKCE struct {
 type DiscoveryProvider interface {
 	Endpoints() Endpoints
 	PKCE() PKCE
+	SupportedSigningAlgs() []string
 }
 
 // NewProvider allows a user to perform an OIDC discovery and returns the DiscoveryProvider.
@@ -63,21 +65,23 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 	}
 
 	return &discoveryProvider{
-		authURL:           p.AuthURL,
-		tokenURL:          p.TokenURL,
-		jwksURL:           p.JWKsURL,
-		userInfoURL:       p.UserInfoURL,
-		codeChallengeAlgs: p.CodeChallengeAlgs,
+		authURL:              p.AuthURL,
+		tokenURL:             p.TokenURL,
+		jwksURL:              p.JWKsURL,
+		userInfoURL:          p.UserInfoURL,
+		codeChallengeAlgs:    p.CodeChallengeAlgs,
+		supportedSigningAlgs: p.SupportedSigningAlgs,
 	}, nil
 }
 
 // discoveryProvider holds the discovered endpoints
 type discoveryProvider struct {
-	authURL           string
-	tokenURL          string
-	jwksURL           string
-	userInfoURL       string
-	codeChallengeAlgs []string
+	authURL              string
+	tokenURL             string
+	jwksURL              string
+	userInfoURL          string
+	codeChallengeAlgs    []string
+	supportedSigningAlgs []string
 }
 
 // Endpoints returns the discovered endpoints needed for an authentication provider.
@@ -95,4 +99,9 @@ func (p *discoveryProvider) PKCE() PKCE {
 	return PKCE{
 		CodeChallengeAlgs: p.codeChallengeAlgs,
 	}
+}
+
+// SupportedSigningAlgs returns the discovered provider signing algorithms.
+func (p *discoveryProvider) SupportedSigningAlgs() []string {
+	return p.supportedSigningAlgs
 }

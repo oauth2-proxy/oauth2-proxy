@@ -167,7 +167,6 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
-| `--redis-connection-idle-timeout` | int | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Exmpale: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0 |
 | `--request-id-header` | string | Request header to use as the request ID in logging | X-Request-Id |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |

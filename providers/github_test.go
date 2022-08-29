@@ -34,7 +34,7 @@ func testGitHubProvider(hostname string, opts options.GitHubOptions) *GitHubProv
 
 func testGitHubBackend(payloads map[string][]string) *httptest.Server {
 	pathToQueryMap := map[string][]string{
-		"/repo/oauth2-proxy/oauth2-proxy":                       {""},
+		"/repos/oauth2-proxy/oauth2-proxy":                      {""},
 		"/repos/oauth2-proxy/oauth2-proxy/collaborators/mbland": {""},
 		"/user":        {""},
 		"/user/emails": {""},
@@ -229,7 +229,7 @@ func TestGitHubProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
 
 func TestGitHubProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
-		"/repo/oauth2-proxy/oauth2-proxy": {`{}`},
+		"/repos/oauth2-proxy/oauth2-proxy": {`{}`},
 	})
 	defer b.Close()
 

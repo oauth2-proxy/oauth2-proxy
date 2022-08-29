@@ -33,7 +33,7 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 }
 
 // https://golang.org/src/crypto/tls/generate_cert.go as a function
-func GenerateCert() ([]byte, []byte, error) {
+func GenerateCert(ipaddr string) ([]byte, []byte, error) {
 	var err error
 
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -63,7 +63,7 @@ func GenerateCert() ([]byte, []byte, error) {
 
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 
-		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		IPAddresses: []net.IP{net.ParseIP(ipaddr)},
 	}
 	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	return certBytes, keyBytes, err
