@@ -112,7 +112,7 @@ func (p *TOTVSProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 	return session, nil
 }
 
-func (p *TOTVSProvider) GetLoginURL(redirectURI, state, nonce string, extraParams url.Values) string {
+func (p *TOTVSProvider) GetLoginURL(redirectURI, state, _ string, _ url.Values) string {
 	loginURL := *p.LoginURL
 	params, _ := url.ParseQuery(loginURL.RawQuery)
 	params.Set("redirect_uri", redirectURI)
