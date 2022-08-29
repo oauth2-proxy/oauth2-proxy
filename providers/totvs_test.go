@@ -113,22 +113,22 @@ func TestTOTVSProviderAuthorize(t *testing.T) {
 }
 
 type TOTVSClaims struct {
-	TenantIdpId     string   `json:"tenantIdpId"`
+	TenantIdpID     string   `json:"tenantIdpId"`
 	LastUpdateDate  int64    `json:"lastUpdateDate"`
-	User_name       string   `json:"user_name"`
-	Roles           []string `json:"roles,omitempty""`
+	UserName        string   `json:"user_name"`
+	Roles           []string `json:"roles,omitempty"`
 	IdmRefreshToken string   `json:"idmRefreshToken"`
 	FullName        string   `json:"fullName"`
 	TenantCode      string   `json:"tenantCode"`
 	PartnerCompany  bool     `json:"partnerCompany"`
 	IdmAccessToken  string   `json:"idmAccessToken"`
 	Authorities     []string `json:"authorities"`
-	Client_id       string   `json:"client_id"`
+	ClientID        string   `json:"client_id"`
 	UserTimeZone    string   `json:"userTimeZone"`
-	CompanyId       string   `json:"companyId"`
+	CompanyID       string   `json:"companyId"`
 	Domain          string   `json:"domain"`
 	Scope           []string `json:"scope,omitempty"`
-	UserIdpId       string   `json:"userIdpId"`
+	UserIdpID       string   `json:"userIdpId"`
 	Email           string   `json:"email"`
 	Apps            []string `json:"apps"`
 	jwt.StandardClaims
