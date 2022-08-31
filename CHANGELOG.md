@@ -8,6 +8,10 @@
 
 ## Changes since v7.3.0
 
+- [#1667](https://github.com/oauth2-proxy/oauth2-proxy/issues/1667) Rename configuration file flag for PKCE
+to remain consistent with CLI flags. You should specify `code_challenge_method` in your configuration instead of
+`force_code_challenge_method`.
+
 # V7.3.0
 
 ## Release Highlights
