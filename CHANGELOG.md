@@ -9,9 +9,8 @@
   - The user may redefine the CSRF cookie expiration time using flag "--cookie-csrf-expire" (e.g. --cookie-csrf-expire=5m). By default, it is 15 minutes, but you can fine tune to your environment.
 
 ## Breaking Changes
-- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99)
-  - The CSRF cookie expiration time now depends on the time defined in flag "--cookie-csrf-expire". 
-    By default, it is 15 minutes.
+
+N/A
 
 ## Changes since v7.3.0
 - [#1691](https://github.com/oauth2-proxy/oauth2-proxy/pull/1691) Fix Redis IdleTimeout when Redis timeout option is set to non-zero (@dimss)
@@ -22,11 +21,12 @@
 
 - [#1720](https://github.com/oauth2-proxy/oauth2-proxy/pull/1720) Extract roles from authToken, to allow using allowed roles with Keycloak.
 
+- [#1774](https://github.com/oauth2-proxy/oauth2-proxy/pull/1774) Fix vulnerabilities CVE-2022-27191, CVE-2021-44716 and CVE-2022-29526
+
 - [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99) 
   - Add flag "--cookie-csrf-per-request" which activates an algorithm to name CSRF cookies differently per request. 
     This feature allows parallel callbacks and by default it is disabled. 
   - Add flag "--cookie-csrf-expire" to define a different expiration time for the CSRF cookie. By default, it is 15 minutes.
-
 # V7.3.0
 
 ## Release Highlights
