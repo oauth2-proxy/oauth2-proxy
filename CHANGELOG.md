@@ -15,6 +15,8 @@
 
 - [#1720](https://github.com/oauth2-proxy/oauth2-proxy/pull/1720) Extract roles from authToken, to allow using allowed roles with Keycloak.
 
+- [#1774](https://github.com/oauth2-proxy/oauth2-proxy/pull/1774) Fix vulnerabilities CVE-2022-27191, CVE-2021-44716 and CVE-2022-29526
+
 # V7.3.0
 
 ## Release Highlights
