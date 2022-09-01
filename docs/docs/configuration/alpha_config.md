@@ -419,7 +419,7 @@ Provider holds all configuration for a single provider
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
-| `force_code_challenge_method` | _string_ | The forced code challenge method |
+| `code_challenge_method` | _string_ | The code challenge method |
 
 ### ProviderType
 #### (`string` alias)
