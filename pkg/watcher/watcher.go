@@ -34,7 +34,7 @@ func WatchFileForUpdates(filename string, done <-chan bool, action func()) error
 			}
 		}
 	}()
-	if err = watcher.Add(filename); err != nil {
+	if err := watcher.Add(filename); err != nil {
 		return fmt.Errorf("failed to add '%s' to watcher: %v", filename, err)
 	}
 	logger.Printf("watching '%s' for updates", filename)

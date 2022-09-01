@@ -35,18 +35,16 @@ type sha1Pass string
 func NewHTPasswdValidator(path string) (Validator, error) {
 	h := &htpasswdMap{users: make(map[string]interface{})}
 
-	err := h.loadHTPasswdFile(path)
-	if err != nil {
+	if err := h.loadHTPasswdFile(path); err != nil {
 		return nil, err
 	}
 
-	err = watcher.WatchFileForUpdates(path, nil, func() {
+	if err := watcher.WatchFileForUpdates(path, nil, func() {
 		err := h.loadHTPasswdFile(path)
 		if err != nil {
 			logger.Errorf("%v: no changes were made to the current htpasswd map", err)
 		}
-	})
-	if err != nil {
+	});  err != nil {
 		return nil, err
 	}
 
