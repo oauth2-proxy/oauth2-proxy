@@ -36,7 +36,7 @@ func NewHTPasswdValidator(path string) (Validator, error) {
 	h := &htpasswdMap{users: make(map[string]interface{})}
 
 	if err := h.loadHTPasswdFile(path); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load htpasswd file: %v", err)
 	}
 
 	if err := watcher.WatchFileForUpdates(path, nil, func() {
@@ -45,7 +45,7 @@ func NewHTPasswdValidator(path string) (Validator, error) {
 			logger.Errorf("%v: no changes were made to the current htpasswd map", err)
 		}
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not watch htpasswd file: %v", err)
 	}
 
 	return h, nil
