@@ -261,6 +261,40 @@ var _ = Describe("Server", func() {
 				expectHTTPListener: false,
 				expectTLSListener:  true,
 			}),
+			Entry("with an ipv4 valid https bind address, and valid TLS config with CipherSuites", &newServerTableInput{
+				opts: Opts{
+					Handler:           handler,
+					SecureBindAddress: "127.0.0.1:0",
+					TLS: &options.TLS{
+						Key:  &ipv4KeyDataSource,
+						Cert: &ipv4CertDataSource,
+						CipherSuites: []string{
+							"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+							"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+						},
+					},
+				},
+				expectedErr:        nil,
+				expectHTTPListener: false,
+				expectTLSListener:  true,
+			}),
+			Entry("with an ipv4 valid https bind address, and invalid TLS config with unknown CipherSuites", &newServerTableInput{
+				opts: Opts{
+					Handler:           handler,
+					SecureBindAddress: "127.0.0.1:0",
+					TLS: &options.TLS{
+						Key:  &ipv4KeyDataSource,
+						Cert: &ipv4CertDataSource,
+						CipherSuites: []string{
+							"TLS_RSA_WITH_RC4_64_SHA",
+							"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+						},
+					},
+				},
+				expectedErr:        errors.New("error setting up TLS listener: could not parse cipher suites: unknown TLS cipher suite name specified \"TLS_RSA_WITH_RC4_64_SHA\""),
+				expectHTTPListener: false,
+				expectTLSListener:  true,
+			}),
 			Entry("with an ipv6 valid http bind address", &newServerTableInput{
 				opts: Opts{
 					Handler:     handler,
@@ -451,6 +485,40 @@ var _ = Describe("Server", func() {
 					},
 				},
 				expectedErr:        errors.New("error setting up TLS listener: unknown TLS MinVersion config provided"),
+				expectHTTPListener: false,
+				expectTLSListener:  true,
+			}),
+			Entry("with an ipv6 valid https bind address, and valid TLS config with CipherSuites", &newServerTableInput{
+				opts: Opts{
+					Handler:           handler,
+					SecureBindAddress: "[::1]:0",
+					TLS: &options.TLS{
+						Key:  &ipv4KeyDataSource,
+						Cert: &ipv4CertDataSource,
+						CipherSuites: []string{
+							"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+							"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+						},
+					},
+				},
+				expectedErr:        nil,
+				expectHTTPListener: false,
+				expectTLSListener:  true,
+			}),
+			Entry("with an ipv6 valid https bind address, and invalid TLS config with unknown CipherSuites", &newServerTableInput{
+				opts: Opts{
+					Handler:           handler,
+					SecureBindAddress: "[::1]:0",
+					TLS: &options.TLS{
+						Key:  &ipv4KeyDataSource,
+						Cert: &ipv4CertDataSource,
+						CipherSuites: []string{
+							"TLS_RSA_WITH_RC4_64_SHA",
+							"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+						},
+					},
+				},
+				expectedErr:        errors.New("error setting up TLS listener: could not parse cipher suites: unknown TLS cipher suite name specified \"TLS_RSA_WITH_RC4_64_SHA\""),
 				expectHTTPListener: false,
 				expectTLSListener:  true,
 			}),
