@@ -81,6 +81,27 @@ func (s *server) setupListener(opts Opts) error {
 	return nil
 }
 
+func parseCipherSuites(names []string) ([]uint16, error) {
+	cipherNameMap := make(map[string]uint16)
+
+	for _, cipherSuite := range tls.CipherSuites() {
+		cipherNameMap[cipherSuite.Name] = cipherSuite.ID
+	}
+	for _, cipherSuite := range tls.InsecureCipherSuites() {
+		cipherNameMap[cipherSuite.Name] = cipherSuite.ID
+	}
+
+	result := make([]uint16, len(names))
+	for i, name := range names {
+		id, present := cipherNameMap[name]
+		if !present {
+			return nil, fmt.Errorf("unknown TLS cipher suite name specified %q", name)
+		}
+		result[i] = id
+	}
+	return result, nil
+}
+
 // setupTLSListener sets the server TLS listener if the HTTPS server is enabled.
 // The HTTPS server can be disabled by setting the SecureBindAddress to "-" or by
 // leaving it empty.
@@ -103,6 +124,14 @@ func (s *server) setupTLSListener(opts Opts) error {
 		return fmt.Errorf("could not load certificate: %v", err)
 	}
 	config.Certificates = []tls.Certificate{cert}
+
+	if len(opts.TLS.CipherSuites) > 0 {
+		cipherSuites, err := parseCipherSuites(opts.TLS.CipherSuites)
+		if err != nil {
+			return fmt.Errorf("could not parse cipher suites: %v", err)
+		}
+		config.CipherSuites = cipherSuites
+	}
 
 	if len(opts.TLS.MinVersion) > 0 {
 		switch opts.TLS.MinVersion {
