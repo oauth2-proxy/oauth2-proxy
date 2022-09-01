@@ -44,7 +44,7 @@ func NewHTPasswdValidator(path string) (Validator, error) {
 		if err != nil {
 			logger.Errorf("%v: no changes were made to the current htpasswd map", err)
 		}
-	});  err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
