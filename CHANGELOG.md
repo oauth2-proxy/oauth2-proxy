@@ -17,6 +17,8 @@ N/A
 
 - [#1669](https://github.com/oauth2-proxy/oauth2-proxy/pull/1699) Fix method deprecated error in lint (@t-katsumura)
 
+- [#1701](https://github.com/oauth2-proxy/oauth2-proxy/pull/1701) Watch the htpasswd file for changes and update the htpasswdMap (@aiciobanu)
+
 - [#1709](https://github.com/oauth2-proxy/oauth2-proxy/pull/1709) Show an alert message when basic auth credentials are invalid (@aiciobanu)
 - [#1723](https://github.com/oauth2-proxy/oauth2-proxy/pull/1723) Added ability to specify allowed TLS cipher suites. (@crbednarz)
 

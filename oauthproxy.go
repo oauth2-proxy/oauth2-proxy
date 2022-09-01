@@ -113,7 +113,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		var err error
 		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
 		if err != nil {
-			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
+			return nil, fmt.Errorf("could not validate htpasswd: %v", err)
 		}
 	}
 
