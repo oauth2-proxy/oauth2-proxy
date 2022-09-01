@@ -87,7 +87,7 @@ var _ = Describe("HTPasswd Suite", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(err).To(MatchError("could not open htpasswd file: open ./test/htpasswd-doesnt-exist.txt: no such file or directory"))
+					Expect(err).To(MatchError("could not load htpasswd file: could not open htpasswd file: open ./test/htpasswd-doesnt-exist.txt: no such file or directory"))
 				})
 
 				It("returns a nil validator", func() {
