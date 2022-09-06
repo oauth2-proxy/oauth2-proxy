@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	b64 "encoding/base64"
-	"fmt"
 	"net/url"
 	"time"
 
@@ -70,6 +69,12 @@ func (p *TOTVSProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 		return nil, err
 	}
 
+	var jsonResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresOn    int64  `json:"expires_in"`
+	}
+
 	params := url.Values{}
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
@@ -77,26 +82,16 @@ func (p *TOTVSProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 
 	authorizationEncoded := b64.StdEncoding.EncodeToString([]byte(p.ClientID + ":" + clientSecret))
 
-	result := requests.New(p.RedeemURL.String()).
+	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		SetHeader("Authorization", "Basic "+authorizationEncoded).
-		Do()
-	if result.Error() != nil {
-		return nil, result.Error()
-	}
-
-	var jsonResponse struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		ExpiresOn    int64  `json:"expires_in"`
-	}
-
-	err = result.UnmarshalInto(&jsonResponse)
+		Do().
+		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return nil, fmt.Errorf("no access token found %s", err)
+		return nil, err
 	}
 
 	session := &sessions.SessionState{
