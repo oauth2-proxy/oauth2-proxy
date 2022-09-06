@@ -16,24 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// func testTOTVSProvider(hostname string) *TOTVSProvider {
-// 	p := NewTOTVSProvider(
-// 		&ProviderData{
-// 			ProviderName: "",
-// 			LoginURL:     &url.URL{},
-// 			RedeemURL:    &url.URL{},
-// 			ProfileURL:   &url.URL{},
-// 			ValidateURL:  &url.URL{},
-// 			Scope:        "",
-// 			EmailClaim:   "email"})
-// 	if hostname != "" {
-// 		updateURL(p.Data().LoginURL, hostname)
-// 		updateURL(p.Data().RedeemURL, hostname)
-// 		updateURL(p.Data().ProfileURL, hostname)
-// 	}
-// 	return p
-// }
-
 func newTOTVSProvider(t *testing.T) *TOTVSProvider {
 	p := NewTOTVSProvider(
 		&ProviderData{
