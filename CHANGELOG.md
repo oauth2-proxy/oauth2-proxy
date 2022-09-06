@@ -37,6 +37,8 @@ to remain consistent with CLI flags. You should specify `code_challenge_method` 
 
 - [#1762](https://github.com/oauth2-proxy/oauth2-proxy/pull/1762) Support negating for skip auth routes
 
+- [#1787](https://github.com/oauth2-proxy/oauth2-proxy/pull/1787) A new TOTVS Provider
+
 # V7.3.0
 
 ## Release Highlights
