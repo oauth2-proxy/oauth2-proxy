@@ -37,6 +37,8 @@ to remain consistent with CLI flags. You should specify `code_challenge_method` 
 
 - [#1762](https://github.com/oauth2-proxy/oauth2-proxy/pull/1762) Support negating for skip auth routes
 
+- [#1788](https://github.com/oauth2-proxy/oauth2-proxy/pull/1788) Update base docker image to alpine 3.16
+
 # V7.3.0
 
 ## Release Highlights
