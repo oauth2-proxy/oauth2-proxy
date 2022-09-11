@@ -68,6 +68,10 @@ type allowedRoute struct {
 	pathRegex *regexp.Regexp
 }
 
+type apiRoute struct {
+	pathRegex *regexp.Regexp
+}
+
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
 	CookieOptions *options.Cookie
@@ -76,6 +80,7 @@ type OAuthProxy struct {
 	SignInPath string
 
 	allowedRoutes       []allowedRoute
+	apiRoutes           []apiRoute
 	redirectURL         *url.URL // the url to receive requests at
 	whitelistDomains    []string
 	provider            providers.Provider
@@ -176,6 +181,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
+	apiRoutes, err := buildAPIRoutes(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	preAuthChain, err := buildPreAuthChain(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
@@ -202,6 +212,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		provider:            provider,
 		sessionStore:        sessionStore,
 		redirectURL:         redirectURL,
+		apiRoutes:           apiRoutes,
 		allowedRoutes:       allowedRoutes,
 		whitelistDomains:    opts.WhitelistDomains,
 		skipAuthPreflight:   opts.SkipAuthPreflight,
@@ -473,6 +484,24 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 	return routes, nil
 }
 
+// buildAPIRoutes builds an []apiRoute from ApiRoutes option
+func buildAPIRoutes(opts *options.Options) ([]apiRoute, error) {
+	routes := make([]apiRoute, 0, len(opts.APIRoutes))
+
+	for _, path := range opts.APIRoutes {
+		compiledRegex, err := regexp.Compile(path)
+		if err != nil {
+			return nil, err
+		}
+		logger.Printf("API route - Path: %s", path)
+		routes = append(routes, apiRoute{
+			pathRegex: compiledRegex,
+		})
+	}
+
+	return routes, nil
+}
+
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) error {
@@ -537,6 +566,15 @@ func isAllowedPath(req *http.Request, route allowedRoute) bool {
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
 		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
+	for _, route := range p.apiRoutes {
+		if route.pathRegex.MatchString(req.URL.Path) {
 			return true
 		}
 	}
@@ -911,7 +949,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		p.headersChain.Then(p.upstreamProxy).ServeHTTP(rw, req)
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
-		if p.forceJSONErrors || isAjax(req) {
+		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) {
 			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
 			p.errorJSON(rw, http.StatusUnauthorized)
