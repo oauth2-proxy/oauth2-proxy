@@ -25,6 +25,7 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, prefixValues("injectRequestHeaders: ", validateHeaders(o.InjectRequestHeaders)...)...)
 	msgs = append(msgs, prefixValues("injectResponseHeaders: ", validateHeaders(o.InjectResponseHeaders)...)...)
 	msgs = append(msgs, validateProviders(o)...)
+	msgs = append(msgs, validateApiRoutes(o)...)
 	msgs = configureLogger(o.Logging, msgs)
 	msgs = parseSignatureKey(o, msgs)
 
@@ -95,8 +96,6 @@ func Validate(o *options.Options) error {
 			return ip.GetClientString(o.GetRealClientIPParser(), r, false)
 		})
 	}
-
-	msgs = append(msgs, validateApiRoutes(o)...)
 
 	// Do this after ReverseProxy validation for TrustedIP coordinated checks
 	msgs = append(msgs, validateAllowlists(o)...)
