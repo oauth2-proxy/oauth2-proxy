@@ -447,15 +447,16 @@ func getXAuthRequestAccessTokenHeader() Header {
 }
 
 type LegacyServer struct {
-	MetricsAddress       string `flag:"metrics-address" cfg:"metrics_address"`
-	MetricsSecureAddress string `flag:"metrics-secure-address" cfg:"metrics_secure_address"`
-	MetricsTLSCertFile   string `flag:"metrics-tls-cert-file" cfg:"metrics_tls_cert_file"`
-	MetricsTLSKeyFile    string `flag:"metrics-tls-key-file" cfg:"metrics_tls_key_file"`
-	HTTPAddress          string `flag:"http-address" cfg:"http_address"`
-	HTTPSAddress         string `flag:"https-address" cfg:"https_address"`
-	TLSCertFile          string `flag:"tls-cert-file" cfg:"tls_cert_file"`
-	TLSKeyFile           string `flag:"tls-key-file" cfg:"tls_key_file"`
-	TLSMinVersion        string `flag:"tls-min-version" cfg:"tls_min_version"`
+	MetricsAddress       string   `flag:"metrics-address" cfg:"metrics_address"`
+	MetricsSecureAddress string   `flag:"metrics-secure-address" cfg:"metrics_secure_address"`
+	MetricsTLSCertFile   string   `flag:"metrics-tls-cert-file" cfg:"metrics_tls_cert_file"`
+	MetricsTLSKeyFile    string   `flag:"metrics-tls-key-file" cfg:"metrics_tls_key_file"`
+	HTTPAddress          string   `flag:"http-address" cfg:"http_address"`
+	HTTPSAddress         string   `flag:"https-address" cfg:"https_address"`
+	TLSCertFile          string   `flag:"tls-cert-file" cfg:"tls_cert_file"`
+	TLSKeyFile           string   `flag:"tls-key-file" cfg:"tls_key_file"`
+	TLSMinVersion        string   `flag:"tls-min-version" cfg:"tls_min_version"`
+	TLSCipherSuites      []string `flag:"tls-cipher-suite" cfg:"tls_cipher_suites"`
 }
 
 func legacyServerFlagset() *pflag.FlagSet {
@@ -470,6 +471,7 @@ func legacyServerFlagset() *pflag.FlagSet {
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("tls-min-version", "", "minimal TLS version for HTTPS clients (either \"TLS1.2\" or \"TLS1.3\")")
+	flagSet.StringSlice("tls-cipher-suite", []string{}, "restricts TLS cipher suites to those listed (e.g. TLS_RSA_WITH_RC4_128_SHA) (may be given multiple times)")
 
 	return flagSet
 }
@@ -526,7 +528,9 @@ type LegacyProvider struct {
 	JWTKeyFile string `flag:"jwt-key-file" cfg:"jwt_key_file"`
 	PubJWKURL  string `flag:"pubjwk-url" cfg:"pubjwk_url"`
 	// PKCE Code Challenge method to use (either S256 or plain)
-	CodeChallengeMethod string `flag:"code-challenge-method" cfg:"force_code_challenge_method"`
+	CodeChallengeMethod string `flag:"code-challenge-method" cfg:"code_challenge_method"`
+	// Provided for legacy reasons, to be dropped in newer version see #1667
+	ForceCodeChallengeMethod string `flag:"force-code-challenge-method" cfg:"force_code_challenge_method"`
 }
 
 func legacyProviderFlagSet() *pflag.FlagSet {
@@ -572,6 +576,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 	flagSet.String("code-challenge-method", "", "use PKCE code challenges with the specified method. Either 'plain' or 'S256'")
+	flagSet.String("force-code-challenge-method", "", "Deprecated - use --code-challenge-method")
 
 	flagSet.String("acr-values", "", "acr values string:  optional")
 	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
@@ -599,6 +604,9 @@ func (l LegacyServer) convert() (Server, Server) {
 				FromFile: l.TLSCertFile,
 			},
 			MinVersion: l.TLSMinVersion,
+		}
+		if len(l.TLSCipherSuites) != 0 {
+			appServer.TLS.CipherSuites = l.TLSCipherSuites
 		}
 		// Preserve backwards compatibility, only run one server
 		appServer.BindAddress = ""
@@ -658,6 +666,11 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		GroupsClaim:                    l.OIDCGroupsClaim,
 		AudienceClaims:                 l.OIDCAudienceClaims,
 		ExtraAudiences:                 l.OIDCExtraAudiences,
+	}
+
+	// Support for legacy configuration option
+	if l.ForceCodeChallengeMethod != "" && l.CodeChallengeMethod == "" {
+		provider.CodeChallengeMethod = l.ForceCodeChallengeMethod
 	}
 
 	// This part is out of the switch section because azure has a default tenant

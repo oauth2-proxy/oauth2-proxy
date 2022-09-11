@@ -64,6 +64,7 @@ var (
 // allowedRoute manages method + path based allowlists
 type allowedRoute struct {
 	method    string
+	negate    bool
 	pathRegex *regexp.Regexp
 }
 
@@ -118,7 +119,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		var err error
 		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
 		if err != nil {
-			return nil, fmt.Errorf("could not load htpasswdfile: %v", err)
+			return nil, fmt.Errorf("could not validate htpasswd: %v", err)
 		}
 	}
 
@@ -456,9 +457,10 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		var (
 			method string
 			path   string
+			negate = strings.Contains(methodPath, "!=")
 		)
 
-		parts := strings.SplitN(methodPath, "=", 2)
+		parts := regexp.MustCompile("!?=").Split(methodPath, 2)
 		if len(parts) == 1 {
 			method = ""
 			path = parts[0]
@@ -474,6 +476,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
 		routes = append(routes, allowedRoute{
 			method:    method,
+			negate:    negate,
 			pathRegex: compiledRegex,
 		})
 	}
@@ -545,10 +548,24 @@ func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 	return isPreflightRequestAllowed || p.isAllowedRoute(req) || p.isTrustedIP(req)
 }
 
+func isAllowedMethod(req *http.Request, route allowedRoute) bool {
+	return route.method == "" || req.Method == route.method
+}
+
+func isAllowedPath(req *http.Request, route allowedRoute) bool {
+	matches := route.pathRegex.MatchString(req.URL.Path)
+
+	if route.negate {
+		return !matches
+	}
+
+	return matches
+}
+
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
-		if (route.method == "" || req.Method == route.method) && route.pathRegex.MatchString(req.URL.Path) {
+		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
 			return true
 		}
 	}
