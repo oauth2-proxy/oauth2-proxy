@@ -2424,14 +2424,14 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 
 func TestApiRoutes(t *testing.T) {
 
-	ajaxApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ajaxAPIServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		_, err := w.Write([]byte("AJAX API Request"))
 		if err != nil {
 			t.Fatal(err)
 		}
 	}))
-	t.Cleanup(ajaxApiServer.Close)
+	t.Cleanup(ajaxAPIServer.Close)
 
 	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
@@ -2460,9 +2460,9 @@ func TestApiRoutes(t *testing.T) {
 				URI:  apiServer.URL,
 			},
 			{
-				ID:   ajaxApiServer.URL,
+				ID:   ajaxAPIServer.URL,
 				Path: "/ajaxapi",
-				URI:  ajaxApiServer.URL,
+				URI:  ajaxAPIServer.URL,
 			},
 			{
 				ID:   uiServer.URL,
@@ -2471,7 +2471,7 @@ func TestApiRoutes(t *testing.T) {
 			},
 		},
 	}
-	opts.ApiRoutes = []string{
+	opts.APIRoutes = []string{
 		"^/api",
 	}
 	opts.SkipProviderButton = true

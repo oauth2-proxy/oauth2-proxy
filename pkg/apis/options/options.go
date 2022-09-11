@@ -50,7 +50,7 @@ type Options struct {
 
 	Providers Providers `cfg:",internal"`
 
-	ApiRoutes             []string `flag:"api-route" cfg:"api_routes"`
+	APIRoutes             []string `flag:"api-route" cfg:"api_routes"`
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
 	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`

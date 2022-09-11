@@ -181,7 +181,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	apiRoutes, err := buildApiRoutes(opts)
+	apiRoutes, err := buildAPIRoutes(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -484,11 +484,11 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 	return routes, nil
 }
 
-// buildApiRoutes builds an []apiRoute from ApiRoutes option
-func buildApiRoutes(opts *options.Options) ([]apiRoute, error) {
-	routes := make([]apiRoute, 0, len(opts.ApiRoutes))
+// buildAPIRoutes builds an []apiRoute from ApiRoutes option
+func buildAPIRoutes(opts *options.Options) ([]apiRoute, error) {
+	routes := make([]apiRoute, 0, len(opts.APIRoutes))
 
-	for _, path := range opts.ApiRoutes {
+	for _, path := range opts.APIRoutes {
 		compiledRegex, err := regexp.Compile(path)
 		if err != nil {
 			return nil, err
@@ -572,7 +572,7 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	return false
 }
 
-func (p *OAuthProxy) isApiPath(req *http.Request) bool {
+func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 	for _, route := range p.apiRoutes {
 		if route.pathRegex.MatchString(req.URL.Path) {
 			return true
@@ -949,7 +949,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		p.headersChain.Then(p.upstreamProxy).ServeHTTP(rw, req)
 	case ErrNeedsLogin:
 		// we need to send the user to a login screen
-		if p.forceJSONErrors || isAjax(req) || p.isApiPath(req) {
+		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) {
 			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
 			p.errorJSON(rw, http.StatusUnauthorized)

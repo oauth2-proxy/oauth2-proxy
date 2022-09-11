@@ -62,9 +62,9 @@ func validateTrustedIPs(o *options.Options) []string {
 	return msgs
 }
 
-// validateApiRoutes validates regex paths passed with options.ApiRoutes
-func validateApiRoutes(o *options.Options) []string {
-	return validateRegexes(o.ApiRoutes)
+// validateAPIRoutes validates regex paths passed with options.ApiRoutes
+func validateAPIRoutes(o *options.Options) []string {
+	return validateRegexes(o.APIRoutes)
 }
 
 // validateRegexes validates all regexes and returns a list of messages in case of error
