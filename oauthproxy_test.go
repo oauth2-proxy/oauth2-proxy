@@ -1533,7 +1533,8 @@ func (st *SignatureTest) Close() {
 
 // fakeNetConn simulates an http.Request.Body buffer that will be consumed
 // when it is read by the hmacauth.HmacAuth if not handled properly. See:
-//   https://github.com/18F/hmacauth/pull/4
+//
+//	https://github.com/18F/hmacauth/pull/4
 type fakeNetConn struct {
 	reqBody string
 }
@@ -2524,7 +2525,6 @@ func TestApiRoutes(t *testing.T) {
 
 			if tc.shouldRedirect {
 				assert.Equal(t, 302, rw.Code)
-				// assert.Equal(t, "Allowed Request", rw.Body.String())
 			} else {
 				assert.Equal(t, 401, rw.Code)
 			}
