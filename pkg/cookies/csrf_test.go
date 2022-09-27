@@ -158,10 +158,9 @@ var _ = Describe("CSRF Cookie Tests", func() {
 				))
 				Expect(rw.Header().Get("Set-Cookie")).To(ContainSubstring(
 					fmt.Sprintf(
-						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
+						"; Path=%s; Domain=%s; HttpOnly; Secure",
 						cookiePath,
 						cookieDomain,
-						testCookieExpires(testNow.Add(cookieOpts.CSRFExpire)),
 					),
 				))
 			})
