@@ -75,7 +75,8 @@ Note: The user is checked against the group members list on initial authenticati
 1. Add an application: go to [https://portal.azure.com](https://portal.azure.com), choose **"Azure Active Directory"** in the left menu, select **"App registrations"** and then click on **"New app registration"**.
 2. Pick a name and choose **"Webapp / API"** as application type. Use `https://internal.yourcompany.com` as Sign-on URL. Click **"Create"**.
 3. On the **"Settings"** / **"Properties"** page of the app, pick a logo and select **"Multi-tenanted"** if you want to allow users from multiple organizations to access your app. Note down the application ID. Click **"Save"**.
-4. On the **"Settings"** / **"Required Permissions"** page of the app, click on **"Windows Azure Active Directory"** and then on **"Access the directory as the signed in user"**. Hit **"Save"** and then then on **"Grant permissions"** (you might need another admin to do this).
+4. On the **"Settings"** / **"API Permissions"** page of the app, click on **"Add a permission"**, then select **"Microsoft Graph"**, then **"Delegated permissions"** and finally check the **"openid (Sign users in)"** permission. Hit **"Save"** and then on **"Grant permissions"** (you might need another admin to do this).
+<br/>**IMPORTANT**: Even if this permission is listed with **"Admin consent required=No"** the consent might actually be required, due to AAD policies you won't be able to see. If you get a **"Need admin approval"** during login, most likely this is what you're missing!
 5. On the **"Settings"** / **"Reply URLs"** page of the app, add `https://internal.yourcompanycom/oauth2/callback` for each host that you want to protect by the oauth2 proxy. Click **"Save"**.
 6. On the **"Settings"** / **"Keys"** page of the app, add a new key and note down the value after hitting **"Save"**.
 7. Configure the proxy with
@@ -192,7 +193,7 @@ Make sure you set the following to the appropriate url:
     --client-id=<your client's id>
     --client-secret=<your client's secret>
     --redirect-url=https://myapp.com/oauth2/callback
-    --oidc-issuer-url=https://<keycloak host>/realms/<your realm>
+    --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
     --allowed-role=<realm role name> // Optional, required realm role
     --allowed-role=<client id>:<client role name> // Optional, required client role
 ```

@@ -9,6 +9,7 @@ import (
 	"unsafe"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/watcher"
 )
 
 // UserMap holds information from the authenticated emails file
@@ -26,7 +27,7 @@ func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
 	if usersFile != "" {
 		logger.Printf("using authenticated emails file %s", usersFile)
-		WatchForUpdates(usersFile, done, func() {
+		watcher.WatchFileForUpdates(usersFile, done, func() {
 			um.LoadAuthenticatedEmailsFile()
 			onUpdate()
 		})
