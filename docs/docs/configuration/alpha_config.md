@@ -420,7 +420,7 @@ Provider holds all configuration for a single provider
 | `introspectURL` | _string_ | IntrospectionURL is the access token introspection endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
-| `force_code_challenge_method` | _string_ | The forced code challenge method |
+| `code_challenge_method` | _string_ | The code challenge method |
 
 ### ProviderType
 #### (`string` alias)
@@ -479,6 +479,7 @@ as well as an optional minimal TLS version that is acceptable.
 | `Key` | _[SecretSource](#secretsource)_ | Key is the TLS key data to use.<br/>Typically this will come from a file. |
 | `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
 | `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
+| `CipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
 
 ### URLParameterRule
 

@@ -32,8 +32,9 @@ There are two recommended configurations:
     The defaults set `TLS1.2` as the minimal version. 
     Regardless of the minimum version configured, `TLS1.3` is currently always used as the maximal version.
 
-    The server side cipher suites are the defaults from [`crypto/tls`](https://pkg.go.dev/crypto/tls#CipherSuites) of 
-    the currently used `go` version for building `oauth2-proxy`.
+    TLS server side cipher suites can be specified with `--tls-cipher-suite=TLS_RSA_WITH_RC4_128_SHA`.
+    If not specified, the defaults from [`crypto/tls`](https://pkg.go.dev/crypto/tls#CipherSuites) of the currently used `go` version for building `oauth2-proxy` will be used.
+    A complete list of valid TLS cipher suite names can be found in [`crypto/tls`](https://pkg.go.dev/crypto/tls#pkg-constants).
 
 ### Terminate TLS at Reverse Proxy, e.g. Nginx
 
