@@ -3,10 +3,44 @@
 ## Release Highlights
 
 ## Important Notes
+- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99)
+  - Since the CSRF cookie name is now longer it could potentially break long cookie names (around 1000 characters).
+  - Having a unique CSRF cookie per request can lead to quite a number of cookies, in case an application performs a high number of parallel authentication requests. Each call will redirect to /oauth2/start, if the user is not authenticated, and a new cookie will be set. The successfully authenticated requests will have its CSRF cookies immediatly expired, however the failed ones will mantain its CSRF cookies until they expire (by default in 15 minutes). 
+  - The user may redefine the CSRF cookie expiration time using flag "--cookie-csrf-expire" (e.g. --cookie-csrf-expire=5m). By default, it is 15 minutes, but you can fine tune to your environment.
 
 ## Breaking Changes
 
+N/A
+
 ## Changes since v7.3.0
+- [#1691](https://github.com/oauth2-proxy/oauth2-proxy/pull/1691) Fix Redis IdleTimeout when Redis timeout option is set to non-zero (@dimss)
+
+- [#1669](https://github.com/oauth2-proxy/oauth2-proxy/pull/1699) Fix method deprecated error in lint (@t-katsumura)
+
+- [#1701](https://github.com/oauth2-proxy/oauth2-proxy/pull/1701) Watch the htpasswd file for changes and update the htpasswdMap (@aiciobanu)
+
+- [#1709](https://github.com/oauth2-proxy/oauth2-proxy/pull/1709) Show an alert message when basic auth credentials are invalid (@aiciobanu)
+- [#1723](https://github.com/oauth2-proxy/oauth2-proxy/pull/1723) Added ability to specify allowed TLS cipher suites. (@crbednarz)
+
+- [#1720](https://github.com/oauth2-proxy/oauth2-proxy/pull/1720) Extract roles from authToken, to allow using allowed roles with Keycloak.
+
+- [#1774](https://github.com/oauth2-proxy/oauth2-proxy/pull/1774) Fix vulnerabilities CVE-2022-27191, CVE-2021-44716 and CVE-2022-29526
+
+- [#1667](https://github.com/oauth2-proxy/oauth2-proxy/issues/1667) Rename configuration file flag for PKCE
+to remain consistent with CLI flags. You should specify `code_challenge_method` in your configuration instead of
+`force_code_challenge_method`.
+
+- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99) 
+  - Add flag "--cookie-csrf-per-request" which activates an algorithm to name CSRF cookies differently per request. 
+    This feature allows parallel callbacks and by default it is disabled. 
+  - Add flag "--cookie-csrf-expire" to define a different expiration time for the CSRF cookie. By default, it is 15 minutes.
+
+- [#1762](https://github.com/oauth2-proxy/oauth2-proxy/pull/1762) Support negating for skip auth routes
+
+- [#1788](https://github.com/oauth2-proxy/oauth2-proxy/pull/1788) Update base docker image to alpine 3.16
+
+- [#1760](https://github.com/oauth2-proxy/oauth2-proxy/pull/1760) Option to configure API routes
+
 
 # V7.3.0
 

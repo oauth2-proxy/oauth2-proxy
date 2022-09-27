@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/watcher"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -17,6 +19,7 @@ import (
 // Passwords must be generated with -B for bcrypt or -s for SHA1.
 type htpasswdMap struct {
 	users map[string]interface{}
+	rwm   sync.RWMutex
 }
 
 // bcryptPass is used to identify bcrypt passwords in the
@@ -30,10 +33,30 @@ type sha1Pass string
 // NewHTPasswdValidator constructs an httpasswd based validator from the file
 // at the path given.
 func NewHTPasswdValidator(path string) (Validator, error) {
+	h := &htpasswdMap{users: make(map[string]interface{})}
+
+	if err := h.loadHTPasswdFile(path); err != nil {
+		return nil, fmt.Errorf("could not load htpasswd file: %v", err)
+	}
+
+	if err := watcher.WatchFileForUpdates(path, nil, func() {
+		err := h.loadHTPasswdFile(path)
+		if err != nil {
+			logger.Errorf("%v: no changes were made to the current htpasswd map", err)
+		}
+	}); err != nil {
+		return nil, fmt.Errorf("could not watch htpasswd file: %v", err)
+	}
+
+	return h, nil
+}
+
+// loadHTPasswdFile loads htpasswd entries from an io.Reader (an opened file) into a htpasswdMap.
+func (h *htpasswdMap) loadHTPasswdFile(filename string) error {
 	// We allow HTPasswd location via config options
-	r, err := os.Open(path) // #nosec G304
+	r, err := os.Open(filename) // #nosec G304
 	if err != nil {
-		return nil, fmt.Errorf("could not open htpasswd file: %v", err)
+		return fmt.Errorf("could not open htpasswd file: %v", err)
 	}
 	defer func(c io.Closer) {
 		cerr := c.Close()
@@ -41,46 +64,79 @@ func NewHTPasswdValidator(path string) (Validator, error) {
 			logger.Fatalf("error closing the htpasswd file: %v", cerr)
 		}
 	}(r)
-	return newHtpasswd(r)
-}
 
-// newHtpasswd consctructs an htpasswd from an io.Reader (an opened file).
-func newHtpasswd(file io.Reader) (*htpasswdMap, error) {
-	csvReader := csv.NewReader(file)
+	csvReader := csv.NewReader(r)
 	csvReader.Comma = ':'
 	csvReader.Comment = '#'
 	csvReader.TrimLeadingSpace = true
 
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("could not read htpasswd file: %v", err)
+		return fmt.Errorf("could not read htpasswd file: %v", err)
 	}
 
-	return createHtpasswdMap(records)
+	updated, err := createHtpasswdMap(records)
+	if err != nil {
+		return fmt.Errorf("htpasswd entries error: %v", err)
+	}
+
+	h.rwm.Lock()
+	h.users = updated.users
+	h.rwm.Unlock()
+
+	return nil
 }
 
 // createHtasswdMap constructs an htpasswdMap from the given records
 func createHtpasswdMap(records [][]string) (*htpasswdMap, error) {
 	h := &htpasswdMap{users: make(map[string]interface{})}
+	var invalidRecords, invalidEntries []string
 	for _, record := range records {
-		user, realPassword := record[0], record[1]
-		shaPrefix := realPassword[:5]
-		if shaPrefix == "{SHA}" {
-			h.users[user] = sha1Pass(realPassword[5:])
-			continue
+		// If a record is invalid or malformed don't panic with index out of range,
+		// return a formatted error.
+		lr := len(record)
+		switch {
+		case lr == 2:
+			user, realPassword := record[0], record[1]
+			invalidEntries = passShaOrBcrypt(h, user, realPassword)
+		case lr == 1, lr > 2:
+			invalidRecords = append(invalidRecords, record[0])
 		}
-
-		bcryptPrefix := realPassword[:4]
-		if bcryptPrefix == "$2a$" || bcryptPrefix == "$2b$" || bcryptPrefix == "$2x$" || bcryptPrefix == "$2y$" {
-			h.users[user] = bcryptPass(realPassword)
-			continue
-		}
-
-		// Password is neither sha1 or bcrypt
-		// TODO(JoelSpeed): In the next breaking release, make this return an error.
-		logger.Errorf("Invalid htpasswd entry for %s. Must be a SHA or bcrypt entry.", user)
 	}
+
+	if len(invalidRecords) > 0 {
+		return h, fmt.Errorf("invalid htpasswd record(s) %+q", invalidRecords)
+	}
+
+	if len(invalidEntries) > 0 {
+		return h, fmt.Errorf("'%+q' user(s) could not be added: invalid password, must be a SHA or bcrypt entry", invalidEntries)
+	}
+
+	if len(h.users) == 0 {
+		return nil, fmt.Errorf("could not construct htpasswdMap: htpasswd file doesn't contain a single valid user entry")
+	}
+
 	return h, nil
+}
+
+// passShaOrBcrypt checks if a htpasswd entry is valid and the password is encrypted with SHA or bcrypt.
+// Valid user entries are saved in the htpasswdMap, invalid records are reurned.
+func passShaOrBcrypt(h *htpasswdMap, user, password string) (invalidEntries []string) {
+	passLen := len(password)
+	switch {
+	case passLen > 6 && password[:5] == "{SHA}":
+		h.users[user] = sha1Pass(password[5:])
+	case passLen > 5 &&
+		(password[:4] == "$2b$" ||
+			password[:4] == "$2y$" ||
+			password[:4] == "$2x$" ||
+			password[:4] == "$2a$"):
+		h.users[user] = bcryptPass(password)
+	default:
+		invalidEntries = append(invalidEntries, user)
+	}
+
+	return invalidEntries
 }
 
 // Validate checks a users password against the htpasswd entries

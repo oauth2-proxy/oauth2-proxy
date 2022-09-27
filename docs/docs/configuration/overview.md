@@ -75,6 +75,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | Option | Type | Description | Default |
 | ------ | ---- | ----------- | ------- |
 | `--acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
+| `--api-route` | string \| list | return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex | |
 | `--approval-prompt` | string | OAuth approval_prompt | `"force"` |
 | `--auth-logging` | bool | Log authentication attempts | true |
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
@@ -89,12 +90,14 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
 | `--cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
 | `--cookie-httponly` | bool | set HttpOnly cookie flag | true |
-| `--cookie-name` | string | the name of the cookie that the oauth_proxy creates | `"_oauth2_proxy"` |
+| `--cookie-name` | string | the name of the cookie that the oauth_proxy creates. Should be changed to use a [cookie prefix](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#cookie_prefixes) (`__Host-` or `__Secure-`) if `--cookie-secure` is set. | `"_oauth2_proxy"` |
 | `--cookie-path` | string | an optional cookie path to force cookies to (e.g. `/poc/`) | `"/"` |
 | `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;\[[1](#footnote1)\] | |
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
+| `--cookie-csrf-per-request` | bool | Enable having different CSRF cookies per request, making it possible to have parallel requests. | false |
+| `--cookie-csrf-expire` | duration | expire timeframe for CSRF cookie | 15m |
 | `--custom-templates-dir` | string | path to custom html templates | |
 | `--custom-sign-in-logo` | string | path or a URL to an custom image for the sign_in page logo. Use \"-\" to disable default logo. |
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
@@ -167,6 +170,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
+| `--redis-connection-idle-timeout` | int | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Exmpale: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0 |
 | `--request-id-header` | string | Request header to use as the request ID in logging | X-Request-Id |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
@@ -183,7 +187,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
 | `--skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
 | `--skip-auth-regex` | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times) | |
-| `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods | |
+| `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex  | |
 | `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy | true |
 | `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens (the token must have [`aud`](https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields) that matches this client id or one of the extras from `extra-jwt-issuers`) | false |
 | `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
@@ -193,6 +197,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--standard-logging` | bool | Log standard runtime information | true |
 | `--standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
 | `--tls-cert-file` | string | path to certificate file | |
+| `--tls-cipher-suite` | string \| list | Restricts TLS cipher suites used by server to those listed (e.g. TLS_RSA_WITH_RC4_128_SHA) (may be given multiple times). If not specified, the default Go safe cipher list is used. List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). | |
 | `--tls-key-file` | string | path to private key file | |
 | `--tls-min-version` | string | minimum TLS version that is acceptable, either `"TLS1.2"` or `"TLS1.3"` | `"TLS1.2"` |
 | `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
