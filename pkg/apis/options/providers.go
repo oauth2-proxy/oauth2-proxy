@@ -186,6 +186,8 @@ type GoogleOptions struct {
 	AdminEmail string `json:"adminEmail,omitempty"`
 	// ServiceAccountJSON is the path to the service account json credentials
 	ServiceAccountJSON string `json:"serviceAccountJson,omitempty"`
+	// AuthorizedServiceAccounts is used when group authorization is enabled.
+	AuthorizedServiceAccounts []string `json:"authorizedServiceAccounts,omitempty"`
 }
 
 type OIDCOptions struct {

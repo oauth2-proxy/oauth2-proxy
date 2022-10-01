@@ -481,20 +481,21 @@ type LegacyProvider struct {
 	ClientSecret     string `flag:"client-secret" cfg:"client_secret"`
 	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file"`
 
-	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
-	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
-	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
-	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
-	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
-	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
-	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
-	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
-	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
-	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
-	GitLabProjects           []string `flag:"gitlab-project" cfg:"gitlab_projects"`
-	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
-	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
-	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
+	KeycloakGroups                  []string `flag:"keycloak-group" cfg:"keycloak_groups"`
+	AzureTenant                     string   `flag:"azure-tenant" cfg:"azure_tenant"`
+	BitbucketTeam                   string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
+	BitbucketRepository             string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
+	GitHubOrg                       string   `flag:"github-org" cfg:"github_org"`
+	GitHubTeam                      string   `flag:"github-team" cfg:"github_team"`
+	GitHubRepo                      string   `flag:"github-repo" cfg:"github_repo"`
+	GitHubToken                     string   `flag:"github-token" cfg:"github_token"`
+	GitHubUsers                     []string `flag:"github-user" cfg:"github_users"`
+	GitLabGroup                     []string `flag:"gitlab-group" cfg:"gitlab_groups"`
+	GitLabProjects                  []string `flag:"gitlab-project" cfg:"gitlab_projects"`
+	GoogleGroups                    []string `flag:"google-group" cfg:"google_group"`
+	GoogleAdminEmail                string   `flag:"google-admin-email" cfg:"google_admin_email"`
+	GoogleServiceAccountJSON        string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
+	GoogleAuthorizedServiceAccounts []string `flag:"google-authorized-service-accounts" cfg:"google_authorized_service_accounts"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -550,6 +551,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
+	flagSet.StringSlice("google-authorized-service-accounts", []string{}, "restrict logins to these service accounts (may be given multiple times).")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
@@ -715,9 +717,10 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 	case "google":
 		provider.GoogleConfig = GoogleOptions{
-			Groups:             l.GoogleGroups,
-			AdminEmail:         l.GoogleAdminEmail,
-			ServiceAccountJSON: l.GoogleServiceAccountJSON,
+			Groups:                    l.GoogleGroups,
+			AdminEmail:                l.GoogleAdminEmail,
+			ServiceAccountJSON:        l.GoogleServiceAccountJSON,
+			AuthorizedServiceAccounts: l.GoogleAuthorizedServiceAccounts,
 		}
 	}
 

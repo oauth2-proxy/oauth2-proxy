@@ -37,6 +37,8 @@ type GoogleProvider struct {
 	// Refresh. `Authorize` uses the results of this saved in `session.Groups`
 	// Since it is called on every request.
 	groupValidator func(*sessions.SessionState) bool
+
+	AuthorizedServiceAccounts []string
 }
 
 var _ Provider = (*GoogleProvider)(nil)
@@ -97,6 +99,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		groupValidator: func(*sessions.SessionState) bool {
 			return true
 		},
+		AuthorizedServiceAccounts: opts.AuthorizedServiceAccounts,
 	}
 
 	if opts.ServiceAccountJSON != "" {
@@ -344,4 +347,24 @@ func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, s *sessions.Ses
 	s.ExpiresIn(time.Duration(data.ExpiresIn) * time.Second)
 
 	return nil
+}
+
+func (p *GoogleProvider) Authorize(_ context.Context, s *sessions.SessionState) (bool, error) {
+	if len(p.AllowedGroups) == 0 {
+		return true, nil
+	}
+
+	for _, group := range s.Groups {
+		if _, ok := p.AllowedGroups[group]; ok {
+			return true, nil
+		}
+	}
+
+	for _, sa := range p.AuthorizedServiceAccounts {
+		if sa == s.Email {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
