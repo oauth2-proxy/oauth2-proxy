@@ -1,5 +1,6 @@
 # This ARG has to be at the top, otherwise the docker daemon does not known what to do with FROM ${RUNTIME_IMAGE}
 ARG RUNTIME_IMAGE=alpine:3.16
+ARG BUILDPLATFORM
 
 # All builds should be done using the platform native to the build node to allow
 #  cache sharing of the go mod download step.
@@ -21,7 +22,6 @@ COPY . .
 #  sources have changed.
 ARG VERSION
 ARG TARGETPLATFORM
-ARG BUILDPLATFORM
 
 # Build binary and make sure there is at least an empty key file.
 #  This is useful for GCP App Engine custom runtime builds, because

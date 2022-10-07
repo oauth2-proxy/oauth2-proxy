@@ -268,6 +268,15 @@ func (l *LegacyHeaders) getResponseHeaders() []Header {
 		responseHeaders = append(responseHeaders, getAuthorizationHeader())
 	}
 
+	if l.PassUserHeaders {
+		responseHeaders = append(responseHeaders, getPassUserHeaders(l.PreferEmailToUser)...)
+		responseHeaders = append(responseHeaders, getPreferredUsernameHeader())
+	}
+
+	if l.PassAccessToken {
+		responseHeaders = append(responseHeaders, getPassAccessTokenHeader())
+	}
+
 	return responseHeaders
 }
 
