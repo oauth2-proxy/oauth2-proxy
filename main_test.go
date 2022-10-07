@@ -62,6 +62,18 @@ injectResponseHeaders:
     prefix: "Basic "
     basicAuthPassword:
       value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+- name: X-Forwarded-Groups
+  values:
+  - claim: groups
+- name: X-Forwarded-User
+  values:
+  - claim: user
+- name: X-Forwarded-Email
+  values:
+  - claim: email
+- name: X-Forwarded-Preferred-Username
+  values:
+  - claim: preferred_username
 server:
   bindAddress: "127.0.0.1:4180"
 providers:
@@ -140,7 +152,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		}
 
 		opts.InjectRequestHeaders = append([]options.Header{authHeader}, opts.InjectRequestHeaders...)
-		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, authHeader)
+		opts.InjectResponseHeaders = append([]options.Header{authHeader}, opts.InjectResponseHeaders...)
 
 		opts.Providers = options.Providers{
 			options.Provider{
