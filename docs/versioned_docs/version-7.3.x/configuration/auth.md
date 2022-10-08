@@ -219,9 +219,9 @@ Restricting by group membership is possible with the following option:
 
     --gitlab-group="mygroup,myothergroup": restrict logins to members of any of these groups (slug), separated by a comma
 
-If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
+Set the OIDC issue URL to the appropriate URL:
 
-    --oidc-issuer-url="<your gitlab url>"
+    --oidc-issuer-url="https://gitlab.com" # or <your gitlab url>
 
 If your self-hosted GitLab is on a sub-directory (e.g. domain.tld/gitlab), as opposed to its own sub-domain (e.g. gitlab.domain.tld), you may need to add a redirect from domain.tld/oauth pointing at e.g. domain.tld/gitlab/oauth.
 
