@@ -33,7 +33,7 @@ For Google, the registration steps are:
 
 1.  Create a new project: https://console.developers.google.com/project
 2.  Choose the new project from the top right project dropdown (only if another project is selected)
-3.  In the project Dashboard center pane, choose **"API Manager"**
+3.  In the project Dashboard center pane, choose **"APIs & Services"**
 4.  In the left Nav pane, choose **"Credentials"**
 5.  In the center pane, choose **"OAuth consent screen"** tab. Fill in **"Product name shown to users"** and hit save.
 6.  In the center pane, choose **"Credentials"** tab.
