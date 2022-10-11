@@ -73,6 +73,8 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 		scope:       azureDefaultScope,
 	})
 
+	p.setAllowedGroups(opts.Group)
+
 	if p.ProtectedResource == nil || p.ProtectedResource.String() == "" {
 		p.ProtectedResource = azureDefaultProtectResourceURL
 	}

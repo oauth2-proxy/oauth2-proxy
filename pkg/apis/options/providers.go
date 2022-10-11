@@ -142,6 +142,8 @@ type AzureOptions struct {
 	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
 	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
+	// Group sets restrict logins to members of this group
+	Group []string `json:"group,omitempty"`
 }
 
 type ADFSOptions struct {
