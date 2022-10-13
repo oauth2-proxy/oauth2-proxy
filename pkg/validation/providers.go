@@ -49,7 +49,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 	// login.gov uses a signed JWT to authenticate, not a client-secret
 	if provider.Type != "login.gov" {
 		if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
-			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
+			msgs = append(msgs, "missing setting: client-secret or client-secret-file" && provider.Type != "oidc")
 		}
 		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
 			_, err := os.ReadFile(provider.ClientSecretFile)
