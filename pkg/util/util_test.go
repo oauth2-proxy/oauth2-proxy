@@ -427,4 +427,8 @@ func TestGetClientCertificates(t *testing.T) {
 	tlsCerts, err := GetClientCertificates(certs, keys)
 	assert.NoError(t, err)
 	assert.Equal(t, len(certs), len(tlsCerts))
+
+	for i, subj := range []string{cert1CertSubj, cert2CertSubj, cert3CertSubj} {
+		assert.Equal(t, tlsCerts[i].Leaf.Subject, subj)
+	}
 }
