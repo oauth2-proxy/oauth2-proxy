@@ -3,6 +3,7 @@ package util
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -30,6 +31,26 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 		}
 	}
 	return pool, nil
+}
+
+func GetClientCertificates(certs, keys []string) ([]tls.Certificate, error) {
+	certificates := make([]tls.Certificate, 0)
+	if len(certs) == 0 || len(keys) == 0 {
+		return certificates, fmt.Errorf("invalid empty list of certs/keys")
+	}
+
+	if len(certs) != len(keys) {
+		return certificates, fmt.Errorf("invalid all certs need a key pair")
+	}
+	for i, c := range certs {
+		cert, err := tls.LoadX509KeyPair(c, keys[i])
+		if err != nil {
+			return []tls.Certificate{}, fmt.Errorf("could not parse cert/key pair %s, %s - %s", c, keys[i], err)
+		}
+		certificates = append(certificates, cert)
+	}
+
+	return certificates, nil
 }
 
 // https://golang.org/src/crypto/tls/generate_cert.go as a function

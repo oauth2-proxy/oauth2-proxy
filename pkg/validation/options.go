@@ -44,11 +44,13 @@ func Validate(o *options.Options) error {
 				MinVersion: tls.VersionTLS12,
 			}
 
-			cert, err := tls.LoadX509KeyPair(o.Providers[0].CertFile, o.Providers[0].KeyFile)
-			if err == nil {
-				tlsConfig.Certificates = []tls.Certificate{cert}
-			} else {
-				msgs = append(msgs, fmt.Sprintf("missing or invalid cert/key pair: %v", err))
+			if len(o.Providers[0].CertFiles) > 0 && len(o.Providers[0].KeyFiles) > 0 {
+				certs, err := util.GetClientCertificates(o.Providers[0].CertFiles, o.Providers[0].KeyFiles)
+				if err == nil {
+					tlsConfig.Certificates = certs
+				} else {
+					msgs = append(msgs, fmt.Sprintf("unable to load client certificates: %v", err))
+				}
 			}
 		} else {
 			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
