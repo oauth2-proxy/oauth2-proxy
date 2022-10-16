@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -18,7 +17,7 @@ type ValidatorTest struct {
 func NewValidatorTest(t *testing.T) *ValidatorTest {
 	vt := &ValidatorTest{}
 	var err error
-	f, err := ioutil.TempFile("", "test_auth_emails_")
+	f, err := os.CreateTemp("", "test_auth_emails_")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}

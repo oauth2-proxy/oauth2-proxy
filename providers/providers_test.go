@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -43,7 +42,7 @@ func TestClientSecretFileOptionFails(t *testing.T) {
 func TestClientSecretFileOption(t *testing.T) {
 	g := NewWithT(t)
 
-	f, err := ioutil.TempFile("", "client_secret_temp_file_")
+	f, err := os.CreateTemp("", "client_secret_temp_file_")
 	g.Expect(err).ToNot(HaveOccurred())
 
 	clientSecretFileName := f.Name()

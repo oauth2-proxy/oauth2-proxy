@@ -73,7 +73,7 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 		scope:       azureDefaultScope,
 	})
 
-	p.setAllowedGroups(opts.Group)
+	p.setAllowedGroups(opts.Groups)
 
 	if p.ProtectedResource == nil || p.ProtectedResource.String() == "" {
 		p.ProtectedResource = azureDefaultProtectResourceURL
@@ -185,6 +185,16 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 		return errors.New("unable to get email address")
 	}
 	s.Email = email
+
+	groups, err := p.getGroupsFromProfileAPI(ctx, s.AccessToken)
+	if err != nil {
+		return fmt.Errorf("unable to get groups: %v", err)
+	}
+	if groups == "" {
+		return errors.New("unable to get groups")
+	}
+
+	fmt.Printf("groups: %v\n", groups)
 
 	return nil
 }
@@ -349,12 +359,34 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 		WithContext(ctx).
 		WithHeaders(makeAzureHeader(accessToken)).
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 	if err != nil {
 		return "", err
 	}
 
 	return getEmailFromJSON(json)
+}
+
+func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
+	var groups string
+	var err error
+
+	if accessToken == "" {
+		return "", errors.New("missing access token")
+	}
+
+	json, err := requests.New(p.ProfileURL.String()).
+		WithContext(ctx).
+		WithHeaders(makeAzureHeader(accessToken)).
+		Do().
+		UnmarshalSimpleJSON()
+	if err != nil {
+		return "", err
+	}
+
+	groups, err = json.Get("groups").String()
+
+	return groups, err
 }
 
 // ValidateSession validates the AccessToken

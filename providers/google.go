@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -231,7 +230,7 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string,
 }
 
 func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Service {
-	data, err := ioutil.ReadAll(credentialsReader)
+	data, err := io.ReadAll(credentialsReader)
 	if err != nil {
 		logger.Fatal("can't read Google credentials file:", err)
 	}

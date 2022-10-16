@@ -143,7 +143,7 @@ type AzureOptions struct {
 	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
 	// Group sets restrict logins to members of this group
-	Group []string `json:"group,omitempty"`
+	Groups []string `json:"group,omitempty"`
 }
 
 type ADFSOptions struct {

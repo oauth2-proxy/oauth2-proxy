@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -56,7 +56,7 @@ var _ = Describe("SignIn Page", func() {
 				recorder := httptest.NewRecorder()
 				signInPage.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal("/prefix/ My Provider Sign In Here Custom Footer Text v0.0.0-test /redirect true Logo Data"))
 			})
@@ -70,7 +70,7 @@ var _ = Describe("SignIn Page", func() {
 				recorder := httptest.NewRecorder()
 				signInPage.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(fmt.Sprintf("Internal Server Error | %s", testRequestID)))
 			})
@@ -84,12 +84,12 @@ var _ = Describe("SignIn Page", func() {
 
 		BeforeEach(func() {
 			var err error
-			customDir, err = ioutil.TempDir("", "oauth2-proxy-sign-in-page-test")
+			customDir, err = os.MkdirTemp("", "oauth2-proxy-sign-in-page-test")
 			Expect(err).ToNot(HaveOccurred())
 
 			for _, ext := range []string{".svg", ".png", ".jpg", ".jpeg", ".gif"} {
 				fileName := filepath.Join(customDir, fmt.Sprintf("logo%s", ext))
-				Expect(ioutil.WriteFile(fileName, []byte(fakeImageData), 0600)).To(Succeed())
+				Expect(os.WriteFile(fileName, []byte(fakeImageData), 0600)).To(Succeed())
 			}
 		})
 

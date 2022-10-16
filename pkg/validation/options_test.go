@@ -2,7 +2,6 @@ package validation
 
 import (
 	"crypto"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -205,7 +204,7 @@ func TestRealClientIPHeader(t *testing.T) {
 }
 
 func TestProviderCAFilesError(t *testing.T) {
-	file, err := ioutil.TempFile("", "absent.*.crt")
+	file, err := os.CreateTemp("", "absent.*.crt")
 	assert.NoError(t, err)
 	assert.NoError(t, file.Close())
 	assert.NoError(t, os.Remove(file.Name()))
