@@ -836,9 +836,9 @@ func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifi
 	}
 
 	groups := pcTest.opts.Providers[0].AllowedGroups
-	testProvider.AllowedGroups = make(map[string]struct{}, len(groups))
+	testProvider.ProviderData.AllowedGroups = make(map[string]struct{}, len(groups))
 	for _, group := range groups {
-		testProvider.AllowedGroups[group] = struct{}{}
+		testProvider.ProviderData.AllowedGroups[group] = struct{}{}
 	}
 	pcTest.proxy.provider = testProvider
 
