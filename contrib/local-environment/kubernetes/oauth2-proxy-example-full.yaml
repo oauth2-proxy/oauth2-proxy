@@ -449,11 +449,14 @@ spec:
           timeoutSeconds: 1
         readinessProbe:
           httpGet:
-            path: /ping
+            path: /ping?full=1
             port: http
             scheme: HTTP
+            httpHeaders:
+            - name: X-Healthcheck
+              value: full
           initialDelaySeconds: 0
-          timeoutSeconds: 1
+          timeoutSeconds: 5
           successThreshold: 1
           periodSeconds: 10
         resources:
