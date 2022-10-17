@@ -449,7 +449,7 @@ spec:
           timeoutSeconds: 1
         readinessProbe:
           httpGet:
-            path: /ping?full=1
+            path: /ping
             port: http
             scheme: HTTP
             httpHeaders:
