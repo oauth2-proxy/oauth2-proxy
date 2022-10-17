@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -12,10 +13,27 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/spf13/pflag"
+	"go.opentelemetry.io/contrib/propagators/autoprop"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func main() {
+	ctx := context.Background()
 	logger.SetFlags(logger.Lshortfile)
+
+	tp, err := initTracer(ctx)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			logger.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 
 	configFlagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ContinueOnError)
 
@@ -153,4 +171,42 @@ func printConvertedConfig(opts *options.Options) error {
 	}
 
 	return nil
+}
+
+func initTracer(ctx context.Context) (*sdktrace.TracerProvider, error) {
+
+	// Following https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#specify-protocol
+	// until https://github.com/open-telemetry/opentelemetry-go/issues/2310 etc is implemented
+	exporterProtocol, exists := os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL")
+	if !exists {
+		exporterProtocol, exists = os.LookupEnv("OTEL_EXPORTER_OTLP_PROTOCOL")
+		if !exists {
+			exporterProtocol = "http/protobuf"
+		}
+	}
+
+	var exporter *otlptrace.Exporter
+	var err error
+
+	if exporterProtocol == "http/protobuf" {
+		exporter, err = otlptracehttp.New(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else if exporterProtocol == "grpc" {
+		exporter, err = otlptracegrpc.New(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("unsupported otlp export protocol: %v", exporterProtocol)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()), // FIXME
+		sdktrace.WithBatcher(exporter),
+	)
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(autoprop.NewTextMapPropagator())
+	return tp, nil
 }
