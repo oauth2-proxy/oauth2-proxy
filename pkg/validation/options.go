@@ -43,17 +43,17 @@ func Validate(o *options.Options) error {
 				RootCAs:    pool,
 				MinVersion: tls.VersionTLS12,
 			}
-
-			if len(o.Providers[0].CertFiles) > 0 && len(o.Providers[0].KeyFiles) > 0 {
-				certs, err := util.GetClientCertificates(o.Providers[0].CertFiles, o.Providers[0].KeyFiles)
-				if err == nil {
-					tlsConfig.Certificates = certs
-				} else {
-					msgs = append(msgs, fmt.Sprintf("unable to load client certificates: %v", err))
-				}
-			}
 		} else {
 			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
+		}
+	}
+
+	if len(o.Providers[0].CertFiles) > 0 && len(o.Providers[0].KeyFiles) > 0 {
+		certs, err := util.GetClientCertificates(o.Providers[0].CertFiles, o.Providers[0].KeyFiles)
+		if err == nil {
+			tlsConfig.Certificates = certs
+		} else {
+			msgs = append(msgs, fmt.Sprintf("unable to load client certificates: %v", err))
 		}
 	}
 
