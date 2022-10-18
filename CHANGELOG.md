@@ -13,6 +13,8 @@
 N/A
 
 ## Changes since v7.3.0
+- [#1828](https://github.com/oauth2-proxy/oauth2-proxy/pull/1828) call providerData.setProviderDefaults for oidc provider to achieve consistent behaviour (@centzilius)
+  - UserClaim will be set to sub instead of beeing empty from now on.
 - [#1691](https://github.com/oauth2-proxy/oauth2-proxy/pull/1691) Fix Redis IdleTimeout when Redis timeout option is set to non-zero (@dimss)
 
 - [#1669](https://github.com/oauth2-proxy/oauth2-proxy/pull/1699) Fix method deprecated error in lint (@t-katsumura)
