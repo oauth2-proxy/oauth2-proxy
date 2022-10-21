@@ -8,6 +8,11 @@
   - Having a unique CSRF cookie per request can lead to quite a number of cookies, in case an application performs a high number of parallel authentication requests. Each call will redirect to /oauth2/start, if the user is not authenticated, and a new cookie will be set. The successfully authenticated requests will have its CSRF cookies immediatly expired, however the failed ones will mantain its CSRF cookies until they expire (by default in 15 minutes). 
   - The user may redefine the CSRF cookie expiration time using flag "--cookie-csrf-expire" (e.g. --cookie-csrf-expire=5m). By default, it is 15 minutes, but you can fine tune to your environment.
 
+- [#1574](https://github.com/oauth2-proxy/oauth2-proxy/pull/1574) Add Azure groups support and Azure OAuth v2.0 (@adriananeci)
+  - group membership check is now validated while using the the azure provider.
+  - Azure OAuth v2.0 (https://login.microsoftonline.com/{tenant_id}/v2.0) is now available along with Azure OAuth v1.0. See https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/docs/configuration/auth.md#azure-auth-provider for more details
+  - When using v2.0 Azure Auth endpoint (`https://login.microsoftonline.com/{tenant-id}/v2.0`) as `--oidc_issuer_url`, in conjunction with `--resource` flag, be sure to append `/.default` at the end of the resource name. See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#the-default-scope for more details.
+
 ## Breaking Changes
 
 N/A
@@ -33,6 +38,7 @@ to remain consistent with CLI flags. You should specify `code_challenge_method` 
 - [#1760](https://github.com/oauth2-proxy/oauth2-proxy/pull/1760) Option to configure API routes
 - [#1825](https://github.com/oauth2-proxy/oauth2-proxy/pull/1825) Fix vulnerabilities CVE-2022-32149 and CVE-2022-27664. (@crbednarz)
 - [#1750](https://github.com/oauth2-proxy/oauth2-proxy/pull/1750) Fix Nextcloud provider
+- [#1574](https://github.com/oauth2-proxy/oauth2-proxy/pull/1574) Add Azure groups support and Azure OAuth v2.0 (@adriananeci)
 
 # V7.3.0
 
