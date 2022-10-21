@@ -3,7 +3,6 @@ package pagewriter
 import (
 	"bytes"
 	"html/template"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -16,14 +15,14 @@ var _ = Describe("Templates", func() {
 
 	BeforeEach(func() {
 		var err error
-		customDir, err = ioutil.TempDir("", "oauth2-proxy-templates-test")
+		customDir, err = os.MkdirTemp("", "oauth2-proxy-templates-test")
 		Expect(err).ToNot(HaveOccurred())
 
 		templateHTML := `{{.TestString}} {{.TestString | ToLower}} {{.TestString | ToUpper}}`
 		signInFile := filepath.Join(customDir, signInTemplateName)
-		Expect(ioutil.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
+		Expect(os.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
 		errorFile := filepath.Join(customDir, errorTemplateName)
-		Expect(ioutil.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
+		Expect(os.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -162,7 +161,7 @@ var _ = Describe("Templates", func() {
 			Context("With an invalid sign_in template", func() {
 				BeforeEach(func() {
 					signInFile := filepath.Join(customDir, signInTemplateName)
-					Expect(ioutil.WriteFile(signInFile, []byte("{{"), 0600))
+					Expect(os.WriteFile(signInFile, []byte("{{"), 0600))
 				})
 
 				It("Should return an error when loading templates", func() {
@@ -175,7 +174,7 @@ var _ = Describe("Templates", func() {
 			Context("With an invalid error template", func() {
 				BeforeEach(func() {
 					errorFile := filepath.Join(customDir, errorTemplateName)
-					Expect(ioutil.WriteFile(errorFile, []byte("{{"), 0600))
+					Expect(os.WriteFile(errorFile, []byte("{{"), 0600))
 				})
 
 				It("Should return an error when loading templates", func() {

@@ -306,7 +306,7 @@ the caller provides it, and no value will be sent otherwise.
 
 Examples:
 
-A parameter whose value is fixed
+# A parameter whose value is fixed
 
 ```
 name: organization
@@ -354,8 +354,9 @@ as backslash is not considered to be an escape character.  Alternatively
 use the "chomped block" format `|-`:
 
 ```
-- pattern: |-
+  - pattern: |-
     ^[^@]*@example\.com$
+
 ```
 
 The hyphen is important, a `|` block would have a trailing newline

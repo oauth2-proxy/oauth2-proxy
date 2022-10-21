@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/go-redis/redis/v9"
@@ -170,7 +170,7 @@ func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 		if rootCAs == nil {
 			rootCAs = x509.NewCertPool()
 		}
-		certs, err := ioutil.ReadFile(opts.CAPath)
+		certs, err := os.ReadFile(opts.CAPath)
 		if err != nil {
 			return fmt.Errorf("failed to load %q, %v", opts.CAPath, err)
 		}

@@ -15,7 +15,7 @@ type Result interface {
 	Headers() http.Header
 	Body() []byte
 	UnmarshalInto(interface{}) error
-	UnmarshalJSON() (*simplejson.Json, error)
+	UnmarshalSimpleJSON() (*simplejson.Json, error)
 }
 
 type result struct {
@@ -66,10 +66,10 @@ func (r *result) UnmarshalInto(into interface{}) error {
 	return nil
 }
 
-// UnmarshalJSON performs the request and attempts to unmarshal the response into a
+// UnmarshalSimpleJSON performs the request and attempts to unmarshal the response into a
 // simplejson.Json. The response body is assume to be JSON.
 // The response must have a 200 status otherwise an error will be returned.
-func (r *result) UnmarshalJSON() (*simplejson.Json, error) {
+func (r *result) UnmarshalSimpleJSON() (*simplejson.Json, error) {
 	body, err := r.getBodyForUnmarshal()
 	if err != nil {
 		return nil, err

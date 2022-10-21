@@ -3,7 +3,7 @@ package options
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 
@@ -17,7 +17,9 @@ import (
 // variables (prefixed with `OAUTH2_PROXY`) and finally merges in flags from the flagSet.
 // If a config value is unset and the flag has a non-zero value default, this default will be used.
 // Eg. A field defined:
-//    FooBar `cfg:"foo_bar" flag:"foo-bar"`
+//
+//	FooBar `cfg:"foo_bar" flag:"foo-bar"`
+//
 // Can be set in the config file as `foo_bar="baz"`, in the environment as `OAUTH2_PROXY_FOO_BAR=baz`,
 // or via the command line flag `--foo-bar=baz`.
 func Load(configFileName string, flagSet *pflag.FlagSet, into interface{}) error {
@@ -147,7 +149,7 @@ func LoadYAML(configFileName string, into interface{}) error {
 		return errors.New("no configuration file provided")
 	}
 
-	data, err := ioutil.ReadFile(configFileName)
+	data, err := os.ReadFile(configFileName)
 	if err != nil {
 		return fmt.Errorf("unable to load config file: %w", err)
 	}
