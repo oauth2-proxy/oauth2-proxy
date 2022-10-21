@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -565,7 +565,7 @@ var _ = Describe("Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(hello))
 			})
@@ -619,7 +619,7 @@ var _ = Describe("Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(hello))
 			})
@@ -690,7 +690,7 @@ var _ = Describe("Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(hello))
 			})
@@ -705,7 +705,7 @@ var _ = Describe("Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(hello))
 			})
@@ -761,7 +761,7 @@ var _ = Describe("Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(hello))
 			})
@@ -815,7 +815,7 @@ var _ = Describe("Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(hello))
 			})
@@ -886,7 +886,7 @@ var _ = Describe("Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(hello))
 			})
@@ -901,7 +901,7 @@ var _ = Describe("Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(hello))
 			})

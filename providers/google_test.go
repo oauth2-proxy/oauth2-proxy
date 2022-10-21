@@ -166,7 +166,6 @@ func TestGoogleProviderGroupValidator(t *testing.T) {
 	}
 }
 
-//
 func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 	p := newGoogleProvider(t)
 	body, err := json.Marshal(redeemResponse{
