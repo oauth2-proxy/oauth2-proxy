@@ -60,6 +60,10 @@ type Options struct {
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
 
+	CorsCredentials bool     `flag:"cors-credentials" cfg:"cors_credentials"`
+	CorsHeaders     []string `flag:"cors-headers" cfg:"cors_headers"`
+	CorsOrigin      []string `flag:"cors-origin" cfg:"cors_origin"`
+
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
 
@@ -148,6 +152,10 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+
+	flagSet.Bool("cors-credentials", false, "Enable Access-Control-Allow-Credentials header on error responses")
+	flagSet.StringSlice("cors-headers", []string{}, "Sets Access-Control-Allow-Headers header on error responses")
+	flagSet.StringSlice("cors-origin", []string{}, "Sets Access-Control-Allow-Origin header on error responses")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())

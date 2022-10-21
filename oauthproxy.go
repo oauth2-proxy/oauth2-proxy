@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -94,6 +95,10 @@ type OAuthProxy struct {
 	forceJSONErrors     bool
 	realClientIPParser  ipapi.RealClientIPParser
 	trustedIPs          *ip.NetSet
+
+	corsCredentials bool
+	corsOrigin      []string
+	corsHeaders     []string
 
 	sessionChain      alice.Chain
 	headersChain      alice.Chain
@@ -221,6 +226,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		SkipProviderButton:  opts.SkipProviderButton,
 		forceJSONErrors:     opts.ForceJSONErrors,
 		trustedIPs:          trustedIPs,
+
+		corsCredentials: opts.CorsCredentials,
+		corsHeaders:     opts.CorsHeaders,
+		corsOrigin:      opts.CorsOrigin,
 
 		basicAuthValidator: basicAuthValidator,
 		basicAuthGroups:    opts.HtpasswdUserGroups,
@@ -952,7 +961,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 		if p.forceJSONErrors || isAjax(req) || p.isAPIPath(req) {
 			logger.Printf("No valid authentication in request. Access Denied.")
 			// no point redirecting an AJAX request
-			p.errorJSON(rw, http.StatusUnauthorized)
+			p.errorJSON(rw, req, http.StatusUnauthorized)
 			return
 		}
 
@@ -968,7 +977,7 @@ func (p *OAuthProxy) Proxy(rw http.ResponseWriter, req *http.Request) {
 
 	case ErrAccessDenied:
 		if p.forceJSONErrors {
-			p.errorJSON(rw, http.StatusForbidden)
+			p.errorJSON(rw, req, http.StatusForbidden)
 		} else {
 			p.ErrorPage(rw, req, http.StatusForbidden, "The session failed authorization checks")
 		}
@@ -1216,8 +1225,14 @@ func isAjax(req *http.Request) bool {
 }
 
 // errorJSON returns the error code with an application/json mime type
-func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
+func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, req *http.Request, code int) {
 	rw.Header().Set("Content-Type", applicationJSON)
+	if len(p.corsOrigin) > 0 {
+		rw.Header().Set("Access-Control-Allow-Origin", strings.Join(p.corsOrigin, ","))
+	}
+
+	rw.Header().Set("Access-Control-Allow-Headers", strings.Join(p.corsHeaders, ","))
+	rw.Header().Set("Access-Control-Allow-Credentials", strconv.FormatBool(p.corsCredentials))
 	rw.WriteHeader(code)
 	// we need to send some JSON response because we set the Content-Type to
 	// application/json
