@@ -3,7 +3,7 @@ package requests
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -82,7 +82,7 @@ func toTestHTTPRequest(req *http.Request) (testHTTPRequest, error) {
 	requestBody := []byte{}
 	if req.Body != http.NoBody {
 		var err error
-		requestBody, err = ioutil.ReadAll(req.Body)
+		requestBody, err = io.ReadAll(req.Body)
 		if err != nil {
 			return testHTTPRequest{}, err
 		}

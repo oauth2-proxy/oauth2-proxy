@@ -3,7 +3,7 @@ package pagewriter
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -50,7 +50,7 @@ var _ = Describe("Writer", func() {
 					AppError:    "Some debug error",
 				})
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(HavePrefix("\n<!DOCTYPE html>"))
 			})
@@ -59,7 +59,7 @@ var _ = Describe("Writer", func() {
 				recorder := httptest.NewRecorder()
 				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(HavePrefix("\n<!DOCTYPE html>"))
 			})
@@ -70,14 +70,14 @@ var _ = Describe("Writer", func() {
 
 			BeforeEach(func() {
 				var err error
-				customDir, err = ioutil.TempDir("", "oauth2-proxy-pagewriter-test")
+				customDir, err = os.MkdirTemp("", "oauth2-proxy-pagewriter-test")
 				Expect(err).ToNot(HaveOccurred())
 
 				templateHTML := `Custom Template`
 				signInFile := filepath.Join(customDir, signInTemplateName)
-				Expect(ioutil.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
+				Expect(os.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
 				errorFile := filepath.Join(customDir, errorTemplateName)
-				Expect(ioutil.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
+				Expect(os.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
 
 				opts.TemplatesPath = customDir
 
@@ -97,7 +97,7 @@ var _ = Describe("Writer", func() {
 					AppError:    "Some debug error",
 				})
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal("Custom Template"))
 			})
@@ -106,7 +106,7 @@ var _ = Describe("Writer", func() {
 				recorder := httptest.NewRecorder()
 				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal("Custom Template"))
 			})
@@ -117,12 +117,12 @@ var _ = Describe("Writer", func() {
 
 			BeforeEach(func() {
 				var err error
-				customDir, err = ioutil.TempDir("", "oauth2-proxy-pagewriter-test")
+				customDir, err = os.MkdirTemp("", "oauth2-proxy-pagewriter-test")
 				Expect(err).ToNot(HaveOccurred())
 
 				templateHTML := `{{ Custom Broken Template`
 				signInFile := filepath.Join(customDir, signInTemplateName)
-				Expect(ioutil.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
+				Expect(os.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
 
 				opts.TemplatesPath = customDir
 			})
@@ -155,7 +155,7 @@ var _ = Describe("Writer", func() {
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
-				body, err := ioutil.ReadAll(rw.Result().Body)
+				body, err := io.ReadAll(rw.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(in.expectedBody))
 			},
@@ -188,7 +188,7 @@ var _ = Describe("Writer", func() {
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
-				body, err := ioutil.ReadAll(rw.Result().Body)
+				body, err := io.ReadAll(rw.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(in.expectedBody))
 			},
@@ -218,7 +218,7 @@ var _ = Describe("Writer", func() {
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
-				body, err := ioutil.ReadAll(rw.Result().Body)
+				body, err := io.ReadAll(rw.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(in.expectedBody))
 			},
@@ -257,7 +257,7 @@ var _ = Describe("Writer", func() {
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
-				body, err := ioutil.ReadAll(rw.Result().Body)
+				body, err := io.ReadAll(rw.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal(in.expectedBody))
 			},

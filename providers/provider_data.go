@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 
@@ -67,7 +67,7 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	}
 
 	// Getting ClientSecret can fail in runtime so we need to report it without returning the file name to the user
-	fileClientSecret, err := ioutil.ReadFile(p.ClientSecretFile)
+	fileClientSecret, err := os.ReadFile(p.ClientSecretFile)
 	if err != nil {
 		logger.Errorf("error reading client secret file %s: %s", p.ClientSecretFile, err)
 		return "", errors.New("could not read client secret file")

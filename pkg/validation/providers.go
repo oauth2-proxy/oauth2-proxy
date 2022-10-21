@@ -2,14 +2,13 @@ package validation
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
-// validateProviders is the initial validation migration for multiple providrers
-// It currently includes only logic that can verify the providers one by one and does not break the valdation pipe
+// validateProviders is the initial validation migration for multiple providers
+// It currently includes only logic that can verify the providers one by one and does not break the validation pipe
 func validateProviders(o *options.Options) []string {
 	msgs := []string{}
 
@@ -53,7 +52,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
 		}
 		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
-			_, err := ioutil.ReadFile(provider.ClientSecretFile)
+			_, err := os.ReadFile(provider.ClientSecretFile)
 			if err != nil {
 				msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
 			}

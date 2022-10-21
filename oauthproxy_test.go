@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -1043,7 +1042,7 @@ func TestUserInfoEndpointAccepted(t *testing.T) {
 
 			test.proxy.ServeHTTP(test.rw, test.req)
 			assert.Equal(t, http.StatusOK, test.rw.Code)
-			bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+			bodyBytes, _ := io.ReadAll(test.rw.Body)
 			assert.Equal(t, tc.expectedResponse, string(bodyBytes))
 		})
 	}
@@ -1094,7 +1093,7 @@ func TestAuthOnlyEndpointAccepted(t *testing.T) {
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusAccepted, test.rw.Code)
-	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	bodyBytes, _ := io.ReadAll(test.rw.Body)
 	assert.Equal(t, "", string(bodyBytes))
 }
 
@@ -1106,7 +1105,7 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
-	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	bodyBytes, _ := io.ReadAll(test.rw.Body)
 	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
@@ -1126,7 +1125,7 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
-	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	bodyBytes, _ := io.ReadAll(test.rw.Body)
 	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
@@ -1145,7 +1144,7 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
 
 	test.proxy.ServeHTTP(test.rw, test.req)
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
-	bodyBytes, _ := ioutil.ReadAll(test.rw.Body)
+	bodyBytes, _ := io.ReadAll(test.rw.Body)
 	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
 }
 
@@ -1531,7 +1530,7 @@ func (st *SignatureTest) Close() {
 	st.upstream.Close()
 }
 
-// fakeNetConn simulates an http.Request.Body buffer that will be consumed
+// fakeNetConn simulates a http.Request.Body buffer that will be consumed
 // when it is read by the hmacauth.HmacAuth if not handled properly. See:
 //
 //	https://github.com/18F/hmacauth/pull/4
@@ -1561,7 +1560,7 @@ func (st *SignatureTest) MakeRequestWithExpectedKey(method, body, key string) er
 
 	var bodyBuf io.ReadCloser
 	if body != "" {
-		bodyBuf = ioutil.NopCloser(&fakeNetConn{reqBody: body})
+		bodyBuf = io.NopCloser(&fakeNetConn{reqBody: body})
 	}
 	req := httptest.NewRequest(method, "/foo/bar", bodyBuf)
 	req.Header = st.header
@@ -1970,7 +1969,7 @@ func Test_noCacheHeaders(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "upstream", rec.Body.String())
 
-		// checking noCacheHeaders does not exists in response headers from upstream
+		// checking noCacheHeaders does not exist in response headers from upstream
 		for k := range noCacheHeaders {
 			assert.Equal(t, "", rec.Header().Get(k))
 		}

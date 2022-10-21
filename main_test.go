@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -191,7 +190,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 			if in.configContent != "" {
 				By("Writing the config to a temporary file", func() {
-					file, err := ioutil.TempFile("", "oauth2-proxy-test-config-XXXX.cfg")
+					file, err := os.CreateTemp("", "oauth2-proxy-test-config-XXXX.cfg")
 					Expect(err).ToNot(HaveOccurred())
 					defer file.Close()
 
@@ -204,7 +203,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 			if in.alphaConfigContent != "" {
 				By("Writing the config to a temporary file", func() {
-					file, err := ioutil.TempFile("", "oauth2-proxy-test-alpha-config-XXXX.yaml")
+					file, err := os.CreateTemp("", "oauth2-proxy-test-alpha-config-XXXX.yaml")
 					Expect(err).ToNot(HaveOccurred())
 					defer file.Close()
 

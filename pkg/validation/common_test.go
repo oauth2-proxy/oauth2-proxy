@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -18,7 +17,7 @@ var _ = Describe("Common", func() {
 	BeforeEach(func() {
 		validSecretSourceValue = []byte("This is a secret source value")
 		Expect(os.Setenv(validSecretSourceEnv, "This is a secret source env")).To(Succeed())
-		tmp, err := ioutil.TempFile("", "oauth2-proxy-secret-source-test")
+		tmp, err := os.CreateTemp("", "oauth2-proxy-secret-source-test")
 		Expect(err).ToNot(HaveOccurred())
 		defer tmp.Close()
 
@@ -115,7 +114,7 @@ var _ = Describe("Common", func() {
 					FromEnv: "INVALID_ENV",
 				}
 			},
-			expectedMsg: "error loading secret from environent: no value for for key \"INVALID_ENV\"",
+			expectedMsg: "error loading secret from environment: no value for for key \"INVALID_ENV\"",
 		}),
 		Entry("with an invalid FromFile", validateSecretSourceTableInput{
 			source: func() options.SecretSource {
