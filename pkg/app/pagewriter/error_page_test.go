@@ -3,7 +3,7 @@ package pagewriter
 import (
 	"errors"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"net/http/httptest"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
@@ -36,7 +36,7 @@ var _ = Describe("Error Page Writer", func() {
 				AppError:    "Access Denied",
 			})
 
-			body, err := ioutil.ReadAll(recorder.Result().Body)
+			body, err := io.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(body)).To(Equal("Forbidden You do not have permission to access this resource. /prefix/ 403 /redirect 11111111-2222-4333-8444-555555555555 Custom Footer Text v0.0.0-test"))
 		})
@@ -50,7 +50,7 @@ var _ = Describe("Error Page Writer", func() {
 				AppError:    "Access Denied",
 			})
 
-			body, err := ioutil.ReadAll(recorder.Result().Body)
+			body, err := io.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(body)).To(Equal("Internal Server Error Oops! Something went wrong. For more information contact your server administrator. /prefix/ 500 /redirect 11111111-2222-4333-8444-555555555555 Custom Footer Text v0.0.0-test"))
 		})
@@ -68,7 +68,7 @@ var _ = Describe("Error Page Writer", func() {
 				},
 			})
 
-			body, err := ioutil.ReadAll(recorder.Result().Body)
+			body, err := io.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(body)).To(Equal("Forbidden An extra message: with more context. /prefix/ 403 /redirect 11111111-2222-4333-8444-555555555555 Custom Footer Text v0.0.0-test"))
 		})
@@ -82,7 +82,7 @@ var _ = Describe("Error Page Writer", func() {
 				AppError:    "Access Denied",
 			})
 
-			body, err := ioutil.ReadAll(recorder.Result().Body)
+			body, err := io.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(body)).To(Equal("Forbidden You do not have permission to access this resource. /prefix/ 403 /redirect &lt;script&gt;alert(1)&lt;/script&gt; Custom Footer Text v0.0.0-test"))
 		})
@@ -97,7 +97,7 @@ var _ = Describe("Error Page Writer", func() {
 			recorder := httptest.NewRecorder()
 			errorPage.ProxyErrorHandler(recorder, req, errors.New("some upstream error"))
 
-			body, err := ioutil.ReadAll(recorder.Result().Body)
+			body, err := io.ReadAll(recorder.Result().Body)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(body)).To(Equal("Bad Gateway There was a problem connecting to the upstream server. /prefix/ 502  11111111-2222-4333-8444-555555555555 Custom Footer Text v0.0.0-test"))
 		})
@@ -121,7 +121,7 @@ var _ = Describe("Error Page Writer", func() {
 					AppError:    "Debug error",
 				})
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal("Debug error"))
 			})
@@ -136,7 +136,7 @@ var _ = Describe("Error Page Writer", func() {
 				recorder := httptest.NewRecorder()
 				errorPage.ProxyErrorHandler(recorder, req, errors.New("some upstream error"))
 
-				body, err := ioutil.ReadAll(recorder.Result().Body)
+				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal("some upstream error"))
 			})

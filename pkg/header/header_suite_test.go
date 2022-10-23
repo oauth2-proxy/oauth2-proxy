@@ -1,7 +1,6 @@
 package header
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -26,9 +25,9 @@ func TestHeaderSuite(t *testing.T) {
 var _ = BeforeSuite(func() {
 	os.Setenv("SECRET_ENV", "super-secret-env")
 
-	dir, err := ioutil.TempDir("", "oauth2-proxy-header-suite")
+	dir, err := os.MkdirTemp("", "oauth2-proxy-header-suite")
 	Expect(err).ToNot(HaveOccurred())
-	Expect(ioutil.WriteFile(path.Join(dir, "secret-file"), []byte("super-secret-file"), 0644)).To(Succeed())
+	Expect(os.WriteFile(path.Join(dir, "secret-file"), []byte("super-secret-file"), 0644)).To(Succeed())
 	filesDir = dir
 })
 

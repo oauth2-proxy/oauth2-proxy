@@ -14,7 +14,7 @@ package options
 //
 // Examples:
 //
-// A parameter whose value is fixed
+// # A parameter whose value is fixed
 //
 // ```
 // name: organization
@@ -62,8 +62,9 @@ package options
 // use the "chomped block" format `|-`:
 //
 // ```
-// - pattern: |-
+//   - pattern: |-
 //     ^[^@]*@example\.com$
+//
 // ```
 //
 // The hyphen is important, a `|` block would have a trailing newline

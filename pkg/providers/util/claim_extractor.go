@@ -98,7 +98,7 @@ func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
 		WithContext(c.ctx).
 		WithHeaders(c.requestHeaders).
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 	if err != nil {
 		return nil, fmt.Errorf("error making request to profile URL: %v", err)
 	}

@@ -22,7 +22,14 @@ type OIDCProvider struct {
 
 // NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
-	p.ProviderName = "OpenID Connect"
+	p.setProviderDefaults(providerDefaults{
+		name:        "OpenID Connect",
+		loginURL:    nil,
+		redeemURL:   nil,
+		profileURL:  nil,
+		validateURL: nil,
+		scope:       "",
+	})
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 
 	return &OIDCProvider{

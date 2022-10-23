@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 
@@ -67,7 +67,7 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	}
 
 	// Getting ClientSecret can fail in runtime so we need to report it without returning the file name to the user
-	fileClientSecret, err := ioutil.ReadFile(p.ClientSecretFile)
+	fileClientSecret, err := os.ReadFile(p.ClientSecretFile)
 	if err != nil {
 		logger.Errorf("error reading client secret file %s: %s", p.ClientSecretFile, err)
 		return "", errors.New("could not read client secret file")
@@ -267,14 +267,16 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 	// considered unverified.
 	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
 
-	var verified bool
-	exists, err := extractor.GetClaimInto("email_verified", &verified)
-	if err != nil {
-		return nil, err
-	}
+	if verifyEmail {
+		var verified bool
+		exists, err := extractor.GetClaimInto("email_verified", &verified)
+		if err != nil {
+			return nil, err
+		}
 
-	if verifyEmail && exists && !verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		if exists && !verified {
+			return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		}
 	}
 
 	return ss, nil

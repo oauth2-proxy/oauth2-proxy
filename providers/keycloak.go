@@ -77,7 +77,7 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 	if err != nil {
 		logger.Errorf("failed making request %v", err)
 		return err
