@@ -30,6 +30,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/vmihailenco/msgpack/v4 v4.3.11
 	golang.org/x/crypto v0.0.0-20220314234659-1baeb1ce4c0b
+	golang.org/x/exp v0.0.0-20221023144134-a1e5550cf13e
 	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a

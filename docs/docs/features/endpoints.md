@@ -33,7 +33,7 @@ X-Auth-Request-Redirect: https://my-oidc-provider/sign_out_page
 
 (The "sign_out_page" should be the [`end_session_endpoint`](https://openid.net/specs/openid-connect-session-1_0.html#rfc.section.2.1) from [the metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) if your OIDC provider supports Session Management and Discovery.)
 
-BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` in the example) must be added to the [`--whitelist-domain`](../configuration/overview) configuration option otherwise the redirect will be ignored.
+BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` in the example) must be added to the [`--whitelist-domain`](../configuration/overview) configuration option otherwise the redirect will be ignored. Make sure to include the actual domain and port (if needed) and not the URL (e.g "localhost:8081" instead of "http://localhost:8081").
 
 ### Auth
 

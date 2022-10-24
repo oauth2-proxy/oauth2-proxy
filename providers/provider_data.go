@@ -267,14 +267,16 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 	// considered unverified.
 	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
 
-	var verified bool
-	exists, err := extractor.GetClaimInto("email_verified", &verified)
-	if err != nil {
-		return nil, err
-	}
+	if verifyEmail {
+		var verified bool
+		exists, err := extractor.GetClaimInto("email_verified", &verified)
+		if err != nil {
+			return nil, err
+		}
 
-	if verifyEmail && exists && !verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		if exists && !verified {
+			return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		}
 	}
 
 	return ss, nil
