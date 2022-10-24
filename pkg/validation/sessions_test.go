@@ -190,8 +190,8 @@ var _ = Describe("Sessions", func() {
 		parseWrongFormatMsg       = "unable to initialize a redis client: unable to parse redis url: redis: invalid database number: \"wrong\""
 		invalidPasswordSetMsg     = "unable to set a redis initialization key: WRONGPASS invalid username-password pair"
 		invalidPasswordDelMsg     = "unable to delete the redis initialization key: WRONGPASS invalid username-password pair"
-		unreachableRedisSetMsg    = "unable to set a redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"
-		unreachableRedisDelMsg    = "unable to delete the redis initialization key: dial tcp 127.0.0.1:65535: connect: connection refused"
+		unreachableRedisSetMsg    = "unable to set a redis initialization key: dial tcp 127.0.0.1:65535: connectex: No connection could be made because the target machine actively refused it."
+		unreachableRedisDelMsg    = "unable to delete the redis initialization key: dial tcp 127.0.0.1:65535: connectex: No connection could be made because the target machine actively refused it."
 		unreachableSentinelSetMsg = "unable to set a redis initialization key: redis: all sentinels specified in configuration are unreachable"
 		unrechableSentinelDelMsg  = "unable to delete the redis initialization key: redis: all sentinels specified in configuration are unreachable"
 	)
