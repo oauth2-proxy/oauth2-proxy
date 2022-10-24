@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/types"
+	"github.com/onsi/gomega/types"
 )
 
 const (
@@ -113,7 +113,7 @@ var _ = Describe("HTPasswd Suite", func() {
 					testText              string
 					remove                bool
 					expectedLen           int
-					expectedGomegaMatcher GomegaMatcher
+					expectedGomegaMatcher types.GomegaMatcher
 				}
 
 				assertHtpasswdMapUpdate := func(hu htpasswdUpdate) {
