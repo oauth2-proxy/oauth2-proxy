@@ -9,8 +9,8 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	"github.com/pierrec/lz4"
-	"github.com/vmihailenco/msgpack/v4"
+	"github.com/pierrec/lz4/v4"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // SessionState is used to store information about the currently authenticated user session
@@ -208,10 +208,10 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 func lz4Compress(payload []byte) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	zw := lz4.NewWriter(nil)
-	zw.Header = lz4.Header{
-		BlockMaxSize:     65536,
-		CompressionLevel: 0,
-	}
+	zw.Apply(
+		lz4.BlockSizeOption(lz4.BlockSize(65536)),
+		lz4.CompressionLevelOption(lz4.Fast),
+	)
 	zw.Reset(buf)
 
 	reader := bytes.NewReader(payload)
