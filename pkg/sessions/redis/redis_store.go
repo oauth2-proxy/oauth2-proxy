@@ -5,10 +5,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/go-redis/redis/v9"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -104,7 +104,7 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		SentinelPassword: opts.SentinelPassword,
 		Password:         opts.Password,
 		TLSConfig:        opt.TLSConfig,
-		IdleTimeout:      time.Duration(opts.IdleTimeout) * time.Second,
+		ConnMaxIdleTime:  time.Duration(opts.IdleTimeout) * time.Second,
 	})
 	return newClient(client), nil
 }
@@ -121,10 +121,10 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 	}
 
 	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:       addrs,
-		Password:    opts.Password,
-		TLSConfig:   opt.TLSConfig,
-		IdleTimeout: time.Duration(opts.IdleTimeout) * time.Second,
+		Addrs:           addrs,
+		Password:        opts.Password,
+		TLSConfig:       opt.TLSConfig,
+		ConnMaxIdleTime: time.Duration(opts.IdleTimeout) * time.Second,
 	})
 	return newClusterClient(client), nil
 }
@@ -145,7 +145,7 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, err
 	}
 
-	opt.IdleTimeout = time.Duration(opts.IdleTimeout) * time.Second
+	opt.ConnMaxIdleTime = time.Duration(opts.IdleTimeout) * time.Second
 
 	client := redis.NewClient(opt)
 	return newClient(client), nil
@@ -170,7 +170,7 @@ func setupTLSConfig(opts options.RedisStoreOptions, opt *redis.Options) error {
 		if rootCAs == nil {
 			rootCAs = x509.NewCertPool()
 		}
-		certs, err := ioutil.ReadFile(opts.CAPath)
+		certs, err := os.ReadFile(opts.CAPath)
 		if err != nil {
 			return fmt.Errorf("failed to load %q, %v", opts.CAPath, err)
 		}

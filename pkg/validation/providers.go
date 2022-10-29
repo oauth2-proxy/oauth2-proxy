@@ -2,7 +2,6 @@ package validation
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -53,7 +52,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
 		}
 		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
-			_, err := ioutil.ReadFile(provider.ClientSecretFile)
+			_, err := os.ReadFile(provider.ClientSecretFile)
 			if err != nil {
 				msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
 			}

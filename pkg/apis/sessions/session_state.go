@@ -5,13 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	"github.com/pierrec/lz4"
-	"github.com/vmihailenco/msgpack/v4"
+	"github.com/pierrec/lz4/v4"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // SessionState is used to store information about the currently authenticated user session
@@ -209,10 +208,10 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 func lz4Compress(payload []byte) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	zw := lz4.NewWriter(nil)
-	zw.Header = lz4.Header{
-		BlockMaxSize:     65536,
-		CompressionLevel: 0,
-	}
+	zw.Apply(
+		lz4.BlockSizeOption(lz4.BlockSize(65536)),
+		lz4.CompressionLevelOption(lz4.Fast),
+	)
 	zw.Reset(buf)
 
 	reader := bytes.NewReader(payload)
@@ -225,7 +224,7 @@ func lz4Compress(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error closing lz4 writer: %w", err)
 	}
 
-	compressed, err := ioutil.ReadAll(buf)
+	compressed, err := io.ReadAll(buf)
 	if err != nil {
 		return nil, fmt.Errorf("error reading lz4 buffer: %w", err)
 	}
@@ -244,7 +243,7 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error copying lz4 stream to buffer: %w", err)
 	}
 
-	payload, err := ioutil.ReadAll(buf)
+	payload, err := io.ReadAll(buf)
 	if err != nil {
 		return nil, fmt.Errorf("error reading lz4 buffer: %w", err)
 	}
