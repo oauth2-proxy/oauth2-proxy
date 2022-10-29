@@ -10,6 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func timePtr(t time.Time) *time.Time {
@@ -247,16 +248,16 @@ func TestEncodeAndDecodeSessionState(t *testing.T) {
 					for testName, ss := range testCases {
 						t.Run(testName, func(t *testing.T) {
 							encoded, err := ss.EncodeSessionState(c, false)
-							assert.NoError(t, err)
+							require.NoError(t, err)
 							encodedCompressed, err := ss.EncodeSessionState(c, true)
-							assert.NoError(t, err)
+							require.NoError(t, err)
 							// Make sure compressed version is smaller than if not compressed
 							assert.Greater(t, len(encoded), len(encodedCompressed))
 
 							decoded, err := DecodeSessionState(encoded, c, false)
-							assert.NoError(t, err)
+							require.NoError(t, err)
 							decodedCompressed, err := DecodeSessionState(encodedCompressed, c, true)
-							assert.NoError(t, err)
+							require.NoError(t, err)
 
 							compareSessionStates(t, decoded, decodedCompressed)
 							compareSessionStates(t, decoded, &ss)

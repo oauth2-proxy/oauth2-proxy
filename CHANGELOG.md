@@ -5,7 +5,7 @@
 ## Important Notes
 - [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99)
   - Since the CSRF cookie name is now longer it could potentially break long cookie names (around 1000 characters).
-  - Having a unique CSRF cookie per request can lead to quite a number of cookies, in case an application performs a high number of parallel authentication requests. Each call will redirect to /oauth2/start, if the user is not authenticated, and a new cookie will be set. The successfully authenticated requests will have its CSRF cookies immediatly expired, however the failed ones will mantain its CSRF cookies until they expire (by default in 15 minutes). 
+  - Having a unique CSRF cookie per request can lead to quite a number of cookies, in case an application performs a high number of parallel authentication requests. Each call will redirect to /oauth2/start, if the user is not authenticated, and a new cookie will be set. The successfully authenticated requests will have its CSRF cookies immediatly expired, however the failed ones will mantain its CSRF cookies until they expire (by default in 15 minutes).
   - The user may redefine the CSRF cookie expiration time using flag "--cookie-csrf-expire" (e.g. --cookie-csrf-expire=5m). By default, it is 15 minutes, but you can fine tune to your environment.
 
 - [#1574](https://github.com/oauth2-proxy/oauth2-proxy/pull/1574) Add Azure groups support and Azure OAuth v2.0 (@adriananeci)
@@ -18,6 +18,8 @@
 N/A
 
 ## Changes since v7.3.0
+
+- [#1862](https://github.com/oauth2-proxy/oauth2-proxy/pull/1862) Update dependencies (@JoelSpeed)
 - [#1828](https://github.com/oauth2-proxy/oauth2-proxy/pull/1828) call providerData.setProviderDefaults for oidc provider to achieve consistent behaviour (@centzilius)
   - UserClaim will be set to sub instead of beeing empty from now on.
 - [#1691](https://github.com/oauth2-proxy/oauth2-proxy/pull/1691) Fix Redis IdleTimeout when Redis timeout option is set to non-zero (@dimss)
@@ -30,9 +32,9 @@ N/A
 - [#1667](https://github.com/oauth2-proxy/oauth2-proxy/issues/1667) Rename configuration file flag for PKCE
 to remain consistent with CLI flags. You should specify `code_challenge_method` in your configuration instead of
 `force_code_challenge_method`.
-- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99) 
-  - Add flag "--cookie-csrf-per-request" which activates an algorithm to name CSRF cookies differently per request. 
-    This feature allows parallel callbacks and by default it is disabled. 
+- [#1708](https://github.com/oauth2-proxy/oauth2-proxy/pull/1708) Enable different CSRF cookies per request (@miguelborges99)
+  - Add flag "--cookie-csrf-per-request" which activates an algorithm to name CSRF cookies differently per request.
+    This feature allows parallel callbacks and by default it is disabled.
   - Add flag "--cookie-csrf-expire" to define a different expiration time for the CSRF cookie. By default, it is 15 minutes.
 - [#1762](https://github.com/oauth2-proxy/oauth2-proxy/pull/1762) Support negating for skip auth routes
 - [#1788](https://github.com/oauth2-proxy/oauth2-proxy/pull/1788) Update base docker image to alpine 3.16
@@ -43,7 +45,7 @@ to remain consistent with CLI flags. You should specify `code_challenge_method` 
 - [#1851](https://github.com/oauth2-proxy/oauth2-proxy/pull/1851) Bump golang to 1.19 and min allowed version to 1.18
 - [#1815](https://github.com/oauth2-proxy/oauth2-proxy/pull/1815) Keycloak: save user and preferredUsername in session to populate headers for the backend (@babs)
 - [#1847](https://github.com/oauth2-proxy/oauth2-proxy/pull/1847) Update go-redis/redis to v9 (@arhamGH)
-- 
+-
 # V7.3.0
 
 ## Release Highlights

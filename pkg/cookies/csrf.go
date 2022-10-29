@@ -10,7 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	"github.com/vmihailenco/msgpack/v4"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // CSRF manages various nonces stored in the CSRF cookie during the initial
