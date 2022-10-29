@@ -95,11 +95,11 @@ func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 	}
 }
 
-type UnixRoundTripper struct {
+type unixRoundTripper struct {
 	Transport *http.Transport
 }
 
-func (t *UnixRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *unixRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Inspired by https://github.com/tv42/httpunix
 	req.URL.Host = req.Host
 	tt := t.Transport
@@ -118,13 +118,12 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	// Inherit default transport options from Go's stdlib
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
-	if strings.HasPrefix(upstream.URI, "unix") {
+	if target.Scheme == "unix" {
 		transport.DialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
 			dialer := net.Dialer{}
-			return dialer.DialContext(ctx, "unix", upstream.ID)
-			// return net.Dial("unix", upstream.Path)
+			return dialer.DialContext(ctx, target.Scheme, upstream.ID)
 		}
-		transport.RegisterProtocol("unix", &UnixRoundTripper{Transport: transport})
+		transport.RegisterProtocol(target.Scheme, &unixRoundTripper{Transport: transport})
 	}
 
 	// Change default duration for waiting for an upstream response
