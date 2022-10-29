@@ -1,6 +1,8 @@
 package upstream
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -18,6 +20,7 @@ const (
 
 	httpScheme  = "http"
 	httpsScheme = "https"
+	unixScheme  = "unix"
 )
 
 // SignatureHeaders contains the headers to be signed by the hmac algorithm
@@ -92,6 +95,19 @@ func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 	}
 }
 
+type UnixRoundTripper struct {
+	Transport *http.Transport
+}
+
+func (t *UnixRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Inspired by https://github.com/tv42/httpunix
+	req.URL.Host = req.Host
+	tt := t.Transport
+	req = req.Clone(req.Context())
+	req.URL.Scheme = "http"
+	return tt.RoundTrip(req)
+}
+
 // newReverseProxy creates a new reverse proxy for proxying requests to upstream
 // servers based on the upstream configuration provided.
 // The proxy should render an error page if there are failures connecting to the
@@ -101,6 +117,15 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// Inherit default transport options from Go's stdlib
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if strings.HasPrefix(upstream.URI, "unix") {
+		transport.DialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
+			dialer := net.Dialer{}
+			return dialer.DialContext(ctx, "unix", upstream.ID)
+			// return net.Dial("unix", upstream.Path)
+		}
+		transport.RegisterProtocol("unix", &UnixRoundTripper{Transport: transport})
+	}
 
 	// Change default duration for waiting for an upstream response
 	if upstream.Timeout != nil {
