@@ -74,6 +74,11 @@ var _ = Describe("Cookie Tests", func() {
 				cookieDomains:  []string{".cookies.wrong", ".cookies.false"},
 				expectedOutput: "",
 			}),
+			Entry("matching against host:port", getCookieDomainTableInput{
+				host:           "www.cookies.test:8080",
+				cookieDomains:  []string{".cookies.test"},
+				expectedOutput: ".cookies.test",
+			}),
 		)
 	})
 })
