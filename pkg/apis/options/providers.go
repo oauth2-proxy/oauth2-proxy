@@ -143,7 +143,7 @@ type KeycloakOptions struct {
 	Roles []string `json:"roles,omitempty"`
 
 	// URL to call to perform backend logout, `${id_token}` would be replaced by the actual `id_token` if available in the session
-	BackendLogoutURL string `json:"backend_logout_url"`
+	BackendLogoutURL string `json:"backendLogoutURL"`
 }
 
 type AzureOptions struct {
