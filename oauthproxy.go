@@ -334,15 +334,15 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Use(prepareNoCacheMiddleware)
 
 	s.Path(signInPath).HandlerFunc(p.SignIn)
-	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
 	// Static file paths
 	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
 
-	// The userinfo endpoint needs to load sessions before handling the request
+	// The userinfo and logout endpoints needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
+	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -746,6 +746,22 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err == nil && session != nil {
+		providerDatas := p.provider.Data()
+		if providerDatas.BackendLogoutUrl != "" {
+			backendLogoutUrl := strings.ReplaceAll(providerDatas.BackendLogoutUrl, "${id_token}", session.IDToken)
+			resp, err := http.Get(backendLogoutUrl)
+			if err != nil {
+				logger.Errorf("error while calling backend logout: %v", err)
+			}
+			if resp.StatusCode != 200 {
+				logger.Errorf("error while calling backend logout, %v returned a %v", backendLogoutUrl, resp.StatusCode)
+			}
+		}
+	}
+
 	http.Redirect(rw, req, redirect, http.StatusFound)
 }
 

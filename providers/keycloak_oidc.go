@@ -20,6 +20,7 @@ func NewKeycloakOIDCProvider(p *ProviderData, opts options.Provider) *KeycloakOI
 	p.setProviderDefaults(providerDefaults{
 		name: keycloakOIDCProviderName,
 	})
+	p.BackendLogoutUrl = opts.KeycloakConfig.BackendLogoutUrl
 
 	provider := &KeycloakOIDCProvider{
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),

@@ -141,6 +141,9 @@ type KeycloakOptions struct {
 
 	// Role enables to restrict login to users with role (only available when using the keycloak-oidc provider)
 	Roles []string `json:"roles,omitempty"`
+
+	// URL to call to perform a logout in background
+	BackendLogoutUrl string `json:"backend_logout_url"`
 }
 
 type AzureOptions struct {

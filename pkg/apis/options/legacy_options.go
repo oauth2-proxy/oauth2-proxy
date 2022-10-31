@@ -532,6 +532,7 @@ type LegacyProvider struct {
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
+	BackendLogoutUrl                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -596,6 +597,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
+	flagSet.String("backend-logout-url", "", "url to call to perfrom a backend logout, ${id_token} can be used as placeholder for the id_token")
 
 	return flagSet
 }
@@ -715,12 +717,14 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 	case "keycloak-oidc":
 		provider.KeycloakConfig = KeycloakOptions{
-			Groups: l.KeycloakGroups,
-			Roles:  l.AllowedRoles,
+			Groups:           l.KeycloakGroups,
+			Roles:            l.AllowedRoles,
+			BackendLogoutUrl: l.BackendLogoutUrl,
 		}
 	case "keycloak":
 		provider.KeycloakConfig = KeycloakOptions{
-			Groups: l.KeycloakGroups,
+			Groups:           l.KeycloakGroups,
+			BackendLogoutUrl: l.BackendLogoutUrl,
 		}
 	case "gitlab":
 		provider.GitLabConfig = GitLabOptions{
