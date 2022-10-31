@@ -58,7 +58,7 @@ type ProviderData struct {
 	loginURLParameterDefaults  url.Values
 	loginURLParameterOverrides map[string]*regexp.Regexp
 
-	BackendLogoutUrl string
+	BackendLogoutURL string
 }
 
 // Data returns the ProviderData

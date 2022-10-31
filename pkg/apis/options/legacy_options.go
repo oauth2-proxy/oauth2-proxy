@@ -532,7 +532,7 @@ type LegacyProvider struct {
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
-	BackendLogoutUrl                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
+	BackendLogoutURL                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -719,12 +719,12 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		provider.KeycloakConfig = KeycloakOptions{
 			Groups:           l.KeycloakGroups,
 			Roles:            l.AllowedRoles,
-			BackendLogoutUrl: l.BackendLogoutUrl,
+			BackendLogoutURL: l.BackendLogoutURL,
 		}
 	case "keycloak":
 		provider.KeycloakConfig = KeycloakOptions{
 			Groups:           l.KeycloakGroups,
-			BackendLogoutUrl: l.BackendLogoutUrl,
+			BackendLogoutURL: l.BackendLogoutURL,
 		}
 	case "gitlab":
 		provider.GitLabConfig = GitLabOptions{

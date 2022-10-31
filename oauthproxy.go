@@ -750,14 +750,16 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
 	if err == nil && session != nil {
 		providerDatas := p.provider.Data()
-		if providerDatas.BackendLogoutUrl != "" {
-			backendLogoutUrl := strings.ReplaceAll(providerDatas.BackendLogoutUrl, "${id_token}", session.IDToken)
-			resp, err := http.Get(backendLogoutUrl)
+		if providerDatas.BackendLogoutURL != "" {
+			backendLogoutURL := strings.ReplaceAll(providerDatas.BackendLogoutURL, "${id_token}", session.IDToken)
+			resp, err := http.Get(backendLogoutURL) // #nosec G107
 			if err != nil {
 				logger.Errorf("error while calling backend logout: %v", err)
-			}
-			if resp.StatusCode != 200 {
-				logger.Errorf("error while calling backend logout, %v returned a %v", backendLogoutUrl, resp.StatusCode)
+			} else {
+				defer resp.Body.Close()
+				if resp.StatusCode != 200 {
+					logger.Errorf("error while calling backend logout, %v returned a %v", backendLogoutURL, resp.StatusCode)
+				}
 			}
 		}
 	}
