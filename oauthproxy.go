@@ -350,13 +350,15 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	// the logging handler
 	if opts.Logging.SilencePing {
 		chain = chain.Append(
-			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents, sessionStore),
+			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
 			middleware.NewRequestLogger(),
 		)
 	} else {
 		chain = chain.Append(
 			middleware.NewRequestLogger(),
-			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents, sessionStore),
+			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
 		)
 	}
 

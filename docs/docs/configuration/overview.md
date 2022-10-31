@@ -155,6 +155,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |
+| `--ready-path` | string | the ready endpoint that can be used for deep health checks | `"/ready"` |
 | `--metrics-address` | string | the address prometheus metrics will be scraped from | `""` |
 | `--proxy-prefix` | string | the url root path that this proxy should be nested under (e.g. /`<oauth2>/sign_in`) | `"/oauth2"` |
 | `--proxy-websockets` | bool | enables WebSocket proxying | true |
@@ -184,7 +185,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
 | `--show-debug-on-error` | bool | show detailed error information on error pages (WARNING: this may contain sensitive information - do not use in production) | false |
 | `--signature-key` | string | GAP-Signature request signature key (algorithm:secretkey) | |
-| `--silence-ping-logging` | bool | disable logging of requests to ping endpoint | false |
+| `--silence-ping-logging` | bool | disable logging of requests to ping & ready endpoints | false |
 | `--skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
 | `--skip-auth-regex` | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times) | |
 | `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex  | |
@@ -246,7 +247,7 @@ There are three different types of logging: standard, authentication, and HTTP r
 
 Each type of logging has its own configurable format and variables. By default these formats are similar to the Apache Combined Log.
 
-Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) can be disabled with `--silence-ping-logging` reducing log volume. This flag appends the `--ping-path` to `--exclude-logging-paths`.
+Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging` reducing log volume.
 
 ### Auth Log Format
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
