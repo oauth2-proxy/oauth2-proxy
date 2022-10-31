@@ -17,10 +17,14 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 
 ### Sign out
 
-To sign the user out, redirect them to `/oauth2/sign_out`. This endpoint only removes oauth2-proxy's own cookies, i.e. the user is still logged in with the authentication provider and may automatically re-login when accessing the application again. You will also need to redirect the user to the authentication provider's sign out page afterwards using the `rd` query parameter, i.e. redirect the user to something like (notice the url-encoding!):
+To sign the user out, redirect them to `/oauth2/sign_out`. This endpoint only removes oauth2-proxy's own cookies, i.e. the user is still logged in with the authentication provider and may automatically re-login when accessing the application again. You will also need to redirect the user to the authentication provider's sign out page afterwards using the `rd` query parameter where `${id_token}` can be used as placeholder for the session's id_token, i.e. redirect the user to something like (notice the url-encoding!):
 
 ```
 /oauth2/sign_out?rd=https%3A%2F%2Fmy-oidc-provider.example.com%2Fsign_out_page
+```
+or
+```
+/oauth2/sign_out?rd=https%3A%2F%2Fmy-oidc-provider.example.com%2Fsign_out_page%3Fid_token=$%7Bid_token%7D
 ```
 
 Alternatively, include the redirect URL in the `X-Auth-Request-Redirect` header:

@@ -8,6 +8,8 @@
 
 ## Changes since v7.4.0
 
+- [#1875](https://github.com/oauth2-proxy/oauth2-proxy/pull/1875) Session aware sign_out for `${id_token}` usage in `rd` parameter(@babs)
+
 # V7.4.0
 
 ## Release Highlights
