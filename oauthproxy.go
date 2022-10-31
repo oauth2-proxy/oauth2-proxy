@@ -317,7 +317,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Use(prepareNoCacheMiddleware)
 
 	s.Path(signInPath).HandlerFunc(p.SignIn)
-	s.Path(signOutPath).HandlerFunc(p.SignOut)
+	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
@@ -718,12 +718,21 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
 		logger.Errorf("Error clearing session cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	idTokenValue := ""
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err == nil && session != nil {
+		idTokenValue = session.IDToken
+	}
+	redirect = strings.ReplaceAll(redirect, "${id_token}", idTokenValue)
+
 	http.Redirect(rw, req, redirect, http.StatusFound)
 }
 
