@@ -197,10 +197,6 @@ func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
 	if p.Scope == "" {
 		p.Scope = defaults.scope
 	}
-
-	if p.UserClaim == "" {
-		p.UserClaim = oidcUserClaim
-	}
 }
 
 // defaultURL will set return a default value if the given value is not set.
@@ -245,6 +241,10 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 	extractor, err := p.getClaimExtractor(rawIDToken, accessToken)
 	if err != nil {
 		return nil, err
+	}
+
+	if p.UserClaim == "" {
+		p.UserClaim = oidcUserClaim
 	}
 
 	// Use a slice of a struct (vs map) here in case the same claim is used twice
