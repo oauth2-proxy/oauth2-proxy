@@ -74,6 +74,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `--azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
+| `--backend-logout-url` | string | URL to call to perform backend logout, `${id_token}` would be replaced by the actual `id_token` if available in the session | |
 | `--basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
 | `--client-secret` | string | the OAuth Client Secret | |
