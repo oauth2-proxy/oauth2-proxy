@@ -8,10 +8,14 @@ import (
 	"github.com/justinas/alice"
 )
 
+// Verifiable an interface for an object that has a connection to external
+// data source and exports a function to validate that connection
 type Verifiable interface {
 	VerifyConnection(context.Context) error
 }
 
+// NewReadynessCheck returns a middleware that performs deep health checks
+// (verifies the connection to any underlying store) on a specific `path`
 func NewReadynessCheck(path string, verifiable Verifiable) alice.Constructor {
 	return func(next http.Handler) http.Handler {
 		return readynessCheck(path, verifiable, next)
