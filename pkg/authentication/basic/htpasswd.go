@@ -139,6 +139,17 @@ func passShaOrBcrypt(h *htpasswdMap, user, password string) (invalidEntries []st
 	return invalidEntries
 }
 
+// GetUsers return a "thread safe" copy of the internal user list
+func (h *htpasswdMap) GetUsers() map[string]interface{} {
+	newUserList := make(map[string]interface{})
+	h.rwm.Lock()
+	for key, value := range h.users {
+		newUserList[key] = value
+	}
+	h.rwm.Unlock()
+	return newUserList
+}
+
 // Validate checks a users password against the htpasswd entries
 func (h *htpasswdMap) Validate(user string, password string) bool {
 	realPassword, exists := h.users[user]
