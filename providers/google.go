@@ -8,11 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -79,7 +80,7 @@ var (
 )
 
 // NewGoogleProvider initiates a new GoogleProvider
-func NewGoogleProvider(p *ProviderData) *GoogleProvider {
+func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProvider, error) {
 	p.setProviderDefaults(providerDefaults{
 		name:        googleProviderName,
 		loginURL:    googleDefaultLoginURL,
@@ -88,7 +89,7 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 		validateURL: googleDefaultValidateURL,
 		scope:       googleDefaultScope,
 	})
-	return &GoogleProvider{
+	provider := &GoogleProvider{
 		ProviderData: p,
 		// Set a default groupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
@@ -96,6 +97,21 @@ func NewGoogleProvider(p *ProviderData) *GoogleProvider {
 			return true
 		},
 	}
+
+	if opts.ServiceAccountJSON != "" {
+		file, err := os.Open(opts.ServiceAccountJSON)
+		if err != nil {
+			return nil, fmt.Errorf("invalid Google credentials file: %s", opts.ServiceAccountJSON)
+		}
+
+		// Backwards compatibility with `--google-group` option
+		if len(opts.Groups) > 0 {
+			provider.setAllowedGroups(opts.Groups)
+		}
+		provider.setGroupRestriction(opts.Groups, opts.AdminEmail, file)
+	}
+
+	return provider, nil
 }
 
 func claimsFromIDToken(idToken string) (*claims, error) {
@@ -124,7 +140,7 @@ func claimsFromIDToken(idToken string) (*claims, error) {
 }
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
-func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -139,6 +155,9 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
 
 	var jsonResponse struct {
 		AccessToken  string `json:"access_token"`
@@ -163,23 +182,22 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code string) (
 		return nil, err
 	}
 
-	created := time.Now()
-	expires := time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Truncate(time.Second)
-
-	return &sessions.SessionState{
+	ss := &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
 		Email:        c.Email,
 		User:         c.Subject,
-	}, nil
+	}
+	ss.CreatedAtNow()
+	ss.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
+
+	return ss, nil
 }
 
 // EnrichSession checks the listed Google Groups configured and adds any
 // that the user is a member of to session.Groups.
-func (p *GoogleProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionState) error {
 	// TODO (@NickMeves) - Move to pure EnrichSession logic and stop
 	// reusing legacy `groupValidator`.
 	//
@@ -196,7 +214,7 @@ func (p *GoogleProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 // account credentials.
 //
 // TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
-func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
+func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
 	adminService := getAdminService(adminEmail, credentialsReader)
 	p.groupValidator = func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
@@ -212,7 +230,7 @@ func (p *GoogleProvider) SetGroupRestriction(groups []string, adminEmail string,
 }
 
 func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Service {
-	data, err := ioutil.ReadAll(credentialsReader)
+	data, err := io.ReadAll(credentialsReader)
 	if err != nil {
 		logger.Fatal("can't read Google credentials file:", err)
 	}
@@ -266,14 +284,13 @@ func userInGroup(service *admin.Service, group string, email string) bool {
 	return false
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
-func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || (s.ExpiresOn != nil && s.ExpiresOn.After(time.Now())) || s.RefreshToken == "" {
+// RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
+func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.RefreshToken == "" {
 		return false, nil
 	}
 
-	newToken, newIDToken, duration, err := p.redeemRefreshToken(ctx, s.RefreshToken)
+	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
 		return false, err
 	}
@@ -286,26 +303,20 @@ func (p *GoogleProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 
-	origExpiration := s.ExpiresOn
-	expires := time.Now().Add(duration).Truncate(time.Second)
-	s.AccessToken = newToken
-	s.IDToken = newIDToken
-	s.ExpiresOn = &expires
-	logger.Printf("refreshed access token %s (expired on %s)", s, origExpiration)
 	return true, nil
 }
 
-func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken string) (token string, idToken string, expires time.Duration, err error) {
+func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	// https://developers.google.com/identity/protocols/OAuth2WebServer#refresh
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return
+		return err
 	}
 
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", clientSecret)
-	params.Add("refresh_token", refreshToken)
+	params.Add("refresh_token", s.RefreshToken)
 	params.Add("grant_type", "refresh_token")
 
 	var data struct {
@@ -322,11 +333,14 @@ func (p *GoogleProvider) redeemRefreshToken(ctx context.Context, refreshToken st
 		Do().
 		UnmarshalInto(&data)
 	if err != nil {
-		return "", "", 0, err
+		return err
 	}
 
-	token = data.AccessToken
-	idToken = data.IDToken
-	expires = time.Duration(data.ExpiresIn) * time.Second
-	return
+	s.AccessToken = data.AccessToken
+	s.IDToken = data.IDToken
+
+	s.CreatedAtNow()
+	s.ExpiresIn(time.Duration(data.ExpiresIn) * time.Second)
+
+	return nil
 }

@@ -198,7 +198,7 @@ var _ = Describe("Result suite", func() {
 
 		DescribeTable("with a result",
 			func(in unmarshalJSONTableInput) {
-				j, err := in.result.UnmarshalJSON()
+				j, err := in.result.UnmarshalSimpleJSON()
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 					Expect(j).To(BeNil())

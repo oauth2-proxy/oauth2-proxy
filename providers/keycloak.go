@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -48,7 +49,7 @@ var (
 )
 
 // NewKeycloakProvider creates a KeyCloakProvider using the passed ProviderData
-func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
+func NewKeycloakProvider(p *ProviderData, opts options.KeycloakOptions) *KeycloakProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        keycloakProviderName,
 		loginURL:    keycloakDefaultLoginURL,
@@ -57,7 +58,10 @@ func NewKeycloakProvider(p *ProviderData) *KeycloakProvider {
 		validateURL: keycloakDefaultValidateURL,
 		scope:       keycloakDefaultScope,
 	})
-	return &KeycloakProvider{ProviderData: p}
+
+	provider := &KeycloakProvider{ProviderData: p}
+	provider.setAllowedGroups(opts.Groups)
+	return provider
 }
 
 // EnrichSession uses the Keycloak userinfo endpoint to populate the session's
@@ -73,7 +77,7 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 	if err != nil {
 		logger.Errorf("failed making request %v", err)
 		return err
@@ -94,5 +98,24 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 	}
 	s.Email = email
 
+	preferredUsername, err := json.Get("preferred_username").String()
+	if err == nil {
+		s.PreferredUsername = preferredUsername
+	}
+
+	user, err := json.Get("user").String()
+	if err == nil {
+		s.User = user
+	}
+
+	if s.User == "" && s.PreferredUsername != "" {
+		s.User = s.PreferredUsername
+	}
+
 	return nil
+}
+
+// ValidateSession validates the AccessToken
+func (p *KeycloakProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+	return validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken))
 }

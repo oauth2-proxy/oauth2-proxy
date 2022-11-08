@@ -18,27 +18,32 @@
       .logo-box {
         margin: 1.5rem 3rem;
       }
+      .alert {
+        padding: 5px;
+        background-color: #f44336; /* Red */
+        color: white;
+        margin-bottom: 5px;
+        border-radius: 5px
+      }
+      /* The close button */
+      .closebtn {
+        margin-left: 10px;
+        color: white;
+        font-weight: bold;
+        float: right;
+        font-size: 22px;
+        line-height: 20px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+      /* When moving the mouse over the close button */
+      .closebtn:hover {
+        color: black;
+      }
       footer a {
         text-decoration: underline;
       }
     </style>
-
-    <script>
-      if (window.location.hash) {
-        (function() {
-          var inputs = document.getElementsByName('rd');
-          for (var i = 0; i < inputs.length; i++) {
-            // Add hash, but make sure it is only added once
-            var idx = inputs[i].value.indexOf('#');
-            if (idx >= 0) {
-              // Remove existing hash from URL
-              inputs[i].value = inputs[i].value.substr(0, idx);
-            }
-            inputs[i].value += window.location.hash;
-          }
-        })();
-      }
-    </script>
   </head>
   <body class="has-background-light">
   <section class="section">
@@ -66,7 +71,7 @@
         <div class="field">
           <label class="label" for="username">Username</label>
           <div class="control">
-            <input class="input" type="email" placeholder="e.g. userx@example.com"  name="username" id="username">
+            <input class="input" type="text" placeholder="e.g. userx@example.com"  name="username" id="username">
           </div>
         </div>
 
@@ -77,10 +82,39 @@
           </div>
         </div>
         <button class="button is-primary">Sign in</button>
+      </form>
+      {{ end }}
+
+      {{ if eq .StatusCode 400 401 }}
+      <div class="alert">
+        <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+        {{ if eq .StatusCode 400 }}
+        {{.StatusCode}}: Username cannot be empty
+        {{ else }}
+        {{.StatusCode}}: Invalid Username or Password
         {{ end }}
-    </form>
+      </div> 
+      {{ end }}
+
     </div>
   </section>
+
+  <script>
+    if (window.location.hash) {
+      (function() {
+        var inputs = document.getElementsByName('rd');
+        for (var i = 0; i < inputs.length; i++) {
+          // Add hash, but make sure it is only added once
+          var idx = inputs[i].value.indexOf('#');
+          if (idx >= 0) {
+            // Remove existing hash from URL
+            inputs[i].value = inputs[i].value.substr(0, idx);
+          }
+          inputs[i].value += window.location.hash;
+        }
+      })();
+    }
+  </script>
 
   <footer class="footer has-text-grey has-background-light is-size-7">
     <div class="content has-text-centered">

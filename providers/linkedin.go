@@ -19,7 +19,7 @@ var _ Provider = (*LinkedInProvider)(nil)
 
 const (
 	linkedinProviderName = "LinkedIn"
-	linkedinDefaultScope = "r_emailaddress r_basicprofile"
+	linkedinDefaultScope = "r_emailaddress r_liteprofile"
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 	linkedinDefaultLoginURL = &url.URL{
 		Scheme: "https",
 		Host:   "www.linkedin.com",
-		Path:   "/uas/oauth2/authorization",
+		Path:   "/oauth/v2/authorization",
 	}
 
 	// Default Redeem URL for LinkedIn.
@@ -43,8 +43,15 @@ var (
 	// Pre-parsed URL of https://www.linkedin.com/v1/people/~/email-address.
 	linkedinDefaultProfileURL = &url.URL{
 		Scheme: "https",
-		Host:   "www.linkedin.com",
-		Path:   "/v1/people/~/email-address",
+		Host:   "api.linkedin.com",
+		Path:   "/v2/emailAddress",
+	}
+
+	// Default Validate URL for LinkedIn.
+	linkedinDefaultValidateURL = &url.URL{
+		Scheme: "https",
+		Host:   "api.linkedin.com",
+		Path:   "/v2/me",
 	}
 )
 
@@ -55,9 +62,11 @@ func NewLinkedInProvider(p *ProviderData) *LinkedInProvider {
 		loginURL:    linkedinDefaultLoginURL,
 		redeemURL:   linkedinDefaultRedeemURL,
 		profileURL:  linkedinDefaultProfileURL,
-		validateURL: linkedinDefaultProfileURL,
+		validateURL: linkedinDefaultValidateURL,
 		scope:       linkedinDefaultScope,
 	})
+	p.getAuthorizationHeaderFunc = makeLinkedInHeader
+
 	return &LinkedInProvider{ProviderData: p}
 }
 
@@ -76,24 +85,23 @@ func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 		return "", errors.New("missing access token")
 	}
 
-	requestURL := p.ProfileURL.String() + "?format=json"
+	requestURL := p.ProfileURL.String() + "?q=members&projection=(elements*(handle~))"
 	json, err := requests.New(requestURL).
 		WithContext(ctx).
 		WithHeaders(makeLinkedInHeader(s.AccessToken)).
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 	if err != nil {
 		return "", err
 	}
-
-	email, err := json.String()
+	email, err := json.Get("elements").GetIndex(0).Get("handle~").Get("emailAddress").String()
 	if err != nil {
 		return "", err
 	}
 	return email, nil
 }
 
-// ValidateSessionState validates the AccessToken
+// ValidateSession validates the AccessToken
 func (p *LinkedInProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
 	return validateToken(ctx, p, s.AccessToken, makeLinkedInHeader(s.AccessToken))
 }

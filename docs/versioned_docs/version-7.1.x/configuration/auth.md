@@ -83,6 +83,7 @@ Note: The user is checked against the group members list on initial authenticati
    --provider=azure
    --client-id=<application ID from step 3>
    --client-secret=<value from step 6>
+   --oidc-issuer-url=https://sts.windows.net/{tenant-id}/
 ```
 
 Note: When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) should resolve this.
@@ -215,7 +216,7 @@ To configure the OIDC provider for Dex, perform the following steps:
     go get github.com/dexidp/dex
     ```
 
-    See the [getting started guide](https://github.com/coreos/dex/blob/master/Documentation/getting-started.md) for more details.
+    See the [getting started guide](https://dexidp.io/docs/getting-started/) for more details.
 
 2. Setup oauth2-proxy with the correct provider and using the default ports and callbacks. Add a configuration block to the `staticClients` section of `examples/config-dev.yaml`:
 

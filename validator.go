@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"unsafe"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/watcher"
 )
 
 // UserMap holds information from the authenticated emails file
@@ -27,7 +27,7 @@ func NewUserMap(usersFile string, done <-chan bool, onUpdate func()) *UserMap {
 	atomic.StorePointer(&um.m, unsafe.Pointer(&m)) // #nosec G103
 	if usersFile != "" {
 		logger.Printf("using authenticated emails file %s", usersFile)
-		WatchForUpdates(usersFile, done, func() {
+		watcher.WatchFileForUpdates(usersFile, done, func() {
 			um.LoadAuthenticatedEmailsFile()
 			onUpdate()
 		})
@@ -83,7 +83,7 @@ func newValidatorImpl(domains []string, usersFile string,
 			allowAll = true
 			continue
 		}
-		domains[i] = fmt.Sprintf("@%s", strings.ToLower(domain))
+		domains[i] = strings.ToLower(domain)
 	}
 
 	validator := func(email string) (valid bool) {
@@ -91,9 +91,7 @@ func newValidatorImpl(domains []string, usersFile string,
 			return
 		}
 		email = strings.ToLower(email)
-		for _, domain := range domains {
-			valid = valid || strings.HasSuffix(email, domain)
-		}
+		valid = isEmailValidWithDomains(email, domains)
 		if !valid {
 			valid = validUsers.IsValid(email)
 		}
@@ -108,4 +106,25 @@ func newValidatorImpl(domains []string, usersFile string,
 // NewValidator constructs a function to validate email addresses
 func NewValidator(domains []string, usersFile string) func(string) bool {
 	return newValidatorImpl(domains, usersFile, nil, func() {})
+}
+
+// isEmailValidWithDomains checks if the authenticated email is validated against the provided domain
+func isEmailValidWithDomains(email string, allowedDomains []string) bool {
+	for _, domain := range allowedDomains {
+		// allow if the domain is perfect suffix match with the email
+		if strings.HasSuffix(email, "@"+domain) {
+			return true
+		}
+
+		// allow if the domain is prefixed with . or *. and
+		// the last element (split on @) has the suffix as the domain
+		atoms := strings.Split(email, "@")
+
+		if (strings.HasPrefix(domain, ".") && strings.HasSuffix(atoms[len(atoms)-1], domain)) ||
+			(strings.HasPrefix(domain, "*.") && strings.HasSuffix(atoms[len(atoms)-1], domain[1:])) {
+			return true
+		}
+	}
+
+	return false
 }

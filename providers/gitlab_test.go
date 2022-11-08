@@ -7,21 +7,26 @@ import (
 	"net/http/httptest"
 	"net/url"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
-func testGitLabProvider(hostname string) *GitLabProvider {
-	p := NewGitLabProvider(
+func testGitLabProvider(hostname, scope string, opts options.GitLabOptions) (*GitLabProvider, error) {
+	p, err := NewGitLabProvider(
 		&ProviderData{
 			ProviderName: "",
 			LoginURL:     &url.URL{},
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""})
+			Scope:        scope},
+		opts)
+	if err != nil {
+		return nil, err
+	}
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
 		updateURL(p.Data().RedeemURL, hostname)
@@ -29,7 +34,7 @@ func testGitLabProvider(hostname string) *GitLabProvider {
 		updateURL(p.Data().ValidateURL, hostname)
 	}
 
-	return p
+	return p, err
 }
 
 func testGitLabBackend() *httptest.Server {
@@ -157,7 +162,8 @@ var _ = Describe("Gitlab Provider Tests", func() {
 		bURL, err := url.Parse(b.URL)
 		Expect(err).To(BeNil())
 
-		p = testGitLabProvider(bURL.Host)
+		p, err = testGitLabProvider(bURL.Host, "", options.GitLabOptions{})
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -188,7 +194,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				err := p.EnrichSession(context.Background(), session)
 
 				if in.expectedError != nil {
-					Expect(err).To(MatchError(err))
+					Expect(err).To(MatchError(in.expectedError))
 				} else {
 					Expect(err).To(BeNil())
 					Expect(session.Email).To(Equal(in.expectedValue))
@@ -208,98 +214,167 @@ var _ = Describe("Gitlab Provider Tests", func() {
 
 	Context("when filtering on gitlab entities (groups and projects)", func() {
 		type entitiesTableInput struct {
-			expectedValue []string
-			projects      []string
-			groups        []string
+			allowedProjects []string
+			allowedGroups   []string
+			scope           string
+			expectedAuthz   bool
+			expectedError   error
+			expectedGroups  []string
+			expectedScope   string
 		}
 
 		DescribeTable("should return expected results",
 			func(in entitiesTableInput) {
+				bURL, err := url.Parse(b.URL)
+				Expect(err).To(BeNil())
+
+				p, err := testGitLabProvider(bURL.Host, in.scope, options.GitLabOptions{
+					Group:    in.allowedGroups,
+					Projects: in.allowedProjects,
+				})
+				if in.expectedError == nil {
+					Expect(err).To(BeNil())
+				} else {
+					Expect(err).To(MatchError(in.expectedError))
+					return
+				}
+
 				p.AllowUnverifiedEmail = true
 				session := &sessions.SessionState{AccessToken: "gitlab_access_token"}
 
-				err := p.AddProjects(in.projects)
-				Expect(err).To(BeNil())
-				p.SetProjectScope()
-
-				if len(in.groups) > 0 {
-					p.Groups = in.groups
-				}
+				Expect(p.Scope).To(Equal(in.expectedScope))
 
 				err = p.EnrichSession(context.Background(), session)
-
 				Expect(err).To(BeNil())
-				Expect(session.Groups).To(Equal(in.expectedValue))
+				Expect(session.Groups).To(Equal(in.expectedGroups))
+
+				authorized, err := p.Authorize(context.Background(), session)
+				Expect(err).To(BeNil())
+				Expect(authorized).To(Equal(in.expectedAuthz))
 			},
 			Entry("project membership valid on group project", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar", "project:my_group/my_project"},
-				projects:      []string{"my_group/my_project"},
+				allowedProjects: []string{"my_group/my_project"},
+				expectedAuthz:   true,
+				expectedGroups:  []string{"foo", "bar", "project:my_group/my_project"},
+				expectedScope:   "openid email read_api",
 			}),
 			Entry("project membership invalid on group project, insufficient access level level", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar"},
-				projects:      []string{"my_group/my_project=40"},
+				allowedProjects: []string{"my_group/my_project=40"},
+				expectedAuthz:   false,
+				expectedGroups:  []string{"foo", "bar"},
+				expectedScope:   "openid email read_api",
 			}),
 			Entry("project membership invalid on group project, no access at all", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar"},
-				projects:      []string{"no_access_group/no_access_project=30"},
+				allowedProjects: []string{"no_access_group/no_access_project=30"},
+				expectedAuthz:   false,
+				expectedGroups:  []string{"foo", "bar"},
+				expectedScope:   "openid email read_api",
 			}),
 			Entry("project membership valid on personnal project", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar", "project:my_profile/my_personal_project"},
-				projects:      []string{"my_profile/my_personal_project"},
+				allowedProjects: []string{"my_profile/my_personal_project"},
+				scope:           "openid email read_api profile",
+				expectedAuthz:   true,
+				expectedGroups:  []string{"foo", "bar", "project:my_profile/my_personal_project"},
+				expectedScope:   "openid email read_api profile",
 			}),
 			Entry("project membership invalid on personnal project, insufficient access level", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar"},
-				projects:      []string{"my_profile/my_personal_project=40"},
+				allowedProjects: []string{"my_profile/my_personal_project=40"},
+				expectedAuthz:   false,
+				expectedGroups:  []string{"foo", "bar"},
+				expectedScope:   "openid email read_api",
 			}),
 			Entry("project membership invalid", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar"},
-				projects:      []string{"my_group/my_bad_project"},
+				allowedProjects: []string{"my_group/my_bad_project"},
+				expectedAuthz:   false,
+				expectedGroups:  []string{"foo", "bar"},
+				expectedScope:   "openid email read_api",
 			}),
 			Entry("group membership valid", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar"},
-				groups:        []string{"foo"},
+				allowedGroups:  []string{"foo"},
+				expectedGroups: []string{"foo", "bar"},
+				expectedAuthz:  true,
+				expectedScope:  "openid email",
 			}),
 			Entry("groups and projects", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar", "project:my_group/my_project", "project:my_profile/my_personal_project"},
-				groups:        []string{"foo", "baz"},
-				projects:      []string{"my_group/my_project", "my_profile/my_personal_project"},
+				allowedGroups:   []string{"foo", "baz"},
+				allowedProjects: []string{"my_group/my_project", "my_profile/my_personal_project"},
+				expectedAuthz:   true,
+				expectedGroups:  []string{"foo", "bar", "project:my_group/my_project", "project:my_profile/my_personal_project"},
+				expectedScope:   "openid email read_api",
 			}),
 			Entry("archived projects", entitiesTableInput{
-				expectedValue: []string{"group:foo", "group:bar"},
-				groups:        []string{},
-				projects:      []string{"my_group/my_archived_project"},
+				allowedProjects: []string{"my_group/my_archived_project"},
+				expectedAuthz:   false,
+				expectedGroups:  []string{"foo", "bar"},
+				expectedScope:   "openid email read_api",
+			}),
+			Entry("invalid project format", entitiesTableInput{
+				allowedProjects: []string{"my_group/my_invalid_project=123"},
+				expectedError:   errors.New("could not configure allowed projects: invalid gitlab project access level specified (my_group/my_invalid_project)"),
+				expectedScope:   "openid email read_api",
 			}),
 		)
-
 	})
 
-	Context("when generating group list from multiple kind", func() {
-		type entitiesTableInput struct {
-			projects []string
-			groups   []string
-		}
+	Context("when refreshing", func() {
+		It("keeps the existing nickname after refreshing", func() {
+			session := &sessions.SessionState{
+				User: "nickname",
+			}
+			p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+				s.User = "subject"
+				return true, nil
+			}
+			refreshed, err := p.RefreshSession(context.Background(), session)
+			Expect(refreshed).To(BeTrue())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(session.User).To(Equal("nickname"))
+		})
+		It("keeps existing projects after refreshing groups", func() {
+			session := &sessions.SessionState{}
+			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
 
-		DescribeTable("should prefix entities with group kind", func(in entitiesTableInput) {
-			p.Groups = in.groups
-			err := p.AddProjects(in.projects)
-			Expect(err).To(BeNil())
+			p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+				s.Groups = []string{"baz"}
+				return true, nil
+			}
 
-			all := p.PrefixAllowedGroups()
+			refreshed, err := p.RefreshSession(context.Background(), session)
+			Expect(refreshed).To(BeTrue())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(session.Groups)).To(Equal(3))
+			Expect(session.Groups).
+				To(ContainElements([]string{"baz", "project:thing", "project:sample"}))
+		})
+		It("leaves existing groups when not refreshed", func() {
+			session := &sessions.SessionState{}
+			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
 
-			Expect(len(all)).To(Equal(len(in.projects) + len(in.groups)))
-		},
-			Entry("simple test case", entitiesTableInput{
-				projects: []string{"my_group/my_project", "my_group/my_other_project"},
-				groups:   []string{"mygroup", "myothergroup"},
-			}),
-			Entry("projects only", entitiesTableInput{
-				projects: []string{"my_group/my_project", "my_group/my_other_project"},
-				groups:   []string{},
-			}),
-			Entry("groups only", entitiesTableInput{
-				projects: []string{},
-				groups:   []string{"mygroup", "myothergroup"},
-			}),
-		)
+			p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+				return false, nil
+			}
+
+			refreshed, err := p.RefreshSession(context.Background(), session)
+			Expect(refreshed).To(BeFalse())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(session.Groups)).To(Equal(4))
+			Expect(session.Groups).
+				To(ContainElements([]string{"foo", "bar", "project:thing", "project:sample"}))
+		})
+		It("leaves existing groups when OIDC refresh errors", func() {
+			session := &sessions.SessionState{}
+			session.Groups = []string{"foo", "bar", "project:thing", "project:sample"}
+
+			p.oidcRefreshFunc = func(_ context.Context, s *sessions.SessionState) (bool, error) {
+				return false, errors.New("failure")
+			}
+
+			refreshed, err := p.RefreshSession(context.Background(), session)
+			Expect(refreshed).To(BeFalse())
+			Expect(err).To(HaveOccurred())
+			Expect(len(session.Groups)).To(Equal(4))
+			Expect(session.Groups).
+				To(ContainElements([]string{"foo", "bar", "project:thing", "project:sample"}))
+		})
 	})
 })

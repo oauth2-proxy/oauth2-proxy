@@ -54,12 +54,13 @@ type signInPageWriter struct {
 
 // WriteSignInPage writes the sign-in page to the given response writer.
 // It uses the redirectURL to be able to set the final destination for the user post login.
-func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string) {
+func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	t := struct {
 		ProviderName  string
 		SignInMessage template.HTML
+		StatusCode    int
 		CustomLogin   bool
 		Redirect      string
 		Version       string
@@ -69,6 +70,7 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 	}{
 		ProviderName:  s.providerName,
 		SignInMessage: template.HTML(s.signInMessage),
+		StatusCode:    statusCode,
 		CustomLogin:   s.displayLoginForm,
 		Redirect:      redirectURL,
 		Version:       s.version,
@@ -91,7 +93,8 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 }
 
 // loadCustomLogo loads the logo file from the path and encodes it to an HTML
-// entity. If no custom logo is provided, the OAuth2 Proxy Icon is used instead.
+// entity or if a URL is provided then it's used directly,
+// otherwise if no custom logo is provided, the OAuth2 Proxy Icon is used instead.
 func loadCustomLogo(logoPath string) (string, error) {
 	if logoPath == "" {
 		// The default logo is an SVG so this will be valid to just return.
@@ -102,6 +105,11 @@ func loadCustomLogo(logoPath string) (string, error) {
 		// Return no logo when the custom logo is set to `-`.
 		// This disables the logo rendering.
 		return "", nil
+	}
+
+	if strings.HasPrefix(logoPath, "https://") {
+		// Return img tag pointing to the URL.
+		return fmt.Sprintf("<img src=\"%s\" alt=\"Logo\" />", logoPath), nil
 	}
 
 	logoData, err := os.ReadFile(logoPath)

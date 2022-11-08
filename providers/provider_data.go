@@ -4,20 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	"net/url"
-	"reflect"
+	"os"
+	"regexp"
 	"strings"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
 	"golang.org/x/oauth2"
 )
 
 const (
-	OIDCEmailClaim  = "email"
-	OIDCGroupsClaim = "groups"
+	// This is not exported as it's not currently user configurable
+	oidcUserClaim = "sub"
 )
 
 // ProviderData contains information required to configure all implementations
@@ -29,25 +33,29 @@ type ProviderData struct {
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
-	// Auth request params & related, see
-	//https://openid.net/specs/openid-connect-basic-1_0.html#rfc.section.2.1.1.1
-	AcrValues        string
-	ApprovalPrompt   string // NOTE: Renamed to "prompt" in OAuth2
-	ClientID         string
-	ClientSecret     string
-	ClientSecretFile string
-	Scope            string
-	Prompt           string
+	ClientID          string
+	ClientSecret      string
+	ClientSecretFile  string
+	Scope             string
+	// The picked CodeChallenge Method or empty if none.
+	CodeChallengeMethod string
+	// Code challenge methods supported by the Provider
+	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
 
 	// Common OIDC options for any OIDC-based providers to consume
 	AllowUnverifiedEmail bool
+	UserClaim            string
 	EmailClaim           string
 	GroupsClaim          string
-	Verifier             *oidc.IDTokenVerifier
+	Verifier             internaloidc.IDTokenVerifier
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
 	AllowedGroups map[string]struct{}
+
+	getAuthorizationHeaderFunc func(string) http.Header
+	loginURLParameterDefaults  url.Values
+	loginURLParameterOverrides map[string]*regexp.Regexp
 }
 
 // Data returns the ProviderData
@@ -59,7 +67,7 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	}
 
 	// Getting ClientSecret can fail in runtime so we need to report it without returning the file name to the user
-	fileClientSecret, err := ioutil.ReadFile(p.ClientSecretFile)
+	fileClientSecret, err := os.ReadFile(p.ClientSecretFile)
 	if err != nil {
 		logger.Errorf("error reading client secret file %s: %s", p.ClientSecretFile, err)
 		return "", errors.New("could not read client secret file")
@@ -67,9 +75,103 @@ func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	return string(fileClientSecret), nil
 }
 
-// SetAllowedGroups organizes a group list into the AllowedGroups map
+// LoginURLParams returns the parameter values that should be passed to the IdP
+// login URL.  This is the default set of parameters configured for this provider,
+// optionally overridden by the given overrides (typically from the URL of the
+// /oauth2/start request) according to the configured rules for this provider.
+func (p *ProviderData) LoginURLParams(overrides url.Values) url.Values {
+	// the returned url.Values may be modified later in the request handling process
+	// so shallow clone the default map
+	params := url.Values{}
+	for k, v := range p.loginURLParameterDefaults {
+		params[k] = v
+	}
+	if len(overrides) > 0 {
+		for param, re := range p.loginURLParameterOverrides {
+			if reqValues, ok := overrides[param]; ok {
+				actualValues := make([]string, 0, len(reqValues))
+				for _, val := range reqValues {
+					if re.MatchString(val) {
+						actualValues = append(actualValues, val)
+					}
+				}
+				if len(actualValues) > 0 {
+					params.Del(param)
+					params[param] = actualValues
+				}
+			}
+		}
+	}
+	return params
+}
+
+// Compile the given set of LoginURLParameter options into the internal defaults
+// and regular expressions used to validate any overrides.
+func (p *ProviderData) compileLoginParams(paramConfig []options.LoginURLParameter) []error {
+	var errs []error
+	p.loginURLParameterDefaults = url.Values{}
+	p.loginURLParameterOverrides = make(map[string]*regexp.Regexp)
+
+	for _, param := range paramConfig {
+		if p.seenParameter(param.Name) {
+			errs = append(errs, fmt.Errorf("parameter %s provided more than once in loginURLParameters", param.Name))
+		} else {
+			// record default if parameter declares one
+			if len(param.Default) > 0 {
+				p.loginURLParameterDefaults[param.Name] = param.Default
+			}
+			// record allow rules if any
+			if len(param.Allow) > 0 {
+				errs = p.convertAllowRules(errs, param)
+			}
+		}
+	}
+	return errs
+}
+
+// Converts the list of allow rules for the given parameter into a regexp
+// and store it for use at runtime when validating overrides of that parameter.
+func (p *ProviderData) convertAllowRules(errs []error, param options.LoginURLParameter) []error {
+	var allowREs []string
+	for idx, rule := range param.Allow {
+		if (rule.Value == nil) == (rule.Pattern == nil) {
+			errs = append(errs, fmt.Errorf("rule %d in LoginURLParameter %s must have exactly one of value or pattern", idx, param.Name))
+		} else {
+			allowREs = append(allowREs, regexpForRule(rule))
+		}
+	}
+	if re, err := regexp.Compile(strings.Join(allowREs, "|")); err != nil {
+		errs = append(errs, err)
+	} else {
+		p.loginURLParameterOverrides[param.Name] = re
+	}
+	return errs
+}
+
+// Check whether we have already processed a configuration for the given parameter name
+func (p *ProviderData) seenParameter(name string) bool {
+	_, seenDefault := p.loginURLParameterDefaults[name]
+	_, seenOverride := p.loginURLParameterOverrides[name]
+	return seenDefault || seenOverride
+}
+
+// Generate a validating regular expression pattern for a given URLParameterRule.
+// If the rule is for a fixed value then returns a regexp that matches exactly
+// that value, if the rule is itself a regexp just use that as-is.
+func regexpForRule(rule options.URLParameterRule) string {
+	if rule.Value != nil {
+		// convert literal value into an equivalent regexp,
+		// anchored at start and end
+		return "^" + regexp.QuoteMeta(*rule.Value) + "$"
+	}
+	// just use the pattern as-is, but wrap in a non-capture group
+	// to avoid any possibility of confusing the outer disjunction.
+	return "(?:" + *rule.Pattern + ")"
+}
+
+// setAllowedGroups organizes a group list into the AllowedGroups map
 // to be consumed by Authorize implementations
-func (p *ProviderData) SetAllowedGroups(groups []string) {
+func (p *ProviderData) setAllowedGroups(groups []string) {
 	p.AllowedGroups = make(map[string]struct{}, len(groups))
 	for _, group := range groups {
 		p.AllowedGroups[group] = struct{}{}
@@ -95,6 +197,10 @@ func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
 	if p.Scope == "" {
 		p.Scope = defaults.scope
 	}
+
+	if p.UserClaim == "" {
+		p.UserClaim = oidcUserClaim
+	}
 }
 
 // defaultURL will set return a default value if the given value is not set.
@@ -116,16 +222,6 @@ func defaultURL(u *url.URL, d *url.URL) *url.URL {
 // OIDC compliant
 // ****************************************************************************
 
-// OIDCClaims is a struct to unmarshal the OIDC claims from an ID Token payload
-type OIDCClaims struct {
-	Subject  string   `json:"sub"`
-	Email    string   `json:"-"`
-	Groups   []string `json:"-"`
-	Verified *bool    `json:"email_verified"`
-
-	raw map[string]interface{}
-}
-
 func (p *ProviderData) verifyIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
 	rawIDToken := getIDToken(token)
 	if strings.TrimSpace(rawIDToken) == "" {
@@ -139,87 +235,82 @@ func (p *ProviderData) verifyIDToken(ctx context.Context, token *oauth2.Token) (
 
 // buildSessionFromClaims uses IDToken claims to populate a fresh SessionState
 // with non-Token related fields.
-func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.SessionState, error) {
+func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*sessions.SessionState, error) {
 	ss := &sessions.SessionState{}
 
-	if idToken == nil {
+	if rawIDToken == "" {
 		return ss, nil
 	}
 
-	claims, err := p.getClaims(idToken)
+	extractor, err := p.getClaimExtractor(rawIDToken, accessToken)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't extract claims from id_token (%v)", err)
+		return nil, err
 	}
 
-	ss.User = claims.Subject
-	ss.Email = claims.Email
-	ss.Groups = claims.Groups
-
-	// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
-	if pref, ok := claims.raw["preferred_username"].(string); ok {
-		ss.PreferredUsername = pref
+	// Use a slice of a struct (vs map) here in case the same claim is used twice
+	for _, c := range []struct {
+		claim string
+		dst   interface{}
+	}{
+		{p.UserClaim, &ss.User},
+		{p.EmailClaim, &ss.Email},
+		{p.GroupsClaim, &ss.Groups},
+		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
+		{"preferred_username", &ss.PreferredUsername},
+	} {
+		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
+			return nil, err
+		}
 	}
 
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
-	verifyEmail := (p.EmailClaim == OIDCEmailClaim) && !p.AllowUnverifiedEmail
-	if verifyEmail && claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
+
+	if verifyEmail {
+		var verified bool
+		exists, err := extractor.GetClaimInto("email_verified", &verified)
+		if err != nil {
+			return nil, err
+		}
+
+		if exists && !verified {
+			return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		}
 	}
 
 	return ss, nil
 }
 
-// getClaims extracts IDToken claims into an OIDCClaims
-func (p *ProviderData) getClaims(idToken *oidc.IDToken) (*OIDCClaims, error) {
-	claims := &OIDCClaims{}
-
-	// Extract default claims.
-	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
-	}
-	// Extract custom claims.
-	if err := idToken.Claims(&claims.raw); err != nil {
-		return nil, fmt.Errorf("failed to parse all id_token claims: %v", err)
+func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {
+	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, p.ProfileURL, p.getAuthorizationHeader(accessToken))
+	if err != nil {
+		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}
 
-	email := claims.raw[p.EmailClaim]
-	if email != nil {
-		claims.Email = fmt.Sprint(email)
-	}
-	claims.Groups = p.extractGroups(claims.raw)
-
-	return claims, nil
+	return extractor, nil
 }
 
-// extractGroups extracts groups from a claim to a list in a type safe manner.
-// If the claim isn't present, `nil` is returned. If the groups claim is
-// present but empty, `[]string{}` is returned.
-func (p *ProviderData) extractGroups(claims map[string]interface{}) []string {
-	rawClaim, ok := claims[p.GroupsClaim]
-	if !ok {
-		return nil
+// checkNonce compares the session's nonce with the IDToken's nonce claim
+func (p *ProviderData) checkNonce(s *sessions.SessionState) error {
+	extractor, err := p.getClaimExtractor(s.IDToken, "")
+	if err != nil {
+		return fmt.Errorf("id_token claims extraction failed: %v", err)
+	}
+	var nonce string
+	if _, err := extractor.GetClaimInto("nonce", &nonce); err != nil {
+		return fmt.Errorf("could not extract nonce from ID Token: %v", err)
 	}
 
-	// Handle traditional list-based groups as well as non-standard singleton
-	// based groups. Both variants support complex objects if needed.
-	var claimGroups []interface{}
-	switch raw := rawClaim.(type) {
-	case []interface{}:
-		claimGroups = raw
-	case interface{}:
-		claimGroups = []interface{}{raw}
+	if !s.CheckNonce(nonce) {
+		return errors.New("id_token nonce claim does not match the session nonce")
 	}
+	return nil
+}
 
-	groups := []string{}
-	for _, rawGroup := range claimGroups {
-		formattedGroup, err := formatGroup(rawGroup)
-		if err != nil {
-			logger.Errorf("Warning: unable to format group of type %s with error %s",
-				reflect.TypeOf(rawGroup), err)
-			continue
-		}
-		groups = append(groups, formattedGroup)
+func (p *ProviderData) getAuthorizationHeader(accessToken string) http.Header {
+	if p.getAuthorizationHeaderFunc != nil && accessToken != "" {
+		return p.getAuthorizationHeaderFunc(accessToken)
 	}
-	return groups
+	return nil
 }

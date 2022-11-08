@@ -6,11 +6,13 @@ slug: /
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.1.2`)
+    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.1.3`)
 
     b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy/v7` which will put the binary in `$GOPATH/bin`
 
     c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, ARMv6 and ARM64 tags available)
+
+    d. Using a [Kubernetes manifest](https://github.com/oauth2-proxy/manifests) (Helm)
 
 Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 

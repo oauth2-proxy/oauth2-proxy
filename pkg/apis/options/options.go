@@ -4,9 +4,8 @@ import (
 	"crypto"
 	"net/url"
 
-	oidc "github.com/coreos/go-oidc"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	"github.com/spf13/pflag"
 )
 
@@ -41,7 +40,7 @@ type Options struct {
 
 	// Not used in the legacy config, name not allowed to match an external key (upstreams)
 	// TODO(JoelSpeed): Rename when legacy config is removed
-	UpstreamServers Upstreams `cfg:",internal"`
+	UpstreamServers UpstreamConfig `cfg:",internal"`
 
 	InjectRequestHeaders  []Header `cfg:",internal"`
 	InjectResponseHeaders []Header `cfg:",internal"`
@@ -51,6 +50,7 @@ type Options struct {
 
 	Providers Providers `cfg:",internal"`
 
+	APIRoutes             []string `flag:"api-route" cfg:"api_routes"`
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
 	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
 	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
@@ -58,6 +58,7 @@ type Options struct {
 	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
+	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
@@ -67,28 +68,27 @@ type Options struct {
 
 	// internal values that are set after config validation
 	redirectURL        *url.URL
-	provider           providers.Provider
 	signatureData      *SignatureData
-	oidcVerifier       *oidc.IDTokenVerifier
-	jwtBearerVerifiers []*oidc.IDTokenVerifier
+	oidcVerifier       internaloidc.IDTokenVerifier
+	jwtBearerVerifiers []internaloidc.IDTokenVerifier
 	realClientIPParser ipapi.RealClientIPParser
 }
 
 // Options for Getting internal values
-func (o *Options) GetRedirectURL() *url.URL                        { return o.redirectURL }
-func (o *Options) GetProvider() providers.Provider                 { return o.provider }
-func (o *Options) GetSignatureData() *SignatureData                { return o.signatureData }
-func (o *Options) GetOIDCVerifier() *oidc.IDTokenVerifier          { return o.oidcVerifier }
-func (o *Options) GetJWTBearerVerifiers() []*oidc.IDTokenVerifier  { return o.jwtBearerVerifiers }
+func (o *Options) GetRedirectURL() *url.URL                      { return o.redirectURL }
+func (o *Options) GetSignatureData() *SignatureData              { return o.signatureData }
+func (o *Options) GetOIDCVerifier() internaloidc.IDTokenVerifier { return o.oidcVerifier }
+func (o *Options) GetJWTBearerVerifiers() []internaloidc.IDTokenVerifier {
+	return o.jwtBearerVerifiers
+}
 func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
 
 // Options for Setting internal values
-func (o *Options) SetRedirectURL(s *url.URL)                        { o.redirectURL = s }
-func (o *Options) SetProvider(s providers.Provider)                 { o.provider = s }
-func (o *Options) SetSignatureData(s *SignatureData)                { o.signatureData = s }
-func (o *Options) SetOIDCVerifier(s *oidc.IDTokenVerifier)          { o.oidcVerifier = s }
-func (o *Options) SetJWTBearerVerifiers(s []*oidc.IDTokenVerifier)  { o.jwtBearerVerifiers = s }
-func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClientIPParser = s }
+func (o *Options) SetRedirectURL(s *url.URL)                              { o.redirectURL = s }
+func (o *Options) SetSignatureData(s *SignatureData)                      { o.signatureData = s }
+func (o *Options) SetOIDCVerifier(s internaloidc.IDTokenVerifier)         { o.oidcVerifier = s }
+func (o *Options) SetJWTBearerVerifiers(s []internaloidc.IDTokenVerifier) { o.jwtBearerVerifiers = s }
+func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.realClientIPParser = s }
 
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
@@ -116,15 +116,17 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
-	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods")
+	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex")
+	flagSet.StringSlice("api-route", []string{}, "return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
+	flagSet.Bool("force-json-errors", false, "will force JSON errors instead of HTTP error pages or redirects")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
-	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . to allow subdomains (eg .example.com)")
+	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
 	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -B\" for bcrypt encryption")
 	flagSet.StringSlice("htpasswd-user-group", []string{}, "the groups to be set on sessions for htpasswd users (may be given multiple times)")
@@ -143,7 +145,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("redis-sentinel-connection-urls", []string{}, "List of Redis sentinel connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-sentinel")
 	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
 	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://HOST[:PORT]). Used in conjunction with --redis-use-cluster")
-
+	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 

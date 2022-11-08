@@ -2,8 +2,9 @@ package main
 
 import (
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -24,13 +25,16 @@ client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 `
 
 	const testAlphaConfig = `
-upstreams:
+upstreamConfig:
+  proxyrawpath: false
+  upstreams:
   - id: /
     path: /
     uri: http://httpbin
     flushInterval: 1s
     passHostHeader: true
     proxyWebSockets: true
+    timeout: 30s
 injectRequestHeaders:
 - name: Authorization
   values:
@@ -64,13 +68,19 @@ providers:
   ID: google=oauth2-proxy
   clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
-  approvalPrompt: force
   azureConfig:
     tenant: common
   oidcConfig:
     groupsClaim: groups
     emailClaim: email
     userIDClaim: email
+    insecureSkipNonce: true
+    audienceClaims: [aud]
+    extraAudiences: []
+  loginURLParameters:
+  - name: approval_prompt
+    default:
+    - force
 `
 
 	const testCoreConfig = `
@@ -99,14 +109,17 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts.Cookie.Secure = false
 		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
 
-		opts.UpstreamServers = options.Upstreams{
-			{
-				ID:              "/",
-				Path:            "/",
-				URI:             "http://httpbin",
-				FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
-				PassHostHeader:  boolPtr(true),
-				ProxyWebSockets: boolPtr(true),
+		opts.UpstreamServers = options.UpstreamConfig{
+			Upstreams: []options.Upstream{
+				{
+					ID:              "/",
+					Path:            "/",
+					URI:             "http://httpbin",
+					FlushInterval:   durationPtr(options.DefaultUpstreamFlushInterval),
+					PassHostHeader:  boolPtr(true),
+					ProxyWebSockets: boolPtr(true),
+					Timeout:         durationPtr(options.DefaultUpstreamTimeout),
+				},
 			},
 		}
 
@@ -129,7 +142,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, authHeader)
 
 		opts.Providers = options.Providers{
-			{
+			options.Provider{
 				ID:           "google=oauth2-proxy",
 				Type:         "google",
 				ClientSecret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
@@ -138,11 +151,16 @@ redirect_url="http://localhost:4180/oauth2/callback"
 					Tenant: "common",
 				},
 				OIDCConfig: options.OIDCOptions{
-					GroupsClaim: "groups",
-					EmailClaim:  "email",
-					UserIDClaim: "email",
+					GroupsClaim:       "groups",
+					EmailClaim:        "email",
+					UserIDClaim:       "email",
+					AudienceClaims:    []string{"aud"},
+					ExtraAudiences:    []string{},
+					InsecureSkipNonce: true,
 				},
-				ApprovalPrompt: "force",
+				LoginURLParameters: []options.LoginURLParameter{
+					{Name: "approval_prompt", Default: []string{"force"}},
+				},
 			},
 		}
 		return opts
@@ -172,7 +190,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 			if in.configContent != "" {
 				By("Writing the config to a temporary file", func() {
-					file, err := ioutil.TempFile("", "oauth2-proxy-test-config-XXXX.cfg")
+					file, err := os.CreateTemp("", "oauth2-proxy-test-config-XXXX.cfg")
 					Expect(err).ToNot(HaveOccurred())
 					defer file.Close()
 
@@ -185,7 +203,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 			if in.alphaConfigContent != "" {
 				By("Writing the config to a temporary file", func() {
-					file, err := ioutil.TempFile("", "oauth2-proxy-test-alpha-config-XXXX.yaml")
+					file, err := os.CreateTemp("", "oauth2-proxy-test-alpha-config-XXXX.yaml")
 					Expect(err).ToNot(HaveOccurred())
 					defer file.Close()
 
@@ -228,7 +246,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig,
 			alphaConfigContent: testAlphaConfig + ":",
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line 48: did not find expected key"),
+			expectedErr:        fmt.Errorf("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testAlphaConfig, "\n")),
 		}),
 		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig + "unknown_field=\"something\"",

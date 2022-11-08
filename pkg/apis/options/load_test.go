@@ -3,7 +3,6 @@ package options
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -22,6 +21,7 @@ var _ = Describe("Load", func() {
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
 			FlushInterval:   DefaultUpstreamFlushInterval,
+			Timeout:         DefaultUpstreamTimeout,
 		},
 
 		LegacyHeaders: LegacyHeaders{
@@ -36,12 +36,14 @@ var _ = Describe("Load", func() {
 		},
 
 		LegacyProvider: LegacyProvider{
-			ProviderType:    "google",
-			AzureTenant:     "common",
-			ApprovalPrompt:  "force",
-			UserIDClaim:     "email",
-			OIDCEmailClaim:  "email",
-			OIDCGroupsClaim: "groups",
+			ProviderType:          "google",
+			AzureTenant:           "common",
+			ApprovalPrompt:        "force",
+			UserIDClaim:           "email",
+			OIDCEmailClaim:        "email",
+			OIDCGroupsClaim:       "groups",
+			OIDCAudienceClaims:    []string{"aud"},
+			InsecureOIDCSkipNonce: true,
 		},
 
 		Options: Options{
@@ -115,7 +117,7 @@ var _ = Describe("Load", func() {
 
 				if o.configFile != nil {
 					By("Creating a config file")
-					configFile, err := ioutil.TempFile("", "oauth2-proxy-test-legacy-config-file")
+					configFile, err := os.CreateTemp("", "oauth2-proxy-test-legacy-config-file")
 					Expect(err).ToNot(HaveOccurred())
 					defer configFile.Close()
 
@@ -387,7 +389,7 @@ sub:
 
 				if in.configFile != nil {
 					By("Creating a config file")
-					configFile, err := ioutil.TempFile("", "oauth2-proxy-test-config-file")
+					configFile, err := os.CreateTemp("", "oauth2-proxy-test-config-file")
 					Expect(err).ToNot(HaveOccurred())
 					defer configFile.Close()
 
@@ -468,11 +470,12 @@ sub:
 
 	It("should load a full example AlphaOptions", func() {
 		config := []byte(`
-upstreams:
-- id: httpbin
-  path: /
-  uri: http://httpbin
-  flushInterval: 500ms
+upstreamConfig:
+  upstreams:
+  - id: httpbin
+    path: /
+    uri: http://httpbin
+    flushInterval: 500ms
 injectRequestHeaders:
 - name: X-Forwarded-User
   values:
@@ -484,7 +487,7 @@ injectResponseHeaders:
 `)
 
 		By("Creating a config file")
-		configFile, err := ioutil.TempFile("", "oauth2-proxy-test-alpha-config-file")
+		configFile, err := os.CreateTemp("", "oauth2-proxy-test-alpha-config-file")
 		Expect(err).ToNot(HaveOccurred())
 		defer configFile.Close()
 
@@ -501,12 +504,14 @@ injectResponseHeaders:
 		flushInterval := Duration(500 * time.Millisecond)
 
 		Expect(into).To(Equal(&AlphaOptions{
-			Upstreams: []Upstream{
-				{
-					ID:            "httpbin",
-					Path:          "/",
-					URI:           "http://httpbin",
-					FlushInterval: &flushInterval,
+			UpstreamConfig: UpstreamConfig{
+				Upstreams: []Upstream{
+					{
+						ID:            "httpbin",
+						Path:          "/",
+						URI:           "http://httpbin",
+						FlushInterval: &flushInterval,
+					},
 				},
 			},
 			InjectRequestHeaders: []Header{

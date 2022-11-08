@@ -30,7 +30,7 @@ func testLinkedInProvider(hostname string) *LinkedInProvider {
 }
 
 func testLinkedInBackend(payload string) *httptest.Server {
-	path := "/v1/people/~/email-address"
+	path := "/v2/emailAddress"
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -51,11 +51,11 @@ func TestNewLinkedInProvider(t *testing.T) {
 	// Test that defaults are set when calling for a new provider with nothing set
 	providerData := NewLinkedInProvider(&ProviderData{}).Data()
 	g.Expect(providerData.ProviderName).To(Equal("LinkedIn"))
-	g.Expect(providerData.LoginURL.String()).To(Equal("https://www.linkedin.com/uas/oauth2/authorization"))
+	g.Expect(providerData.LoginURL.String()).To(Equal("https://www.linkedin.com/oauth/v2/authorization"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://www.linkedin.com/uas/oauth2/accessToken"))
-	g.Expect(providerData.ProfileURL.String()).To(Equal("https://www.linkedin.com/v1/people/~/email-address"))
-	g.Expect(providerData.ValidateURL.String()).To(Equal("https://www.linkedin.com/v1/people/~/email-address"))
-	g.Expect(providerData.Scope).To(Equal("r_emailaddress r_basicprofile"))
+	g.Expect(providerData.ProfileURL.String()).To(Equal("https://api.linkedin.com/v2/emailAddress"))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://api.linkedin.com/v2/me"))
+	g.Expect(providerData.Scope).To(Equal("r_emailaddress r_liteprofile"))
 }
 
 func TestLinkedInProviderOverrides(t *testing.T) {
@@ -92,7 +92,7 @@ func TestLinkedInProviderOverrides(t *testing.T) {
 }
 
 func TestLinkedInProviderGetEmailAddress(t *testing.T) {
-	b := testLinkedInBackend(`"user@linkedin.com"`)
+	b := testLinkedInBackend(`{"elements":[{"handle~":{"emailAddress": "user@linkedin.com"}}]}`)
 	defer b.Close()
 
 	bURL, _ := url.Parse(b.URL)

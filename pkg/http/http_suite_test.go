@@ -2,26 +2,22 @@ package http
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
-	"math/big"
-	"net"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var certData []byte
-var certDataSource, keyDataSource options.SecretSource
+var ipv4CertData, ipv6CertData []byte
+var ipv4CertDataSource, ipv4KeyDataSource options.SecretSource
+var ipv6CertDataSource, ipv6KeyDataSource options.SecretSource
 var client *http.Client
 
 func TestHTTPSuite(t *testing.T) {
@@ -33,50 +29,46 @@ func TestHTTPSuite(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	By("Generating a self-signed cert for TLS tests", func() {
-		priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	By("Generating a ipv4 self-signed cert for TLS tests", func() {
+		certBytes, keyBytes, err := util.GenerateCert("127.0.0.1")
 		Expect(err).ToNot(HaveOccurred())
+		ipv4CertData = certBytes
 
-		keyOut := bytes.NewBuffer(nil)
-		privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes})).To(Succeed())
-		keyDataSource.Value = keyOut.Bytes()
-
-		serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-		serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-		Expect(err).ToNot(HaveOccurred())
-
-		template := x509.Certificate{
-			SerialNumber: serialNumber,
-			Subject: pkix.Name{
-				Organization: []string{"OAuth2 Proxy Test Suite"},
-			},
-			NotBefore:   time.Now(),
-			NotAfter:    time.Now().Add(time.Hour),
-			IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
-			KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		}
-
-		certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-		Expect(err).ToNot(HaveOccurred())
-		certData = certBytes
-
-		certOut := bytes.NewBuffer(nil)
+		certOut := new(bytes.Buffer)
 		Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
-		certDataSource.Value = certOut.Bytes()
+		ipv4CertDataSource.Value = certOut.Bytes()
+		keyOut := new(bytes.Buffer)
+		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
+		ipv4KeyDataSource.Value = keyOut.Bytes()
+	})
+
+	By("Generating a ipv6 self-signed cert for TLS tests", func() {
+		certBytes, keyBytes, err := util.GenerateCert("::1")
+		Expect(err).ToNot(HaveOccurred())
+		ipv6CertData = certBytes
+
+		certOut := new(bytes.Buffer)
+		Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
+		ipv6CertDataSource.Value = certOut.Bytes()
+		keyOut := new(bytes.Buffer)
+		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
+		ipv6KeyDataSource.Value = keyOut.Bytes()
 	})
 
 	By("Setting up a http client", func() {
-		cert, err := tls.X509KeyPair(certDataSource.Value, keyDataSource.Value)
+		ipv4cert, err := tls.X509KeyPair(ipv4CertDataSource.Value, ipv4KeyDataSource.Value)
+		Expect(err).ToNot(HaveOccurred())
+		ipv6cert, err := tls.X509KeyPair(ipv6CertDataSource.Value, ipv6KeyDataSource.Value)
 		Expect(err).ToNot(HaveOccurred())
 
-		certificate, err := x509.ParseCertificate(cert.Certificate[0])
+		ipv4certificate, err := x509.ParseCertificate(ipv4cert.Certificate[0])
+		Expect(err).ToNot(HaveOccurred())
+		ipv6certificate, err := x509.ParseCertificate(ipv6cert.Certificate[0])
 		Expect(err).ToNot(HaveOccurred())
 
 		certpool := x509.NewCertPool()
-		certpool.AddCert(certificate)
+		certpool.AddCert(ipv4certificate)
+		certpool.AddCert(ipv6certificate)
 
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig.RootCAs = certpool

@@ -30,8 +30,7 @@ func NewManager(store Store, cookieOpts *options.Cookie) *Manager {
 // from the persistent data store.
 func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
 	if s.CreatedAt == nil || s.CreatedAt.IsZero() {
-		now := time.Now()
-		s.CreatedAt = &now
+		s.CreatedAtNow()
 	}
 
 	tckt, err := decodeTicketFromRequest(req, m.Options)
@@ -60,9 +59,12 @@ func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
 		return nil, err
 	}
 
-	return tckt.loadSession(func(key string) ([]byte, error) {
-		return m.Store.Load(req.Context(), key)
-	})
+	return tckt.loadSession(
+		func(key string) ([]byte, error) {
+			return m.Store.Load(req.Context(), key)
+		},
+		m.Store.Lock,
+	)
 }
 
 // Clear clears any saved session information for a given ticket cookie.

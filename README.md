@@ -23,18 +23,18 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.1.0`)
+    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.4.0`)
 
-    b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy` which will put the binary in `$GOROOT/bin`
+    b. Build with `$ go get github.com/oauth2-proxy/oauth2-proxy/v7` which will put the binary in `$GOROOT/bin`
 
-    c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, ARMv6 and ARM64 tags available)
+    c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, PPC64LE, ARMv6, ARMv8 and ARM64 available)
 
-Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
+    Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 
-```
-sha256sum -c sha256sum.txt 2>&1 | grep OK
-oauth2-proxy-x.y.z.linux-amd64: OK
-```
+    ```
+    sha256sum -c sha256sum.txt 2>&1 | grep OK
+    oauth2-proxy-x.y.z.linux-amd64: OK
+    ```
 
 2.  [Select a Provider and Register an OAuth Application with a Provider](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/oauth_provider)
 3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview)
@@ -44,7 +44,7 @@ oauth2-proxy-x.y.z.linux-amd64: OK
 ## Security
 
 If you are running a version older than v6.0.0 we **strongly recommend you please update** to a current version.
-See [open redirect vulnverability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) for details.
+See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) for details.
 
 ## Docs
 

@@ -10,10 +10,8 @@ REGISTRY ?= quay.io/oauth2-proxy
 GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
 GO_MINOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f2)
 MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
-MINIMUM_SUPPORTED_GO_MINOR_VERSION = 15
+MINIMUM_SUPPORTED_GO_MINOR_VERSION = 18
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
-
-DOCKER_BUILD := docker build --build-arg VERSION=${VERSION}
 
 ifeq ($(COVER),true)
 TESTCOVER ?= -coverprofile c.out
@@ -24,8 +22,8 @@ all: lint $(BINARY)
 
 .PHONY: clean
 clean:
-	rm -rf release
-	rm -f $(BINARY)
+	-rm -rf release
+	-rm -f $(BINARY)
 
 .PHONY: distclean
 distclean: clean
@@ -39,35 +37,47 @@ lint: validate-go-version
 build: validate-go-version clean $(BINARY)
 
 $(BINARY):
-	GO111MODULE=on CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
+	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
+
+DOCKER_BUILD_PLATFORM ?= linux/amd64,linux/ppc64le,linux/arm/v6,linux/arm/v8
+DOCKER_BUILD_RUNTIME_IMAGE ?= alpine:3.15
+DOCKER_BUILDX_ARGS ?= --build-arg RUNTIME_IMAGE=${DOCKER_BUILD_RUNTIME_IMAGE}
+DOCKER_BUILDX := docker buildx build ${DOCKER_BUILDX_ARGS} --build-arg VERSION=${VERSION}
+DOCKER_BUILDX_X_PLATFORM := $(DOCKER_BUILDX) --platform ${DOCKER_BUILD_PLATFORM}
+DOCKER_BUILDX_PUSH := docker buildx build --push ${DOCKER_BUILDX_ARGS} --build-arg VERSION=${VERSION}
+DOCKER_BUILDX_PUSH_X_PLATFORM := $(DOCKER_BUILDX_PUSH) --platform ${DOCKER_BUILD_PLATFORM}
 
 .PHONY: docker
 docker:
-	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest .
+	$(DOCKER_BUILDX_X_PLATFORM) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest .
 
 .PHONY: docker-all
 docker-all: docker
-	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest-amd64 .
-	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION} .
-	$(DOCKER_BUILD) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
-	$(DOCKER_BUILD) -f Dockerfile.arm64 -t $(REGISTRY)/oauth2-proxy:latest-arm64 .
-	$(DOCKER_BUILD) -f Dockerfile.arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
-	$(DOCKER_BUILD) -f Dockerfile.armv6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 .
-	$(DOCKER_BUILD) -f Dockerfile.armv6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
+	$(DOCKER_BUILDX) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:latest-amd64 .
+	$(DOCKER_BUILDX_X_PLATFORM) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION} .
+	$(DOCKER_BUILDX) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
+	$(DOCKER_BUILDX) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:latest-arm64 .
+	$(DOCKER_BUILDX) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
+	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:latest-ppc64le .
+	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:${VERSION}-ppc64le .
+	$(DOCKER_BUILDX) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 .
+	$(DOCKER_BUILDX) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
 
 .PHONY: docker-push
 docker-push:
-	docker push $(REGISTRY)/oauth2-proxy:latest
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:latest .
 
 .PHONY: docker-push-all
 docker-push-all: docker-push
-	docker push $(REGISTRY)/oauth2-proxy:latest-amd64
-	docker push $(REGISTRY)/oauth2-proxy:${VERSION}
-	docker push $(REGISTRY)/oauth2-proxy:${VERSION}-amd64
-	docker push $(REGISTRY)/oauth2-proxy:latest-arm64
-	docker push $(REGISTRY)/oauth2-proxy:${VERSION}-arm64
-	docker push $(REGISTRY)/oauth2-proxy:latest-armv6
-	docker push $(REGISTRY)/oauth2-proxy:${VERSION}-armv6
+	$(DOCKER_BUILDX_PUSH) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:latest-amd64 .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:${VERSION} .
+	$(DOCKER_BUILDX_PUSH) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:latest-arm64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:latest-ppc64le .
+	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:${VERSION}-ppc64le .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
 
 .PHONY: generate
 generate:

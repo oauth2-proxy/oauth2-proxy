@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -20,10 +20,11 @@ type VerifyFunc func(ctx context.Context, token string) (*oidc.IDToken, error)
 func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 	return func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
 		var claims struct {
-			Subject           string `json:"sub"`
-			Email             string `json:"email"`
-			Verified          *bool  `json:"email_verified"`
-			PreferredUsername string `json:"preferred_username"`
+			Subject           string   `json:"sub"`
+			Email             string   `json:"email"`
+			Verified          *bool    `json:"email_verified"`
+			PreferredUsername string   `json:"preferred_username"`
+			Groups            []string `json:"groups"`
 		}
 
 		idToken, err := verify(ctx, token)
@@ -46,6 +47,7 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 		newSession := &sessionsapi.SessionState{
 			Email:             claims.Email,
 			User:              claims.Subject,
+			Groups:            claims.Groups,
 			PreferredUsername: claims.PreferredUsername,
 			AccessToken:       token,
 			IDToken:           token,

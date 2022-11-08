@@ -63,6 +63,17 @@
 ## enabling exposes a username/login signin form
 # htpasswd_file = ""
 
+## bypass authentication for requests that match the method & path. Format: method=path_regex OR path_regex alone for all methods
+# skip_auth_routes = [
+#   "GET=^/probe",
+#   "^/metrics"
+# ]
+
+## mark paths as API routes to get HTTP Status code 401 instead of redirect to login page
+# api_routes = [
+#   "^/api
+# ]
+
 ## Templates
 ## optional directory with custom sign_in.html and error.html
 # custom_templates_dir = ""

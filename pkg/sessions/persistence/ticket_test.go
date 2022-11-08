@@ -103,10 +103,17 @@ var _ = Describe("Session Ticket Tests", func() {
 			c, err := t.makeCipher()
 			Expect(err).ToNot(HaveOccurred())
 
-			ss := &sessions.SessionState{User: "foobar"}
-			loadedSession, err := t.loadSession(func(k string) ([]byte, error) {
-				return ss.EncodeSessionState(c, false)
-			})
+			ss := &sessions.SessionState{
+				User: "foobar",
+				Lock: &sessions.NoOpLock{},
+			}
+			loadedSession, err := t.loadSession(
+				func(k string) ([]byte, error) {
+					return ss.EncodeSessionState(c, false)
+				},
+				func(k string) sessions.Lock {
+					return &sessions.NoOpLock{}
+				})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(loadedSession).To(Equal(ss))
 		})
@@ -115,9 +122,13 @@ var _ = Describe("Session Ticket Tests", func() {
 			t, err := newTicket(&options.Cookie{Name: "dummy"})
 			Expect(err).ToNot(HaveOccurred())
 
-			data, err := t.loadSession(func(k string) ([]byte, error) {
-				return nil, errors.New("load error")
-			})
+			data, err := t.loadSession(
+				func(k string) ([]byte, error) {
+					return nil, errors.New("load error")
+				},
+				func(k string) sessions.Lock {
+					return &sessions.NoOpLock{}
+				})
 			Expect(data).To(BeNil())
 			Expect(err).To(MatchError(errors.New("failed to load the session state with the ticket: load error")))
 		})

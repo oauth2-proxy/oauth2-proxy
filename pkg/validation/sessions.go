@@ -2,6 +2,7 @@ package validation
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -50,10 +51,11 @@ func validateRedisSessionStore(o *options.Options) []string {
 		return []string{fmt.Sprintf("unable to initialize a redis client: %v", err)}
 	}
 
-	nonce, err := encryption.Nonce()
+	n, err := encryption.Nonce(32)
 	if err != nil {
 		return []string{fmt.Sprintf("unable to generate a redis initialization test key: %v", err)}
 	}
+	nonce := base64.RawURLEncoding.EncodeToString(n)
 
 	key := fmt.Sprintf("%s-healthcheck-%s", o.Cookie.Name, nonce)
 	return sendRedisConnectionTest(client, key, nonce)

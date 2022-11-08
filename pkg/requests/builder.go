@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -107,7 +106,7 @@ func (r *builder) do() Result {
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		r.result = &result{err: fmt.Errorf("error reading response body: %v", err)}
 		return r.result

@@ -2,7 +2,7 @@ package validation
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
@@ -52,7 +52,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
 		}
 		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
-			_, err := ioutil.ReadFile(provider.ClientSecretFile)
+			_, err := os.ReadFile(provider.ClientSecretFile)
 			if err != nil {
 				msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
 			}
@@ -77,7 +77,10 @@ func validateGoogleConfig(provider options.Provider) []string {
 		}
 		if provider.GoogleConfig.ServiceAccountJSON == "" {
 			msgs = append(msgs, "missing setting: google-service-account-json")
+		} else if _, err := os.Stat(provider.GoogleConfig.ServiceAccountJSON); err != nil {
+			msgs = append(msgs, fmt.Sprintf("invalid Google credentials file: %s", provider.GoogleConfig.ServiceAccountJSON))
 		}
 	}
+
 	return msgs
 }

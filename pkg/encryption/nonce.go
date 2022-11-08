@@ -1,17 +1,37 @@
 package encryption
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
-	"fmt"
+	"encoding/base64"
+
+	"golang.org/x/crypto/blake2b"
 )
 
-// Nonce generates a random 16 byte string to be used as a nonce
-func Nonce() (nonce string, err error) {
-	b := make([]byte, 16)
-	_, err = rand.Read(b)
+// Nonce generates a random n-byte slice
+func Nonce(length int) ([]byte, error) {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
 	if err != nil {
-		return
+		return nil, err
 	}
-	nonce = fmt.Sprintf("%x", b)
-	return
+	return b, nil
+}
+
+// HashNonce returns the BLAKE2b 256-bit hash of a nonce
+// NOTE: Error checking (G104) is purposefully skipped:
+// - `blake2b.New256` has no error path with a nil signing key
+// - `hash.Hash` interface's `Write` has an error signature, but
+//   `blake2b.digest.Write` does not use it.
+/* #nosec G104 */
+func HashNonce(nonce []byte) string {
+	hasher, _ := blake2b.New256(nil)
+	hasher.Write(nonce)
+	sum := hasher.Sum(nil)
+	return base64.RawURLEncoding.EncodeToString(sum)
+}
+
+// CheckNonce tests if a nonce matches the hashed version of it
+func CheckNonce(nonce []byte, hashed string) bool {
+	return hmac.Equal([]byte(HashNonce(nonce)), []byte(hashed))
 }

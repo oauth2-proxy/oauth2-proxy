@@ -3,11 +3,11 @@ id: overview
 title: Overview
 ---
 
-`oauth2-proxy` can be configured via [config file](#config-file), [command line options](#command-line-options) or [environment variables](#environment-variables).
+`oauth2-proxy` can be configured via [command line options](#command-line-options), [environment variables](#environment-variables) or [config file](#config-file) (in decreasing order of precedence, i.e. command line options will overwrite environment variables and environment variables will overwrite configuration file settings).
 
 ### Generating a Cookie Secret
 
-To generate a strong cookie secret use `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(16)).decode())'`
+To generate a strong cookie secret use `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
 
 ### Config File
 
@@ -33,7 +33,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
 | `--cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
 | `--cookie-httponly` | bool | set HttpOnly cookie flag | true |
-| `--cookie-name` | string | the name of the cookie that the oauth_proxy creates | `"_oauth2_proxy"` |
+| `--cookie-name` | string | the name of the cookie that the oauth_proxy creates. Should be changed to use a [cookie prefix](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#cookie_prefixes) (`__Host-` or `__Secure-`) if `--cookie-secure` is set. | `"_oauth2_proxy"` |
 | `--cookie-path` | string | an optional cookie path to force cookies to (e.g. `/poc/`) | `"/"` |
 | `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;\[[1](#footnote1)\] | |
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
@@ -45,7 +45,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
 | `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
-| `--exclude-logging-paths` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
+| `--exclude-logging-path` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
 | `--force-https` | bool | enforce https redirect | `false` |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |

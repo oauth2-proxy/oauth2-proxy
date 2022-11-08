@@ -36,8 +36,7 @@ type SessionStore struct {
 // within Cookies set on the HTTP response writer
 func (s *SessionStore) Save(rw http.ResponseWriter, req *http.Request, ss *sessions.SessionState) error {
 	if ss.CreatedAt == nil || ss.CreatedAt.IsZero() {
-		now := time.Now()
-		ss.CreatedAt = &now
+		ss.CreatedAtNow()
 	}
 	value, err := s.cookieForSession(ss)
 	if err != nil {
@@ -52,7 +51,7 @@ func (s *SessionStore) Load(req *http.Request) (*sessions.SessionState, error) {
 	c, err := loadCookie(req, s.Cookie.Name)
 	if err != nil {
 		// always http.ErrNoCookie
-		return nil, fmt.Errorf("cookie %q not present", s.Cookie.Name)
+		return nil, err
 	}
 	val, _, ok := encryption.Validate(c, s.Cookie.Secret, s.Cookie.Expire)
 	if !ok {
@@ -217,7 +216,7 @@ func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {
 		}
 	}
 	if len(cookies) == 0 {
-		return nil, fmt.Errorf("could not find cookie %s", cookieName)
+		return nil, http.ErrNoCookie
 	}
 	return joinCookies(cookies, cookieName)
 }

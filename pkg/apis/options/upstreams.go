@@ -5,10 +5,21 @@ import "time"
 const (
 	// DefaultUpstreamFlushInterval is the default value for the Upstream FlushInterval.
 	DefaultUpstreamFlushInterval = 1 * time.Second
+
+	// DefaultUpstreamTimeout is the maximum duration a network dial to a upstream server for a response.
+	DefaultUpstreamTimeout = 30 * time.Second
 )
 
-// Upstreams is a collection of definitions for upstream servers.
-type Upstreams []Upstream
+// UpstreamConfig is a collection of definitions for upstream servers.
+type UpstreamConfig struct {
+	// ProxyRawPath will pass the raw url path to upstream allowing for url's
+	// like: "/%2F/" which would otherwise be redirected to "/"
+	ProxyRawPath bool `json:"proxyRawPath,omitempty"`
+
+	// Upstreams represents the configuration for the upstream servers.
+	// Requests will be proxied to this upstream if the path matches the request path.
+	Upstreams []Upstream `json:"upstreams,omitempty"`
+}
 
 // Upstream represents the configuration for an upstream server.
 // Requests will be proxied to this upstream if the path matches the request path.
@@ -19,7 +30,21 @@ type Upstream struct {
 
 	// Path is used to map requests to the upstream server.
 	// The closest match will take precedence and all Paths must be unique.
+	// Path can also take a pattern when used with RewriteTarget.
+	// Path segments can be captured and matched using regular experessions.
+	// Eg:
+	// - `^/foo$`: Match only the explicit path `/foo`
+	// - `^/bar/$`: Match any path prefixed with `/bar/`
+	// - `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget
 	Path string `json:"path,omitempty"`
+
+	// RewriteTarget allows users to rewrite the request path before it is sent to
+	// the upstream server.
+	// Use the Path to capture segments for reuse within the rewrite target.
+	// Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite
+	// the request `/baz/abc/123` to `/foo/abc/123` before proxying to the
+	// upstream server.
+	RewriteTarget string `json:"rewriteTarget,omitempty"`
 
 	// The URI of the upstream server. This may be an HTTP(S) server of a File
 	// based URL. It may include a path, in which case all requests will be served
@@ -62,4 +87,8 @@ type Upstream struct {
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
 	ProxyWebSockets *bool `json:"proxyWebSockets,omitempty"`
+
+	// Timeout is the maximum duration the server will wait for a response from the upstream server.
+	// Defaults to 30 seconds.
+	Timeout *Duration `json:"timeout,omitempty"`
 }

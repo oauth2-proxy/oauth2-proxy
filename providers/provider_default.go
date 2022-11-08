@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -33,8 +32,17 @@ var (
 	_ Provider = (*ProviderData)(nil)
 )
 
+// GetLoginURL with typical oauth parameters
+// codeChallenge and codeChallengeMethod are the PKCE challenge and method to append to the URL params.
+// they will be empty strings if no code challenge should be presented
+func (p *ProviderData) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
+	loginURL := makeLoginURL(p, redirectURI, state, extraParams)
+	return loginURL.String()
+}
+
 // Redeem provides a default implementation of the OAuth2 token redemption process
-func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*sessions.SessionState, error) {
+// The codeVerifier is set if a code_verifier parameter should be sent for PKCE
+func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -49,6 +57,9 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*s
 	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}
@@ -78,19 +89,16 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code string) (*s
 	if err != nil {
 		return nil, err
 	}
+	// TODO (@NickMeves): Uses OAuth `expires_in` to set an expiration
 	if token := values.Get("access_token"); token != "" {
-		created := time.Now()
-		return &sessions.SessionState{AccessToken: token, CreatedAt: &created}, nil
+		ss := &sessions.SessionState{
+			AccessToken: token,
+		}
+		ss.CreatedAtNow()
+		return ss, nil
 	}
 
 	return nil, fmt.Errorf("no access token found %s", result.Body())
-}
-
-// GetLoginURL with typical oauth parameters
-func (p *ProviderData) GetLoginURL(redirectURI, state string) string {
-	extraParams := url.Values{}
-	a := makeLoginURL(p, redirectURI, state, extraParams)
-	return a.String()
 }
 
 // GetEmailAddress returns the Account email address
@@ -126,10 +134,9 @@ func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionS
 	return validateToken(ctx, p, s.AccessToken, nil)
 }
 
-// RefreshSessionIfNeeded should refresh the user's session if required and
-// do nothing if a refresh is not required
-func (p *ProviderData) RefreshSessionIfNeeded(_ context.Context, _ *sessions.SessionState) (bool, error) {
-	return false, nil
+// RefreshSession refreshes the user's session
+func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionState) (bool, error) {
+	return false, ErrNotImplemented
 }
 
 // CreateSessionFromToken converts Bearer IDTokens into sessions
