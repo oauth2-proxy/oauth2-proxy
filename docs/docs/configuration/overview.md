@@ -110,7 +110,11 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--force-json-errors` | bool | force JSON errors instead of HTTP error pages or redirects | `false` |
 | `--banner` | string | custom (html) banner string. Use `"-"` to disable default banner. | |
 | `--footer` | string | custom (html) footer string. Use `"-"` to disable default footer. | |
-| `--github-org` | string | restrict logins to members of this organisation | |
+| `--gitea-org` | string | restrict logins to members of this organisation | |
+| `--gitea-team` | string | restrict logins to members of this team, separated by a comma | |
+| `--gitea-repo` | string | restrict logins to collaborators of this repository formatted as `orgname/repo` | |
+| `--gitea-user` | string \| list | To allow users to login by username even if they do not belong to the specified org and team or collaborators | |
+| `--gitea-org` | string | restrict logins to members of this organisation | |
 | `--github-team` | string | restrict logins to members of any of these teams (slug), separated by a comma | |
 | `--github-repo` | string | restrict logins to collaborators of this repository formatted as `orgname/repo` | |
 | `--github-token` | string | the token to use when verifying repository collaborators (must have push access to the repository) | |
