@@ -142,7 +142,7 @@ type KeycloakOptions struct {
 	// Role enables to restrict login to users with role (only available when using the keycloak-oidc provider)
 	Roles []string `json:"roles,omitempty"`
 
-	// URL to call to perform backend logout, `${id_token}` would be replaced by the actual `id_token` if available in the session
+	// URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session
 	BackendLogoutURL string `json:"backendLogoutURL"`
 }
 

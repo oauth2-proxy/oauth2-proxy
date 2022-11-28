@@ -292,7 +292,7 @@ make up the header value
 | ----- | ---- | ----------- |
 | `groups` | _[]string_ | Group enables to restrict login to members of indicated group |
 | `roles` | _[]string_ | Role enables to restrict login to users with role (only available when using the keycloak-oidc provider) |
-| `backendLogoutURL` | _string_ | URL to call to perform backend logout, `${id_token}` would be replaced by the actual `id_token` if available in the session |
+| `backendLogoutURL` | _string_ | URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session |
 
 ### LoginGovOptions
 
