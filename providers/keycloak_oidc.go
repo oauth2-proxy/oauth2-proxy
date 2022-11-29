@@ -107,8 +107,7 @@ type accessClaims struct {
 }
 
 func (p *KeycloakOIDCProvider) getAccessClaims(ctx context.Context, s *sessions.SessionState) (*accessClaims, error) {
-	// HACK: This isn't an ID Token, but has similar structure & signing
-	token, err := p.Verifier.Verify(ctx, s.AccessToken)
+	token, err := p.Verifier.Verify(ctx, s.IDToken)
 	if err != nil {
 		return nil, err
 	}
