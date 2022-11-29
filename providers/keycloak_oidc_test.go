@@ -18,28 +18,28 @@ import (
 )
 
 const (
-	accessTokenHeader    = "ewogICJhbGciOiAiUlMyNTYiLAogICJ0eXAiOiAiSldUIgp9"
-	accessTokenSignature = "dyt0CoTl4WoVjAHI9Q_CwSKhl6d_9rhM3NrXuJttkao"
+	idTokenHeader        = "ewogICJhbGciOiAiUlMyNTYiLAogICJ0eXAiOiAiSldUIgp9"
+	idTokenSignature     = "dyt0CoTl4WoVjAHI9Q_CwSKhl6d_9rhM3NrXuJttkao"
 	defaultAudienceClaim = "aud"
 	mockClientID         = "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"
 )
 
-var accessTokenPayload = base64.StdEncoding.EncodeToString([]byte(
+var idTokenPayload = base64.StdEncoding.EncodeToString([]byte(
 	fmt.Sprintf(`{"%s": "%s", "realm_access": {"roles": ["write"]}, "resource_access": {"default": {"roles": ["read"]}}}`, defaultAudienceClaim, mockClientID)))
 
 type DummyKeySet struct{}
 
 func (DummyKeySet) VerifySignature(_ context.Context, _ string) (payload []byte, err error) {
-	p, _ := base64.RawURLEncoding.DecodeString(accessTokenPayload)
+	p, _ := base64.RawURLEncoding.DecodeString(idTokenPayload)
 	return p, nil
 }
 
-func getAccessToken() string {
-	return fmt.Sprintf("%s.%s.%s", accessTokenHeader, accessTokenPayload, accessTokenSignature)
+func getIdToken() string {
+	return fmt.Sprintf("%s.%s.%s", idTokenHeader, idTokenPayload, idTokenSignature)
 }
 
 func newTestKeycloakOIDCSetup() (*httptest.Server, *KeycloakOIDCProvider) {
-	redeemURL, server := newOIDCServer([]byte(fmt.Sprintf(`{"email": "new@thing.com", "expires_in": 300, "access_token": "%v"}`, getAccessToken())))
+	redeemURL, server := newOIDCServer([]byte(fmt.Sprintf(`{"email": "new@thing.com", "expires_in": 300, "id_token": "%v", "access_token": "%v"}`, getIdToken(), getIdToken())))
 	provider := newKeycloakOIDCProvider(redeemURL, options.Provider{})
 	return server, provider
 }
@@ -134,16 +134,16 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       nil,
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      getIdToken(),
+				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			}
 			expectedSession := &sessions.SessionState{
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       []string{"role:write", "role:default:read"},
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      getIdToken(),
+				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			}
 
@@ -164,16 +164,16 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       []string{"existing", "group"},
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      getIdToken(),
+				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			}
 			expectedSession := &sessions.SessionState{
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       []string{"existing", "group", "role:write", "role:default:read"},
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      getIdToken(),
+				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			}
 
@@ -196,8 +196,8 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 				User:         "already",
 				Email:        "a@b.com",
 				Groups:       nil,
-				IDToken:      idToken,
-				AccessToken:  getAccessToken(),
+				IDToken:      getIdToken(),
+				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			}
 
@@ -219,7 +219,7 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 
 			provider.ProfileURL = url
 
-			session, err := provider.CreateSessionFromToken(context.Background(), getAccessToken())
+			session, err := provider.CreateSessionFromToken(context.Background(), getIdToken())
 			Expect(err).To(BeNil())
 			Expect(session.ExpiresOn).ToNot(BeNil())
 			Expect(session.CreatedAt).ToNot(BeNil())
