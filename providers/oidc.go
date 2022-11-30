@@ -251,7 +251,7 @@ func (p *OIDCProvider) introspectToken(token string) (*simplejson.Json, error) {
 		SetBasicHeader(p.ClientID, p.ClientSecret).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 
 	if err != nil {
 		return nil, err
