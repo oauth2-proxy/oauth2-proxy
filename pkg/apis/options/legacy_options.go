@@ -539,6 +539,9 @@ type LegacyProvider struct {
 func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("provider", pflag.ExitOnError)
 
+	addCredentialsFlag(flagSet)
+	addEndpointsFlag(flagSet)
+
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("azure-graph-group-field", "", "configures the group field to be used when building the groups list(`id` or `displayName`. Default is `id`) from Microsoft Graph(available only for v2.0 oidc url). Based on this value, the `allowed-group` config values should be adjusted accordingly. If using `id` as group field, `allowed-group` should contains groups IDs, if using `displayName` as group field, `allowed-group` should contains groups name")
@@ -554,9 +557,6 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
-	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
-	flagSet.String("client-secret", "", "the OAuth Client Secret")
-	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
@@ -571,12 +571,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
-	flagSet.String("login-url", "", "Authentication endpoint")
-	flagSet.String("redeem-url", "", "Token redemption endpoint")
-	flagSet.String("profile-url", "", "Profile access endpoint")
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
-	flagSet.String("validate-url", "", "Access token validation endpoint")
-	flagSet.String("introspect-url", "", "Access token introspection endpoint")
 	flagSet.Bool("introspect-token", false, "Validate token with token introspection endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("prompt", "", "OIDC prompt")
@@ -594,6 +589,20 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 
 	return flagSet
+}
+
+func addCredentialsFlag(flagSet *pflag.FlagSet) {
+	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
+	flagSet.String("client-secret", "", "the OAuth Client Secret")
+	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
+}
+
+func addEndpointsFlag(flagSet *pflag.FlagSet) {
+	flagSet.String("login-url", "", "Authentication endpoint")
+	flagSet.String("redeem-url", "", "Token redemption endpoint")
+	flagSet.String("profile-url", "", "Profile access endpoint")
+	flagSet.String("validate-url", "", "Access token validation endpoint")
+	flagSet.String("introspect-url", "", "Access token introspection endpoint")
 }
 
 func (l LegacyServer) convert() (Server, Server) {
