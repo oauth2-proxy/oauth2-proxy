@@ -144,6 +144,9 @@ type AzureOptions struct {
 	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
 	// Default value is 'common'
 	Tenant string `json:"tenant,omitempty"`
+	// GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph
+	// Default value is 'id'
+	GraphGroupField string `json:"graphGroupField,omitempty"`
 }
 
 type ADFSOptions struct {

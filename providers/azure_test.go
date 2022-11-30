@@ -55,6 +55,7 @@ func testAzureProvider(hostname string, opts options.AzureOptions) *AzureProvide
 			ProtectedResource: &url.URL{},
 			Scope:             "",
 			EmailClaim:        "email",
+			GroupsClaim:       "groups",
 			Verifier: internaloidc.NewVerifier(oidc.NewVerifier(
 				"https://issuer.example.com",
 				fakeAzureKeySetStub{},
@@ -133,14 +134,9 @@ func TestAzureSetTenant(t *testing.T) {
 	p := testAzureProvider("", options.AzureOptions{Tenant: "example"})
 	assert.Equal(t, "Azure", p.Data().ProviderName)
 	assert.Equal(t, "example", p.Tenant)
-	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/authorize",
-		p.Data().LoginURL.String())
-	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/token",
-		p.Data().RedeemURL.String())
-	assert.Equal(t, "https://graph.microsoft.com/v1.0/me",
-		p.Data().ProfileURL.String())
-	assert.Equal(t, "https://graph.microsoft.com",
-		p.Data().ProtectedResource.String())
+	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/authorize", p.Data().LoginURL.String())
+	assert.Equal(t, "https://login.microsoftonline.com/example/oauth2/token", p.Data().RedeemURL.String())
+	assert.Equal(t, "https://graph.microsoft.com/v1.0/me", p.Data().ProfileURL.String())
 	assert.Equal(t, "https://graph.microsoft.com/v1.0/me", p.Data().ValidateURL.String())
 	assert.Equal(t, "openid", p.Data().Scope)
 }
@@ -151,10 +147,25 @@ func testAzureBackend(payload string, accessToken, refreshToken string) *httptes
 
 func testAzureBackendWithError(payload string, accessToken, refreshToken string, injectError bool) *httptest.Server {
 	path := "/v1.0/me"
+	pathGroups := path + "/transitiveMemberOf/microsoft.graph.group"
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			if (r.URL.Path != path) && r.Method != http.MethodPost {
+			if r.URL.Path == pathGroups && r.Method == http.MethodGet {
+				w.Write([]byte(`{
+					"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups(displayName,id)",
+					"value": [
+						{
+							"displayName": "aa",
+							"id": "11111111-2222-3333-4444-555555555555"
+						},
+						{
+							"displayName": "bb",
+							"id": "555555555555-4444-3333-2222-11111111"
+						}
+					]
+				}`))
+			} else if (r.URL.Path != path) && r.Method != http.MethodPost {
 				w.WriteHeader(404)
 			} else if r.Method == http.MethodPost && r.Body != nil {
 				if injectError {
@@ -183,7 +194,7 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 	}{
 		{
 			Description:             "should return email using mail property from Azure backend",
-			PayloadFromAzureBackend: `{ "mail": "user@windows.net" }`,
+			PayloadFromAzureBackend: `{ "mail": "user@windows.net", "groups": ["aa", "bb"] }`,
 			ExpectedEmail:           "user@windows.net",
 		},
 		{
@@ -199,17 +210,17 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 		{
 			Description:             "should return error when Azure backend doesn't return email information",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": null }`,
-			ExpectedError:           fmt.Errorf("unable to get email address: %v", errors.New("type assertion to string failed")),
+			ExpectedError:           fmt.Errorf("unable to get email address from profile URL: %v", errors.New("empty email address: type assertion to string failed")),
 		},
 		{
 			Description:             "should return specific error when unable to get email",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": [], "userPrincipalName": "" }`,
-			ExpectedError:           errors.New("unable to get email address"),
+			ExpectedError:           errors.New("unable to get email address from profile URL: empty email address: <nil>"),
 		},
 		{
 			Description:             "should return error when otherMails from Azure backend is not a valid type",
 			PayloadFromAzureBackend: `{ "mail": null, "otherMails": "", "userPrincipalName": null }`,
-			ExpectedError:           fmt.Errorf("unable to get email address: %v", errors.New("type assertion to string failed")),
+			ExpectedError:           fmt.Errorf("unable to get email address from profile URL: %v", errors.New("empty email address: type assertion to string failed")),
 		},
 		{
 			Description:   "should not query profile api when email is already set in session",
@@ -224,13 +235,13 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 				b    *httptest.Server
 				host string
 			)
-			if testCase.PayloadFromAzureBackend != "" {
-				b = testAzureBackend(testCase.PayloadFromAzureBackend, authorizedAccessToken, "")
-				defer b.Close()
 
-				bURL, _ := url.Parse(b.URL)
-				host = bURL.Host
-			}
+			b = testAzureBackend(testCase.PayloadFromAzureBackend, authorizedAccessToken, "")
+			defer b.Close()
+
+			bURL, _ := url.Parse(b.URL)
+			host = bURL.Host
+
 			p := testAzureProvider(host, options.AzureOptions{})
 			session := CreateAuthorizedSession()
 			session.Email = testCase.Email
@@ -250,18 +261,21 @@ func TestAzureProviderRedeem(t *testing.T) {
 		EmailFromAccessToken string
 		IsIDTokenMalformed   bool
 		InjectRedeemURLError bool
+		Groups               []string
 	}{
 		{
 			Name:             "with id_token returned",
 			EmailFromIDToken: "foo1@example.com",
 			RefreshToken:     "some_refresh_token",
 			ExpiresOn:        time.Now().Add(time.Hour),
+			Groups:           []string{"aa", "bb"},
 		},
 		{
 			Name:                 "without id_token returned, fallback to access token",
 			EmailFromAccessToken: "foo2@example.com",
 			RefreshToken:         "some_refresh_token",
 			ExpiresOn:            time.Now().Add(time.Hour),
+			Groups:               []string{"aa", "bb"},
 		},
 		{
 			Name:                 "id_token malformed, fallback to access token",
@@ -269,6 +283,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 			RefreshToken:         "some_refresh_token",
 			ExpiresOn:            time.Now().Add(time.Hour),
 			IsIDTokenMalformed:   true,
+			Groups:               []string{"aa", "bb"},
 		},
 		{
 			Name:                 "both id_token and access tokens are valid, return email from id_token",
@@ -276,6 +291,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 			EmailFromAccessToken: "foo3@example.com",
 			RefreshToken:         "some_refresh_token",
 			ExpiresOn:            time.Now().Add(time.Hour),
+			Groups:               []string{"aa", "bb"},
 		},
 		{
 			Name:                 "redeem URL failed, should return error",
@@ -284,6 +300,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 			RefreshToken:         "some_refresh_token",
 			ExpiresOn:            time.Now().Add(time.Hour),
 			InjectRedeemURLError: true,
+			Groups:               []string{"aa", "bb"},
 		},
 	}
 
@@ -295,7 +312,9 @@ func TestAzureProviderRedeem(t *testing.T) {
 				var err error
 				token := idTokenClaims{
 					StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
-					Email:          testCase.EmailFromIDToken}
+					Email:          testCase.EmailFromIDToken,
+					Groups:         []string{"aa", "bb"},
+				}
 				idTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
 			}
@@ -303,7 +322,9 @@ func TestAzureProviderRedeem(t *testing.T) {
 				var err error
 				token := idTokenClaims{
 					StandardClaims: jwt.StandardClaims{Audience: "cd6d4fae-f6a6-4a34-8454-2c6b598e9532"},
-					Email:          testCase.EmailFromAccessToken}
+					Email:          testCase.EmailFromAccessToken,
+					Groups:         []string{"aa", "bb"},
+				}
 				accessTokenString, err = newSignedTestIDToken(token)
 				assert.NoError(t, err)
 			}
@@ -335,6 +356,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 				assert.Equal(t, accessTokenString, s.AccessToken)
 				assert.Equal(t, testCase.ExpiresOn.Unix(), s.ExpiresOn.Unix())
 				assert.Equal(t, testCase.RefreshToken, s.RefreshToken)
+				assert.Equal(t, testCase.Groups, s.Groups)
 				if testCase.EmailFromIDToken != "" {
 					assert.Equal(t, testCase.EmailFromIDToken, s.Email)
 				} else {
@@ -345,11 +367,22 @@ func TestAzureProviderRedeem(t *testing.T) {
 	}
 }
 
-func TestAzureProviderProtectedResourceConfigured(t *testing.T) {
+func TestAzureProviderProtectedResourceConfiguredOAuthV1(t *testing.T) {
 	p := testAzureProvider("", options.AzureOptions{})
 	p.ProtectedResource, _ = url.Parse("http://my.resource.test")
 	result := p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{})
 	assert.Contains(t, result, "resource="+url.QueryEscape("http://my.resource.test"))
+}
+
+func TestAzureProviderProtectedResourceConfiguredOAuthV2(t *testing.T) {
+	p := testAzureProvider("", options.AzureOptions{})
+	testURL := "http://my.resource.test"
+	p.ProtectedResource, _ = url.Parse(testURL)
+	p.isV2Endpoint = true
+	result, _ := url.Parse(p.GetLoginURL("https://my.test.app/oauth", "", "", url.Values{}))
+	parsedQuery, _ := url.ParseQuery(result.RawQuery)
+	assert.NotContains(t, parsedQuery["scope"], " "+testURL)
+	assert.NotContains(t, result.RawQuery, "resource="+url.QueryEscape(testURL))
 }
 
 func TestAzureProviderRefresh(t *testing.T) {

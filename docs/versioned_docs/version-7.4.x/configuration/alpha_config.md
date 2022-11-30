@@ -419,7 +419,6 @@ Provider holds all configuration for a single provider
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
 | `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
-| `introspectURL` | _string_ | IntrospectionURL is the access token introspection endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
 | `code_challenge_method` | _string_ | The code challenge method |

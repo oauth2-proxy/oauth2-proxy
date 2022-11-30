@@ -77,7 +77,7 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 		WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+s.AccessToken).
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 	if err != nil {
 		logger.Errorf("failed making request %v", err)
 		return err
@@ -97,6 +97,20 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 		return fmt.Errorf("unable to extract email from userinfo endpoint: %v", err)
 	}
 	s.Email = email
+
+	preferredUsername, err := json.Get("preferred_username").String()
+	if err == nil {
+		s.PreferredUsername = preferredUsername
+	}
+
+	user, err := json.Get("user").String()
+	if err == nil {
+		s.User = user
+	}
+
+	if s.User == "" && s.PreferredUsername != "" {
+		s.User = s.PreferredUsername
+	}
 
 	return nil
 }
