@@ -285,7 +285,7 @@ func assertSuccessfulRequest(builder func() Builder, expectedRequest testHTTPReq
 
 		BeforeEach(func() {
 			var err error
-			response, err = builder().Do().UnmarshalJSON()
+			response, err = builder().Do().UnmarshalSimpleJSON()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -340,7 +340,7 @@ func assertRequestError(builder func() Builder, errorMessage string) {
 
 	Context("UnmarshalJSON", func() {
 		It("returns an error", func() {
-			resp, err := builder().Do().UnmarshalJSON()
+			resp, err := builder().Do().UnmarshalSimpleJSON()
 			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
 			Expect(resp).To(BeNil())
 		})
@@ -368,7 +368,7 @@ func assertJSONError(builder func() Builder, errorMessage string) {
 
 	Context("UnmarshalJSON", func() {
 		It("returns an error", func() {
-			resp, err := builder().Do().UnmarshalJSON()
+			resp, err := builder().Do().UnmarshalSimpleJSON()
 			Expect(err).To(MatchError(ContainSubstring(errorMessage)))
 			Expect(resp).To(BeNil())
 		})

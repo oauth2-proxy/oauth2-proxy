@@ -186,7 +186,7 @@ func (s *server) Start(ctx context.Context) error {
 // When the given context is cancelled the server will be shutdown.
 // If any errors occur, only the first error will be returned.
 func (s *server) startServer(ctx context.Context, listener net.Listener) error {
-	srv := &http.Server{Handler: s.handler}
+	srv := &http.Server{Handler: s.handler, ReadHeaderTimeout: time.Minute}
 	g, groupCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {

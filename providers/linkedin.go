@@ -90,7 +90,7 @@ func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 		WithContext(ctx).
 		WithHeaders(makeLinkedInHeader(s.AccessToken)).
 		Do().
-		UnmarshalJSON()
+		UnmarshalSimpleJSON()
 	if err != nil {
 		return "", err
 	}

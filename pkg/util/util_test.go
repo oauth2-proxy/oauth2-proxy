@@ -3,7 +3,6 @@ package util
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -183,7 +182,7 @@ WrW4JMzLaGDtoHxRNNfo8E7fGkQ=
 )
 
 func makeTestCertFile(t *testing.T, pem, dir string) *os.File {
-	file, err := ioutil.TempFile(dir, "test-certfile")
+	file, err := os.CreateTemp(dir, "test-certfile")
 	assert.NoError(t, err)
 	_, err = file.Write([]byte(pem))
 	assert.NoError(t, err)
@@ -196,7 +195,7 @@ func TestGetCertPool_NoRoots(t *testing.T) {
 }
 
 func TestGetCertPool(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "certtest")
+	tempDir, err := os.MkdirTemp("", "certtest")
 	assert.NoError(t, err)
 	defer func(path string) {
 		rerr := os.RemoveAll(path)

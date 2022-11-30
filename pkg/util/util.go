@@ -6,10 +6,10 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -21,7 +21,7 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 	pool := x509.NewCertPool()
 	for _, path := range paths {
 		// Cert paths are a configurable option
-		data, err := ioutil.ReadFile(path) // #nosec G304
+		data, err := os.ReadFile(path) // #nosec G304
 		if err != nil {
 			return nil, fmt.Errorf("certificate authority file (%s) could not be read - %s", path, err)
 		}
@@ -148,4 +148,17 @@ func isHostnameAllowed(hostname, allowedHost string) bool {
 	}
 
 	return false
+}
+
+// RemoveDuplicateStr removes duplicates from a slice of strings.
+func RemoveDuplicateStr(strSlice []string) []string {
+	allKeys := make(map[string]struct{})
+	var list []string
+	for _, item := range strSlice {
+		if _, ok := allKeys[item]; !ok {
+			allKeys[item] = struct{}{}
+			list = append(list, item)
+		}
+	}
+	return list
 }
