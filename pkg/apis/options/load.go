@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/drone/envsubst"
 	"github.com/ghodss/yaml"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/pflag"
@@ -140,10 +141,6 @@ func isUnexported(name string) bool {
 
 // LoadYAML will load a YAML based configuration file into the options interface provided.
 func LoadYAML(configFileName string, into interface{}) error {
-	v := viper.New()
-	v.SetConfigFile(configFileName)
-	v.SetConfigType("yaml")
-	v.SetTypeByDefaultValue(true)
 
 	if configFileName == "" {
 		return errors.New("no configuration file provided")
@@ -153,6 +150,14 @@ func LoadYAML(configFileName string, into interface{}) error {
 	if err != nil {
 		return fmt.Errorf("unable to load config file: %w", err)
 	}
+
+	// We now parse over the yaml with env substring, and fill in the ENV's
+	datastring, err := envsubst.EvalEnv(string(data))
+	if err != nil {
+		return fmt.Errorf("error in substituting env variables : %w", err)
+	}
+
+	data = []byte(datastring)
 
 	// UnmarshalStrict will return an error if the config includes options that are
 	// not mapped to felds of the into struct

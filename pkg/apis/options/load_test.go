@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -542,3 +543,63 @@ injectResponseHeaders:
 		}))
 	})
 })
+
+func TestLoadYAML(t *testing.T) {
+	type config struct {
+		Name string
+		Age  int
+	}
+
+	// Test case: config file is empty
+	if err := LoadYAML("", &config{}); err == nil {
+		t.Errorf("LoadYAML() should return error if no configuration file provided")
+	}
+
+	// Test case: config file does not exist
+	if err := LoadYAML("non-existent-file.yml", &config{}); err == nil {
+		t.Errorf("LoadYAML() should return error if config file does not exist")
+	}
+
+	// Test case: config file is valid YAML but contains unknown fields
+	os.WriteFile("config.yml", []byte("name: Alice\nage: 10\nunknown: field"), 0644)
+	if err := LoadYAML("config.yml", &config{}); err == nil {
+		t.Errorf("LoadYAML() should return error if config file contains unknown fields")
+	}
+	os.Remove("config.yml")
+
+	// Test case: config file is valid YAML and maps to provided options
+	os.WriteFile("config.yml", []byte("name: Bob\nage: 20"), 0644)
+	options := &config{}
+	if err := LoadYAML("config.yml", options); err != nil {
+		t.Errorf("LoadYAML() returned unexpected error: %v", err)
+	}
+	if options.Name != "Bob" || options.Age != 20 {
+		t.Errorf("LoadYAML() did not load expected values: %v", options)
+	}
+	os.Remove("config.yml")
+
+	// Test case: config file contains environment variable references
+	os.Setenv("USER", "Alice")
+	os.WriteFile("config.yml", []byte("name: ${USER}"), 0644)
+	options = &config{}
+	if err := LoadYAML("config.yml", options); err != nil {
+		t.Errorf("LoadYAML() returned unexpected error: %v", err)
+	}
+	if options.Name != "Alice" {
+		t.Errorf("LoadYAML() did not substitute environment variable references: %v", options)
+	}
+	os.Remove("config.yml")
+	os.Unsetenv("USER")
+
+	// Test case: config file contains environment variable references, with a fallback value
+	os.WriteFile("config.yml", []byte("name: ${USER=Alice}"), 0644)
+	options = &config{}
+	if err := LoadYAML("config.yml", options); err != nil {
+		t.Errorf("LoadYAML() returned unexpected error: %v", err)
+	}
+	if options.Name != "Alice" {
+		t.Errorf("LoadYAML() did not fallback to default env value: %v", options)
+	}
+	os.Remove("config.yml")
+
+}
