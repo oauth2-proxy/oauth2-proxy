@@ -3,6 +3,8 @@ package pagewriter
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/tenant/types"
 )
 
 // Writer is an interface for rendering html templates for both sign-in and
@@ -10,7 +12,7 @@ import (
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
 type Writer interface {
-	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
+	WriteSignInPage(rw http.ResponseWriter, req *http.Request, tnt *types.Tenant, redirectURL string, statusCode int)
 	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
@@ -46,9 +48,6 @@ type Opts struct {
 	// DisplayLoginForm determines whether or not the basic auth password form is displayed on the sign-in page.
 	DisplayLoginForm bool
 
-	// ProviderName is the name of the provider that should be displayed on the login button.
-	ProviderName string
-
 	// SignInMessage is the messge displayed above the login button.
 	SignInMessage string
 
@@ -83,7 +82,6 @@ func NewWriter(opts Opts) (Writer, error) {
 		template:         templates.Lookup("sign_in.html"),
 		errorPageWriter:  errorPage,
 		proxyPrefix:      opts.ProxyPrefix,
-		providerName:     opts.ProviderName,
 		signInMessage:    opts.SignInMessage,
 		footer:           opts.Footer,
 		version:          opts.Version,

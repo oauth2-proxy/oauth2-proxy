@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -16,7 +16,7 @@ type KeycloakOIDCProvider struct {
 }
 
 // NewKeycloakOIDCProvider makes a KeycloakOIDCProvider using the ProviderData
-func NewKeycloakOIDCProvider(p *ProviderData, opts options.KeycloakOptions) *KeycloakOIDCProvider {
+func NewKeycloakOIDCProvider(p *ProviderData, opts provideropts.KeycloakOptions) *KeycloakOIDCProvider {
 	p.setProviderDefaults(providerDefaults{
 		name: keycloakOIDCProviderName,
 	})

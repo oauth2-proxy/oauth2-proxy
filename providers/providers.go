@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
@@ -20,7 +20,7 @@ const (
 // Provider represents an upstream identity provider implementation
 type Provider interface {
 	Data() *ProviderData
-	GetLoginURL(redirectURI, finalRedirect, nonce string, extraParams url.Values) string
+	GetLoginURL(redirectURI, state, nonce string, extraParams url.Values) string
 	Redeem(ctx context.Context, redirectURI, code, codeVerifier string) (*sessions.SessionState, error)
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
@@ -31,46 +31,46 @@ type Provider interface {
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
 }
 
-func NewProvider(providerConfig options.Provider) (Provider, error) {
+func NewProvider(providerConfig provideropts.Provider) (Provider, error) {
 	providerData, err := newProviderDataFromConfig(providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
 	}
 	switch providerConfig.Type {
-	case options.ADFSProvider:
+	case provideropts.ADFSProvider:
 		return NewADFSProvider(providerData, providerConfig.ADFSConfig), nil
-	case options.AzureProvider:
+	case provideropts.AzureProvider:
 		return NewAzureProvider(providerData, providerConfig.AzureConfig), nil
-	case options.BitbucketProvider:
+	case provideropts.BitbucketProvider:
 		return NewBitbucketProvider(providerData, providerConfig.BitbucketConfig), nil
-	case options.DigitalOceanProvider:
+	case provideropts.DigitalOceanProvider:
 		return NewDigitalOceanProvider(providerData), nil
-	case options.FacebookProvider:
+	case provideropts.FacebookProvider:
 		return NewFacebookProvider(providerData), nil
-	case options.GitHubProvider:
+	case provideropts.GitHubProvider:
 		return NewGitHubProvider(providerData, providerConfig.GitHubConfig), nil
-	case options.GitLabProvider:
+	case provideropts.GitLabProvider:
 		return NewGitLabProvider(providerData, providerConfig.GitLabConfig)
-	case options.GoogleProvider:
+	case provideropts.GoogleProvider:
 		return NewGoogleProvider(providerData, providerConfig.GoogleConfig)
-	case options.KeycloakProvider:
+	case provideropts.KeycloakProvider:
 		return NewKeycloakProvider(providerData, providerConfig.KeycloakConfig), nil
-	case options.KeycloakOIDCProvider:
+	case provideropts.KeycloakOIDCProvider:
 		return NewKeycloakOIDCProvider(providerData, providerConfig.KeycloakConfig), nil
-	case options.LinkedInProvider:
+	case provideropts.LinkedInProvider:
 		return NewLinkedInProvider(providerData), nil
-	case options.LoginGovProvider:
+	case provideropts.LoginGovProvider:
 		return NewLoginGovProvider(providerData, providerConfig.LoginGovConfig)
-	case options.NextCloudProvider:
+	case provideropts.NextCloudProvider:
 		return NewNextcloudProvider(providerData), nil
-	case options.OIDCProvider:
+	case provideropts.OIDCProvider:
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
 }
 
-func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
+func newProviderDataFromConfig(providerConfig provideropts.Provider) (*ProviderData, error) {
 	p := &ProviderData{
 		Scope:            providerConfig.Scope,
 		ClientID:         providerConfig.ClientID,
@@ -151,8 +151,8 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option
-	if providerConfig.OIDCConfig.EmailClaim == options.OIDCEmailClaim &&
-		providerConfig.OIDCConfig.UserIDClaim != options.OIDCEmailClaim {
+	if providerConfig.OIDCConfig.EmailClaim == provideropts.OIDCEmailClaim &&
+		providerConfig.OIDCConfig.UserIDClaim != provideropts.OIDCEmailClaim {
 		p.EmailClaim = providerConfig.OIDCConfig.UserIDClaim
 	}
 
@@ -172,7 +172,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 // Pick the most appropriate code challenge method for PKCE
 // At this time we do not consider what the server supports to be safe and
 // only enable PKCE if the user opts-in
-func parseCodeChallengeMethod(providerConfig options.Provider) string {
+func parseCodeChallengeMethod(providerConfig provideropts.Provider) string {
 	switch {
 	case providerConfig.CodeChallengeMethod != "":
 		return providerConfig.CodeChallengeMethod
@@ -181,12 +181,12 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 	}
 }
 
-func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
+func providerRequiresOIDCProviderVerifier(providerType provideropts.ProviderType) (bool, error) {
 	switch providerType {
-	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
-		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider, options.NextCloudProvider:
+	case provideropts.BitbucketProvider, provideropts.DigitalOceanProvider, provideropts.FacebookProvider, provideropts.GitHubProvider,
+		provideropts.GoogleProvider, provideropts.KeycloakProvider, provideropts.LinkedInProvider, provideropts.LoginGovProvider, provideropts.NextCloudProvider:
 		return false, nil
-	case options.ADFSProvider, options.AzureProvider, options.GitLabProvider, options.KeycloakOIDCProvider, options.OIDCProvider:
+	case provideropts.ADFSProvider, provideropts.AzureProvider, provideropts.GitLabProvider, provideropts.KeycloakOIDCProvider, provideropts.OIDCProvider:
 		return true, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)

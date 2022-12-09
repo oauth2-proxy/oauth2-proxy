@@ -7,7 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/loginurlopts"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/tenant"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/tenant/single"
 	"github.com/spf13/pflag"
 )
 
@@ -92,6 +96,14 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 		return nil, fmt.Errorf("error converting provider: %v", err)
 	}
 	l.Options.Providers = providers
+
+	// in case of legacy options, we initilize single tenant implementation of tenant loader
+	l.Options.TenantLoader = tenant.LoaderConfiguration{
+		Type: "single",
+		Single: &single.Configuration{
+			Provider: &providers[0],
+		},
+	}
 
 	return &l.Options, nil
 }
@@ -565,9 +577,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("insecure-oidc-skip-nonce", true, "skip verifying the OIDC ID Token's nonce claim")
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
-	flagSet.String("oidc-groups-claim", OIDCGroupsClaim, "which OIDC claim contains the user groups")
-	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
-	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
+	flagSet.String("oidc-groups-claim", provideropts.OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-email-claim", provideropts.OIDCEmailClaim, "which OIDC claim contains the user's email")
+	flagSet.StringSlice("oidc-audience-claim", provideropts.OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
@@ -585,7 +597,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
 	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
 
-	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
+	flagSet.String("user-id-claim", provideropts.OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 
@@ -636,14 +648,14 @@ func (l LegacyServer) convert() (Server, Server) {
 	return appServer, metricsServer
 }
 
-func (l *LegacyProvider) convert() (Providers, error) {
-	providers := Providers{}
+func (l *LegacyProvider) convert() (provideropts.Providers, error) {
+	providers := provideropts.Providers{}
 
-	provider := Provider{
+	provider := provideropts.Provider{
 		ClientID:            l.ClientID,
 		ClientSecret:        l.ClientSecret,
 		ClientSecretFile:    l.ClientSecretFile,
-		Type:                ProviderType(l.ProviderType),
+		Type:                provideropts.ProviderType(l.ProviderType),
 		CAFiles:             l.ProviderCAFiles,
 		LoginURL:            l.LoginURL,
 		RedeemURL:           l.RedeemURL,
@@ -656,7 +668,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	}
 
 	// This part is out of the switch section for all providers that support OIDC
-	provider.OIDCConfig = OIDCOptions{
+	provider.OIDCConfig = provideropts.OIDCOptions{
 		IssuerURL:                      l.OIDCIssuerURL,
 		InsecureAllowUnverifiedEmail:   l.InsecureOIDCAllowUnverifiedEmail,
 		InsecureSkipIssuerVerification: l.InsecureOIDCSkipIssuerVerification,
@@ -677,14 +689,14 @@ func (l *LegacyProvider) convert() (Providers, error) {
 
 	// This part is out of the switch section because azure has a default tenant
 	// that needs to be added from legacy options
-	provider.AzureConfig = AzureOptions{
+	provider.AzureConfig = provideropts.AzureOptions{
 		Tenant:          l.AzureTenant,
 		GraphGroupField: l.AzureGraphGroupField,
 	}
 
 	switch provider.Type {
 	case "github":
-		provider.GitHubConfig = GitHubOptions{
+		provider.GitHubConfig = provideropts.GitHubOptions{
 			Org:   l.GitHubOrg,
 			Team:  l.GitHubTeam,
 			Repo:  l.GitHubRepo,
@@ -692,32 +704,32 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Users: l.GitHubUsers,
 		}
 	case "keycloak-oidc":
-		provider.KeycloakConfig = KeycloakOptions{
+		provider.KeycloakConfig = provideropts.KeycloakOptions{
 			Groups: l.KeycloakGroups,
 			Roles:  l.AllowedRoles,
 		}
 	case "keycloak":
-		provider.KeycloakConfig = KeycloakOptions{
+		provider.KeycloakConfig = provideropts.KeycloakOptions{
 			Groups: l.KeycloakGroups,
 		}
 	case "gitlab":
-		provider.GitLabConfig = GitLabOptions{
+		provider.GitLabConfig = provideropts.GitLabOptions{
 			Group:    l.GitLabGroup,
 			Projects: l.GitLabProjects,
 		}
 	case "login.gov":
-		provider.LoginGovConfig = LoginGovOptions{
+		provider.LoginGovConfig = provideropts.LoginGovOptions{
 			JWTKey:     l.JWTKey,
 			JWTKeyFile: l.JWTKeyFile,
 			PubJWKURL:  l.PubJWKURL,
 		}
 	case "bitbucket":
-		provider.BitbucketConfig = BitbucketOptions{
+		provider.BitbucketConfig = provideropts.BitbucketOptions{
 			Team:       l.BitbucketTeam,
 			Repository: l.BitbucketRepository,
 		}
 	case "google":
-		provider.GoogleConfig = GoogleOptions{
+		provider.GoogleConfig = provideropts.GoogleOptions{
 			Groups:             l.GoogleGroups,
 			AdminEmail:         l.GoogleAdminEmail,
 			ServiceAccountJSON: l.GoogleServiceAccountJSON,
@@ -732,19 +744,19 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	}
 
 	// handle AcrValues, Prompt and ApprovalPrompt
-	var urlParams []LoginURLParameter
+	var urlParams []loginurlopts.LoginURLParameter
 	if l.AcrValues != "" {
-		urlParams = append(urlParams, LoginURLParameter{Name: "acr_values", Default: []string{l.AcrValues}})
+		urlParams = append(urlParams, loginurlopts.LoginURLParameter{Name: "acr_values", Default: []string{l.AcrValues}})
 	}
 	switch {
 	case l.Prompt != "":
-		urlParams = append(urlParams, LoginURLParameter{Name: "prompt", Default: []string{l.Prompt}})
+		urlParams = append(urlParams, loginurlopts.LoginURLParameter{Name: "prompt", Default: []string{l.Prompt}})
 	case l.ApprovalPrompt != "":
-		urlParams = append(urlParams, LoginURLParameter{Name: "approval_prompt", Default: []string{l.ApprovalPrompt}})
+		urlParams = append(urlParams, loginurlopts.LoginURLParameter{Name: "approval_prompt", Default: []string{l.ApprovalPrompt}})
 	default:
 		// match legacy behaviour by default - if neither prompt nor approval_prompt
 		// specified, use approval_prompt=force
-		urlParams = append(urlParams, LoginURLParameter{Name: "approval_prompt", Default: []string{"force"}})
+		urlParams = append(urlParams, loginurlopts.LoginURLParameter{Name: "approval_prompt", Default: []string{"force"}})
 	}
 
 	provider.LoginURLParameters = urlParams

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
 )
 
 // validateProviders is the initial validation migration for multiple providrers
@@ -29,7 +30,7 @@ func validateProviders(o *options.Options) []string {
 	return msgs
 }
 
-func validateProvider(provider options.Provider, providerIDs map[string]struct{}) []string {
+func validateProvider(provider provideropts.Provider, providerIDs map[string]struct{}) []string {
 	msgs := []string{}
 
 	if provider.ID == "" {
@@ -64,7 +65,7 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 	return msgs
 }
 
-func validateGoogleConfig(provider options.Provider) []string {
+func validateGoogleConfig(provider provideropts.Provider) []string {
 	msgs := []string{}
 	if len(provider.GoogleConfig.Groups) > 0 ||
 		provider.GoogleConfig.AdminEmail != "" ||

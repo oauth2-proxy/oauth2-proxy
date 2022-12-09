@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -63,7 +63,7 @@ var (
 )
 
 // NewGitHubProvider initiates a new GitHubProvider
-func NewGitHubProvider(p *ProviderData, opts options.GitHubOptions) *GitHubProvider {
+func NewGitHubProvider(p *ProviderData, opts provideropts.GitHubOptions) *GitHubProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        githubProviderName,
 		loginURL:    githubDefaultLoginURL,

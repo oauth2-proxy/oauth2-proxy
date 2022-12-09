@@ -15,6 +15,7 @@ import (
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/tenant/types"
 )
 
 //go:embed default_logo.svg
@@ -30,9 +31,6 @@ type signInPageWriter struct {
 
 	// ProxyPrefix is the prefix under which OAuth2 Proxy pages are served.
 	proxyPrefix string
-
-	// ProviderName is the name of the provider that should be displayed on the login button.
-	providerName string
 
 	// SignInMessage is the messge displayed above the login button.
 	signInMessage string
@@ -54,7 +52,7 @@ type signInPageWriter struct {
 
 // WriteSignInPage writes the sign-in page to the given response writer.
 // It uses the redirectURL to be able to set the final destination for the user post login.
-func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
+func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, tnt *types.Tenant, redirectURL string, statusCode int) {
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	t := struct {
@@ -68,7 +66,7 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		Footer        template.HTML
 		LogoData      template.HTML
 	}{
-		ProviderName:  s.providerName,
+		ProviderName:  tnt.Provider.Data().ProviderName,
 		SignInMessage: template.HTML(s.signInMessage),
 		StatusCode:    statusCode,
 		CustomLogin:   s.displayLoginForm,

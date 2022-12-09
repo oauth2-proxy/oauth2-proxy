@@ -11,7 +11,8 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/loginurlopts"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
@@ -107,7 +108,7 @@ func (p *ProviderData) LoginURLParams(overrides url.Values) url.Values {
 
 // Compile the given set of LoginURLParameter options into the internal defaults
 // and regular expressions used to validate any overrides.
-func (p *ProviderData) compileLoginParams(paramConfig []options.LoginURLParameter) []error {
+func (p *ProviderData) compileLoginParams(paramConfig []loginurlopts.LoginURLParameter) []error {
 	var errs []error
 	p.loginURLParameterDefaults = url.Values{}
 	p.loginURLParameterOverrides = make(map[string]*regexp.Regexp)
@@ -131,7 +132,7 @@ func (p *ProviderData) compileLoginParams(paramConfig []options.LoginURLParamete
 
 // Converts the list of allow rules for the given parameter into a regexp
 // and store it for use at runtime when validating overrides of that parameter.
-func (p *ProviderData) convertAllowRules(errs []error, param options.LoginURLParameter) []error {
+func (p *ProviderData) convertAllowRules(errs []error, param loginurlopts.LoginURLParameter) []error {
 	var allowREs []string
 	for idx, rule := range param.Allow {
 		if (rule.Value == nil) == (rule.Pattern == nil) {
@@ -158,7 +159,7 @@ func (p *ProviderData) seenParameter(name string) bool {
 // Generate a validating regular expression pattern for a given URLParameterRule.
 // If the rule is for a fixed value then returns a regexp that matches exactly
 // that value, if the rule is itself a regexp just use that as-is.
-func regexpForRule(rule options.URLParameterRule) string {
+func regexpForRule(rule loginurlopts.URLParameterRule) string {
 	if rule.Value != nil {
 		// convert literal value into an equivalent regexp,
 		// anchored at start and end
@@ -265,7 +266,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
-	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
+	verifyEmail := (p.EmailClaim == provideropts.OIDCEmailClaim) && !p.AllowUnverifiedEmail
 
 	if verifyEmail {
 		var verified bool
