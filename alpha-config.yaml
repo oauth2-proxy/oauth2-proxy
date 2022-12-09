@@ -1,0 +1,94 @@
+injectRequestHeaders:
+- name: X-Forwarded-Groups
+  values:
+  - claim: groups
+- name: X-Forwarded-User
+  values:
+  - claim: user
+- name: X-Forwarded-Email
+  values:
+  - claim: email
+- name: X-Forwarded-Preferred-Username
+  values:
+  - claim: preferred_username
+- name: X-Forwarded-Access-Token
+  values:
+  - claim: access_token
+- name: Authorization
+  values:
+  - claim: id_token
+    prefix: 'Bearer '
+injectResponseHeaders:
+- name: X-Auth-Request-User
+  values:
+  - claim: user
+- name: X-Auth-Request-Email
+  values:
+  - claim: email
+- name: X-Auth-Request-Preferred-Username
+  values:
+  - claim: preferred_username
+- name: X-Auth-Request-Groups
+  values:
+  - claim: groups
+- name: X-Auth-Request-Access-Token
+  values:
+  - claim: access_token
+- name: Authorization
+  values:
+  - claim: id_token
+    prefix: 'Bearer '
+metricsServer:
+  BindAddress: ""
+  SecureBindAddress: ""
+  TLS: null
+providers:
+- ADFSConfig: {}
+  azureConfig:
+    tenant: common
+  bitbucketConfig: {}
+  clientID: myapp
+  clientSecret: XFMnngiW2HfeALxInpnJn927cFh4pAE2
+  githubConfig: {}
+  gitlabConfig: {}
+  googleConfig: {}
+  id: oidc=myapp
+  keycloakConfig: {}
+  loginGovConfig: {}
+  loginURL: http://localhost:8080/auth/realms/tenant1/protocol/openid-connect/auth
+  loginURLParameters:
+  - default:
+    - force
+    name: approval_prompt
+  oidcConfig:
+    audienceClaims:
+    - aud
+    emailClaim: email
+    groupsClaim: groups
+    insecureAllowUnverifiedEmail: true
+    insecureSkipIssuerVerification: true
+    insecureSkipNonce: true
+    issuerURL: http://localhost:8080/auth/realms/tenant1
+    jwksURL: http://localhost:8080/auth/realms/tenant1/protocol/openid-connect/certs
+    skipDiscovery: true
+    userIDClaim: email
+  provider: oidc
+  redeemURL: http://localhost:8080/auth/realms/tenant1/protocol/openid-connect/token
+server:
+  BindAddress: 0.0.0.0:4180
+  SecureBindAddress: ""
+  TLS: null
+upstreamConfig: {}
+tenantLoader:
+  type: "config"
+  config:
+    tenantsFile: "tenants.yaml"
+    rules:
+      - source: "header"
+        header: "Tenantid"
+        expr: (^[^\.]*) # matches everything before the first '.', so gets 'www' out from 'www.google.com'
+        captureGroup: 1
+      - source: "host"
+        expr: (^[^\.]*) # matches everything before the first '.', so gets 'www' out from 'www.google.com'
+        captureGroup: 1
+

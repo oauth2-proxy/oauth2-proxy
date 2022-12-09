@@ -1,0 +1,101 @@
+tenants:
+- id: "iis200"
+  provider:
+    type: "oidc"
+    clientID: myapp
+    clientSecret: "dfghjredsmnc"
+    id: oidc=myapp
+    loginURL: https://sso.dev.intechmyapp.com/auth/realms/iis200/protocol/openid-connect/auth
+    loginURLParameters:
+    - default:
+      - force
+      name: approval_prompt
+    oidcConfig:
+      audienceClaims:
+      - aud
+      emailClaim: email
+      groupsClaim: groups
+      insecureAllowUnverifiedEmail: true
+      insecureSkipIssuerVerification: true
+      insecureSkipNonce: true
+      issuerURL: https://sso.dev.intechmyapp.com/auth/realms/iis200
+      jwksURL: https://sso.dev.intechmyapp.com/auth/realms/iis200/protocol/openid-connect/certs
+      skipDiscovery: true
+      userIDClaim: email
+    provider: oidc
+    redeemURL: https://sso.dev.intechmyapp.com/auth/realms/iis200/protocol/openid-connect/token
+- id: "demo110"
+  provider:
+    type: "oidc"
+    clientID: myapp
+    clientSecret: "dfghjredsmnc"
+    id: oidc=myapp
+    loginURL: https://sso.dev.intechmyapp.com/auth/realms/demo110/protocol/openid-connect/auth
+    loginURLParameters:
+    - default:
+      - force
+      name: approval_prompt
+    oidcConfig:
+      audienceClaims:
+      - aud
+      emailClaim: email
+      groupsClaim: groups
+      insecureAllowUnverifiedEmail: true
+      insecureSkipIssuerVerification: true
+      insecureSkipNonce: true
+      issuerURL: https://sso.dev.intechmyapp.com/auth/realms/demo110
+      jwksURL: https://sso.dev.intechmyapp.com/auth/realms/demo110/protocol/openid-connect/certs
+      skipDiscovery: true
+      userIDClaim: email
+    provider: oidc
+    redeemURL: https://sso.dev.intechmyapp.com/auth/realms/demo110/protocol/openid-connect/token
+- id: "demo8"
+  provider:
+    type: "oidc"
+    clientID: myapp
+    clientSecret: "dfghjredsmnc"
+    id: oidc=myapp
+    loginURL: https://sso.dev.intechmyapp.com/auth/realms/demo8/protocol/openid-connect/auth
+    loginURLParameters:
+    - default:
+      - force
+      name: approval_prompt
+    oidcConfig:
+      audienceClaims:
+      - aud
+      emailClaim: email
+      groupsClaim: groups
+      insecureAllowUnverifiedEmail: true
+      insecureSkipIssuerVerification: true
+      insecureSkipNonce: true
+      issuerURL: https://sso.dev.intechmyapp.com/auth/realms/demo8
+      jwksURL: https://sso.dev.intechmyapp.com/auth/realms/demo8/protocol/openid-connect/certs
+      skipDiscovery: true
+      userIDClaim: email
+    provider: oidc
+    redeemURL: https://sso.dev.intechmyapp.com/auth/realms/demo8/protocol/openid-connect/token
+- id: "zeecomo1000"
+  provider:
+    type: "oidc"
+    clientID: myapp
+    clientSecret: "dfghjredsmnc"
+    id: oidc=myapp
+    loginURL: https://sso.dev.intechmyapp.com/auth/realms/zeecomo1000/protocol/openid-connect/auth
+    loginURLParameters:
+    - default:
+      - force
+      name: approval_prompt
+    oidcConfig:
+      audienceClaims:
+      - aud
+      emailClaim: email
+      groupsClaim: groups
+      insecureAllowUnverifiedEmail: true
+      insecureSkipIssuerVerification: true
+      insecureSkipNonce: true
+      issuerURL: https://sso.dev.intechmyapp.com/auth/realms/zeecomo1000
+      jwksURL: https://sso.dev.intechmyapp.com/auth/realms/zeecomo1000/protocol/openid-connect/certs
+      skipDiscovery: true
+      userIDClaim: email
+    provider: oidc
+    redeemURL: https://sso.dev.intechmyapp.com/auth/realms/zeecomo1000/protocol/openid-connect/token
