@@ -156,7 +156,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		p.EmailClaim = providerConfig.OIDCConfig.UserIDClaim
 	}
 
-	if providerConfig.Type == "oidc" && p.Scope == "" {
+	if p.ProviderName == "oidc" && p.Scope == "" {
 		p.Scope = "openid email profile"
 
 		if len(providerConfig.AllowedGroups) > 0 {
