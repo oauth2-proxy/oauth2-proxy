@@ -123,6 +123,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	provider, err := providers.NewProvider(opts.Providers[0])
+	logger.Printf("Scopes after provider creation: %s", provider.Data().Scope)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising provider: %v", err)
 	}
@@ -777,6 +778,8 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	}
 
 	callbackRedirect := p.getOAuthRedirectURI(req)
+	logger.Printf("Provider name: %s", p.provider.Data().ProviderName)
+	logger.Printf("Scope before login: %s", p.provider.Data().Scope)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
 		encodeState(csrf.HashOAuthState(), appRedirect),

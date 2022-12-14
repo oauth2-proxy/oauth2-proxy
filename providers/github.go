@@ -31,7 +31,7 @@ var _ Provider = (*GitHubProvider)(nil)
 
 const (
 	githubProviderName = "GitHub"
-	githubDefaultScope = "user:email"
+	githubDefaultScope = "user:email read:org"
 )
 
 var (
@@ -93,9 +93,6 @@ func makeGitHubHeader(accessToken string) http.Header {
 func (p *GitHubProvider) setOrgTeam(org, team string) {
 	p.Org = org
 	p.Team = team
-	if org != "" || team != "" {
-		p.Scope += " read:org"
-	}
 }
 
 // setRepo configures the target repository and optional token to use
@@ -111,10 +108,50 @@ func (p *GitHubProvider) setUsers(users []string) {
 
 // EnrichSession updates the User & Email after the initial Redeem
 func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	err := p.getEmail(ctx, s)
+	// Construct user info JSON from multiple GitHub API endpoints to have a more detailed session state
+	err := p.getOrgAndTeam(ctx, s)
 	if err != nil {
 		return err
 	}
+
+	// If usernames are set, check that first
+	verifiedUser := false
+	if len(p.Users) > 0 {
+		var err error
+		verifiedUser, err = p.hasUser(ctx, s.AccessToken)
+		if err != nil {
+			return err
+		}
+		// org and repository options are not configured
+		if !verifiedUser && p.Org == "" && p.Repo == "" {
+			return errors.New("missing github user")
+		}
+	}
+
+	if !verifiedUser {
+		// If a user is verified by username options, skip the following restrictions
+		if p.Org != "" {
+			if p.Team != "" {
+				if ok := p.hasOrgAndTeam(ctx, s); !ok {
+					return err
+				}
+			} else {
+				if ok := p.hasOrg(ctx, s); !ok {
+					return err
+				}
+			}
+		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
+			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
+				return err
+			}
+		}
+	}
+
+	err = p.getEmail(ctx, s)
+	if err != nil {
+		return err
+	}
+
 	return p.getUser(ctx, s)
 }
 
@@ -123,165 +160,61 @@ func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.Sessio
 	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
 }
 
-func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, error) {
+func (p *GitHubProvider) hasOrg(ctx context.Context, s *sessions.SessionState) bool {
 	// https://developer.github.com/v3/orgs/#list-your-organizations
+	var orgs []string
 
-	var orgs []struct {
-		Login string `json:"login"`
-	}
-
-	type orgsPage []struct {
-		Login string `json:"login"`
-	}
-
-	pn := 1
-	for {
-		params := url.Values{
-			"per_page": {"100"},
-			"page":     {strconv.Itoa(pn)},
+	for _, group := range s.Groups {
+		if !strings.Contains(group, ":") {
+			orgs = append(orgs, group)
 		}
-
-		endpoint := &url.URL{
-			Scheme:   p.ValidateURL.Scheme,
-			Host:     p.ValidateURL.Host,
-			Path:     path.Join(p.ValidateURL.Path, "/user/orgs"),
-			RawQuery: params.Encode(),
-		}
-
-		var op orgsPage
-		err := requests.New(endpoint.String()).
-			WithContext(ctx).
-			WithHeaders(makeGitHubHeader(accessToken)).
-			Do().
-			UnmarshalInto(&op)
-		if err != nil {
-			return false, err
-		}
-
-		if len(op) == 0 {
-			break
-		}
-
-		orgs = append(orgs, op...)
-		pn++
 	}
 
 	presentOrgs := make([]string, 0, len(orgs))
 	for _, org := range orgs {
-		if p.Org == org.Login {
-			logger.Printf("Found Github Organization: %q", org.Login)
-			return true, nil
+		if p.Org == org {
+			logger.Printf("Found Github Organization: %q", org)
+			return true
 		}
-		presentOrgs = append(presentOrgs, org.Login)
+		presentOrgs = append(presentOrgs, org)
 	}
 
 	logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
-	return false, nil
+	return false
 }
 
-func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) (bool, error) {
-	// https://developer.github.com/v3/orgs/teams/#list-user-teams
-
-	var teams []struct {
-		Name string `json:"name"`
-		Slug string `json:"slug"`
-		Org  struct {
-			Login string `json:"login"`
-		} `json:"organization"`
+func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionState) bool {
+	type orgTeam struct {
+		Org  string `json:"org"`
+		Team string `json:"team"`
 	}
 
-	type teamsPage []struct {
-		Name string `json:"name"`
-		Slug string `json:"slug"`
-		Org  struct {
-			Login string `json:"login"`
-		} `json:"organization"`
-	}
+	var presentOrgTeams []orgTeam
 
-	pn := 1
-	last := 0
-	for {
-		params := url.Values{
-			"per_page": {"100"},
-			"page":     {strconv.Itoa(pn)},
+	for _, group := range s.Groups {
+		if strings.Contains(group, ":") {
+			ot := strings.Split(group, ":")
+			presentOrgTeams = append(presentOrgTeams, orgTeam{ot[0], ot[1]})
 		}
-
-		endpoint := &url.URL{
-			Scheme:   p.ValidateURL.Scheme,
-			Host:     p.ValidateURL.Host,
-			Path:     path.Join(p.ValidateURL.Path, "/user/teams"),
-			RawQuery: params.Encode(),
-		}
-
-		// bodyclose cannot detect that the body is being closed later in requests.Into,
-		// so have to skip the linting for the next line.
-		// nolint:bodyclose
-		result := requests.New(endpoint.String()).
-			WithContext(ctx).
-			WithHeaders(makeGitHubHeader(accessToken)).
-			Do()
-		if result.Error() != nil {
-			return false, result.Error()
-		}
-
-		if last == 0 {
-			// link header may not be obtained
-			// When paging is not required and all data can be retrieved with a single call
-
-			// Conditions for obtaining the link header.
-			// 1. When paging is required (Example: When the data size is 100 and the page size is 99 or less)
-			// 2. When it exceeds the paging frame (Example: When there is only 10 records but the second page is called with a page size of 100)
-
-			// link header at not last page
-			// <https://api.github.com/user/teams?page=1&per_page=100>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=100>; rel="last", <https://api.github.com/user/teams?page=1&per_page=100>; rel="first"
-			// link header at last page (doesn't exist last info)
-			// <https://api.github.com/user/teams?page=3&per_page=10>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=10>; rel="first"
-
-			link := result.Headers().Get("Link")
-			rep1 := regexp.MustCompile(`(?s).*\<https://api.github.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
-			i, converr := strconv.Atoi(rep1.ReplaceAllString(link, "$1"))
-
-			// If the last page cannot be taken from the link in the http header, the last variable remains zero
-			if converr == nil {
-				last = i
-			}
-		}
-
-		var tp teamsPage
-		if err := result.UnmarshalInto(&tp); err != nil {
-			return false, err
-		}
-		if len(tp) == 0 {
-			break
-		}
-
-		teams = append(teams, tp...)
-
-		if pn == last {
-			break
-		}
-		if last == 0 {
-			break
-		}
-
-		pn++
 	}
 
 	var hasOrg bool
-	presentOrgs := make(map[string]bool)
 	var presentTeams []string
-	for _, team := range teams {
-		presentOrgs[team.Org.Login] = true
-		if p.Org == team.Org.Login {
+	presentOrgs := make(map[string]bool)
+
+	for _, ot := range presentOrgTeams {
+		presentOrgs[ot.Org] = true
+
+		if p.Org == ot.Org {
 			hasOrg = true
 			ts := strings.Split(p.Team, ",")
 			for _, t := range ts {
-				if t == team.Slug {
-					logger.Printf("Found Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
-					return true, nil
+				if t == ot.Team {
+					logger.Printf("Found Github Organization:%q Team:%q (Name:%q)", ot.Org, ot.Team)
+					return true
 				}
 			}
-			presentTeams = append(presentTeams, team.Slug)
+			presentTeams = append(presentTeams, ot.Team)
 		}
 	}
 	if hasOrg {
@@ -293,7 +226,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 		}
 		logger.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
 	}
-	return false, nil
+	return false
 }
 
 func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool, error) {
@@ -394,38 +327,6 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 		Verified bool   `json:"verified"`
 	}
 
-	// If usernames are set, check that first
-	verifiedUser := false
-	if len(p.Users) > 0 {
-		var err error
-		verifiedUser, err = p.hasUser(ctx, s.AccessToken)
-		if err != nil {
-			return err
-		}
-		// org and repository options are not configured
-		if !verifiedUser && p.Org == "" && p.Repo == "" {
-			return errors.New("missing github user")
-		}
-	}
-	// If a user is verified by username options, skip the following restrictions
-	if !verifiedUser {
-		if p.Org != "" {
-			if p.Team != "" {
-				if ok, err := p.hasOrgAndTeam(ctx, s.AccessToken); err != nil || !ok {
-					return err
-				}
-			} else {
-				if ok, err := p.hasOrg(ctx, s.AccessToken); err != nil || !ok {
-					return err
-				}
-			}
-		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
-			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
-				return err
-			}
-		}
-	}
-
 	endpoint := &url.URL{
 		Scheme: p.ValidateURL.Scheme,
 		Host:   p.ValidateURL.Host,
@@ -493,4 +394,162 @@ func (p *GitHubProvider) isVerifiedUser(username string) bool {
 		}
 	}
 	return false
+}
+
+func (p *GitHubProvider) getOrgAndTeam(ctx context.Context, s *sessions.SessionState) error {
+	err := p.getOrgs(ctx, s)
+	if err != nil {
+		return err
+	}
+
+	return p.getTeams(ctx, s)
+}
+
+func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) error {
+	// https://docs.github.com/en/rest/orgs/orgs#list-organizations-for-the-authenticated-user
+
+	var orgs []struct {
+		Login string `json:"login"`
+	}
+
+	type orgsPage []struct {
+		Login string `json:"login"`
+	}
+
+	pn := 1
+	for {
+		params := url.Values{
+			"per_page": {"100"},
+			"page":     {strconv.Itoa(pn)},
+		}
+
+		endpoint := &url.URL{
+			Scheme:   p.ValidateURL.Scheme,
+			Host:     p.ValidateURL.Host,
+			Path:     path.Join(p.ValidateURL.Path, "/user/orgs"),
+			RawQuery: params.Encode(),
+		}
+
+		var op orgsPage
+		err := requests.New(endpoint.String()).
+			WithContext(ctx).
+			WithHeaders(makeGitHubHeader(s.AccessToken)).
+			Do().
+			UnmarshalInto(&op)
+		if err != nil {
+			return err
+		}
+
+		if len(op) == 0 {
+			break
+		}
+
+		orgs = append(orgs, op...)
+		pn++
+	}
+
+	presentOrgs := make([]string, 0, len(orgs))
+	for _, org := range orgs {
+		logger.Printf("Member of Github Organization:%q", org.Login)
+		presentOrgs = append(presentOrgs, org.Login)
+	}
+	s.Groups = append(s.Groups, presentOrgs...)
+	return nil
+}
+
+func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState) error {
+	// https://docs.github.com/en/rest/teams/teams?#list-user-teams
+
+	var teams []struct {
+		Name string `json:"name"`
+		Slug string `json:"slug"`
+		Org  struct {
+			Login string `json:"login"`
+		} `json:"organization"`
+	}
+
+	type teamsPage []struct {
+		Name string `json:"name"`
+		Slug string `json:"slug"`
+		Org  struct {
+			Login string `json:"login"`
+		} `json:"organization"`
+	}
+
+	pn := 1
+	last := 0
+	for {
+		params := url.Values{
+			"per_page": {"100"},
+			"page":     {strconv.Itoa(pn)},
+		}
+
+		endpoint := &url.URL{
+			Scheme:   p.ValidateURL.Scheme,
+			Host:     p.ValidateURL.Host,
+			Path:     path.Join(p.ValidateURL.Path, "/user/teams"),
+			RawQuery: params.Encode(),
+		}
+
+		// bodyclose cannot detect that the body is being closed later in requests.Into,
+		// so have to skip the linting for the next line.
+		// nolint:bodyclose
+		result := requests.New(endpoint.String()).
+			WithContext(ctx).
+			WithHeaders(makeGitHubHeader(s.AccessToken)).
+			Do()
+		if result.Error() != nil {
+			return result.Error()
+		}
+
+		if last == 0 {
+			// link header may not be obtained
+			// When paging is not required and all data can be retrieved with a single call
+
+			// Conditions for obtaining the link header.
+			// 1. When paging is required (Example: When the data size is 100 and the page size is 99 or less)
+			// 2. When it exceeds the paging frame (Example: When there is only 10 records but the second page is called with a page size of 100)
+
+			// link header at not last page
+			// <https://api.github.com/user/teams?page=1&per_page=100>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=100>; rel="last", <https://api.github.com/user/teams?page=1&per_page=100>; rel="first"
+			// link header at last page (doesn't exist last info)
+			// <https://api.github.com/user/teams?page=3&per_page=10>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=10>; rel="first"
+
+			link := result.Headers().Get("Link")
+			rep1 := regexp.MustCompile(`(?s).*\<https://api.github.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
+			i, converr := strconv.Atoi(rep1.ReplaceAllString(link, "$1"))
+
+			// If the last page cannot be taken from the link in the http header, the last variable remains zero
+			if converr == nil {
+				last = i
+			}
+		}
+
+		var tp teamsPage
+		if err := result.UnmarshalInto(&tp); err != nil {
+			return err
+		}
+		if len(tp) == 0 {
+			break
+		}
+
+		teams = append(teams, tp...)
+
+		if pn == last {
+			break
+		}
+		if last == 0 {
+			break
+		}
+
+		pn++
+	}
+
+	var presentTeams []string
+	for _, team := range teams {
+		logger.Printf("Member of Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
+		presentTeams = append(presentTeams, team.Org.Login+":"+team.Slug)
+	}
+	s.Groups = append(s.Groups, presentTeams...)
+	return nil
 }
