@@ -85,6 +85,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
 | `--client-secret` | string | the OAuth Client Secret | |
 | `--client-secret-file` | string | the file with OAuth Client Secret | |
+| `--client-secret-allow-empty` | bool | allow omitting the Client Secret (e.g. when using PKCE without a Client Secret) | |
 | `--code-challenge-method` | string | use PKCE code challenges with the specified method. Either 'plain' or 'S256' (recommended) | |
 | `--config` | string | path to config file | |
 | `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |

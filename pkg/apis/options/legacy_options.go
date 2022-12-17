@@ -477,9 +477,10 @@ func legacyServerFlagset() *pflag.FlagSet {
 }
 
 type LegacyProvider struct {
-	ClientID         string `flag:"client-id" cfg:"client_id"`
-	ClientSecret     string `flag:"client-secret" cfg:"client_secret"`
-	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file"`
+	ClientID               string `flag:"client-id" cfg:"client_id"`
+	ClientSecret           string `flag:"client-secret" cfg:"client_secret"`
+	ClientSecretFile       string `flag:"client-secret-file" cfg:"client_secret_file"`
+	ClientSecretAllowEmpty bool `flag:"client-secret-allow-empty" cfg:"client_secret_allow_empty"`
 
 	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
 	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
@@ -555,6 +556,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
+	flagSet.Bool("client-secret-allow-empty", false, "allow omitting the Client Secret (e.g. when using PKCE without a Client Secret)")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
@@ -640,19 +642,20 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers := Providers{}
 
 	provider := Provider{
-		ClientID:            l.ClientID,
-		ClientSecret:        l.ClientSecret,
-		ClientSecretFile:    l.ClientSecretFile,
-		Type:                ProviderType(l.ProviderType),
-		CAFiles:             l.ProviderCAFiles,
-		LoginURL:            l.LoginURL,
-		RedeemURL:           l.RedeemURL,
-		ProfileURL:          l.ProfileURL,
-		ProtectedResource:   l.ProtectedResource,
-		ValidateURL:         l.ValidateURL,
-		Scope:               l.Scope,
-		AllowedGroups:       l.AllowedGroups,
-		CodeChallengeMethod: l.CodeChallengeMethod,
+		ClientID:               l.ClientID,
+		ClientSecret:           l.ClientSecret,
+		ClientSecretFile:       l.ClientSecretFile,
+		ClientSecretAllowEmpty: l.ClientSecretAllowEmpty,
+		Type:                   ProviderType(l.ProviderType),
+		CAFiles:                l.ProviderCAFiles,
+		LoginURL:               l.LoginURL,
+		RedeemURL:              l.RedeemURL,
+		ProfileURL:             l.ProfileURL,
+		ProtectedResource:      l.ProtectedResource,
+		ValidateURL:            l.ValidateURL,
+		Scope:                  l.Scope,
+		AllowedGroups:          l.AllowedGroups,
+		CodeChallengeMethod:    l.CodeChallengeMethod,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC

@@ -55,6 +55,16 @@ func TestNewOptions(t *testing.T) {
 	assert.Equal(t, expected, err.Error())
 }
 
+func TestOmitClientSecret(t *testing.T) {
+	o := options.NewOptions()
+	o.Cookie.Secret = cookieSecret
+	o.EmailDomains = []string{"*"}
+	o.Providers[0].ID = providerID
+	o.Providers[0].ClientID = clientID
+	o.Providers[0].ClientSecretAllowEmpty = true
+	assert.Equal(t, nil, Validate(o))
+}
+
 func TestGoogleGroupOptions(t *testing.T) {
 	o := testOptions()
 	o.Providers[0].GoogleConfig.Groups = []string{"googlegroup"}

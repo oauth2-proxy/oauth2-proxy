@@ -33,10 +33,13 @@ type ProviderData struct {
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
-	ClientID          string
-	ClientSecret      string
-	ClientSecretFile  string
-	Scope             string
+
+	ClientID               string
+	ClientSecret           string
+	ClientSecretFile       string
+	ClientSecretAllowEmpty bool
+	Scope                  string
+
 	// The picked CodeChallenge Method or empty if none.
 	CodeChallengeMethod string
 	// Code challenge methods supported by the Provider

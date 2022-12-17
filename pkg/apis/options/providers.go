@@ -25,6 +25,8 @@ type Provider struct {
 	// ClientSecretFile is the name of the file
 	// containing the OAuth Client Secret, it will be used if ClientSecret is not set.
 	ClientSecretFile string `json:"clientSecretFile,omitempty"`
+	// ClientSecretAllowEmpty allow the Client Secret to be empty.
+	ClientSecretAllowEmpty bool `json:"clientSecretAllowEmpty,omitempty"`
 
 	// KeycloakConfig holds all configurations for Keycloak provider.
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
