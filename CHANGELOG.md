@@ -1,10 +1,10 @@
 # Vx.x.x (Pre-release)
 
 ## Release Highlights
-- Possible to set samesite value to CSRF cookie, different from session cookie.
+- Possible to set a CSRF cookie samesite value, which can be different from the one defined for the session cookie.
 
 ## Important Notes
-- [#1663](https://github.com/oauth2-proxy/oauth2-proxy/pull/xxxx) New option added "--cookie-csrf-samesite", to set one samesite value to CSRF cookie, different from session cookie.
+- [#1663](https://github.com/oauth2-proxy/oauth2-proxy/pull/xxxx) New option "--cookie-csrf-samesite" added, to define the samesite value of CSRF cookie. If option is not configured, then CSRF cookie samesite is equal to the one configured for the session cookie.
 
 ## Breaking Changes
 
@@ -14,7 +14,7 @@
 - [#1882](https://github.com/oauth2-proxy/oauth2-proxy/pull/1882) Make `htpasswd.GetUsers` racecondition safe
 - [#1883](https://github.com/oauth2-proxy/oauth2-proxy/pull/1883) Ensure v8 manifest variant is set on docker images
 - [#1906](https://github.com/oauth2-proxy/oauth2-proxy/pull/1906) Fix PKCE code verifier generation to never use UTF-8 characters
-- [#1663](https://github.com/oauth2-proxy/oauth2-proxy/pull/xxxx) Added new parameter to configure the samesite value of csrf cookie 
+- [#1663](https://github.com/oauth2-proxy/oauth2-proxy/pull/xxxx) Added new option to configure the samesite value of csrf cookie (e.g.: "--cookie-csrf-samesite")
 
 # V7.4.0
 
