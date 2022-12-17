@@ -43,6 +43,8 @@ type Provider struct {
 	// OIDCConfig holds all configurations for OIDC provider
 	// or providers utilize OIDC configurations.
 	OIDCConfig OIDCOptions `json:"oidcConfig,omitempty"`
+	// WxWorkConfig holds all configurations for WxWork provider
+	WxWorkConfig WxWorkOptions `json:"wxworkConfig,omitempty"`
 	// LoginGovConfig holds all configurations for LoginGov provider.
 	LoginGovConfig LoginGovOptions `json:"loginGovConfig,omitempty"`
 
@@ -125,6 +127,9 @@ const (
 
 	// NextCloudProvider is the provider type for NextCloud
 	NextCloudProvider ProviderType = "nextcloud"
+
+	// WxWorkProvider is the provider type for WxWork
+	WxWorkProvider ProviderType = "wxwork"
 
 	// OIDCProvider is the provider type for OIDC
 	OIDCProvider ProviderType = "oidc"
