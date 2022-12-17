@@ -1,9 +1,9 @@
 package providers
 
 import (
+	"bytes"
 	"context"
-	"errors"
-	"net/http"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -17,13 +17,16 @@ type WxWorkProvider struct {
 	*ProviderData
 	CorpId        string
 	CorpAccessToken           string
-	CorpAccessTokenExpiration time
+	CorpAccessTokenUrl        url.URL
+	CorpAccessTokenExpiration time.Time
 }
 
 const (
 	wxworkProviderName = "WxWork"
 	wxworkDefaultScope = "snsapi_privateinfo"
+)
 
+var (
 	// Default CorpAccessToken URL for WxWork.
 	// Pre-parsed URL of https://qyapi.weixin.qq.com/cgi-bin/gettoken.
 	wxworkDefaultCorpAccessTokenURL = &url.URL{
@@ -69,9 +72,11 @@ func NewWxWorkProvider(p *ProviderData, opts options.WxWorkOptions) *WxWorkProvi
 	})
 
 	return &WxWorkProvider{
-		ProviderData:       p,
-		CorpId:             opts.CorpId,
-		CorpAccessTokenUrl: wxworkDefaultCorpAccessTokenURL,
+		ProviderData:              p,
+		CorpId:                    opts.CorpId,
+		CorpAccessToken:           "",
+		CorpAccessTokenUrl:        *wxworkDefaultCorpAccessTokenURL,
+		CorpAccessTokenExpiration: time.Unix(0, 0),
 	}
 }
 
@@ -80,8 +85,8 @@ var _ Provider = (*WxWorkProvider)(nil)
 
 // GetLoginURL makes the LoginURL with optional appid/agentid support
 func (p *WxWorkProvider) GetLoginURL(redirectURI, state, nonce string, extraParams url.Values) string {
-	if !p.SkipNonce {
-		extraParams.Add("appid", p.CorpId)
+	extraParams.Add("appid", p.CorpId)
+	if p.Scope == "snsapi_privateinfo" {
 		extraParams.Add("agentid", p.ClientID)
 	}
 	loginURL := makeLoginURL(p.Data(), redirectURI, state, extraParams)
@@ -91,13 +96,13 @@ func (p *WxWorkProvider) GetLoginURL(redirectURI, state, nonce string, extraPara
 // Redeem exchanges the OAuth2 authentication code for an User Ticket
 func (p *WxWorkProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	// get
-	corpAccessToken, err := getCorpAcessToken()
+	corpAccessToken, err := p.getCorpAccessToken(ctx)
 	if err != nil {
 		return nil, err
 	}
 	
 	var jsonResponse struct {
-		ErrorCode    string `json:"errcode"`
+		ErrorCode    int    `json:"errcode"`
 		ErrorMessage string `json:"errmsg"`
 		UserId       string `json:"userid"`
 		UserTicket   string `json:"user_ticket"`
@@ -115,58 +120,23 @@ func (p *WxWorkProvider) Redeem(ctx context.Context, redirectURL, code, codeVeri
 
 	session := &sessions.SessionState{
 		User:         jsonResponse.UserId,
-		AccessToken:  nil,
+		AccessToken:  "",
 		IDToken:      jsonResponse.UserTicket,
-		RefreshToken: nil,
+		RefreshToken: "",
 	}
 	session.CreatedAtNow()
-	session.SetExpiresOn(time.Unix(time.Now().Add(1800*time.Second)))
+	session.SetExpiresOn(time.Now().Add(time.Duration(1800) * time.Second))
 
 	return session, nil
-}
-
-// Acquire CorpAccessToken before access oauth2 api
-func (p *WxWorkProvider) getCorpAcessToken(ctx context.Context) (string, error) {
-	// return directly if valid
-	if p.CorpAccessToken != nil && p.CorpAccessToken != "" && p.CorpAccessTokenExpiration.After(time.Now())  {
-		return p.CorpAccessToken, nil
-	}
-
-	var jsonResponse struct {
-		ErrorCode    string `json:"errcode"`
-		ErrorMessage string `json:"errmsg"`
-		AccessToken  string `json:"access_token"`
-		ExpiresIn    string `json:"expires_in"`
-	}
-
-	// corpsecret is appsecret
-	corpSecret, err := p.GetClientSecret()
-	if err != nil {
-		return nil, err
-	}
-
-	err = requests.New(p.CorpAccessTokenUrls.String() + "?corpid=" + p.CorpId + "&corpsecret=" + corpSecret).
-		WithContext(ctx).
-		WithMethod("GET").
-		SetHeader("Content-Type", "application/json").
-		Do().
-		UnmarshalInto(&jsonResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	if jsonResponse.ErrorCode == 0 && jsonResponse.AccesToken != nil && jsonResponse.AccessToken != "" {
-		p.CorpAccessToken = jsonResponse.AccessToken
-		p.CorpAccessTokenExpiration = time.Now().Add(jsonResponse.ExpiresIn*time.Second).Minus(300*time.Second)
-	} else {
-		return nil, jsonResponse.ErrorMessage
-	}
 }
 
 // GetEmailAddress returns the Account email address
 func (p *WxWorkProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {
 
-	accessToken := ""
+	corpAccessToken, err := p.getCorpAccessToken(ctx)
+	if err != nil {
+		return "", err
+	}
 
 	var jsonResponse struct {
 		ErrorCode    string `json:"errcode"`
@@ -184,7 +154,7 @@ func (p *WxWorkProvider) GetEmailAddress(ctx context.Context, session *sessions.
 	params := url.Values{}
 	params.Add("user_ticket", session.IDToken)
 
-	err = requests.New(p.ProfileURL.String() + "?access_token=" + accessToken).
+	err = requests.New(p.ProfileURL.String() + "?access_token=" + corpAccessToken).
 		WithContext(ctx).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
@@ -192,9 +162,47 @@ func (p *WxWorkProvider) GetEmailAddress(ctx context.Context, session *sessions.
 		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return jsonResponse.Email, nil
 }
 
+// Acquire CorpAccessToken before access oauth2 api
+func (p *WxWorkProvider) getCorpAccessToken(ctx context.Context) (string, error) {
+	// return directly if valid
+	if p.CorpAccessToken != "" && p.CorpAccessTokenExpiration.After(time.Now())  {
+		return p.CorpAccessToken, nil
+	}
+
+	var jsonResponse struct {
+		ErrorCode    int    `json:"errcode"`
+		ErrorMessage string `json:"errmsg"`
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int    `json:"expires_in"`
+	}
+
+	// corpsecret is appsecret
+	corpSecret, err := p.GetClientSecret()
+	if err != nil {
+		return "", err
+	}
+
+	err = requests.New(p.CorpAccessTokenUrl.String() + "?corpid=" + p.CorpId + "&corpsecret=" + corpSecret).
+		WithContext(ctx).
+		WithMethod("GET").
+		SetHeader("Content-Type", "application/json").
+		Do().
+		UnmarshalInto(&jsonResponse)
+	if err != nil {
+		return "", err
+	}
+
+	if jsonResponse.ErrorCode == 0 && jsonResponse.AccessToken != "" {
+		p.CorpAccessToken = jsonResponse.AccessToken
+		p.CorpAccessTokenExpiration = time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Add(-300 * time.Second)
+		return p.CorpAccessToken, nil
+	} else {
+		return "", fmt.Errorf(jsonResponse.ErrorMessage)
+	}
+}

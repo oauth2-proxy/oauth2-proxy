@@ -244,6 +244,11 @@ type LoginGovOptions struct {
 	PubJWKURL string `json:"pubjwkURL,omitempty"`
 }
 
+type WxWorkOptions struct {
+	// CorpId directs to a corp-specific endpoint
+	CorpId string `json:"corpid,omitempty"`
+}
+
 func providerDefaults() Providers {
 	providers := Providers{
 		{
