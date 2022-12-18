@@ -19,6 +19,7 @@ type WeComProvider struct {
 	CorpAccessToken           string
 	CorpAccessTokenURL        url.URL
 	CorpAccessTokenExpiration time.Time
+	NonSensitiveProfileURL    url.URL
 }
 
 const (
@@ -58,6 +59,14 @@ var (
 		Host:   "qyapi.weixin.qq.com",
 		Path:   "/cgi-bin/auth/getuserdetail",
 	}
+
+	// Default NonSensitive Profile URL for WeCom.
+	// Pre-parsed URL of https://qyapi.weixin.qq.com/cgi-bin/user/get.
+	wecomDefaultNonSensitiveProfileURL = &url.URL{
+		Scheme: "https",
+		Host:   "qyapi.weixin.qq.com",
+		Path:   "/cgi-bin/user/get",
+	}
 )
 
 // NewWeComProvider initiates a new WeComProvider
@@ -77,6 +86,7 @@ func NewWeComProvider(p *ProviderData, opts options.WeComOptions) *WeComProvider
 		CorpAccessToken:           "",
 		CorpAccessTokenURL:        *wecomDefaultCorpAccessTokenURL,
 		CorpAccessTokenExpiration: time.Unix(0, 0),
+		NonSensitiveProfileURL:    *wecomDefaultNonSensitiveProfileURL,
 	}
 }
 
@@ -118,60 +128,37 @@ func (p *WeComProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 		return nil, err
 	}
 
-	session := &sessions.SessionState{
+	s := &sessions.SessionState{
 		User:         jsonResponse.UserId,
-		AccessToken:  "",
-		IDToken:      jsonResponse.UserTicket,
+		AccessToken:  jsonResponse.UserTicket,
+		IDToken:      "",
 		RefreshToken: "",
 	}
-	session.CreatedAtNow()
-	session.SetExpiresOn(time.Now().Add(time.Duration(1800 - 300) * time.Second))
+	s.CreatedAtNow()
+	s.SetExpiresOn(time.Now().Add(time.Duration(1800 - 300) * time.Second))
+	
+	err = p.enrichNonSensitiveData(ctx, s)
+	if err != nil {
+		return nil, err
+	}
 
-	return session, nil
+	return s, nil
 }
 
 // GetEmailAddress returns the Account email address
-func (p *WeComProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {
-
-	corpAccessToken, err := p.getCorpAccessToken(ctx)
-	if err != nil {
-		return "", err
+func (p *WeComProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+	if s.Email == "" {
+		err := p.enrichSensitiveData(ctx, s)
+		if err != nil {
+			return "", err
+		}
 	}
-
-	var jsonResponse struct {
-		ErrorCode    string `json:"errcode"`
-		ErrorMessage string `json:"errmsg"`
-		UserId       string `json:"userid"`
-		Gender       string `json:"gender"`
-		Avatar       string `json:"avatar"`
-		QRCode       string `json:"qr_code"`
-		Mobile       string `json:"mobile"`
-		Email        string `json:"email"`
-		BizEmail     string `json:"biz_email"`
-		Address      string `json:"address"`
-	}
-
-	params := url.Values{}
-	params.Add("user_ticket", session.IDToken)
-
-	err = requests.New(p.ProfileURL.String() + "?access_token=" + corpAccessToken).
-		WithContext(ctx).
-		WithMethod("POST").
-		WithBody(bytes.NewBufferString(params.Encode())).
-		SetHeader("Content-Type", "application/json").
-		Do().
-		UnmarshalInto(&jsonResponse)
-	if err != nil {
-		return "", err
-	}
-
-	return jsonResponse.Email, nil
+	return s.Email, nil
 }
 
 func (p *WeComProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
-	// If a mandatory email wasn't set, error at this point.
 	if s.Email == "" {
-		return errors.New("neither the id_token nor the profileURL set an email")
+		return p.enrichSensitiveData(ctx, s)
 	}
 	return nil
 }
@@ -213,4 +200,79 @@ func (p *WeComProvider) getCorpAccessToken(ctx context.Context) (string, error) 
 	} else {
 		return "", fmt.Errorf(jsonResponse.ErrorMessage)
 	}
+}
+
+func (p *WeComProvider) enrichNonSensitiveData(ctx context.Context, s *sessions.SessionState) error {
+	// Corp Access Token
+	corpAccessToken, err := p.getCorpAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire corp access token: %v", err)
+	}
+
+	var jsonResponse struct {
+		ErrorCode    int    `json:"errcode"`
+		ErrorMessage string `json:"errmsg"`
+		UserId       string `json:"userid"`
+		Name         string `json:"name"`
+		Department   []string  `json:"department"`
+		// Position     string `json:"position"`
+	}
+
+	err = requests.New(p.NonSensitiveProfileURL.String() + "?access_token=" + corpAccessToken + "&userid=" + s.User).
+		WithContext(ctx).
+		WithMethod("GET").
+		SetHeader("Content-Type", "application/json").
+		Do().
+		UnmarshalInto(&jsonResponse)
+	if err != nil {
+		return fmt.Errorf("failed to acquire employee non-sensitive data: %v", err)
+	}
+
+	s.Groups = jsonResponse.Department
+	s.PreferredUsername = jsonResponse.Name
+
+	return nil
+}
+
+func (p *WeComProvider) enrichSensitiveData(ctx context.Context, s *sessions.SessionState) error {
+	// Corp Access Token
+	corpAccessToken, err := p.getCorpAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire corp access token: %v", err)
+	}
+
+	var jsonResponse struct {
+		ErrorCode    int    `json:"errcode"`
+		ErrorMessage string `json:"errmsg"`
+		UserId       string `json:"userid"`
+		// Gender       string `json:"gender"`
+		// Avatar       string `json:"avatar"`
+		// QRCode       string `json:"qr_code"`
+		// Mobile       string `json:"mobile"`
+		Email        string `json:"email"`
+		BizEmail     string `json:"biz_email"`
+		// Address      string `json:"address"`
+	}
+
+	params := url.Values{}
+	params.Add("user_ticket", s.AccessToken)
+
+	err = requests.New(p.ProfileURL.String() + "?access_token=" + corpAccessToken).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/json").
+		Do().
+		UnmarshalInto(&jsonResponse)
+	if err != nil {
+		return err
+	}
+
+	if jsonResponse.Email != "" {
+		s.Email = jsonResponse.Email
+	} else {
+		s.Email = jsonResponse.BizEmail
+	}
+
+	return nil
 }
