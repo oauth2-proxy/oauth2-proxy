@@ -409,7 +409,7 @@ Provider holds all configuration for a single provider
 | `googleConfig` | _[GoogleOptions](#googleoptions)_ | GoogleConfig holds all configurations for Google provider. |
 | `oidcConfig` | _[OIDCOptions](#oidcoptions)_ | OIDCConfig holds all configurations for OIDC provider<br/>or providers utilize OIDC configurations. |
 | `loginGovConfig` | _[LoginGovOptions](#logingovoptions)_ | LoginGovConfig holds all configurations for LoginGov provider. |
-| `wxworkConfig` | _[WxWorkOptions](#wxworkoptions)_ | WxWorkConfig holds all configurations for WxWork provider. |
+| `wecomConfig` | _[WeComOptions](#wecomoptions)_ | WeComConfig holds all configurations for WeCom (a.k.a. WxWork, Wechat Work) provider. |
 | `id` | _string_ | ID should be a unique identifier for the provider.<br/>This value is required for all providers. |
 | `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |

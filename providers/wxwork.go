@@ -12,8 +12,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
-// WxWorkProvider represents an WxWork based Identity Provider
-type WxWorkProvider struct {
+// WeComProvider represents an WeCom based Identity Provider
+type WeComProvider struct {
 	*ProviderData
 	CorpId        string
 	CorpAccessToken           string
@@ -22,69 +22,69 @@ type WxWorkProvider struct {
 }
 
 const (
-	wxworkProviderName = "WxWork"
-	wxworkDefaultScope = "snsapi_privateinfo"
+	wecomProviderName = "WeCom"
+	wecomDefaultScope = "snsapi_privateinfo"
 )
 
 var (
-	// Default CorpAccessToken URL for WxWork.
+	// Default CorpAccessToken URL for WeCom.
 	// Pre-parsed URL of https://qyapi.weixin.qq.com/cgi-bin/gettoken.
-	wxworkDefaultCorpAccessTokenURL = &url.URL{
+	wecomDefaultCorpAccessTokenURL = &url.URL{
 		Scheme: "https",
 		Host:   "qyapi.weixin.qq.com",
 		Path:   "/cgi-bin/gettoken",
 	}
 
-	// Default Login URL for WxWork.
+	// Default Login URL for WeCom.
 	// Pre-parsed URL of https://open.weixin.qq.com/connect/oauth2/authorize.
-	wxworkDefaultLoginURL = &url.URL{
+	wecomDefaultLoginURL = &url.URL{
 		Scheme: "https",
 		Host:   "open.weixin.qq.com",
 		Path:   "/connect/oauth2/authorize",
 	}
 
-	// Default Redeem URL for WxWork.
+	// Default Redeem URL for WeCom.
 	// Pre-parsed URL of https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo.
-	wxworkDefaultRedeemURL = &url.URL{
+	wecomDefaultRedeemURL = &url.URL{
 		Scheme: "https",
 		Host:   "qyapi.weixin.qq.com",
 		Path:   "/cgi-bin/auth/getuserinfo",
 	}
 
-	// Default Profile URL for WxWork.
+	// Default Profile URL for WeCom.
 	// Pre-parsed URL of https://qyapi.weixin.qq.com/cgi-bin/auth/getuserdetail.
-	wxworkDefaultProfileURL = &url.URL{
+	wecomDefaultProfileURL = &url.URL{
 		Scheme: "https",
 		Host:   "qyapi.weixin.qq.com",
 		Path:   "/cgi-bin/auth/getuserdetail",
 	}
 )
 
-// NewWxWorkProvider initiates a new WxWorkProvider
-func NewWxWorkProvider(p *ProviderData, opts options.WxWorkOptions) *WxWorkProvider {
+// NewWeComProvider initiates a new WeComProvider
+func NewWeComProvider(p *ProviderData, opts options.WeComOptions) *WeComProvider {
 	p.setProviderDefaults(providerDefaults{
-		name:        wxworkProviderName,
-		loginURL:    wxworkDefaultLoginURL,
-		redeemURL:   wxworkDefaultRedeemURL,
-		profileURL:  wxworkDefaultProfileURL,
-		validateURL: wxworkDefaultProfileURL,
-		scope:       wxworkDefaultScope,
+		name:        wecomProviderName,
+		loginURL:    wecomDefaultLoginURL,
+		redeemURL:   wecomDefaultRedeemURL,
+		profileURL:  wecomDefaultProfileURL,
+		validateURL: wecomDefaultProfileURL,
+		scope:       wecomDefaultScope,
 	})
 
-	return &WxWorkProvider{
+	return &WeComProvider{
 		ProviderData:              p,
 		CorpId:                    opts.CorpId,
 		CorpAccessToken:           "",
-		CorpAccessTokenUrl:        *wxworkDefaultCorpAccessTokenURL,
+		CorpAccessTokenUrl:        *wecomDefaultCorpAccessTokenURL,
 		CorpAccessTokenExpiration: time.Unix(0, 0),
 	}
 }
 
-var _ Provider = (*WxWorkProvider)(nil)
+var _ Provider = (*WeComProvider)(nil)
 
 
 // GetLoginURL makes the LoginURL with optional appid/agentid support
-func (p *WxWorkProvider) GetLoginURL(redirectURI, state, nonce string, extraParams url.Values) string {
+func (p *WeComProvider) GetLoginURL(redirectURI, state, nonce string, extraParams url.Values) string {
 	extraParams.Add("appid", p.CorpId)
 	if p.Scope == "snsapi_privateinfo" {
 		extraParams.Add("agentid", p.ClientID)
@@ -94,7 +94,7 @@ func (p *WxWorkProvider) GetLoginURL(redirectURI, state, nonce string, extraPara
 }
 
 // Redeem exchanges the OAuth2 authentication code for an User Ticket
-func (p *WxWorkProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+func (p *WeComProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	// get
 	corpAccessToken, err := p.getCorpAccessToken(ctx)
 	if err != nil {
@@ -125,13 +125,13 @@ func (p *WxWorkProvider) Redeem(ctx context.Context, redirectURL, code, codeVeri
 		RefreshToken: "",
 	}
 	session.CreatedAtNow()
-	session.SetExpiresOn(time.Now().Add(time.Duration(1800) * time.Second))
+	session.SetExpiresOn(time.Now().Add(time.Duration(1800 - 300) * time.Second))
 
 	return session, nil
 }
 
 // GetEmailAddress returns the Account email address
-func (p *WxWorkProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {
+func (p *WeComProvider) GetEmailAddress(ctx context.Context, session *sessions.SessionState) (string, error) {
 
 	corpAccessToken, err := p.getCorpAccessToken(ctx)
 	if err != nil {
@@ -168,8 +168,16 @@ func (p *WxWorkProvider) GetEmailAddress(ctx context.Context, session *sessions.
 	return jsonResponse.Email, nil
 }
 
+func (p *WeComProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+	// If a mandatory email wasn't set, error at this point.
+	if s.Email == "" {
+		return errors.New("neither the id_token nor the profileURL set an email")
+	}
+	return nil
+}
+
 // Acquire CorpAccessToken before access oauth2 api
-func (p *WxWorkProvider) getCorpAccessToken(ctx context.Context) (string, error) {
+func (p *WeComProvider) getCorpAccessToken(ctx context.Context) (string, error) {
 	// return directly if valid
 	if p.CorpAccessToken != "" && p.CorpAccessTokenExpiration.After(time.Now())  {
 		return p.CorpAccessToken, nil
@@ -200,7 +208,7 @@ func (p *WxWorkProvider) getCorpAccessToken(ctx context.Context) (string, error)
 
 	if jsonResponse.ErrorCode == 0 && jsonResponse.AccessToken != "" {
 		p.CorpAccessToken = jsonResponse.AccessToken
-		p.CorpAccessTokenExpiration = time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second).Add(-300 * time.Second)
+		p.CorpAccessTokenExpiration = time.Now().Add(time.Duration(jsonResponse.ExpiresIn - 300) * time.Second)
 		return p.CorpAccessToken, nil
 	} else {
 		return "", fmt.Errorf(jsonResponse.ErrorMessage)

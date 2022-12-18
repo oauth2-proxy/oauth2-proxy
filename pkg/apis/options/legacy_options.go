@@ -496,7 +496,7 @@ type LegacyProvider struct {
 	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
 	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
-	WxWorkCorpId             string   `flag:"wxwork-corpid" cfg:"wxwork_corpid"`
+	WeComCorpId             string   `flag:"wecom-corpid" cfg:"wecom_corpid"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -553,7 +553,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
-	flagSet.String("wxwork-corpid", "", "go to a corp-specific endpoint.")
+	flagSet.String("wecom-corpid", "", "go to a corp-specific endpoint.")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
@@ -724,9 +724,9 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			AdminEmail:         l.GoogleAdminEmail,
 			ServiceAccountJSON: l.GoogleServiceAccountJSON,
 		}
-	case "wxwork":
-		provider.WxWorkConfig = WxWorkOptions{
-			CorpId: l.WxWorkCorpId,
+	case "wecom":
+		provider.WeComConfig = WeComOptions{
+			CorpId: l.WeComCorpId,
 		}
 	}
 

@@ -65,8 +65,8 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return NewNextcloudProvider(providerData), nil
 	case options.OIDCProvider:
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
-	case options.WxWorkProvider:
-		return NewWxWorkProvider(providerData, providerConfig.WxWorkConfig), nil
+	case options.WeComProvider:
+		return NewWeComProvider(providerData, providerConfig.WeComConfig), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
@@ -186,7 +186,7 @@ func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bo
 	switch providerType {
 	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
 		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider, options.NextCloudProvider,
-		options.WxWorkProvider:
+		options.WeComProvider:
 		return false, nil
 	case options.ADFSProvider, options.AzureProvider, options.GitLabProvider, options.KeycloakOIDCProvider, options.OIDCProvider:
 		return true, nil

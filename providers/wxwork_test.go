@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testWxWorkProvider(hostname string) *WxWorkProvider {
-	p := NewWxWorkProvider(
+func testWeComProvider(hostname string) *WeComProvider {
+	p := NewWeComProvider(
 		&ProviderData{
 			ProviderName: "",
 			LoginURL:     &url.URL{},
@@ -28,12 +28,12 @@ func testWxWorkProvider(hostname string) *WxWorkProvider {
 	return p
 }
 
-func TestNewWxWorkProvider(t *testing.T) {
+func TestNewWeComProvider(t *testing.T) {
 	g := NewWithT(t)
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	providerData := NewWxWorkProvider(&ProviderData{}).Data()
-	g.Expect(providerData.ProviderName).To(Equal("WxWork"))
+	providerData := NewWeComProvider(&ProviderData{}).Data()
+	g.Expect(providerData.ProviderName).To(Equal("WeCom"))
 	g.Expect(providerData.LoginURL.String()).To(Equal("https://open.weixin.qq.com/connect/oauth2/authorize"))
 	g.Expect(providerData.RedeemURL.String()).To(Equal("https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo"))
 	g.Expect(providerData.ProfileURL.String()).To(Equal("https://qyapi.weixin.qq.com/cgi-bin/auth/getuserdetail"))
