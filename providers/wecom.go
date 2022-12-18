@@ -17,7 +17,7 @@ type WeComProvider struct {
 	*ProviderData
 	CorpId        string
 	CorpAccessToken           string
-	CorpAccessTokenUrl        url.URL
+	CorpAccessTokenURL        url.URL
 	CorpAccessTokenExpiration time.Time
 }
 
@@ -75,7 +75,7 @@ func NewWeComProvider(p *ProviderData, opts options.WeComOptions) *WeComProvider
 		ProviderData:              p,
 		CorpId:                    opts.CorpId,
 		CorpAccessToken:           "",
-		CorpAccessTokenUrl:        *wecomDefaultCorpAccessTokenURL,
+		CorpAccessTokenURL:        *wecomDefaultCorpAccessTokenURL,
 		CorpAccessTokenExpiration: time.Unix(0, 0),
 	}
 }
@@ -196,7 +196,7 @@ func (p *WeComProvider) getCorpAccessToken(ctx context.Context) (string, error) 
 		return "", err
 	}
 
-	err = requests.New(p.CorpAccessTokenUrl.String() + "?corpid=" + p.CorpId + "&corpsecret=" + corpSecret).
+	err = requests.New(p.CorpAccessTokenURL.String() + "?corpid=" + p.CorpId + "&corpsecret=" + corpSecret).
 		WithContext(ctx).
 		WithMethod("GET").
 		SetHeader("Content-Type", "application/json").
