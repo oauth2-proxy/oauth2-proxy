@@ -180,10 +180,10 @@ func TestScope(t *testing.T) {
 			},
 		}
 
-		pd, err := newProviderDataFromConfig(providerConfig)
+		pd, err := NewProvider(providerConfig)
 		g.Expect(err).ToNot(HaveOccurred())
 
-		g.Expect(pd.Scope).To(Equal(tc.expectedScope))
+		g.Expect(pd.Data().Scope).To(Equal(tc.expectedScope))
 	}
 }
 
