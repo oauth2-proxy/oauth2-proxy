@@ -163,6 +163,15 @@ func (p *WeComProvider) EnrichSession(ctx context.Context, s *sessions.SessionSt
 	return nil
 }
 
+// ValidateSession validates the AccessToken
+func (p *WeComProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+	err := p.enrichSensitiveData(ctx, s)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 // Acquire CorpAccessToken before access oauth2 api
 func (p *WeComProvider) getCorpAccessToken(ctx context.Context) (string, error) {
 	// return directly if valid
