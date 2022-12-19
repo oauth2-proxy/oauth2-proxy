@@ -118,7 +118,7 @@ func (p *WeComProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 		UserTicket   string `json:"user_ticket"`
 	}
 
-	err = requests.New(p.RedeemURL.String() + "?access_token=" + corpAccessToken).
+	err = requests.New(p.RedeemURL.String() + "?access_token=" + url.QueryEscape(corpAccessToken) + "&code=" + url.QueryEscape(code)).
 		WithContext(ctx).
 		WithMethod("GET").
 		SetHeader("Content-Type", "application/json").
@@ -192,7 +192,7 @@ func (p *WeComProvider) getCorpAccessToken(ctx context.Context) (string, error) 
 		return "", err
 	}
 
-	err = requests.New(p.CorpAccessTokenURL.String() + "?corpid=" + p.CorpId + "&corpsecret=" + corpSecret).
+	err = requests.New(p.CorpAccessTokenURL.String() + "?corpid=" + url.QueryEscape(p.CorpId) + "&corpsecret=" + url.QueryEscape(corpSecret)).
 		WithContext(ctx).
 		WithMethod("GET").
 		SetHeader("Content-Type", "application/json").
@@ -227,7 +227,7 @@ func (p *WeComProvider) enrichNonSensitiveData(ctx context.Context, s *sessions.
 		// Position     string `json:"position"`
 	}
 
-	err = requests.New(p.NonSensitiveProfileURL.String() + "?access_token=" + corpAccessToken + "&userid=" + s.User).
+	err = requests.New(p.NonSensitiveProfileURL.String() + "?access_token=" + url.QueryEscape(corpAccessToken) + "&userid=" + url.QueryEscape(s.User)).
 		WithContext(ctx).
 		WithMethod("GET").
 		SetHeader("Content-Type", "application/json").
@@ -265,7 +265,7 @@ func (p *WeComProvider) enrichSensitiveData(ctx context.Context, s *sessions.Ses
 
 	params := fmt.Sprint("{\"user_ticket\":\"%s\"}", s.AccessToken)
 
-	err = requests.New(p.ProfileURL.String() + "?access_token=" + corpAccessToken).
+	err = requests.New(p.ProfileURL.String() + "?access_token=" + url.QueryEscape(corpAccessToken)).
 		WithContext(ctx).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params)).
