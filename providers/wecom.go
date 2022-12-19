@@ -263,13 +263,12 @@ func (p *WeComProvider) enrichSensitiveData(ctx context.Context, s *sessions.Ses
 		// Address      string `json:"address"`
 	}
 
-	params := url.Values{}
-	params.Add("user_ticket", s.AccessToken)
+	params := fmt.Sprint("{\"user_ticket\":\"%s\"}", s.AccessToken)
 
 	err = requests.New(p.ProfileURL.String() + "?access_token=" + corpAccessToken).
 		WithContext(ctx).
 		WithMethod("POST").
-		WithBody(bytes.NewBufferString(params.Encode())).
+		WithBody(bytes.NewBufferString(params)).
 		SetHeader("Content-Type", "application/json").
 		Do().
 		UnmarshalInto(&jsonResponse)
