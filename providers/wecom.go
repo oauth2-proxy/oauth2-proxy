@@ -108,7 +108,7 @@ func (p *WeComProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 	// get
 	corpAccessToken, err := p.getCorpAccessToken(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to redeem code: %v", err)
 	}
 	
 	var jsonResponse struct {
@@ -125,7 +125,9 @@ func (p *WeComProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to redeem code: %v", err)
+	} else if jsonResponse.ErrorCode != 0 {
+		return nil, fmt.Errorf("failed to redeem code: %d, %s", jsonResponse.ErrorCode, jsonResponse.ErrorMessage)
 	}
 
 	s := &sessions.SessionState{
@@ -139,7 +141,7 @@ func (p *WeComProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 	
 	err = p.enrichNonSensitiveData(ctx, s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to redeem code: %v", err)
 	}
 
 	return s, nil
@@ -150,7 +152,7 @@ func (p *WeComProvider) GetEmailAddress(ctx context.Context, s *sessions.Session
 	if s.Email == "" {
 		err := p.enrichSensitiveData(ctx, s)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to acquire email address: %v", err)
 		}
 	}
 	return s.Email, nil
@@ -189,7 +191,7 @@ func (p *WeComProvider) getCorpAccessToken(ctx context.Context) (string, error) 
 	// corpsecret is appsecret
 	corpSecret, err := p.GetClientSecret()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get client secret: %v", err)
 	}
 
 	err = requests.New(p.CorpAccessTokenURL.String() + "?corpid=" + url.QueryEscape(p.CorpId) + "&corpsecret=" + url.QueryEscape(corpSecret)).
@@ -199,15 +201,17 @@ func (p *WeComProvider) getCorpAccessToken(ctx context.Context) (string, error) 
 		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to acquire corp access token: %v", err)
+	} else if jsonResponse.ErrorCode != 0 {
+		return "", fmt.Errorf("failed to acquire corp access token: %d, %s", jsonResponse.ErrorCode, jsonResponse.ErrorMessage)
 	}
 
-	if jsonResponse.ErrorCode == 0 && jsonResponse.AccessToken != "" {
+	if jsonResponse.AccessToken != "" && jsonResponse.ExpiresIn > 0 {
 		p.CorpAccessToken = jsonResponse.AccessToken
 		p.CorpAccessTokenExpiration = time.Now().Add(time.Duration(jsonResponse.ExpiresIn - 300) * time.Second)
-		return p.CorpAccessToken, nil
+		return jsonResponse.AccessToken, nil
 	} else {
-		return "", fmt.Errorf(jsonResponse.ErrorMessage)
+		return "", fmt.Errorf("failed to acquire corp access token: nil")
 	}
 }
 
@@ -215,7 +219,7 @@ func (p *WeComProvider) enrichNonSensitiveData(ctx context.Context, s *sessions.
 	// Corp Access Token
 	corpAccessToken, err := p.getCorpAccessToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to acquire corp access token: %v", err)
+		return fmt.Errorf("failed to acquire user non-sensitive data: %v", err)
 	}
 
 	var jsonResponse struct {
@@ -234,7 +238,9 @@ func (p *WeComProvider) enrichNonSensitiveData(ctx context.Context, s *sessions.
 		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return fmt.Errorf("failed to acquire employee non-sensitive data: %v", err)
+		return fmt.Errorf("failed to acquire user non-sensitive data: %v", err)
+	} else if jsonResponse.ErrorCode != 0 {
+		return fmt.Errorf("failed to acquire user non-sensitive data: %d, %s", jsonResponse.ErrorCode, jsonResponse.ErrorMessage)
 	}
 
 	s.Groups = jsonResponse.Department
@@ -247,7 +253,7 @@ func (p *WeComProvider) enrichSensitiveData(ctx context.Context, s *sessions.Ses
 	// Corp Access Token
 	corpAccessToken, err := p.getCorpAccessToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to acquire corp access token: %v", err)
+		return fmt.Errorf("failed to acquire user profile: %v", err)
 	}
 
 	var jsonResponse struct {
@@ -263,7 +269,7 @@ func (p *WeComProvider) enrichSensitiveData(ctx context.Context, s *sessions.Ses
 		// Address      string `json:"address"`
 	}
 
-	params := fmt.Sprint("{\"user_ticket\":\"%s\"}", s.AccessToken)
+	params := fmt.Sprintf("{\"user_ticket\":\"%s\"}", s.AccessToken)
 
 	err = requests.New(p.ProfileURL.String() + "?access_token=" + url.QueryEscape(corpAccessToken)).
 		WithContext(ctx).
@@ -273,13 +279,17 @@ func (p *WeComProvider) enrichSensitiveData(ctx context.Context, s *sessions.Ses
 		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to acquire user profile: %v", err)
+	} else if jsonResponse.ErrorCode != 0 {
+		return fmt.Errorf("failed to acquire user profile: %d, %s", jsonResponse.ErrorCode, jsonResponse.ErrorMessage)
 	}
 
 	if jsonResponse.Email != "" {
 		s.Email = jsonResponse.Email
-	} else {
+	} else if jsonResponse.BizEmail != "" {
 		s.Email = jsonResponse.BizEmail
+	} else {
+		return fmt.Errorf("user didn't authorize to access email")
 	}
 
 	return nil
