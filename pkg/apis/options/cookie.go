@@ -19,6 +19,7 @@ type Cookie struct {
 	SameSite       string        `flag:"cookie-samesite" cfg:"cookie_samesite"`
 	CSRFPerRequest bool          `flag:"cookie-csrf-per-request" cfg:"cookie_csrf_per_request"`
 	CSRFExpire     time.Duration `flag:"cookie-csrf-expire" cfg:"cookie_csrf_expire"`
+	CSRFSameSite   string        `flag:"cookie-csrf-samesite" cfg:"cookie_csrf_samesite"`
 }
 
 func cookieFlagSet() *pflag.FlagSet {
@@ -35,6 +36,7 @@ func cookieFlagSet() *pflag.FlagSet {
 	flagSet.String("cookie-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
 	flagSet.Bool("cookie-csrf-per-request", false, "When this property is set to true, then the CSRF cookie name is built based on the state and varies per request. If property is set to false, then CSRF cookie has the same name for all requests.")
 	flagSet.Duration("cookie-csrf-expire", time.Duration(15)*time.Minute, "expire timeframe for CSRF cookie")
+	flagSet.String("cookie-csrf-samesite", "", "set SameSite cookie attribute (ie: \"lax\", \"strict\", \"none\", or \"\"). ")
 	return flagSet
 }
 
@@ -52,5 +54,6 @@ func cookieDefaults() Cookie {
 		SameSite:       "",
 		CSRFPerRequest: false,
 		CSRFExpire:     time.Duration(15) * time.Minute,
+		CSRFSameSite:   "",
 	}
 }

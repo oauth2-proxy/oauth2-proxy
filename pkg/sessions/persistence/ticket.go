@@ -171,14 +171,14 @@ func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *session
 // clearCookie removes any cookies that would be where this ticket
 // would set them
 func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
-	http.SetCookie(rw, cookies.MakeCookieFromOptions(
-		req,
+	cookie := cookies.MakeSessionCookie(req,
 		t.options.Name,
 		"",
 		t.options,
 		time.Hour*-1,
-		time.Now(),
-	))
+		time.Now())
+
+	http.SetCookie(rw, cookie)
 }
 
 // makeCookie makes a cookie, signing the value if present
@@ -190,14 +190,13 @@ func (t *ticket) makeCookie(req *http.Request, value string, expires time.Durati
 			return nil, err
 		}
 	}
-	return cookies.MakeCookieFromOptions(
-		req,
+
+	return cookies.MakeSessionCookie(req,
 		t.options.Name,
 		value,
 		t.options,
 		expires,
-		now,
-	), nil
+		now), nil
 }
 
 // makeCipher makes a AES-GCM cipher out of the ticket's secret

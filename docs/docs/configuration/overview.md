@@ -96,6 +96,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
+| `--cookie-csrf-samesite` | string | set SameSite CSRF cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`| `""` |
 | `--cookie-csrf-per-request` | bool | Enable having different CSRF cookies per request, making it possible to have parallel requests. | false |
 | `--cookie-csrf-expire` | duration | expire timeframe for CSRF cookie | 15m |
 | `--custom-templates-dir` | string | path to custom html templates | |
