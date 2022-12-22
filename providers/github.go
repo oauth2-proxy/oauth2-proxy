@@ -114,37 +114,9 @@ func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 		return err
 	}
 
-	// If usernames are set, check that first
-	verifiedUser := false
-	if len(p.Users) > 0 {
-		var err error
-		verifiedUser, err = p.hasUser(ctx, s.AccessToken)
-		if err != nil {
-			return err
-		}
-		// org and repository options are not configured
-		if !verifiedUser && p.Org == "" && p.Repo == "" {
-			return errors.New("missing github user")
-		}
-	}
-
-	if !verifiedUser {
-		// If a user is verified by username options, skip the following restrictions
-		if p.Org != "" {
-			if p.Team != "" {
-				if ok := p.hasOrgAndTeam(ctx, s); !ok {
-					return err
-				}
-			} else {
-				if ok := p.hasOrg(ctx, s); !ok {
-					return err
-				}
-			}
-		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
-			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
-				return err
-			}
-		}
+	err = p.checkRestrictions(ctx, s)
+	if err != nil {
+		return err
 	}
 
 	err = p.getEmail(ctx, s)
@@ -396,6 +368,44 @@ func (p *GitHubProvider) isVerifiedUser(username string) bool {
 	return false
 }
 
+func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.SessionState) error {
+	var err error
+
+	// If usernames are set, check that first
+	verifiedUser := false
+	if len(p.Users) > 0 {
+		verifiedUser, err = p.hasUser(ctx, s.AccessToken)
+		if err != nil {
+			return err
+		}
+		// org and repository options are not configured
+		if !verifiedUser && p.Org == "" && p.Repo == "" {
+			return errors.New("missing github user")
+		}
+	}
+
+	if !verifiedUser {
+		// If a user is verified by username options, skip the following restrictions
+		if p.Org != "" {
+			if p.Team != "" {
+				if ok := p.hasOrgAndTeam(ctx, s); !ok {
+					return err
+				}
+			} else {
+				if ok := p.hasOrg(ctx, s); !ok {
+					return err
+				}
+			}
+		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
+			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (p *GitHubProvider) getOrgAndTeam(ctx context.Context, s *sessions.SessionState) error {
 	err := p.getOrgs(ctx, s)
 	if err != nil {
@@ -408,11 +418,7 @@ func (p *GitHubProvider) getOrgAndTeam(ctx context.Context, s *sessions.SessionS
 func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) error {
 	// https://docs.github.com/en/rest/orgs/orgs#list-organizations-for-the-authenticated-user
 
-	var orgs []struct {
-		Login string `json:"login"`
-	}
-
-	type orgsPage []struct {
+	type Organization struct {
 		Login string `json:"login"`
 	}
 
@@ -430,45 +436,34 @@ func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) 
 			RawQuery: params.Encode(),
 		}
 
-		var op orgsPage
+		var orgs []Organization
 		err := requests.New(endpoint.String()).
 			WithContext(ctx).
 			WithHeaders(makeGitHubHeader(s.AccessToken)).
 			Do().
-			UnmarshalInto(&op)
+			UnmarshalInto(&orgs)
 		if err != nil {
 			return err
 		}
 
-		if len(op) == 0 {
+		if len(orgs) == 0 {
 			break
 		}
 
-		orgs = append(orgs, op...)
+		for _, org := range orgs {
+			logger.Printf("Member of Github Organization:%q", org.Login)
+			s.Groups = append(s.Groups, org.Login)
+		}
 		pn++
 	}
 
-	presentOrgs := make([]string, 0, len(orgs))
-	for _, org := range orgs {
-		logger.Printf("Member of Github Organization:%q", org.Login)
-		presentOrgs = append(presentOrgs, org.Login)
-	}
-	s.Groups = append(s.Groups, presentOrgs...)
 	return nil
 }
 
 func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState) error {
 	// https://docs.github.com/en/rest/teams/teams?#list-user-teams
 
-	var teams []struct {
-		Name string `json:"name"`
-		Slug string `json:"slug"`
-		Org  struct {
-			Login string `json:"login"`
-		} `json:"organization"`
-	}
-
-	type teamsPage []struct {
+	type Team struct {
 		Name string `json:"name"`
 		Slug string `json:"slug"`
 		Org  struct {
@@ -498,6 +493,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 			WithContext(ctx).
 			WithHeaders(makeGitHubHeader(s.AccessToken)).
 			Do()
+
 		if result.Error() != nil {
 			return result.Error()
 		}
@@ -525,15 +521,18 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 			}
 		}
 
-		var tp teamsPage
-		if err := result.UnmarshalInto(&tp); err != nil {
+		var teams []Team
+		if err := result.UnmarshalInto(&teams); err != nil {
 			return err
 		}
-		if len(tp) == 0 {
+		if len(teams) == 0 {
 			break
 		}
 
-		teams = append(teams, tp...)
+		for _, team := range teams {
+			logger.Printf("Member of Github Organization/Team:%q/%q", team.Org.Login, team.Slug)
+			s.Groups = append(s.Groups, team.Org.Login+"/"+team.Slug)
+		}
 
 		if pn == last {
 			break
@@ -545,11 +544,5 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		pn++
 	}
 
-	var presentTeams []string
-	for _, team := range teams {
-		logger.Printf("Member of Github Organization:%q Team:%q (Name:%q)", team.Org.Login, team.Slug, team.Name)
-		presentTeams = append(presentTeams, team.Org.Login+":"+team.Slug)
-	}
-	s.Groups = append(s.Groups, presentTeams...)
 	return nil
 }
