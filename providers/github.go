@@ -182,7 +182,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionS
 			ts := strings.Split(p.Team, ",")
 			for _, t := range ts {
 				if t == ot.Team {
-					logger.Printf("Found Github Organization:%q Team:%q (Name:%q)", ot.Org, ot.Team)
+					logger.Printf("Found Github Organization/Team: %q/%q", ot.Org, ot.Team)
 					return true
 				}
 			}
@@ -190,7 +190,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionS
 		}
 	}
 	if hasOrg {
-		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
+		logger.Printf("Missing Team: (%q) from Org: (%q) in teams: %v", p.Team, p.Org, presentTeams)
 	} else {
 		var allOrgs []string
 		for org := range presentOrgs {
@@ -369,41 +369,49 @@ func (p *GitHubProvider) isVerifiedUser(username string) bool {
 }
 
 func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.SessionState) error {
-	var err error
-
-	// If usernames are set, check that first
-	verifiedUser := false
-	if len(p.Users) > 0 {
-		verifiedUser, err = p.hasUser(ctx, s.AccessToken)
-		if err != nil {
-			return err
-		}
-		// org and repository options are not configured
-		if !verifiedUser && p.Org == "" && p.Repo == "" {
-			return errors.New("missing github user")
-		}
+	if ok, err := p.checkUserRestriction(ctx, s); err != nil || !ok {
+		return err
 	}
 
-	if !verifiedUser {
-		// If a user is verified by username options, skip the following restrictions
-		if p.Org != "" {
-			if p.Team != "" {
-				if ok := p.hasOrgAndTeam(ctx, s); !ok {
-					return err
-				}
-			} else {
-				if ok := p.hasOrg(ctx, s); !ok {
-					return err
-				}
-			}
-		} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
-			if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
+	var err error
+
+	// If a user is verified by username options, skip the following restrictions
+	if p.Org != "" {
+		if p.Team != "" {
+			if ok := p.hasOrgAndTeam(ctx, s); !ok {
 				return err
 			}
+		} else {
+			if ok := p.hasOrg(ctx, s); !ok {
+				return err
+			}
+		}
+	} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
+		if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if len(p.Users) == 0 {
+		return false, nil
+	}
+
+	verifiedUser, err := p.hasUser(ctx, s.AccessToken)
+
+	if err != nil {
+		return verifiedUser, err
+	}
+
+	// org and repository options are not configured
+	if !verifiedUser && p.Org == "" && p.Repo == "" {
+		return false, errors.New("missing github user")
+	}
+
+	return verifiedUser, nil
 }
 
 func (p *GitHubProvider) getOrgAndTeam(ctx context.Context, s *sessions.SessionState) error {
