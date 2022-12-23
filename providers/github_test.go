@@ -227,7 +227,7 @@ func TestGitHubProvider_getEmailWithWriteAccessToPrivateRepo(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
+func TestGitHubProvider_checkRestrictionsWithNoAccessToPrivateRepo(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
 		"/repos/oauth2-proxy/oauth2-proxy": {`{}`},
 	})
@@ -241,7 +241,7 @@ func TestGitHubProvider_getEmailWithNoAccessToPrivateRepo(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.checkRestrictions(context.Background(), session)
 	assert.NoError(t, err)
 	assert.Empty(t, session.Email)
 }
@@ -373,7 +373,7 @@ func TestGitHubProvider_getEmailWithUsername(t *testing.T) {
 	assert.Equal(t, "michael.bland@gsa.gov", session.Email)
 }
 
-func TestGitHubProvider_getEmailWithNotAllowedUsername(t *testing.T) {
+func TestGitHubProvider_checkRestrictionsWithNotAllowedUsername(t *testing.T) {
 	b := testGitHubBackend(map[string][]string{
 		"/user":        {`{"email": "michael.bland@gsa.gov", "login": "mbland"}`},
 		"/user/emails": {`[ {"email": "michael.bland@gsa.gov", "verified": true, "primary": true} ]`},
@@ -388,7 +388,7 @@ func TestGitHubProvider_getEmailWithNotAllowedUsername(t *testing.T) {
 	)
 
 	session := CreateAuthorizedSession()
-	err := p.getEmail(context.Background(), session)
+	err := p.checkRestrictions(context.Background(), session)
 	assert.Error(t, err)
 	assert.Empty(t, session.Email)
 }
