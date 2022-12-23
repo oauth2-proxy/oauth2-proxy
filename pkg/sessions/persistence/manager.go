@@ -1,6 +1,7 @@
 package persistence
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -89,4 +90,9 @@ func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {
 	return tckt.clearSession(func(key string) error {
 		return m.Store.Clear(req.Context(), key)
 	})
+}
+
+// VerifyConnection validates the underlying store is ready and connected
+func (m *Manager) VerifyConnection(ctx context.Context) error {
+	return m.Store.VerifyConnection(ctx)
 }
