@@ -145,7 +145,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, s *sessions.SessionState) b
 	presentOrgs := make([]string, 0, len(orgs))
 	for _, org := range orgs {
 		if p.Org == org {
-			logger.Printf("Found Github Organization: %q", org)
+			logger.Printf("Found Github Organization:%q", org)
 			return true
 		}
 		presentOrgs = append(presentOrgs, org)
@@ -182,7 +182,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionS
 			ts := strings.Split(p.Team, ",")
 			for _, t := range ts {
 				if t == ot.Team {
-					logger.Printf("Found Github Organization/Team: %q/%q", ot.Org, ot.Team)
+					logger.Printf("Found Github Organization/Team:%q/%q", ot.Org, ot.Team)
 					return true
 				}
 			}
@@ -190,7 +190,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionS
 		}
 	}
 	if hasOrg {
-		logger.Printf("Missing Team: (%q) from Org: (%q) in teams: %v", p.Team, p.Org, presentTeams)
+		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
 	} else {
 		var allOrgs []string
 		for org := range presentOrgs {
