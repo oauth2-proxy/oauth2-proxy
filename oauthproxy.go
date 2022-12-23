@@ -919,7 +919,8 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 // and optional authorization).
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 	session, err := p.getAuthenticatedSession(rw, req)
-	if err != nil {
+	if err != nil || session == nil {
+		// If there's no session, or an error retrieving it, we need to return 401 to trigger the OAuth2 flow.
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
