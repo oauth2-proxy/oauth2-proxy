@@ -126,24 +126,13 @@ func (c *csrf) SetSessionNonce(s *sessions.SessionState) {
 	s.Nonce = c.OIDCNonce
 }
 
-// BuildCSRFCookieOptions constructs the CSRF cookie options
-func BuildCSRFCookieOptions(name string, value string, opts *options.Cookie, expiration time.Duration, now time.Time) *CookieOptions {
+// getCSRFSameSite get the CSRF same site
+func getCSRFSameSite(opts *options.Cookie) string {
 	sameSite := opts.CSRFSameSite
 	if sameSite == "" {
 		sameSite = opts.SameSite
 	}
-	cookieOptions := &CookieOptions{
-		Name:       name,
-		Value:      value,
-		Domains:    opts.Domains,
-		Expiration: expiration,
-		Now:        now,
-		SameSite:   sameSite,
-		Path:       opts.Path,
-		HTTPOnly:   opts.HTTPOnly,
-		Secure:     opts.Secure,
-	}
-	return cookieOptions
+	return sameSite
 }
 
 // SetCookie encodes the CSRF to a signed cookie and sets it on the ResponseWriter
@@ -153,13 +142,17 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 		return nil, err
 	}
 
-	csrfCookieOptions := BuildCSRFCookieOptions(
-		c.cookieName(),
-		encoded,
-		c.cookieOpts,
-		c.cookieOpts.CSRFExpire,
-		c.time.Now(),
-	)
+	csrfCookieOptions := &CookieOptions{
+		Name:       c.cookieName(),
+		Value:      encoded,
+		Domains:    c.cookieOpts.Domains,
+		Expiration: c.cookieOpts.CSRFExpire,
+		Now:        c.time.Now(),
+		SameSite:   getCSRFSameSite(c.cookieOpts),
+		Path:       c.cookieOpts.Path,
+		HTTPOnly:   c.cookieOpts.HTTPOnly,
+		Secure:     c.cookieOpts.Secure,
+	}
 
 	cookie := MakeCookieFromOptions(
 		req,
@@ -172,13 +165,17 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 
 // ClearCookie removes the CSRF cookie
 func (c *csrf) ClearCookie(rw http.ResponseWriter, req *http.Request) {
-	csrfCookieOptions := BuildCSRFCookieOptions(
-		c.cookieName(),
-		"",
-		c.cookieOpts,
-		time.Hour*-1,
-		c.time.Now(),
-	)
+	csrfCookieOptions := &CookieOptions{
+		Name:       c.cookieName(),
+		Value:      "",
+		Domains:    c.cookieOpts.Domains,
+		Expiration: time.Hour * -1,
+		Now:        c.time.Now(),
+		SameSite:   getCSRFSameSite(c.cookieOpts),
+		Path:       c.cookieOpts.Path,
+		HTTPOnly:   c.cookieOpts.HTTPOnly,
+		Secure:     c.cookieOpts.Secure,
+	}
 
 	http.SetCookie(rw, MakeCookieFromOptions(
 		req,
