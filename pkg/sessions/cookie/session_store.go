@@ -73,7 +73,7 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 
 	for _, c := range req.Cookies() {
 		if cookieNameRegex.MatchString(c.Name) {
-			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
+			clearCookie := pkgcookies.MakeSessionCookie(req, c.Name, "", s.Cookie, time.Hour*-1, time.Now())
 
 			http.SetCookie(rw, clearCookie)
 		}
@@ -108,7 +108,7 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 	return nil
 }
 
-// makeSessionCookie creates an http.Cookie containing the authenticated user's
+// makeSessionCookie creates a http.Cookie containing the authenticated user's
 // authentication details
 func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now time.Time) ([]*http.Cookie, error) {
 	strValue := string(value)
@@ -119,22 +119,11 @@ func (s *SessionStore) makeSessionCookie(req *http.Request, value []byte, now ti
 			return nil, err
 		}
 	}
-	c := s.makeCookie(req, s.Cookie.Name, strValue, s.Cookie.Expire, now)
+	c := pkgcookies.MakeSessionCookie(req, s.Cookie.Name, strValue, s.Cookie, s.Cookie.Expire, now)
 	if len(c.String()) > maxCookieLength {
 		return splitCookie(c), nil
 	}
 	return []*http.Cookie{c}, nil
-}
-
-func (s *SessionStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time) *http.Cookie {
-	return pkgcookies.MakeCookieFromOptions(
-		req,
-		name,
-		value,
-		s.Cookie,
-		expiration,
-		now,
-	)
 }
 
 // NewCookieSessionStore initialises a new instance of the SessionStore from
@@ -196,7 +185,7 @@ func splitCookieName(name string, count int) string {
 	return splitName
 }
 
-// loadCookie retreieves the sessions state cookie from the http request.
+// loadCookie retrieves the sessions state cookie from the http request.
 // If a single cookie is present this will be returned, otherwise it attempts
 // to reconstruct a cookie split up by splitCookie
 func loadCookie(req *http.Request, cookieName string) (*http.Cookie, error) {

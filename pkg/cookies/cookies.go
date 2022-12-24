@@ -7,14 +7,34 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 )
 
+type CookieOptions struct {
+	// Cookie name
+	Name string
+	// Cookie value
+	Value string
+	// Domains
+	Domains []string
+	// Cookie expiration duration
+	Expiration time.Duration
+	// current time
+	Now time.Time
+	// Samesite
+	SameSite string
+	// Cookie path
+	Path string
+	// HTTP only
+	HTTPOnly bool
+	// Secure
+	Secure bool
+}
+
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time
-func MakeCookieFromOptions(req *http.Request, name string, value string, opts *options.Cookie, expiration time.Duration, now time.Time) *http.Cookie {
+func MakeCookieFromOptions(req *http.Request, opts *CookieOptions) *http.Cookie {
 	domain := GetCookieDomain(req, opts.Domains)
 	// If nothing matches, create the cookie with the shortest domain
 	if domain == "" && len(opts.Domains) > 0 {
@@ -26,11 +46,11 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 	}
 
 	c := &http.Cookie{
-		Name:     name,
-		Value:    value,
+		Name:     opts.Name,
+		Value:    opts.Value,
 		Path:     opts.Path,
 		Domain:   domain,
-		Expires:  now.Add(expiration),
+		Expires:  opts.Now.Add(opts.Expiration),
 		HttpOnly: opts.HTTPOnly,
 		Secure:   opts.Secure,
 		SameSite: ParseSameSite(opts.SameSite),
@@ -53,7 +73,7 @@ func GetCookieDomain(req *http.Request, cookieDomains []string) string {
 	return ""
 }
 
-// Parse a valid http.SameSite value from a user supplied string for use of making cookies.
+// ParseSameSite Parse a valid http.SameSite value from a user supplied string for use of making cookies.
 func ParseSameSite(v string) http.SameSite {
 	switch v {
 	case "lax":

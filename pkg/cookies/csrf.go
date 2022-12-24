@@ -126,6 +126,26 @@ func (c *csrf) SetSessionNonce(s *sessions.SessionState) {
 	s.Nonce = c.OIDCNonce
 }
 
+// BuildCSRFCookieOptions constructs the CSRF cookie options
+func BuildCSRFCookieOptions(name string, value string, opts *options.Cookie, expiration time.Duration, now time.Time) *CookieOptions {
+	sameSite := opts.CSRFSameSite
+	if sameSite == "" {
+		sameSite = opts.SameSite
+	}
+	cookieOptions := &CookieOptions{
+		Name:       name,
+		Value:      value,
+		Domains:    opts.Domains,
+		Expiration: expiration,
+		Now:        now,
+		SameSite:   sameSite,
+		Path:       opts.Path,
+		HTTPOnly:   opts.HTTPOnly,
+		Secure:     opts.Secure,
+	}
+	return cookieOptions
+}
+
 // SetCookie encodes the CSRF to a signed cookie and sets it on the ResponseWriter
 func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cookie, error) {
 	encoded, err := c.encodeCookie()
@@ -133,13 +153,17 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 		return nil, err
 	}
 
-	cookie := MakeCookieFromOptions(
-		req,
+	csrfCookieOptions := BuildCSRFCookieOptions(
 		c.cookieName(),
 		encoded,
 		c.cookieOpts,
 		c.cookieOpts.CSRFExpire,
 		c.time.Now(),
+	)
+
+	cookie := MakeCookieFromOptions(
+		req,
+		csrfCookieOptions,
 	)
 	http.SetCookie(rw, cookie)
 
@@ -148,13 +172,17 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 
 // ClearCookie removes the CSRF cookie
 func (c *csrf) ClearCookie(rw http.ResponseWriter, req *http.Request) {
-	http.SetCookie(rw, MakeCookieFromOptions(
-		req,
+	csrfCookieOptions := BuildCSRFCookieOptions(
 		c.cookieName(),
 		"",
 		c.cookieOpts,
 		time.Hour*-1,
 		c.time.Now(),
+	)
+
+	http.SetCookie(rw, MakeCookieFromOptions(
+		req,
+		csrfCookieOptions,
 	))
 }
 
