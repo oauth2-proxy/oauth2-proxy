@@ -385,7 +385,18 @@ func SessionStoreInterfaceTests(in *testInput) {
 				broken := "BrokenSessionFromADifferentSessionImplementation"
 				value, err := encryption.SignedValue(in.cookieOpts.Secret, in.cookieOpts.Name, []byte(broken), time.Now())
 				Expect(err).ToNot(HaveOccurred())
-				cookie := cookiesapi.MakeSessionCookie(in.request, in.cookieOpts.Name, value, in.cookieOpts, in.cookieOpts.Expire, time.Now())
+				cookieOptions := &cookiesapi.CookieOptions{
+					Name:       in.cookieOpts.Name,
+					Value:      value,
+					Domains:    in.cookieOpts.Domains,
+					Expiration: in.cookieOpts.Expire,
+					Now:        time.Now(),
+					SameSite:   in.cookieOpts.SameSite,
+					Path:       in.cookieOpts.Path,
+					HTTPOnly:   in.cookieOpts.HTTPOnly,
+					Secure:     in.cookieOpts.Secure,
+				}
+				cookie := cookiesapi.MakeCookieFromOptions(in.request, cookieOptions)
 				in.request.AddCookie(cookie)
 
 				err = in.ss().Save(in.response, in.request, in.session)
