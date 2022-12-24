@@ -185,7 +185,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	preAuthChain, err := buildPreAuthChain(opts)
+	preAuthChain, err := buildPreAuthChain(opts, sessionStore)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
@@ -327,7 +327,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
+func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore) (alice.Chain, error) {
 	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader))
 
 	if opts.ForceHTTPS {
@@ -351,12 +351,14 @@ func buildPreAuthChain(opts *options.Options) (alice.Chain, error) {
 	if opts.Logging.SilencePing {
 		chain = chain.Append(
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
 			middleware.NewRequestLogger(),
 		)
 	} else {
 		chain = chain.Append(
 			middleware.NewRequestLogger(),
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
+			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
 		)
 	}
 
