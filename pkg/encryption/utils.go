@@ -2,10 +2,12 @@ package encryption
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"hash"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,6 +17,7 @@ import (
 const (
 	CodeChallengeMethodPlain = "plain"
 	CodeChallengeMethodS256  = "S256"
+	asciiCharset             = "-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
 )
 
 // SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary
@@ -78,6 +81,19 @@ func SignedValue(seed string, key string, value []byte, now time.Time) (string, 
 	}
 	cookieVal := fmt.Sprintf("%s|%s|%s", encodedValue, timeStr, sig)
 	return cookieVal, nil
+}
+
+func GenerateRandomASCIIString(length int) (string, error) {
+	b := make([]byte, length)
+	charsetLen := new(big.Int).SetInt64(int64(len(asciiCharset)))
+	for i := range b {
+		character, err := rand.Int(rand.Reader, charsetLen)
+		if err != nil {
+			return "", err
+		}
+		b[i] = asciiCharset[character.Int64()]
+	}
+	return string(b), nil
 }
 
 func GenerateCodeChallenge(method, codeVerifier string) (string, error) {

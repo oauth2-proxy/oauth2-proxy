@@ -21,7 +21,10 @@ const nextCloudProviderName = "Nextcloud"
 
 // NewNextcloudProvider initiates a new NextcloudProvider
 func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
-	p.ProviderName = nextCloudProviderName
+	p.setProviderDefaults(providerDefaults{
+		name: nextCloudProviderName,
+	})
+
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 	if p.EmailClaim == options.OIDCEmailClaim {
 		// This implies the email claim has not been overridden, we should set a default
