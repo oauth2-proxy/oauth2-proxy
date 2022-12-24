@@ -81,7 +81,7 @@ var _ = Describe("Cookie Tests", func() {
 	})
 
 	Context("MakeCookieFromOptions", func() {
-		type MakeCookieFromOptionsTableInput struct {
+		type makeCookieFromOptionsTableInput struct {
 			host           string
 			name           string
 			value          string
@@ -98,8 +98,8 @@ var _ = Describe("Cookie Tests", func() {
 		now := time.Now()
 		var expectedExpires time.Time
 
-		DescribeTable("should return expected results",
-			func(in MakeCookieFromOptionsTableInput) {
+		DescribeTable("should return cookies with or without expiration",
+			func(in makeCookieFromOptionsTableInput) {
 				req, err := http.NewRequest(
 					http.MethodGet,
 					fmt.Sprintf("https://%s/%s", in.host, cookiePath),
@@ -109,7 +109,7 @@ var _ = Describe("Cookie Tests", func() {
 
 				Expect(MakeCookieFromOptions(req, in.name, in.value, &in.opts, in.expiration, in.now).Expires).To(Equal(in.expectedOutput))
 			},
-			Entry("persistent cookie", MakeCookieFromOptionsTableInput{
+			Entry("persistent cookie", makeCookieFromOptionsTableInput{
 				host:  "www.cookies.test",
 				name:  validName,
 				value: "1",
@@ -128,7 +128,7 @@ var _ = Describe("Cookie Tests", func() {
 				now:            now,
 				expectedOutput: now.Add(15 * time.Minute),
 			}),
-			Entry("session cookie", MakeCookieFromOptionsTableInput{
+			Entry("session cookie", makeCookieFromOptionsTableInput{
 				host:  "www.cookies.test",
 				name:  validName,
 				value: "1",
