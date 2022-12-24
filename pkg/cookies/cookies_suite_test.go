@@ -19,6 +19,10 @@ const (
 	cookieDomain = "o2p.cookies.test"
 	cookiePath   = "/cookie-tests"
 
+	SameSiteLax    = "lax"
+	SameSiteStrict = "strict"
+	SameSiteNone   = "none"
+
 	nowEpoch = 1609366421
 )
 

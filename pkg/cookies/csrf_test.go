@@ -226,7 +226,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call SetCookie when CSRF SameSite is not defined. "+
 			"Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
 			// prepare
-			cookieOpts.SameSite = "lax" // session cookie SameSite
+			cookieOpts.SameSite = SameSiteLax
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
@@ -249,8 +249,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call SetCookie when CSRF SameSite is an empty string. "+
 			"Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
 			// prepare
-			cookieOpts.SameSite = "lax"  // Session SameSite option
-			cookieOpts.CSRFSameSite = "" // CSRF SameSite option
+			cookieOpts.SameSite = SameSiteLax
+			cookieOpts.CSRFSameSite = ""
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
@@ -273,8 +273,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call SetCookie when CSRF SameSite is 'none'. "+
 			"Expected result: CSRF cookie SameSite is None.", func() {
 			// prepare
-			cookieOpts.SameSite = "lax"      // Session SameSite option
-			cookieOpts.CSRFSameSite = "none" // CSRF SameSite option
+			cookieOpts.SameSite = SameSiteLax
+			cookieOpts.CSRFSameSite = SameSiteNone
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
@@ -297,8 +297,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call SetCookie when CSRF SameSite is 'strict'. "+
 			"Expected result: CSRF cookie SameSite is Strict.", func() {
 			// prepare
-			cookieOpts.SameSite = "lax"        // Session SameSite option
-			cookieOpts.CSRFSameSite = "strict" // CSRF SameSite option
+			cookieOpts.SameSite = SameSiteLax
+			cookieOpts.CSRFSameSite = SameSiteStrict
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
@@ -321,8 +321,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call SetCookie when CSRF SameSite is 'lax'. "+
 			"Expected result: CSRF cookie SameSite is Lax.", func() {
 			// prepare
-			cookieOpts.SameSite = "strict"  // Session SameSite option
-			cookieOpts.CSRFSameSite = "lax" // CSRF SameSite option
+			cookieOpts.SameSite = SameSiteStrict
+			cookieOpts.CSRFSameSite = SameSiteLax
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
@@ -345,7 +345,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call ClearCookie when CSRF SameSite is not defined. "+
 			"Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
 			// prepare
-			cookieOpts.SameSite = "lax" // Session SameSite option
+			cookieOpts.SameSite = SameSiteLax
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
@@ -368,7 +368,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call ClearCookie when CSRF SameSite is an empty string. "+
 			"Expected result: CSRF cookie SameSite is the same as session cookie.", func() {
 			// prepare
-			cookieOpts.SameSite = "lax" // Session SameSite option
+			cookieOpts.SameSite = SameSiteLax
 			cookieOpts.CSRFSameSite = ""
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
@@ -392,8 +392,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call ClearCookie when CSRF SameSite is 'none'. "+
 			"Expected result: CSRF cookie SameSite is None.", func() {
 			// prepare
-			cookieOpts.SameSite = "lax" // Session SameSite option
-			cookieOpts.CSRFSameSite = "none"
+			cookieOpts.SameSite = SameSiteLax
+			cookieOpts.CSRFSameSite = SameSiteNone
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
@@ -416,8 +416,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call ClearCookie when CSRF SameSite is 'strict'. "+
 			"Expected result: CSRF cookie SameSite is Strict.", func() {
 			// prepare
-			cookieOpts.SameSite = "lax" // Session SameSite option
-			cookieOpts.CSRFSameSite = "strict"
+			cookieOpts.SameSite = SameSiteLax
+			cookieOpts.CSRFSameSite = SameSiteStrict
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
@@ -440,8 +440,8 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		It("Call ClearCookie when CSRF SameSite is 'lax'. "+
 			"Expected result: CSRF cookie SameSite is Lax.", func() {
 			// prepare
-			cookieOpts.SameSite = "strict" // Session SameSite option
-			cookieOpts.CSRFSameSite = "lax"
+			cookieOpts.SameSite = SameSiteStrict
+			cookieOpts.CSRFSameSite = SameSiteLax
 			CSRF, _ := NewCSRF(cookieOpts, "verifier")
 			rw := httptest.NewRecorder()
 			CSRF.(*csrf).time.Set(testNow)
