@@ -1,6 +1,7 @@
 package cookie
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -91,6 +92,12 @@ func (s *SessionStore) Clear(rw http.ResponseWriter, req *http.Request) error {
 		}
 	}
 
+	return nil
+}
+
+// VerifyConnection always return no-error, as there's no connection
+// in this store
+func (s *SessionStore) VerifyConnection(_ context.Context) error {
 	return nil
 }
 
