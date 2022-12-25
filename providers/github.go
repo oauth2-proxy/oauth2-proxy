@@ -109,18 +109,15 @@ func (p *GitHubProvider) setUsers(users []string) {
 // EnrichSession updates the User & Email after the initial Redeem
 func (p *GitHubProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Construct user info JSON from multiple GitHub API endpoints to have a more detailed session state
-	err := p.getOrgAndTeam(ctx, s)
-	if err != nil {
+	if err := p.getOrgAndTeam(ctx, s); err != nil {
 		return err
 	}
 
-	err = p.checkRestrictions(ctx, s)
-	if err != nil {
+	if err := p.checkRestrictions(ctx, s); err != nil {
 		return err
 	}
 
-	err = p.getEmail(ctx, s)
-	if err != nil {
+	if err := p.getEmail(ctx, s); err != nil {
 		return err
 	}
 
@@ -132,7 +129,7 @@ func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.Sessio
 	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
 }
 
-func (p *GitHubProvider) hasOrg(ctx context.Context, s *sessions.SessionState) bool {
+func (p *GitHubProvider) hasOrg(ctx context.Context, s *sessions.SessionState) error {
 	// https://developer.github.com/v3/orgs/#list-your-organizations
 	var orgs []string
 
@@ -146,16 +143,16 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, s *sessions.SessionState) b
 	for _, org := range orgs {
 		if p.Org == org {
 			logger.Printf("Found Github Organization:%q", org)
-			return true
+			return nil
 		}
 		presentOrgs = append(presentOrgs, org)
 	}
 
 	logger.Printf("Missing Organization:%q in %v", p.Org, presentOrgs)
-	return false
+	return errors.New("user is missing required organization")
 }
 
-func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionState) bool {
+func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionState) error {
 	type orgTeam struct {
 		Org  string `json:"org"`
 		Team string `json:"team"`
@@ -183,25 +180,28 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionS
 			for _, t := range ts {
 				if t == ot.Team {
 					logger.Printf("Found Github Organization/Team:%q/%q", ot.Org, ot.Team)
-					return true
+					return nil
 				}
 			}
 			presentTeams = append(presentTeams, ot.Team)
 		}
 	}
+
 	if hasOrg {
 		logger.Printf("Missing Team:%q from Org:%q in teams: %v", p.Team, p.Org, presentTeams)
-	} else {
-		var allOrgs []string
-		for org := range presentOrgs {
-			allOrgs = append(allOrgs, org)
-		}
-		logger.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
+		return errors.New("user is missing required team")
 	}
-	return false
+
+	var allOrgs []string
+	for org := range presentOrgs {
+		allOrgs = append(allOrgs, org)
+	}
+
+	logger.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
+	return errors.New("user is missing required organization")
 }
 
-func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool, error) {
+func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) error {
 	// https://developer.github.com/v3/repos/#get-a-repository
 
 	type permissions struct {
@@ -226,13 +226,18 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 		WithHeaders(makeGitHubHeader(accessToken)).
 		Do().
 		UnmarshalInto(&repo)
+
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// Every user can implicitly pull from a public repo, so only grant access
 	// if they have push access or the repo is private and they can pull
-	return repo.Permissions.Push || (repo.Private && repo.Permissions.Pull), nil
+	if repo.Permissions.Push || (repo.Private && repo.Permissions.Pull) {
+		return nil
+	}
+
+	return errors.New("user doesn't have repository access")
 }
 
 func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool, error) {
@@ -369,27 +374,18 @@ func (p *GitHubProvider) isVerifiedUser(username string) bool {
 }
 
 func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.SessionState) error {
-	if ok, err := p.checkUserRestriction(ctx, s); err != nil || !ok {
+	if ok, err := p.checkUserRestriction(ctx, s); err != nil || ok {
 		return err
 	}
 
-	var err error
-
 	// If a user is verified by username options, skip the following restrictions
-	if p.Org != "" {
-		if p.Team != "" {
-			if ok := p.hasOrgAndTeam(ctx, s); !ok {
-				return err
-			}
-		} else {
-			if ok := p.hasOrg(ctx, s); !ok {
-				return err
-			}
-		}
-	} else if p.Repo != "" && p.Token == "" { // If we have a token we'll do the collaborator check in GetUserName
-		if ok, err := p.hasRepo(ctx, s.AccessToken); err != nil || !ok {
-			return err
-		}
+	if err := p.checkOrgAndTeamRestriction(ctx, s); err != nil {
+		return err
+	}
+
+	if p.Org == "" && p.Repo != "" && p.Token == "" {
+		// If we have a token we'll do the collaborator check in GetUserName
+		return p.hasRepo(ctx, s.AccessToken)
 	}
 
 	return nil
@@ -401,7 +397,6 @@ func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.S
 	}
 
 	verifiedUser, err := p.hasUser(ctx, s.AccessToken)
-
 	if err != nil {
 		return verifiedUser, err
 	}
@@ -412,6 +407,19 @@ func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.S
 	}
 
 	return verifiedUser, nil
+}
+
+func (p *GitHubProvider) checkOrgAndTeamRestriction(ctx context.Context, s *sessions.SessionState) error {
+
+	if p.Org != "" && p.Team != "" {
+		return p.hasOrgAndTeam(ctx, s)
+	}
+
+	if p.Org != "" {
+		return p.hasOrg(ctx, s)
+	}
+
+	return nil
 }
 
 func (p *GitHubProvider) getOrgAndTeam(ctx context.Context, s *sessions.SessionState) error {

@@ -242,7 +242,7 @@ func TestGitHubProvider_checkRestrictionsWithNoAccessToPrivateRepo(t *testing.T)
 
 	session := CreateAuthorizedSession()
 	err := p.checkRestrictions(context.Background(), session)
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.Empty(t, session.Email)
 }
 
