@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -387,8 +386,11 @@ sub:
 
 		DescribeTable("LoadYAML",
 			func(in loadYAMLTableInput) {
-				var configFileName string
+				// Set the required environment variables before running the test
 
+				os.Setenv("TESTUSER", "Alice")
+
+				var configFileName string
 				if in.configFile != nil {
 					By("Creating a config file")
 					configFile, err := os.CreateTemp("", "oauth2-proxy-test-config-file")
@@ -414,7 +416,13 @@ sub:
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
+
 				Expect(input).To(Equal(in.expectedOutput))
+
+				// Unset the environment variables after running the test
+
+				os.Unsetenv("TESTUSER")
+
 			},
 			Entry("with a valid input", loadYAMLTableInput{
 				configFile: testOptionsConfigBytesFull,
@@ -466,6 +474,20 @@ sub:
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
 				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
+			}),
+			Entry("with a config file containing environment variable references", loadYAMLTableInput{
+				configFile: []byte("stringOption: ${TESTUSER}"),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "Alice",
+				},
+			}),
+			Entry("with a config file containing env variable references, with a fallback value", loadYAMLTableInput{
+				configFile: []byte("stringOption: ${TESTUSER2=Bob}"),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "Bob",
+				},
 			}),
 		)
 	})
@@ -543,63 +565,3 @@ injectResponseHeaders:
 		}))
 	})
 })
-
-func TestLoadYAML(t *testing.T) {
-	type config struct {
-		Name string
-		Age  int
-	}
-
-	// Test case: config file is empty
-	if err := LoadYAML("", &config{}); err == nil {
-		t.Errorf("LoadYAML() should return error if no configuration file provided")
-	}
-
-	// Test case: config file does not exist
-	if err := LoadYAML("non-existent-file.yml", &config{}); err == nil {
-		t.Errorf("LoadYAML() should return error if config file does not exist")
-	}
-
-	// Test case: config file is valid YAML but contains unknown fields
-	os.WriteFile("config.yml", []byte("name: Alice\nage: 10\nunknown: field"), 0644)
-	if err := LoadYAML("config.yml", &config{}); err == nil {
-		t.Errorf("LoadYAML() should return error if config file contains unknown fields")
-	}
-	os.Remove("config.yml")
-
-	// Test case: config file is valid YAML and maps to provided options
-	os.WriteFile("config.yml", []byte("name: Bob\nage: 20"), 0644)
-	options := &config{}
-	if err := LoadYAML("config.yml", options); err != nil {
-		t.Errorf("LoadYAML() returned unexpected error: %v", err)
-	}
-	if options.Name != "Bob" || options.Age != 20 {
-		t.Errorf("LoadYAML() did not load expected values: %v", options)
-	}
-	os.Remove("config.yml")
-
-	// Test case: config file contains environment variable references
-	os.Setenv("USER", "Alice")
-	os.WriteFile("config.yml", []byte("name: ${USER}"), 0644)
-	options = &config{}
-	if err := LoadYAML("config.yml", options); err != nil {
-		t.Errorf("LoadYAML() returned unexpected error: %v", err)
-	}
-	if options.Name != "Alice" {
-		t.Errorf("LoadYAML() did not substitute environment variable references: %v", options)
-	}
-	os.Remove("config.yml")
-	os.Unsetenv("USER")
-
-	// Test case: config file contains environment variable references, with a fallback value
-	os.WriteFile("config.yml", []byte("name: ${USER=Alice}"), 0644)
-	options = &config{}
-	if err := LoadYAML("config.yml", options); err != nil {
-		t.Errorf("LoadYAML() returned unexpected error: %v", err)
-	}
-	if options.Name != "Alice" {
-		t.Errorf("LoadYAML() did not fallback to default env value: %v", options)
-	}
-	os.Remove("config.yml")
-
-}
