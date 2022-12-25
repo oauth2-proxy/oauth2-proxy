@@ -1,6 +1,6 @@
 .PHONY: up
 up:
-	VERSION=$(shell git branch --show-current | sed "s/\//_/g") docker-compose up -d
+	VERSION=$(shell git describe --all --abbrev=0 | sed -e 's/^heads\///' -e 's/^tags\///' -e 's/\//_/g') docker-compose up -d
 
 .PHONY: down
 down:
@@ -8,7 +8,7 @@ down:
 
 .PHONY: alpha-config-up
 alpha-config-up:
-	VERSION=$(shell git branch --show-current | sed "s/\//_/g") docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml up -d
+	VERSION=$(shell git describe --all --abbrev=0 | sed -e 's/^heads\///' -e 's/^tags\///' -e 's/\//_/g') docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml up -d
 
 .PHONY: alpha-config-down
 alpha-config-down:
@@ -24,15 +24,15 @@ alpha-config-multiple-providers-down:
 
 .PHONY: build-up
 build-up:
-	BUILDPLATFORM=$(shell dpkg --print-architecture) VERSION=$(shell git branch --show-current | sed "s/\//_/g") DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-build-oauth.yaml up --build
+	BUILDPLATFORM=$(shell dpkg --print-architecture) VERSION=$(shell git describe --all --abbrev=0 | sed -e 's/^heads\///' -e 's/^tags\///' -e 's/\//_/g') DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-build-oauth.yaml up --build
 
 .PHONY: alpha-config-build-up
 alpha-config-build-up:
-	BUILDPLATFORM=$(shell dpkg --print-architecture) VERSION=$(shell git branch --show-current | sed "s/\//_/g") DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
+	BUILDPLATFORM=$(shell dpkg --print-architecture) VERSION=$(shell git describe --all --abbrev=0 | sed -e 's/^heads\///' -e 's/^tags\///' -e 's/\//_/g') DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml -f docker-compose-build-oauth.yaml up --build
 
 .PHONY: alpha-config-multiple-providers-build-up
 alpha-config-multiple-providers-build-up:
-	BUILDPLATFORM=$(shell dpkg --print-architecture) VERSION=$(shell git branch --show-current | sed "s/\//_/g") DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-build-oauth.yaml up --build
+	BUILDPLATFORM=$(shell dpkg --print-architecture) VERSION=$(shell git describe --all --abbrev=0 | sed -e 's/^heads\///' -e 's/^tags\///' -e 's/\//_/g') DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f docker-compose.yaml -f docker-compose-multiple-providers.yaml -f docker-compose-build-oauth.yaml up --build
 
 .PHONY: nginx-up
 nginx-up:
