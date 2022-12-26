@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path"
 	"regexp"
 	"strings"
 	"syscall"
@@ -104,7 +103,7 @@ type OAuthProxy struct {
 	serveMux          *mux.Router
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
-	metaRefresh       bool
+	useRedirectPage   bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -232,7 +231,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
-		metaRefresh:        opts.MetaRefreshRedirect,
+		useRedirectPage:    opts.UseRedirectPage,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -543,6 +542,21 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		RequestID:   scope.RequestID,
 		AppError:    appError,
 		Messages:    messages,
+	})
+}
+
+// RedirectPage writes a redirect page response
+func (p *OAuthProxy) RedirectPage(rw http.ResponseWriter, req *http.Request) {
+	redirectURL, err := p.appDirector.GetRedirect(req)
+	if err != nil {
+		logger.Errorf("Error obtaining redirect: %v", err)
+	}
+	if redirectURL == p.SignInPath || redirectURL == "" {
+		redirectURL = "/"
+	}
+
+	p.pageWriter.WriteRedirectPage(rw, pagewriter.RedirectPageOpts{
+		RedirectURL: redirectURL,
 	})
 }
 
@@ -877,8 +891,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if p.metaRefresh {
-			MetaRefreshRedirect(rw, req, appRedirect)
+		if p.useRedirectPage {
+			p.RedirectPage(rw, req)
 		} else {
 			http.Redirect(rw, req, appRedirect, http.StatusFound)
 		}
@@ -1232,50 +1246,4 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	// we need to send some JSON response because we set the Content-Type to
 	// application/json
 	rw.Write([]byte("{}"))
-}
-
-// MetaRefreshRedirect instructs the web browser to go to a different web page.
-func MetaRefreshRedirect(w http.ResponseWriter, r *http.Request, redirectURL string) {
-	if u, err := url.Parse(redirectURL); err == nil {
-		// If url was relative, make its path absolute by
-		// combining with request path.
-		// The client would probably do this for us,
-		// but doing it ourselves is more reliable.
-		// See RFC 7231, section 7.1.2
-		if u.Scheme == "" && u.Host == "" {
-			oldpath := r.URL.Path
-			if oldpath == "" { // should not happen, but avoid a crash if it does
-				oldpath = "/"
-			}
-
-			// no leading http://server
-			if redirectURL == "" || redirectURL[0] != '/' {
-				// make relative path absolute
-				olddir, _ := path.Split(oldpath)
-				redirectURL = olddir + redirectURL
-			}
-
-			var query string
-			if i := strings.Index(redirectURL, "?"); i != -1 {
-				redirectURL, query = redirectURL[:i], redirectURL[i:]
-			}
-
-			// clean up but preserve trailing slash
-			trailing := strings.HasSuffix(redirectURL, "/")
-			redirectURL = path.Clean(redirectURL)
-			if trailing && !strings.HasSuffix(redirectURL, "/") {
-				redirectURL += "/"
-			}
-			redirectURL += query
-		}
-	}
-
-	h := w.Header()
-	h.Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(200)
-	body := "<html>"
-	body += "<head><meta http-equiv=\"refresh\" content=\"0; URL='" + redirectURL + "'\"/></head>"
-	body += "<body><p>If you are not redirected, click <a href=\"" + redirectURL + "\">here</a>.</p></body>"
-	body += "</html>"
-	fmt.Fprintln(w, body)
 }

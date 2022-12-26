@@ -12,6 +12,7 @@ import (
 type Writer interface {
 	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
 	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
+	WriteRedirectPage(rw http.ResponseWriter, opts RedirectPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
 }
@@ -19,6 +20,7 @@ type Writer interface {
 // pageWriter implements the Writer interface
 type pageWriter struct {
 	*errorPageWriter
+	*redirectPageWriter
 	*signInPageWriter
 	*staticPageWriter
 }
@@ -79,6 +81,14 @@ func NewWriter(opts Opts) (Writer, error) {
 		debug:       opts.Debug,
 	}
 
+	redirectPage := &redirectPageWriter{
+		template:    templates.Lookup("redirect_page.html"),
+		proxyPrefix: opts.ProxyPrefix,
+		footer:      opts.Footer,
+		version:     opts.Version,
+		debug:       opts.Debug,
+	}
+
 	signInPage := &signInPageWriter{
 		template:         templates.Lookup("sign_in.html"),
 		errorPageWriter:  errorPage,
@@ -97,9 +107,10 @@ func NewWriter(opts Opts) (Writer, error) {
 	}
 
 	return &pageWriter{
-		errorPageWriter:  errorPage,
-		signInPageWriter: signInPage,
-		staticPageWriter: staticPages,
+		errorPageWriter:    errorPage,
+		redirectPageWriter: redirectPage,
+		signInPageWriter:   signInPage,
+		staticPageWriter:   staticPages,
 	}, nil
 }
 
@@ -108,10 +119,11 @@ func NewWriter(opts Opts) (Writer, error) {
 // If any of the funcs are not provided, a default implementation will be used.
 // This is primarily for us in testing.
 type WriterFuncs struct {
-	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
-	ErrorPageFunc  func(rw http.ResponseWriter, opts ErrorPageOpts)
-	ProxyErrorFunc func(rw http.ResponseWriter, req *http.Request, proxyErr error)
-	RobotsTxtfunc  func(rw http.ResponseWriter, req *http.Request)
+	SignInPageFunc   func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
+	ErrorPageFunc    func(rw http.ResponseWriter, opts ErrorPageOpts)
+	RedirectPageFunc func(rw http.ResponseWriter, opts RedirectPageOpts)
+	ProxyErrorFunc   func(rw http.ResponseWriter, req *http.Request, proxyErr error)
+	RobotsTxtfunc    func(rw http.ResponseWriter, req *http.Request)
 }
 
 // WriteSignInPage implements the Writer interface.
@@ -140,6 +152,21 @@ func (w *WriterFuncs) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	rw.WriteHeader(opts.Status)
 	errMsg := fmt.Sprintf("%d - %v", opts.Status, opts.AppError)
 	if _, err := rw.Write([]byte(errMsg)); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+// WriteRedirectPage implements the Writer interface.
+// If the RedirectPageFunc is provided, this will be used, else a default
+// implementation will be used.
+func (w *WriterFuncs) WriteRedirectPage(rw http.ResponseWriter, opts RedirectPageOpts) {
+	if w.RedirectPageFunc != nil {
+		w.RedirectPageFunc(rw, opts)
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	if _, err := rw.Write([]byte("Redirect page")); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }
