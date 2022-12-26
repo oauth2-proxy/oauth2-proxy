@@ -15,6 +15,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"golang.org/x/exp/maps"
 )
 
 // GitHubProvider represents an GitHub based Identity Provider
@@ -32,6 +33,7 @@ var _ Provider = (*GitHubProvider)(nil)
 const (
 	githubProviderName = "GitHub"
 	githubDefaultScope = "user:email read:org"
+	orgTeamSeparator   = ":"
 )
 
 var (
@@ -161,24 +163,25 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionS
 	var presentOrgTeams []orgTeam
 
 	for _, group := range s.Groups {
-		if strings.Contains(group, ":") {
-			ot := strings.Split(group, ":")
+		if strings.Contains(group, orgTeamSeparator) {
+			ot := strings.Split(group, orgTeamSeparator)
 			presentOrgTeams = append(presentOrgTeams, orgTeam{ot[0], ot[1]})
 		}
 	}
 
 	var hasOrg bool
-	var presentTeams []string
+
 	presentOrgs := make(map[string]bool)
+	var presentTeams []string
 
 	for _, ot := range presentOrgTeams {
 		presentOrgs[ot.Org] = true
 
-		if p.Org == ot.Org {
+		if strings.EqualFold(p.Org, ot.Org) {
 			hasOrg = true
-			ts := strings.Split(p.Team, ",")
-			for _, t := range ts {
-				if t == ot.Team {
+			teams := strings.Split(p.Team, ",")
+			for _, team := range teams {
+				if strings.EqualFold(strings.TrimSpace(team), ot.Team) {
 					logger.Printf("Found Github Organization/Team:%q/%q", ot.Org, ot.Team)
 					return nil
 				}
@@ -192,16 +195,11 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionS
 		return errors.New("user is missing required team")
 	}
 
-	var allOrgs []string
-	for org := range presentOrgs {
-		allOrgs = append(allOrgs, org)
-	}
-
-	logger.Printf("Missing Organization:%q in %#v", p.Org, allOrgs)
+	logger.Printf("Missing Organization:%q in %#v", p.Org, maps.Keys(presentOrgs))
 	return errors.New("user is missing required organization")
 }
 
-func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) error {
+func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) error {
 	// https://developer.github.com/v3/repos/#get-a-repository
 
 	type permissions struct {
@@ -363,7 +361,6 @@ func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) 
 	return nil
 }
 
-// isVerifiedUser
 func (p *GitHubProvider) isVerifiedUser(username string) bool {
 	for _, u := range p.Users {
 		if username == u {
@@ -374,18 +371,18 @@ func (p *GitHubProvider) isVerifiedUser(username string) bool {
 }
 
 func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.SessionState) error {
+	// If a user is verified by username options, skip the following restrictions
 	if ok, err := p.checkUserRestriction(ctx, s); err != nil || ok {
 		return err
 	}
 
-	// If a user is verified by username options, skip the following restrictions
-	if err := p.checkOrgAndTeamRestriction(ctx, s); err != nil {
+	if err := p.hasOrgAndTeamAccess(ctx, s); err != nil {
 		return err
 	}
 
 	if p.Org == "" && p.Repo != "" && p.Token == "" {
 		// If we have a token we'll do the collaborator check in GetUserName
-		return p.hasRepo(ctx, s.AccessToken)
+		return p.hasRepoAccess(ctx, s.AccessToken)
 	}
 
 	return nil
@@ -409,8 +406,7 @@ func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.S
 	return verifiedUser, nil
 }
 
-func (p *GitHubProvider) checkOrgAndTeamRestriction(ctx context.Context, s *sessions.SessionState) error {
-
+func (p *GitHubProvider) hasOrgAndTeamAccess(ctx context.Context, s *sessions.SessionState) error {
 	if p.Org != "" && p.Team != "" {
 		return p.hasOrgAndTeam(ctx, s)
 	}
@@ -478,7 +474,6 @@ func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) 
 
 func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState) error {
 	// https://docs.github.com/en/rest/teams/teams?#list-user-teams
-
 	type Team struct {
 		Name string `json:"name"`
 		Slug string `json:"slug"`
@@ -487,8 +482,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		} `json:"organization"`
 	}
 
-	pn := 1
-	last := 0
+	pn, last := 1, 0
 	for {
 		params := url.Values{
 			"per_page": {"100"},
@@ -541,19 +535,13 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		if err := result.UnmarshalInto(&teams); err != nil {
 			return err
 		}
-		if len(teams) == 0 {
-			break
-		}
 
 		for _, team := range teams {
 			logger.Printf("Member of Github Organization/Team:%q/%q", team.Org.Login, team.Slug)
-			s.Groups = append(s.Groups, team.Org.Login+"/"+team.Slug)
+			s.Groups = append(s.Groups, team.Org.Login+orgTeamSeparator+team.Slug)
 		}
 
-		if pn == last {
-			break
-		}
-		if last == 0 {
+		if len(teams) == 0 || pn == last || last == 0 {
 			break
 		}
 
