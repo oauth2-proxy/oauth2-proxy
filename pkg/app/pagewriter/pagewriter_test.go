@@ -244,7 +244,7 @@ var _ = Describe("Writer", func() {
 				writer: &WriterFuncs{
 					RedirectPageFunc: func(rw http.ResponseWriter, opts RedirectPageOpts) {
 						rw.WriteHeader(200)
-						rw.Write([]byte(fmt.Sprintf("%s", opts.RedirectURL)))
+						rw.Write([]byte(opts.RedirectURL))
 					},
 				},
 				expectedStatus: 200,
