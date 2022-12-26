@@ -546,15 +546,7 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 }
 
 // RedirectPage writes a redirect page response
-func (p *OAuthProxy) RedirectPage(rw http.ResponseWriter, req *http.Request) {
-	redirectURL, err := p.appDirector.GetRedirect(req)
-	if err != nil {
-		logger.Errorf("Error obtaining redirect: %v", err)
-	}
-	if redirectURL == p.SignInPath || redirectURL == "" {
-		redirectURL = "/"
-	}
-
+func (p *OAuthProxy) RedirectPage(rw http.ResponseWriter, redirectURL string) {
 	p.pageWriter.WriteRedirectPage(rw, pagewriter.RedirectPageOpts{
 		RedirectURL: redirectURL,
 	})
@@ -892,7 +884,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 		if p.useRedirectPage {
-			p.RedirectPage(rw, req)
+			p.RedirectPage(rw, appRedirect)
 		} else {
 			http.Redirect(rw, req, appRedirect, http.StatusFound)
 		}

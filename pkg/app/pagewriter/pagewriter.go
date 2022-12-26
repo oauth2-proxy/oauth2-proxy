@@ -121,9 +121,9 @@ func NewWriter(opts Opts) (Writer, error) {
 type WriterFuncs struct {
 	SignInPageFunc   func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
 	ErrorPageFunc    func(rw http.ResponseWriter, opts ErrorPageOpts)
-	RedirectPageFunc func(rw http.ResponseWriter, opts RedirectPageOpts)
 	ProxyErrorFunc   func(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	RobotsTxtfunc    func(rw http.ResponseWriter, req *http.Request)
+	RedirectPageFunc func(rw http.ResponseWriter, opts RedirectPageOpts)
 }
 
 // WriteSignInPage implements the Writer interface.
