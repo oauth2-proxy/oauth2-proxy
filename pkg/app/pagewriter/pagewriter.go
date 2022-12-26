@@ -28,7 +28,7 @@ type pageWriter struct {
 // Opts contains all options required to configure the template
 // rendering within OAuth2 Proxy.
 type Opts struct {
-	// TemplatesPath is the path from which to load custom templates for the sign-in and error pages.
+	// TemplatesPath is the path from which to load custom templates for the sign-in, error and redirect pages.
 	TemplatesPath string
 
 	// ProxyPrefix is the prefix under which OAuth2 Proxy pages are served.

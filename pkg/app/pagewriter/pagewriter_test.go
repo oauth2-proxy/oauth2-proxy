@@ -78,6 +78,8 @@ var _ = Describe("Writer", func() {
 				Expect(os.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
 				errorFile := filepath.Join(customDir, errorTemplateName)
 				Expect(os.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
+				redirectFile := filepath.Join(customDir, redirectTemplateName)
+				Expect(os.WriteFile(redirectFile, []byte(templateHTML), 0600)).To(Succeed())
 
 				opts.TemplatesPath = customDir
 
@@ -105,6 +107,17 @@ var _ = Describe("Writer", func() {
 			It("Writes the custom sign in template", func() {
 				recorder := httptest.NewRecorder()
 				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
+
+				body, err := io.ReadAll(recorder.Result().Body)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(body)).To(Equal("Custom Template"))
+			})
+
+			It("Writes the custom redirect page template", func() {
+				recorder := httptest.NewRecorder()
+				writer.WriteRedirectPage(recorder, RedirectPageOpts{
+					RedirectURL: "/redirect",
+				})
 
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
@@ -206,6 +219,36 @@ var _ = Describe("Writer", func() {
 				},
 				expectedStatus: 503,
 				expectedBody:   "12345 <redirectURL>",
+			}),
+		)
+
+		DescribeTable("WriteRedirectPage",
+			func(in writerFuncsTableInput) {
+				rw := httptest.NewRecorder()
+				in.writer.WriteRedirectPage(rw, RedirectPageOpts{
+					RedirectURL: "<redirectURL>",
+				})
+
+				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
+
+				body, err := io.ReadAll(rw.Result().Body)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(body)).To(Equal(in.expectedBody))
+			},
+			Entry("With no override", writerFuncsTableInput{
+				writer:         &WriterFuncs{},
+				expectedStatus: 200,
+				expectedBody:   "Redirect page",
+			}),
+			Entry("With an override function", writerFuncsTableInput{
+				writer: &WriterFuncs{
+					RedirectPageFunc: func(rw http.ResponseWriter, opts RedirectPageOpts) {
+						rw.WriteHeader(200)
+						rw.Write([]byte(fmt.Sprintf("%s", opts.RedirectURL)))
+					},
+				},
+				expectedStatus: 200,
+				expectedBody:   "<redirectURL>",
 			}),
 		)
 
