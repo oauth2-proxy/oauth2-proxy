@@ -45,6 +45,8 @@ type Provider struct {
 	OIDCConfig OIDCOptions `json:"oidcConfig,omitempty"`
 	// LoginGovConfig holds all configurations for LoginGov provider.
 	LoginGovConfig LoginGovOptions `json:"loginGovConfig,omitempty"`
+	// MastodonConfig holds all configurations for Mastodon provider
+	MastodonConfig MastodonOptions `json:"mastodonConfig,omitempty"`
 
 	// ID should be a unique identifier for the provider.
 	// This value is required for all providers.
@@ -122,6 +124,9 @@ const (
 
 	// LoginGovProvider is the provider type for LoginGov
 	LoginGovProvider ProviderType = "login.gov"
+
+	// MastodonProvider is the provider type for Mastodon
+	MastodonProvider ProviderType = "mastodon"
 
 	// NextCloudProvider is the provider type for NextCloud
 	NextCloudProvider ProviderType = "nextcloud"
@@ -237,6 +242,11 @@ type LoginGovOptions struct {
 	JWTKeyFile string `json:"jwtKeyFile,omitempty"`
 	// PubJWKURL is the JWK pubkey access endpoint
 	PubJWKURL string `json:"pubjwkURL,omitempty"`
+}
+
+type MastodonOptions struct {
+	// The base URL of the Mastodon instance
+	URL string `json:"url,omitempty"`
 }
 
 func providerDefaults() Providers {
