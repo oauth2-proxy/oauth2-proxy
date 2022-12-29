@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -17,8 +18,9 @@ import (
 
 func GetCertPool(paths []string) (*x509.CertPool, error) {
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("invalid empty list of Root CAs file paths")
+		return x509.SystemCertPool()
 	}
+
 	pool := x509.NewCertPool()
 	for _, path := range paths {
 		// Cert paths are a configurable option
@@ -33,24 +35,50 @@ func GetCertPool(paths []string) (*x509.CertPool, error) {
 	return pool, nil
 }
 
-func GetClientCertificates(certs, keys []string) ([]tls.Certificate, error) {
-	certificates := make([]tls.Certificate, 0)
-	if len(certs) == 0 || len(keys) == 0 {
-		return certificates, fmt.Errorf("invalid empty list of certs/keys")
+func getClientCertificates(certFile, keyFile string) ([]tls.Certificate, error) {
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("unable to locate certificate %s: %w", certFile, err)
 	}
 
-	if len(certs) != len(keys) {
-		return certificates, fmt.Errorf("invalid all certs need a key pair")
+	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("unable to locate key %s: %w", keyFile, err)
 	}
-	for i, c := range certs {
-		cert, err := tls.LoadX509KeyPair(c, keys[i])
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse cert/key pair %s, %s: %w", certFile, keyFile, err)
+	}
+
+	return []tls.Certificate{cert}, nil
+}
+
+func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, caFiles ...string) (*http.Client, error) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if insecureSkipVerify {
+		transport.TLSClientConfig.InsecureSkipVerify = true
+	} else {
+		pool, err := GetCertPool(caFiles)
 		if err != nil {
-			return []tls.Certificate{}, fmt.Errorf("could not parse cert/key pair %s, %s - %s", c, keys[i], err)
+			return nil, err
 		}
-		certificates = append(certificates, cert)
+
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs:    pool,
+			MinVersion: tls.VersionTLS12,
+		}
 	}
 
-	return certificates, nil
+	if certFile != "" && keyFile != "" {
+		certs, err := getClientCertificates(certFile, keyFile)
+		if err == nil {
+			return nil, err
+		}
+		transport.TLSClientConfig.Certificates = certs
+	}
+
+	return &http.Client{
+		Transport: transport,
+	}, nil
 }
 
 // https://golang.org/src/crypto/tls/generate_cert.go as a function

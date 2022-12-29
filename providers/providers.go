@@ -3,6 +3,8 @@ package providers
 import (
 	"context"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"golang.org/x/oauth2"
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -78,13 +80,21 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientSecretFile: providerConfig.ClientSecretFile,
 	}
 
+	client, err := util.GetHTTPClient(providerConfig.TLSCertFile, providerConfig.TLSKeyFile, providerConfig.SSLInsecureSkipVerify, providerConfig.CAFiles...)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse tls configuration for provider client: %w", err)
+	}
+
+	p.Client = client
+	ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, client)
+
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
 	if err != nil {
 		return nil, err
 	}
 
 	if needsVerifier {
-		pv, err := internaloidc.NewProviderVerifier(context.TODO(), internaloidc.ProviderVerifierOptions{
+		pv, err := internaloidc.NewProviderVerifier(ctx, internaloidc.ProviderVerifierOptions{
 			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
 			ClientID:               providerConfig.ClientID,
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,

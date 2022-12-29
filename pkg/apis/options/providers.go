@@ -56,13 +56,15 @@ type Provider struct {
 	// Name is the providers display name
 	// if set, it will be shown to the users in the login page.
 	Name string `json:"name,omitempty"`
+	// SSLInsecureSkipVerify disables verification of the providers CA
+	SSLInsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 	// CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
 	// If not specified, the default Go trust sources are used instead
 	CAFiles []string `json:"caFiles,omitempty"`
 	// CertFiles is list of paths to certificates that should be used when connecting to the provider.
-	CertFiles []string `json:"certFile,omitempty"`
+	TLSCertFile string `json:"certFile,omitempty"`
 	// KeyFiles is a list of paths to keys that should be paired with certificates when connecting to the provider.
-	KeyFiles []string `json:"keyFile,omitempty"`
+	TLSKeyFile string `json:"keyFile,omitempty"`
 
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`

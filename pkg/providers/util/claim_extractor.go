@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/oauth2"
 	"net/http"
 	"net/url"
 	"strings"
@@ -95,8 +96,12 @@ func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
 		return simplejson.New(), nil
 	}
 
-	claims, err := requests.New(c.profileURL.String()).
-		WithContext(c.ctx).
+	requestBuilder := requests.New(c.profileURL.String())
+	if client, ok := c.ctx.Value(oauth2.HTTPClient).(*http.Client); ok {
+		requestBuilder = requestBuilder.WithClient(client)
+	}
+
+	claims, err := requestBuilder.WithContext(c.ctx).
 		WithHeaders(c.requestHeaders).
 		Do().
 		UnmarshalSimpleJSON()

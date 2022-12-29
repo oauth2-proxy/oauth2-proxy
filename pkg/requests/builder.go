@@ -16,6 +16,8 @@ type Builder interface {
 	WithBody(io.Reader) Builder
 	WithMethod(string) Builder
 	WithHeaders(http.Header) Builder
+	WithTransport(*http.Transport) Builder
+	WithClient(*http.Client) Builder
 	SetHeader(key, value string) Builder
 	Do() Result
 }
@@ -27,11 +29,13 @@ type builder struct {
 	body     io.Reader
 	header   http.Header
 	result   *result
+	client   *http.Client
 }
 
 // New provides a new Builder for the given endpoint.
 func New(endpoint string) Builder {
 	return &builder{
+		client:   http.DefaultClient,
 		endpoint: endpoint,
 		method:   "GET",
 	}
@@ -59,6 +63,20 @@ func (r *builder) WithMethod(method string) Builder {
 // WithHeaders replaces the request header map with the given header map.
 func (r *builder) WithHeaders(header http.Header) Builder {
 	r.header = header
+	return r
+}
+
+func (r *builder) WithTransport(transport *http.Transport) Builder {
+	if transport != nil {
+		r.client.Transport = transport
+	}
+	return r
+}
+
+func (r *builder) WithClient(client *http.Client) Builder {
+	if client != nil {
+		r.client = client
+	}
 	return r
 }
 
@@ -99,7 +117,7 @@ func (r *builder) do() Result {
 	}
 	req.Header = r.header
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := r.client.Do(req)
 	if err != nil {
 		r.result = &result{err: fmt.Errorf("error performing request: %v", err)}
 		return r.result

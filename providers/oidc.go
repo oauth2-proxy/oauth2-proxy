@@ -77,12 +77,14 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		},
 		RedirectURL: redirectURL,
 	}
-	token, err := c.Exchange(ctx, code, opts...)
+
+	ctxWithClient := context.WithValue(ctx, oauth2.HTTPClient, p.Client)
+	token, err := c.Exchange(ctxWithClient, code, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
 
-	return p.createSession(ctx, token, false)
+	return p.createSession(ctxWithClient, token, false)
 }
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields

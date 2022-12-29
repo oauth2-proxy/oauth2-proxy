@@ -29,38 +29,26 @@ func Validate(o *options.Options) error {
 	msgs = configureLogger(o.Logging, msgs)
 	msgs = parseSignatureKey(o, msgs)
 
-	var tlsConfig *tls.Config
 	if o.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
 		/* #nosec G402 */
-		tlsConfig = &tls.Config{
-			InsecureSkipVerify: true,
+		insecureTransport := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
+		http.DefaultClient = &http.Client{Transport: insecureTransport}
 	} else if len(o.Providers[0].CAFiles) > 0 {
 		pool, err := util.GetCertPool(o.Providers[0].CAFiles)
 		if err == nil {
-			tlsConfig = &tls.Config{
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{
 				RootCAs:    pool,
 				MinVersion: tls.VersionTLS12,
 			}
+
+			http.DefaultClient = &http.Client{Transport: transport}
 		} else {
 			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
 		}
-	}
-
-	if len(o.Providers[0].CertFiles) > 0 && len(o.Providers[0].KeyFiles) > 0 {
-		certs, err := util.GetClientCertificates(o.Providers[0].CertFiles, o.Providers[0].KeyFiles)
-		if err == nil {
-			tlsConfig.Certificates = certs
-		} else {
-			msgs = append(msgs, fmt.Sprintf("unable to load client certificates: %v", err))
-		}
-	}
-
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = tlsConfig
-	http.DefaultClient = &http.Client{
-		Transport: transport,
 	}
 
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {

@@ -7,7 +7,9 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"golang.org/x/oauth2"
 	"math/big"
+	"net/http"
 	"net/url"
 	"os"
 	"time"
@@ -153,7 +155,10 @@ type loginGovCustomClaims struct {
 func checkNonce(idToken string, p *LoginGovProvider) (err error) {
 	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		var pubkeys jose.JSONWebKeySet
-		rerr := requests.New(p.PubJWKURL.String()).Do().UnmarshalInto(&pubkeys)
+		rerr := requests.New(p.PubJWKURL.String()).
+			WithClient(p.Client).
+			Do().
+			UnmarshalInto(&pubkeys)
 		if rerr != nil {
 			return nil, rerr
 		}
@@ -179,9 +184,13 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 		EmailVerified bool   `json:"email_verified"`
 	}
 
+	requestBuilder := requests.New(userInfoEndpoint)
+	if client, ok := ctx.Value(oauth2.HTTPClient).(*http.Client); ok {
+		requestBuilder = requestBuilder.WithClient(client)
+	}
+
 	// query the user info endpoint for user attributes
-	err := requests.New(userInfoEndpoint).
-		WithContext(ctx).
+	err := requestBuilder.WithContext(ctx).
 		SetHeader("Authorization", "Bearer "+accessToken).
 		Do().
 		UnmarshalInto(&emailData)
@@ -238,6 +247,7 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code, codeVerifier str
 	}
 	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").

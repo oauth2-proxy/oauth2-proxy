@@ -151,6 +151,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 		var op orgsPage
 		err := requests.New(endpoint.String()).
 			WithContext(ctx).
+			WithClient(p.Client).
 			WithHeaders(makeGitHubHeader(accessToken)).
 			Do().
 			UnmarshalInto(&op)
@@ -218,6 +219,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 		// nolint:bodyclose
 		result := requests.New(endpoint.String()).
 			WithContext(ctx).
+			WithClient(p.Client).
 			WithHeaders(makeGitHubHeader(accessToken)).
 			Do()
 		if result.Error() != nil {
@@ -318,6 +320,7 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 	var repo repository
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(accessToken)).
 		Do().
 		UnmarshalInto(&repo)
@@ -346,6 +349,7 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(accessToken)).
 		Do().
 		UnmarshalInto(&user)
@@ -369,6 +373,7 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 	}
 	result := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(accessToken)).
 		Do()
 	if result.Error() != nil {
@@ -433,6 +438,7 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 	}
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&emails)
@@ -467,6 +473,7 @@ func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) 
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&user)

@@ -506,6 +506,8 @@ type LegacyProvider struct {
 	ProviderType                       string   `flag:"provider" cfg:"provider"`
 	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
 	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
+	TLSCertFile                        string   `flag:"provider-tls-cert-file" cfg:"provider_tls_cert_file"`
+	TLSKeyFile                         string   `flag:"provider-tls-key-file" cfg:"provider_tls_key_file"`
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
@@ -560,6 +562,8 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.StringSlice("provider-ca-file", []string{}, "One or more paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead.")
+	flagSet.String("provider-tls-cert-file", "", "Path to the PEM encoded X.509 certificate to use when connecting to the provider.")
+	flagSet.String("provider-tls-key-file", "", "Path to the PEM encoded X.509 key to use when connecting to the provider.")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
@@ -657,6 +661,8 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientSecretFile:    l.ClientSecretFile,
 		Type:                ProviderType(l.ProviderType),
 		CAFiles:             l.ProviderCAFiles,
+		TLSCertFile:         l.TLSCertFile,
+		TLSKeyFile:          l.TLSKeyFile,
 		LoginURL:            l.LoginURL,
 		RedeemURL:           l.RedeemURL,
 		ProfileURL:          l.ProfileURL,

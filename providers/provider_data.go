@@ -33,6 +33,7 @@ type ProviderData struct {
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
+	Client            *http.Client
 	ClientID          string
 	ClientSecret      string
 	ClientSecretFile  string

@@ -396,7 +396,7 @@ func TestGetCertPool(t *testing.T) {
 }
 
 func TestGetClientCertificates(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "certtest")
+	tempDir, err := os.MkdirTemp("", "certtest")
 	assert.NoError(t, err)
 	defer func(path string) {
 		rerr := os.RemoveAll(path)
@@ -424,11 +424,9 @@ func TestGetClientCertificates(t *testing.T) {
 		keyFile3.Name(),
 	}
 
-	tlsCerts, err := GetClientCertificates(certs, keys)
-	assert.NoError(t, err)
-	assert.Equal(t, len(certs), len(tlsCerts))
-
-	for i, subj := range []string{cert1CertSubj, cert2CertSubj, cert3CertSubj} {
-		assert.Equal(t, tlsCerts[i].Leaf.Subject, subj)
+	for i := range certs {
+		tlsCerts, err := getClientCertificates(certs[i], keys[i])
+		assert.NoError(t, err)
+		assert.Equal(t, len(certs), len(tlsCerts))
 	}
 }
