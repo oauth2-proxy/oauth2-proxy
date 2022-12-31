@@ -79,7 +79,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
-func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+func (p *OIDCProvider) EnrichSession(_ context.Context, s *sessions.SessionState) error {
 	// If a mandatory email wasn't set, error at this point.
 	if s.Email == "" {
 		return errors.New("neither the id_token nor the profileURL set an email")
@@ -101,6 +101,17 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	err = p.checkNonce(s)
 	if err != nil {
 		logger.Errorf("nonce verification failed: %v", err)
+		return false
+	}
+
+	return true
+}
+
+// IsSessionExpired checks that the session's IDToken has reach its maximum time to live
+func (p *OIDCProvider) IsSessionExpired(ctx context.Context, s *sessions.SessionState) bool {
+	_, err := p.ExpirationCheck.Verify(ctx, s.IDToken)
+	if err != nil {
+		logger.Errorf("id_token not valid: %v", err)
 		return false
 	}
 

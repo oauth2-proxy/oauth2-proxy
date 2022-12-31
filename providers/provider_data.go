@@ -48,6 +48,7 @@ type ProviderData struct {
 	EmailClaim           string
 	GroupsClaim          string
 	Verifier             internaloidc.IDTokenVerifier
+	ExpirationCheck      internaloidc.IDTokenExpirationCheck
 
 	// Universal Group authorization data structure
 	// any provider can set to consume

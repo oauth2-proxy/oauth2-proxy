@@ -113,6 +113,10 @@ var _ = Describe("Stored Session Suite", func() {
 			return ss.AccessToken != "Invalid"
 		}
 
+		var defaultIsExpiredFunc = func(_ context.Context, ss *sessionsapi.SessionState) bool {
+			return ss.IDToken == "Expired"
+		}
+
 		var defaultSessionStore = &fakeSessionStore{
 			LoadFunc: func(req *http.Request) (*sessionsapi.SessionState, error) {
 				switch req.Header.Get("Cookie") {
@@ -147,6 +151,13 @@ var _ = Describe("Stored Session Suite", func() {
 						CreatedAt:    &createdPast,
 						ExpiresOn:    &createdFuture,
 					}, nil
+				case "_oauth2_proxy=IDTokenExpired":
+					return &sessionsapi.SessionState{
+						IDToken:      "Expired",
+						RefreshToken: refresh,
+						CreatedAt:    &createdPast,
+						ExpiresOn:    &createdFuture,
+					}, nil
 				case "_oauth2_proxy=NonExistent":
 					return nil, fmt.Errorf("invalid cookie")
 				default:
@@ -164,13 +175,14 @@ var _ = Describe("Stored Session Suite", func() {
 		})
 
 		type storedSessionLoaderTableInput struct {
-			requestHeaders  http.Header
-			existingSession *sessionsapi.SessionState
-			expectedSession *sessionsapi.SessionState
-			store           sessionsapi.SessionStore
-			refreshPeriod   time.Duration
-			refreshSession  func(context.Context, *sessionsapi.SessionState) (bool, error)
-			validateSession func(context.Context, *sessionsapi.SessionState) bool
+			requestHeaders   http.Header
+			existingSession  *sessionsapi.SessionState
+			expectedSession  *sessionsapi.SessionState
+			store            sessionsapi.SessionStore
+			refreshPeriod    time.Duration
+			refreshSession   func(context.Context, *sessionsapi.SessionState) (bool, error)
+			validateSession  func(context.Context, *sessionsapi.SessionState) bool
+			isSessionExpired func(context.Context, *sessionsapi.SessionState) bool
 		}
 
 		DescribeTable("when serving a request",
@@ -187,10 +199,11 @@ var _ = Describe("Stored Session Suite", func() {
 				rw := httptest.NewRecorder()
 
 				opts := &StoredSessionLoaderOptions{
-					SessionStore:    in.store,
-					RefreshPeriod:   in.refreshPeriod,
-					RefreshSession:  in.refreshSession,
-					ValidateSession: in.validateSession,
+					SessionStore:     in.store,
+					RefreshPeriod:    in.refreshPeriod,
+					RefreshSession:   in.refreshSession,
+					ValidateSession:  in.validateSession,
+					IsSessionExpired: in.isSessionExpired,
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -204,24 +217,26 @@ var _ = Describe("Stored Session Suite", func() {
 				Expect(gotSession).To(Equal(in.expectedSession))
 			},
 			Entry("with no cookie", storedSessionLoaderTableInput{
-				requestHeaders:  http.Header{},
-				existingSession: nil,
-				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				requestHeaders:   http.Header{},
+				existingSession:  nil,
+				expectedSession:  nil,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("with an invalid cookie", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=NonExistent"},
 				},
-				existingSession: nil,
-				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				existingSession:  nil,
+				expectedSession:  nil,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("with an existing session", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
@@ -233,10 +248,11 @@ var _ = Describe("Stored Session Suite", func() {
 				expectedSession: &sessionsapi.SessionState{
 					RefreshToken: "Existing",
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("with a session that has not expired", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
@@ -249,21 +265,23 @@ var _ = Describe("Stored Session Suite", func() {
 					ExpiresOn:    &createdFuture,
 					Lock:         &sessionsapi.NoOpLock{},
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("with a session that cannot refresh and has expired", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=ExpiredNoRefreshSession"},
 				},
-				existingSession: nil,
-				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				existingSession:  nil,
+				expectedSession:  nil,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("with a session that can refresh, but is younger than refresh period", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
@@ -275,10 +293,11 @@ var _ = Describe("Stored Session Suite", func() {
 					CreatedAt:    &createdPast,
 					ExpiresOn:    &createdFuture,
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   10 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				store:            defaultSessionStore,
+				refreshPeriod:    10 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("with a session that can refresh and is older than the refresh period", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
@@ -286,15 +305,34 @@ var _ = Describe("Stored Session Suite", func() {
 				},
 				existingSession: nil,
 				expectedSession: &sessionsapi.SessionState{
-					RefreshToken: "Refreshed",
+					RefreshToken: refreshed,
 					CreatedAt:    &now,
 					ExpiresOn:    &createdFuture,
 					Lock:         &sessionsapi.NoOpLock{},
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
+			}),
+			Entry("with a session that can refresh and is younger than the refresh period but IDToken has expired", storedSessionLoaderTableInput{
+				requestHeaders: http.Header{
+					"Cookie": []string{"_oauth2_proxy=IDTokenExpired"},
+				},
+				existingSession: nil,
+				expectedSession: &sessionsapi.SessionState{
+					IDToken:      "Expired",
+					RefreshToken: refreshed,
+					CreatedAt:    &now,
+					ExpiresOn:    &createdFuture,
+					Lock:         &sessionsapi.NoOpLock{},
+				},
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("when the provider refresh fails but validation succeeds", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
@@ -307,32 +345,35 @@ var _ = Describe("Stored Session Suite", func() {
 					ExpiresOn:    &createdFuture,
 					Lock:         &sessionsapi.NoOpLock{},
 				},
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("when the provider refresh fails and validation fails", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=RefreshError"},
 				},
-				existingSession: nil,
-				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: func(context.Context, *sessionsapi.SessionState) bool { return false },
+				existingSession:  nil,
+				expectedSession:  nil,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  func(context.Context, *sessionsapi.SessionState) bool { return false },
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 			Entry("when the session is not refreshed and is no longer valid", storedSessionLoaderTableInput{
 				requestHeaders: http.Header{
 					"Cookie": []string{"_oauth2_proxy=InvalidNoRefreshSession"},
 				},
-				existingSession: nil,
-				expectedSession: nil,
-				store:           defaultSessionStore,
-				refreshPeriod:   1 * time.Minute,
-				refreshSession:  defaultRefreshFunc,
-				validateSession: defaultValidateFunc,
+				existingSession:  nil,
+				expectedSession:  nil,
+				store:            defaultSessionStore,
+				refreshPeriod:    1 * time.Minute,
+				refreshSession:   defaultRefreshFunc,
+				validateSession:  defaultValidateFunc,
+				isSessionExpired: defaultIsExpiredFunc,
 			}),
 		)
 
@@ -388,6 +429,9 @@ var _ = Describe("Stored Session Suite", func() {
 							},
 							ValidateSession: func(context.Context, *sessionsapi.SessionState) bool {
 								return true
+							},
+							IsSessionExpired: func(context.Context, *sessionsapi.SessionState) bool {
+								return false
 							},
 						}
 
@@ -493,6 +537,9 @@ var _ = Describe("Stored Session Suite", func() {
 					sessionValidator: func(_ context.Context, ss *sessionsapi.SessionState) bool {
 						validated = true
 						return ss.AccessToken != "Invalid"
+					},
+					isSessionExpired: func(ctx context.Context, state *sessionsapi.SessionState) bool {
+						return false
 					},
 				}
 

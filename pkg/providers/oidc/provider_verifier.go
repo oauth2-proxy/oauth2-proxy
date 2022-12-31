@@ -14,6 +14,7 @@ type ProviderVerifier interface {
 	DiscoveryEnabled() bool
 	Provider() DiscoveryProvider
 	Verifier() IDTokenVerifier
+	ExpirationCheck() IDTokenExpirationCheck
 }
 
 // ProviderVerifierOptions allows you to configure a ProviderVerifier
@@ -87,6 +88,17 @@ func (p ProviderVerifierOptions) toOIDCConfig() *oidc.Config {
 	}
 }
 
+// toOIDCConfigForExpiration returns an oidc.Config based on the configured options to check if ID token has expired.
+func (p ProviderVerifierOptions) toOIDCConfigForExpiration() *oidc.Config {
+	return &oidc.Config{
+		ClientID:                   p.ClientID,
+		SkipIssuerCheck:            true,
+		SkipClientIDCheck:          true,
+		SupportedSigningAlgs:       p.SupportedSigningAlgs,
+		InsecureSkipSignatureCheck: true,
+	}
+}
+
 // NewProviderVerifier constructs a ProviderVerifier from the options given.
 func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (ProviderVerifier, error) {
 	if err := opts.validate(); err != nil {
@@ -98,6 +110,7 @@ func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (Pro
 		return nil, fmt.Errorf("could not get verifier builder: %v", err)
 	}
 	verifier := NewVerifier(verifierBuilder(opts.toOIDCConfig()), opts.toVerificationOptions())
+	expirationCheck := NewExpirationCheck(verifierBuilder(opts.toOIDCConfigForExpiration()))
 
 	if provider == nil {
 		// To avoid the possibility of nil pointers, always return an empty provider if discovery didn't occur.
@@ -109,6 +122,7 @@ func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (Pro
 		discoveryEnabled: !opts.SkipDiscovery,
 		provider:         provider,
 		verifier:         verifier,
+		expirationCheck:  expirationCheck,
 	}, nil
 }
 
@@ -145,6 +159,7 @@ type providerVerifier struct {
 	discoveryEnabled bool
 	provider         DiscoveryProvider
 	verifier         IDTokenVerifier
+	expirationCheck  IDTokenExpirationCheck
 }
 
 // DiscoveryEnabled returns whether the provider verifier was constructed
@@ -161,4 +176,9 @@ func (p *providerVerifier) Provider() DiscoveryProvider {
 // Verifier returns the ID token verifier
 func (p *providerVerifier) Verifier() IDTokenVerifier {
 	return p.verifier
+}
+
+// ExpirationCheck returns the ID token verifier to check if ID token is expired
+func (p *providerVerifier) ExpirationCheck() IDTokenExpirationCheck {
+	return p.expirationCheck
 }

@@ -27,6 +27,7 @@ type Provider interface {
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
 	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
 	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
+	IsSessionExpired(ctx context.Context, s *sessions.SessionState) bool
 	RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error)
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
 }
@@ -98,6 +99,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		}
 
 		p.Verifier = pv.Verifier()
+		p.ExpirationCheck = pv.ExpirationCheck()
 		if pv.DiscoveryEnabled() {
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
