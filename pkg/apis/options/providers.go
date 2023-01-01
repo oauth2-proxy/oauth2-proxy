@@ -201,6 +201,10 @@ type OIDCOptions struct {
 	// InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
 	// default set to 'false'
 	InsecureSkipIssuerVerification bool `json:"insecureSkipIssuerVerification,omitempty"`
+	// InsecureSkipSignatureCheck skips JWT signature validation.
+	// It's intended for special cases where providers (such as Azure), use the "none"
+	// algorithm. default set to 'false'
+	InsecureSkipSignatureCheck bool `json:"insecureSkipSignatureCheck,omitempty"`
 	// InsecureSkipNonce skips verifying the ID Token's nonce claim that must match
 	// the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked
 	// after the initial OAuth redeem & subsequent token refreshes.

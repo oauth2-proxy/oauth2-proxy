@@ -44,6 +44,11 @@ type ProviderVerifierOptions struct {
 	// When false, ID Token Issuers must match the OIDC discovery URL.
 	SkipIssuerVerification bool
 
+	// InsecureSkipSignatureCheck skips JWT signature validation.
+	// It's intended for special cases where providers (such as Azure), use the "none"
+	// algorithm.
+	InsecureSkipSignatureCheck bool
+
 	// SupportedSigningAlgs is the list of signature algorithms supported by the
 	// provider.
 	SupportedSigningAlgs []string
@@ -80,10 +85,11 @@ func (p ProviderVerifierOptions) toVerificationOptions() IDTokenVerificationOpti
 // toOIDCConfig returns an oidc.Config based on the configured options.
 func (p ProviderVerifierOptions) toOIDCConfig() *oidc.Config {
 	return &oidc.Config{
-		ClientID:             p.ClientID,
-		SkipIssuerCheck:      p.SkipIssuerVerification,
-		SkipClientIDCheck:    true,
-		SupportedSigningAlgs: p.SupportedSigningAlgs,
+		ClientID:                   p.ClientID,
+		SkipIssuerCheck:            p.SkipIssuerVerification,
+		InsecureSkipSignatureCheck: p.InsecureSkipSignatureCheck,
+		SkipClientIDCheck:          true,
+		SupportedSigningAlgs:       p.SupportedSigningAlgs,
 	}
 }
 
