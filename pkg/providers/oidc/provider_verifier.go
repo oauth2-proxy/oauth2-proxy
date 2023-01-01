@@ -45,7 +45,8 @@ type ProviderVerifierOptions struct {
 	SkipIssuerVerification bool
 
 	// InsecureSkipSignatureCheck skips JWT signature validation.
-	// It's intended for special cases where providers (such as Azure), use the "none" algorithm.
+	// It's intended for special cases where providers (such as Azure), use the "none"
+	// algorithm.
 	InsecureSkipSignatureCheck bool
 
 	// SupportedSigningAlgs is the list of signature algorithms supported by the

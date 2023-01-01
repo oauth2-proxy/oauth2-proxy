@@ -202,8 +202,8 @@ type OIDCOptions struct {
 	// default set to 'false'
 	InsecureSkipIssuerVerification bool `json:"insecureSkipIssuerVerification,omitempty"`
 	// InsecureSkipSignatureCheck skips JWT signature validation.
-	// It's intended for special cases where providers (such as Azure), use the "none" algorithm.
-	// default set to 'false'
+	// It's intended for special cases where providers (such as Azure), use the "none"
+	// algorithm. default set to 'false'
 	InsecureSkipSignatureCheck bool `json:"insecureSkipSignatureCheck,omitempty"`
 	// InsecureSkipNonce skips verifying the ID Token's nonce claim that must match
 	// the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked
