@@ -85,13 +85,14 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	if needsVerifier {
 		pv, err := internaloidc.NewProviderVerifier(context.TODO(), internaloidc.ProviderVerifierOptions{
-			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
-			ClientID:               providerConfig.ClientID,
-			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
-			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
-			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
-			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
-			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
+			AudienceClaims:             providerConfig.OIDCConfig.AudienceClaims,
+			ClientID:                   providerConfig.ClientID,
+			ExtraAudiences:             providerConfig.OIDCConfig.ExtraAudiences,
+			IssuerURL:                  providerConfig.OIDCConfig.IssuerURL,
+			JWKsURL:                    providerConfig.OIDCConfig.JwksURL,
+			SkipDiscovery:              providerConfig.OIDCConfig.SkipDiscovery,
+			SkipIssuerVerification:     providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
+			InsecureSkipSignatureCheck: providerConfig.OIDCConfig.InsecureSkipSignatureCheck,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)

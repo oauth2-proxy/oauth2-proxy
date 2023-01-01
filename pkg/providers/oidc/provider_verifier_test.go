@@ -169,5 +169,10 @@ var _ = Describe("ProviderVerifier", func() {
 			},
 			expectedError: "failed to verify token: oidc: token is expired",
 		}),
+		Entry("when the JWT validation needs to be skipped skip signature check", &verifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.InsecureSkipSignatureCheck = true
+			},
+		}),
 	)
 })
