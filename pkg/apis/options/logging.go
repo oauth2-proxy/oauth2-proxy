@@ -43,7 +43,7 @@ func loggingFlagSet() *pflag.FlagSet {
 
 	flagSet.StringSlice("exclude-logging-path", []string{}, "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
 	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
-	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping endpoint")
+	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping & ready endpoints")
 	flagSet.String("request-id-header", "X-Request-Id", "Request header to use as the request ID")
 
 	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
