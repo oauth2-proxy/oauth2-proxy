@@ -111,11 +111,11 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 func (p *OIDCProvider) IsSessionExpired(ctx context.Context, s *sessions.SessionState) bool {
 	_, err := p.ExpirationCheck.Verify(ctx, s.IDToken)
 	if err != nil {
-		logger.Errorf("id_token not valid: %v", err)
-		return false
+		logger.Errorf("id_token expired: %v", err)
+		return true
 	}
 
-	return true
+	return false
 }
 
 // RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
