@@ -481,21 +481,22 @@ type LegacyProvider struct {
 	ClientSecret     string `flag:"client-secret" cfg:"client_secret"`
 	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file"`
 
-	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
-	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
-	AzureGraphGroupField     string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
-	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
-	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
-	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
-	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
-	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
-	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
-	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
-	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
-	GitLabProjects           []string `flag:"gitlab-project" cfg:"gitlab_projects"`
-	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
-	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
-	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
+	KeycloakGroups                         []string `flag:"keycloak-group" cfg:"keycloak_groups"`
+	AzureTenant                            string   `flag:"azure-tenant" cfg:"azure_tenant"`
+	AzureGraphGroupField                   string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
+	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
+	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
+	GitHubOrg                              string   `flag:"github-org" cfg:"github_org"`
+	GitHubTeam                             string   `flag:"github-team" cfg:"github_team"`
+	GitHubRepo                             string   `flag:"github-repo" cfg:"github_repo"`
+	GitHubToken                            string   `flag:"github-token" cfg:"github_token"`
+	GitHubUsers                            []string `flag:"github-user" cfg:"github_users"`
+	GitLabGroup                            []string `flag:"gitlab-group" cfg:"gitlab_groups"`
+	GitLabProjects                         []string `flag:"gitlab-project" cfg:"gitlab_projects"`
+	GoogleGroups                           []string `flag:"google-group" cfg:"google_group"`
+	GoogleAdminEmail                       string   `flag:"google-admin-email" cfg:"google_admin_email"`
+	GoogleServiceAccountJSON               string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
+	GoogleUseApplicationDefaultCredentials bool     `flag:"google-use-application-default-credentials" cfg:"google_use_application_default_credentials"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -552,6 +553,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
+	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. Workload Identity)")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
@@ -718,9 +720,10 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 	case "google":
 		provider.GoogleConfig = GoogleOptions{
-			Groups:             l.GoogleGroups,
-			AdminEmail:         l.GoogleAdminEmail,
-			ServiceAccountJSON: l.GoogleServiceAccountJSON,
+			Groups:                           l.GoogleGroups,
+			AdminEmail:                       l.GoogleAdminEmail,
+			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
+			UseApplicationDefaultCredentials: l.GoogleUseApplicationDefaultCredentials,
 		}
 	}
 
