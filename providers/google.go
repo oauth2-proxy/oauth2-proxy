@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -98,17 +99,21 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		},
 	}
 
+	var file *os.File
 	if opts.ServiceAccountJSON != "" {
-		file, err := os.Open(opts.ServiceAccountJSON)
+		var err error
+		file, err = os.Open(opts.ServiceAccountJSON)
 		if err != nil {
 			return nil, fmt.Errorf("invalid Google credentials file: %s", opts.ServiceAccountJSON)
 		}
+	}
 
+	if opts.ServiceAccountJSON != "" || opts.UseApplicationDefaultCredentials {
 		// Backwards compatibility with `--google-group` option
 		if len(opts.Groups) > 0 {
 			provider.setAllowedGroups(opts.Groups)
 		}
-		provider.setGroupRestriction(opts.Groups, opts.AdminEmail, file)
+		provider.setGroupRestriction(opts.Groups, opts.AdminEmail, file, opts.UseApplicationDefaultCredentials)
 	}
 
 	return provider, nil
@@ -214,8 +219,8 @@ func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionSta
 // account credentials.
 //
 // TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
-func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
-	adminService := getAdminService(adminEmail, credentialsReader)
+func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader, useApplicationDefaultCredentials bool) {
+	adminService := getAdminService(adminEmail, credentialsReader, useApplicationDefaultCredentials)
 	p.groupValidator = func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
@@ -229,19 +234,24 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string,
 	}
 }
 
-func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Service {
-	data, err := io.ReadAll(credentialsReader)
-	if err != nil {
-		logger.Fatal("can't read Google credentials file:", err)
-	}
-	conf, err := google.JWTConfigFromJSON(data, admin.AdminDirectoryUserReadonlyScope, admin.AdminDirectoryGroupReadonlyScope)
-	if err != nil {
-		logger.Fatal("can't load Google credentials file:", err)
-	}
-	conf.Subject = adminEmail
-
+func getAdminService(adminEmail string, credentialsReader io.Reader, useApplicationDefaultCredentials bool) *admin.Service {
 	ctx := context.Background()
-	client := conf.Client(ctx)
+	var client *http.Client
+	if useApplicationDefaultCredentials {
+		client, _ = google.DefaultClient(ctx, admin.AdminDirectoryUserReadonlyScope, admin.AdminDirectoryGroupReadonlyScope)
+	} else {
+		data, err := io.ReadAll(credentialsReader)
+		if err != nil {
+			logger.Fatal("can't read Google credentials file:", err)
+		}
+
+		conf, err := google.JWTConfigFromJSON(data, admin.AdminDirectoryUserReadonlyScope, admin.AdminDirectoryGroupReadonlyScope)
+		if err != nil {
+			logger.Fatal("can't load Google credentials file:", err)
+		}
+		conf.Subject = adminEmail
+		client = conf.Client(ctx)
+	}
 	adminService, err := admin.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		logger.Fatal(err)
