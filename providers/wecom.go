@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -28,6 +29,9 @@ const (
 )
 
 var (
+	// Mutex to avoid race condition, refresh token one at a time
+	refreshCorpAccessTokenLock sync.Mutex
+
 	// Default CorpAccessToken URL for WeCom.
 	// Pre-parsed URL of https://qyapi.weixin.qq.com/cgi-bin/gettoken.
 	wecomDefaultCorpAccessTokenURL = &url.URL{
@@ -180,6 +184,10 @@ func (p *WeComProvider) getCorpAccessToken(ctx context.Context) (string, error) 
 	if p.CorpAccessToken != "" && p.CorpAccessTokenExpiration.After(time.Now())  {
 		return p.CorpAccessToken, nil
 	}
+
+	// lock rest of the function
+	refreshCorpAccessTokenLock.Lock()
+	defer refreshCorpAccessTokenLock.Unlock()
 
 	var jsonResponse struct {
 		ErrorCode    int    `json:"errcode"`
