@@ -18,6 +18,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
@@ -238,7 +239,15 @@ func getAdminService(adminEmail string, credentialsReader io.Reader, useApplicat
 	ctx := context.Background()
 	var client *http.Client
 	if useApplicationDefaultCredentials {
-		client, _ = google.DefaultClient(ctx, admin.AdminDirectoryUserReadonlyScope, admin.AdminDirectoryGroupReadonlyScope)
+		params := google.CredentialsParams{
+			Scopes:  []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
+			Subject: adminEmail,
+		}
+		credentials, err := google.FindDefaultCredentialsWithParams(ctx, params)
+		if err != nil {
+			logger.Fatal("can't read google application default credentials:", err)
+		}
+		client = oauth2.NewClient(ctx, credentials.TokenSource)
 	} else {
 		data, err := io.ReadAll(credentialsReader)
 		if err != nil {
