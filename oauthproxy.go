@@ -550,11 +550,24 @@ func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 }
 
 func isAllowedMethod(req *http.Request, route allowedRoute) bool {
-	return route.method == "" || req.Method == route.method
+	if route.method == "" {
+		return true
+	}
+	originalMethod := req.Header.Get("X-Original-Method")
+	return originalMethod == "" || originalMethod == route.method
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(req.URL.Path)
+	var path string
+
+	originalURL, err := url.Parse(req.Header.Get("X-Original-Url"))
+	if err != nil {
+		path = ""
+	} else {
+		path = originalURL.Path
+	}
+
+	matches := route.pathRegex.MatchString(path)
 
 	if route.negate {
 		return !matches
