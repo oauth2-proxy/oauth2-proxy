@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/impersonate"
 	"io"
 	"net/http"
 	"net/url"
@@ -18,7 +20,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
@@ -114,7 +115,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		if len(opts.Groups) > 0 {
 			provider.setAllowedGroups(opts.Groups)
 		}
-		provider.setGroupRestriction(opts.Groups, opts.AdminEmail, file, opts.UseApplicationDefaultCredentials)
+		provider.setGroupRestriction(opts.Groups, opts.AdminEmail, opts.TargetPrincipal, file, opts.UseApplicationDefaultCredentials)
 	}
 
 	return provider, nil
@@ -220,8 +221,8 @@ func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionSta
 // account credentials.
 //
 // TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
-func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader, useApplicationDefaultCredentials bool) {
-	adminService := getAdminService(adminEmail, credentialsReader, useApplicationDefaultCredentials)
+func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string, targetPrincipal string, credentialsReader io.Reader, useApplicationDefaultCredentials bool) {
+	adminService := getAdminService(adminEmail, targetPrincipal, credentialsReader, useApplicationDefaultCredentials)
 	p.groupValidator = func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
@@ -235,19 +236,19 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string,
 	}
 }
 
-func getAdminService(adminEmail string, credentialsReader io.Reader, useApplicationDefaultCredentials bool) *admin.Service {
+func getAdminService(adminEmail string, targetPrincipipal string, credentialsReader io.Reader, useApplicationDefaultCredentials bool) *admin.Service {
 	ctx := context.Background()
 	var client *http.Client
 	if useApplicationDefaultCredentials {
-		params := google.CredentialsParams{
-			Scopes:  []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
-			Subject: adminEmail,
-		}
-		credentials, err := google.FindDefaultCredentialsWithParams(ctx, params)
+		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
+			TargetPrincipal: targetPrincipipal,
+			Subject:         adminEmail,
+			Scopes:          []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
+		})
 		if err != nil {
-			logger.Fatal("can't read google application default credentials:", err)
+			logger.Fatal("failed to fetch application default credentials: ", err)
 		}
-		client = oauth2.NewClient(ctx, credentials.TokenSource)
+		client = oauth2.NewClient(ctx, ts)
 	} else {
 		data, err := io.ReadAll(credentialsReader)
 		if err != nil {
