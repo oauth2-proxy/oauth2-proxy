@@ -554,7 +554,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
-	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. Workload Identity)")
+	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. GKE Workload Identity)")
 	flagSet.String("google-target-principal", "", "service account to use/impersonate")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
