@@ -115,7 +115,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		if len(opts.Groups) > 0 {
 			provider.setAllowedGroups(opts.Groups)
 		}
-		provider.setGroupRestriction(opts.Groups, opts.AdminEmail, opts.TargetPrincipal, file, opts.UseApplicationDefaultCredentials)
+		provider.setGroupRestriction(opts, file)
 	}
 
 	return provider, nil
@@ -221,13 +221,13 @@ func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionSta
 // account credentials.
 //
 // TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
-func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string, targetPrincipal string, credentialsReader io.Reader, useApplicationDefaultCredentials bool) {
-	adminService := getAdminService(adminEmail, targetPrincipal, credentialsReader, useApplicationDefaultCredentials)
+func (p *GoogleProvider) setGroupRestriction(opts options.GoogleOptions, credentialsReader io.Reader) {
+	adminService := getAdminService(opts.AdminEmail, opts.TargetPrincipal, opts.UseApplicationDefaultCredentials, credentialsReader)
 	p.groupValidator = func(s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
-		s.Groups = make([]string, 0, len(groups))
-		for _, group := range groups {
+		s.Groups = make([]string, 0, len(opts.Groups))
+		for _, group := range opts.Groups {
 			if userInGroup(adminService, group, s.Email) {
 				s.Groups = append(s.Groups, group)
 			}
@@ -236,12 +236,12 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string,
 	}
 }
 
-func getAdminService(adminEmail string, targetPrincipipal string, credentialsReader io.Reader, useApplicationDefaultCredentials bool) *admin.Service {
+func getAdminService(adminEmail string, targetPrincipal string, useADC bool, credentialsReader io.Reader) *admin.Service {
 	ctx := context.Background()
 	var client *http.Client
-	if useApplicationDefaultCredentials {
+	if useADC {
 		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
-			TargetPrincipal: targetPrincipipal,
+			TargetPrincipal: targetPrincipal,
 			Subject:         adminEmail,
 			Scopes:          []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
 		})
