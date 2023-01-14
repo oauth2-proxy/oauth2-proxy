@@ -98,7 +98,7 @@ This will be the value of `client-secret` in the configuration.
 4. Select the **Overview** page of the app for help in configuring the proxy.
    1. The **Application (client) ID** is the `client-id`.
    2. The **Directory (tenant) ID** is the `azure-tenant`. This flag is not necessary for multi-tenant applications.
-   3. Select **Endpoints** to obtain the `oidc-issuer-url` from **OpenID Connect metadata document**. Be sure to strip `/.well-known/openid-configuration`
+   3. Click **Endpoints** to obtain the `oidc-issuer-url` from **OpenID Connect metadata document**. Be sure to strip `/.well-known/openid-configuration`
 from the end of the URL. For example, if the URL is `https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration`, the `oidc-issuer-url` is `https://login.microsoftonline.com/{tenant-id}/v2.0`.
 If `tenant-id` is `common` or `organizations`, you also need to specify the `insecure-oidc-skip-issuer-verify` flag per Microsoft's [documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant#update-your-code-to-handle-multiple-issuer-values).
    4. The **Client secret** is the `client-secret` you noted down earlier.
