@@ -69,7 +69,8 @@ func validateGoogleConfig(provider options.Provider) []string {
 	if len(provider.GoogleConfig.Groups) == 0 &&
 		provider.GoogleConfig.AdminEmail == "" &&
 		provider.GoogleConfig.ServiceAccountJSON == "" &&
-		!provider.GoogleConfig.UseApplicationDefaultCredentials {
+		!provider.GoogleConfig.UseApplicationDefaultCredentials &&
+		provider.GoogleConfig.TargetPrincipal == "" {
 		return msgs
 	}
 
@@ -80,9 +81,11 @@ func validateGoogleConfig(provider options.Provider) []string {
 		msgs = append(msgs, "missing setting: google-admin-email")
 	}
 	if provider.GoogleConfig.ServiceAccountJSON == "" && !provider.GoogleConfig.UseApplicationDefaultCredentials {
-		msgs = append(msgs, "missing setting: google-service-account-json or enable use-application-default-credentials")
+		msgs = append(msgs, "missing setting: google-service-account-json or google-use-application-default-credentials")
 	} else if provider.GoogleConfig.UseApplicationDefaultCredentials && provider.GoogleConfig.ServiceAccountJSON != "" {
-		msgs = append(msgs, "invalid setting: can't configure both google-service-account-json and enable use-application-default-credentials")
+		msgs = append(msgs, "invalid setting: can't use both google-service-account-json and google-use-application-default-credentials")
+	} else if provider.GoogleConfig.UseApplicationDefaultCredentials && provider.GoogleConfig.TargetPrincipal == "" {
+		msgs = append(msgs, "missing setting: google-target-principal when google-use-application-default-credentials")
 	} else if !provider.GoogleConfig.UseApplicationDefaultCredentials {
 		if _, err := os.Stat(provider.GoogleConfig.ServiceAccountJSON); err != nil {
 			msgs = append(msgs, fmt.Sprintf("invalid Google credentials file: %s", provider.GoogleConfig.ServiceAccountJSON))
