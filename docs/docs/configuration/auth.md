@@ -72,37 +72,36 @@ Note: The user is checked against the group members list on initial authenticati
 
 ### Azure Auth Provider
 
-1. Add an application: go to [https://portal.azure.com](https://portal.azure.com), choose **Azure Active Directory**, select 
-**App registrations** and then click on **New registration**.
-2. Pick a name, check the supported account type(single-tenant, multi-tenant, etc). In the **Redirect URI** section create a new 
-**Web** platform entry for each app that you want to protect by the oauth2 proxy(e.g. 
-https://internal.yourcompanycom/oauth2/callback). Click **Register**.
-3. Next we need to add group read permissions for the app registration, on the **API Permissions** page of the app, click on
-**Add a permission**, select **Microsoft Graph**, then select **Application permissions**, then click on **Group** and select
-**Group.Read.All**. Hit **Add permissions** and then on **Grant admin consent** (you might need an admin to do this).
-<br/>**IMPORTANT**: Even if this permission is listed with **"Admin consent required=No"** the consent might actually be required, due to AAD policies you won't be able to see. If you get a **"Need admin approval"** during login, most likely this is what you're missing!
-4. Next, if you are planning to use v2.0 Azure Auth endpoint, go to the **Manifest** page and set `"accessTokenAcceptedVersion": 2`
-in the App registration manifest file.
-5. On the **Certificates & secrets** page of the app, add a new client secret and note down the value after hitting **Add**.
-6. Configure the proxy with:
-- for V1 Azure Auth endpoint (Azure Active Directory Endpoints - https://login.microsoftonline.com/common/oauth2/authorize)
-
-```
-   --provider=azure
-   --client-id=<application ID from step 3>
-   --client-secret=<value from step 5>
-   --azure-tenant={tenant-id}
-   --oidc-issuer-url=https://sts.windows.net/{tenant-id}/
-```
-
-- for V2 Azure Auth endpoint (Microsoft Identity Platform Endpoints - https://login.microsoftonline.com/common/oauth2/v2.0/authorize)
-```
-   --provider=azure
-   --client-id=<application ID from step 3>
-   --client-secret=<value from step 5>
-   --azure-tenant={tenant-id}
-   --oidc-issuer-url=https://login.microsoftonline.com/{tenant-id}/v2.0
-```
+1. Add an application.
+   1. Navigate to the [Azure Portal](https://portal.azure.com).
+   2. Click **Azure Active Directory**
+   3. Click **App registrations**.
+   4. Click **New registration**.
+   5. Enter a name for the application.
+   6. Select the supported account type (single-tenant, multi-tenant, etc.).
+   7. In the **Redirect URI** section create a new **Web** platform entry for each app that you want to protect by the oauth2 proxy (e.g. 
+   https://internal.yourcompanycom/oauth2/callback).
+   8. Click **Register**.
+2. If using `--allowed-group` to validate group membership, you **must** add group read permissions. This requires
+[administrator consent](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview?WT.mc_id=Portal-Microsoft_AAD_RegisteredApps#administrator-consent)
+for all tenants that will use the application.
+   1. Navigate to the **API Permissions** page of the app.
+   2. Click **Add a permission**.
+   3. Click **Microsoft Graph**.
+   4. Click **Application permissions**.
+   5. Expand the **Group** permissions group.
+   6. Select **Group.Read.All**.
+   7. Click **Add permissions**.
+   8. The permission will be added but administrator consent will be required before it can be used. Click **Grant admin consent for _organization-name_** (you might need an admin to do this).
+3. On the **Certificates & secrets** page of the app, add a new client secret and note down the value after hitting **Add**.
+This will be the value of `client-secret` in the configuration.
+4. Select the **Overview** page of the app for help in configuring the proxy.
+   1. The **Application (client) ID** is the `client-id`.
+   2. The **Directory (tenant) ID** is the `azure-tenant`. This flag is not necessary for multi-tenant applications.
+   3. Select **Endpoints** to obtain the `oidc-issuer-url` from **OpenID Connect metadata document**. Be sure to strip `/.well-known/openid-configuration`
+from the end of the URL. For example, if the URL is `https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration`, the `oidc-issuer-url` is `https://login.microsoftonline.com/{tenant-id}/v2.0`.
+If `tenant-id` is `common` or `organizations`, you also need to specify the `insecure-oidc-skip-issuer-verify` flag per Microsoft's [documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant#update-your-code-to-handle-multiple-issuer-values).
+   4. The **Client secret** is the `client-secret` you noted down earlier.
 
 ***Notes***:
 - When using v2.0 Azure Auth endpoint (`https://login.microsoftonline.com/{tenant-id}/v2.0`) as `--oidc_issuer_url`, in conjunction 
@@ -111,6 +110,37 @@ https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-a
 - When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't 
 get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) 
 should resolve this.
+
+#### Configuration Examples
+
+##### v1 Azure Auth endpoint (Azure Active Directory Endpoints - https://login.microsoftonline.com/common/oauth2/authorize)
+
+```
+   --provider=azure
+   --client-id=<Application (client) ID>
+   --client-secret=<value from step 3>
+   --azure-tenant={tenant-id}
+   --oidc-issuer-url=https://sts.windows.net/{tenant-id}/
+```
+
+##### v2 Azure Auth endpoint (Microsoft Identity Platform Endpoints - https://login.microsoftonline.com/common/oauth2/v2.0/authorize)
+```
+   --provider=azure
+   --client-id=<Application (client) ID>
+   --client-secret=<value from step 3>
+   --azure-tenant={tenant-id}
+   --oidc-issuer-url=https://login.microsoftonline.com/{tenant-id}/v2.0
+```
+
+##### [Multi-tenant Configuration](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant)
+
+```
+   --provider=azure
+   --client-id=<Application (client) ID>
+   --client-secret=<value from step 4>
+   --oidc-issuer-url=https://login.microsoftonline.com/organizations/v2.0
+   --insecure-oidc-skip-issuer-verification
+```
 
 ### ADFS Auth Provider
 
