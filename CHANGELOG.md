@@ -14,7 +14,7 @@
 - [#1906](https://github.com/oauth2-proxy/oauth2-proxy/pull/1906) Fix PKCE code verifier generation to never use UTF-8 characters
 - [#1839](https://github.com/oauth2-proxy/oauth2-proxy/pull/1839) Add readiness checks for deeper health checks (@kobim)
 - [#1927](https://github.com/oauth2-proxy/oauth2-proxy/pull/1927) Fix default scope settings for none oidc providers
-- [#1955](https://github.com/oauth2-proxy/oauth2-proxy/pull/1955) Refresh expired OIDC tokens
+- [#1955](https://github.com/oauth2-proxy/oauth2-proxy/pull/1955) Refresh expired OIDC tokens (@miguelborges99)
 
 # V7.4.0
 
