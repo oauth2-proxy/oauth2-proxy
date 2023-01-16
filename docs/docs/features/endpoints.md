@@ -38,9 +38,10 @@ BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` i
 
 ### Auth
 
-This endpoint returns 202 Accepted response or a 401 Unauthorized response.
+This endpoint returns 202 Accepted response, 403 Forbidden or a 401 Unauthorized response.
 
 It can be configured using the following query parameters query parameters:
 - `allowed_groups`: comma separated list of allowed groups
 - `allowed_email_domains`: comma separated list of allowed email domains
 - `allowed_emails`: comma separated list of allowed emails
+- `whitelisted_ip_ranges`: comma seperated list of allowed IP ranges that can skip auth. MUST be combined with `--reverse-proxy` and `--real-client-ip-header` this will evaluate the trust of the IP stored in an HTTP header by the reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them.

@@ -921,15 +921,18 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 // AuthOnly checks whether the user is currently logged in (both authentication
 // and optional authorization).
 func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+
+	isIPWhitelisted := p.isIPWhitelisted(req)
+
 	session, err := p.getAuthenticatedSession(rw, req)
-	if err != nil {
+	if err != nil && !isIPWhitelisted {
 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	// Unauthorized cases need to return 403 to prevent infinite redirects with
 	// subrequest architectures
-	if !authOnlyAuthorize(req, session) {
+	if !isIPWhitelisted && !authOnlyAuthorize(req, session) {
 		http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
@@ -1230,4 +1233,39 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	// we need to send some JSON response because we set the Content-Type to
 	// application/json
 	rw.Write([]byte("{}"))
+}
+
+func (p *OAuthProxy) isIPWhitelisted(req *http.Request) bool {
+
+	parameterKey := "whitelisted_ip_ranges"
+	parameterQuery := req.URL.Query()
+
+	if parameterQuery[parameterKey] == nil {
+		return false
+	}
+
+	remoteAddr, err := ip.GetClientIP(p.realClientIPParser, req)
+
+	if err != nil {
+		logger.Errorf("Error obtaining real IP for trusted IP list: %v", err)
+		// Possibly spoofed X-Real-IP header
+		return false
+	}
+
+	for _, allowedEntities := range parameterQuery[parameterKey] {
+		for _, entity := range strings.Split(allowedEntities, ",") {
+			if entity != "" {
+				_, net, err := net.ParseCIDR(entity)
+				if err != nil {
+					logger.Errorf("Error Parsing CIDR: %v - Please check this is a valid range", entity)
+					return false
+				}
+				if net.Contains(remoteAddr) {
+					return true
+				}
+
+			}
+		}
+	}
+	return false
 }

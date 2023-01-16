@@ -19,6 +19,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
@@ -3254,6 +3255,89 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
 			test.proxy.ServeHTTP(test.rw, test.req)
 
 			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
+func TestIsIngressIPWhitelisted(t *testing.T) {
+	testCases := []struct {
+		name                string
+		whitelistedIPRanges []string
+		clientIP            string
+		querystring         string
+		expectedResult      bool
+	}{
+		{
+			name:           "NoQueryString",
+			clientIP:       "172.16.0.1",
+			querystring:    "",
+			expectedResult: false,
+		},
+		{
+			name:           "QueryStringMalformed",
+			clientIP:       "172.16.0.1",
+			querystring:    "?whitelisted_ip_ranges=textstring",
+			expectedResult: false,
+		},
+		{
+			name:           "IPWhitelistedInQuerystring",
+			clientIP:       "172.16.0.1",
+			querystring:    "?whitelisted_ip_ranges=172.16.0.0/24",
+			expectedResult: true,
+		},
+		{
+			name:           "IPNotWhitelistedInQuerystring",
+			clientIP:       "172.16.0.1",
+			querystring:    "?whitelisted_ip_ranges=172.17.0.0/24",
+			expectedResult: false,
+		},
+		{
+			name:           "IPWhitelistedInMultiParamQuerystring",
+			clientIP:       "172.16.0.1",
+			querystring:    "?whitelisted_ip_ranges=172.16.0.0/24&whitelisted_ip_range=172.17.0.0/24",
+			expectedResult: true,
+		},
+		{
+			name:           "IPWhitelistedInDelimitedQuerystring",
+			clientIP:       "10.0.0.1",
+			querystring:    "?whitelisted_ip_ranges=10.0.0.0/8,172.17.0.0/24",
+			expectedResult: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", "http://example.com/oauth2/auth"+tc.querystring, nil)
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+
+			// set the client IP for the request
+			req.Header.Set("X-Forwarded-For", tc.clientIP)
+
+			opts := &options.Options{
+				ProxyPrefix:        "/oauth2",
+				ReverseProxy:       true,
+				PingPath:           "/ping",
+				RealClientIPHeader: "X-Forwarded-For",
+				ForceHTTPS:         false,
+				SkipAuthPreflight:  false,
+			}
+
+			parser, _ := ip.GetRealClientIPParser(opts.RealClientIPHeader)
+
+			opts.SetRealClientIPParser(parser)
+
+			// create an instance of OAuthProxy
+			p := &OAuthProxy{realClientIPParser: opts.GetRealClientIPParser()}
+
+			// call the function
+			result := p.isIPWhitelisted(req)
+
+			// assert the result
+			if result != tc.expectedResult {
+				t.Errorf("Expected result to be %v, but got %v", tc.expectedResult, result)
+			}
 		})
 	}
 }
