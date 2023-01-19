@@ -793,3 +793,7 @@ func (f *fakeSessionStore) Clear(rw http.ResponseWriter, req *http.Request) erro
 	}
 	return nil
 }
+
+func (f *fakeSessionStore) VerifyConnection(_ context.Context) error {
+	return nil
+}

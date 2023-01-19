@@ -7,7 +7,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -99,4 +101,21 @@ func TestSignAndValidate(t *testing.T) {
 
 	assert.False(t, checkSignature(sha256sig, seed, key, "tampered", epoch))
 	assert.False(t, checkSignature(sha1sig, seed, key, "tampered", epoch))
+}
+
+func TestGenerateRandomASCIIString(t *testing.T) {
+	randomString, err := GenerateRandomASCIIString(96)
+	assert.NoError(t, err)
+
+	// Only 8-bit characters
+	assert.Equal(t, 96, len([]byte(randomString)))
+
+	// All non-ascii characters removed should still be the original string
+	removedChars := strings.Map(func(r rune) rune {
+		if r > unicode.MaxASCII {
+			return -1
+		}
+		return r
+	}, randomString)
+	assert.Equal(t, removedChars, randomString)
 }

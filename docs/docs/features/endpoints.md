@@ -7,6 +7,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 
 - /robots.txt - returns a 200 OK response that disallows all User-agents from all paths; see [robotstxt.org](http://www.robotstxt.org/) for more info
 - /ping - returns a 200 OK response, which is intended for use with health checks
+- /ready - returns a 200 OK response if all the underlying connections (e.g., Redis store) are connected
 - /metrics - Metrics endpoint for Prometheus to scrape, serve on the address specified by `--metrics-address`, disabled by default
 - /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
 - /oauth2/sign_out - this URL is used to clear the session cookie
