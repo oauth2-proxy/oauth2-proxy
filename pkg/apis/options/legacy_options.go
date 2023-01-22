@@ -54,6 +54,7 @@ func NewLegacyOptions() *LegacyOptions {
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
+			OIDCAcrClaim:          "acr",
 			OIDCAudienceClaims:    []string{"aud"},
 			OIDCExtraAudiences:    []string{},
 			InsecureOIDCSkipNonce: true,
@@ -510,6 +511,7 @@ type LegacyProvider struct {
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
+	OIDCAcrClaim                       string   `flag:"oidc-acr-claim" cfg:"oidc_acr_claim"`
 	OIDCAudienceClaims                 []string `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
 	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
@@ -523,6 +525,7 @@ type LegacyProvider struct {
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
+	AllowedAcrs                        []string `flag:"allowed-acr" cfg:"allowed_acrs"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -566,6 +569,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-acr-claim", OIDCAcrClaim, "which OIDC claim contains the ACR")
 	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
@@ -588,6 +592,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
+	flagSet.StringSlice("allowed-acr", []string{}, "require tokens to present this acr claim (may be given multiple times)")
 
 	return flagSet
 }
@@ -652,6 +657,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ValidateURL:         l.ValidateURL,
 		Scope:               l.Scope,
 		AllowedGroups:       l.AllowedGroups,
+		AllowedAcrs:         l.AllowedAcrs,
 		CodeChallengeMethod: l.CodeChallengeMethod,
 	}
 
@@ -666,6 +672,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
+		AcrClaim:                       l.OIDCAcrClaim,
 		AudienceClaims:                 l.OIDCAudienceClaims,
 		ExtraAudiences:                 l.OIDCExtraAudiences,
 	}
@@ -733,7 +740,9 @@ func (l *LegacyProvider) convert() (Providers, error) {
 
 	// handle AcrValues, Prompt and ApprovalPrompt
 	var urlParams []LoginURLParameter
-	if l.AcrValues != "" {
+	if len(l.AllowedAcrs) > 0 {
+		urlParams = append(urlParams, LoginURLParameter{Name: "acr_values", Default: []string{strings.Join(l.AllowedAcrs, " ")}})
+	} else if l.AcrValues != "" {
 		urlParams = append(urlParams, LoginURLParameter{Name: "acr_values", Default: []string{l.AcrValues}})
 	}
 	switch {

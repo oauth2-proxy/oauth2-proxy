@@ -28,6 +28,7 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+	Acr               string   `msgpack:"a,omitempty"`
 
 	// Internal helpers, not serialized
 	Clock clock.Clock `msgpack:"-"`

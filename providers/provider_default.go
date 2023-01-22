@@ -116,17 +116,34 @@ func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState
 // Authorize performs global authorization on an authenticated session.
 // This is not used for fine-grained per route authorization rules.
 func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (bool, error) {
-	if len(p.AllowedGroups) == 0 {
-		return true, nil
-	}
+	var groupsPass = len(p.AllowedGroups) == 0
 
-	for _, group := range s.Groups {
-		if _, ok := p.AllowedGroups[group]; ok {
-			return true, nil
+	if !groupsPass {
+		for _, group := range s.Groups {
+			if _, ok := p.AllowedGroups[group]; ok {
+				groupsPass = true
+				break
+			}
 		}
 	}
 
-	return false, nil
+	if !groupsPass {
+		return false, nil
+	}
+
+	var acrPass = len(p.AllowedAcrs) == 0
+
+	if !acrPass {
+		if _, ok := p.AllowedAcrs[s.Acr]; ok {
+			acrPass = true
+		}
+	}
+
+	if !acrPass {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // ValidateSession validates the AccessToken

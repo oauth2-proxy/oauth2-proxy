@@ -107,6 +107,7 @@ longer available when using alpha configuration:
 - `approval-prompt`/`approval_prompt`
 - `acr-values`/`acr_values`
 - `user-id-claim`/`user_id_claim`
+- `allowed-acr`/`allowed_acrs`
 - `allowed-group`/`allowed_groups`
 - `allowed-role`/`allowed_roles`
 - `jwt-key`/`jwt_key`
@@ -385,6 +386,7 @@ character.
 | `jwksURL` | _string_ | JwksURL is the OpenID Connect JWKS URL<br/>eg: https://www.googleapis.com/oauth2/v3/certs |
 | `emailClaim` | _string_ | EmailClaim indicates which claim contains the user email,<br/>default set to 'email' |
 | `groupsClaim` | _string_ | GroupsClaim indicates which claim contains the user groups<br/>default set to 'groups' |
+| `acrClaim` | _string_ | AcrClaim indicates which claim contains the ACR level<br/>default set to 'acr' |
 | `userIDClaim` | _string_ | UserIDClaim indicates which claim contains the user ID<br/>default set to 'email' |
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
@@ -421,6 +423,7 @@ Provider holds all configuration for a single provider
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
+| `allowedAcrs` | _[]string_ | AllowedAcrs is a list of acrs by preference, one of which must be satisfied by the authorizer |
 | `code_challenge_method` | _string_ | The code challenge method |
 
 ### ProviderType
