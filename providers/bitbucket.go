@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -54,7 +54,7 @@ var (
 )
 
 // NewBitbucketProvider initiates a new BitbucketProvider
-func NewBitbucketProvider(p *ProviderData, opts provideropts.BitbucketOptions) *BitbucketProvider {
+func NewBitbucketProvider(p *ProviderData, opts options.BitbucketOptions) *BitbucketProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        bitbucketProviderName,
 		loginURL:    bitbucketDefaultLoginURL,

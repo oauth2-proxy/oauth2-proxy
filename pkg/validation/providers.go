@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
 )
 
 // validateProviders is the initial validation migration for multiple providrers
@@ -17,9 +16,9 @@ func validateProviders(o *options.Options) []string {
 	if len(o.Providers) == 0 {
 		msgs = append(msgs, "at least one provider has to be defined")
 	}
-	if o.SkipProviderButton && len(o.Providers) > 1 {
-		msgs = append(msgs, "SkipProviderButton and multiple providers are mutually exclusive")
-	}
+	// if o.SkipProviderButton && len(o.Providers) > 1 {
+	// 	msgs = append(msgs, "SkipProviderButton and multiple providers are mutually exclusive")
+	// }
 
 	providerIDs := make(map[string]struct{})
 
@@ -30,7 +29,7 @@ func validateProviders(o *options.Options) []string {
 	return msgs
 }
 
-func validateProvider(provider provideropts.Provider, providerIDs map[string]struct{}) []string {
+func validateProvider(provider options.Provider, providerIDs map[string]struct{}) []string {
 	msgs := []string{}
 
 	if provider.ID == "" {
@@ -65,7 +64,7 @@ func validateProvider(provider provideropts.Provider, providerIDs map[string]str
 	return msgs
 }
 
-func validateGoogleConfig(provider provideropts.Provider) []string {
+func validateGoogleConfig(provider options.Provider) []string {
 	msgs := []string{}
 	if len(provider.GoogleConfig.Groups) > 0 ||
 		provider.GoogleConfig.AdminEmail != "" ||

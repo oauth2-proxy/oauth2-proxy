@@ -1,10 +1,5 @@
 package options
 
-import (
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/tenant"
-)
-
 // AlphaOptions contains alpha structured configuration options.
 // Usage of these options allows users to access alpha features that are not
 // available as part of the primary configuration structure for OAuth2 Proxy.
@@ -47,9 +42,10 @@ type AlphaOptions struct {
 	MetricsServer Server `json:"metricsServer,omitempty"`
 
 	// Providers is used to configure multiple providers.
-	Providers provideropts.Providers `json:"providers,omitempty"`
+	Providers Providers `json:"providers,omitempty"`
 
-	TenantLoader tenant.LoaderConfiguration `flag:"tenant-loader" cfg:"tenant_loader"`
+	ProviderLoader ProviderLoader `json:"providerLoader,omitempty"`
+	TenantMatcher  TenantMatcher  `json:"tenantMatcher,omitempty"`
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -61,7 +57,8 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
-	opts.TenantLoader = a.TenantLoader
+	opts.ProviderLoader = a.ProviderLoader
+	opts.TenantMatcher = a.TenantMatcher
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from

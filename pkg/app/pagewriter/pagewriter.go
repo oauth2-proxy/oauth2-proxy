@@ -1,10 +1,11 @@
 package pagewriter
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/tenant/types"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
 // Writer is an interface for rendering html templates for both sign-in and
@@ -12,8 +13,8 @@ import (
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
 type Writer interface {
-	WriteSignInPage(rw http.ResponseWriter, req *http.Request, tnt *types.Tenant, redirectURL string, statusCode int)
-	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
+	WriteSignInPage(rw http.ResponseWriter, req *http.Request, provider providers.Provider, redirectURL string, statusCode int)
+	WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
 }

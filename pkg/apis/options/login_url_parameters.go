@@ -1,4 +1,4 @@
-package loginurlopts
+package options
 
 // LoginURLParameter is the configuration for a single query parameter that
 // can be passed through from the `/oauth2/start` endpoint to the IdP login

@@ -82,7 +82,10 @@
       <div class="column">
         <form method="GET" action="{{.ProxyPrefix}}/sign_in">
           <input type="hidden" name="rd" value="{{.Redirect}}">
-          <button type="submit" class="button is-primary is-fullwidth">Sign in</button>
+          {{ if .TenantId }}
+          <input type="hidden" name="{{.TenantIdInputName}}" value="{{.TenantId}}">
+          {{ end }}
+            <button type="submit" class="button is-primary is-fullwidth">Sign in</button>
         </form>
       </div>
     </div>

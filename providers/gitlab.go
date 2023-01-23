@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -31,7 +31,7 @@ type GitLabProvider struct {
 var _ Provider = (*GitLabProvider)(nil)
 
 // NewGitLabProvider initiates a new GitLabProvider
-func NewGitLabProvider(p *ProviderData, opts provideropts.GitLabOptions) (*GitLabProvider, error) {
+func NewGitLabProvider(p *ProviderData, opts options.GitLabOptions) (*GitLabProvider, error) {
 	p.setProviderDefaults(providerDefaults{
 		name: gitlabProviderName,
 	})

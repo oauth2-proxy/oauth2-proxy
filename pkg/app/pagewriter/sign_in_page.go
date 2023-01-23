@@ -15,7 +15,8 @@ import (
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/tenant/types"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenantmatcher"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
 //go:embed default_logo.svg
@@ -52,36 +53,40 @@ type signInPageWriter struct {
 
 // WriteSignInPage writes the sign-in page to the given response writer.
 // It uses the redirectURL to be able to set the final destination for the user post login.
-func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, tnt *types.Tenant, redirectURL string, statusCode int) {
+func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, provider providers.Provider, redirectURL string, statusCode int) {
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	t := struct {
-		ProviderName  string
-		SignInMessage template.HTML
-		StatusCode    int
-		CustomLogin   bool
-		Redirect      string
-		Version       string
-		ProxyPrefix   string
-		Footer        template.HTML
-		LogoData      template.HTML
+		TenantIdInputName string
+		TenantId          string
+		ProviderName      string
+		SignInMessage     template.HTML
+		StatusCode        int
+		CustomLogin       bool
+		Redirect          string
+		Version           string
+		ProxyPrefix       string
+		Footer            template.HTML
+		LogoData          template.HTML
 	}{
-		ProviderName:  tnt.Provider.Data().ProviderName,
-		SignInMessage: template.HTML(s.signInMessage),
-		StatusCode:    statusCode,
-		CustomLogin:   s.displayLoginForm,
-		Redirect:      redirectURL,
-		Version:       s.version,
-		ProxyPrefix:   s.proxyPrefix,
-		Footer:        template.HTML(s.footer),
-		LogoData:      template.HTML(s.logoData),
+		TenantIdInputName: tenantmatcher.DefaultTenantIdQueryParam,
+		TenantId:          tenantmatcher.FromContext(req.Context()),
+		ProviderName:      provider.Data().ProviderName,
+		SignInMessage:     template.HTML(s.signInMessage),
+		StatusCode:        statusCode,
+		CustomLogin:       s.displayLoginForm,
+		Redirect:          redirectURL,
+		Version:           s.version,
+		ProxyPrefix:       s.proxyPrefix,
+		Footer:            template.HTML(s.footer),
+		LogoData:          template.HTML(s.logoData),
 	}
 
 	err := s.template.Execute(rw, t)
 	if err != nil {
 		logger.Printf("Error rendering sign-in template: %v", err)
 		scope := middlewareapi.GetRequestScope(req)
-		s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
+		s.errorPageWriter.WriteErrorPage(req.Context(), rw, ErrorPageOpts{
 			Status:      http.StatusInternalServerError,
 			RedirectURL: redirectURL,
 			RequestID:   scope.RequestID,

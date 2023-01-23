@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"golang.org/x/oauth2"
@@ -21,7 +21,7 @@ type OIDCProvider struct {
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
-func NewOIDCProvider(p *ProviderData, opts provideropts.OIDCOptions) *OIDCProvider {
+func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        "OpenID Connect",
 		loginURL:    nil,

@@ -5,9 +5,7 @@ import (
 	"net/url"
 
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/tenant"
 	"github.com/spf13/pflag"
 )
 
@@ -44,7 +42,8 @@ type Options struct {
 	// Not used in the legacy config, name not allowed to match an external key (upstreams)
 	// TODO(JoelSpeed): Rename when legacy config is removed
 
-	TenantLoader tenant.LoaderConfiguration `cfg:",internal"`
+	ProviderLoader ProviderLoader `cfg:",internal"`
+	TenantMatcher  TenantMatcher  `cfg:",internal"`
 
 	UpstreamServers UpstreamConfig `cfg:",internal"`
 
@@ -54,7 +53,7 @@ type Options struct {
 	Server        Server `cfg:",internal"`
 	MetricsServer Server `cfg:",internal"`
 
-	Providers provideropts.Providers `cfg:",internal"`
+	Providers Providers `cfg:",internal"`
 
 	APIRoutes             []string `flag:"api-route" cfg:"api_routes"`
 	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
@@ -100,7 +99,7 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.re
 func NewOptions() *Options {
 	return &Options{
 		ProxyPrefix:        "/oauth2",
-		Providers:          provideropts.ProviderDefaults(),
+		Providers:          ProviderDefaults(),
 		PingPath:           "/ping",
 		ReadyPath:          "/ready",
 		RealClientIPHeader: "X-Real-IP",

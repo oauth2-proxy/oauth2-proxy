@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
@@ -29,7 +29,7 @@ const (
 )
 
 // NewADFSProvider initiates a new ADFSProvider
-func NewADFSProvider(p *ProviderData, opts provideropts.ADFSOptions) *ADFSProvider {
+func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:  adfsProviderName,
 		scope: adfsDefaultScope,

@@ -36,7 +36,7 @@ func (s *staticPageWriter) writePage(rw http.ResponseWriter, req *http.Request, 
 	if err != nil {
 		logger.Printf("Error writing %q: %v", pageName, err)
 		scope := middlewareapi.GetRequestScope(req)
-		s.errorPageWriter.WriteErrorPage(rw, ErrorPageOpts{
+		s.errorPageWriter.WriteErrorPage(req.Context(), rw, ErrorPageOpts{
 			Status:    http.StatusInternalServerError,
 			RequestID: scope.RequestID,
 			AppError:  err.Error(),

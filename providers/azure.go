@@ -12,7 +12,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/provideropts"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -60,7 +60,7 @@ var (
 )
 
 // NewAzureProvider initiates a new AzureProvider
-func NewAzureProvider(p *ProviderData, opts provideropts.AzureOptions) *AzureProvider {
+func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:        azureProviderName,
 		loginURL:    azureDefaultLoginURL,
