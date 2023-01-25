@@ -315,6 +315,7 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	r.Use(p.preAuthChain.Then)
 
 	r.Use(p.tenantMatcherChain.Then)
+	r.Use(p.providerLoaderChain.Then)
 
 	// Register the robots path writer
 	r.Path(robotsPath).HandlerFunc(p.pageWriter.WriteRobotsTxt)
@@ -322,23 +323,23 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
 	// likelihood of multiple reuests trying to referesh sessions simultaneously.
-	r.Path(proxyPrefix + authOnlyPath).Handler(p.providerLoaderChain.Extend(p.sessionChain).ThenFunc(p.AuthOnly))
+	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
 	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
 	// are not applied.
 	p.buildProxySubrouter(r.PathPrefix(proxyPrefix).Subrouter())
 
 	// Register serveHTTP last so it catches anything that isn't already caught earlier.
 	// Anything that got to this point needs to have a session loaded.
-	r.PathPrefix("/").Handler(p.providerLoaderChain.Extend(p.sessionChain).ThenFunc(p.Proxy))
+	r.PathPrefix("/").Handler(p.sessionChain.ThenFunc(p.Proxy))
 	p.serveMux = r
 }
 
 func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Use(prepareNoCacheMiddleware)
 
-	s.Path(signInPath).Handler(p.providerLoaderChain.ThenFunc(p.SignIn))
-	s.Path(signOutPath).Handler(p.providerLoaderChain.ThenFunc(p.SignOut))
-	s.Path(oauthStartPath).Handler(p.providerLoaderChain.ThenFunc(p.OAuthStart))
+	s.Path(signInPath).HandlerFunc(p.SignIn)
+	s.Path(signOutPath).HandlerFunc(p.SignOut)
+	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
 	// The userinfo endpoint needs to load sessions before handling the request
@@ -566,6 +567,10 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
+	tntId := tenantmatcher.FromContext(req.Context())
+
+	redirectURL = tenantmatcher.InjectTenantId(tntId, redirectURL)
+
 	scope := middlewareapi.GetRequestScope(req)
 	p.pageWriter.WriteErrorPage(req.Context(), rw, pagewriter.ErrorPageOpts{
 		Status:      code,
@@ -695,6 +700,9 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	tntId := tenantmatcher.FromContext(req.Context())
+	redirect = tenantmatcher.InjectTenantId(tntId, redirect)
+
 	user, ok, statusCode := p.ManualSignIn(req)
 	if ok {
 		session := &sessionsapi.SessionState{User: user, Groups: p.basicAuthGroups}
@@ -765,6 +773,10 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	tntId := tenantmatcher.FromContext(req.Context())
+	redirect = tenantmatcher.InjectTenantId(tntId, redirect)
+
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
 		logger.Errorf("Error clearing session cookie: %v", err)
@@ -921,6 +933,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if !p.redirectValidator.IsValidRedirect(appRedirect) {
 		appRedirect = "/"
 	}
+
+	appRedirect = tenantmatcher.InjectTenantId(tntId, appRedirect)
 
 	// set cookie, or deny
 	authorized, err := provider.Authorize(req.Context(), session)
@@ -1084,7 +1098,9 @@ func prepareNoCacheMiddleware(next http.Handler) http.Handler {
 func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	// if `p.redirectURL` already has a host, return it
 	if p.redirectURL.Host != "" {
-		return p.redirectURL.String()
+		rdStr := p.redirectURL.String()
+		rdStr = tenantmatcher.InjectTenantId(tenantmatcher.FromContext(req.Context()), rdStr)
+		return rdStr
 	}
 
 	// Otherwise figure out the scheme + host from the request
@@ -1102,7 +1118,10 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	if p.CookieOptions.Secure {
 		rd.Scheme = schemeHTTPS
 	}
-	return rd.String()
+
+	rdStr := rd.String()
+	rdStr = tenantmatcher.InjectTenantId(tenantmatcher.FromContext(req.Context()), rdStr)
+	return rdStr
 }
 
 // getAuthenticatedSession checks whether a user is authenticated and returns a session object and nil error if so
