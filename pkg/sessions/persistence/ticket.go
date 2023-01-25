@@ -43,6 +43,8 @@ type ticket struct {
 	options *options.Cookie
 }
 
+var ErrCookieValidationFailed = errors.New("session ticket cookie failed validation")
+
 // newTicket creates a new ticket. The ID & secret will be randomly created
 // with 16 byte sizes. The ID will be prefixed & hex encoded.
 func newTicket(cookieOpts *options.Cookie) (*ticket, error) {
@@ -102,7 +104,7 @@ func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ti
 	// An existing cookie exists, try to retrieve the ticket
 	val, _, ok := encryption.Validate(requestCookie, cookieOpts.Secret, cookieOpts.Expire)
 	if !ok {
-		return nil, fmt.Errorf("session ticket cookie failed validation: %v", err)
+		return nil, ErrCookieValidationFailed
 	}
 
 	// Valid cookie, decode the ticket

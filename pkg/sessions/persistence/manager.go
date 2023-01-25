@@ -79,8 +79,8 @@ func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {
 			options: m.Options,
 		}
 		tckt.clearCookie(rw, req)
-		// Don't raise an error if we didn't have a Cookie
-		if err == http.ErrNoCookie {
+		// Don't raise an error if we didn't have a Cookie or it is invalid
+		if err == http.ErrNoCookie || err == ErrCookieValidationFailed {
 			return nil
 		}
 		return fmt.Errorf("error decoding ticket to clear session: %v", err)
