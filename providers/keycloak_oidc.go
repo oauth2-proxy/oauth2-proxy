@@ -8,10 +8,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 )
 
-const (
-	keycloakOIDCProviderName = "Keycloak OIDC"
-	keycloakOIDCDefaultScope = "openid email profile"
-)
+const keycloakOIDCProviderName = "Keycloak OIDC"
 
 // KeycloakOIDCProvider creates a Keycloak provider based on OIDCProvider
 type KeycloakOIDCProvider struct {
@@ -21,8 +18,7 @@ type KeycloakOIDCProvider struct {
 // NewKeycloakOIDCProvider makes a KeycloakOIDCProvider using the ProviderData
 func NewKeycloakOIDCProvider(p *ProviderData, opts options.KeycloakOptions) *KeycloakOIDCProvider {
 	p.setProviderDefaults(providerDefaults{
-		name:  keycloakOIDCProviderName,
-		scope: keycloakOIDCDefaultScope,
+		name: keycloakOIDCProviderName,
 	})
 
 	provider := &KeycloakOIDCProvider{
