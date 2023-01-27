@@ -8,7 +8,7 @@ import (
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenantmatcher"
+	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 )
 
 // errorMessages are default error messages for each of the different
@@ -74,8 +74,8 @@ func (e *errorPageWriter) WriteErrorPage(ctx context.Context, rw http.ResponseWr
 		Footer            template.HTML
 		Version           string
 	}{
-		TenantIdInputName: tenantmatcher.DefaultTenantIdQueryParam,
-		TenantId:          tenantmatcher.FromContext(ctx),
+		TenantIdInputName: tenantutils.DefaultTenantIdQueryParam,
+		TenantId:          tenantutils.FromContext(ctx),
 		Title:             http.StatusText(opts.Status),
 		Message:           e.getMessage(opts.Status, opts.AppError, opts.Messages...),
 		ProxyPrefix:       e.proxyPrefix,

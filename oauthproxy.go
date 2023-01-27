@@ -30,7 +30,9 @@ import (
 	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader"
 	providerLoaderUtil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenantmatcher"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/decorators"
+	tenantmatcher "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/matcher"
+	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
@@ -120,6 +122,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
+	sessionStore = decorators.TenantIdValidator(sessionStore)
+
 	var basicAuthValidator basic.Validator
 	if opts.HtpasswdFile != "" {
 		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
@@ -166,7 +170,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
 	}
 
-	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
+	logger.Printf("Cookie settings: name_prefix:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.NamePrefix, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
 	for _, ipStr := range opts.TrustedIPs {
@@ -567,9 +571,9 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
-	tntId := tenantmatcher.FromContext(req.Context())
+	tntId := tenantutils.FromContext(req.Context())
 
-	redirectURL = tenantmatcher.InjectTenantId(tntId, redirectURL)
+	redirectURL = tenantutils.InjectTenantId(tntId, redirectURL)
 
 	scope := middlewareapi.GetRequestScope(req)
 	p.pageWriter.WriteErrorPage(req.Context(), rw, pagewriter.ErrorPageOpts{
@@ -700,8 +704,8 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tntId := tenantmatcher.FromContext(req.Context())
-	redirect = tenantmatcher.InjectTenantId(tntId, redirect)
+	tntId := tenantutils.FromContext(req.Context())
+	redirect = tenantutils.InjectTenantId(tntId, redirect)
 
 	user, ok, statusCode := p.ManualSignIn(req)
 	if ok {
@@ -774,8 +778,8 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tntId := tenantmatcher.FromContext(req.Context())
-	redirect = tenantmatcher.InjectTenantId(tntId, redirect)
+	tntId := tenantutils.FromContext(req.Context())
+	redirect = tenantutils.InjectTenantId(tntId, redirect)
 
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
@@ -798,7 +802,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, provider providers.Provider, overrides url.Values) {
-	tntId := tenantmatcher.FromContext(req.Context())
+	tntId := tenantutils.FromContext(req.Context())
 
 	extraParams := provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
@@ -863,6 +867,8 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, pro
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
 
+	tntId := tenantutils.FromContext(req.Context())
+
 	// finish the oauth cycle
 	err := req.ParseForm()
 	if err != nil {
@@ -871,17 +877,17 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	nonce, appRedirect, tntId, err := decodeState(req)
+	nonce, appRedirect, _, err := decodeState(req)
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	provider, err := p.providerLoader.Load(tntId)
-	if err != nil {
-		logger.Errorf("Error while loading provider 'id=%s': %w", tntId, err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+	provider := providerLoaderUtil.FromContext(req.Context())
+	if provider == nil {
+		logger.Errorf("No provider found for tenant 'id=%s'", tntId)
+		p.ErrorPage(rw, req, http.StatusForbidden, "no provider found")
 		return
 	}
 
@@ -934,7 +940,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		appRedirect = "/"
 	}
 
-	appRedirect = tenantmatcher.InjectTenantId(tntId, appRedirect)
+	appRedirect = tenantutils.InjectTenantId(tntId, appRedirect)
 
 	// set cookie, or deny
 	authorized, err := provider.Authorize(req.Context(), session)
@@ -1099,7 +1105,7 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	// if `p.redirectURL` already has a host, return it
 	if p.redirectURL.Host != "" {
 		rdStr := p.redirectURL.String()
-		rdStr = tenantmatcher.InjectTenantId(tenantmatcher.FromContext(req.Context()), rdStr)
+		rdStr = tenantutils.InjectTenantId(tenantutils.FromContext(req.Context()), rdStr)
 		return rdStr
 	}
 
@@ -1120,7 +1126,7 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	}
 
 	rdStr := rd.String()
-	rdStr = tenantmatcher.InjectTenantId(tenantmatcher.FromContext(req.Context()), rdStr)
+	rdStr = tenantutils.InjectTenantId(tenantutils.FromContext(req.Context()), rdStr)
 	return rdStr
 }
 

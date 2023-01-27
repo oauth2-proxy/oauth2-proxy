@@ -57,7 +57,7 @@ func validateRedisSessionStore(o *options.Options) []string {
 	}
 	nonce := base64.RawURLEncoding.EncodeToString(n)
 
-	key := fmt.Sprintf("%s-healthcheck-%s", o.Cookie.Name, nonce)
+	key := fmt.Sprintf("%s-healthcheck-%s", o.Cookie.Name(context.TODO()), nonce)
 	return sendRedisConnectionTest(client, key, nonce)
 }
 

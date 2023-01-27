@@ -1,14 +1,18 @@
 package options
 
 import (
+	"context"
+	"crypto/sha256"
+	"fmt"
 	"time"
 
+	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 	"github.com/spf13/pflag"
 )
 
 // Cookie contains configuration options relating to Cookie configuration
 type Cookie struct {
-	Name           string        `flag:"cookie-name" cfg:"cookie_name"`
+	NamePrefix     string        `flag:"cookie-name" cfg:"cookie_name"`
 	Secret         string        `flag:"cookie-secret" cfg:"cookie_secret"`
 	Domains        []string      `flag:"cookie-domain" cfg:"cookie_domains"`
 	Path           string        `flag:"cookie-path" cfg:"cookie_path"`
@@ -19,6 +23,19 @@ type Cookie struct {
 	SameSite       string        `flag:"cookie-samesite" cfg:"cookie_samesite"`
 	CSRFPerRequest bool          `flag:"cookie-csrf-per-request" cfg:"cookie_csrf_per_request"`
 	CSRFExpire     time.Duration `flag:"cookie-csrf-expire" cfg:"cookie_csrf_expire"`
+}
+
+func (c *Cookie) Name(ctx context.Context) string {
+	tntId := tenantutils.FromContext(ctx)
+	if tntId == "" {
+		return c.NamePrefix
+	}
+
+	// appending hex format of sha256 sum of tenantid
+	// sha256 to keep the length of cookie name constant and deterministic
+	// hex for alphanumeric characters only
+	suffix := fmt.Sprintf("%x", sha256.Sum256([]byte(tntId)))
+	return fmt.Sprintf("%s_%s", c.NamePrefix, suffix)
 }
 
 func cookieFlagSet() *pflag.FlagSet {
@@ -41,7 +58,7 @@ func cookieFlagSet() *pflag.FlagSet {
 // cookieDefaults creates a Cookie populating each field with its default value
 func cookieDefaults() Cookie {
 	return Cookie{
-		Name:           "_oauth2_proxy",
+		NamePrefix:     "_oauth2_proxy",
 		Secret:         "",
 		Domains:        nil,
 		Path:           "/",

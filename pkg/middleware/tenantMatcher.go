@@ -4,7 +4,8 @@ import (
 	"net/http"
 
 	"github.com/justinas/alice"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenantmatcher"
+	tenantmatcher "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/matcher"
+	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 )
 
 // middleware that extracts tenantId from the http request and then stores it in the context
@@ -14,7 +15,7 @@ func NewTenantMatcher(tenantMatcher *tenantmatcher.Matcher) alice.Constructor {
 
 			tenantId := tenantMatcher.Match(req)
 
-			ctx := tenantmatcher.AppendToContext(req.Context(), tenantId)
+			ctx := tenantutils.AppendToContext(req.Context(), tenantId)
 			next.ServeHTTP(rw, req.WithContext(ctx))
 		})
 	}

@@ -30,20 +30,21 @@ func validateCookie(o options.Cookie) []string {
 		return len(o.Domains[i]) > len(o.Domains[j])
 	})
 
-	msgs = append(msgs, validateCookieName(o.Name)...)
+	msgs = append(msgs, validateCookieName(o.NamePrefix)...)
 	return msgs
 }
 
 func validateCookieName(name string) []string {
 	msgs := []string{}
+	maxLength := 256 - 64 - 1 // -64 for hex(sha256(tenantId)) length and -1 for underscore( _ separator)
 
 	cookie := &http.Cookie{Name: name}
 	if cookie.String() == "" {
 		msgs = append(msgs, fmt.Sprintf("invalid cookie name: %q", name))
 	}
 
-	if len(name) > 256 {
-		msgs = append(msgs, fmt.Sprintf("cookie name should be under 256 characters: cookie name is %d characters", len(name)))
+	if len(name) > maxLength {
+		msgs = append(msgs, fmt.Sprintf("cookie name should be under %d characters: cookie name is %d characters", maxLength, len(name)))
 	}
 	return msgs
 }
