@@ -27,16 +27,17 @@ const (
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
 type ProviderData struct {
-	ProviderName      string
-	LoginURL          *url.URL
-	RedeemURL         *url.URL
-	ProfileURL        *url.URL
-	ProtectedResource *url.URL
-	ValidateURL       *url.URL
-	ClientID          string
-	ClientSecret      string
-	ClientSecretFile  string
-	Scope             string
+	ProviderName        string
+	LoginURL            *url.URL
+	RedeemURL           *url.URL
+	ProfileURL          *url.URL
+	ProtectedResource   *url.URL
+	ValidateURL         *url.URL
+	ValidateURLspecial  *url.URL
+	ClientID            string
+	ClientSecret        string
+	ClientSecretFile    string
+	Scope               string
 	// The picked CodeChallenge Method or empty if none.
 	CodeChallengeMethod string
 	// Code challenge methods supported by the Provider
@@ -60,6 +61,17 @@ type ProviderData struct {
 
 // Data returns the ProviderData
 func (p *ProviderData) Data() *ProviderData { return p }
+
+func (p *ProviderData) GetTokenValidateURL() *url.URL {
+	// By default ValidateURLspecial is not initialized because ValidateURL should be used.
+	// But with Gitea ValidateURL can't be used, because GET by such URL returns error 404. 
+	// So the special URL is required for validation.
+	if p.ValidateURLspecial != nil {
+		return p.ValidateURLspecial
+	} 
+	
+	return p.ValidateURL
+}
 
 func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
 	if p.ClientSecret != "" || p.ClientSecretFile == "" {

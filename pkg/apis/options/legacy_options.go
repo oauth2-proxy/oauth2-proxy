@@ -517,6 +517,7 @@ type LegacyProvider struct {
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
 	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
 	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
+	ValidateURLspecial                 string   `flag:"validate-url-special" cfg:"validate_url_special"`
 	Scope                              string   `flag:"scope" cfg:"scope"`
 	Prompt                             string   `flag:"prompt" cfg:"prompt"`
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
@@ -556,6 +557,21 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
 
+	addIntegrationFlags( flagSet )	
+
+	flagSet.String("acr-values", "", "acr values string:  optional")
+	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
+	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
+	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
+
+	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
+	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
+	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
+
+	return flagSet
+}
+
+func addIntegrationFlags( flagSet *pflag.FlagSet ) {
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.StringSlice("provider-ca-file", []string{}, "One or more paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead.")
@@ -574,22 +590,12 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("profile-url", "", "Profile access endpoint")
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
+	flagSet.String("validate-url-special", "", "Optional access token validation endpoint used in special cases")
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 	flagSet.String("code-challenge-method", "", "use PKCE code challenges with the specified method. Either 'plain' or 'S256'")
 	flagSet.String("force-code-challenge-method", "", "Deprecated - use --code-challenge-method")
-
-	flagSet.String("acr-values", "", "acr values string:  optional")
-	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
-	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
-	flagSet.String("pubjwk-url", "", "JWK pubkey access endpoint: required by login.gov")
-
-	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
-	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
-	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
-
-	return flagSet
 }
 
 func (l LegacyServer) convert() (Server, Server) {
@@ -650,6 +656,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ProfileURL:          l.ProfileURL,
 		ProtectedResource:   l.ProtectedResource,
 		ValidateURL:         l.ValidateURL,
+		ValidateURLspecial:  l.ValidateURLspecial,
 		Scope:               l.Scope,
 		AllowedGroups:       l.AllowedGroups,
 		CodeChallengeMethod: l.CodeChallengeMethod,

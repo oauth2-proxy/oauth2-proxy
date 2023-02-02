@@ -47,10 +47,10 @@ func stripParam(param, endpoint string) string {
 
 // validateToken returns true if token is valid
 func validateToken(ctx context.Context, p Provider, accessToken string, header http.Header) bool {
-	if accessToken == "" || p.Data().ValidateURL == nil || p.Data().ValidateURL.String() == "" {
+	if accessToken == "" || p.Data().GetTokenValidateURL() == nil || p.Data().GetTokenValidateURL().String() == "" {
 		return false
 	}
-	endpoint := p.Data().ValidateURL.String()
+	endpoint := p.Data().GetTokenValidateURL().String()
 	if len(header) == 0 {
 		params := url.Values{"access_token": {accessToken}}
 		if hasQueryParams(endpoint) {

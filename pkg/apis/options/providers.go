@@ -72,6 +72,8 @@ type Provider struct {
 	ProtectedResource string `json:"resource,omitempty"`
 	// ValidateURL is the access token validation endpoint
 	ValidateURL string `json:"validateURL,omitempty"`
+	// ValidateURLspecial is the optional access token validation endpoint in special cases
+	ValidateURLspecial string `json:"validateURLspecial,omitempty"`
 	// Scope is the OAuth scope specification
 	Scope string `json:"scope,omitempty"`
 	// AllowedGroups is a list of restrict logins to members of this group

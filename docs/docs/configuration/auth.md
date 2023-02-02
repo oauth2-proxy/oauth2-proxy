@@ -666,6 +666,7 @@ The default configuration allows everyone with Bitbucket account to authenticate
     --login-url="https://< your gitea host >/login/oauth/authorize"
     --redeem-url="https://< your gitea host >/login/oauth/access_token"
     --validate-url="https://< your gitea host >/api/v1"
+    --validate-url-special="https://< your gitea host >/api/v1/user/emails"
 ```
 
 

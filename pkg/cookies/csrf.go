@@ -219,7 +219,9 @@ func ExtractStateSubstring(req *http.Request) string {
 	stateSubstring := ""
 
 	state := req.URL.Query()["state"]
-	if state[0] != "" {
+	// If the application authorization was rejected by the OAuth2 provider's login page,
+    // the "state" can be empty. That's why to check len(state) is mandatory to avoid the panic.
+	if 0 < len(state) && state[0] != "" {
 		state := state[0]
 		if lastChar <= len(state) {
 			stateSubstring = state[0:lastChar]

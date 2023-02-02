@@ -119,6 +119,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
 		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
 		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
+		"val_spec": {dst: &p.ValidateURLspecial, raw: providerConfig.ValidateURLspecial},
 		"resource": {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
 	} {
 		var err error
