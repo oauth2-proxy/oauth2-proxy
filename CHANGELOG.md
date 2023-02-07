@@ -15,6 +15,7 @@
 - [#1839](https://github.com/oauth2-proxy/oauth2-proxy/pull/1839) Add readiness checks for deeper health checks (@kobim)
 - [#1927](https://github.com/oauth2-proxy/oauth2-proxy/pull/1927) Fix default scope settings for none oidc providers
 - [#1967](https://github.com/oauth2-proxy/oauth2-proxy/pull/1967) Added support for GKE Workload Identity (@kvanzuijlen)
+- [#1920](https://github.com/oauth2-proxy/oauth2-proxy/pull/1920) Make sure emailClaim is not overriden if userIDClaim is not set
 
 
 # V7.4.0
