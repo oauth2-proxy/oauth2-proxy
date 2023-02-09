@@ -208,7 +208,7 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `org` | _string_ | Org sets restrict logins to members of this organisation |
+| `org` | _string_ | Org sets restrict logins to members of this organization |
 | `team` | _string_ | Team sets restrict logins to members of this team |
 | `repo` | _string_ | Repo sets restrict logins to collaborators of this repository |
 | `token` | _string_ | Token is the token to use when verifying repository collaborators<br/>it must have push access to the repository |
