@@ -136,6 +136,7 @@ Note: When using the ADFS Auth provider with nginx and the cookie session store 
 
 1.  Create a new project: https://github.com/settings/developers
 2.  Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
+3.  Configure an explicit scope, e.g. with `--scope="user:email"` ([issue 1724](https://github.com/oauth2-proxy/oauth2-proxy/issues/1724))
 
 The GitHub auth provider supports two additional ways to restrict authentication to either organization and optional team level access, or to collaborators of a repository. Restricting by these options is normally accompanied with `--email-domain=*`
 
