@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -37,12 +38,17 @@ var _ Provider = (*KeycloakOIDCProvider)(nil)
 // Assumes `SetAllowedGroups` is already called on groups and appends to that
 // with `role:` prefixed roles.
 func (p *KeycloakOIDCProvider) addAllowedRoles(roles []string) {
-	if p.AllowedGroups == nil {
-		p.AllowedGroups = make(map[string]struct{})
+	groups := make([]string, len(roles))
+	for i, r := range roles {
+		path, role, hasPath := strings.Cut(r, "|")
+		if !hasPath {
+			role = path
+			path = "/"
+		}
+
+		groups[i] = path + "|" + formatRole(role)
 	}
-	for _, role := range roles {
-		p.AllowedGroups[formatRole(role)] = struct{}{}
-	}
+	p.addAllowedGroups(groups)
 }
 
 // CreateSessionFromToken converts Bearer IDTokens into sessions

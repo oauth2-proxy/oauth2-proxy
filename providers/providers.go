@@ -25,7 +25,7 @@ type Provider interface {
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
-	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
+	Authorize(ctx context.Context, s *sessions.SessionState, path string) (bool, error)
 	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
 	RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error)
 	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)

@@ -862,7 +862,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	authorized, err := p.provider.Authorize(req.Context(), session)
+	authorized, err := p.provider.Authorize(req.Context(), session, req.URL.Path)
 	if err != nil {
 		logger.Errorf("Error with authorization: %v", err)
 	}
@@ -1050,7 +1050,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	invalidEmail := session.Email != "" && !p.Validator(session.Email)
-	authorized, err := p.provider.Authorize(req.Context(), session)
+	authorized, err := p.provider.Authorize(req.Context(), session, req.URL.Path)
 	if err != nil {
 		logger.Errorf("Error with authorization: %v", err)
 	}

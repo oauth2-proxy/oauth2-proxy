@@ -248,7 +248,7 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				Expect(err).To(BeNil())
 				Expect(session.Groups).To(Equal(in.expectedGroups))
 
-				authorized, err := p.Authorize(context.Background(), session)
+				authorized, err := p.Authorize(context.Background(), session, "/")
 				Expect(err).To(BeNil())
 				Expect(authorized).To(Equal(in.expectedAuthz))
 			},

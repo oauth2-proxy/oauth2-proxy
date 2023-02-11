@@ -102,12 +102,13 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 	})
 
 	Context("Allowed Roles", func() {
-		It("should prefix allowed roles and add them to groups", func() {
+		It("should prefix allowed roles and add them to groups for the correct path", func() {
 			p := newKeycloakOIDCProvider(nil, options.KeycloakOptions{
-				Roles: []string{"admin", "editor"},
+				Roles: []string{"admin", "editor", "/api/|api"},
 			})
-			Expect(p.AllowedGroups).To(HaveKey("role:admin"))
-			Expect(p.AllowedGroups).To(HaveKey("role:editor"))
+			Expect(p.AllowedGroups["/"]).To(HaveKey("role:admin"))
+			Expect(p.AllowedGroups["/"]).To(HaveKey("role:editor"))
+			Expect(p.AllowedGroups["/api/"]).To(HaveKey("role:api"))
 		})
 	})
 

@@ -51,7 +51,7 @@ type ProviderData struct {
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
-	AllowedGroups map[string]struct{}
+	AllowedGroups map[string]map[string]struct{}
 
 	getAuthorizationHeaderFunc func(string) http.Header
 	loginURLParameterDefaults  url.Values
@@ -172,9 +172,31 @@ func regexpForRule(rule options.URLParameterRule) string {
 // setAllowedGroups organizes a group list into the AllowedGroups map
 // to be consumed by Authorize implementations
 func (p *ProviderData) setAllowedGroups(groups []string) {
-	p.AllowedGroups = make(map[string]struct{}, len(groups))
+	p.AllowedGroups = nil
+	p.addAllowedGroups(groups)
+}
+
+// addAllowedGroups appends a group list into the AllowedGroups map
+func (p *ProviderData) addAllowedGroups(groups []string) {
+	if p.AllowedGroups == nil {
+		p.AllowedGroups = make(map[string]map[string]struct{})
+	}
+
 	for _, group := range groups {
-		p.AllowedGroups[group] = struct{}{}
+		path, group, hasPath := strings.Cut(group, "|")
+		if !hasPath {
+			group = path
+			path = "/"
+		}
+
+		logger.Printf("Add allowed group %q for path %q", group, path)
+
+		pathGroups := p.AllowedGroups[path]
+		if pathGroups == nil {
+			pathGroups = make(map[string]struct{})
+		}
+		pathGroups[group] = struct{}{}
+		p.AllowedGroups[path] = pathGroups
 	}
 }
 

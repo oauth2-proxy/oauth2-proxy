@@ -61,17 +61,21 @@ func NewGitLabProvider(p *ProviderData, opts options.GitLabOptions) (*GitLabProv
 // setAllowedProjects adds Gitlab projects to the AllowedGroups list
 // and tracks them to do a project API lookup during `EnrichSession`.
 func (p *GitLabProvider) setAllowedProjects(projects []string) error {
-	for _, project := range projects {
+	groups := make([]string, len(projects))
+	for i, project := range projects {
 		gp, err := newGitlabProject(project)
 		if err != nil {
 			return err
 		}
 		p.allowedProjects = append(p.allowedProjects, gp)
-		p.AllowedGroups[formatProject(gp)] = struct{}{}
+		groups[i] = formatProject(gp)
 	}
+	p.addAllowedGroups(groups)
+
 	if len(p.allowedProjects) > 0 {
 		p.setProjectScope()
 	}
+
 	return nil
 }
 
