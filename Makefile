@@ -40,7 +40,7 @@ $(BINARY):
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -ldflags="-X main.VERSION=${VERSION}" -o $@ github.com/oauth2-proxy/oauth2-proxy/v7
 
 DOCKER_BUILD_PLATFORM ?= linux/amd64,linux/ppc64le,linux/arm/v6,linux/arm/v8
-DOCKER_BUILD_RUNTIME_IMAGE ?= alpine:3.15
+DOCKER_BUILD_RUNTIME_IMAGE ?= alpine:3.17.2
 DOCKER_BUILDX_ARGS ?= --build-arg RUNTIME_IMAGE=${DOCKER_BUILD_RUNTIME_IMAGE}
 DOCKER_BUILDX := docker buildx build ${DOCKER_BUILDX_ARGS} --build-arg VERSION=${VERSION}
 DOCKER_BUILDX_X_PLATFORM := $(DOCKER_BUILDX) --platform ${DOCKER_BUILD_PLATFORM}
