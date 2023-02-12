@@ -2,9 +2,10 @@ package redis
 
 import (
 	"context"
+	"time"
+
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/redis/go-redis/v9"
-	"time"
 )
 
 // Client is wrapper interface for redis.Client and redis.ClusterClient.
