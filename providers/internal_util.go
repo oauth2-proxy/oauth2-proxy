@@ -53,7 +53,11 @@ func validateToken(ctx context.Context, p Provider, accessToken string, header h
 	endpoint := p.Data().ValidateURL.String()
 	if len(header) == 0 {
 		params := url.Values{"access_token": {accessToken}}
-		endpoint = endpoint + "?" + params.Encode()
+		if hasQueryParams(endpoint) {
+			endpoint = endpoint + "&" + params.Encode()
+		} else {
+			endpoint = endpoint + "?" + params.Encode()
+		}
 	}
 
 	result := requests.New(endpoint).
@@ -73,4 +77,14 @@ func validateToken(ctx context.Context, p Provider, accessToken string, header h
 	}
 	logger.Errorf("token validation request failed: status %d - %s", result.StatusCode(), result.Body())
 	return false
+}
+
+// hasQueryParams check if URL has query parameters
+func hasQueryParams(endpoint string) bool {
+	endpointURL, err := url.Parse(endpoint)
+	if err != nil {
+		return false
+	}
+
+	return len(endpointURL.RawQuery) != 0
 }
