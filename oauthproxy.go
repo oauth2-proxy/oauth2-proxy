@@ -43,13 +43,12 @@ const (
 	schemeHTTPS     = "https"
 	applicationJSON = "application/json"
 
-	robotsPath        = "/robots.txt"
-	signInPath        = "/sign_in"
-	signOutPath       = "/sign_out"
-	oauthStartPath    = "/start"
-	oauthCallbackPath = "/callback"
-	authOnlyPath      = "/auth"
-	userInfoPath      = "/userinfo"
+	robotsPath     = "/robots.txt"
+	signInPath     = "/sign_in"
+	signOutPath    = "/sign_out"
+	oauthStartPath = "/start"
+	authOnlyPath   = "/auth"
+	userInfoPath   = "/userinfo"
 )
 
 var (
@@ -306,6 +305,8 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	// are not applied.
 	p.buildProxySubrouter(r.PathPrefix(proxyPrefix).Subrouter())
 
+	r.Path(p.redirectURL.Path).HandlerFunc(p.OAuthCallback)
+
 	// Register serveHTTP last so it catches anything that isn't already caught earlier.
 	// Anything that got to this point needs to have a session loaded.
 	r.PathPrefix("/").Handler(p.sessionChain.ThenFunc(p.Proxy))
@@ -318,7 +319,6 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Path(signInPath).HandlerFunc(p.SignIn)
 	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
-	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
 	// The userinfo endpoint needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
