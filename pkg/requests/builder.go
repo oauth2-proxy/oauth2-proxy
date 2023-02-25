@@ -16,7 +16,6 @@ type Builder interface {
 	WithBody(io.Reader) Builder
 	WithMethod(string) Builder
 	WithHeaders(http.Header) Builder
-	WithTransport(*http.Transport) Builder
 	WithClient(*http.Client) Builder
 	SetHeader(key, value string) Builder
 	Do() Result
@@ -63,13 +62,6 @@ func (r *builder) WithMethod(method string) Builder {
 // WithHeaders replaces the request header map with the given header map.
 func (r *builder) WithHeaders(header http.Header) Builder {
 	r.header = header
-	return r
-}
-
-func (r *builder) WithTransport(transport *http.Transport) Builder {
-	if transport != nil {
-		r.client.Transport = transport
-	}
 	return r
 }
 
