@@ -421,7 +421,6 @@ func buildRefreshChain(opts *options.Options, provider providers.Provider, sessi
 	if validator != nil {
 		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups, opts.LegacyPreferEmailToUser))
 	}
-	logger.Printf("Building session refresher: %s", sessionStore)
 	chain = chain.Append(middleware.NewStoredSessionRefresher(&middleware.StoredSessionLoaderOptions{
 		SessionStore:    sessionStore,
 		RefreshPeriod:   opts.Cookie.Refresh,
