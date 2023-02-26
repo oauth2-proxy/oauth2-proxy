@@ -125,7 +125,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	provider, err := providers.NewProvider(opts.Providers[0])
 	if err != nil {
-		return nil, fmt.Errorf("error intiailising provider: %v", err)
+		return nil, fmt.Errorf("error initialising provider: %v", err)
 	}
 
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
