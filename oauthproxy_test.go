@@ -2005,6 +2005,10 @@ func Test_noCacheHeaders(t *testing.T) {
 				hasNoCache: true,
 			},
 			{
+				path:       "/oauth2/refresh",
+				hasNoCache: true,
+			},
+			{
 				path:       "/upstream",
 				hasNoCache: false,
 			},
