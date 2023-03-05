@@ -14,7 +14,9 @@
 - [#1906](https://github.com/oauth2-proxy/oauth2-proxy/pull/1906) Fix PKCE code verifier generation to never use UTF-8 characters
 - [#1839](https://github.com/oauth2-proxy/oauth2-proxy/pull/1839) Add readiness checks for deeper health checks (@kobim)
 - [#1927](https://github.com/oauth2-proxy/oauth2-proxy/pull/1927) Fix default scope settings for none oidc providers
-
+- [#1951](https://github.com/oauth2-proxy/oauth2-proxy/pull/1951) Fix validate URL, check if query string marker (?) or separator (&) needs to be appended (@miguelborges99)
+- [#1920](https://github.com/oauth2-proxy/oauth2-proxy/pull/1920) Make sure emailClaim is not overriden if userIDClaim is not set
+- [#1988](https://github.com/oauth2-proxy/oauth2-proxy/pull/1988) Ensure sign-in page background is uniform throughout the page
 
 # V7.4.0
 
@@ -906,6 +908,7 @@ N/A
     - `-bitbucket-team` Restrict authorization to users that are part of this Bitbucket team
 - [#211](https://github.com/oauth2-proxy/oauth2-proxy/pull/211) Switch from dep to go modules (@steakunderscore)
 - [#145](https://github.com/oauth2-proxy/oauth2-proxy/pull/145) Add support for OIDC UserInfo endpoint email verification (@rtluckie)
+- [#2013](https://github.com/oauth2-proxy/oauth2-proxy/pull/2013) Upgrade alpine to version 3.17.2 and library dependencies (@miguelborges99)
 
 # v3.2.0
 
