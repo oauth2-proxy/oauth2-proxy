@@ -16,6 +16,7 @@
 - [#1927](https://github.com/oauth2-proxy/oauth2-proxy/pull/1927) Fix default scope settings for none oidc providers
 - [#1951](https://github.com/oauth2-proxy/oauth2-proxy/pull/1951) Fix validate URL, check if query string marker (?) or separator (&) needs to be appended (@miguelborges99)
 - [#1920](https://github.com/oauth2-proxy/oauth2-proxy/pull/1920) Make sure emailClaim is not overriden if userIDClaim is not set
+- [#1988](https://github.com/oauth2-proxy/oauth2-proxy/pull/1988) Ensure sign-in page background is uniform throughout the page
 - [#1956](https://github.com/oauth2-proxy/oauth2-proxy/pull/1956) Add `insecureSkipSignatureCheck` alpha config option to ignore ID token signature verification (@miguelborges99)
 
 # V7.4.0
@@ -908,6 +909,7 @@ N/A
     - `-bitbucket-team` Restrict authorization to users that are part of this Bitbucket team
 - [#211](https://github.com/oauth2-proxy/oauth2-proxy/pull/211) Switch from dep to go modules (@steakunderscore)
 - [#145](https://github.com/oauth2-proxy/oauth2-proxy/pull/145) Add support for OIDC UserInfo endpoint email verification (@rtluckie)
+- [#2013](https://github.com/oauth2-proxy/oauth2-proxy/pull/2013) Upgrade alpine to version 3.17.2 and library dependencies (@miguelborges99)
 
 # v3.2.0
 
