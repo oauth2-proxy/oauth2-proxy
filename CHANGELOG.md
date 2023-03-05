@@ -22,7 +22,7 @@
 - [#1988](https://github.com/oauth2-proxy/oauth2-proxy/pull/1988) Ensure sign-in page background is uniform throughout the page
 - [#1947](https://github.com/oauth2-proxy/oauth2-proxy/pull/1947) Added new option to configure the SameSite value of csrf cookie (e.g.: "--cookie-csrf-samesite"). 
 Also, added a new option to redirect to a page (e.g. --use-redirect-page=true), instead of redirecting to <redirect-url> with HTTP 302 Found, 
-go to a redirect page to perform a meta refresh redirect to <redirect-url> with HTTP 200 OK, so that strict cookies can go through. (@miguelborges99)
+go to a redirect page to perform a meta refresh redirect to <redirect-url> with HTTP 200 OK, so that strict cookies can go through.(@miguelborges99)
 
 # V7.4.0
 
