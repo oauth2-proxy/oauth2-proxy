@@ -167,6 +167,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--use-redirect-page` | bool | When enabled, instead of redirecting to redirect-url at Oauth2 callback with HTTP 302 Found, go to redirect_page.html to perform a meta refresh redirect to redirect-url with HTTP 200 OK. | false |
 | `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster` | |
 | `--redis-connection-url` | string | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`) | |
+| `--redis-insecure-skip-tls-verify` | bool | skip TLS verification when connecting to Redis | false |
 | `--redis-password` | string | Redis password. Applicable for all Redis configurations. Will override any password set in `--redis-connection-url` | |
 | `--redis-sentinel-password` | string | Redis sentinel password. Used only for sentinel connection; any redis node passwords need to use `--redis-password` | |
 | `--redis-sentinel-master-name` | string | Redis sentinel master name. Used in conjunction with `--redis-use-sentinel` | |
