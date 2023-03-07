@@ -1,6 +1,6 @@
 module github.com/oauth2-proxy/oauth2-proxy/v7
 
-go 1.18
+go 1.19
 
 require (
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
@@ -31,7 +31,7 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	golang.org/x/crypto v0.6.0
 	golang.org/x/exp v0.0.0-20221019170559-20944726eadf
-	golang.org/x/net v0.6.0
+	golang.org/x/net v0.7.0
 	golang.org/x/oauth2 v0.5.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/api v0.100.0
@@ -41,7 +41,6 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute v1.10.0 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
