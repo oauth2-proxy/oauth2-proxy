@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"google.golang.org/api/googleapi"
 	"io"
 	"net/url"
 	"os"
@@ -19,7 +20,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
-	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
