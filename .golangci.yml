@@ -3,7 +3,7 @@ run:
 linters:
   enable:
     - govet
-    - golint
+    - revive
     - ineffassign
     - goconst
     - deadcode
@@ -21,7 +21,7 @@ linters:
     - goprintffuncname
     - misspell
     - prealloc
-    - scopelint
+    - exportloopref
     - stylecheck
     - unconvert
     - gocritic
