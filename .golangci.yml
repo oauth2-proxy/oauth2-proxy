@@ -3,7 +3,7 @@ run:
 linters:
   enable:
     - govet
-    - revive
+    - golint
     - ineffassign
     - goconst
     - deadcode
