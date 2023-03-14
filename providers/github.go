@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -484,7 +483,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		} `json:"organization"`
 	}
 
-	pn, last := 1, 0
+	pn := 1
 	for {
 		params := url.Values{
 			"per_page": {"100"},
@@ -498,55 +497,24 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 			RawQuery: params.Encode(),
 		}
 
-		// bodyclose cannot detect that the body is being closed later in requests.Into,
-		// so have to skip the linting for the next line.
-		// nolint:bodyclose
-		result := requests.New(endpoint.String()).
+		var teams []Team
+		err := requests.New(endpoint.String()).
 			WithContext(ctx).
 			WithHeaders(makeGitHubHeader(s.AccessToken)).
-			Do()
-
-		if result.Error() != nil {
-			return result.Error()
-		}
-
-		if last == 0 {
-			// link header may not be obtained
-			// When paging is not required and all data can be retrieved with a single call
-
-			// Conditions for obtaining the link header.
-			// 1. When paging is required (Example: When the data size is 100 and the page size is 99 or less)
-			// 2. When it exceeds the paging frame (Example: When there is only 10 records but the second page is called with a page size of 100)
-
-			// link header at not last page
-			// <https://api.github.com/user/teams?page=1&per_page=100>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=100>; rel="last", <https://api.github.com/user/teams?page=1&per_page=100>; rel="first"
-			// link header at last page (doesn't exist last info)
-			// <https://api.github.com/user/teams?page=3&per_page=10>; rel="prev", <https://api.github.com/user/teams?page=1&per_page=10>; rel="first"
-
-			link := result.Headers().Get("Link")
-			rep1 := regexp.MustCompile(`(?s).*\<https://api.github.com/user/teams\?page=(.)&per_page=[0-9]+\>; rel="last".*`)
-			i, converr := strconv.Atoi(rep1.ReplaceAllString(link, "$1"))
-
-			// If the last page cannot be taken from the link in the http header, the last variable remains zero
-			if converr == nil {
-				last = i
-			}
-		}
-
-		var teams []Team
-		if err := result.UnmarshalInto(&teams); err != nil {
+			Do().
+			UnmarshalInto(&teams)
+		if err != nil {
 			return err
+		}
+
+		if len(teams) == 0 {
+			break
 		}
 
 		for _, team := range teams {
 			logger.Printf("Member of Github Organization/Team:%q/%q", team.Org.Login, team.Slug)
 			s.Groups = append(s.Groups, team.Org.Login+orgTeamSeparator+team.Slug)
 		}
-
-		if len(teams) == 0 || pn == last || last == 0 {
-			break
-		}
-
 		pn++
 	}
 
