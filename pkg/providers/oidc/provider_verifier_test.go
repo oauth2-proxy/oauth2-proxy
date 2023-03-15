@@ -78,7 +78,15 @@ var _ = Describe("ProviderVerifier", func() {
 				p.SkipDiscovery = true
 				p.JWKsURL = ""
 			},
-			expectedError: "invalid provider verifier options: missing required setting: jwks-url",
+			expectedError: "invalid provider verifier options: missing required setting: jwks-url or public-keys",
+		}),
+		Entry("with skip discovery, the JWKs URL not empty and len(PublicKeys) is greater than 0", &newProviderVerifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.SkipDiscovery = true
+				p.JWKsURL = "notEmpty"
+				p.PublicKeys = []string{"notEmpty"}
+			},
+			expectedError: "invalid provider verifier options: mutually exclusive settings: jwks-url and public-keys",
 		}),
 		Entry("should be succesfful when skipping discovery with the JWKs URL specified", &newProviderVerifierTableInput{
 			modifyOpts: func(p *ProviderVerifierOptions) {
