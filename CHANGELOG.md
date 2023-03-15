@@ -16,6 +16,7 @@
 - [#2620](https://github.com/oauth2-proxy/oauth2-proxy/pull/2620) fix: update code_verifier to use recommended method (@vishvananda)
 - [#2392](https://github.com/oauth2-proxy/oauth2-proxy/pull/2392) chore: extend test cases for oidc provider and documentation regarding implicit setting of the groups scope when no scope was specified in the config (@jjlakis / @tuunit)
 - [#2902](https://github.com/oauth2-proxy/oauth2-proxy/pull/2902) feat(entra): add Workload Identity support for Entra ID (@jjlakis)
+- [#2376](https://github.com/oauth2-proxy/oauth2-proxy/pull/2376) feat: static public keys file support for oidc provider (@axel7083 / @jjlakis)
 
 # V7.7.1
 
