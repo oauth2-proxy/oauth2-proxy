@@ -152,16 +152,18 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 	return verifierBuilder, provider, nil
 }
 
-// GetPublicKeyFromFile reads a PEM-encoded public key from a file
-// and returns a crypto.PublicKey object.
-func GetPublicKeyFromFile(filename string) (crypto.PublicKey, error) {
-	// Read the contents of the file into a byte array
+// ReadFile reads the contents of a file into a byte array.
+func ReadFile(filename string) ([]byte, error) {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
+	return bytes, nil
+}
 
-	// Parse the PEM-encoded public key
+// GetPublicKeyFromBytes parses a PEM-encoded public key from a byte array
+// and returns a crypto.PublicKey object.
+func GetPublicKeyFromBytes(bytes []byte) (crypto.PublicKey, error) {
 	block, _ := pem.Decode(bytes)
 	if block == nil {
 		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
@@ -171,7 +173,6 @@ func GetPublicKeyFromFile(filename string) (crypto.PublicKey, error) {
 		return nil, fmt.Errorf("failed to parse public key: %w", err)
 	}
 
-	// Cast the public key to the crypto.PublicKey interface
 	cryptoPublicKey, ok := publicKey.(crypto.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("failed to cast public key to crypto.PublicKey")
@@ -184,7 +185,12 @@ func GetPublicKeyFromFile(filename string) (crypto.PublicKey, error) {
 func newKeySetFromStatic(keys []string) (*oidc.StaticKeySet, error) {
 	var keySet []crypto.PublicKey
 	for _, keyFile := range keys {
-		publicKey, err := GetPublicKeyFromFile(keyFile)
+		bytes, err := ReadFile(keyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file: %w", err)
+		}
+
+		publicKey, err := GetPublicKeyFromBytes(bytes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create keys: %w", err)
 		}
