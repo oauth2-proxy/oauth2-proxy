@@ -3,8 +3,13 @@ package main
 import (
 	"context"
 	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,13 +19,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	sessionscookie "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/cookie"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
@@ -1788,37 +1791,76 @@ func (NoOpKeySet) VerifySignature(_ context.Context, jwt string) (payload []byte
 	return base64.RawURLEncoding.DecodeString(payloadString)
 }
 
-func TestGetJwtSession(t *testing.T) {
-	/* token payload:
-	{
-	  "sub": "1234567890",
-	  "aud": "https://test.myapp.com",
-	  "name": "John Doe",
-	  "email": "john@example.com",
-	  "iss": "https://issuer.example.com",
-	  "iat": 1553691215,
-	  "exp": 1912151821
-	}
-	*/
-	goodJwt := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9." +
-		"eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoiaHR0cHM6Ly90ZXN0Lm15YXBwLmNvbSIsIm5hbWUiOiJKb2huIERvZSIsImVtY" +
-		"WlsIjoiam9obkBleGFtcGxlLmNvbSIsImlzcyI6Imh0dHBzOi8vaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNTUzNjkxMj" +
-		"E1LCJleHAiOjE5MTIxNTE4MjF9." +
-		"rLVyzOnEldUq_pNkfa-WiV8TVJYWyZCaM2Am_uo8FGg11zD7l-qmz3x1seTvqpH6Y0Ty00fmv6dJnGnC8WMnPXQiodRTfhBSe" +
-		"OKZMu0HkMD2sg52zlKkbfLTO6ic5VnbVgwjjrB8am_Ta6w7kyFUaB5C1BsIrrLMldkWEhynbb8"
+type jwtToken struct {
+	PrivateKey jose.JSONWebKey
+	PublicKey  jose.JSONWebKey
+	Token      string
+}
 
-	keyset := NoOpKeySet{}
-	verifier := oidc.NewVerifier("https://issuer.example.com", keyset,
-		&oidc.Config{ClientID: "https://test.myapp.com", SkipExpiryCheck: true,
-			SkipClientIDCheck: true})
-	verificationOptions := internaloidc.IDTokenVerificationOptions{
-		AudienceClaims: []string{"aud"},
-		ClientID:       "https://test.myapp.com",
-		ExtraAudiences: []string{},
+func createToken(claims map[string]interface{}) (*jwtToken, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 1028)
+	if err != nil {
+		return nil, err
 	}
-	internalVerifier := internaloidc.NewVerifier(verifier, verificationOptions)
+	privateWebKey := jose.JSONWebKey{Key: privateKey, Algorithm: string(jose.RS256), KeyID: ""}
+	publicWebKey := jose.JSONWebKey{Key: privateKey.Public(), Use: "sig", Algorithm: string(jose.RS256), KeyID: ""}
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: privateWebKey}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := jwt.Signed(signer).Claims(claims).CompactSerialize()
+	if err != nil {
+		return nil, err
+	}
+	return &jwtToken{
+		PrivateKey: privateWebKey,
+		PublicKey:  publicWebKey,
+		Token:      data,
+	}, nil
+}
+
+func TestGetJwtSession(t *testing.T) {
+	// Let's create a token containing the private/public key and the jwt token.
+	token, err := createToken(map[string]interface{}{
+		"sub":   "1234567890",
+		"aud":   "https://test.myapp.com",
+		"name":  "John Doe",
+		"email": "john@example.com",
+		"iss":   "https://issuer.example.com",
+		"iat":   1553691215,
+		"exp":   1912151821,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// oidc does not support getting the public key from a file for verification
+	// therefore we need to mock a JWKs endpoint serving the JWKs required to
+	// validate or invalidate the token. See https://github.com/oauth2-proxy/oauth2-proxy/pull/2050 for improvement
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(&jose.JSONWebKeySet{
+			Keys: []jose.JSONWebKey{token.PublicKey}, // We serve the public key we generate using `createToken`
+		})
+	}))
 
 	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
+		// We declare a oidc provider with the configuration required to validate our JWT token.
+		opts.Providers = []options.Provider{
+			{
+				ID:           "oidc=https://test.myapp.com",
+				ClientID:     "https://test.myapp.com",
+				ClientSecret: "USELESS_BUT_REQUIRED",
+				Type:         options.OIDCProvider,
+				OIDCConfig: options.OIDCOptions{
+					IssuerURL:      "https://issuer.example.com",
+					SkipDiscovery:  true,
+					AudienceClaims: []string{"aud"},
+					JwksURL:        server.URL,
+					EmailClaim:     "email",
+				},
+			},
+		}
 		opts.InjectRequestHeaders = []options.Header{
 			{
 				Name: "Authorization",
@@ -1887,7 +1929,6 @@ func TestGetJwtSession(t *testing.T) {
 			},
 		}
 		opts.SkipJwtBearerTokens = true
-		opts.SetJWTBearerVerifiers(append(opts.GetJWTBearerVerifiers(), internalVerifier))
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1897,7 +1938,7 @@ func TestGetJwtSession(t *testing.T) {
 		return true
 	}
 
-	authHeader := fmt.Sprintf("Bearer %s", goodJwt)
+	authHeader := fmt.Sprintf("Bearer %s", token.Token)
 	test.req.Header = map[string][]string{
 		"Authorization": {authHeader},
 	}

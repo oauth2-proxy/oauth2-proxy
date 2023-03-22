@@ -27,14 +27,14 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	proxyhttp "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/http"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
-
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
+	claimutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
@@ -122,9 +122,13 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		}
 	}
 
-	provider, err := providers.NewProvider(opts.Providers[0])
-	if err != nil {
-		return nil, fmt.Errorf("error initialising provider: %v", err)
+	var providersCollection []providers.Provider
+	for _, provider := range opts.Providers {
+		provider, err := providers.NewProvider(provider)
+		if err != nil {
+			return nil, fmt.Errorf("error initialising provider: %v", err)
+		}
+		providersCollection = append(providersCollection, provider)
 	}
 
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
@@ -134,7 +138,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Footer:           opts.Templates.Footer,
 		Version:          VERSION,
 		Debug:            opts.Templates.Debug,
-		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
+		ProviderName:     buildProviderName(providersCollection[0], opts.Providers[0].Name),
 		SignInMessage:    buildSignInMessage(opts),
 		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
 	})
@@ -148,17 +152,14 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	if opts.SkipJwtBearerTokens {
-		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
-		for _, issuer := range opts.ExtraJwtIssuers {
-			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
-		}
+		logger.Printf("Skipping JWT tokens option is enabled. When a JWT token is received, the iss claim will be used to determined which provider should be used.")
 	}
 	redirectURL := opts.GetRedirectURL()
 	if redirectURL.Path == "" {
 		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
 	}
 
-	logger.Printf("OAuthProxy configured for %s Client ID: %s", provider.Data().ProviderName, opts.Providers[0].ClientID)
+	logger.Printf("OAuthProxy configured for %s Client ID: %s", providersCollection[0].Data().ProviderName, opts.Providers[0].ClientID)
 	refresh := "disabled"
 	if opts.Cookie.Refresh != time.Duration(0) {
 		refresh = fmt.Sprintf("after %s", opts.Cookie.Refresh)
@@ -189,7 +190,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
 	}
-	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator)
+	sessionChain := buildSessionChain(opts, providersCollection, sessionStore, basicAuthValidator)
 	headersChain, err := buildHeadersChain(opts)
 	if err != nil {
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
@@ -208,7 +209,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
 		ProxyPrefix:         opts.ProxyPrefix,
-		provider:            provider,
+		provider:            providersCollection[0],
 		sessionStore:        sessionStore,
 		redirectURL:         redirectURL,
 		apiRoutes:           apiRoutes,
@@ -367,17 +368,32 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	return chain, nil
 }
 
-func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
+func buildSessionChain(opts *options.Options, providersCollection []providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
 	chain := alice.New()
 
 	if opts.SkipJwtBearerTokens {
 		sessionLoaders := []middlewareapi.TokenToSessionFunc{
-			provider.CreateSessionFromToken,
-		}
+			func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
+				claimExtractor, err := claimutil.NewClaimExtractor(ctx, token, nil, nil)
+				if err != nil {
+					return nil, fmt.Errorf("impossible to create a claim extractor from the token: %s", err.Error())
+				}
+				value, exists, err := claimExtractor.GetClaim("iss")
+				if !exists {
+					return nil, fmt.Errorf("the token does not have the iss claim")
+				}
+				if err != nil {
+					return nil, fmt.Errorf("could not get the iss claim: %s", err.Error())
+				}
 
-		for _, verifier := range opts.GetJWTBearerVerifiers() {
-			sessionLoaders = append(sessionLoaders,
-				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
+				for _, provider := range providersCollection {
+					issuer, err := provider.GetIssuerURL()
+					if err == nil && issuer == value {
+						return provider.CreateSessionFromToken(ctx, token)
+					}
+				}
+				return nil, fmt.Errorf("no provider corresponding to the issuer %s", value)
+			},
 		}
 
 		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders))
@@ -387,6 +403,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups, opts.LegacyPreferEmailToUser))
 	}
 
+	provider := providersCollection[0]
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
 		SessionStore:    sessionStore,
 		RefreshPeriod:   opts.Cookie.Refresh,

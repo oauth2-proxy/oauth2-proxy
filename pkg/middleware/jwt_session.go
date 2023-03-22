@@ -87,6 +87,7 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 
 // findTokenFromHeader finds a valid JWT token from the Authorization header of a given request.
 func (j *jwtSessionLoader) findTokenFromHeader(header string) (string, error) {
+	fmt.Printf("header: %s\n", header)
 	tokenType, token, err := splitAuthHeader(header)
 	if err != nil {
 		return "", err

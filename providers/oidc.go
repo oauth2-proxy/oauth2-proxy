@@ -18,6 +18,7 @@ type OIDCProvider struct {
 	*ProviderData
 
 	SkipNonce bool
+	IssuerURL string
 }
 
 // NewOIDCProvider initiates a new OIDCProvider
@@ -35,6 +36,7 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 	return &OIDCProvider{
 		ProviderData: p,
 		SkipNonce:    opts.InsecureSkipNonce,
+		IssuerURL:    opts.IssuerURL,
 	}
 }
 
@@ -226,4 +228,8 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.SetExpiresOn(token.Expiry)
 
 	return ss, nil
+}
+
+func (p *OIDCProvider) GetIssuerURL() (string, error) {
+	return p.IssuerURL, nil
 }

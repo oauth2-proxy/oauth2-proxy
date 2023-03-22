@@ -146,3 +146,8 @@ func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string)
 	}
 	return nil, ErrNotImplemented
 }
+
+// GetIssuerURL get the issuer URL of the provider
+func (p *ProviderData) GetIssuerURL() (string, error) {
+	return "", ErrNotImplemented
+}

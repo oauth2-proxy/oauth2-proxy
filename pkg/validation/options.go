@@ -56,25 +56,6 @@ func Validate(o *options.Options) error {
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 
-	if o.SkipJwtBearerTokens {
-		// Configure extra issuers
-		if len(o.ExtraJwtIssuers) > 0 {
-			var jwtIssuers []jwtIssuer
-			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
-			for _, jwtIssuer := range jwtIssuers {
-				verifier, err := newVerifierFromJwtIssuer(
-					o.Providers[0].OIDCConfig.AudienceClaims,
-					o.Providers[0].OIDCConfig.ExtraAudiences,
-					jwtIssuer,
-				)
-				if err != nil {
-					msgs = append(msgs, fmt.Sprintf("error building verifiers: %s", err))
-				}
-				o.SetJWTBearerVerifiers(append(o.GetJWTBearerVerifiers(), verifier))
-			}
-		}
-	}
-
 	var redirectURL *url.URL
 	redirectURL, msgs = parseURL(o.RawRedirectURL, "redirect", msgs)
 	o.SetRedirectURL(redirectURL)
