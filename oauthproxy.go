@@ -368,31 +368,35 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	return chain, nil
 }
 
+func createSessionFromIssuerClaim(ctx context.Context, token string, providersCollection []providers.Provider) (*sessionsapi.SessionState, error) {
+	claimExtractor, err := claimutil.NewClaimExtractor(ctx, token, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("impossible to create a claim extractor from the token: %s", err.Error())
+	}
+	value, exists, err := claimExtractor.GetClaim("iss")
+	if !exists {
+		return nil, fmt.Errorf("the token does not have the iss claim")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not get the iss claim: %s", err.Error())
+	}
+
+	for _, provider := range providersCollection {
+		issuer, err := provider.GetIssuerURL()
+		if err == nil && issuer == value {
+			return provider.CreateSessionFromToken(ctx, token)
+		}
+	}
+	return nil, fmt.Errorf("no provider corresponding to the issuer %s", value)
+}
+
 func buildSessionChain(opts *options.Options, providersCollection []providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
 	chain := alice.New()
 
 	if opts.SkipJwtBearerTokens {
 		sessionLoaders := []middlewareapi.TokenToSessionFunc{
 			func(ctx context.Context, token string) (*sessionsapi.SessionState, error) {
-				claimExtractor, err := claimutil.NewClaimExtractor(ctx, token, nil, nil)
-				if err != nil {
-					return nil, fmt.Errorf("impossible to create a claim extractor from the token: %s", err.Error())
-				}
-				value, exists, err := claimExtractor.GetClaim("iss")
-				if !exists {
-					return nil, fmt.Errorf("the token does not have the iss claim")
-				}
-				if err != nil {
-					return nil, fmt.Errorf("could not get the iss claim: %s", err.Error())
-				}
-
-				for _, provider := range providersCollection {
-					issuer, err := provider.GetIssuerURL()
-					if err == nil && issuer == value {
-						return provider.CreateSessionFromToken(ctx, token)
-					}
-				}
-				return nil, fmt.Errorf("no provider corresponding to the issuer %s", value)
+				return createSessionFromIssuerClaim(ctx, token, providersCollection)
 			},
 		}
 
