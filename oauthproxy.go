@@ -375,7 +375,7 @@ func createSessionFromIssuerClaim(ctx context.Context, token string, providersCo
 	}
 	value, exists, err := claimExtractor.GetClaim("iss")
 	if !exists {
-		return nil, fmt.Errorf("the token does not have the iss claim")
+		err = fmt.Errorf("the token does not have the iss claim")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not get the iss claim: %s", err.Error())
