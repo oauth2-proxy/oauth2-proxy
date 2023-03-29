@@ -484,6 +484,7 @@ type LegacyProvider struct {
 	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
 	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
 	AzureGraphGroupField     string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
+	AzureFederatedTokenAuth  bool     `flag:"azure-federated-token-auth-enabled" cfg:"azure_federated_token_auth_enabled"`
 	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
 	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
@@ -540,6 +541,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("azure-graph-group-field", "", "configures the group field to be used when building the groups list(`id` or `displayName`. Default is `id`) from Microsoft Graph(available only for v2.0 oidc url). Based on this value, the `allowed-group` config values should be adjusted accordingly. If using `id` as group field, `allowed-group` should contains groups IDs, if using `displayName` as group field, `allowed-group` should contains groups name")
+	flagSet.Bool("azure-federated-token-auth-enabled", false, "Whether to authenticate to Azure using federated credential (projected by Workload Identity). Token path is read from AZURE_FEDERATED_TOKEN_FILE environment variable")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
 	flagSet.String("github-org", "", "restrict logins to members of this organisation")
@@ -579,7 +581,6 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 	flagSet.String("code-challenge-method", "", "use PKCE code challenges with the specified method. Either 'plain' or 'S256'")
 	flagSet.String("force-code-challenge-method", "", "Deprecated - use --code-challenge-method")
-
 	flagSet.String("acr-values", "", "acr values string:  optional")
 	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov")
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov")
@@ -678,8 +679,9 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	// This part is out of the switch section because azure has a default tenant
 	// that needs to be added from legacy options
 	provider.AzureConfig = AzureOptions{
-		Tenant:          l.AzureTenant,
-		GraphGroupField: l.AzureGraphGroupField,
+		Tenant:            l.AzureTenant,
+		GraphGroupField:   l.AzureGraphGroupField,
+		UseFederatedToken: l.AzureFederatedTokenAuth,
 	}
 
 	switch provider.Type {

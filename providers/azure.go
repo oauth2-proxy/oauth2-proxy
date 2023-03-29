@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -22,9 +23,10 @@ import (
 // AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
 	*ProviderData
-	Tenant          string
-	GraphGroupField string
-	isV2Endpoint    bool
+	Tenant            string
+	GraphGroupField   string
+	isV2Endpoint      bool
+	UseFederatedToken bool
 }
 
 var _ Provider = (*AzureProvider)(nil)
@@ -107,10 +109,11 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	}
 
 	return &AzureProvider{
-		ProviderData:    p,
-		Tenant:          tenant,
-		GraphGroupField: graphGroupField,
-		isV2Endpoint:    isV2Endpoint,
+		ProviderData:      p,
+		Tenant:            tenant,
+		GraphGroupField:   graphGroupField,
+		isV2Endpoint:      isV2Endpoint,
+		UseFederatedToken: opts.UseFederatedToken,
 	}
 }
 
@@ -208,8 +211,8 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 		session.Email = email
 	}
 
-	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph
-	if p.isV2Endpoint {
+	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph if groups were not present in id_token
+	if p.isV2Endpoint && len(session.Groups) == 0 {
 		groups, err := p.getGroupsFromProfileAPI(ctx, session)
 		if err != nil {
 			return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
@@ -224,14 +227,29 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (u
 	if code == "" {
 		return params, ErrMissingCode
 	}
-	clientSecret, err := p.GetClientSecret()
-	if err != nil {
-		return params, err
+
+	if !p.UseFederatedToken {
+		clientSecret, err := p.GetClientSecret()
+		if err != nil {
+			return params, err
+		}
+		params.Add("client_secret", clientSecret)
+	} else {
+		federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
+		if federatedTokenPath == "" {
+			return nil, fmt.Errorf("AZURE_FEDERATED_TOKEN_FILE variable is not set!")
+		}
+
+		federatedToken, err := os.ReadFile(federatedTokenPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading federated token file %s: %s", federatedTokenPath, err)
+		}
+		params.Add("client_assertion", string(federatedToken))
+		params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 	}
 
 	params.Add("redirect_uri", redirectURL)
 	params.Add("client_id", p.ClientID)
-	params.Add("client_secret", clientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 	if codeVerifier != "" {

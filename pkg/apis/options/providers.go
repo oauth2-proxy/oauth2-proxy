@@ -145,6 +145,9 @@ type AzureOptions struct {
 	// GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph
 	// Default value is 'id'
 	GraphGroupField string `json:"graphGroupField,omitempty"`
+	// UseWorkloadIdentity determines whether we want to use federated credential stored in
+	// $AZURE_FEDERATED_TOKEN_FILE environment variable to access Azure APIs
+	UseFederatedToken bool `json:"useFederatedToken,omitempty"`
 }
 
 type ADFSOptions struct {

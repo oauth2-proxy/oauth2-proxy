@@ -46,8 +46,8 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 		msgs = append(msgs, "provider missing setting: client-id")
 	}
 
-	// login.gov uses a signed JWT to authenticate, not a client-secret
-	if provider.Type != "login.gov" {
+	// login.gov and Azure with workload identity support uses a signed JWT to authenticate, not a client-secret.
+	if provider.Type != "login.gov" && (provider.Type != "azure" || !provider.AzureConfig.UseFederatedToken) {
 		if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
 			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
 		}
