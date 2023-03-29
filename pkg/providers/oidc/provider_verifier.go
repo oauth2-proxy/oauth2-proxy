@@ -80,10 +80,11 @@ func (p ProviderVerifierOptions) toVerificationOptions() IDTokenVerificationOpti
 // toOIDCConfig returns an oidc.Config based on the configured options.
 func (p ProviderVerifierOptions) toOIDCConfig() *oidc.Config {
 	return &oidc.Config{
-		ClientID:             p.ClientID,
-		SkipIssuerCheck:      p.SkipIssuerVerification,
-		SkipClientIDCheck:    true,
-		SupportedSigningAlgs: p.SupportedSigningAlgs,
+		ClientID:                   p.ClientID,
+		SkipIssuerCheck:            p.SkipIssuerVerification,
+		SkipClientIDCheck:          true,
+		InsecureSkipSignatureCheck: true,
+		SupportedSigningAlgs:       p.SupportedSigningAlgs,
 	}
 }
 
