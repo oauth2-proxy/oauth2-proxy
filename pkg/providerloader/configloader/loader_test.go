@@ -1,6 +1,7 @@
 package configloader
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -113,7 +114,8 @@ func TestLoad(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := l.Load(tt.id)
+			ctx := context.Background()
+			got, err := l.Load(ctx, tt.id)
 
 			if err == nil && !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf(" load returned  = %v, want %v", got, tt.want)

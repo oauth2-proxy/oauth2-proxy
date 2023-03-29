@@ -80,7 +80,8 @@ func TestLoad(t *testing.T) {
 					GetFunc: tt.mockGet,
 				},
 			}
-			_, err := ps.Load(tt.id)
+			ctx := context.Background()
+			_, err := ps.Load(ctx, tt.id)
 			if err != nil && !tt.wantErr {
 				t.Errorf("load, got error: '%v'", err)
 			}

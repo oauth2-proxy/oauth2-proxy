@@ -1,6 +1,7 @@
 package single
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -23,6 +24,6 @@ func New(conf options.Provider) (*Loader, error) {
 	}, nil
 }
 
-func (l *Loader) Load(_ string) (providers.Provider, error) {
+func (l *Loader) Load(_ context.Context, _ string) (providers.Provider, error) {
 	return l.provider, nil
 }

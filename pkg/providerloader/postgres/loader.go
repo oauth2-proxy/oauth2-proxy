@@ -37,8 +37,7 @@ func New(opts options.PostgresLoader, proxyPrefix string) (*ProviderStore, error
 	return &l, nil
 }
 
-func (ps *ProviderStore) Load(id string) (providers.Provider, error) {
-	ctx := context.Background()
+func (ps *ProviderStore) Load(ctx context.Context, id string) (providers.Provider, error) {
 	if id == "" {
 		return nil, fmt.Errorf("provider id is empty")
 	}

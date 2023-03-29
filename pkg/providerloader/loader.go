@@ -1,6 +1,7 @@
 package providerloader
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -12,7 +13,7 @@ import (
 
 type Loader interface {
 	// id is provider id, which should be same as tenantId
-	Load(id string) (providers.Provider, error)
+	Load(ctx context.Context, id string) (providers.Provider, error)
 }
 
 // factory function for types.Loader interface

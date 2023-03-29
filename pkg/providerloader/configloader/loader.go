@@ -1,6 +1,7 @@
 package configloader
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -32,7 +33,7 @@ func New(conf options.Providers) (*Loader, error) {
 	return loader, nil
 }
 
-func (l *Loader) Load(id string) (providers.Provider, error) {
+func (l *Loader) Load(_ context.Context, id string) (providers.Provider, error) {
 	if tnt, ok := l.providers[id]; ok {
 		return tnt, nil
 	}

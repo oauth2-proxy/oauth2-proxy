@@ -358,7 +358,7 @@ type providerLoader struct {
 	provider providers.Provider
 }
 
-func (l *providerLoader) Load(_ string) (providers.Provider, error) {
+func (l *providerLoader) Load(_ context.Context, _ string) (providers.Provider, error) {
 	return l.provider, nil
 }
 
@@ -2008,7 +2008,7 @@ func TestGetJwtSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := test.proxy.providerLoader.Load("providerID")
+	p, err := test.proxy.providerLoader.Load(test.req.Context(), "providerID")
 	if err != nil {
 		t.Fatal(err)
 	}

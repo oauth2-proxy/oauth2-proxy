@@ -18,7 +18,7 @@ func NewProviderLoader(loader providerloader.Loader) alice.Constructor {
 
 			tenantID := tenantutils.FromContext(req.Context())
 
-			provider, err := loader.Load(tenantID)
+			provider, err := loader.Load(req.Context(), tenantID)
 			if err != nil {
 				logger.Error(fmt.Sprintf("unable to load provider, id='%s': %s", tenantID, err.Error()))
 				rw.WriteHeader(http.StatusUnauthorized)
