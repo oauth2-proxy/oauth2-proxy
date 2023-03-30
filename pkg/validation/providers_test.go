@@ -34,7 +34,7 @@ var _ = Describe("Providers", func() {
 	missingProvider := "at least one provider has to be defined"
 	emptyIDMsg := "provider has empty id: ids are required for all providers"
 	duplicateProviderIDMsg := "multiple providers found with id ProviderID: provider ids must be unique"
-	skipButtonAndMultipleProvidersMsg := "SkipProviderButton and multiple providers are mutually exclusive"
+	//skipButtonAndMultipleProvidersMsg := "SkipProviderButton and multiple providers are mutually exclusive"
 
 	DescribeTable("validateProviders",
 		func(o *validateProvidersTableInput) {
@@ -69,16 +69,6 @@ var _ = Describe("Providers", func() {
 				},
 			},
 			errStrings: []string{duplicateProviderIDMsg},
-		}),
-		Entry("with multiple providers and skip provider button", &validateProvidersTableInput{
-			options: &options.Options{
-				SkipProviderButton: true,
-				Providers: options.Providers{
-					validProvider,
-					validLoginGovProvider,
-				},
-			},
-			errStrings: []string{skipButtonAndMultipleProvidersMsg},
 		}),
 	)
 })

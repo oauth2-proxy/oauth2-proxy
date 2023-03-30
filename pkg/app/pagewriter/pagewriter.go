@@ -107,8 +107,8 @@ func NewWriter(opts Opts) (Writer, error) {
 // If any of the funcs are not provided, a default implementation will be used.
 // This is primarily for us in testing.
 type WriterFuncs struct {
-	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
-	ErrorPageFunc  func(rw http.ResponseWriter, opts ErrorPageOpts)
+	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, provider providers.Provider, redirectURL string, statusCode int)
+	ErrorPageFunc  func(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorFunc func(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	RobotsTxtfunc  func(rw http.ResponseWriter, req *http.Request)
 }
@@ -116,9 +116,9 @@ type WriterFuncs struct {
 // WriteSignInPage implements the Writer interface.
 // If the SignInPageFunc is provided, this will be used, else a default
 // implementation will be used.
-func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
+func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request, provider providers.Provider, redirectURL string, statusCode int) {
 	if w.SignInPageFunc != nil {
-		w.SignInPageFunc(rw, req, redirectURL, statusCode)
+		w.SignInPageFunc(rw, req, provider, redirectURL, statusCode)
 		return
 	}
 
@@ -130,9 +130,9 @@ func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request,
 // WriteErrorPage implements the Writer interface.
 // If the ErrorPageFunc is provided, this will be used, else a default
 // implementation will be used.
-func (w *WriterFuncs) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts) {
+func (w *WriterFuncs) WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts) {
 	if w.ErrorPageFunc != nil {
-		w.ErrorPageFunc(rw, opts)
+		w.ErrorPageFunc(ctx, rw, opts)
 		return
 	}
 
@@ -152,7 +152,7 @@ func (w *WriterFuncs) ProxyErrorHandler(rw http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	w.WriteErrorPage(rw, ErrorPageOpts{
+	w.WriteErrorPage(req.Context(), rw, ErrorPageOpts{
 		Status:   http.StatusBadGateway,
 		AppError: proxyErr.Error(),
 	})

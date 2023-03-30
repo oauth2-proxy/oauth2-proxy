@@ -7,13 +7,13 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
-type loader struct {
+type Loader struct {
 	providersConf options.Providers             // providers configuration that has been loaded from file at path loader.conf.ProvidersFile
 	providers     map[string]providers.Provider // providers map, key is provider id
 }
 
-func New(conf options.Providers) (*loader, error) {
-	loader := &loader{
+func New(conf options.Providers) (*Loader, error) {
+	loader := &Loader{
 		providersConf: conf,
 	}
 	loader.providers = make(map[string]providers.Provider)
@@ -32,10 +32,9 @@ func New(conf options.Providers) (*loader, error) {
 	return loader, nil
 }
 
-func (l *loader) Load(id string) (providers.Provider, error) {
+func (l *Loader) Load(id string) (providers.Provider, error) {
 	if tnt, ok := l.providers[id]; ok {
 		return tnt, nil
-	} else {
-		return nil, fmt.Errorf("no provider found with id='%s'", id)
 	}
+	return nil, fmt.Errorf("no provider found with id='%s'", id)
 }

@@ -16,11 +16,11 @@ func NewProviderLoader(loader providerloader.Loader) alice.Constructor {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-			tenantId := tenantutils.FromContext(req.Context())
+			tenantID := tenantutils.FromContext(req.Context())
 
-			provider, err := loader.Load(tenantId)
+			provider, err := loader.Load(tenantID)
 			if err != nil {
-				logger.Error(fmt.Sprintf("unable to load provider, id='%s': %s", tenantId, err.Error()))
+				logger.Error(fmt.Sprintf("unable to load provider, id='%s': %s", tenantID, err.Error()))
 				rw.WriteHeader(http.StatusUnauthorized)
 				return
 			}

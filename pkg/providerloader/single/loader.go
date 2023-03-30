@@ -7,22 +7,22 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
-type loader struct {
+type Loader struct {
 	config   *options.Provider
 	provider providers.Provider
 }
 
-func New(conf options.Provider) (*loader, error) {
+func New(conf options.Provider) (*Loader, error) {
 	provider, err := providers.NewProvider(conf)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create new provider: %w", err)
 	}
-	return &loader{
+	return &Loader{
 		config:   &conf,
 		provider: provider,
 	}, nil
 }
 
-func (l *loader) Load(_ string) (providers.Provider, error) {
+func (l *Loader) Load(_ string) (providers.Provider, error) {
 	return l.provider, nil
 }

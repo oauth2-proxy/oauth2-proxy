@@ -56,8 +56,8 @@
 
       <form method="GET" action="{{.ProxyPrefix}}/start">
         <input type="hidden" name="rd" value="{{.Redirect}}">
-        {{ if .TenantId }}
-        <input type="hidden" name="{{.TenantIdInputName}}" value="{{.TenantId}}">
+        {{ if .TenantID }}
+        <input type="hidden" name="{{.TenantIDInputName}}" value="{{.TenantID}}">
         {{ end }}
           {{ if .SignInMessage }}
           <p class="block">{{.SignInMessage}}</p>
@@ -70,8 +70,8 @@
 
       <form method="POST" action="{{.ProxyPrefix}}/sign_in" class="block">
         <input type="hidden" name="rd" value="{{.Redirect}}">
-        {{ if .TenantId }}
-        <input type="hidden" name="{{.TenantIdInputName}}" value="{{.TenantId}}">
+        {{ if .TenantID }}
+        <input type="hidden" name="{{.TenantIDInputName}}" value="{{.TenantID}}">
         {{ end }}
         <div class="field">
           <label class="label" for="username">Username</label>

@@ -26,15 +26,15 @@ type Cookie struct {
 }
 
 func (c *Cookie) Name(ctx context.Context) string {
-	tntId := tenantutils.FromContext(ctx)
-	if tntId == "" {
+	tntID := tenantutils.FromContext(ctx)
+	if tntID == "" {
 		return c.NamePrefix
 	}
 
 	// appending hex format of sha256 sum of tenantid
 	// sha256 to keep the length of cookie name constant and deterministic
 	// hex for alphanumeric characters only
-	suffix := fmt.Sprintf("%x", sha256.Sum256([]byte(tntId)))
+	suffix := fmt.Sprintf("%x", sha256.Sum256([]byte(tntID)))
 	return fmt.Sprintf("%s_%s", c.NamePrefix, suffix)
 }
 

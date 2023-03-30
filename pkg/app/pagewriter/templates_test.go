@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -36,9 +36,11 @@ var _ = Describe("Templates", func() {
 		BeforeEach(func() {
 			data = struct {
 				// For default templates
-				ProxyPrefix string
-				Redirect    string
-				Footer      string
+				TenantID          string
+				TenantIDInputName string
+				ProxyPrefix       string
+				Redirect          string
+				Footer            string
 
 				// For default sign_in template
 				SignInMessage string
@@ -55,9 +57,11 @@ var _ = Describe("Templates", func() {
 				// For custom templates
 				TestString string
 			}{
-				ProxyPrefix: "<proxy-prefix>",
-				Redirect:    "<redirect>",
-				Footer:      "<footer>",
+				TenantID:          "<tenantid>",
+				TenantIDInputName: "<tenant-id>",
+				ProxyPrefix:       "<proxy-prefix>",
+				Redirect:          "<redirect>",
+				Footer:            "<footer>",
 
 				SignInMessage: "<sign-in-message>",
 				ProviderName:  "<provider-name>",

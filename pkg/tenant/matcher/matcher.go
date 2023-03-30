@@ -33,13 +33,13 @@ func (r *rule) execute(req *http.Request) string {
 	sourceStr := ""
 	// get the source string based on rule.source
 	switch r.conf.Source {
-	case options.TenantMatcherRuleSource_Host:
+	case options.TenantMatcherRuleSourceHost:
 		sourceStr = req.Host
-	case options.TenantMatcherRuleSource_Path:
+	case options.TenantMatcherRuleSourcePath:
 		sourceStr = req.URL.Path
-	case options.TenantMatcherRuleSource_QueryParams:
+	case options.TenantMatcherRuleSourceQueryParams:
 		sourceStr = req.URL.Query().Get(r.conf.QueryParam)
-	case options.TenantMatcherRuleSource_Header:
+	case options.TenantMatcherRuleSourceHeader:
 		sourceStr = req.Header.Get(r.conf.Header)
 	}
 
@@ -85,8 +85,8 @@ func (matcher *Matcher) Match(req *http.Request) string {
 // this helps with self-redirects to oauth2 proxy, and oauth2 proxy will inject the tenantId in http request
 func defaultRule() *rule {
 	rule, _ := newRule(options.TenantMatcherRule{
-		Source:       options.TenantMatcherRuleSource_QueryParams,
-		QueryParam:   tenantutils.DefaultTenantIdQueryParam,
+		Source:       options.TenantMatcherRuleSourceQueryParams,
+		QueryParam:   tenantutils.DefaultTenantIDQueryParam,
 		Expr:         ".*",
 		CaptureGroup: 0,
 	})

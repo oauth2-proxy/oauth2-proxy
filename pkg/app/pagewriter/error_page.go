@@ -63,8 +63,8 @@ func (e *errorPageWriter) WriteErrorPage(ctx context.Context, rw http.ResponseWr
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	data := struct {
-		TenantIdInputName string
-		TenantId          string
+		TenantIDInputName string
+		TenantID          string
 		Title             string
 		Message           string
 		ProxyPrefix       string
@@ -74,8 +74,8 @@ func (e *errorPageWriter) WriteErrorPage(ctx context.Context, rw http.ResponseWr
 		Footer            template.HTML
 		Version           string
 	}{
-		TenantIdInputName: tenantutils.DefaultTenantIdQueryParam,
-		TenantId:          tenantutils.FromContext(ctx),
+		TenantIDInputName: tenantutils.DefaultTenantIDQueryParam,
+		TenantID:          tenantutils.FromContext(ctx),
 		Title:             http.StatusText(opts.Status),
 		Message:           e.getMessage(opts.Status, opts.AppError, opts.Messages...),
 		ProxyPrefix:       e.proxyPrefix,

@@ -13,9 +13,9 @@ func NewTenantMatcher(tenantMatcher *tenantmatcher.Matcher) alice.Constructor {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-			tenantId := tenantMatcher.Match(req)
+			tenantID := tenantMatcher.Match(req)
 
-			ctx := tenantutils.AppendToContext(req.Context(), tenantId)
+			ctx := tenantutils.AppendToContext(req.Context(), tenantID)
 			next.ServeHTTP(rw, req.WithContext(ctx))
 		})
 	}

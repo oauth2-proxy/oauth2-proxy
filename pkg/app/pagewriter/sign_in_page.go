@@ -57,8 +57,8 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	t := struct {
-		TenantIdInputName string
-		TenantId          string
+		TenantIDInputName string
+		TenantID          string
 		ProviderName      string
 		SignInMessage     template.HTML
 		StatusCode        int
@@ -69,8 +69,8 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		Footer            template.HTML
 		LogoData          template.HTML
 	}{
-		TenantIdInputName: tenantutils.DefaultTenantIdQueryParam,
-		TenantId:          tenantutils.FromContext(req.Context()),
+		TenantIDInputName: tenantutils.DefaultTenantIDQueryParam,
+		TenantID:          tenantutils.FromContext(req.Context()),
 		ProviderName:      provider.Data().ProviderName,
 		SignInMessage:     template.HTML(s.signInMessage),
 		StatusCode:        statusCode,

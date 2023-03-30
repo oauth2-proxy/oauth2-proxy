@@ -11,34 +11,33 @@ import (
 
 // this is a decorator/wrapper over SessionStore
 // it validates that the tenantId in the incoming request and in the SessionState should be same
-type tenantIdValidator struct {
+type tenantIDValidator struct {
 	sessions.SessionStore
 }
 
-func (tiv *tenantIdValidator) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
-	s.TenantId = tenantutils.FromContext(req.Context())
+func (tiv *tenantIDValidator) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
+	s.TenantID = tenantutils.FromContext(req.Context())
 
 	return tiv.SessionStore.Save(rw, req, s)
 }
 
-func (tiv *tenantIdValidator) Load(req *http.Request) (*sessions.SessionState, error) {
+func (tiv *tenantIDValidator) Load(req *http.Request) (*sessions.SessionState, error) {
 	s, err := tiv.SessionStore.Load(req)
 	if err != nil {
 		return s, err
 	}
 
-	reqTenantId := tenantutils.FromContext(req.Context())
-	sessionsTenantId := s.TenantId
-	if reqTenantId == sessionsTenantId {
+	reqTenantID := tenantutils.FromContext(req.Context())
+	sessionsTenantID := s.TenantID
+	if reqTenantID == sessionsTenantID {
 		return s, nil
-	} else {
-		logger.Error(fmt.Sprintf("tenantId conflict in incoming request '%s' and cookie '%s'", reqTenantId, sessionsTenantId))
-		return nil, fmt.Errorf("tenantid conflict in request and cookie")
 	}
+	logger.Error(fmt.Sprintf("tenantId conflict in incoming request '%s' and cookie '%s'", reqTenantID, sessionsTenantID))
+	return nil, fmt.Errorf("tenantid conflict in request and cookie")
 }
 
-func TenantIdValidator(s sessions.SessionStore) sessions.SessionStore {
-	return &tenantIdValidator{
+func TenantIDValidator(s sessions.SessionStore) sessions.SessionStore {
+	return &tenantIDValidator{
 		SessionStore: s,
 	}
 }

@@ -59,6 +59,10 @@ func main() {
 	if err != nil {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
+	err = oauthproxy.Init(opts)
+	if err != nil {
+		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
+	}
 
 	rand.Seed(time.Now().UnixNano())
 

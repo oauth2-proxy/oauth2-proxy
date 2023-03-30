@@ -3,10 +3,10 @@ package options
 type TenantMatcherRuleSource string
 
 const (
-	TenantMatcherRuleSource_Host        TenantMatcherRuleSource = "host"
-	TenantMatcherRuleSource_Path        TenantMatcherRuleSource = "path"
-	TenantMatcherRuleSource_QueryParams TenantMatcherRuleSource = "query"
-	TenantMatcherRuleSource_Header      TenantMatcherRuleSource = "header"
+	TenantMatcherRuleSourceHost        TenantMatcherRuleSource = "host"
+	TenantMatcherRuleSourcePath        TenantMatcherRuleSource = "path"
+	TenantMatcherRuleSourceQueryParams TenantMatcherRuleSource = "query"
+	TenantMatcherRuleSourceHeader      TenantMatcherRuleSource = "header"
 )
 
 type TenantMatcherRule struct {
