@@ -11,6 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -44,6 +45,7 @@ type csrf struct {
 	// which is used to compare the code challenge when exchanging the
 	// authentication code.
 	CodeVerifier string `msgpack:"cv,omitempty"`
+	TenantID     string `msgpack:"tid,omitempty"`
 
 	cookieOpts *options.Cookie
 	time       clock.Clock
@@ -53,7 +55,7 @@ type csrf struct {
 const csrfStateLength int = 9
 
 // NewCSRF creates a CSRF with random nonces
-func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
+func NewCSRF(ctx context.Context, opts *options.Cookie, codeVerifier string) (CSRF, error) {
 	state, err := encryption.Nonce(32)
 	if err != nil {
 		return nil, err
@@ -63,10 +65,13 @@ func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
 		return nil, err
 	}
 
+	tid := tenantutils.FromContext(ctx)
+
 	return &csrf{
 		OAuthState:   state,
 		OIDCNonce:    nonce,
 		CodeVerifier: codeVerifier,
+		TenantID:     tid,
 
 		cookieOpts: opts,
 	}, nil
@@ -82,7 +87,19 @@ func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
 		return nil, err
 	}
 
-	return decodeCSRFCookie(cookie, opts)
+	crf, err := decodeCSRFCookie(cookie, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// matching tenant id from request and in cookie
+	tenantIDFromRequest := tenantutils.FromContext(req.Context())
+
+	if tenantIDFromRequest != crf.TenantID {
+		return nil, errors.New("tenantID in request does not match tenantID in csrf cookie")
+	}
+
+	return crf, nil
 }
 
 // GenerateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise

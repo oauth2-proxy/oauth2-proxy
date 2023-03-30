@@ -1,6 +1,8 @@
 package cookies
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -34,7 +37,9 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		}
 
 		var err error
-		publicCSRF, err = NewCSRF(cookieOpts, "verifier")
+		ctx := context.Background()
+		ctx = tenantutils.AppendToContext(ctx, "dummy")
+		publicCSRF, err = NewCSRF(ctx, cookieOpts, "verifier")
 		Expect(err).ToNot(HaveOccurred())
 
 		privateCSRF = publicCSRF.(*csrf)
@@ -46,10 +51,12 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			Expect(privateCSRF.OIDCNonce).ToNot(BeEmpty())
 			Expect(privateCSRF.OAuthState).ToNot(Equal(privateCSRF.OIDCNonce))
 			Expect(privateCSRF.CodeVerifier).To(Equal("verifier"))
+			Expect(privateCSRF.TenantID).To(Equal("dummy"))
 		})
 
 		It("makes unique nonces between multiple CSRFs", func() {
-			other, err := NewCSRF(cookieOpts, "verifier")
+			ctx := context.Background()
+			other, err := NewCSRF(ctx, cookieOpts, "verifier")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(privateCSRF.OAuthState).ToNot(Equal(other.(*csrf).OAuthState))
@@ -84,6 +91,63 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			session := &sessions.SessionState{}
 			publicCSRF.SetSessionNonce(session)
 			Expect(session.Nonce).To(Equal(privateCSRF.OIDCNonce))
+		})
+	})
+
+	Context("Load cookie", func() {
+		var req *http.Request
+
+		BeforeEach(func() {
+			req = &http.Request{
+				Method: http.MethodGet,
+				Proto:  "HTTP/1.1",
+				Host:   cookieDomain,
+
+				URL: &url.URL{
+					Scheme: "https",
+					Host:   cookieDomain,
+					Path:   cookiePath,
+				},
+			}
+		})
+
+		It("with different tenantid", func(ctx SpecContext) {
+			privateCSRF.OAuthState = []byte(csrfState)
+			privateCSRF.OIDCNonce = []byte(csrfNonce)
+
+			encoded, err := privateCSRF.encodeCookie(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			cookie := &http.Cookie{
+				Name:  privateCSRF.cookieName(ctx),
+				Value: encoded,
+			}
+
+			req.Header = http.Header{}
+			req.AddCookie(cookie)
+			_, err = LoadCSRFCookie(req, cookieOpts)
+			Expect(err).To(Equal(errors.New("tenantID in request does not match tenantID in csrf cookie")))
+		})
+
+		It("with same tenantID", func(c SpecContext) {
+			ctx := tenantutils.AppendToContext(req.Context(), "dummy")
+			privateCSRF.OAuthState = []byte(csrfState)
+			privateCSRF.OIDCNonce = []byte(csrfNonce)
+
+			encoded, err := privateCSRF.encodeCookie(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			cookie := &http.Cookie{
+				Name:  privateCSRF.cookieName(ctx),
+				Value: encoded,
+			}
+
+			newReq := req.WithContext(ctx)
+			newReq.Header = http.Header{}
+			newReq.AddCookie(cookie)
+			_, err = LoadCSRFCookie(newReq, cookieOpts)
+			Expect(err).ToNot(HaveOccurred())
+
 		})
 	})
 

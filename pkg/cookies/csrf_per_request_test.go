@@ -1,6 +1,7 @@
 package cookies
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +36,8 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 		}
 
 		var err error
-		publicCSRF, err = NewCSRF(cookieOpts, "verifier")
+		ctx := context.Background()
+		publicCSRF, err = NewCSRF(ctx, cookieOpts, "verifier")
 		Expect(err).ToNot(HaveOccurred())
 
 		privateCSRF = publicCSRF.(*csrf)
@@ -50,7 +52,8 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 		})
 
 		It("makes unique nonces between multiple CSRFs", func() {
-			other, err := NewCSRF(cookieOpts, "verifier")
+			ctx := context.Background()
+			other, err := NewCSRF(ctx, cookieOpts, "verifier")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(privateCSRF.OAuthState).ToNot(Equal(other.(*csrf).OAuthState))

@@ -827,7 +827,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, pro
 		extraParams.Add("code_challenge_method", codeChallengeMethod)
 	}
 
-	csrf, err := cookies.NewCSRF(p.CookieOptions, codeVerifier)
+	csrf, err := cookies.NewCSRF(req.Context(), p.CookieOptions, codeVerifier)
 	if err != nil {
 		logger.Errorf("Error creating CSRF nonce: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
