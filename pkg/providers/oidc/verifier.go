@@ -53,9 +53,9 @@ func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
 	}
 
-	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
-		return nil, err
-	}
+	// if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
+	// 	return nil, err
+	// }
 
 	return token, err
 }
