@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
-	github.com/alicebob/miniredis/v2 v2.23.0
+	github.com/alicebob/miniredis/v2 v2.30.1
 	github.com/benbjohnson/clock v1.3.0
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/bsm/redislock v0.9.1
@@ -68,7 +68,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
+	github.com/yuin/gopher-lua v1.1.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
