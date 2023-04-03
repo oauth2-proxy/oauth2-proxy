@@ -7,7 +7,7 @@ require (
 	github.com/alicebob/miniredis/v2 v2.23.0
 	github.com/benbjohnson/clock v1.3.0
 	github.com/bitly/go-simplejson v0.5.0
-	github.com/bsm/redislock v0.9.0
+	github.com/bsm/redislock v0.9.1
 	github.com/coreos/go-oidc/v3 v3.5.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344
