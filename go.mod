@@ -7,7 +7,7 @@ require (
 	github.com/alicebob/miniredis/v2 v2.23.0
 	github.com/benbjohnson/clock v1.3.0
 	github.com/bitly/go-simplejson v0.5.0
-	github.com/bsm/redislock v0.9.0
+	github.com/bsm/redislock v0.9.1
 	github.com/coreos/go-oidc/v3 v3.5.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344
@@ -23,14 +23,14 @@ require (
 	github.com/onsi/gomega v1.23.0
 	github.com/pierrec/lz4/v4 v4.1.17
 	github.com/prometheus/client_golang v1.13.0
-	github.com/redis/go-redis/v9 v9.0.2
+	github.com/redis/go-redis/v9 v9.0.3
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.3
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	golang.org/x/crypto v0.6.0
-	golang.org/x/exp v0.0.0-20221019170559-20944726eadf
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/net v0.7.0
 	golang.org/x/oauth2 v0.5.0
 	golang.org/x/sync v0.1.0

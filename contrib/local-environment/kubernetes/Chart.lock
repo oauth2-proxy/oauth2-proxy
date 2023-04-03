@@ -1,7 +1,7 @@
 dependencies:
 - name: dex
   repository: https://charts.helm.sh/stable
-  version: 2.11.0
+  version: 2.15.2
 - name: oauth2-proxy
   repository: https://charts.helm.sh/stable
   version: 3.1.0
@@ -13,3 +13,4 @@ dependencies:
   version: 1.1.0
 digest: sha256:818e24a8f8023cae684e0559671dc35c81c784396202614f34b310329734dab4
 generated: "2023-04-03T13:26:05.294376179Z"
+
