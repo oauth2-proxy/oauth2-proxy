@@ -2,10 +2,10 @@ name: documentation
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, main]
     paths: ['docs/**']
   push:
-    branches: [master]
+    branches: [master, main]
     paths: ['docs/**']
 
 jobs:
