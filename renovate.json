@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "renovateFork": true,
+  "includeForks": true,
   "extends": [
     "config:base",
     ":dependencyDashboard"
