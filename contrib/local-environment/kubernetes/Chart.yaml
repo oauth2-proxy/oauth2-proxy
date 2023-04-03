@@ -12,7 +12,7 @@ dependencies:
     repository: https://charts.helm.sh/stable
   # https://github.com/postmanlabs/httpbin/issues/549 is still in progress, for now using a non-official chart
   - name: httpbin
-    version: 1.0.1
+    version: 1.1.0
     repository: https://conservis.github.io/helm-charts
   - name: hello-world
     version: 1.1.0

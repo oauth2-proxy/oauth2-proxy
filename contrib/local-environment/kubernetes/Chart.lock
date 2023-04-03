@@ -7,9 +7,9 @@ dependencies:
   version: 3.2.5
 - name: httpbin
   repository: https://conservis.github.io/helm-charts
-  version: 1.0.1
+  version: 1.1.0
 - name: hello-world
   repository: https://conservis.github.io/helm-charts
   version: 1.1.0
-digest: sha256:19115edd6b7da507d8fa39ab1269cfd166de26885574c59d2b185bb535d27185
-generated: "2023-04-03T14:13:12.341934028Z"
+digest: sha256:5a91a1a2ed7968cb963859a062765337eeb7d3c374bd665a83d0a0857b39ade1
+generated: "2023-04-03T14:24:28.597506661Z"
