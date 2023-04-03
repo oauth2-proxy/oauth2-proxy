@@ -10,6 +10,7 @@ dependencies:
   version: 1.0.1
 - name: hello-world
   repository: https://conservis.github.io/helm-charts
-  version: 1.0.1
-digest: sha256:e0253cf3a72cb581a4566adc978339241afad394e4aae4fa5c975c8a5b1fca33
-generated: "2023-04-03T13:25:46.502972918Z"
+  version: 1.1.0
+digest: sha256:818e24a8f8023cae684e0559671dc35c81c784396202614f34b310329734dab4
+generated: "2023-04-03T13:26:05.294376179Z"
+
