@@ -29,7 +29,7 @@ services:
       - httpbin
   dex:
     container_name: dex
-    image: ghcr.io/dexidp/dex:v2.30.3
+    image: ghcr.io/dexidp/dex:v2.36.0
     command: dex serve /dex.yaml
     ports:
       - 4190:4190/tcp
