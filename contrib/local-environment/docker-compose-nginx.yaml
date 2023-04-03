@@ -30,7 +30,7 @@ services:
       oauth2-proxy: {}
   nginx:
     container_name: nginx
-    image: nginx:1.18
+    image: nginx:1.23
     ports:
       - 80:80/tcp
     hostname: nginx
