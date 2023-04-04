@@ -12,6 +12,7 @@
 
 ## Release Highlights
 
+- Added support for semicolons in query strings.
 - New Azure groups support for Azure OAuth2 v2.0
 - Option to configure API routes - paths that will not redirect to login when unauthenticated
 - CSRF and session cookies now have different timeouts
