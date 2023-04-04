@@ -12,8 +12,6 @@ name: create and publish docker image
 on:
   push:
     branches: [ 'main' ]
-  schedule:
-    - cron: '0 6 * * *'
 
 env:
   REGISTRY: ghcr.io
@@ -27,6 +25,10 @@ jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
     steps:
+      - name: Semantic Version Bump
+        id: version
+        uses: paulhatch/semantic-version@v5.0.2
+  
       - name: Checkout
         uses: actions/checkout@v3
 
