@@ -83,22 +83,23 @@ type OAuthProxy struct {
 
 	SignInPath string
 
-	allowedRoutes       []allowedRoute
-	apiRoutes           []apiRoute
-	redirectURL         *url.URL // the url to receive requests at
+	allowedRoutes        []allowedRoute
+	apiRoutes            []apiRoute
+	redirectURL          *url.URL // the url to receive requests at
 	relativeRedirectURL bool
-	whitelistDomains    []string
-	provider            providers.Provider
-	sessionStore        sessionsapi.SessionStore
-	ProxyPrefix         string
-	basicAuthValidator  basic.Validator
-	basicAuthGroups     []string
-	SkipProviderButton  bool
-	skipAuthPreflight   bool
-	skipJwtBearerTokens bool
-	forceJSONErrors     bool
-	realClientIPParser  ipapi.RealClientIPParser
-	trustedIPs          *ip.NetSet
+	whitelistDomains     []string
+	provider             providers.Provider
+	sessionStore         sessionsapi.SessionStore
+	ProxyPrefix          string
+	basicAuthValidator   basic.Validator
+	basicAuthGroups      []string
+	SkipProviderButton   bool
+	skipAuthPreflight    bool
+	skipJwtBearerTokens  bool
+	forceJSONErrors      bool
+	allowQuerySemicolons bool
+	realClientIPParser   ipapi.RealClientIPParser
+	trustedIPs           *ip.NetSet
 
 	sessionChain      alice.Chain
 	headersChain      alice.Chain
@@ -213,20 +214,21 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
-		ProxyPrefix:         opts.ProxyPrefix,
-		provider:            provider,
-		sessionStore:        sessionStore,
-		redirectURL:         redirectURL,
+		ProxyPrefix:          opts.ProxyPrefix,
+		provider:             provider,
+		sessionStore:         sessionStore,
+		redirectURL:          redirectURL,
 		relativeRedirectURL: opts.RelativeRedirectURL,
-		apiRoutes:           apiRoutes,
-		allowedRoutes:       allowedRoutes,
-		whitelistDomains:    opts.WhitelistDomains,
-		skipAuthPreflight:   opts.SkipAuthPreflight,
-		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
-		realClientIPParser:  opts.GetRealClientIPParser(),
-		SkipProviderButton:  opts.SkipProviderButton,
-		forceJSONErrors:     opts.ForceJSONErrors,
-		trustedIPs:          trustedIPs,
+		apiRoutes:            apiRoutes,
+		allowedRoutes:        allowedRoutes,
+		whitelistDomains:     opts.WhitelistDomains,
+		skipAuthPreflight:    opts.SkipAuthPreflight,
+		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
+		realClientIPParser:   opts.GetRealClientIPParser(),
+		SkipProviderButton:   opts.SkipProviderButton,
+		forceJSONErrors:      opts.ForceJSONErrors,
+		allowQuerySemicolons: opts.AllowQuerySemicolons,
+		trustedIPs:           trustedIPs,
 
 		basicAuthValidator: basicAuthValidator,
 		basicAuthGroups:    opts.HtpasswdUserGroups,
@@ -273,6 +275,11 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 		BindAddress:       opts.Server.BindAddress,
 		SecureBindAddress: opts.Server.SecureBindAddress,
 		TLS:               opts.Server.TLS,
+	}
+
+	// Option: AllowQuerySemicolons
+	if opts.AllowQuerySemicolons {
+		serverOpts.Handler = http.AllowQuerySemicolons(p)
 	}
 
 	appServer, err := proxyhttp.NewServer(serverOpts)
