@@ -42,6 +42,7 @@ func NewServer(opts Opts) (Server, error) {
 	s := &server{
 		handler: opts.Handler,
 	}
+
 	if err := s.setupListener(opts); err != nil {
 		return nil, fmt.Errorf("error setting up listener: %v", err)
 	}
