@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"runtime"
-	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -59,8 +57,6 @@ func main() {
 	if err != nil {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
 	}
-
-	rand.Seed(time.Now().UnixNano())
 
 	if err := oauthproxy.Start(); err != nil {
 		logger.Fatalf("ERROR: Failed to start OAuth2 Proxy: %v", err)

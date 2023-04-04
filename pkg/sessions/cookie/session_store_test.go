@@ -2,7 +2,7 @@ package cookie
 
 import (
 	"fmt"
-	mathrand "math/rand"
+	"math/rand"
 	"net/http"
 	"strings"
 	"testing"
@@ -143,9 +143,11 @@ func Test_splitCookieName(t *testing.T) {
 func Test_splitCookie_joinCookies(t *testing.T) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	v := make([]byte, 251)
 	for i := range v {
-		v[i] = charset[mathrand.Intn(len(charset))]
+		v[i] = charset[rnd.Intn(len(charset))]
 	}
 	value := strings.Repeat(string(v), 1000)
 
