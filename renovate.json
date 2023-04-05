@@ -6,5 +6,11 @@
     ":dependencyDashboard"
   ],
   "dependencyDashboard": false,
-  "prHourlyLimit": 35
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    }
+  ]
 }
