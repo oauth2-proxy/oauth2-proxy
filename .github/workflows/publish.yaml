@@ -52,7 +52,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             # set latest tag for default branch
-            type=schedule,pattern={{date 'YYYYMMDD-hhmmss' tz='Europe/Berlin'}}
+            type=raw,value={{date 'YYYYMMDD-hhmmss' tz='Europe/Berlin'}}
             type=ref,event=pr
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
