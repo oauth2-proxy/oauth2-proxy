@@ -30,10 +30,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Semantic Version Bump
-        id: version
-        uses: paulhatch/semantic-version@v5.0.2
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -56,11 +52,11 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             # set latest tag for default branch
-            type=ref,event=branch
+            type=schedule,pattern={{date 'YYYYMMDD-hhmmss' tz='Europe/Berlin'}}
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
             type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
 
       - name: Build and push
         uses: docker/build-push-action@v4
