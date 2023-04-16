@@ -78,21 +78,22 @@ type OAuthProxy struct {
 
 	SignInPath string
 
-	allowedRoutes       []allowedRoute
-	apiRoutes           []apiRoute
-	redirectURL         *url.URL // the url to receive requests at
-	whitelistDomains    []string
-	provider            providers.Provider
-	sessionStore        sessionsapi.SessionStore
-	ProxyPrefix         string
-	basicAuthValidator  basic.Validator
-	basicAuthGroups     []string
-	SkipProviderButton  bool
-	skipAuthPreflight   bool
-	skipJwtBearerTokens bool
-	forceJSONErrors     bool
-	realClientIPParser  ipapi.RealClientIPParser
-	trustedIPs          *ip.NetSet
+	allowedRoutes                  []allowedRoute
+	apiRoutes                      []apiRoute
+	redirectURL                    *url.URL // the url to receive requests at
+	whitelistDomains               []string
+	provider                       providers.Provider
+	sessionStore                   sessionsapi.SessionStore
+	ProxyPrefix                    string
+	basicAuthValidator             basic.Validator
+	basicAuthGroups                []string
+	SkipProviderButton             bool
+	skipAuthPreflight              bool
+	skipJwtBearerTokens            bool
+	exchangeOfflineJwtBearerTokens bool
+	forceJSONErrors                bool
+	realClientIPParser             ipapi.RealClientIPParser
+	trustedIPs                     *ip.NetSet
 
 	sessionChain      alice.Chain
 	headersChain      alice.Chain
@@ -207,19 +208,20 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
-		ProxyPrefix:         opts.ProxyPrefix,
-		provider:            provider,
-		sessionStore:        sessionStore,
-		redirectURL:         redirectURL,
-		apiRoutes:           apiRoutes,
-		allowedRoutes:       allowedRoutes,
-		whitelistDomains:    opts.WhitelistDomains,
-		skipAuthPreflight:   opts.SkipAuthPreflight,
-		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
-		realClientIPParser:  opts.GetRealClientIPParser(),
-		SkipProviderButton:  opts.SkipProviderButton,
-		forceJSONErrors:     opts.ForceJSONErrors,
-		trustedIPs:          trustedIPs,
+		ProxyPrefix:                    opts.ProxyPrefix,
+		provider:                       provider,
+		sessionStore:                   sessionStore,
+		redirectURL:                    redirectURL,
+		apiRoutes:                      apiRoutes,
+		allowedRoutes:                  allowedRoutes,
+		whitelistDomains:               opts.WhitelistDomains,
+		skipAuthPreflight:              opts.SkipAuthPreflight,
+		skipJwtBearerTokens:            opts.SkipJwtBearerTokens,
+		exchangeOfflineJwtBearerTokens: opts.ExchangeOfflineJwtBearerTokens,
+		realClientIPParser:             opts.GetRealClientIPParser(),
+		SkipProviderButton:             opts.SkipProviderButton,
+		forceJSONErrors:                opts.ForceJSONErrors,
+		trustedIPs:                     trustedIPs,
 
 		basicAuthValidator: basicAuthValidator,
 		basicAuthGroups:    opts.HtpasswdUserGroups,
@@ -378,6 +380,14 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 		for _, verifier := range opts.GetJWTBearerVerifiers() {
 			sessionLoaders = append(sessionLoaders,
 				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
+		}
+
+		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders))
+	}
+
+	if opts.ExchangeOfflineJwtBearerTokens {
+		sessionLoaders := []middlewareapi.TokenToSessionFunc{
+			provider.CreateSessionFromOfflineToken,
 		}
 
 		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders))

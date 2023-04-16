@@ -196,6 +196,20 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 	return ss, nil
 }
 
+// CreateSessionFromToken converts Bearer Refresh tokens into sessions by exchanging them for id/access tokens
+func (p *OIDCProvider) CreateSessionFromOfflineToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+	s := &sessions.SessionState{
+		RefreshToken: token,
+	}
+
+	err := p.redeemRefreshToken(ctx, s)
+	if err != nil {
+		return nil, fmt.Errorf("unable to redeem refresh token: %v", err)
+	}
+
+	return s, nil
+}
+
 // createSession takes an oauth2.Token and creates a SessionState from it.
 // It alters behavior if called from Redeem vs Refresh
 func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {

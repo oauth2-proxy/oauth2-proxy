@@ -21,6 +21,10 @@ var (
 	// code
 	ErrMissingCode = errors.New("missing code")
 
+	// ErrMissingRefreshToken is returned when a Refresh method is called with an
+	// empty refresh token
+	ErrMissingRefreshToken = errors.New("missing refresh_token")
+
 	// ErrMissingIDToken is returned when an oidc.Token does not contain the
 	// extra `id_token` field for an IDToken.
 	ErrMissingIDToken = errors.New("missing id_token")
@@ -60,6 +64,62 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 	if codeVerifier != "" {
 		params.Add("code_verifier", codeVerifier)
 	}
+	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
+		params.Add("resource", p.ProtectedResource.String())
+	}
+
+	result := requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do()
+	if result.Error() != nil {
+		return nil, result.Error()
+	}
+
+	// blindly try json and x-www-form-urlencoded
+	var jsonResponse struct {
+		AccessToken string `json:"access_token"`
+	}
+	err = result.UnmarshalInto(&jsonResponse)
+	if err == nil {
+		return &sessions.SessionState{
+			AccessToken: jsonResponse.AccessToken,
+		}, nil
+	}
+
+	values, err := url.ParseQuery(string(result.Body()))
+	if err != nil {
+		return nil, err
+	}
+	// TODO (@NickMeves): Uses OAuth `expires_in` to set an expiration
+	if token := values.Get("access_token"); token != "" {
+		ss := &sessions.SessionState{
+			AccessToken: token,
+		}
+		ss.CreatedAtNow()
+		return ss, nil
+	}
+
+	return nil, fmt.Errorf("no access token found %s", result.Body())
+}
+
+// Redeem provides a default implementation of the OAuth2 refresh token redemption process
+func (p *ProviderData) Refresh(ctx context.Context, refreshToken string) (*sessions.SessionState, error) {
+	if refreshToken == "" {
+		return nil, ErrMissingRefreshToken
+	}
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	params := url.Values{}
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", clientSecret)
+	params.Add("refresh_token", refreshToken)
+	params.Add("grant_type", "refresh_token")
 	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
 		params.Add("resource", p.ProtectedResource.String())
 	}
@@ -143,6 +203,14 @@ func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionStat
 func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	if p.Verifier != nil {
 		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)
+	}
+	return nil, ErrNotImplemented
+}
+
+// CreateSessionFromToken converts Bearer IDTokens into sessions
+func (p *ProviderData) CreateSessionFromOfflineToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+	if p.RedeemURL != nil {
+		return p.Refresh(ctx, token)
 	}
 	return nil, ErrNotImplemented
 }
