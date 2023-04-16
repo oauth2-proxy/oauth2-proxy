@@ -21,7 +21,7 @@
 - [#1988](https://github.com/oauth2-proxy/oauth2-proxy/pull/1988) Ensure sign-in page background is uniform throughout the page
 - [#2013](https://github.com/oauth2-proxy/oauth2-proxy/pull/2013) Upgrade alpine to version 3.17.2 and library dependencies (@miguelborges99)
 - [#2047](https://github.com/oauth2-proxy/oauth2-proxy/pull/2047) CVE-2022-41717: DoS in Go net/http may lead to DoS (@miguelborges99)
-- [#20xx](https://github.com/oauth2-proxy/oauth2-proxy/pull/20xx) Added support for GKE Workload Identity (@kvanzuijlen)
+- [#2087](https://github.com/oauth2-proxy/oauth2-proxy/pull/2087) Added support for GKE Workload Identity (@kvanzuijlen)
 
 
 # V7.4.0
