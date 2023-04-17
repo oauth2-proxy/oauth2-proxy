@@ -832,7 +832,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect),
+		encodeState(csrf.HashOAuthState(), appRedirect, p.isGenerateTokenRequest(req)),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
@@ -923,9 +923,16 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if p.isGenerateTokenRequest(req) {
+	nonce, appRedirect, isTokenRequest, err := decodeState(req)
+	if err != nil {
+		logger.Errorf("Error while parsing OAuth2 state: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if isTokenRequest {
 		if session.RefreshToken == "" {
-			logger.Errorf("Got a token generate callback with no refresh token")
+			logger.Errorf("Got a token generation callback with no refresh token")
 			p.ErrorPage(rw, req, http.StatusInternalServerError, "Provider did not include a token")
 			return
 		}
@@ -942,13 +949,6 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	csrf.ClearCookie(rw, req)
-
-	nonce, appRedirect, err := decodeState(req)
-	if err != nil {
-		logger.Errorf("Error while parsing OAuth2 state: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
 
 	if !csrf.CheckOAuthState(nonce) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
@@ -1116,11 +1116,6 @@ func prepareNoCacheMiddleware(next http.Handler) http.Handler {
 // This is usually the OAuthProxy callback URL.
 func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	rd := *p.redirectURL
-
-	// If the request to the start page has the token request parameter, include it so its forwarded to the callback
-	if p.isGenerateTokenRequest(req) {
-		rd.RawQuery = url.Values{generateTokenParam: req.Form[generateTokenParam]}.Encode()
-	}
 
 	// if `p.redirectURL` already has a host, return it
 	if rd.Host != "" {
@@ -1290,18 +1285,18 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(nonce string, redirect string) string {
-	return fmt.Sprintf("%v:%v", nonce, redirect)
+func encodeState(nonce string, redirect string, isTokenRequest bool) string {
+	return fmt.Sprintf("%v:%t:%v", nonce, isTokenRequest, redirect)
 }
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(req *http.Request) (string, string, error) {
-	state := strings.SplitN(req.Form.Get("state"), ":", 2)
-	if len(state) != 2 {
-		return "", "", errors.New("invalid length")
+func decodeState(req *http.Request) (string, string, bool, error) {
+	state := strings.SplitN(req.Form.Get("state"), ":", 3)
+	if len(state) != 3 {
+		return "", "", false, errors.New("invalid length")
 	}
-	return state[0], state[1], nil
+	return state[0], state[2], state[1] == "true", nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
