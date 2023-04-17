@@ -846,48 +846,6 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	http.Redirect(rw, req, loginURL, http.StatusFound)
 }
 
-/*
-func (p *OAuthProxy) ShowGeneratedToken(rw http.ResponseWriter, req *http.Request) {
-	// finish the oauth cycle
-	err := req.ParseForm()
-	if err != nil {
-		logger.Errorf("Error while parsing OAuth2 callback: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
-	errorString := req.Form.Get("error")
-	if errorString != "" {
-		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
-		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
-		// Set the debug message and override the non debug message to be the same for this case
-		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
-		return
-	}
-
-	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
-	if err != nil {
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
-		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
-		return
-	}
-
-	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
-	if err != nil {
-		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	if session.RefreshToken == "" {
-		logger.Errorf("Got a request to /show-token with no token")
-		p.ErrorPage(rw, req, http.StatusInternalServerError, "Provider did not include a token")
-		return
-	}
-
-	p.pageWriter.WriteGeneratedTokenPage(rw, req, session.RefreshToken)
-}
-*/
-
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
