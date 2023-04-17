@@ -41,10 +41,11 @@ var _ = Describe("Templates", func() {
 				Footer      string
 
 				// For default sign_in template
-				SignInMessage string
-				ProviderName  string
-				CustomLogin   bool
-				LogoData      string
+				SignInMessage       string
+				ProviderName        string
+				CustomLogin         bool
+				LogoData            string
+				GenerateTokenButton bool
 
 				// For default error template
 				StatusCode int
@@ -59,10 +60,11 @@ var _ = Describe("Templates", func() {
 				Redirect:    "<redirect>",
 				Footer:      "<footer>",
 
-				SignInMessage: "<sign-in-message>",
-				ProviderName:  "<provider-name>",
-				CustomLogin:   false,
-				LogoData:      "<logo>",
+				SignInMessage:       "<sign-in-message>",
+				ProviderName:        "<provider-name>",
+				CustomLogin:         false,
+				LogoData:            "<logo>",
+				GenerateTokenButton: false,
 
 				StatusCode: 404,
 				Title:      "<title>",

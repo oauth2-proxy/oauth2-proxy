@@ -11,6 +11,7 @@ import (
 // upstream package.
 type Writer interface {
 	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
+	WriteGeneratedTokenPage(rw http.ResponseWriter, req *http.Request, token string)
 	WriteErrorPage(rw http.ResponseWriter, opts ErrorPageOpts)
 	ProxyErrorHandler(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	WriteRobotsTxt(rw http.ResponseWriter, req *http.Request)
@@ -20,6 +21,7 @@ type Writer interface {
 type pageWriter struct {
 	*errorPageWriter
 	*signInPageWriter
+	*generatedTokenPageWriter
 	*staticPageWriter
 }
 
@@ -45,6 +47,9 @@ type Opts struct {
 
 	// DisplayLoginForm determines whether or not the basic auth password form is displayed on the sign-in page.
 	DisplayLoginForm bool
+
+	// GenerateTokenButton determines whether or not the generate api token button is displayed on the sign-in page
+	GenerateTokenButton bool
 
 	// ProviderName is the name of the provider that should be displayed on the login button.
 	ProviderName string
@@ -80,15 +85,24 @@ func NewWriter(opts Opts) (Writer, error) {
 	}
 
 	signInPage := &signInPageWriter{
-		template:         templates.Lookup("sign_in.html"),
-		errorPageWriter:  errorPage,
-		proxyPrefix:      opts.ProxyPrefix,
-		providerName:     opts.ProviderName,
-		signInMessage:    opts.SignInMessage,
-		footer:           opts.Footer,
-		version:          opts.Version,
-		displayLoginForm: opts.DisplayLoginForm,
-		logoData:         logoData,
+		template:            templates.Lookup("sign_in.html"),
+		errorPageWriter:     errorPage,
+		proxyPrefix:         opts.ProxyPrefix,
+		providerName:        opts.ProviderName,
+		signInMessage:       opts.SignInMessage,
+		footer:              opts.Footer,
+		version:             opts.Version,
+		displayLoginForm:    opts.DisplayLoginForm,
+		generateTokenButton: opts.GenerateTokenButton,
+		logoData:            logoData,
+	}
+
+	generatedTokenPage := &generatedTokenPageWriter{
+		template:        templates.Lookup(generatedTokenTemplateName),
+		errorPageWriter: errorPage,
+		footer:          opts.Footer,
+		version:         opts.Version,
+		logoData:        logoData,
 	}
 
 	staticPages, err := newStaticPageWriter(opts.TemplatesPath, errorPage)
@@ -97,9 +111,10 @@ func NewWriter(opts Opts) (Writer, error) {
 	}
 
 	return &pageWriter{
-		errorPageWriter:  errorPage,
-		signInPageWriter: signInPage,
-		staticPageWriter: staticPages,
+		errorPageWriter:          errorPage,
+		signInPageWriter:         signInPage,
+		generatedTokenPageWriter: generatedTokenPage,
+		staticPageWriter:         staticPages,
 	}, nil
 }
 
@@ -108,10 +123,11 @@ func NewWriter(opts Opts) (Writer, error) {
 // If any of the funcs are not provided, a default implementation will be used.
 // This is primarily for us in testing.
 type WriterFuncs struct {
-	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
-	ErrorPageFunc  func(rw http.ResponseWriter, opts ErrorPageOpts)
-	ProxyErrorFunc func(rw http.ResponseWriter, req *http.Request, proxyErr error)
-	RobotsTxtfunc  func(rw http.ResponseWriter, req *http.Request)
+	SignInPageFunc         func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
+	GeneratedTokenPageFunc func(rw http.ResponseWriter, req *http.Request, token string)
+	ErrorPageFunc          func(rw http.ResponseWriter, opts ErrorPageOpts)
+	ProxyErrorFunc         func(rw http.ResponseWriter, req *http.Request, proxyErr error)
+	RobotsTxtfunc          func(rw http.ResponseWriter, req *http.Request)
 }
 
 // WriteSignInPage implements the Writer interface.
@@ -124,6 +140,20 @@ func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request,
 	}
 
 	if _, err := rw.Write([]byte("Sign In")); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+// WriteGeneratedTokenPage implements the Writer interface.
+// If the GeneratedTokenPageFunc is provided, this will be used, else a default
+// implementation will be used.
+func (w *WriterFuncs) WriteGeneratedTokenPage(rw http.ResponseWriter, req *http.Request, token string) {
+	if w.GeneratedTokenPageFunc != nil {
+		w.GeneratedTokenPageFunc(rw, req, token)
+		return
+	}
+
+	if _, err := rw.Write([]byte("Generated Token")); err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 }

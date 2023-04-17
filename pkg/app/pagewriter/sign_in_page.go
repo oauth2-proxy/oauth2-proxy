@@ -47,6 +47,9 @@ type signInPageWriter struct {
 	// DisplayLoginForm determines whether or not the basic auth password form is displayed on the sign-in page.
 	displayLoginForm bool
 
+	// generateTokenButton determines whether or not the generate api token button is displayed on the sign-in page
+	generateTokenButton bool
+
 	// LogoData is the logo to render in the template.
 	// This should contain valid html.
 	logoData string
@@ -58,25 +61,27 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	t := struct {
-		ProviderName  string
-		SignInMessage template.HTML
-		StatusCode    int
-		CustomLogin   bool
-		Redirect      string
-		Version       string
-		ProxyPrefix   string
-		Footer        template.HTML
-		LogoData      template.HTML
+		ProviderName        string
+		SignInMessage       template.HTML
+		StatusCode          int
+		CustomLogin         bool
+		GenerateTokenButton bool
+		Redirect            string
+		Version             string
+		ProxyPrefix         string
+		Footer              template.HTML
+		LogoData            template.HTML
 	}{
-		ProviderName:  s.providerName,
-		SignInMessage: template.HTML(s.signInMessage),
-		StatusCode:    statusCode,
-		CustomLogin:   s.displayLoginForm,
-		Redirect:      redirectURL,
-		Version:       s.version,
-		ProxyPrefix:   s.proxyPrefix,
-		Footer:        template.HTML(s.footer),
-		LogoData:      template.HTML(s.logoData),
+		ProviderName:        s.providerName,
+		SignInMessage:       template.HTML(s.signInMessage),
+		StatusCode:          statusCode,
+		CustomLogin:         s.displayLoginForm,
+		GenerateTokenButton: s.generateTokenButton,
+		Redirect:            redirectURL,
+		Version:             s.version,
+		ProxyPrefix:         s.proxyPrefix,
+		Footer:              template.HTML(s.footer),
+		LogoData:            template.HTML(s.logoData),
 	}
 
 	err := s.template.Execute(rw, t)

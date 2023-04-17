@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
@@ -43,13 +44,16 @@ const (
 	schemeHTTPS     = "https"
 	applicationJSON = "application/json"
 
-	robotsPath        = "/robots.txt"
-	signInPath        = "/sign_in"
-	signOutPath       = "/sign_out"
-	oauthStartPath    = "/start"
-	oauthCallbackPath = "/callback"
-	authOnlyPath      = "/auth"
-	userInfoPath      = "/userinfo"
+	robotsPath         = "/robots.txt"
+	signInPath         = "/sign_in"
+	signOutPath        = "/sign_out"
+	oauthStartPath     = "/start"
+	generatedTokenPath = "/show-token"
+	oauthCallbackPath  = "/callback"
+	authOnlyPath       = "/auth"
+	userInfoPath       = "/userinfo"
+
+	generateTokenParam = "x-oauth2-proxy-generate-token" // #nosec G101
 )
 
 var (
@@ -91,6 +95,7 @@ type OAuthProxy struct {
 	skipAuthPreflight              bool
 	skipJwtBearerTokens            bool
 	exchangeOfflineJwtBearerTokens bool
+	offlineJwtScope                string
 	forceJSONErrors                bool
 	realClientIPParser             ipapi.RealClientIPParser
 	trustedIPs                     *ip.NetSet
@@ -129,15 +134,16 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
-		TemplatesPath:    opts.Templates.Path,
-		CustomLogo:       opts.Templates.CustomLogo,
-		ProxyPrefix:      opts.ProxyPrefix,
-		Footer:           opts.Templates.Footer,
-		Version:          VERSION,
-		Debug:            opts.Templates.Debug,
-		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
-		SignInMessage:    buildSignInMessage(opts),
-		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+		TemplatesPath:       opts.Templates.Path,
+		CustomLogo:          opts.Templates.CustomLogo,
+		ProxyPrefix:         opts.ProxyPrefix,
+		Footer:              opts.Templates.Footer,
+		Version:             VERSION,
+		Debug:               opts.Templates.Debug,
+		ProviderName:        buildProviderName(provider, opts.Providers[0].Name),
+		SignInMessage:       buildSignInMessage(opts),
+		DisplayLoginForm:    basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+		GenerateTokenButton: opts.ExchangeOfflineJwtBearerTokens,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error initialising page writer: %v", err)
@@ -202,6 +208,20 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Validator:   redirectValidator,
 	})
 
+	scope := opts.Providers[0].Scope
+	offlineJwtScope := scope
+	scopeParts := strings.Split(scope, " ")
+	scopeAlreadyOffline := false
+	for _, scopePart := range scopeParts {
+		if scopePart == oidc.ScopeOfflineAccess {
+			scopeAlreadyOffline = true
+			break
+		}
+	}
+	if !scopeAlreadyOffline {
+		offlineJwtScope += " " + oidc.ScopeOfflineAccess
+	}
+
 	p := &OAuthProxy{
 		CookieOptions: &opts.Cookie,
 		Validator:     validator,
@@ -218,6 +238,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		skipAuthPreflight:              opts.SkipAuthPreflight,
 		skipJwtBearerTokens:            opts.SkipJwtBearerTokens,
 		exchangeOfflineJwtBearerTokens: opts.ExchangeOfflineJwtBearerTokens,
+		offlineJwtScope:                offlineJwtScope,
 		realClientIPParser:             opts.GetRealClientIPParser(),
 		SkipProviderButton:             opts.SkipProviderButton,
 		forceJSONErrors:                opts.ForceJSONErrors,
@@ -320,6 +341,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Path(signInPath).HandlerFunc(p.SignIn)
 	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
+	// s.Path(generatedTokenPath).HandlerFunc(p.ShowGeneratedToken)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
 	// The userinfo endpoint needs to load sessions before handling the request
@@ -744,6 +766,10 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 	p.doOAuthStart(rw, req, req.URL.Query())
 }
 
+func (p *OAuthProxy) isGenerateTokenRequest(req *http.Request) bool {
+	return p.exchangeOfflineJwtBearerTokens && req.Form.Get(generateTokenParam) == "true"
+}
+
 func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values) {
 	extraParams := p.provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
@@ -752,6 +778,12 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		err                                              error
 		codeChallenge, codeVerifier, codeChallengeMethod string
 	)
+	err = req.ParseForm()
+	if err != nil {
+		logger.Errorf("Error while parsing OAuth2 start: %v", err)
+		p.ErrorPage(rw, req, http.StatusBadRequest, err.Error())
+		return
+	}
 	if p.provider.Data().CodeChallengeMethod != "" {
 		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
 		codeVerifier, err = encryption.GenerateRandomASCIIString(96)
@@ -779,11 +811,22 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		return
 	}
 
-	appRedirect, err := p.appDirector.GetRedirect(req)
-	if err != nil {
-		logger.Errorf("Error obtaining application redirect: %v", err)
-		p.ErrorPage(rw, req, http.StatusBadRequest, err.Error())
-		return
+	var appRedirect string
+
+	if p.isGenerateTokenRequest(req) {
+		extraParams.Add("scope", p.offlineJwtScope)
+		tokenDisplayURL := *req.URL
+		tokenDisplayURL.Scheme = "https" // TODO: Can this ever be http?
+		tokenDisplayURL.Host = req.Host
+		tokenDisplayURL.Path = strings.TrimSuffix(tokenDisplayURL.Path, oauthStartPath) + generatedTokenPath
+		appRedirect = tokenDisplayURL.String()
+	} else {
+		appRedirect, err = p.appDirector.GetRedirect(req)
+		if err != nil {
+			logger.Errorf("Error obtaining application redirect: %v", err)
+			p.ErrorPage(rw, req, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
 	callbackRedirect := p.getOAuthRedirectURI(req)
@@ -802,6 +845,48 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 
 	http.Redirect(rw, req, loginURL, http.StatusFound)
 }
+
+/*
+func (p *OAuthProxy) ShowGeneratedToken(rw http.ResponseWriter, req *http.Request) {
+	// finish the oauth cycle
+	err := req.ParseForm()
+	if err != nil {
+		logger.Errorf("Error while parsing OAuth2 callback: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+	errorString := req.Form.Get("error")
+	if errorString != "" {
+		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
+		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
+		// Set the debug message and override the non debug message to be the same for this case
+		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
+		return
+	}
+
+	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
+	if err != nil {
+		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
+		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
+		return
+	}
+
+	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
+	if err != nil {
+		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if session.RefreshToken == "" {
+		logger.Errorf("Got a request to /show-token with no token")
+		p.ErrorPage(rw, req, http.StatusInternalServerError, "Provider did not include a token")
+		return
+	}
+
+	p.pageWriter.WriteGeneratedTokenPage(rw, req, session.RefreshToken)
+}
+*/
 
 // OAuthCallback is the OAuth2 authentication flow callback that finishes the
 // OAuth2 authentication flow
@@ -835,6 +920,17 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if p.isGenerateTokenRequest(req) {
+		if session.RefreshToken == "" {
+			logger.Errorf("Got a token generate callback with no refresh token")
+			p.ErrorPage(rw, req, http.StatusInternalServerError, "Provider did not include a token")
+			return
+		}
+
+		p.pageWriter.WriteGeneratedTokenPage(rw, req, session.RefreshToken)
 		return
 	}
 
@@ -1019,13 +1115,19 @@ func prepareNoCacheMiddleware(next http.Handler) http.Handler {
 // redirect clients to once authenticated.
 // This is usually the OAuthProxy callback URL.
 func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
+	rd := *p.redirectURL
+
+	// If the request to the start page has the token request parameter, include it so its forwarded to the callback
+	if p.isGenerateTokenRequest(req) {
+		rd.RawQuery = url.Values{generateTokenParam: req.Form[generateTokenParam]}.Encode()
+	}
+
 	// if `p.redirectURL` already has a host, return it
-	if p.redirectURL.Host != "" {
-		return p.redirectURL.String()
+	if rd.Host != "" {
+		return rd.String()
 	}
 
 	// Otherwise figure out the scheme + host from the request
-	rd := *p.redirectURL
 	rd.Host = requestutil.GetRequestHost(req)
 	rd.Scheme = requestutil.GetRequestProto(req)
 
@@ -1039,6 +1141,7 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	if p.CookieOptions.Secure {
 		rd.Scheme = schemeHTTPS
 	}
+
 	return rd.String()
 }
 

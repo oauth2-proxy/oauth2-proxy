@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	errorTemplateName  = "error.html"
-	signInTemplateName = "sign_in.html"
+	errorTemplateName          = "error.html"
+	signInTemplateName         = "sign_in.html"
+	generatedTokenTemplateName = "generated_token.html"
 )
 
 //go:embed error.html
@@ -23,6 +24,9 @@ var defaultErrorTemplate string
 
 //go:embed sign_in.html
 var defaultSignInTemplate string
+
+//go:embed generated_token.html
+var defaultGeneratedTokenTemplate string
 
 // loadTemplates adds the Sign In and Error templates from the custom template
 // directory, or uses the defaults if they do not exist or the custom directory
@@ -36,6 +40,10 @@ func loadTemplates(customDir string) (*template.Template, error) {
 	t, err = addTemplate(t, customDir, signInTemplateName, defaultSignInTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("could not add Sign In template: %v", err)
+	}
+	t, err = addTemplate(t, customDir, generatedTokenTemplateName, defaultGeneratedTokenTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("could not add Generated Token template: %v", err)
 	}
 	t, err = addTemplate(t, customDir, errorTemplateName, defaultErrorTemplate)
 	if err != nil {
@@ -55,6 +63,9 @@ func addTemplate(t *template.Template, customDir, fileName, defaultTemplate stri
 			return nil, fmt.Errorf("failed to parse template %s: %v", filePath, err)
 		}
 		return t, nil
+	}
+	if defaultTemplate == "" {
+		logger.Panic("Default template for ", fileName, " was not exported")
 	}
 	t, err := t.Parse(defaultTemplate)
 	if err != nil {

@@ -38,11 +38,18 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 	a := *p.LoginURL
 	params, _ := url.ParseQuery(a.RawQuery)
 	params.Set("redirect_uri", redirectURI)
-	params.Add("scope", p.Scope)
+	if extraParams.Has("scope") {
+		params.Add("scope", extraParams.Get("scope"))
+	} else {
+		params.Add("scope", p.Scope)
+	}
 	params.Set("client_id", p.ClientID)
 	params.Set("response_type", "code")
 	params.Add("state", state)
 	for n, p := range extraParams {
+		if n == "scope" {
+			continue
+		}
 		for _, v := range p {
 			params.Add(n, v)
 		}
