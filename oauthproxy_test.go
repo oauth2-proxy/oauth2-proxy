@@ -320,28 +320,70 @@ type PassAccessTokenTest struct {
 }
 
 type PassAccessTokenTestOptions struct {
-	PassAccessToken bool
-	ValidToken      bool
-	ProxyUpstream   options.Upstream
+	PassAccessToken      bool
+	ValidToken           bool
+	ProxyUpstream        options.Upstream
+	ExchangeOfflineToken bool
 }
+
+const (
+	grantTypeRefreshToken      = "refresh_token"
+	grantTypeAuthorizationCode = "authorization_code"
+	paramGrantType             = "grant_type"
+	paramRefreshToken          = "refresh_token"
+	paramCode                  = "code"
+
+	dummyRefreshToken = "eyI_my.eyJ_refresh.token"
+	// This is what jwt_session.go thinks a valid JWT is
+	dummyAccessToken = "eyI_my.eyJ_access.token"
+)
 
 func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTest, error) {
 	patt := &PassAccessTokenTest{}
 
 	patt.providerServer = httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			err := r.ParseForm()
+			if err != nil {
+				panic(err)
+			}
 			var payload string
+			status := http.StatusOK
 			switch r.URL.Path {
 			case "/oauth/token":
-				payload = `{"access_token": "my_auth_token"}`
+				successPayload := fmt.Sprintf(`{"access_token": "%s"}`, dummyAccessToken)
+				newTokenPayload := fmt.Sprintf(`{"refresh_token": "%s"}`, dummyRefreshToken)
+				if opts.ExchangeOfflineToken {
+					grantType := r.Form.Get(paramGrantType)
+					refreshToken := r.Form.Get(paramRefreshToken)
+					authorizationCode := r.Form.Get(paramCode)
+					switch {
+					case grantType != grantTypeRefreshToken && grantType != grantTypeAuthorizationCode:
+						payload = fmt.Sprintf(`Expected token payload grant_type to be "refresh_token" or "authorization_code", got "%s", in url "%s" %v`, grantType, r.URL.String(), r.Form)
+						status = http.StatusBadRequest
+					case grantType == grantTypeRefreshToken && refreshToken != dummyRefreshToken:
+						payload = fmt.Sprintf(`Expected token exchange payload refresh_token to be "%s", got "%s", in url "%s" %v`, dummyRefreshToken, refreshToken, r.URL.String(), r.Form)
+						status = http.StatusBadRequest
+					case grantType == grantTypeAuthorizationCode && authorizationCode == "":
+						payload = fmt.Sprintf(`Expected token generation payload code to be non-empty, in url "%s" %v`, r.URL.String(), r.Form)
+					case grantType == grantTypeRefreshToken:
+						payload = successPayload
+					case grantType == grantTypeAuthorizationCode:
+						payload = newTokenPayload
+					}
+				} else {
+					payload = successPayload
+				}
+			case "/oauth/keys":
+				payload = `{ "keys": ["key-goes-here"] }`
 			default:
 				payload = r.Header.Get("X-Forwarded-Access-Token")
 				if payload == "" {
 					payload = "No access token found."
 				}
 			}
-			w.WriteHeader(200)
-			_, err := w.Write([]byte(payload))
+			w.WriteHeader(status)
+			_, err = w.Write([]byte(payload))
 			if err != nil {
 				panic(err)
 			}
@@ -360,7 +402,9 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 	if opts.ProxyUpstream.ID != "" {
 		patt.opts.UpstreamServers.Upstreams = append(patt.opts.UpstreamServers.Upstreams, opts.ProxyUpstream)
 	}
-
+	if opts.ExchangeOfflineToken {
+		patt.opts.ExchangeOfflineJwtBearerTokens = true
+	}
 	patt.opts.Cookie.Secure = false
 	if opts.PassAccessToken {
 		patt.opts.InjectRequestHeaders = []options.Header{
@@ -390,9 +434,20 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 	patt.proxy, err = NewOAuthProxy(patt.opts, func(email string) bool {
 		return email == emailAddress
 	})
-	patt.proxy.provider = testProvider
 	if err != nil {
 		return nil, err
+	}
+
+	// This is a huge hack, but NewOAuthProxy() applies defaulting to the provider
+	// prior to building the session chain and setting up the server mux.
+	// This results in URLs being set to google urls, which obviously won't for for the mocks
+	// This is basically copied verbatim from NewOAuthProxy()
+	// TODO: Re-factor the NewOAuthProxy to accept a pre-baked provider?
+	patt.proxy.provider = testProvider
+	patt.proxy.sessionChain = buildSessionChain(patt.opts, patt.proxy.provider, patt.proxy.sessionStore, patt.proxy.basicAuthValidator)
+	patt.proxy.buildServeMux(patt.opts.ProxyPrefix)
+	if err := patt.proxy.setupServer(patt.opts); err != nil {
+		panic(err)
 	}
 	return patt, nil
 }
@@ -401,7 +456,7 @@ func (patTest *PassAccessTokenTest) Close() {
 	patTest.providerServer.Close()
 }
 
-func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie string) {
+func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie string, body string) {
 	rw := httptest.NewRecorder()
 
 	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions, "")
@@ -413,12 +468,12 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 		http.MethodGet,
 		fmt.Sprintf(
 			"/oauth2/callback?code=callback_code&state=%s",
-			encodeState(csrf.HashOAuthState(), "%2F", false),
+			encodeState(csrf.HashOAuthState(), "%2F", patTest.opts.ExchangeOfflineJwtBearerTokens),
 		),
 		strings.NewReader(""),
 	)
 	if err != nil {
-		return 0, ""
+		return 0, "", ""
 	}
 
 	// rw is a dummy here, we just want the csrfCookie to add to our req
@@ -434,7 +489,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 		cookie = rw.Header().Values("Set-Cookie")[1]
 	}
 
-	return rw.Code, cookie
+	return rw.Code, cookie, rw.Body.String()
 }
 
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
@@ -473,6 +528,18 @@ func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoin
 	return rw.Code, rw.Body.String()
 }
 
+func (patTest *PassAccessTokenTest) getEndpointWithToken(token string, endpoint string) (httpCode int, accessToken string) {
+	req, err := http.NewRequest("GET", endpoint, strings.NewReader(""))
+	if err != nil {
+		return 0, ""
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	rw := httptest.NewRecorder()
+	patTest.proxy.ServeHTTP(rw, req)
+	return rw.Code, rw.Body.String()
+}
+
 func TestForwardAccessTokenUpstream(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		PassAccessToken: true,
@@ -484,7 +551,7 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 	t.Cleanup(patTest.Close)
 
 	// A successful validation will redirect and set the auth cookie.
-	code, cookie := patTest.getCallbackEndpoint()
+	code, cookie, _ := patTest.getCallbackEndpoint()
 	if code != 302 {
 		t.Fatalf("expected 302; got %d", code)
 	}
@@ -497,7 +564,7 @@ func TestForwardAccessTokenUpstream(t *testing.T) {
 	if code != 200 {
 		t.Fatalf("expected 200; got %d", code)
 	}
-	assert.Equal(t, "my_auth_token", payload)
+	assert.Equal(t, dummyAccessToken, payload)
 }
 
 func TestStaticProxyUpstream(t *testing.T) {
@@ -516,7 +583,7 @@ func TestStaticProxyUpstream(t *testing.T) {
 	t.Cleanup(patTest.Close)
 
 	// A successful validation will redirect and set the auth cookie.
-	code, cookie := patTest.getCallbackEndpoint()
+	code, cookie, _ := patTest.getCallbackEndpoint()
 	if code != 302 {
 		t.Fatalf("expected 302; got %d", code)
 	}
@@ -542,7 +609,7 @@ func TestDoNotForwardAccessTokenUpstream(t *testing.T) {
 	t.Cleanup(patTest.Close)
 
 	// A successful validation will redirect and set the auth cookie.
-	code, cookie := patTest.getCallbackEndpoint()
+	code, cookie, _ := patTest.getCallbackEndpoint()
 	if code != 302 {
 		t.Fatalf("expected 302; got %d", code)
 	}
@@ -565,26 +632,91 @@ func TestSessionValidationFailure(t *testing.T) {
 	t.Cleanup(patTest.Close)
 
 	// An unsuccessful validation will return 403 and not set the auth cookie.
-	code, cookie := patTest.getCallbackEndpoint()
+	code, cookie, _ := patTest.getCallbackEndpoint()
 	assert.Equal(t, http.StatusForbidden, code)
 	assert.Equal(t, "", cookie)
+}
+
+const generatedTokenPattern = `<input id="token-box" type="text" readonly="true" value="(.*)" />`
+
+func TestGenerateAndUseToken(t *testing.T) {
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		ExchangeOfflineToken: true,
+		PassAccessToken:      true,
+	})
+	require.NoError(t, err)
+	t.Cleanup(patTest.Close)
+
+	// An unsuccessful validation will return 403 and not set the auth cookie.
+	code, cookie, body := patTest.getCallbackEndpoint()
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "", cookie)
+	pat, err := regexp.Compile(generatedTokenPattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	match := pat.FindStringSubmatch(body)
+	if match == nil {
+		t.Fatal("Did not find pattern in body: " +
+			generatedTokenPattern + "\nBody:\n" + body)
+	}
+
+	refreshToken := match[1]
+	assert.Equal(t, dummyRefreshToken, refreshToken)
+
+	code, payload := patTest.getEndpointWithToken(refreshToken, "/")
+	if code != 200 {
+		t.Fatalf("expected 200; got %d", code)
+	}
+	assert.Equal(t, dummyAccessToken, payload)
+}
+
+func TestRefuseTokenGeneration(t *testing.T) {
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		ExchangeOfflineToken: false,
+		PassAccessToken:      true,
+	})
+	require.NoError(t, err)
+	t.Cleanup(patTest.Close)
+
+	// An unsuccessful validation will return 403 and not set the auth cookie.
+	code, _, _ := patTest.getCallbackEndpoint()
+	assert.Equal(t, http.StatusForbidden, code)
+}
+
+func TestRejectOfflineToken(t *testing.T) {
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		ExchangeOfflineToken: false,
+		PassAccessToken:      true,
+	})
+	require.NoError(t, err)
+	t.Cleanup(patTest.Close)
+
+	code, _ := patTest.getEndpointWithToken(dummyRefreshToken, "/")
+	if code != http.StatusForbidden {
+		t.Fatalf("expected 403; got %d", code)
+	}
 }
 
 type SignInPageTest struct {
 	opts                 *options.Options
 	proxy                *OAuthProxy
 	signInRegexp         *regexp.Regexp
+	signInIsTokenRegexp  *regexp.Regexp
 	signInProviderRegexp *regexp.Regexp
 }
 
 const signInRedirectPattern = `<input type="hidden" name="rd" value="(.*)">`
+const signInIsTokenPattern = `<input type="hidden" name="x-oauth2-proxy-generate-token" value="(.*)">`
 const signInSkipProvider = `>Found<`
 
-func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
+func NewSignInPageTest(modifiers ...OptionsModifier) (*SignInPageTest, error) {
 	var sipTest SignInPageTest
 
 	sipTest.opts = baseTestOptions()
-	sipTest.opts.SkipProviderButton = skipProvider
+	for _, mod := range modifiers {
+		mod(sipTest.opts)
+	}
 	err := validation.Validate(sipTest.opts)
 	if err != nil {
 		return nil, err
@@ -597,6 +729,7 @@ func NewSignInPageTest(skipProvider bool) (*SignInPageTest, error) {
 		return nil, err
 	}
 	sipTest.signInRegexp = regexp.MustCompile(signInRedirectPattern)
+	sipTest.signInIsTokenRegexp = regexp.MustCompile(signInIsTokenPattern)
 	sipTest.signInProviderRegexp = regexp.MustCompile(signInSkipProvider)
 
 	return &sipTest, nil
@@ -710,7 +843,7 @@ func TestManualSignInCorrectCredentials(t *testing.T) {
 }
 
 func TestSignInPageIncludesTargetRedirect(t *testing.T) {
-	sipTest, err := NewSignInPageTest(false)
+	sipTest, err := NewSignInPageTest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -730,8 +863,46 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 	}
 }
 
+func TestSignInPageIncludesTokenButtonWhenEnabled(t *testing.T) {
+	sipTest, err := NewSignInPageTest(func(opts *options.Options) { opts.ExchangeOfflineJwtBearerTokens = true })
+	if err != nil {
+		t.Fatal(err)
+	}
+	const endpoint = "/some/random/endpoint"
+
+	code, body := sipTest.GetEndpoint(endpoint)
+	assert.Equal(t, 403, code)
+
+	match := sipTest.signInIsTokenRegexp.FindStringSubmatch(body)
+	if match == nil {
+		t.Fatal("Did not find pattern in body: " +
+			signInIsTokenPattern + "\nBody:\n" + body)
+	}
+	if match[1] != generateTokenParamTrue {
+		t.Fatal(`expected ` + generateTokenParam + ` to be "` + generateTokenParamTrue +
+			`", but was "` + match[1] + `"`)
+	}
+}
+
+func TestSignInPageNotIncludesTokenButtonWhenNotEnabled(t *testing.T) {
+	sipTest, err := NewSignInPageTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const endpoint = "/some/random/endpoint"
+
+	code, body := sipTest.GetEndpoint(endpoint)
+	assert.Equal(t, 403, code)
+
+	match := sipTest.signInIsTokenRegexp.FindStringSubmatch(body)
+	if match != nil {
+		t.Fatal("Found unexpected pattern in body: " +
+			signInIsTokenPattern + "\nBody:\n" + body)
+	}
+}
+
 func TestSignInPageInvalidQueryStringReturnsBadRequest(t *testing.T) {
-	sipTest, err := NewSignInPageTest(true)
+	sipTest, err := NewSignInPageTest(func(opts *options.Options) { opts.SkipProviderButton = true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -742,7 +913,7 @@ func TestSignInPageInvalidQueryStringReturnsBadRequest(t *testing.T) {
 }
 
 func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
-	sipTest, err := NewSignInPageTest(false)
+	sipTest, err := NewSignInPageTest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -760,7 +931,7 @@ func TestSignInPageDirectAccessRedirectsToRoot(t *testing.T) {
 }
 
 func TestSignInPageSkipProvider(t *testing.T) {
-	sipTest, err := NewSignInPageTest(true)
+	sipTest, err := NewSignInPageTest(func(opts *options.Options) { opts.SkipProviderButton = true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -778,7 +949,7 @@ func TestSignInPageSkipProvider(t *testing.T) {
 }
 
 func TestSignInPageSkipProviderDirect(t *testing.T) {
-	sipTest, err := NewSignInPageTest(true)
+	sipTest, err := NewSignInPageTest(func(opts *options.Options) { opts.SkipProviderButton = true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1059,7 +1230,7 @@ func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 }
 
 func TestEncodedUrlsStayEncoded(t *testing.T) {
-	encodeTest, err := NewSignInPageTest(false)
+	encodeTest, err := NewSignInPageTest()
 	if err != nil {
 		t.Fatal(err)
 	}

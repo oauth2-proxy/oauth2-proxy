@@ -47,6 +47,7 @@ func (p *ProviderData) GetLoginURL(redirectURI, state, _ string, extraParams url
 // Redeem provides a default implementation of the OAuth2 token redemption process
 // The codeVerifier is set if a code_verifier parameter should be sent for PKCE
 func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+
 	if code == "" {
 		return nil, ErrMissingCode
 	}
@@ -80,12 +81,14 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 
 	// blindly try json and x-www-form-urlencoded
 	var jsonResponse struct {
-		AccessToken string `json:"access_token"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 	err = result.UnmarshalInto(&jsonResponse)
 	if err == nil {
 		return &sessions.SessionState{
-			AccessToken: jsonResponse.AccessToken,
+			AccessToken:  jsonResponse.AccessToken,
+			RefreshToken: jsonResponse.RefreshToken,
 		}, nil
 	}
 
@@ -94,15 +97,16 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		return nil, err
 	}
 	// TODO (@NickMeves): Uses OAuth `expires_in` to set an expiration
-	if token := values.Get("access_token"); token != "" {
+	if accessToken, refreshToken := values.Get("access_token"), values.Get("refresh_token"); accessToken != "" || refreshToken != "" {
 		ss := &sessions.SessionState{
-			AccessToken: token,
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
 		}
 		ss.CreatedAtNow()
 		return ss, nil
 	}
 
-	return nil, fmt.Errorf("no access token found %s", result.Body())
+	return nil, fmt.Errorf("no access token or refresh token found %s", result.Body())
 }
 
 // Redeem provides a default implementation of the OAuth2 refresh token redemption process

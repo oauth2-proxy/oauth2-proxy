@@ -53,7 +53,8 @@ const (
 	authOnlyPath       = "/auth"
 	userInfoPath       = "/userinfo"
 
-	generateTokenParam = "x-oauth2-proxy-generate-token" // #nosec G101
+	generateTokenParam     = "x-oauth2-proxy-generate-token" // #nosec G101
+	generateTokenParamTrue = "true"
 )
 
 var (
@@ -159,6 +160,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		for _, issuer := range opts.ExtraJwtIssuers {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
+	}
+	if opts.ExchangeOfflineJwtBearerTokens {
+		logger.Printf("Exchanging offline JWT tokens from onfigured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
 	}
 	redirectURL := opts.GetRedirectURL()
 	if redirectURL.Path == "" {
@@ -767,7 +771,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) isGenerateTokenRequest(req *http.Request) bool {
-	return p.exchangeOfflineJwtBearerTokens && req.Form.Get(generateTokenParam) == "true"
+	return p.exchangeOfflineJwtBearerTokens && req.Form.Get(generateTokenParam) == generateTokenParamTrue
 }
 
 func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values) {

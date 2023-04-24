@@ -13,8 +13,10 @@ MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
 MINIMUM_SUPPORTED_GO_MINOR_VERSION = 19
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
 
+COVERPROFILE = c.out
+
 ifeq ($(COVER),true)
-TESTCOVER ?= -coverprofile c.out
+TESTCOVER ?= -coverprofile $(COVERPROFILE)
 endif
 
 .PHONY: all
@@ -24,6 +26,7 @@ all: lint $(BINARY)
 clean:
 	-rm -rf release
 	-rm -f $(BINARY)
+	-rm -f $(COVERPROFILE)
 
 .PHONY: distclean
 distclean: clean
@@ -95,7 +98,13 @@ verify-generate: generate
 
 .PHONY: test
 test: lint
-	GO111MODULE=on $(GO) test $(TESTCOVER) -v -race ./...
+	GO111MODULE=on $(GO) test $(TESTCOVER) -v -race $(TESTFLAGS) ./...
+
+c.out: test
+
+.PHONY: coverreport
+coverreport: $(COVERPROFILE)
+	go tool cover -html=$(COVERPROFILE)
 
 .PHONY: release
 release: validate-go-version lint test
