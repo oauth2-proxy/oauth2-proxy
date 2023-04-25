@@ -37,6 +37,7 @@ type azureOAuthPayload struct {
 	AccessToken  string `json:"access_token,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
 	ExpiresOn    int64  `json:"expires_on,omitempty,string"`
+	ExpiresIn    int64  `json:"expires_in,omitempty"`
 	IDToken      string `json:"id_token,omitempty"`
 }
 
@@ -257,9 +258,11 @@ func TestAzureProviderRedeem(t *testing.T) {
 		Name                 string
 		RefreshToken         string
 		ExpiresOn            time.Time
+		ExpiresIn            int64
 		EmailFromIDToken     string
 		EmailFromAccessToken string
 		IsIDTokenMalformed   bool
+		isV2Reedeem          bool
 		InjectRedeemURLError bool
 		Groups               []string
 	}{
@@ -268,6 +271,14 @@ func TestAzureProviderRedeem(t *testing.T) {
 			EmailFromIDToken: "foo1@example.com",
 			RefreshToken:     "some_refresh_token",
 			ExpiresOn:        time.Now().Add(time.Hour),
+			Groups:           []string{"aa", "bb"},
+		},
+		{
+			Name:             "with id_token returned and v2.0 response with no 'ExpiresOn' field",
+			EmailFromIDToken: "foo1@example.com",
+			RefreshToken:     "some_refresh_token",
+			ExpiresIn:        1234,
+			isV2Reedeem:      true,
 			Groups:           []string{"aa", "bb"},
 		},
 		{
@@ -335,7 +346,12 @@ func TestAzureProviderRedeem(t *testing.T) {
 				IDToken:      idTokenString,
 				RefreshToken: testCase.RefreshToken,
 				AccessToken:  accessTokenString,
-				ExpiresOn:    testCase.ExpiresOn.Unix(),
+			}
+
+			if testCase.isV2Reedeem {
+				payload.ExpiresIn = testCase.ExpiresIn
+			} else {
+				payload.ExpiresOn = testCase.ExpiresOn.Unix()
 			}
 
 			payloadBytes, err := json.Marshal(payload)
@@ -346,6 +362,11 @@ func TestAzureProviderRedeem(t *testing.T) {
 
 			bURL, _ := url.Parse(b.URL)
 			p := testAzureProvider(bURL.Host, options.AzureOptions{})
+
+			if testCase.isV2Reedeem {
+				p.isV2Endpoint = true
+			}
+
 			p.Data().RedeemURL.Path = "/common/oauth2/token"
 			s, err := p.Redeem(context.Background(), "https://localhost", "1234", "123")
 			if testCase.InjectRedeemURLError {
@@ -354,9 +375,14 @@ func TestAzureProviderRedeem(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, idTokenString, s.IDToken)
 				assert.Equal(t, accessTokenString, s.AccessToken)
-				assert.Equal(t, testCase.ExpiresOn.Unix(), s.ExpiresOn.Unix())
 				assert.Equal(t, testCase.RefreshToken, s.RefreshToken)
 				assert.Equal(t, testCase.Groups, s.Groups)
+
+				if testCase.isV2Reedeem {
+					testCase.ExpiresOn = s.CreatedAt.Add(time.Duration(payload.ExpiresIn * int64(time.Second)))
+				}
+				assert.Equal(t, testCase.ExpiresOn.Unix(), s.ExpiresOn.Unix())
+
 				if testCase.EmailFromIDToken != "" {
 					assert.Equal(t, testCase.EmailFromIDToken, s.Email)
 				} else {
