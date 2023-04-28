@@ -10,6 +10,7 @@ import (
 // error pages.
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
+// ProxyErrorHandler takes context input to extract tenant-ID.
 type Writer interface {
 	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
 	WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts)
@@ -105,7 +106,7 @@ func NewWriter(opts Opts) (Writer, error) {
 // If any of the funcs are not provided, a default implementation will be used.
 type WriterFuncs struct {
 	SignInPageFunc func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
-	ErrorPageFunc  func(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts)
+	ErrorPageFunc  func(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts) // context.Context is used since request is not needed here
 	ProxyErrorFunc func(rw http.ResponseWriter, req *http.Request, proxyErr error)
 	RobotsTxtfunc  func(rw http.ResponseWriter, req *http.Request)
 }
@@ -127,8 +128,10 @@ func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request,
 // WriteErrorPage implements the Writer interface.
 // If the ErrorPageFunc is provided, this will be used, else a default
 // implementation will be used.
+// Context is added to extract tenant-ID from incoming request's context.
 func (w *WriterFuncs) WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts) {
 	if w.ErrorPageFunc != nil {
+		// The context is further passed to ErrorPage Func
 		w.ErrorPageFunc(ctx, rw, opts)
 		return
 	}
@@ -149,6 +152,7 @@ func (w *WriterFuncs) ProxyErrorHandler(rw http.ResponseWriter, req *http.Reques
 		return
 	}
 
+	// Request Context is passed to error page writer.
 	w.WriteErrorPage(req.Context(), rw, ErrorPageOpts{
 		Status:   http.StatusBadGateway,
 		AppError: proxyErr.Error(),

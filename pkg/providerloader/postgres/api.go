@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -70,38 +71,25 @@ func NewAPI(conf options.API, rs *RedisStore, proxyPrefix string) error {
 	}()
 
 	return nil
-
 }
 
+// CreateHandler defines the handler for api call through which
+// new provider configuration is added in the database.
+// It returns status created in when successful.
 func (api *API) CreateHandler(rw http.ResponseWriter, req *http.Request) {
-	var providerConf []byte
-	var err error
-	providerConf, err = io.ReadAll(req.Body)
-	defer req.Body.Close()
-
+	// Before a config entry is added in the db it is validated to
+	// avoid failures and crashes.
+	code, err := api.addOrUpdateProviderConfig(req, api.configStore.Create) // configStore.Create is used as action here,
 	if err != nil {
-		writeErrorResponse(rw, http.StatusBadRequest, err.Error())
-		return
-	}
-	id, err := api.validateProviderConfig(providerConf)
-	if err != nil {
-		writeErrorResponse(rw, http.StatusBadRequest, err.Error())
+		writeErrorResponse(rw, code, err.Error())
 		return
 	}
 
-	err = api.configStore.Create(req.Context(), id, providerConf)
-	if err != nil {
-		if errors.Is(err, ErrAlreadyExists) {
-			writeErrorResponse(rw, http.StatusConflict, err.Error())
-			return
-		}
-		writeErrorResponse(rw, http.StatusInternalServerError, err.Error())
-		return
-	}
-
+	// Status Created (201) is returned in case of success.
 	rw.WriteHeader(http.StatusCreated)
 }
 
+// This function handles the get requests and return provider config in response.
 func (api *API) GetHandler(rw http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	id := vars["id"]
@@ -121,6 +109,8 @@ func (api *API) GetHandler(rw http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(rw, providerConf)
 }
 
+// This function handles delete requests and remove the specific provider's config
+// from db/store.
 func (api *API) DeleteHandler(rw http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	id := vars["id"]
@@ -138,35 +128,17 @@ func (api *API) DeleteHandler(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(http.StatusNoContent)
 }
 
+// This handler updates the provider config in the config store and cache
+// store as well.
 func (api *API) UpdateHandler(rw http.ResponseWriter, req *http.Request) {
-	var providerConf []byte
-	var err error
-	providerConf, err = io.ReadAll(req.Body)
-	defer req.Body.Close()
 
+	code, err := api.addOrUpdateProviderConfig(req, api.configStore.Update)
 	if err != nil {
-		writeErrorResponse(rw, http.StatusBadRequest, err.Error())
-		return
-	}
-	id, err := api.validateProviderConfig(providerConf)
-	if err != nil {
-		writeErrorResponse(rw, http.StatusBadRequest, err.Error())
-		return
-
-	}
-
-	err = api.configStore.Update(req.Context(), id, providerConf)
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			writeErrorResponse(rw, http.StatusNotFound, err.Error())
-			return
-		}
-		writeErrorResponse(rw, http.StatusInternalServerError, err.Error())
+		writeErrorResponse(rw, code, err.Error())
 		return
 	}
 
-	rw.WriteHeader(http.StatusAccepted)
-
+	rw.WriteHeader(http.StatusAccepted) // in case of success status accepted is written in response
 }
 
 // ValidateProviderConfig validates the provider configuration and returns provider ID and error
@@ -200,4 +172,41 @@ func writeErrorResponse(rw http.ResponseWriter, code int, message string) {
 
 	j, _ := json.Marshal(newErr)
 	fmt.Fprint(rw, string(j))
+}
+
+type createOrUpdateAction func(ctx context.Context, providerID string, providerConfig []byte) error
+
+// This function takes request as input along with action createOrUpdate.
+// This action is responsible for configStore related logic,
+// It returns status Code for response and error.
+// In case of no error, statusCode 0 is returned.
+func (api *API) addOrUpdateProviderConfig(req *http.Request, action createOrUpdateAction) (int, error) {
+	providerConf, err := io.ReadAll(req.Body)
+	defer req.Body.Close()
+
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+	id, err := api.validateProviderConfig(providerConf)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	err = action(req.Context(), id, providerConf)
+	if err != nil {
+		return getHTTPCodeFromError(err), err
+	}
+
+	return 0, nil
+}
+
+func getHTTPCodeFromError(err error) int {
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, ErrAlreadyExists):
+		return http.StatusConflict
+	default:
+		return http.StatusInternalServerError
+	}
 }
