@@ -44,8 +44,14 @@ type AlphaOptions struct {
 	// Providers is used to configure multiple providers.
 	Providers Providers `json:"providers,omitempty"`
 
+	// ProviderLoader is used to allow multi-tenancy in oauth2-proxy.
+	// You can choose between single, config and postgres types.
 	ProviderLoader ProviderLoader `json:"providerLoader,omitempty"`
-	TenantMatcher  TenantMatcher  `json:"tenantMatcher,omitempty"`
+
+	// TenantMatcher is used to configure the tenant-id matching rules for extracting tenant-id from request
+	// which will then in turn cause providerLoader to load provider/tenant identifying from its ID.
+	// The rules define where to look for tenant-id in request header, host, query or path or their precedence.
+	TenantMatcher TenantMatcher `json:"tenantMatcher,omitempty"`
 }
 
 // MergeInto replaces alpha options in the Options struct with the values

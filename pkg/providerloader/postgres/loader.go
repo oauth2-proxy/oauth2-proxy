@@ -46,17 +46,24 @@ func (ps *ProviderStore) Load(ctx context.Context, id string) (providers.Provide
 	if err != nil {
 		return nil, err
 	}
-
-	providerConf := options.Provider{}
-	err = json.Unmarshal([]byte(data), &providerConf)
+	provider, err := providerFromConfig(data)
 	if err != nil {
 		return nil, err
+	}
+
+	return provider, nil
+}
+
+func providerFromConfig(providerJSON string) (providers.Provider, error) {
+	providerConf := options.Provider{}
+	err := json.Unmarshal([]byte(providerJSON), &providerConf)
+	if err != nil {
+		return nil, fmt.Errorf("can't unmarshal into provider config struct: %w", err)
 	}
 
 	provider, err := providers.NewProvider(providerConf)
 	if err != nil {
 		return nil, fmt.Errorf("invalid provider config(id=%s): %s", providerConf.ID, err.Error())
 	}
-
 	return provider, nil
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -269,32 +268,27 @@ func TestUpdateHandler(t *testing.T) {
 func TestValidateProviderConfig(t *testing.T) {
 	tests := []struct {
 		name         string
-		providerConf io.Reader
+		providerConf []byte
 		wantErr      bool
 	}{
 		{
 			"validate with no error",
-			bytes.NewBuffer([]byte("{\"id\":\"xxx\", \"provider\":\"keycloak\"}")),
+			[]byte("{\"id\":\"xxx\", \"provider\":\"keycloak\"}"),
 			false,
 		},
 		{
-			"validate with error from reading request body",
-			errReader(0),
-			true,
-		},
-		{
-			"validate with error from json.unmarshal",
-			bytes.NewBuffer([]byte("{\"id\": \"xxx\", err:?okosfko}")),
+			"validate werrReader(0)ith error from json.unmarshal",
+			[]byte("{\"id\": \"xxx\", err:?okosfko}"),
 			true,
 		},
 		{
 			"validate with error no id",
-			bytes.NewBuffer([]byte("{}")),
+			[]byte("{}"),
 			true,
 		},
 		{
 			"validate with error from new provider",
-			bytes.NewBuffer([]byte("{\"id\": \"xxx\"}")),
+			[]byte("{\"id\": \"xxx\"}"),
 			true,
 		},
 	}
@@ -302,8 +296,8 @@ func TestValidateProviderConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			api := API{}
-			req := httptest.NewRequest(http.MethodPost, "/", tt.providerConf)
-			_, _, err := api.validateProviderConfig(req)
+
+			_, err := api.validateProviderConfig(tt.providerConf)
 
 			if err != nil && !tt.wantErr {
 				t.Errorf("New config loader, got error: '%v'", err)
@@ -311,10 +305,4 @@ func TestValidateProviderConfig(t *testing.T) {
 		})
 	}
 
-}
-
-type errReader int
-
-func (errReader) Read(p []byte) (n int, err error) {
-	return 0, errors.New("test error")
 }

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	providerLoaderUtil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -80,7 +81,9 @@ var _ = Describe("Writer", func() {
 
 			It("Writes the default sign in template", func() {
 				recorder := httptest.NewRecorder()
-				writer.WriteSignInPage(recorder, request, pd, "/redirect", http.StatusOK)
+
+				request = request.WithContext(providerLoaderUtil.AppendToContext(request.Context(), pd))
+				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
@@ -128,7 +131,8 @@ var _ = Describe("Writer", func() {
 			It("Writes the custom sign in template", func() {
 				recorder := httptest.NewRecorder()
 
-				writer.WriteSignInPage(recorder, request, pd, "/redirect", http.StatusOK)
+				request = request.WithContext(providerLoaderUtil.AppendToContext(request.Context(), pd))
+				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(body)).To(Equal("Custom Template"))
@@ -197,7 +201,9 @@ var _ = Describe("Writer", func() {
 				rw := httptest.NewRecorder()
 				req := httptest.NewRequest("", "/sign-in", nil)
 				redirectURL := "<redirectURL>"
-				in.writer.WriteSignInPage(rw, req, pd, redirectURL, http.StatusOK)
+
+				req = req.WithContext(providerLoaderUtil.AppendToContext(req.Context(), pd))
+				in.writer.WriteSignInPage(rw, req, redirectURL, http.StatusOK)
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))
 
@@ -212,7 +218,7 @@ var _ = Describe("Writer", func() {
 			}),
 			Entry("With an override function", writerFuncsTableInput{
 				writer: &WriterFuncs{
-					SignInPageFunc: func(rw http.ResponseWriter, req *http.Request, provider providers.Provider, redirectURL string, statusCode int) {
+					SignInPageFunc: func(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
 						rw.WriteHeader(202)
 						rw.Write([]byte(fmt.Sprintf("%s %s", req.URL.Path, redirectURL)))
 					},

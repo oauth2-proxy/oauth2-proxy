@@ -15,8 +15,8 @@ import (
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	providerLoaderUtil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
 	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
 //go:embed default_logo.svg
@@ -53,7 +53,13 @@ type signInPageWriter struct {
 
 // WriteSignInPage writes the sign-in page to the given response writer.
 // It uses the redirectURL to be able to set the final destination for the user post login.
-func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, provider providers.Provider, redirectURL string, statusCode int) {
+func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int) {
+
+	provider := providerLoaderUtil.FromContext(req.Context())
+	if provider == nil {
+		fmt.Println("NO PROVIDER FOUND")
+	}
+
 	// We allow unescaped template.HTML since it is user configured options
 	/* #nosec G203 */
 	t := struct {

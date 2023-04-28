@@ -135,6 +135,20 @@ You must remove these options before starting OAuth2 Proxy with `--alpha-config`
 | ----- | ---- | ----------- |
 | `skipScope` | _bool_ | Skip adding the scope parameter in login request<br/>Default value is 'false' |
 
+### API
+
+(**Appears on:** [PostgresLoader](#postgresloader))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Host` | _string_ | Name of the host. |
+| `Port` | _int_ | Port of the host. |
+| `PathPrefix` | _string_ | PathPrefix is an optional prefix that will be<br/>prepended to the API path if it is non-empty.<br/>Default is set to options.ProxyPrefix which is set to "/oauth2" by default. |
+| `HandlerTimeout` | _duration_ | HandlerTimeout is the time duration value<br/>after which the API will timeout. |
+| `ReadHeaderTimeout` | _duration_ | ReadHeaderTimeout is the time.duration allowed<br/>to read request header. If not set a default value of<br/>10 seconds is used. |
+
 ### AlphaOptions
 
 AlphaOptions contains alpha structured configuration options.
@@ -154,6 +168,8 @@ They may change between releases without notice.
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
+| `providerLoader` | _[ProviderLoader](#providerloader)_ | ProviderLoader is used to allow multi-tenancy in oauth2-proxy.<br/>You can choose between single, config and postgres types. |
+| `tenantMatcher` | _[TenantMatcher](#tenantmatcher)_ | TenantMatcher is used to configure the tenant-id matching rules for extracting tenant-id from request<br/>which will then in turn cause providerLoader to load provider/tenant identifying from its ID.<br/>The rules define where to look for tenant-id in request header, host, query or path or their precedence. |
 
 ### AzureOptions
 
@@ -389,6 +405,39 @@ character.
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 
+### Postgres
+
+(**Appears on:** [PostgresLoader](#postgresloader))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Host` | _string_ | Host is the name of the postgres host. |
+| `Port` | _uint16_ | Post is the host port. |
+| `Database` | _string_ | Database defines the database name in Postgres Store. |
+| `Schema` | _string_ | Schema defines the schema in Postgres. |
+| `User` | _string_ | User contains the username for connecting to Postgres. |
+| `Password` | _string_ | Password contains the password for connecting with Postgres. |
+| `MaxConnections` | _int_ | MaxConnections is the number of maxmimum connections allowed. |
+| `SslMode` | _string_ | SslMode defines the ssl security mode.This option determines whether or with what priority a secure SSL TCP/IP<br/>connection will be negotiated with the server. There are six modes:<br/><br/>disable: only try a non-SSL connection<br/>allow:first try a non-SSL connection; if that fails, try an SSL connection<br/>prefer (default): first try an SSL connection; if that fails, try a non-SSL connection<br/>require: only try an SSL connection. If a root CA file is present, verify the certificate in the same way as if verify-ca was specified<br/>verify-ca: only try an SSL connection, and verify that the server certificate is issued by a trusted certificate authority (CA)<br/>verify-full: only try an SSL connection, verify that the server certificate is issued by a trusted CA and that the requested server host name matches that in the certificate |
+| `SslRootCert` | _string_ | This parameter specifies the name of a file containing SSL certificate authority (CA) certificate(s).<br/>If the file exists, the server's certificate will be verified to be signed by one of these authorities. |
+| `SslCrl` | _string_ | This parameter specifies the file name of the SSL server certificate revocation list (CRL). Certificates listed in this file, if it exists,<br/>will be rejected while attempting to authenticate the server's certificate. |
+| `SslCert` | _string_ | This parameter specifies the file name of the client SSL certificate. This parameter is ignored if an SSL connection is not made. |
+| `SslKey` | _string_ | This parameter specifies the location for the secret key used for the client certificate.<br/>It can either specify a file name, or it can specify a key obtained from an external “engine” (engines are OpenSSL loadable modules). An external engine specification should consist of a colon-separated engine name and an engine-specific key identifier.<br/>This parameter is ignored if an SSL connection is not made. |
+
+### PostgresLoader
+
+(**Appears on:** [ProviderLoader](#providerloader))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Postgres` | _[Postgres](#postgres)_ | Postgres defines the configuration of Postgres DB store. |
+| `Redis` | _[Redis](#redis)_ | Redis defines the configuration of Redis DB which is used as a cache. |
+| `API` | _[API](#api)_ | API defines configuration of API exposed for CURD operations<br/>on the configuration store. |
+
 ### Provider
 
 (**Appears on:** [Providers](#providers))
@@ -423,6 +472,17 @@ Provider holds all configuration for a single provider
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
 | `code_challenge_method` | _string_ | The code challenge method |
 
+### ProviderLoader
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Type` | _string_ | Type defines the type of ProviderLoader which can be single, config and postgres.<br/>"single" referes to the single tenant providers.<br/>"config" refers to multi-tenancy.<br/>"postgres" refers to storing provider configuration in a podtgres store and load/delete multi-tenancy<br/>providers while the service is alive. |
+| `PostgresLoader` | _[PostgresLoader](#postgresloader)_ | PostgresLoader contains configuration settings for PostgesLoader Type. |
+
 ### ProviderType
 #### (`string` alias)
 
@@ -442,6 +502,48 @@ and oidc.
 
 Providers is a collection of definitions for providers.
 
+
+### Redis
+
+(**Appears on:** [PostgresLoader](#postgresloader))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `ConnectionURL` | _string_ | ConnectionURL is the host URL. |
+| `Password` | _string_ | Password required to allow connection with redis store. |
+| `UseSentinel` | _bool_ | UseSentinels will allow to use sentinels in case its value is set to true. |
+| `SentinelPassword` | _string_ | SentinelPassword contains password for authorizing use of sentinel. |
+| `SentinelMasterName` | _string_ | SentinelMasterName is the name given to master. |
+| `SentinelConnectionURLs` | _[]string_ | SnetinelConnectionURLs contains the list of URLs used for connecting with the redis instances<br/>to be included in the sentinel. |
+| `UseCluster` | _bool_ | UseCluster sets the flag for using redis cluster or not. |
+| `ClusterConnectionURLs` | _[]string_ | ClusterConnectionURLs contains the list of URLs of redis instances to be included in the<br/>cluster. |
+| `CAPath` | _string_ | CAPath defines the path to certificates. |
+| `InsecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of redis hosts.<br/>Defaults to false. |
+| `IdleTimeout` | _int_ | IdleTimeout defines the time duration after which an idle redis connection<br/>will timeout and be closed. |
+| `Expiry` | _duration_ | Expiry time is the time duration after which a data entry<br/>added in redis cache will be deleted. |
+| `Prefix` | _string_ | Prefix is the string which is prepended to each key<br/>in redis store. |
+
+### RedisStoreOptions
+
+(**Appears on:** [Redis](#redis))
+
+RedisStoreOptions contains configuration options for the RedisSessionStore.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `ConnectionURL` | _string_ | ConnectionURL is the host URL. |
+| `Password` | _string_ | Password required to allow connection with redis store. |
+| `UseSentinel` | _bool_ | UseSentinels will allow to use sentinels in case its value is set to true. |
+| `SentinelPassword` | _string_ | SentinelPassword contains password for authorizing use of sentinel. |
+| `SentinelMasterName` | _string_ | SentinelMasterName is the name given to master. |
+| `SentinelConnectionURLs` | _[]string_ | SnetinelConnectionURLs contains the list of URLs used for connecting with the redis instances<br/>to be included in the sentinel. |
+| `UseCluster` | _bool_ | UseCluster sets the flag for using redis cluster or not. |
+| `ClusterConnectionURLs` | _[]string_ | ClusterConnectionURLs contains the list of URLs of redis instances to be included in the<br/>cluster. |
+| `CAPath` | _string_ | CAPath defines the path to certificates. |
+| `InsecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of redis hosts.<br/>Defaults to false. |
+| `IdleTimeout` | _int_ | IdleTimeout defines the time duration after which an idle redis connection<br/>will timeout and be closed. |
 
 ### SecretSource
 
@@ -481,6 +583,16 @@ as well as an optional minimal TLS version that is acceptable.
 | `Cert` | _[SecretSource](#secretsource)_ | Cert is the TLS certificate data to use.<br/>Typically this will come from a file. |
 | `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
 | `CipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
+
+### TenantMatcher
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Rules` | _[]*github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options.TenantMatcherRule_ |  |
 
 ### URLParameterRule
 

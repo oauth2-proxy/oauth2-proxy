@@ -13,6 +13,7 @@ import (
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	providerLoaderUtil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -75,7 +76,9 @@ var _ = Describe("SignIn Page", func() {
 		Context("WriteSignInPage", func() {
 			It("Writes the template to the response writer", func() {
 				recorder := httptest.NewRecorder()
-				signInPage.WriteSignInPage(recorder, request, pd, "/redirect", http.StatusOK)
+
+				request2 := request.WithContext(providerLoaderUtil.AppendToContext(request.Context(), pd))
+				signInPage.WriteSignInPage(recorder, request2, "/redirect", http.StatusOK)
 
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
@@ -89,7 +92,8 @@ var _ = Describe("SignIn Page", func() {
 				signInPage.template = tmpl
 
 				recorder := httptest.NewRecorder()
-				signInPage.WriteSignInPage(recorder, request, pd, "/redirect", http.StatusOK)
+				request2 := request.WithContext(providerLoaderUtil.AppendToContext(request.Context(), pd))
+				signInPage.WriteSignInPage(recorder, request2, "/redirect", http.StatusOK)
 
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())

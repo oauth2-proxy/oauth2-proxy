@@ -100,5 +100,3 @@ require (
 	k8s.io/gengo v0.0.0-20201113003025-83324d819ded // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 )
-
-replace github.com/oauth2-proxy/oauth2-proxy/v7 => ./

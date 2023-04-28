@@ -22,17 +22,43 @@ type CookieStoreOptions struct {
 
 // RedisStoreOptions contains configuration options for the RedisSessionStore.
 type RedisStoreOptions struct {
-	ConnectionURL          string   `flag:"redis-connection-url" cfg:"redis_connection_url"`
-	Password               string   `flag:"redis-password" cfg:"redis_password"`
-	UseSentinel            bool     `flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
-	SentinelPassword       string   `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
-	SentinelMasterName     string   `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
+
+	// ConnectionURL is the host URL.
+	ConnectionURL string `flag:"redis-connection-url" cfg:"redis_connection_url"`
+
+	// Password required to allow connection with redis store.
+	Password string `flag:"redis-password" cfg:"redis_password"`
+
+	// UseSentinels will allow to use sentinels in case its value is set to true.
+	UseSentinel bool `flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
+
+	// SentinelPassword contains password for authorizing use of sentinel.
+	SentinelPassword string `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
+
+	// SentinelMasterName is the name given to master.
+	SentinelMasterName string `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
+
+	// SnetinelConnectionURLs contains the list of URLs used for connecting with the redis instances
+	// to be included in the sentinel.
 	SentinelConnectionURLs []string `flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls"`
-	UseCluster             bool     `flag:"redis-use-cluster" cfg:"redis_use_cluster"`
-	ClusterConnectionURLs  []string `flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
-	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
-	InsecureSkipTLSVerify  bool     `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
-	IdleTimeout            int      `flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
+
+	// UseCluster sets the flag for using redis cluster or not.
+	UseCluster bool `flag:"redis-use-cluster" cfg:"redis_use_cluster"`
+
+	// ClusterConnectionURLs contains the list of URLs of redis instances to be included in the
+	// cluster.
+	ClusterConnectionURLs []string `flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
+
+	// CAPath defines the path to certificates.
+	CAPath string `flag:"redis-ca-path" cfg:"redis_ca_path"`
+
+	// InsecureSkipTLSVerify will skip TLS verification of redis hosts.
+	// Defaults to false.
+	InsecureSkipTLSVerify bool `flag:"redis-insecure-skip-tls-verify" cfg:"redis_insecure_skip_tls_verify"`
+
+	// IdleTimeout defines the time duration after which an idle redis connection
+	// will timeout and be closed.
+	IdleTimeout int `flag:"redis-connection-idle-timeout" cfg:"redis_connection_idle_timeout"`
 }
 
 func sessionOptionsDefaults() SessionOptions {
