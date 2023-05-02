@@ -10,7 +10,7 @@ REGISTRY ?= quay.io/oauth2-proxy
 GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
 GO_MINOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f2)
 MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
-MINIMUM_SUPPORTED_GO_MINOR_VERSION = 18
+MINIMUM_SUPPORTED_GO_MINOR_VERSION = 19
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
 
 ifeq ($(COVER),true)
