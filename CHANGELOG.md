@@ -18,6 +18,7 @@
 - [#1920](https://github.com/oauth2-proxy/oauth2-proxy/pull/1920) Make sure emailClaim is not overriden if userIDClaim is not set
 - [#2010](https://github.com/oauth2-proxy/oauth2-proxy/pull/2010) Log the difference between invalid email and not authorized session
 - [#1988](https://github.com/oauth2-proxy/oauth2-proxy/pull/1988) Ensure sign-in page background is uniform throughout the page
+- [#2053](https://github.com/oauth2-proxy/oauth2-proxy/pull/2053) Respect db parameter when using redis sentinel
 
 # V7.4.0
 
