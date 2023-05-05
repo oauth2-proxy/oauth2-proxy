@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"regex"
 
 	"golang.org/x/exp/slices"
 
@@ -99,6 +100,13 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 		if !strings.Contains(p.Scope, " "+azureV2Scope) {
 			// In order to be able to query MS Graph we must pass the ms graph default endpoint
 			p.Scope += " " + azureV2Scope
+
+                       // If --cookie-refresh is turned on, modify scope to ensure refresh_token
+                       re := regexp.MustCompile(`[1-9]`)
+                       if re.MatchString(opts.CookieRefresh) {
+                               fmt.Printf("Cookie refresh is set to %s. Adding 'offline_access' to scope'", opts.CookieRefresh)
+                               p.Scope += " " + "offline_access"
+                       }
 		}
 
 		if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
