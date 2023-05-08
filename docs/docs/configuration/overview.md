@@ -99,7 +99,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-csrf-per-request` | bool | Enable having different CSRF cookies per request, making it possible to have parallel requests. | false |
 | `--cookie-csrf-expire` | duration | expire timeframe for CSRF cookie | 15m |
 | `--custom-templates-dir` | string | path to custom html templates | |
-| `--custom-sign-in-logo` | string | path or a URL to an custom image for the sign_in page logo. Use \"-\" to disable default logo. |
+| `--custom-sign-in-logo` | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo. |
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
 | `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
@@ -165,6 +165,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redirect-url` | string | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"` | |
 | `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster` | |
 | `--redis-connection-url` | string | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`) | |
+| `--redis-insecure-skip-tls-verify` | bool | skip TLS verification when connecting to Redis | false |
 | `--redis-password` | string | Redis password. Applicable for all Redis configurations. Will override any password set in `--redis-connection-url` | |
 | `--redis-sentinel-password` | string | Redis sentinel password. Used only for sentinel connection; any redis node passwords need to use `--redis-password` | |
 | `--redis-sentinel-master-name` | string | Redis sentinel master name. Used in conjunction with `--redis-use-sentinel` | |

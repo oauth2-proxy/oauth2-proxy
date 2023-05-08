@@ -132,6 +132,13 @@ func TestValidateSessionExpiredToken(t *testing.T) {
 	assert.Equal(t, false, validateToken(context.Background(), vtTest.provider, "foobar", nil))
 }
 
+func TestValidateSessionValidateURLWithQueryParams(t *testing.T) {
+	vtTest := NewValidateSessionTest()
+	defer vtTest.Close()
+	vtTest.provider.Data().ValidateURL, _ = url.Parse(vtTest.provider.Data().ValidateURL.String() + "?query_param1=true&query_param2=test")
+	assert.Equal(t, true, validateToken(context.Background(), vtTest.provider, "foobar", nil))
+}
+
 func TestStripTokenNotPresent(t *testing.T) {
 	test := "http://local.test/api/test?a=1&b=2"
 	assert.Equal(t, test, stripToken(test))
