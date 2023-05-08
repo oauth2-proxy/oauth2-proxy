@@ -22,7 +22,7 @@ func TestNew(t *testing.T) {
 		{
 			"new matcher",
 			options.TenantMatcher{
-				Rules: []*options.TenantMatcherRule{
+				Rules: []options.TenantMatcherRule{
 					{
 						Source:       options.TenantMatcherRuleSourceQueryParams,
 						QueryParam:   "tenantid",
@@ -58,7 +58,7 @@ func TestNew(t *testing.T) {
 		{
 			"new matcher -ve capture group",
 			options.TenantMatcher{
-				Rules: []*options.TenantMatcherRule{
+				Rules: []options.TenantMatcherRule{
 					{
 						Source:       options.TenantMatcherRuleSourceQueryParams,
 						QueryParam:   "tenantid",
@@ -73,7 +73,7 @@ func TestNew(t *testing.T) {
 		{
 			"new matcher invalid expression",
 			options.TenantMatcher{
-				Rules: []*options.TenantMatcherRule{
+				Rules: []options.TenantMatcherRule{
 					{
 						Source:       options.TenantMatcherRuleSourceQueryParams,
 						QueryParam:   "tenantid",
@@ -101,6 +101,7 @@ func TestNew(t *testing.T) {
 
 func TestMatch(t *testing.T) {
 	reg, _ := regexp.Compile(".*")
+	reg2, _ := regexp.Compile(`Bearer\s+([^\s]+)`)
 	tests := []struct {
 		name    string
 		matcher *Matcher
@@ -125,6 +126,29 @@ func TestMatch(t *testing.T) {
 				Host: "id",
 			},
 			"id",
+		},
+		{
+			"Match with tenantid in jwt token",
+			&Matcher{
+				rules: []*rule{
+
+					{
+						conf: &options.TenantMatcherRule{
+							Source:   options.TenantMatcherRuleSourceHeader,
+							Expr:     `Bearer\s+([^\s]+)`,
+							Header:   "Authorization",
+							JWTClaim: "tenant.id",
+						},
+						regexp: reg2,
+					},
+				},
+			},
+			&http.Request{
+				Header: http.Header{
+					"Authorization": {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc"},
+				},
+			},
+			"tenant1",
 		},
 		{
 			"Match with tenantid in req path",
@@ -225,6 +249,49 @@ func TestMatch(t *testing.T) {
 			got := tt.matcher.Match(tt.req)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Match returned id = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_exractTenantIDFromJWT(t *testing.T) {
+	tests := []struct {
+		name  string
+		jwt   string
+		claim string
+		want  string
+	}{
+		{
+			"no tenant-id found due to invalid token",
+			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0",
+			"",
+			"",
+		},
+		{
+			"no tenant-id found due to invalid base64 encoding of jwt token payload",
+			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5%hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc",
+			"",
+			"",
+		},
+		{
+			"no error tenant-id found",
+			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc",
+			"tenant.id",
+			"tenant1",
+		},
+		{
+			"no tenant-id found due to invalid claim",
+			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc",
+			"t.id",
+			"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := exractTenantIDFromJWT(tt.jwt, tt.claim)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("extract tenant ID from JWT = %v, want %v", got, tt.want)
 			}
 		})
 	}

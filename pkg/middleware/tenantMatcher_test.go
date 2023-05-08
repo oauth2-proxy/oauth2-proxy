@@ -16,7 +16,7 @@ func TestTenantMatcher(t *testing.T) {
 
 	rw := httptest.NewRecorder()
 	tm, _ := tenantmatcher.New(options.TenantMatcher{
-		Rules: []*options.TenantMatcherRule{
+		Rules: []options.TenantMatcherRule{
 			{
 				Source:       options.TenantMatcherRuleSourceQueryParams,
 				QueryParam:   "tenantid",

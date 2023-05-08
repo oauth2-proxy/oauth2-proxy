@@ -1,11 +1,16 @@
 package tenantmatcher
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 )
 
@@ -43,12 +48,19 @@ func (r *rule) execute(req *http.Request) string {
 		sourceStr = req.Header.Get(r.conf.Header)
 	}
 
-	// get the capture groups
 	cgs := r.regexp.FindStringSubmatch(sourceStr)
+	var regexMatch string
 	if r.conf.CaptureGroup < len(cgs) {
-		return cgs[r.conf.CaptureGroup]
+		regexMatch = cgs[r.conf.CaptureGroup]
+	} else {
+		return ""
 	}
-	return ""
+
+	if r.conf.JWTClaim != "" {
+		return exractTenantIDFromJWT(regexMatch, r.conf.JWTClaim)
+	}
+
+	return regexMatch
 }
 
 type Matcher struct {
@@ -58,7 +70,7 @@ type Matcher struct {
 func New(conf options.TenantMatcher) (*Matcher, error) {
 	matcher := &Matcher{}
 	for _, ruleConf := range conf.Rules {
-		rule, err := newRule(*ruleConf)
+		rule, err := newRule(ruleConf)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create new rule: %w", err)
 		}
@@ -91,4 +103,19 @@ func defaultRule() *rule {
 		CaptureGroup: 0,
 	})
 	return rule
+}
+
+func exractTenantIDFromJWT(jwt string, claim string) string {
+	subStrs := strings.Split(jwt, ".")
+	if len(subStrs) != 3 {
+		logger.Errorf("jwt token is not valid")
+		return ""
+	}
+	jsonStr, err := base64.RawStdEncoding.DecodeString(subStrs[1])
+	if err != nil {
+		logger.Errorf("jwt payload is not a valid base64 encoded string: %v", err)
+		return ""
+	}
+	value := gjson.Get(string(jsonStr), claim)
+	return value.String()
 }

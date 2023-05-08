@@ -592,7 +592,30 @@ as well as an optional minimal TLS version that is acceptable.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Rules` | _[]*github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options.TenantMatcherRule_ |  |
+| `rules` | _[[]TenantMatcherRule](#tenantmatcherrule)_ | Rules define the rules for finding tenant id in the incoming request |
+
+### TenantMatcherRule
+
+(**Appears on:** [TenantMatcher](#tenantmatcher))
+
+TenantMatcherRule is the structure to define rule for finding tenant id in request
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `source` | _[TenantMatcherRuleSource](#tenantmatcherrulesource)_ | Source defines which part of the HTTP request contains the tenant id |
+| `expr` | _string_ | Expr defines the regex expression to match and extract tenant id from the source |
+| `captureGroup` | _int_ | CaptureGroup or sub-match referes to the index that is actually the tenant id |
+| `queryParam` | _string_ | QueryParam defines the query parameter containing tenant-id in case source is 'query' |
+| `header` | _string_ | Header defines the header key in case source is 'header' |
+| `jwtClaim` | _string_ | JWT Claim defines the json field containing tenant id in jwt token e.g tenant.id |
+
+### TenantMatcherRuleSource
+#### (`string` alias)
+
+(**Appears on:** [TenantMatcherRule](#tenantmatcherrule))
+
+Source defines the source i-e "host", "path", "query" or "header"
+
 
 ### URLParameterRule
 
