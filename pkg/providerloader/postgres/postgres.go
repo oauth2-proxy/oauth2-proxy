@@ -20,7 +20,7 @@ type provider struct {
 }
 
 func runMigrations(db *gorm.DB, schema string) error {
-	res := db.Exec("create schema if not exists  " + schema)
+	res := db.Exec("create schema if not exists  " + "\"" + schema + "\"")
 	if res.Error != nil {
 		return res.Error
 	}
