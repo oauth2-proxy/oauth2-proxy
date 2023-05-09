@@ -21,7 +21,7 @@
 - [#2013](https://github.com/oauth2-proxy/oauth2-proxy/pull/2013) Upgrade alpine to version 3.17.2 and library dependencies (@miguelborges99)
 - [#2047](https://github.com/oauth2-proxy/oauth2-proxy/pull/2047) CVE-2022-41717: DoS in Go net/http may lead to DoS (@miguelborges99)
 - [#2096](https://github.com/oauth2-proxy/oauth2-proxy/pull/2096) Fix azure provider to set expirement of session properly for azure v2.0 endpoints (@nhahn1312)
-- [#2109](https://github.com/oauth2-proxy/oauth2-proxy/pull/2097) Fix azure provider to fetch refresh_token for azure v2.0 endpoints (@mikefab-msf)
+- [#2109](https://github.com/oauth2-proxy/oauth2-proxy/pull/2109) Fix azure provider to fetch refresh_token for azure v2.0 endpoints (@mikefab-msf)
 
 # V7.4.0
 
