@@ -22,6 +22,7 @@
 - [#2047](https://github.com/oauth2-proxy/oauth2-proxy/pull/2047) CVE-2022-41717: DoS in Go net/http may lead to DoS (@miguelborges99)
 - [#2096](https://github.com/oauth2-proxy/oauth2-proxy/pull/2096) Fix azure provider to set expirement of session properly for azure v2.0 endpoints (@nhahn1312)
 - [#2109](https://github.com/oauth2-proxy/oauth2-proxy/pull/2109) Fix azure provider to fetch refresh_token for azure v2.0 endpoints (@mikefab-msf)
+- [#2071](https://github.com/oauth2-proxy/oauth2-proxy/pull/2071) Update Alpine Linux Version to fix [CVE-2023-0464](https://dso.docker.com/cve/CVE-2023-0464)
 
 # V7.4.0
 
