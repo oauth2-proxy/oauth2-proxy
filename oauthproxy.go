@@ -124,7 +124,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 	provider, err := providers.NewProvider(opts.Providers[0])
 	if err != nil {
-		return nil, fmt.Errorf("error intiailising provider: %v", err)
+		return nil, fmt.Errorf("error initialising provider: %v", err)
 	}
 
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
@@ -1056,7 +1056,12 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 	}
 
 	if invalidEmail || !authorized {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authorization via session: removing session %s", session)
+		cause := "unauthorized"
+		if invalidEmail {
+			cause = "invalid email"
+		}
+
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authorization via session (%s): removing session %s", cause, session)
 		// Invalid session, clear it
 		err := p.ClearSessionCookie(rw, req)
 		if err != nil {
