@@ -100,6 +100,8 @@ func Validate(o *options.Options) error {
 	// Do this after ReverseProxy validation for TrustedIP coordinated checks
 	msgs = append(msgs, validateAllowlists(o)...)
 
+	msgs = append(msgs, validateAuthRoutes1(o)...)
+
 	if len(msgs) != 0 {
 		return fmt.Errorf("invalid configuration:\n  %s",
 			strings.Join(msgs, "\n  "))
