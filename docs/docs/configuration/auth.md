@@ -48,8 +48,8 @@ For Google, the registration steps are:
 
 It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the account is still authorized.
 
-#### Restrict auth to specific Google groups on your domain. (optional)
-
+#### Restrict auth to specific Google groups on your domain. (optional, follow either one of the methods)
+#### Using service account with admin access:
 1.  Create a service account: https://developers.google.com/identity/protocols/OAuth2ServiceAccount and make sure to download the json file.
 2.  Make note of the Client ID for a future step.
 3.  Under "APIs & Auth", choose APIs.
@@ -67,6 +67,15 @@ https://www.googleapis.com/auth/admin.directory.user.readonly
     and the user will be checked against all the provided groups.
 9.  Lock down the permissions on the json file downloaded from step 1 so only oauth2-proxy is able to read the file and set the path to the file in the `google-service-account-json` flag.
 10. Restart oauth2-proxy.
+
+#### Using Cloud Identity API
+1. Create or choose an existing email group and set that email to the `google-group` flag. You can pass multiple instances of this flag with different groups and the user will be checked against all the provided groups.
+2. Configure `scope` flag with the following scopes:
+```
+profile email https://www.googleapis.com/auth/cloud-identity.groups.readonly
+```
+3. Make sure users of the google group can view other members. Configure it in "Access Settings" for the group in admin console.
+4. Restart oauth2-proxy.
 
 Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
 

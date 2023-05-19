@@ -17,8 +17,10 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
+	"google.golang.org/api/cloudidentity/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
@@ -35,7 +37,7 @@ type GoogleProvider struct {
 	// This hits the Google API for each group, so it is called on Redeem &
 	// Refresh. `Authorize` uses the results of this saved in `session.Groups`
 	// Since it is called on every request.
-	groupValidator func(*sessions.SessionState) bool
+	groupValidator func(context.Context, *sessions.SessionState) bool
 }
 
 var _ Provider = (*GoogleProvider)(nil)
@@ -93,7 +95,7 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		ProviderData: p,
 		// Set a default groupValidator to just always return valid (true), it will
 		// be overwritten if we configured a Google group restriction.
-		groupValidator: func(*sessions.SessionState) bool {
+		groupValidator: func(context.Context, *sessions.SessionState) bool {
 			return true
 		},
 	}
@@ -104,11 +106,14 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 			return nil, fmt.Errorf("invalid Google credentials file: %s", opts.ServiceAccountJSON)
 		}
 
-		// Backwards compatibility with `--google-group` option
-		if len(opts.Groups) > 0 {
-			provider.setAllowedGroups(opts.Groups)
-		}
 		provider.setGroupRestriction(opts.Groups, opts.AdminEmail, file)
+	} else if len(opts.Groups) > 0 {
+		provider.setGroupRestrictionCI(opts.Groups)
+	}
+
+	// Backwards compatibility with `--google-group` option
+	if len(opts.Groups) > 0 {
+		provider.setAllowedGroups(opts.Groups)
 	}
 
 	return provider, nil
@@ -197,13 +202,13 @@ func (p *GoogleProvider) Redeem(ctx context.Context, redirectURL, code, codeVeri
 
 // EnrichSession checks the listed Google Groups configured and adds any
 // that the user is a member of to session.Groups.
-func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionState) error {
+func (p *GoogleProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// TODO (@NickMeves) - Move to pure EnrichSession logic and stop
 	// reusing legacy `groupValidator`.
 	//
 	// This is called here to get the validator to do the `session.Groups`
 	// populating logic.
-	p.groupValidator(s)
+	p.groupValidator(ctx, s)
 
 	return nil
 }
@@ -216,7 +221,7 @@ func (p *GoogleProvider) EnrichSession(_ context.Context, s *sessions.SessionSta
 // TODO (@NickMeves) - Unit Test this OR refactor away from groupValidator func
 func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string, credentialsReader io.Reader) {
 	adminService := getAdminService(adminEmail, credentialsReader)
-	p.groupValidator = func(s *sessions.SessionState) bool {
+	p.groupValidator = func(_ context.Context, s *sessions.SessionState) bool {
 		// Reset our saved Groups in case membership changed
 		// This is used by `Authorize` on every request
 		s.Groups = make([]string, 0, len(groups))
@@ -227,6 +232,54 @@ func (p *GoogleProvider) setGroupRestriction(groups []string, adminEmail string,
 		}
 		return len(s.Groups) > 0
 	}
+}
+
+func (p *GoogleProvider) setGroupRestrictionCI(groups []string) {
+	p.groupValidator = func(ctx context.Context, s *sessions.SessionState) bool {
+		token := &oauth2.Token{
+			AccessToken: s.AccessToken,
+		}
+		service, err := cloudidentity.NewService(ctx, option.WithTokenSource(oauth2.StaticTokenSource(token)))
+		if err != nil {
+			logger.Fatal("failed to initialize cloud identity service:", err)
+		}
+		// Reset our saved Groups in case membership changed
+		// This is used by `Authorize` on every request
+		s.Groups = make([]string, 0, len(groups))
+		for _, group := range groups {
+			groupID, err := getGroupID(service, group)
+			if err != nil {
+				continue
+			}
+
+			resp, err := service.Groups.Memberships.
+				CheckTransitiveMembership(groupID).
+				Query("member_key_id == " + s.Email).
+				Do()
+
+			if err != nil {
+				logger.Error("failed to check group membership:", err)
+				continue
+			}
+			if resp.HasMembership {
+				s.Groups = append(s.Groups, group)
+			}
+		}
+		return len(s.Groups) > 0
+	}
+}
+
+func getGroupID(service *cloudidentity.Service, groupEmail string) (string, error) {
+	resp, err := service.Groups.Lookup().
+		GroupKeyId(groupEmail).Do()
+	if err != nil {
+		if resp.HTTPStatusCode == 404 {
+			logger.Errorf("error getting group id for group %s: group does not exist", groupEmail)
+		} else {
+			logger.Error("failed to get group id from group email:", err)
+		}
+	}
+	return resp.Name, err
 }
 
 func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Service {
@@ -299,7 +352,7 @@ func (p *GoogleProvider) RefreshSession(ctx context.Context, s *sessions.Session
 	// behavior in the `RefreshSession` case.
 	//
 	// re-check that the user is in the proper google group(s)
-	if !p.groupValidator(s) {
+	if !p.groupValidator(ctx, s) {
 		return false, fmt.Errorf("%s is no longer in the group(s)", s.Email)
 	}
 

@@ -57,12 +57,12 @@ func TestNewOptions(t *testing.T) {
 
 func TestGoogleGroupOptions(t *testing.T) {
 	o := testOptions()
-	o.Providers[0].GoogleConfig.Groups = []string{"googlegroup"}
+	o.Providers[0].GoogleConfig.AdminEmail = "user@google.com"
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
 	expected := errorMsg([]string{
-		"missing setting: google-admin-email",
+		"missing setting: google-group",
 		"missing setting: google-service-account-json"})
 	assert.Equal(t, expected, err.Error())
 }
