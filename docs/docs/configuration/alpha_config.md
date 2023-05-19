@@ -437,6 +437,7 @@ character.
 | `Postgres` | _[Postgres](#postgres)_ | Postgres defines the configuration of Postgres DB store. |
 | `Redis` | _[Redis](#redis)_ | Redis defines the configuration of Redis DB which is used as a cache. |
 | `API` | _[API](#api)_ | API defines configuration of API exposed for CURD operations<br/>on the configuration store. |
+| `Secret` | _string_ | Secret is the secret string used for encryption of client secret before<br/>storing it in db and cache. |
 
 ### Provider
 

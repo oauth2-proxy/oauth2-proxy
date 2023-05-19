@@ -76,7 +76,7 @@ func TestLoad(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ps := ProviderStore{
 				opts: options.PostgresLoader{},
-				rs: fakeConfigStore{
+				configStore: fakeConfigStore{
 					GetFunc: tt.mockGet,
 				},
 			}

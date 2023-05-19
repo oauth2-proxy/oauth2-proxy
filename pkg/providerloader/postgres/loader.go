@@ -6,33 +6,29 @@ import (
 	"fmt"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
 type ProviderStore struct {
-	opts options.PostgresLoader
-	rs   ConfigStore
+	opts        options.PostgresLoader
+	configStore ConfigStore
 }
 
 func New(opts options.PostgresLoader, proxyPrefix string) (*ProviderStore, error) {
-	ps, err := NewPostgresStore(opts.Postgres)
+
+	configStore, err := initializeConfigStore(opts)
 	if err != nil {
 		return nil, err
 	}
-
-	rs, err := NewRedisStore(opts.Redis, ps)
-	if err != nil {
-		return nil, err
-	}
-
-	err = NewAPI(opts.API, rs, proxyPrefix)
+	err = NewAPI(opts.API, configStore, proxyPrefix)
 	if err != nil {
 		return nil, err
 	}
 
 	l := ProviderStore{
-		opts: opts,
-		rs:   rs,
+		opts:        opts,
+		configStore: configStore,
 	}
 	return &l, nil
 }
@@ -42,7 +38,7 @@ func (ps *ProviderStore) Load(ctx context.Context, id string) (providers.Provide
 		return nil, fmt.Errorf("provider id is empty")
 	}
 
-	data, err := ps.rs.Get(ctx, id)
+	data, err := ps.configStore.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -66,4 +62,36 @@ func providerFromConfig(providerJSON string) (providers.Provider, error) {
 		return nil, fmt.Errorf("invalid provider config(id=%s): %s", providerConf.ID, err.Error())
 	}
 	return provider, nil
+}
+
+func applyEncryptionDecorator(secret string, cs ConfigStore) (ConfigStore, error) {
+	cstd, err := encryption.NewCFBCipher([]byte(secret))
+	if err != nil {
+		return nil, fmt.Errorf("unable to create cipher from secret: %w", err)
+	}
+	cb64 := encryption.NewBase64Cipher(cstd)
+
+	enDecorator, err := EncryptionDecorator(cs, cb64)
+	if err != nil {
+		return nil, err
+	}
+	return enDecorator, nil
+}
+
+func initializeConfigStore(opts options.PostgresLoader) (ConfigStore, error) {
+	ps, err := NewPostgresStore(opts.Postgres)
+	if err != nil {
+		return nil, err
+	}
+
+	rs, err := NewRedisStore(opts.Redis, ps)
+	if err != nil {
+		return nil, err
+	}
+
+	enDecorator, err := applyEncryptionDecorator(opts.Secret, rs)
+	if err != nil {
+		return nil, err
+	}
+	return enDecorator, nil
 }

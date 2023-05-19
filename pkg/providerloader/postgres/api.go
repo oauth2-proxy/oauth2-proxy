@@ -30,10 +30,10 @@ func (errRes ErrorResponse) Error() string {
 	return fmt.Sprintf("code=%d: %s", errRes.Code, errRes.Message)
 }
 
-func NewAPI(conf options.API, rs *RedisStore, proxyPrefix string) error {
+func NewAPI(conf options.API, cs ConfigStore, proxyPrefix string) error {
 	r := mux.NewRouter()
 	api := API{
-		configStore: rs,
+		configStore: cs,
 		conf:        conf,
 	}
 	var pathPrefix = proxyPrefix
