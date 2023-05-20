@@ -88,14 +88,14 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			).Verify
 		})
 
-		type jwtSessionLoaderTableInput struct {
+		type tokenSessionLoaderTableInput struct {
 			authorizationHeader string
 			existingSession     *sessionsapi.SessionState
 			expectedSession     *sessionsapi.SessionState
 		}
 
 		DescribeTable("with an authorization header",
-			func(in jwtSessionLoaderTableInput) {
+			func(in tokenSessionLoaderTableInput) {
 				scope := &middlewareapi.RequestScope{
 					Session: in.existingSession,
 				}
@@ -121,42 +121,42 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 				Expect(gotSession).To(Equal(in.expectedSession))
 			},
-			Entry("<no value>", jwtSessionLoaderTableInput{
+			Entry("<no value>", tokenSessionLoaderTableInput{
 				authorizationHeader: "",
 				existingSession:     nil,
 				expectedSession:     nil,
 			}),
-			Entry("abcdef", jwtSessionLoaderTableInput{
+			Entry("abcdef", tokenSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
 				existingSession:     nil,
 				expectedSession:     nil,
 			}),
-			Entry("abcdef  (with existing session)", jwtSessionLoaderTableInput{
+			Entry("abcdef  (with existing session)", tokenSessionLoaderTableInput{
 				authorizationHeader: "abcdef",
 				existingSession:     &sessionsapi.SessionState{User: "user"},
 				expectedSession:     &sessionsapi.SessionState{User: "user"},
 			}),
-			Entry("Bearer <verifiedToken>", jwtSessionLoaderTableInput{
+			Entry("Bearer <verifiedToken>", tokenSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
 				existingSession:     nil,
 				expectedSession:     verifiedSession,
 			}),
-			Entry("Bearer <nonVerifiedToken>", jwtSessionLoaderTableInput{
+			Entry("Bearer <nonVerifiedToken>", tokenSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", nonVerifiedToken),
 				existingSession:     nil,
 				expectedSession:     nil,
 			}),
-			Entry("Bearer <verifiedToken> (with existing session)", jwtSessionLoaderTableInput{
+			Entry("Bearer <verifiedToken> (with existing session)", tokenSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Bearer %s", verifiedToken),
 				existingSession:     &sessionsapi.SessionState{User: "user"},
 				expectedSession:     &sessionsapi.SessionState{User: "user"},
 			}),
-			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", jwtSessionLoaderTableInput{
+			Entry("Basic Base64(<nonVerifiedToken>:) (No password)", tokenSessionLoaderTableInput{
 				authorizationHeader: "Basic ZXlKZm9vYmFyLmV5SmZvb2Jhci4xMjM0NWFzZGY6",
 				existingSession:     nil,
 				expectedSession:     nil,
 			}),
-			Entry("Basic Base64(<verifiedToken>:x-oauth-basic) (Sentinel password)", jwtSessionLoaderTableInput{
+			Entry("Basic Base64(<verifiedToken>:x-oauth-basic) (Sentinel password)", tokenSessionLoaderTableInput{
 				authorizationHeader: fmt.Sprintf("Basic %s", verifiedTokenXOAuthBasicBase64),
 				existingSession:     nil,
 				expectedSession:     verifiedSession,
@@ -166,7 +166,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 	})
 
 	Context("getJWTSession", func() {
-		var j *jwtSessionLoader
+		var t *tokenSessionLoader
 		const nonVerifiedToken = validToken
 
 		BeforeEach(func() {
@@ -179,8 +179,9 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				},
 			).Verify
 
-			j = &jwtSessionLoader{
-				jwtRegex: regexp.MustCompile(jwtRegexFormat),
+			jwtRegex := regexp.MustCompile(jwtRegexFormat)
+			t = &tokenSessionLoader{
+				validate: func(t string) bool { return jwtRegex.MatchString(t) },
 				sessionLoaders: []middlewareapi.TokenToSessionFunc{
 					middlewareapi.CreateTokenToSessionFunc(verifier),
 				},
@@ -198,7 +199,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				req := httptest.NewRequest("", "/", nil)
 				req.Header.Set("Authorization", in.authorizationHeader)
 
-				session, err := j.getJwtSession(req)
+				session, err := t.getTokenSession(req)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
@@ -251,11 +252,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 	})
 
 	Context("findTokenFromHeader", func() {
-		var j *jwtSessionLoader
+		var t *tokenSessionLoader
 
 		BeforeEach(func() {
-			j = &jwtSessionLoader{
-				jwtRegex: regexp.MustCompile(jwtRegexFormat),
+			jwtRegex := regexp.MustCompile(jwtRegexFormat)
+			t = &tokenSessionLoader{
+				validate: func(t string) bool { return jwtRegex.MatchString(t) },
 			}
 		})
 
@@ -267,7 +269,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 		DescribeTable("with a header",
 			func(in findBearerTokenFromHeaderTableInput) {
-				token, err := j.findTokenFromHeader(in.header)
+				token, err := t.findTokenFromHeader(in.header)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
@@ -335,11 +337,12 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 	})
 
 	Context("getBasicToken", func() {
-		var j *jwtSessionLoader
+		var t *tokenSessionLoader
 
 		BeforeEach(func() {
-			j = &jwtSessionLoader{
-				jwtRegex: regexp.MustCompile(jwtRegexFormat),
+			jwtRegex := regexp.MustCompile(jwtRegexFormat)
+			t = &tokenSessionLoader{
+				validate: func(t string) bool { return jwtRegex.MatchString(t) },
 			}
 		})
 
@@ -351,7 +354,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 
 		DescribeTable("with a token",
 			func(in getBasicTokenTableInput) {
-				token, err := j.getBasicToken(in.token)
+				token, err := t.getBasicToken(in.token)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {

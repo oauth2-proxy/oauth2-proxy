@@ -323,7 +323,8 @@ type PassAccessTokenTestOptions struct {
 	PassAccessToken      bool
 	ValidToken           bool
 	ProxyUpstream        options.Upstream
-	ExchangeOfflineToken bool
+	ExchangeRefreshToken bool
+	GeneratedTokenType   options.GeneratedTokenType
 }
 
 const (
@@ -333,7 +334,7 @@ const (
 	paramRefreshToken          = "refresh_token"
 	paramCode                  = "code"
 
-	dummyRefreshToken = "eyI_my.eyJ_refresh.token"
+	dummyRefreshToken = "some_opaque_refresh_token"
 	// This is what jwt_session.go thinks a valid JWT is
 	dummyAccessToken = "eyI_my.eyJ_access.token"
 )
@@ -351,9 +352,9 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 			status := http.StatusOK
 			switch r.URL.Path {
 			case "/oauth/token":
-				successPayload := fmt.Sprintf(`{"access_token": "%s"}`, dummyAccessToken)
-				newTokenPayload := fmt.Sprintf(`{"refresh_token": "%s"}`, dummyRefreshToken)
-				if opts.ExchangeOfflineToken {
+				redeemPayload := fmt.Sprintf(`{"access_token": "%s"}`, dummyAccessToken)
+				newTokenPayload := fmt.Sprintf(`{"access_token": "%s", "refresh_token": "%s"}`, dummyAccessToken, dummyRefreshToken)
+				if opts.ExchangeRefreshToken {
 					grantType := r.Form.Get(paramGrantType)
 					refreshToken := r.Form.Get(paramRefreshToken)
 					authorizationCode := r.Form.Get(paramCode)
@@ -367,12 +368,12 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 					case grantType == grantTypeAuthorizationCode && authorizationCode == "":
 						payload = fmt.Sprintf(`Expected token generation payload code to be non-empty, in url "%s" %v`, r.URL.String(), r.Form)
 					case grantType == grantTypeRefreshToken:
-						payload = successPayload
+						payload = redeemPayload
 					case grantType == grantTypeAuthorizationCode:
 						payload = newTokenPayload
 					}
 				} else {
-					payload = successPayload
+					payload = redeemPayload
 				}
 			case "/oauth/keys":
 				payload = `{ "keys": ["key-goes-here"] }`
@@ -402,8 +403,8 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 	if opts.ProxyUpstream.ID != "" {
 		patt.opts.UpstreamServers.Upstreams = append(patt.opts.UpstreamServers.Upstreams, opts.ProxyUpstream)
 	}
-	if opts.ExchangeOfflineToken {
-		patt.opts.ExchangeOfflineJwtBearerTokens = true
+	if opts.ExchangeRefreshToken {
+		patt.opts.ExchangeRefreshBearerTokens = true
 	}
 	patt.opts.Cookie.Secure = false
 	if opts.PassAccessToken {
@@ -419,6 +420,11 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 				},
 			},
 		}
+	}
+
+	patt.opts.GeneratedTokenType = opts.GeneratedTokenType
+	if patt.opts.GeneratedTokenType == "" {
+		patt.opts.GeneratedTokenType = options.NoneGeneratedTokenType
 	}
 
 	err := validation.Validate(patt.opts)
@@ -468,7 +474,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 		http.MethodGet,
 		fmt.Sprintf(
 			"/oauth2/callback?code=callback_code&state=%s",
-			encodeState(csrf.HashOAuthState(), "%2F", patTest.opts.ExchangeOfflineJwtBearerTokens),
+			encodeState(csrf.HashOAuthState(), "%2F", patTest.opts.ExchangeRefreshBearerTokens),
 		),
 		strings.NewReader(""),
 	)
@@ -639,10 +645,44 @@ func TestSessionValidationFailure(t *testing.T) {
 
 const generatedTokenPattern = `<input id="token-box" type="text" readonly="true" value="(.*)" />`
 
-func TestGenerateAndUseToken(t *testing.T) {
+func TestGenerateAndUseAccessToken(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
-		ExchangeOfflineToken: true,
+		ExchangeRefreshToken: true,
 		PassAccessToken:      true,
+		GeneratedTokenType:   options.AccessGeneratedTokenType,
+	})
+	require.NoError(t, err)
+	t.Cleanup(patTest.Close)
+
+	// An unsuccessful validation will return 403 and not set the auth cookie.
+	code, cookie, body := patTest.getCallbackEndpoint()
+	assert.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "", cookie)
+	pat, err := regexp.Compile(generatedTokenPattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	match := pat.FindStringSubmatch(body)
+	if match == nil {
+		t.Fatal("Did not find pattern in body: " +
+			generatedTokenPattern + "\nBody:\n" + body)
+	}
+
+	accessToken := match[1]
+	assert.Equal(t, dummyAccessToken, accessToken)
+
+	code, payload := patTest.getEndpointWithToken(accessToken, "/")
+	if code != 200 {
+		t.Fatalf("expected 200; got %d", code)
+	}
+	assert.Equal(t, dummyAccessToken, payload)
+}
+
+func TestGenerateAndUseRefreshToken(t *testing.T) {
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		ExchangeRefreshToken: true,
+		PassAccessToken:      true,
+		GeneratedTokenType:   options.RefreshGeneratedTokenType,
 	})
 	require.NoError(t, err)
 	t.Cleanup(patTest.Close)
@@ -673,7 +713,7 @@ func TestGenerateAndUseToken(t *testing.T) {
 
 func TestRefuseTokenGeneration(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
-		ExchangeOfflineToken: false,
+		ExchangeRefreshToken: false,
 		PassAccessToken:      true,
 	})
 	require.NoError(t, err)
@@ -686,7 +726,7 @@ func TestRefuseTokenGeneration(t *testing.T) {
 
 func TestRejectOfflineToken(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
-		ExchangeOfflineToken: false,
+		ExchangeRefreshToken: false,
 		PassAccessToken:      true,
 	})
 	require.NoError(t, err)
@@ -863,8 +903,29 @@ func TestSignInPageIncludesTargetRedirect(t *testing.T) {
 	}
 }
 
-func TestSignInPageIncludesTokenButtonWhenEnabled(t *testing.T) {
-	sipTest, err := NewSignInPageTest(func(opts *options.Options) { opts.ExchangeOfflineJwtBearerTokens = true })
+func TestSignInPageIncludesTokenButtonWhenEnabledWithAccessTokens(t *testing.T) {
+	sipTest, err := NewSignInPageTest(func(opts *options.Options) { opts.GeneratedTokenType = options.AccessGeneratedTokenType })
+	if err != nil {
+		t.Fatal(err)
+	}
+	const endpoint = "/some/random/endpoint"
+
+	code, body := sipTest.GetEndpoint(endpoint)
+	assert.Equal(t, 403, code)
+
+	match := sipTest.signInIsTokenRegexp.FindStringSubmatch(body)
+	if match == nil {
+		t.Fatal("Did not find pattern in body: " +
+			signInIsTokenPattern + "\nBody:\n" + body)
+	}
+	if match[1] != generateTokenParamTrue {
+		t.Fatal(`expected ` + generateTokenParam + ` to be "` + generateTokenParamTrue +
+			`", but was "` + match[1] + `"`)
+	}
+}
+
+func TestSignInPageIncludesTokenButtonWhenEnabledWithRefreshTokens(t *testing.T) {
+	sipTest, err := NewSignInPageTest(func(opts *options.Options) { opts.GeneratedTokenType = options.RefreshGeneratedTokenType })
 	if err != nil {
 		t.Fatal(err)
 	}

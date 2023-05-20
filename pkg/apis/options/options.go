@@ -15,6 +15,14 @@ type SignatureData struct {
 	Key  string
 }
 
+type GeneratedTokenType = string
+
+const (
+	NoneGeneratedTokenType    = "none"
+	AccessGeneratedTokenType  = "access"
+	RefreshGeneratedTokenType = "refresh"
+)
+
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
@@ -51,16 +59,18 @@ type Options struct {
 
 	Providers Providers `cfg:",internal"`
 
-	APIRoutes                      []string `flag:"api-route" cfg:"api_routes"`
-	SkipAuthRegex                  []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
-	SkipAuthRoutes                 []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
-	SkipJwtBearerTokens            bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
-	ExchangeOfflineJwtBearerTokens bool     `flag:"exchange-offline-jwt-bearer-tokens" cfg:"exchange_offline_jwt_bearer_tokens"`
-	ExtraJwtIssuers                []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
-	SkipProviderButton             bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
-	SSLInsecureSkipVerify          bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
-	SkipAuthPreflight              bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
-	ForceJSONErrors                bool     `flag:"force-json-errors" cfg:"force_json_errors"`
+	APIRoutes                   []string           `flag:"api-route" cfg:"api_routes"`
+	SkipAuthRegex               []string           `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
+	SkipAuthRoutes              []string           `flag:"skip-auth-route" cfg:"skip_auth_routes"`
+	SkipJwtBearerTokens         bool               `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
+	ExchangeRefreshBearerTokens bool               `flag:"exchange-refresh-bearer-tokens" cfg:"exchange_refresh_bearer_tokens"`
+	GeneratedTokenType          GeneratedTokenType `flag:"generated-token-type" cfg:"generated_token_type"`
+	GeneratedTokenScope         string             `flag:"generated-token-scope" cfg:"generated_token_scope"`
+	ExtraJwtIssuers             []string           `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
+	SkipProviderButton          bool               `flag:"skip-provider-button" cfg:"skip_provider_button"`
+	SSLInsecureSkipVerify       bool               `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
+	SkipAuthPreflight           bool               `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
+	ForceJSONErrors             bool               `flag:"force-json-errors" cfg:"force_json_errors"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
@@ -106,6 +116,7 @@ func NewOptions() *Options {
 		Templates:          templatesDefaults(),
 		SkipAuthPreflight:  false,
 		Logging:            loggingDefaults(),
+		GeneratedTokenType: NoneGeneratedTokenType,
 	}
 }
 
@@ -125,7 +136,9 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
-	flagSet.Bool("exchange-offline-jwt-bearer-tokens", false, "will exchange offline JWT bearer tokens for access tokens (default false)")
+	flagSet.Bool("exchange-refresh-bearer-tokens", false, "will exchange bearer tokens for access tokens (default false)")
+	flagSet.String("generated-token-type", NoneGeneratedTokenType, "Add an additional button to the sign-in page to generate this type of token (choose from access, refresh, none) (default none)")
+	flagSet.String("generated-token-scope", "", "Scope to use when generating tokens via the sign-in page (default same as provider scope)")
 	flagSet.Bool("force-json-errors", false, "will force JSON errors instead of HTTP error pages or redirects")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 

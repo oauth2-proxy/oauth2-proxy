@@ -15,7 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
@@ -83,23 +82,24 @@ type OAuthProxy struct {
 
 	SignInPath string
 
-	allowedRoutes                  []allowedRoute
-	apiRoutes                      []apiRoute
-	redirectURL                    *url.URL // the url to receive requests at
-	whitelistDomains               []string
-	provider                       providers.Provider
-	sessionStore                   sessionsapi.SessionStore
-	ProxyPrefix                    string
-	basicAuthValidator             basic.Validator
-	basicAuthGroups                []string
-	SkipProviderButton             bool
-	skipAuthPreflight              bool
-	skipJwtBearerTokens            bool
-	exchangeOfflineJwtBearerTokens bool
-	offlineJwtScope                string
-	forceJSONErrors                bool
-	realClientIPParser             ipapi.RealClientIPParser
-	trustedIPs                     *ip.NetSet
+	allowedRoutes               []allowedRoute
+	apiRoutes                   []apiRoute
+	redirectURL                 *url.URL // the url to receive requests at
+	whitelistDomains            []string
+	provider                    providers.Provider
+	sessionStore                sessionsapi.SessionStore
+	ProxyPrefix                 string
+	basicAuthValidator          basic.Validator
+	basicAuthGroups             []string
+	SkipProviderButton          bool
+	skipAuthPreflight           bool
+	skipJwtBearerTokens         bool
+	exchangeRefreshBearerTokens bool
+	generatedTokenType          options.GeneratedTokenType
+	generatedTokenScope         string
+	forceJSONErrors             bool
+	realClientIPParser          ipapi.RealClientIPParser
+	trustedIPs                  *ip.NetSet
 
 	sessionChain      alice.Chain
 	headersChain      alice.Chain
@@ -144,7 +144,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		ProviderName:        buildProviderName(provider, opts.Providers[0].Name),
 		SignInMessage:       buildSignInMessage(opts),
 		DisplayLoginForm:    basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
-		GenerateTokenButton: opts.ExchangeOfflineJwtBearerTokens,
+		GenerateTokenButton: opts.GeneratedTokenType != options.NoneGeneratedTokenType,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error initialising page writer: %v", err)
@@ -161,8 +161,8 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
 	}
-	if opts.ExchangeOfflineJwtBearerTokens {
-		logger.Printf("Exchanging offline JWT tokens from onfigured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
+	if opts.ExchangeRefreshBearerTokens {
+		logger.Printf("Exchanging refresh tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
 	}
 	redirectURL := opts.GetRedirectURL()
 	if redirectURL.Path == "" {
@@ -213,17 +213,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	})
 
 	scope := opts.Providers[0].Scope
-	offlineJwtScope := scope
-	scopeParts := strings.Split(scope, " ")
-	scopeAlreadyOffline := false
-	for _, scopePart := range scopeParts {
-		if scopePart == oidc.ScopeOfflineAccess {
-			scopeAlreadyOffline = true
-			break
-		}
-	}
-	if !scopeAlreadyOffline {
-		offlineJwtScope += " " + oidc.ScopeOfflineAccess
+	generatedTokenScope := opts.GeneratedTokenScope
+	if generatedTokenScope == "" {
+		generatedTokenScope = scope
 	}
 
 	p := &OAuthProxy{
@@ -232,21 +224,22 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
-		ProxyPrefix:                    opts.ProxyPrefix,
-		provider:                       provider,
-		sessionStore:                   sessionStore,
-		redirectURL:                    redirectURL,
-		apiRoutes:                      apiRoutes,
-		allowedRoutes:                  allowedRoutes,
-		whitelistDomains:               opts.WhitelistDomains,
-		skipAuthPreflight:              opts.SkipAuthPreflight,
-		skipJwtBearerTokens:            opts.SkipJwtBearerTokens,
-		exchangeOfflineJwtBearerTokens: opts.ExchangeOfflineJwtBearerTokens,
-		offlineJwtScope:                offlineJwtScope,
-		realClientIPParser:             opts.GetRealClientIPParser(),
-		SkipProviderButton:             opts.SkipProviderButton,
-		forceJSONErrors:                opts.ForceJSONErrors,
-		trustedIPs:                     trustedIPs,
+		ProxyPrefix:                 opts.ProxyPrefix,
+		provider:                    provider,
+		sessionStore:                sessionStore,
+		redirectURL:                 redirectURL,
+		apiRoutes:                   apiRoutes,
+		allowedRoutes:               allowedRoutes,
+		whitelistDomains:            opts.WhitelistDomains,
+		skipAuthPreflight:           opts.SkipAuthPreflight,
+		skipJwtBearerTokens:         opts.SkipJwtBearerTokens,
+		exchangeRefreshBearerTokens: opts.ExchangeRefreshBearerTokens,
+		generatedTokenType:          opts.GeneratedTokenType,
+		generatedTokenScope:         generatedTokenScope,
+		realClientIPParser:          opts.GetRealClientIPParser(),
+		SkipProviderButton:          opts.SkipProviderButton,
+		forceJSONErrors:             opts.ForceJSONErrors,
+		trustedIPs:                  trustedIPs,
 
 		basicAuthValidator: basicAuthValidator,
 		basicAuthGroups:    opts.HtpasswdUserGroups,
@@ -411,12 +404,12 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders))
 	}
 
-	if opts.ExchangeOfflineJwtBearerTokens {
+	if opts.ExchangeRefreshBearerTokens {
 		sessionLoaders := []middlewareapi.TokenToSessionFunc{
-			provider.CreateSessionFromOfflineToken,
+			provider.CreateSessionFromRefreshToken,
 		}
 
-		chain = chain.Append(middleware.NewJwtSessionLoader(sessionLoaders))
+		chain = chain.Append(middleware.NewRefreshTokenSessionLoader(sessionLoaders))
 	}
 
 	if validator != nil {
@@ -771,7 +764,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) isGenerateTokenRequest(req *http.Request) bool {
-	return p.exchangeOfflineJwtBearerTokens && req.Form.Get(generateTokenParam) == generateTokenParamTrue
+	return p.generatedTokenType != options.NoneGeneratedTokenType && req.Form.Get(generateTokenParam) == generateTokenParamTrue
 }
 
 func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, overrides url.Values) {
@@ -818,7 +811,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	var appRedirect string
 
 	if p.isGenerateTokenRequest(req) {
-		extraParams.Add("scope", p.offlineJwtScope)
+		extraParams.Add("scope", p.generatedTokenScope)
 		tokenDisplayURL := *req.URL
 		tokenDisplayURL.Scheme = "https" // TODO: Can this ever be http?
 		tokenDisplayURL.Host = req.Host
@@ -893,13 +886,25 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if isTokenRequest {
-		if session.RefreshToken == "" {
-			logger.Errorf("Got a token generation callback with no refresh token")
-			p.ErrorPage(rw, req, http.StatusInternalServerError, "Provider did not include a token")
-			return
+		var token string
+		if options.RefreshGeneratedTokenType == p.generatedTokenType {
+			token = session.RefreshToken
+			if token == "" {
+				logger.Errorf("Got a refresh token generation callback with no refresh token")
+				p.ErrorPage(rw, req, http.StatusInternalServerError, "Provider did not include a token")
+				return
+			}
+		}
+		if p.generatedTokenType == options.AccessGeneratedTokenType {
+			token = session.AccessToken
+			if token == "" {
+				logger.Errorf("Got an access token generation callback with no access token")
+				p.ErrorPage(rw, req, http.StatusInternalServerError, "Provider did not include a token")
+				return
+			}
 		}
 
-		p.pageWriter.WriteGeneratedTokenPage(rw, req, session.RefreshToken)
+		p.pageWriter.WriteGeneratedTokenPage(rw, req, token)
 		return
 	}
 

@@ -212,7 +212,7 @@ func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string)
 }
 
 // CreateSessionFromToken converts Bearer IDTokens into sessions
-func (p *ProviderData) CreateSessionFromOfflineToken(ctx context.Context, token string) (*sessions.SessionState, error) {
+func (p *ProviderData) CreateSessionFromRefreshToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	if p.RedeemURL != nil {
 		return p.Refresh(ctx, token)
 	}
