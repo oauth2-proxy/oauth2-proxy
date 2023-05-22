@@ -273,13 +273,14 @@ func getGroupID(service *cloudidentity.Service, groupEmail string) (string, erro
 	resp, err := service.Groups.Lookup().
 		GroupKeyId(groupEmail).Do()
 	if err != nil {
-		if resp.HTTPStatusCode == 404 {
+		if resp != nil && resp.HTTPStatusCode == 404 {
 			logger.Errorf("error getting group id for group %s: group does not exist", groupEmail)
 		} else {
 			logger.Error("failed to get group id from group email:", err)
 		}
+		return "", err
 	}
-	return resp.Name, err
+	return resp.Name, nil
 }
 
 func getAdminService(adminEmail string, credentialsReader io.Reader) *admin.Service {
