@@ -112,5 +112,19 @@ type Postgres struct {
 }
 
 func (c *Postgres) ConnectionString() string {
-	return fmt.Sprintf("port=%v host=%s user=%s password=%s dbname=%s search_path=%s sslmode=%s sslrootcert=%s sslcrl=%s sslcert=%s sslkey=%s", c.Port, c.Host, c.User, c.Password, c.Database, c.Schema, c.SslMode, c.SslRootCert, c.SslCrl, c.SslCert, c.SslKey)
+	str := fmt.Sprintf("port=%v host=%s user=%s password=%s dbname=%s search_path=%s sslmode=%s", c.Port, c.Host, c.User, c.Password, c.Database, c.Schema, c.SslMode)
+
+	if c.SslRootCert != "" {
+		str += fmt.Sprintf(" sslrootcert=%s", c.SslRootCert)
+	}
+	if c.SslCrl != "" {
+		str += fmt.Sprintf(" sslcrl=%s", c.SslCrl)
+	}
+	if c.SslCert != "" {
+		str += fmt.Sprintf(" sslcert=%s", c.SslCert)
+	}
+	if c.SslKey != "" {
+		str += fmt.Sprintf(" sslkey=%s", c.SslKey)
+	}
+	return str
 }
