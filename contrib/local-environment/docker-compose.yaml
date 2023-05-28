@@ -53,7 +53,7 @@ services:
       httpbin: {}
   etcd:
     container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.5.8
+    image: gcr.io/etcd-development/etcd:v3.5.9
     entrypoint: /usr/local/bin/etcd
     command:
       - --listen-client-urls=http://0.0.0.0:2379
