@@ -43,7 +43,10 @@ var SignatureHeaders = []string{
 // to a single upstream host.
 func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, errorHandler ProxyErrorHandler) http.Handler {
 	// Set path to empty so that request paths start at the server root
-	u.Path = ""
+	// Unix scheme need the path to find the socket
+	if u.Scheme != "unix" {
+		u.Path = ""
+	}
 
 	// Create a ReverseProxy
 	proxy := newReverseProxy(u, upstream, errorHandler)
@@ -95,12 +98,18 @@ func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 	}
 }
 
+// Unix implementation of http.RoundTripper, required to register unix protocol in reverse proxy
 type unixRoundTripper struct {
 	Transport *http.Transport
 }
 
+// Implementation of https://pkg.go.dev/net/http#RoundTripper interface to support http protocol over unix socket
 func (t *unixRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Inspired by https://github.com/tv42/httpunix
+	// Not having a Host, even if not used, makes the reverseproxy fail with a "no Host in request URL"
+	if req.Host == "" {
+		req.Host = "localhost"
+	}
 	req.URL.Host = req.Host
 	tt := t.Transport
 	req = req.Clone(req.Context())
@@ -121,7 +130,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	if target.Scheme == "unix" {
 		transport.DialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
 			dialer := net.Dialer{}
-			return dialer.DialContext(ctx, target.Scheme, upstream.ID)
+			return dialer.DialContext(ctx, target.Scheme, target.Path)
 		}
 		transport.RegisterProtocol(target.Scheme, &unixRoundTripper{Transport: transport})
 	}

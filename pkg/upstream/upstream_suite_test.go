@@ -51,10 +51,10 @@ var _ = BeforeSuite(func() {
 	serverAddr = fmt.Sprintf("http://%s", server.Listener.Addr().String())
 
 	unixServer = httptest.NewUnstartedServer(&testHTTPUpstream{})
-	unixListener, _ := net.Listen("unix", "test.sock")
+	unixListener, _ := net.Listen("unix", path.Join(filesDir, "test.sock"))
 	unixServer.Listener = unixListener
 	unixServer.Start()
-	unixServerAddr = fmt.Sprintf("unix://%s", "test.sock")
+	unixServerAddr = fmt.Sprintf("unix://%s", path.Join(filesDir, "test.sock"))
 })
 
 var _ = AfterSuite(func() {
