@@ -109,6 +109,7 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 
 // RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
 func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	logger.Printf("oidc refresh session %s", s.RefreshToken)
 	if s == nil || s.RefreshToken == "" {
 		return false, nil
 	}

@@ -257,6 +257,7 @@ func (l *LegacyHeaders) getResponseHeaders() []Header {
 		responseHeaders = append(responseHeaders, getXAuthRequestHeaders()...)
 		if l.PassAccessToken {
 			responseHeaders = append(responseHeaders, getXAuthRequestAccessTokenHeader())
+			responseHeaders = append(responseHeaders, getXAuthRequestRefreshTokenHeader())
 		}
 	}
 
@@ -440,6 +441,19 @@ func getXAuthRequestAccessTokenHeader() Header {
 			{
 				ClaimSource: &ClaimSource{
 					Claim: "access_token",
+				},
+			},
+		},
+	}
+}
+
+func getXAuthRequestRefreshTokenHeader() Header {
+	return Header{
+		Name: "X-Auth-Request-Refresh-Token",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim: "refresh_token",
 				},
 			},
 		},

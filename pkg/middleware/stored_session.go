@@ -12,6 +12,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
 const (
@@ -64,6 +65,19 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 	return ss.loadSession
 }
 
+func NewStoredSessionRefresher(opts *StoredSessionLoaderOptions, opts_basic *options.Options, provider providers.Provider) alice.Constructor {
+	sr := &storedSessionLoader{
+		store:            opts.SessionStore,
+		refreshPeriod:    opts.RefreshPeriod,
+		sessionRefresher: opts.RefreshSession,
+		sessionValidator: opts.ValidateSession,
+		opts_basic: opts_basic,
+		provider: provider,
+	}
+	return sr.forceRefreshSession
+}
+
+
 // storedSessionLoader is responsible for loading sessions from cookie
 // identified sessions in the session store.
 type storedSessionLoader struct {
@@ -71,6 +85,8 @@ type storedSessionLoader struct {
 	refreshPeriod    time.Duration
 	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
 	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	opts_basic *options.Options
+	provider providers.Provider
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -113,7 +129,7 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 		return nil, err
 	}
 
-	err = s.refreshSessionIfNeeded(rw, req, session)
+	err = s.refreshSessionIfNeeded(rw, req, session, false)
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
@@ -124,8 +140,8 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 // refreshSessionIfNeeded will attempt to refresh a session if the session
 // is older than the refresh period.
 // Success or fail, we will then validate the session.
-func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
-	if !needsRefresh(s.refreshPeriod, session) {
+func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState, forceRefresh bool) error {
+	if !forceRefresh && !needsRefresh(s.refreshPeriod, session) {
 		// Refresh is disabled or the session is not old enough, do nothing
 		return nil
 	}
@@ -179,7 +195,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
 	// Loading from the session store creates a new lock in the session.
 	session.Lock = lock
 
-	if !needsRefresh(s.refreshPeriod, session) {
+	if !forceRefresh && !needsRefresh(s.refreshPeriod, session) {
 		// The session must have already been refreshed while we were waiting to
 		// obtain the lock.
 		return nil
@@ -205,8 +221,10 @@ func needsRefresh(refreshPeriod time.Duration, session *sessionsapi.SessionState
 // refreshSession attempts to refresh the session with the provider
 // and will save the session if it was updated.
 func (s *storedSessionLoader) refreshSession(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
+	session.RefreshToken = req.Header.Get("RefreshToken")
 	refreshed, err := s.sessionRefresher(req.Context(), session)
 	if err != nil && !errors.Is(err, providers.ErrNotImplemented) {
+		logger.Printf("error refreshing session")
 		return fmt.Errorf("error refreshing tokens: %v", err)
 	}
 
@@ -251,4 +269,54 @@ func (s *storedSessionLoader) validateSession(ctx context.Context, session *sess
 	}
 
 	return nil
+}
+
+
+// forceRefreshSession attempts to load a session as identified by the request cookies.
+// If no session is found, the request will be passed to the next handler.
+// If a session was loaded by a previous handler, it will not be refreshed.
+func (s *storedSessionLoader) forceRefreshSession(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		scope := middlewareapi.GetRequestScope(req)
+
+		// If refreshPeriod isn't defined then forward request to the next handler
+		if s.refreshPeriod <= time.Duration(0) {
+			next.ServeHTTP(rw, req)
+			return
+		}
+
+		session, err := s.store.Load(req)
+		if err == nil && session != nil {
+			err = s.refreshSessionIfNeeded(rw, req, session, true)
+		}
+
+		auth := req.Header.Get("Authorization")
+		_, token, _ := splitAuthHeader(auth)
+
+		
+
+		sessionLoaders := []middlewareapi.TokenToSessionFunc{
+			s.provider.CreateSessionFromToken,
+		}
+
+		for _, verifier := range s.opts_basic.GetJWTBearerVerifiers() {
+			sessionLoaders = append(sessionLoaders,
+				middlewareapi.CreateTokenToSessionFunc(verifier.Verify))
+			}
+
+        for _, loader := range sessionLoaders {
+			session, _ := loader(req.Context(), token)
+			// if err != nil {
+			// 	next.ServeHTTP(rw, req)
+			// 	return
+			// }
+
+			scope.Session = session
+			break
+		}
+
+		err = s.refreshSession(rw, req, scope.Session)
+
+		next.ServeHTTP(rw, req)
+	})
 }
