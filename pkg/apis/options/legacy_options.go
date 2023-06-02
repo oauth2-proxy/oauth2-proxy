@@ -70,6 +70,7 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(legacyHeadersFlagSet())
 	flagSet.AddFlagSet(legacyServerFlagset())
 	flagSet.AddFlagSet(legacyProviderFlagSet())
+	flagSet.AddFlagSet(legacyGoogleFlagSet())
 
 	return flagSet
 }
@@ -551,11 +552,6 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project=accesslevel`). Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent")
-	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
-	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
-	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
-	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. GKE Workload Identity)")
-	flagSet.String("google-target-principal", "", "service account to use/impersonate")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
@@ -592,6 +588,18 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
+
+	return flagSet
+}
+
+func legacyGoogleFlagSet() *pflag.FlagSet {
+	flagSet := pflag.NewFlagSet("google", pflag.ExitOnError)
+
+	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
+	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
+	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
+	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. GKE Workload Identity)")
+	flagSet.String("google-target-principal", "", "service account to use/impersonate")
 
 	return flagSet
 }
