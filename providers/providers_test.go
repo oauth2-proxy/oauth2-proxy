@@ -125,32 +125,48 @@ func TestScope(t *testing.T) {
 
 	testCases := []struct {
 		name            string
+		configuredType  options.ProviderType
 		configuredScope string
 		expectedScope   string
 		allowedGroups   []string
 	}{
 		{
-			name:            "with no scope provided",
+			name:            "oidc: with no scope provided",
+			configuredType:  "oidc",
 			configuredScope: "",
 			expectedScope:   "openid email profile",
 		},
 		{
-			name:            "with no scope provided and groups",
+			name:            "oidc: with no scope provided and groups",
+			configuredType:  "oidc",
 			configuredScope: "",
 			expectedScope:   "openid email profile groups",
 			allowedGroups:   []string{"foo"},
 		},
 		{
-			name:            "with a configured scope provided",
+			name:            "oidc: with a configured scope provided",
+			configuredType:  "oidc",
 			configuredScope: "openid",
 			expectedScope:   "openid",
+		},
+		{
+			name:            "github: with no scope provided",
+			configuredType:  "github",
+			configuredScope: "",
+			expectedScope:   "user:email",
+		},
+		{
+			name:            "github: with a configured scope provided",
+			configuredType:  "github",
+			configuredScope: "user:email org:read",
+			expectedScope:   "user:email org:read",
 		},
 	}
 
 	for _, tc := range testCases {
 		providerConfig := options.Provider{
 			ID:               providerID,
-			Type:             "oidc",
+			Type:             tc.configuredType,
 			ClientID:         clientID,
 			ClientSecretFile: clientSecret,
 			LoginURL:         msAuthURL,
@@ -164,10 +180,10 @@ func TestScope(t *testing.T) {
 			},
 		}
 
-		pd, err := newProviderDataFromConfig(providerConfig)
+		pd, err := NewProvider(providerConfig)
 		g.Expect(err).ToNot(HaveOccurred())
 
-		g.Expect(pd.Scope).To(Equal(tc.expectedScope))
+		g.Expect(pd.Data().Scope).To(Equal(tc.expectedScope))
 	}
 }
 
@@ -204,4 +220,53 @@ func TestCanOverwriteS256(t *testing.T) {
 	method := parseCodeChallengeMethod(options.Providers[0])
 
 	g.Expect(method).To(Equal(CodeChallengeMethodPlain))
+}
+
+func TestEmailClaimCorrectlySet(t *testing.T) {
+	g := NewWithT(t)
+
+	testCases := []struct {
+		name               string
+		userIDClaim        string
+		emailClaim         string
+		expectedEmailClaim string
+	}{
+		{
+			name:               "do not override EmailClaim if UserIDClaim is empty",
+			userIDClaim:        "",
+			emailClaim:         "email",
+			expectedEmailClaim: "email",
+		},
+		{
+			name:               "set EmailClaim to UserIDClaim",
+			userIDClaim:        "user_id_claim",
+			emailClaim:         "email",
+			expectedEmailClaim: "user_id_claim",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			providerConfig := options.Provider{
+				ID:               providerID,
+				Type:             "oidc",
+				ClientID:         clientID,
+				ClientSecretFile: clientSecret,
+				LoginURL:         msAuthURL,
+				RedeemURL:        msTokenURL,
+				OIDCConfig: options.OIDCOptions{
+					IssuerURL:     msIssuerURL,
+					SkipDiscovery: true,
+					JwksURL:       msKeysURL,
+					UserIDClaim:   tc.userIDClaim,
+					EmailClaim:    tc.emailClaim,
+				},
+			}
+
+			pd, err := newProviderDataFromConfig(providerConfig)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			g.Expect(pd.EmailClaim).To(Equal(tc.expectedEmailClaim))
+		})
+	}
 }

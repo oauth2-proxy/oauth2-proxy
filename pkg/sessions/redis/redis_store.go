@@ -8,11 +8,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-redis/redis/v9"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
+	"github.com/redis/go-redis/v9"
 )
 
 // SessionStore is an implementation of the persistence.Store
@@ -68,6 +68,12 @@ func (store *SessionStore) Clear(ctx context.Context, key string) error {
 // Lock creates a lock object for sessions.SessionState
 func (store *SessionStore) Lock(key string) sessions.Lock {
 	return store.Client.Lock(key)
+}
+
+// VerifyConnection verifies the redis connection is valid and the
+// server is responsive
+func (store *SessionStore) VerifyConnection(ctx context.Context) error {
+	return store.Client.Ping(ctx)
 }
 
 // NewRedisClient makes a redis.Client (either standalone, sentinel aware, or
@@ -205,3 +211,5 @@ func parseRedisURLs(urls []string) ([]string, *redis.Options, error) {
 	}
 	return addrs, redisOptions, nil
 }
+
+var _ persistence.Store = (*SessionStore)(nil)
