@@ -17,53 +17,50 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
 
-    - name: Check out code
-      uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v3
 
-    - name: Set up Go 1.19
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.19.x
-      id: go
+      - name: Set up Go 1.20
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.x
+        id: go
 
-    - name: Get dependencies
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.0
-        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-        chmod +x ./cc-test-reporter
+      - name: Get dependencies
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.52.2
+          curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+          chmod +x ./cc-test-reporter
 
-    - name: Verify Code Generation
-      run: |
-        make verify-generate
+      - name: Verify Code Generation
+        run: |
+          make verify-generate
 
-    - name: Lint
-      run: |
-        make lint
+      - name: Lint
+        run: |
+          make lint
 
-    - name: Build
-      run: |
-        make build
+      - name: Build
+        run: |
+          make build
 
-    - name: Test
-      env:
-        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
-      run: |
-        ./.github/workflows/test.sh
+      - name: Test
+        env:
+          CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
+        run: |
+          ./.github/workflows/test.sh
 
   docker:
     runs-on: ubuntu-20.04
     steps:
 
-    - name: Check out code
-      uses: actions/checkout@v3
-
-    - name: Set up Docker Buildx
-      id: buildx
-      uses: crazy-max/ghaction-docker-buildx@v3
-      with:
-        buildx-version: latest
-        qemu-version: latest
-
-    - name: Docker Build
-      run: |
-        make docker
+      - name: Check out code
+        uses: actions/checkout@v3
+      -
+        # Add support for more platforms with QEMU (optional)
+        # https://github.com/docker/setup-qemu-action
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2

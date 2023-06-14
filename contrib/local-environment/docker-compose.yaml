@@ -29,7 +29,7 @@ services:
       - httpbin
   dex:
     container_name: dex
-    image: ghcr.io/dexidp/dex:v2.30.3
+    image: ghcr.io/dexidp/dex:v2.36.0
     command: dex serve /dex.yaml
     ports:
       - 4190:4190/tcp
@@ -53,7 +53,7 @@ services:
       httpbin: {}
   etcd:
     container_name: etcd
-    image: gcr.io/etcd-development/etcd:v3.4.7
+    image: gcr.io/etcd-development/etcd:v3.5.9
     entrypoint: /usr/local/bin/etcd
     command:
       - --listen-client-urls=http://0.0.0.0:2379
