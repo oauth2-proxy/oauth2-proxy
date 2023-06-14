@@ -28,8 +28,11 @@ const (
 // of OAuth2 providers
 type ProviderData struct {
 	ProviderName      string
+	EndSessionURL     *url.URL
+	IntrospectionURL  *url.URL
 	LoginURL          *url.URL
 	RedeemURL         *url.URL
+	RevocationURL     *url.URL
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
@@ -179,18 +182,24 @@ func (p *ProviderData) setAllowedGroups(groups []string) {
 }
 
 type providerDefaults struct {
-	name        string
-	loginURL    *url.URL
-	redeemURL   *url.URL
-	profileURL  *url.URL
-	validateURL *url.URL
-	scope       string
+	name             string
+	endSessionURL    *url.URL
+	introspectionURL *url.URL
+	loginURL         *url.URL
+	redeemURL        *url.URL
+	revocationURL    *url.URL
+	profileURL       *url.URL
+	validateURL      *url.URL
+	scope            string
 }
 
 func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
 	p.ProviderName = defaults.name
+	p.EndSessionURL = defaultURL(p.EndSessionURL, defaults.endSessionURL)
+	p.IntrospectionURL = defaultURL(p.IntrospectionURL, defaults.introspectionURL)
 	p.LoginURL = defaultURL(p.LoginURL, defaults.loginURL)
 	p.RedeemURL = defaultURL(p.RedeemURL, defaults.redeemURL)
+	p.RevocationURL = defaultURL(p.RevocationURL, defaults.revocationURL)
 	p.ProfileURL = defaultURL(p.ProfileURL, defaults.profileURL)
 	p.ValidateURL = defaultURL(p.ValidateURL, defaults.validateURL)
 

@@ -102,8 +102,11 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			// Use the discovered values rather than any specified values
 			endpoints := pv.Provider().Endpoints()
 			pkce := pv.Provider().PKCE()
+			providerConfig.EndSessionURL = endpoints.EndSessionURL
+			providerConfig.IntrospectionURL = endpoints.IntrospectionURL
 			providerConfig.LoginURL = endpoints.AuthURL
 			providerConfig.RedeemURL = endpoints.TokenURL
+			providerConfig.RevocationURL = endpoints.RevocationURL
 			providerConfig.ProfileURL = endpoints.UserInfoURL
 			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
 			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
@@ -115,11 +118,14 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		dst **url.URL
 		raw string
 	}{
-		"login":    {dst: &p.LoginURL, raw: providerConfig.LoginURL},
-		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
-		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
-		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
-		"resource": {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
+		"end_session": {dst: &p.EndSessionURL, raw: providerConfig.EndSessionURL},
+		"introspect":  {dst: &p.IntrospectionURL, raw: providerConfig.IntrospectionURL},
+		"revoke":      {dst: &p.RevocationURL, raw: providerConfig.RevocationURL},
+		"login":       {dst: &p.LoginURL, raw: providerConfig.LoginURL},
+		"redeem":      {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
+		"profile":     {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
+		"validate":    {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
+		"resource":    {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
 	} {
 		var err error
 		*u.dst, err = url.Parse(u.raw)

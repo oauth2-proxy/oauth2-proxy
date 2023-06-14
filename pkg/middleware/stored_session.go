@@ -113,12 +113,26 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
 		return nil, err
 	}
 
+	err = s.introspectTokenIfRequested(req, session)
+	if err != nil {
+		return nil, fmt.Errorf("error inspecting token for session (%s): %v", session, err)
+	}
+
 	err = s.refreshSessionIfNeeded(rw, req, session)
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing access token for session (%s): %v", session, err)
 	}
 
 	return session, nil
+}
+
+func (s *storedSessionLoader) introspectTokenIfRequested(req *http.Request, session *sessionsapi.SessionState) error {
+	if req.Header.Get("X-Oauth2-Proxy-Introspect-Token") != "" {
+		session.IntrospectToken = true
+		return s.validateSession(req.Context(), session)
+	}
+
+	return nil
 }
 
 // refreshSessionIfNeeded will attempt to refresh a session if the session

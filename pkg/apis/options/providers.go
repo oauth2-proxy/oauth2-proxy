@@ -60,12 +60,15 @@ type Provider struct {
 	// If not specified, the default Go trust sources are used instead
 	CAFiles []string `json:"caFiles,omitempty"`
 
+	EndSessionURL    string `json:"endSessionURL,omitempty"`
+	IntrospectionURL string `json:"introspectionURL,omitempty"`
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
 	LoginURLParameters []LoginURLParameter `json:"loginURLParameters,omitempty"`
 	// RedeemURL is the token redemption endpoint
-	RedeemURL string `json:"redeemURL,omitempty"`
+	RedeemURL     string `json:"redeemURL,omitempty"`
+	RevocationURL string `json:"revocationURL,omitempty"`
 	// ProfileURL is the profile access endpoint
 	ProfileURL string `json:"profileURL,omitempty"`
 	// ProtectedResource is the resource that is protected (Azure AD and ADFS only)

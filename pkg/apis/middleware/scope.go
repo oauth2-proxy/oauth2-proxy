@@ -35,6 +35,10 @@ type RequestScope struct {
 	// ClearSession indicates whether the user should be logged out or not.
 	ClearSession bool
 
+	// IntrospectToken indicates whether to introspect the session token.
+	// This is set if the request has the header `X-Oauth2-Proxy-Introspect-Token`.
+	IntrospectToken bool
+
 	// SessionRevalidated indicates whether the session has been revalidated since
 	// it was loaded or not.
 	SessionRevalidated bool

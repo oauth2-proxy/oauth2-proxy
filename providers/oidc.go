@@ -1,15 +1,18 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net/url"
 	"time"
 
+	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
 )
 
@@ -23,12 +26,15 @@ type OIDCProvider struct {
 // NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 	p.setProviderDefaults(providerDefaults{
-		name:        "OpenID Connect",
-		loginURL:    nil,
-		redeemURL:   nil,
-		profileURL:  nil,
-		validateURL: nil,
-		scope:       "",
+		name:             "OpenID Connect",
+		endSessionURL:    nil,
+		introspectionURL: nil,
+		loginURL:         nil,
+		redeemURL:        nil,
+		revocationURL:    nil,
+		profileURL:       nil,
+		validateURL:      nil,
+		scope:            "",
 	})
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 
@@ -93,6 +99,13 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	if err != nil {
 		logger.Errorf("id_token verification failed: %v", err)
 		return false
+	}
+
+	if s.IntrospectToken {
+		if _, err := p.introspectToken(s.AccessToken); err != nil {
+			logger.Errorf("inspect token failed: %v", err)
+			return false
+		}
 	}
 
 	if p.SkipNonce {
@@ -226,4 +239,36 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.SetExpiresOn(token.Expiry)
 
 	return ss, nil
+}
+
+func (p *OIDCProvider) introspectToken(token string) (*simplejson.Json, error) {
+	body := url.Values{}
+	body.Add("token", token)
+
+	if p.IntrospectionURL == nil {
+		return nil, fmt.Errorf("IntrospectionURL was nil")
+	}
+
+	js, err := requests.New(p.IntrospectionURL.String()).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(body.Encode())).
+		WithAuthorizationBasicBase64(p.ClientID, p.ClientSecret).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalSimpleJSON()
+
+	if err != nil {
+		return nil, err
+	}
+
+	active, err := js.Get("active").EncodePretty()
+	if err != nil {
+		return nil, err
+	}
+
+	if string(active) != "true" {
+		return nil, fmt.Errorf("token status is inactive")
+	}
+
+	return js, nil
 }
