@@ -1,5 +1,5 @@
 # This ARG has to be at the top, otherwise the docker daemon does not known what to do with FROM ${RUNTIME_IMAGE}
-ARG RUNTIME_IMAGE=alpine:3.18.0
+ARG RUNTIME_IMAGE=alpine:3.18.2
 
 # All builds should be done using the platform native to the build node to allow
 #  cache sharing of the go mod download step.
