@@ -554,7 +554,7 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(req.URL.Path)
+	matches := route.pathRegex.MatchString(requestutil.GetRequestURI(req))
 
 	if route.negate {
 		return !matches
@@ -575,7 +575,7 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 
 func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 	for _, route := range p.apiRoutes {
-		if route.pathRegex.MatchString(req.URL.Path) {
+		if route.pathRegex.MatchString(requestutil.GetRequestURI(req)) {
 			return true
 		}
 	}
