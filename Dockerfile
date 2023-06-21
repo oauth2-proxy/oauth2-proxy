@@ -1,11 +1,11 @@
 # This ARG has to be at the top, otherwise the docker daemon does not known what to do with FROM ${RUNTIME_IMAGE}
-ARG RUNTIME_IMAGE=alpine:3.17.2
+ARG RUNTIME_IMAGE=docker.io/library/alpine:3.17.2
 
 # All builds should be done using the platform native to the build node to allow
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
 #  multiple platforms.
-FROM --platform=${BUILDPLATFORM} golang:1.19-buster AS builder
+FROM --platform=${BUILDPLATFORM} docker.io/library/golang:1.19-buster AS builder
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
