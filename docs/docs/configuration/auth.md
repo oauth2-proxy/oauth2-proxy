@@ -50,6 +50,8 @@ It's recommended to refresh sessions on a short interval (1h) with `cookie-refre
 
 #### Restrict auth to specific Google groups on your domain. (optional)
 
+Currently this feature is not supported for JWT bearer tokens.
+
 1.  Create a service account: https://developers.google.com/identity/protocols/OAuth2ServiceAccount and make sure to download the json file.
 2.  Make note of the Client ID for a future step.
 3.  Under "APIs & Auth", choose APIs.
