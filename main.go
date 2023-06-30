@@ -24,7 +24,7 @@ func main() {
 	configFlagSet.ParseErrorsWhitelist.UnknownFlags = true
 
 	config := configFlagSet.String("config", "", "path to config file")
-	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
+	alphaConfig := configFlagSet.String("beta-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
 	convertConfig := configFlagSet.Bool("convert-config-to-alpha", false, "if true, the proxy will load configuration as normal and convert existing configuration to the alpha config structure, and print it to stdout")
 	showVersion := configFlagSet.Bool("version", false, "print version string")
 	configFlagSet.Parse(os.Args[1:])
