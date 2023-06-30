@@ -1,0 +1,10 @@
+site_name: Oauth2 Proxy
+site_author: Philips
+docs_dir: docs
+
+repo_name: PICS Foundation Services
+remote_name: main
+repo_url: https://github.com/philips-forks/oauth2-proxy
+edit_uri: tree/main
+
+copyright: Copyright Koninklijke Philips N.V., 2023. All rights reserved.

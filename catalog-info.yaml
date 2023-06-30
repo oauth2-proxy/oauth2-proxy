@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+title: Oauth2-Proxy
+kind: Component
+metadata:
+  name: oauth2-proxy
+  description: A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group.
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: philips-forks/oauth2-proxy
+    philips.com/techdocs-builder: local
+spec:
+  type: library
+  lifecycle: experimental
+  owner: pics
+  system: Reporting
