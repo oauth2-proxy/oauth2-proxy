@@ -111,7 +111,7 @@ func exractTenantIDFromJWT(jwt string, claim string) string {
 		logger.Errorf("jwt token is not valid")
 		return ""
 	}
-	jsonStr, err := base64.RawStdEncoding.DecodeString(subStrs[1])
+	jsonStr, err := base64.RawURLEncoding.DecodeString(subStrs[1])
 	if err != nil {
 		logger.Errorf("jwt payload is not a valid base64 encoded string: %v", err)
 		return ""
