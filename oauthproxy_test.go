@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/mbland/hmacauth"
@@ -67,7 +69,27 @@ type TestProvider struct {
 
 var _ providers.Provider = (*TestProvider)(nil)
 
+type TestIDTokenVerifier struct {
+	expected string
+	output   *oidc.IDToken
+}
+
+func (t *TestIDTokenVerifier) Verify(ctx context.Context, token string) (*oidc.IDToken, error) {
+	if token == t.expected {
+		return t.output, nil
+	}
+	return nil, fmt.Errorf("Expected access token %s, but got %s", t.expected, token)
+}
+
+func SetUnexportedField(field reflect.Value, value interface{}) {
+	reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).
+		Elem().
+		Set(reflect.ValueOf(value))
+}
+
 func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
+	dummyIDToken := &oidc.IDToken{}
+	SetUnexportedField(reflect.ValueOf(dummyIDToken).Elem().FieldByName("claims"), []byte(`{}`))
 	return &TestProvider{
 		ProviderData: &providers.ProviderData{
 			ProviderName: "Test Provider",
@@ -87,6 +109,10 @@ func NewTestProvider(providerURL *url.URL, emailAddress string) *TestProvider {
 				Path:   "/api/v1/profile",
 			},
 			Scope: "profile.email",
+			Verifier: &TestIDTokenVerifier{
+				expected: dummyAccessToken,
+				output:   dummyIDToken,
+			},
 		},
 		EmailAddress: emailAddress,
 		GroupValidator: func(s string) bool {
@@ -324,6 +350,7 @@ type PassAccessTokenTestOptions struct {
 	ValidToken           bool
 	ProxyUpstream        options.Upstream
 	ExchangeRefreshToken bool
+	SkipJwtBearerTokens  bool
 	GeneratedTokenType   options.GeneratedTokenType
 }
 
@@ -420,6 +447,9 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 				},
 			},
 		}
+	}
+	if opts.SkipJwtBearerTokens {
+		patt.opts.SkipJwtBearerTokens = true
 	}
 
 	patt.opts.GeneratedTokenType = opts.GeneratedTokenType
@@ -649,6 +679,7 @@ func TestGenerateAndUseAccessToken(t *testing.T) {
 	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
 		ExchangeRefreshToken: true,
 		PassAccessToken:      true,
+		SkipJwtBearerTokens:  true,
 		GeneratedTokenType:   options.AccessGeneratedTokenType,
 	})
 	require.NoError(t, err)

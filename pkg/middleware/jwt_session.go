@@ -130,7 +130,7 @@ func (t *tokenSessionLoader) getBasicToken(token string) (string, error) {
 		if password == "" || password == "x-oauth-basic" {
 			return user, nil
 		}
-	} else if t.validate(token) {
+	} else if t.validate(password) {
 		// support passwords and ignore user
 		return password, nil
 	}

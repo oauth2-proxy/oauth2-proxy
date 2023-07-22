@@ -57,6 +57,7 @@ var _ = Describe("Load", func() {
 			Templates:          templatesDefaults(),
 			SkipAuthPreflight:  false,
 			Logging:            loggingDefaults(),
+			GeneratedTokenType: NoneGeneratedTokenType,
 		},
 	}
 

@@ -196,7 +196,7 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 	return ss, nil
 }
 
-// CreateSessionFromToken converts Bearer Refresh tokens into sessions by exchanging them for id/access tokens
+// CreateSessionFromRefreshToken converts Bearer Refresh tokens into sessions by exchanging them for id/access tokens
 func (p *OIDCProvider) CreateSessionFromRefreshToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	s := &sessions.SessionState{
 		RefreshToken: token,
