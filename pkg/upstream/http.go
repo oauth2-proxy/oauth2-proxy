@@ -57,19 +57,21 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 	}
 
 	return &httpUpstreamProxy{
-		upstream:  upstream.ID,
-		handler:   proxy,
-		wsHandler: wsProxy,
-		auth:      auth,
+		upstream:    upstream.ID,
+		handler:     proxy,
+		wsHandler:   wsProxy,
+		auth:        auth,
+		upstreamUrl: u,
 	}
 }
 
 // httpUpstreamProxy represents a single HTTP(S) upstream proxy
 type httpUpstreamProxy struct {
-	upstream  string
-	handler   http.Handler
-	wsHandler http.Handler
-	auth      hmacauth.HmacAuth
+	upstream    string
+	handler     http.Handler
+	wsHandler   http.Handler
+	auth        hmacauth.HmacAuth
+	upstreamUrl *url.URL
 }
 
 // ServeHTTP proxies requests to the upstream provider while signing the
@@ -79,6 +81,12 @@ func (h *httpUpstreamProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 	// If scope is nil, this will panic.
 	// A scope should always be injected before this handler is called.
 	scope.Upstream = h.upstream
+
+	// Update the headers to allow for SSL redirection
+	ur := h.upstreamUrl
+	req.URL.Host = ur.Host
+	req.URL.Scheme = ur.Scheme
+	req.Host = ur.Host
 
 	// TODO (@NickMeves) - Deprecate GAP-Signature & remove GAP-Auth
 	if h.auth != nil {
