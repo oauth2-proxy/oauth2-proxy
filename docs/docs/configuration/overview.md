@@ -238,6 +238,10 @@ or the command line.
 For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET`,
 and the `--email-domain` flag becomes `OAUTH2_PROXY_EMAIL_DOMAINS`.
 
+### Configuring Outbound Proxy
+If you need to pass a proxy when communicating with the providers, you can set the environment variable 
+`OAUTH2_PROXY_OUTBOUND_PROXY` in the format `<protocol>://(<domain>|<ip>):<port>`.
+
 ## Logging Configuration
 
 By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the `--logging-filename` command.

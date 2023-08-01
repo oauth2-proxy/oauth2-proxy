@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 )
 
 // Builder allows users to construct a request and then execute the
@@ -99,7 +101,13 @@ func (r *builder) do() Result {
 	}
 	req.Header = r.header
 
-	resp, err := http.DefaultClient.Do(req)
+	httpClient, err := createHttpClient()
+	if err != nil {
+		r.result = &result{err: fmt.Errorf("error while creating HTTP Client for request: %v", err)}
+		return r.result
+	}
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		r.result = &result{err: fmt.Errorf("error performing request: %v", err)}
 		return r.result
@@ -114,4 +122,41 @@ func (r *builder) do() Result {
 
 	r.result = &result{response: resp, body: body}
 	return r.result
+}
+
+const ProxyEnvironmentVariable = "OAUTH2_PROXY_OUTBOUND_PROXY"
+
+// createHttpClient returns a configured http.Client
+func createHttpClient() (*http.Client, error) {
+	transport, err := createHttpTransport()
+	if err != nil {
+		return nil, err
+	}
+	return &http.Client{
+		Transport: transport,
+	}, nil
+}
+
+// creates the http.Transport configuration for the http.Client based on environment variables
+func createHttpTransport() (*http.Transport, error) {
+	proxyUrlAsString, proxyVariableIsSet := getValueOfEnvironmentVariable(ProxyEnvironmentVariable)
+	if proxyVariableIsSet {
+		parsedProxyUrl, err := url.Parse(proxyUrlAsString)
+		if err != nil {
+			return nil, fmt.Errorf("error while parsing %v url: %v", ProxyEnvironmentVariable, err)
+		}
+		return &http.Transport{
+			Proxy: http.ProxyURL(parsedProxyUrl),
+		}, nil
+	} else {
+		// if no proxy config is set then return an empty transport setting so that the default client is used
+		return nil, nil
+	}
+}
+
+// getValueOfEnvironmentVariable returns the value of a given environment variable along with a boolean
+// indicating if the variable was set or not
+func getValueOfEnvironmentVariable(variableName string) (string, bool) {
+	value := os.Getenv(variableName)
+	return value, len(value) > 0
 }
