@@ -97,10 +97,9 @@ in the App registration manifest file.
 
 - for V2 Azure Auth endpoint (Microsoft Identity Platform Endpoints - https://login.microsoftonline.com/common/oauth2/v2.0/authorize)
 ```
-   --provider=azure
+   --provider=oidc
    --client-id=<application ID from step 3>
    --client-secret=<value from step 5>
-   --azure-tenant={tenant-id}
    --oidc-issuer-url=https://login.microsoftonline.com/{tenant-id}/v2.0
 ```
 
