@@ -12,6 +12,7 @@
 - [#1989](https://github.com/oauth2-proxy/oauth2-proxy/pull/1989) Fix default scope for keycloak-oidc provider
 - [#2217](https://github.com/oauth2-proxy/oauth2-proxy/pull/2217) Upgrade alpine to version 3.18 (@polarctos)
 - [#2229](https://github.com/oauth2-proxy/oauth2-proxy/pull/2229) bugfix: default scopes for OIDCProvider based providers
+- [#2183](https://github.com/oauth2-proxy/oauth2-proxy/pull/2183) Allowing relative redirect url though an option
 
 # V7.5.0
 
