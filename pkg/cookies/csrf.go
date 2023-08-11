@@ -219,7 +219,7 @@ func ExtractStateSubstring(req *http.Request) string {
 	stateSubstring := ""
 
 	state := req.URL.Query()["state"]
-	if state[0] != "" {
+	if len(state) > 0 && state[0] != "" {
 		state := state[0]
 		if lastChar <= len(state) {
 			stateSubstring = state[0:lastChar]
