@@ -211,7 +211,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 	}
 
 	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph
-	// Only query for groups if AllowedGroups is set
+	// Only query for groups if AllowedGroups is set or if it is explicitly requested
 	if p.isV2Endpoint && (len(p.AllowedGroups) > 0 || p.GraphGetGroups) {
 		groups, err := p.getGroupsFromProfileAPI(ctx, session)
 		if err != nil {
