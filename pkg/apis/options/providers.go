@@ -145,6 +145,8 @@ type AzureOptions struct {
 	// GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph
 	// Default value is 'id'
 	GraphGroupField string `json:"graphGroupField,omitempty"`
+	// GraphGetGroups query Microsoft Graph to get group membership for the signed-in user (implied if `allowed-group` is set)
+	GraphGetGroups bool `json:"graphGetGroups,omitempty"`
 }
 
 type ADFSOptions struct {

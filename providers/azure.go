@@ -24,6 +24,7 @@ type AzureProvider struct {
 	*ProviderData
 	Tenant          string
 	GraphGroupField string
+	GraphGetGroups  bool
 	isV2Endpoint    bool
 }
 
@@ -109,6 +110,7 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	return &AzureProvider{
 		ProviderData:    p,
 		Tenant:          tenant,
+		GraphGetGroups:  opts.GraphGetGroups,
 		GraphGroupField: graphGroupField,
 		isV2Endpoint:    isV2Endpoint,
 	}
@@ -210,7 +212,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 
 	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph
 	// Only query for groups if AllowedGroups is set
-	if p.isV2Endpoint && len(p.AllowedGroups) > 0 {
+	if p.isV2Endpoint && (len(p.AllowedGroups) > 0 || p.GraphGetGroups) {
 		groups, err := p.getGroupsFromProfileAPI(ctx, session)
 		if err != nil {
 			return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
@@ -262,7 +264,7 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 	// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
 	// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
 	// due to above issues, id_token may not be signed by AAD
-	// in that case, we will fallback to access token
+	// in that case, we will fall back to access token
 	var err error
 	s, err = p.buildSessionFromClaims(session.IDToken, session.AccessToken)
 	if err != nil || s.Email == "" {
@@ -400,7 +402,7 @@ func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, s *sessions
 }
 
 func getGroupsFromJSON(json *simplejson.Json, graphGroupField string) []string {
-	groups := []string{}
+	var groups []string
 
 	for i := range json.Get("value").MustArray() {
 		value := json.Get("value").GetIndex(i).Get(graphGroupField).MustString()
