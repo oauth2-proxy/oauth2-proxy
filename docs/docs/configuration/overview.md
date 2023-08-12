@@ -81,7 +81,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `--azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
-| `--azure-graph-get-groups` | bool | query Microsoft Graph to get group membership for the signed-in user (implied if `allowed-group` is set). Requires the application to be granted the [*GroupMember.Read.All*](https://learn.microsoft.com/en-us/graph/permissions-reference#delegated-permissions-39) Microsoft Graph API permission. | false |
+| `--azure-graph-get-groups` | bool | query Microsoft Graph API to get group membership for the signed-in user (implied if `--allowed-group` is set). Requires the application to be granted the [*GroupMember.Read.All*](https://learn.microsoft.com/en-us/graph/permissions-reference#delegated-permissions-39) Microsoft Graph API permission. | false |
 | `--azure-graph-group-field` | string | Microsoft Graph API field to use for Azure group validation against `--allowed-group` ("id" or "displayName") | `"id"` |
 | `--basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
