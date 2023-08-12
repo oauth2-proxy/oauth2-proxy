@@ -82,15 +82,15 @@ Note: The user is checked against the group members list on initial authenticati
    7. In the **Redirect URI** section create a new **Web** platform entry for each app that you want to protect by the oauth2 proxy (e.g. 
    https://internal.yourcompanycom/oauth2/callback).
    8. Click **Register**.
-2. If using `--allowed-group` to validate group membership, you **must** add group read permissions. This requires
-[administrator consent](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview?WT.mc_id=Portal-Microsoft_AAD_RegisteredApps#administrator-consent)
-for all tenants that will use the application.
+2. To validate group membership with `--allowed-group` or to fetch a user's group
+info using `--azure-graph-get-groups`, you **must** grant group read permissions.
+All tenants using the app need [administrator consent](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview?WT.mc_id=Portal-Microsoft_AAD_RegisteredApps#administrator-consent).
    1. Navigate to the **API Permissions** page of the app.
    2. Click **Add a permission**.
    3. Click **Microsoft Graph**.
-   4. Click **Application permissions**.
-   5. Expand the **Group** permissions group.
-   6. Select **Group.Read.All**.
+   4. Click **Delegated permissions**.
+   5. Expand the **GroupMember** permissions group.
+   6. Select **GroupMember.Read.All**.
    7. Click **Add permissions**.
    8. The permission will be added but administrator consent will be required before it can be used. Click **Grant admin consent for _organization-name_** (you might need an admin to do this).
 3. On the **Certificates & secrets** page of the app, add a new client secret and note down the value after hitting **Add**.
