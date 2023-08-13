@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -215,7 +216,7 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 	session.Email = s.Email
 
 	// process groups claim and check for group overage
-	var queryGraph bool
+	var groupOverage bool
 	if s.Groups != nil {
 		session.Groups = s.Groups
 	} else {
@@ -233,24 +234,46 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 		if exists {
 			claimNamesMap := cast.ToStringMapString(claimNames)
 			// if the _claim_names claim exists, and it has a "groups" entry, we should query the Graph API
-			_, queryGraph = claimNamesMap["groups"]
+			_, groupOverage = claimNamesMap["groups"]
 		}
 		// implicit flow overage indication uses the "hasgroups" claim, so check for its existence as well
-		if !queryGraph {
+		if !groupOverage {
 			var err error
-			_, queryGraph, err = extractor.GetClaim("hasgroups")
+			_, groupOverage, err = extractor.GetClaim("hasgroups")
 			if err != nil {
 				return fmt.Errorf("unable to extract hasgroups from token: %v", err)
 			}
 		}
 	}
 
-	if queryGraph {
-		session.Groups, err = p.getGroupsFromProfileAPI(ctx, session.AccessToken)
+	if groupOverage || (session.Groups != nil && strings.EqualFold(p.GraphGroupField, "displayName")) {
+		groupsMap, err := p.getGroupsFromProfileAPI(ctx, session.AccessToken)
 		if err != nil {
 			return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
 		}
+		// if we have groups from the token, and we're here, we need to translate group
+		// IDs to display names
+		if session.Groups != nil {
+			for key, group := range session.Groups {
+				if displayName, ok := groupsMap[group]; ok {
+					session.Groups[key] = displayName
+				}
+			}
+		} else { // Process the group overage
+			session.Groups = make([]string, 0)
+			if strings.EqualFold(p.GraphGroupField, "displayName") {
+				for _, displayName := range groupsMap {
+					session.Groups = append(session.Groups, displayName)
+				}
+			} else {
+				for group := range groupsMap {
+					session.Groups = append(session.Groups, group)
+				}
+			}
+		}
 	}
+	sort.Strings(session.Groups)
+
 	return nil
 }
 
@@ -344,8 +367,8 @@ func makeGraphAuthHeader(accessToken string) *abstractions.RequestHeaders {
 	return headers
 }
 
-func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, accessToken string) ([]string, error) {
-	groups := make([]string, 0)
+func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, accessToken string) (map[string]string, error) {
+	groups := make(map[string]string, 0)
 
 	// Query Graph API for user's groups
 	// https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages
@@ -359,18 +382,18 @@ func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, accessToken
 	// Set the authorization header for the page iterator
 	pageIterator.SetHeaders(makeGraphAuthHeader(accessToken))
 	err = pageIterator.Iterate(ctx, func(groupObj models.Groupable) bool {
-		var group *string
-		// check if displayName was requested
-		if strings.EqualFold(p.GraphGroupField, "displayName") {
-			group = groupObj.GetDisplayName()
+		var (
+			groupID     *string
+			displayName *string
+		)
+		groupID = groupObj.GetId()
+		displayName = groupObj.GetDisplayName()
+		// if displayName is nil, the GroupMember.Read.All delegated permission has not
+		// been granted, so use the group ID instead
+		if displayName == nil {
+			displayName = groupID
 		}
-		// if displayName wasn't requested or it was requested but it's nil because the
-		// GroupMember.Read.All delegated permission has not been granted, fall back to
-		// retrieving the group ID
-		if group == nil {
-			group = groupObj.GetId()
-		}
-		groups = append(groups, *group)
+		groups[*groupID] = *displayName
 		return true
 	})
 	if err != nil {
