@@ -12,11 +12,18 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/bitly/go-simplejson"
+	abstractions "github.com/microsoft/kiota-abstractions-go"
+	"github.com/microsoft/kiota-abstractions-go/authentication"
+	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
+	msgraphcore "github.com/microsoftgraph/msgraph-sdk-go-core"
+	"github.com/microsoftgraph/msgraph-sdk-go/models"
+	"github.com/microsoftgraph/msgraph-sdk-go/users"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/spf13/cast"
 )
 
 // AzureProvider represents an Azure based Identity Provider
@@ -261,24 +268,78 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 		return fmt.Errorf("unable to verify token: %v", err)
 	}
 
-	// https://github.com/oauth2-proxy/oauth2-proxy/pull/914#issuecomment-782285814
-	// https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/117
-	// due to above issues, id_token may not be signed by AAD
-	// in that case, we will fall back to access token
 	var err error
 	s, err = p.buildSessionFromClaims(session.IDToken, session.AccessToken)
-	if err != nil || s.Email == "" {
-		s, err = p.buildSessionFromClaims(session.AccessToken, session.AccessToken)
-	}
 	if err != nil {
 		return fmt.Errorf("unable to get claims from token: %v", err)
 	}
 
 	session.Email = s.Email
+
+	// process groups claim and check for group overage
 	if s.Groups != nil {
 		session.Groups = s.Groups
-	}
+	} else {
+		// Check for group overage
+		// https://learn.microsoft.com/en-us/azure/active-directory/external-identities/customers/how-to-web-app-role-based-access-control#handle-groups-overage
+		// https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages
+		extractor, err := p.getClaimExtractor(session.IDToken, session.AccessToken)
+		if err != nil {
+			return fmt.Errorf("unable to get claim extractor: %v", err)
+		}
+		var queryGraph bool
+		claimNames, exists, err := extractor.GetClaim("_claim_names")
+		if err != nil {
+			return fmt.Errorf("unable to extract _claim_names from token: %v", err)
+		}
+		if exists {
+			claimNamesMap := cast.ToStringMapString(claimNames)
+			// if the _claim_names claim exists, and it has a "groups" entry, we should query the Graph API
+			_, queryGraph = claimNamesMap["groups"]
+		}
+		// implicit flow overage indication uses the "hasgroups" claim, so check for its existence as well
+		if !queryGraph {
+			var err error
+			_, queryGraph, err = extractor.GetClaim("hasgroups")
+			if err != nil {
+				return fmt.Errorf("unable to extract hasgroups from token: %v", err)
+			}
+		}
 
+		if queryGraph {
+			adapter, err := msgraphsdk.NewGraphRequestAdapter(&authentication.AnonymousAuthenticationProvider{})
+			if err != nil {
+				return fmt.Errorf("unable to Microsoft Graph API request adapter: %v", err)
+			}
+			graphClient := msgraphsdk.NewGraphServiceClient(adapter)
+			headers := abstractions.NewRequestHeaders()
+			headers.Add("Authorization", makeAzureHeader(session.AccessToken).Get("Authorization"))
+			groups, err := graphClient.Me().TransitiveMemberOf().GraphGroup().Get(ctx, &users.ItemTransitiveMemberOfGraphGroupRequestBuilderGetRequestConfiguration{Headers: headers})
+			if err != nil {
+				return fmt.Errorf("unable to query user's groups from Microsoft Graph API: %v", err)
+			}
+			// Use PageIterator to iterate through all groups
+			pageIterator, err := msgraphcore.NewPageIterator[models.Groupable](groups, graphClient.GetAdapter(), models.CreateGroupCollectionResponseFromDiscriminatorValue)
+			pageIterator.SetHeaders(headers)
+			session.Groups = make([]string, 0)
+			err = pageIterator.Iterate(ctx, func(group models.Groupable) bool {
+				switch p.GraphGroupField {
+				case "displayName":
+					displayName := group.GetDisplayName()
+					if displayName == nil {
+						displayName = group.GetId()
+					}
+					session.Groups = append(session.Groups, *displayName)
+				default:
+					session.Groups = append(session.Groups, *group.GetId())
+				}
+				return true
+			})
+			if err != nil {
+				return fmt.Errorf("unable to iterate through user's groups from Microsoft Graph API: %v", err)
+			}
+		}
+	}
 	return nil
 }
 

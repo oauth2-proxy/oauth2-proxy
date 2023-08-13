@@ -3,6 +3,7 @@ module github.com/oauth2-proxy/oauth2-proxy/v7
 go 1.19
 
 require (
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
 	github.com/alicebob/miniredis/v2 v2.23.0
 	github.com/benbjohnson/clock v1.3.0
@@ -16,6 +17,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/justinas/alice v1.2.0
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
+	github.com/microsoftgraph/msgraph-sdk-go v1.14.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/oauth2-proxy/mockoidc v0.0.0-20220221072942-e3afe97dec43
 	github.com/oauth2-proxy/tools/reference-gen v0.0.0-20210118095127-56ffd7384404
@@ -27,11 +29,11 @@ require (
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.3
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	golang.org/x/crypto v0.7.0
 	golang.org/x/exp v0.0.0-20230307190834-24139beb5833
-	golang.org/x/net v0.8.0
+	golang.org/x/net v0.9.0
 	golang.org/x/oauth2 v0.6.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/api v0.111.0
@@ -43,25 +45,39 @@ require (
 require (
 	cloud.google.com/go/compute v1.18.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.0.0 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cjlapao/common-go v0.0.39 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-jose/go-jose/v3 v3.0.0 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+	github.com/microsoft/kiota-abstractions-go v1.1.0 // indirect
+	github.com/microsoft/kiota-authentication-azure-go v1.0.0 // indirect
+	github.com/microsoft/kiota-http-go v1.0.0 // indirect
+	github.com/microsoft/kiota-serialization-form-go v1.0.0 // indirect
+	github.com/microsoft/kiota-serialization-json-go v1.0.4 // indirect
+	github.com/microsoft/kiota-serialization-text-go v1.0.0 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go-core v1.0.0 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/pelletier/go-toml v1.2.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.7 // indirect
+	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
@@ -70,10 +86,14 @@ require (
 	github.com/spf13/jwalterweatherman v1.0.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	go.opentelemetry.io/otel v1.16.0 // indirect
+	go.opentelemetry.io/otel/metric v1.16.0 // indirect
+	go.opentelemetry.io/otel/trace v1.16.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
