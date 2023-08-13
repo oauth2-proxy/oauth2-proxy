@@ -87,8 +87,11 @@ Note: The user is checked against the group members list on initial authenticati
    1. Go to **Token configuration** and **Add groups claim**. Select "All 
       groups" or "SecurityGroup" based on which groups for a user you want 
       returned in the claim. If you have a large number of groups, you may 
-      want to select "Groups assigned to the application".
-   2. If `--azure-graph-group-field` is set to "displayName", you **must** 
+      want to select "Groups assigned to the application" to limit the 
+      number of groups returned to avoid having to grant admin consent to 
+      the application.
+   2. If `--azure-graph-group-field` is set to "displayName" **OR** you have 
+      users that will have more than 200 groups returned, you **must** 
       grant group member read permissions.
       This requires [administrator consent](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview?WT.mc_id=Portal-Microsoft_AAD_RegisteredApps#administrator-consent)
       for all tenants that will use the application. If not set, the default 

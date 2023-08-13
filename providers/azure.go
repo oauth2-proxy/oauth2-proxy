@@ -368,7 +368,7 @@ func makeGraphAuthHeader(accessToken string) *abstractions.RequestHeaders {
 }
 
 func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, accessToken string) (map[string]string, error) {
-	groups := make(map[string]string, 0)
+	groups := make(map[string]string)
 
 	// Query Graph API for user's groups
 	// https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages
