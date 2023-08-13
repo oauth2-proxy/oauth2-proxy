@@ -3,36 +3,34 @@ package providers
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"golang.org/x/exp/slices"
-
-	"github.com/bitly/go-simplejson"
 	abstractions "github.com/microsoft/kiota-abstractions-go"
 	"github.com/microsoft/kiota-abstractions-go/authentication"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
 	msgraphcore "github.com/microsoftgraph/msgraph-sdk-go-core"
 	"github.com/microsoftgraph/msgraph-sdk-go/models"
+	"github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
 	"github.com/microsoftgraph/msgraph-sdk-go/users"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"github.com/spf13/cast"
 )
 
 // AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
 	*ProviderData
-	Tenant          string
-	GraphGroupField string
-	GraphGetGroups  bool
-	isV2Endpoint    bool
+	Tenant             string
+	GraphGroupField    string
+	graphClient        *msgraphsdk.GraphServiceClient
+	graphClientHeaders *abstractions.RequestHeaders
 }
 
 var _ Provider = (*AzureProvider)(nil)
@@ -41,7 +39,6 @@ const (
 	azureProviderName           = "Azure"
 	azureDefaultScope           = "openid"
 	azureDefaultGraphGroupField = "id"
-	azureV2Scope                = "https://graph.microsoft.com/.default"
 )
 
 var (
@@ -95,31 +92,17 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 		graphGroupField = opts.GraphGroupField
 	}
 
-	isV2Endpoint := false
-	if strings.Contains(p.LoginURL.String(), "v2.0") {
-		isV2Endpoint = true
-
-		if strings.Contains(p.Scope, " groups") {
-			logger.Print("WARNING: `groups` scope is not an accepted scope when using Azure OAuth V2 endpoint. Removing it from the scope list")
-			p.Scope = strings.ReplaceAll(p.Scope, " groups", "")
-		}
-
-		if !strings.Contains(p.Scope, " "+azureV2Scope) {
-			// In order to be able to query MS Graph we must pass the ms graph default endpoint
-			p.Scope += " " + azureV2Scope
-		}
-
-		if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-			logger.Print("WARNING: `--resource` option has no effect when using the Azure OAuth V2 endpoint.")
-		}
-	}
+	// Set up Graph client. Pass an anonymous authentication provider to the Graph
+	// client as we'll be passing the access token in the request headers.
+	adapter, _ := msgraphsdk.NewGraphRequestAdapter(&authentication.AnonymousAuthenticationProvider{})
+	graphClient := msgraphsdk.NewGraphServiceClient(adapter)
 
 	return &AzureProvider{
-		ProviderData:    p,
-		Tenant:          tenant,
-		GraphGetGroups:  opts.GraphGetGroups,
-		GraphGroupField: graphGroupField,
-		isV2Endpoint:    isV2Endpoint,
+		ProviderData:       p,
+		Tenant:             tenant,
+		GraphGroupField:    graphGroupField,
+		graphClient:        graphClient,
+		graphClientHeaders: abstractions.NewRequestHeaders(),
 	}
 }
 
@@ -132,28 +115,7 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
-func getMicrosoftGraphGroupsURL(graphGroupField string) *url.URL {
-
-	selectStatement := "$select=displayName,id"
-	if !slices.Contains([]string{"displayName", "id"}, graphGroupField) {
-		selectStatement += "," + graphGroupField
-	}
-
-	// Select only security groups. Due to the filter option, count param is mandatory even if unused otherwise
-	return &url.URL{
-		Scheme:   "https",
-		Host:     "graph.microsoft.com",
-		Path:     "/v1.0/me/transitiveMemberOf",
-		RawQuery: "$count=true&$filter=securityEnabled+eq+true&" + selectStatement,
-	}
-}
-
 func (p *AzureProvider) GetLoginURL(redirectURI, state, _ string, extraParams url.Values) string {
-	// In azure oauth v2 there is no resource param so add it only if V1 endpoint
-	// https://docs.microsoft.com/en-us/azure/active-directory/azuread-dev/azure-ad-endpoint-comparison#scopes-not-resources
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" && !p.isV2Endpoint {
-		extraParams.Add("resource", p.ProtectedResource.String())
-	}
 	a := makeLoginURL(p.ProviderData, redirectURI, state, extraParams)
 	return a.String()
 }
@@ -192,11 +154,8 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 	session.CreatedAtNow()
 	session.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
 
-	err = p.extractClaimsIntoSession(ctx, session)
-
-	if err != nil {
-		return nil, fmt.Errorf("unable to get email and/or groups claims from token: %v", err)
-	}
+	// Add authorization header to graphClientHeaders for use with Microsoft Graph API
+	p.graphClientHeaders.Add("Authorization", makeAzureHeader(session.AccessToken).Get("Authorization"))
 
 	return session, nil
 }
@@ -206,7 +165,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 	err := p.extractClaimsIntoSession(ctx, session)
 
 	if err != nil {
-		logger.Printf("unable to get email and/or groups claims from token: %v", err)
+		return fmt.Errorf("unable to get email and/or groups claims from token: %v", err)
 	}
 
 	if session.Email == "" {
@@ -217,15 +176,6 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 		session.Email = email
 	}
 
-	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph
-	// Only query for groups if AllowedGroups is set or if it is explicitly requested
-	if p.isV2Endpoint && (len(p.AllowedGroups) > 0 || p.GraphGetGroups) {
-		groups, err := p.getGroupsFromProfileAPI(ctx, session)
-		if err != nil {
-			return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
-		}
-		session.Groups = util.RemoveDuplicateStr(append(session.Groups, groups...))
-	}
 	return nil
 }
 
@@ -246,12 +196,6 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (u
 	params.Add("grant_type", "authorization_code")
 	if codeVerifier != "" {
 		params.Add("code_verifier", codeVerifier)
-	}
-
-	// In azure oauth v2 there is no resource param so add it only if V1 endpoint
-	// https://docs.microsoft.com/en-us/azure/active-directory/azuread-dev/azure-ad-endpoint-comparison#scopes-not-resources
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" && !p.isV2Endpoint {
-		params.Add("resource", p.ProtectedResource.String())
 	}
 
 	return params, nil
@@ -277,6 +221,7 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 	session.Email = s.Email
 
 	// process groups claim and check for group overage
+	var queryGraph bool
 	if s.Groups != nil {
 		session.Groups = s.Groups
 	} else {
@@ -287,7 +232,6 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 		if err != nil {
 			return fmt.Errorf("unable to get claim extractor: %v", err)
 		}
-		var queryGraph bool
 		claimNames, exists, err := extractor.GetClaim("_claim_names")
 		if err != nil {
 			return fmt.Errorf("unable to extract _claim_names from token: %v", err)
@@ -305,39 +249,12 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 				return fmt.Errorf("unable to extract hasgroups from token: %v", err)
 			}
 		}
+	}
 
-		if queryGraph {
-			adapter, err := msgraphsdk.NewGraphRequestAdapter(&authentication.AnonymousAuthenticationProvider{})
-			if err != nil {
-				return fmt.Errorf("unable to Microsoft Graph API request adapter: %v", err)
-			}
-			graphClient := msgraphsdk.NewGraphServiceClient(adapter)
-			headers := abstractions.NewRequestHeaders()
-			headers.Add("Authorization", makeAzureHeader(session.AccessToken).Get("Authorization"))
-			groups, err := graphClient.Me().TransitiveMemberOf().GraphGroup().Get(ctx, &users.ItemTransitiveMemberOfGraphGroupRequestBuilderGetRequestConfiguration{Headers: headers})
-			if err != nil {
-				return fmt.Errorf("unable to query user's groups from Microsoft Graph API: %v", err)
-			}
-			// Use PageIterator to iterate through all groups
-			pageIterator, err := msgraphcore.NewPageIterator[models.Groupable](groups, graphClient.GetAdapter(), models.CreateGroupCollectionResponseFromDiscriminatorValue)
-			pageIterator.SetHeaders(headers)
-			session.Groups = make([]string, 0)
-			err = pageIterator.Iterate(ctx, func(group models.Groupable) bool {
-				switch p.GraphGroupField {
-				case "displayName":
-					displayName := group.GetDisplayName()
-					if displayName == nil {
-						displayName = group.GetId()
-					}
-					session.Groups = append(session.Groups, *displayName)
-				default:
-					session.Groups = append(session.Groups, *group.GetId())
-				}
-				return true
-			})
-			if err != nil {
-				return fmt.Errorf("unable to iterate through user's groups from Microsoft Graph API: %v", err)
-			}
+	if queryGraph {
+		session.Groups, err = p.getGroupsFromProfileAPI(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
 		}
 	}
 	return nil
@@ -427,93 +344,75 @@ func makeAzureHeader(accessToken string) http.Header {
 	return makeAuthorizationHeader(tokenTypeBearer, accessToken, nil)
 }
 
-func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, s *sessions.SessionState) ([]string, error) {
-	if s.AccessToken == "" {
-		return nil, fmt.Errorf("missing access token")
+func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context) ([]string, error) {
+	groups := make([]string, 0)
+
+	// Query Graph API for user's groups
+	// https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages
+	// https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof?view=graph-rest-1.0&tabs=go
+	groupsResponse, err := p.graphClient.Me().TransitiveMemberOf().GraphGroup().Get(ctx, &users.ItemTransitiveMemberOfGraphGroupRequestBuilderGetRequestConfiguration{Headers: p.graphClientHeaders})
+	if err != nil {
+		return nil, fmt.Errorf("unable to query user's groups from Microsoft Graph API: %v", getOdataError(err))
 	}
-
-	groupsURL := getMicrosoftGraphGroupsURL(p.GraphGroupField).String()
-
-	// Need and extra header while talking with MS Graph. For more context see
-	// https://docs.microsoft.com/en-us/graph/api/group-list-transitivememberof?view=graph-rest-1.0&tabs=http#request-headers
-	extraHeader := makeAzureHeader(s.AccessToken)
-	extraHeader.Add("ConsistencyLevel", "eventual")
-
-	var groups []string
-
-	for groupsURL != "" {
-		jsonRequest, err := requests.New(groupsURL).
-			WithContext(ctx).
-			WithHeaders(extraHeader).
-			Do().
-			UnmarshalSimpleJSON()
-		if err != nil {
-			return nil, fmt.Errorf("unable to unmarshal Microsoft Graph response: %v", err)
-
+	// Use PageIterator to iterate through all groups
+	pageIterator, err := msgraphcore.NewPageIterator[models.Groupable](groupsResponse, p.graphClient.GetAdapter(), models.CreateGroupCollectionResponseFromDiscriminatorValue)
+	// Set the authorization header for the page iterator
+	pageIterator.SetHeaders(p.graphClientHeaders)
+	err = pageIterator.Iterate(ctx, func(groupObj models.Groupable) bool {
+		var group *string
+		// check if displayName was requested
+		if strings.EqualFold(p.GraphGroupField, "displayName") {
+			group = groupObj.GetDisplayName()
 		}
-		groupsURL, err = jsonRequest.Get("@odata.nextLink").String()
-		if err != nil {
-			groupsURL = ""
+		// if displayName wasn't requested or it was requested but it's nil because the
+		// GroupMember.Read.All delegated permission has not been granted, fall back to
+		// retrieving the group ID
+		if group == nil {
+			group = groupObj.GetId()
 		}
-		groupsPage := getGroupsFromJSON(jsonRequest, p.GraphGroupField)
-		groups = append(groups, groupsPage...)
+		groups = append(groups, *group)
+		return true
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to iterate through user's groups from Microsoft Graph API: %v", err)
 	}
 
 	return groups, nil
 }
 
-func getGroupsFromJSON(json *simplejson.Json, graphGroupField string) []string {
-	var groups []string
-
-	for i := range json.Get("value").MustArray() {
-		value := json.Get("value").GetIndex(i).Get(graphGroupField).MustString()
-		groups = append(groups, value)
-	}
-
-	return groups
-}
-
 func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
-	if accessToken == "" {
-		return "", fmt.Errorf("missing access token")
-	}
-
-	json, err := requests.New(p.ProfileURL.String()).
-		WithContext(ctx).
-		WithHeaders(makeAzureHeader(accessToken)).
-		Do().
-		UnmarshalSimpleJSON()
+	// Query Graph API for user's profile
+	// https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof?view=graph-rest-1.0&tabs=go
+	profileResponse, err := p.graphClient.Me().Get(ctx, &users.UserItemRequestBuilderGetRequestConfiguration{Headers: p.graphClientHeaders})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to query user's profile from Microsoft Graph API: %v", getOdataError(err))
 	}
-
-	email, err := getEmailFromJSON(json)
-	if email == "" {
-		return "", fmt.Errorf("empty email address: %v", err)
+	if profileResponse.GetMail() != nil {
+		return *profileResponse.GetMail(), nil
 	}
-	return email, nil
+	if profileResponse.GetOtherMails() != nil && len(profileResponse.GetOtherMails()) > 0 {
+		return (profileResponse.GetOtherMails())[0], nil
+	}
+	if profileResponse.GetUserPrincipalName() != nil {
+		return *profileResponse.GetUserPrincipalName(), nil
+	}
+	return "", fmt.Errorf("unable to find email address in user's profile from Microsoft Graph API")
 }
 
-func getEmailFromJSON(json *simplejson.Json) (string, error) {
-	email, err := json.Get("mail").String()
-
-	if err != nil || email == "" {
-		otherMails, otherMailsErr := json.Get("otherMails").Array()
-		if len(otherMails) > 0 {
-			email = otherMails[0].(string)
+func getOdataError(err error) error {
+	var outErr error
+	var ODataError *odataerrors.ODataError
+	switch {
+	case errors.As(err, &ODataError):
+		var typed *odataerrors.ODataError
+		errors.As(err, &typed)
+		if terr := typed.GetErrorEscaped(); terr != nil {
+			outErr = fmt.Errorf("%v: (%v) %v", typed.Error(), *terr.GetCode(), *terr.GetMessage())
 		}
-		err = otherMailsErr
+	default:
+		outErr = fmt.Errorf("%T > error: %#v", err, err)
 	}
-
-	if err != nil || email == "" {
-		email, err = json.Get("userPrincipalName").String()
-		if err != nil {
-			logger.Errorf("unable to find userPrincipalName: %s", err)
-			return "", err
-		}
-	}
-
-	return email, nil
+	return outErr
 }
 
 // ValidateSession validates the AccessToken
