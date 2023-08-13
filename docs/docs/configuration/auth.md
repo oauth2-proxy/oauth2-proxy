@@ -82,20 +82,27 @@ Note: The user is checked against the group members list on initial authenticati
    7. In the **Redirect URI** section create a new **Web** platform entry for each app that you want to protect by the oauth2 proxy (e.g. 
    https://internal.yourcompanycom/oauth2/callback).
    8. Click **Register**.
-2. If `--allowed-group` (for validating group membership) or 
-   `--azure-graph-get-groups` (for querying and storing group membership in 
-   the session) is specified, you **must** grant group member read permissions. 
-   This requires [administrator consent](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview?WT.mc_id=Portal-Microsoft_AAD_RegisteredApps#administrator-consent)
-   for all tenants that will use the application. If neither of these flags 
-   are specified, this step can be skipped.
-   1. Navigate to the **API Permissions** page of the app.
-   2. Click **Add a permission**.
-   3. Click **Microsoft Graph**.
-   4. Click **Delegated permissions**.
-   5. Expand the **GroupMember** permissions group.
-   6. Select **GroupMember.Read.All**.
-   7. Click **Add permissions**.
-   8. The permission will be added but administrator consent will be required before it can be used. Click **Grant admin consent for _organization-name_** (you might need an admin to do this).
+2. If you want to validate groups using the `--allowed-group` flag, add a 
+   `groups` claim to the ID token.
+   1. Go to **Token configuration** and **Add groups claim**. Select "All 
+      groups" or "SecurityGroup" based on which groups for a user you want 
+      returned in the claim. If you have a large number of groups, you may 
+      want to select "Groups assigned to the application".
+   2. If `--azure-graph-group-field` is set to "displayName", you **must** 
+      grant group member read permissions.
+      This requires [administrator consent](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview?WT.mc_id=Portal-Microsoft_AAD_RegisteredApps#administrator-consent)
+      for all tenants that will use the application. If not set, the default 
+      **User.Read** permission is sufficient for reading the user's group IDs.
+      1. Navigate to the **API Permissions** page of the app.
+      2. Click **Add a permission**.
+      3. Click **Microsoft Graph**.
+      4. Click **Delegated permissions**.
+      5. Expand the **GroupMember** permissions group.
+      6. Select **GroupMember.Read.All**.
+      7. Click **Add permissions**.
+      8. The permission will be added but administrator consent will be 
+         required before it can be used. Click **Grant admin consent for 
+         _organization-name_** (you might need an admin to do this).
 3. On the **Certificates & secrets** page of the app, add a new client secret and note down the value after hitting **Add**.
 This will be the value of `client-secret` in the configuration.
 4. Select the **Overview** page of the app for help in configuring the proxy.
@@ -107,24 +114,11 @@ If `tenant-id` is `common` or `organizations`, you also need to specify the `ins
    4. The **Client secret** is the `client-secret` you noted down earlier.
 
 ***Notes***:
-- When using v2.0 Azure Auth endpoint (`https://login.microsoftonline.com/{tenant-id}/v2.0`) as `--oidc_issuer_url`, in conjunction 
-with `--resource` flag, be sure to append `/.default` at the end of the resource name. See
-https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#the-default-scope for more details.
 - When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't 
 get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) 
 should resolve this.
 
 #### Configuration Examples
-
-##### v1 Azure Auth endpoint (Azure Active Directory Endpoints - https://login.microsoftonline.com/common/oauth2/authorize)
-
-```
-   --provider=azure
-   --client-id=<Application (client) ID>
-   --client-secret=<value from step 3>
-   --azure-tenant={tenant-id}
-   --oidc-issuer-url=https://sts.windows.net/{tenant-id}/
-```
 
 ##### v2 Azure Auth endpoint (Microsoft Identity Platform Endpoints - https://login.microsoftonline.com/common/oauth2/v2.0/authorize)
 ```
