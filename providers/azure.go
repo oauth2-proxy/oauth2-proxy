@@ -27,10 +27,9 @@ import (
 // AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
 	*ProviderData
-	Tenant             string
-	GraphGroupField    string
-	graphClient        *msgraphsdk.GraphServiceClient
-	graphClientHeaders *abstractions.RequestHeaders
+	Tenant          string
+	GraphGroupField string
+	graphClient     *msgraphsdk.GraphServiceClient
 }
 
 var _ Provider = (*AzureProvider)(nil)
@@ -46,14 +45,14 @@ var (
 	azureDefaultLoginURL = &url.URL{
 		Scheme: "https",
 		Host:   "login.microsoftonline.com",
-		Path:   "/common/oauth2/authorize",
+		Path:   "/common/oauth2/v2.0/authorize",
 	}
 
 	// Default Redeem URL for Azure. Pre-parsed URL of https://login.microsoftonline.com/common/oauth2/token.
 	azureDefaultRedeemURL = &url.URL{
 		Scheme: "https",
 		Host:   "login.microsoftonline.com",
-		Path:   "/common/oauth2/token",
+		Path:   "/common/oauth2/v2.0/token",
 	}
 
 	// Default Profile URL for Azure. Pre-parsed URL of https://graph.microsoft.com/v1.0/me.
@@ -95,14 +94,12 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	// Set up Graph client. Pass an anonymous authentication provider to the Graph
 	// client as we'll be passing the access token in the request headers.
 	adapter, _ := msgraphsdk.NewGraphRequestAdapter(&authentication.AnonymousAuthenticationProvider{})
-	graphClient := msgraphsdk.NewGraphServiceClient(adapter)
 
 	return &AzureProvider{
-		ProviderData:       p,
-		Tenant:             tenant,
-		GraphGroupField:    graphGroupField,
-		graphClient:        graphClient,
-		graphClientHeaders: abstractions.NewRequestHeaders(),
+		ProviderData:    p,
+		Tenant:          tenant,
+		GraphGroupField: graphGroupField,
+		graphClient:     msgraphsdk.NewGraphServiceClient(adapter),
 	}
 }
 
@@ -111,7 +108,7 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 		*current = url.URL{
 			Scheme: "https",
 			Host:   "login.microsoftonline.com",
-			Path:   "/" + tenant + "/oauth2/" + path}
+			Path:   "/" + tenant + "/oauth2/v2.0/" + path}
 	}
 }
 
@@ -153,9 +150,6 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 	}
 	session.CreatedAtNow()
 	session.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
-
-	// Add authorization header to graphClientHeaders for use with Microsoft Graph API
-	p.graphClientHeaders.Add("Authorization", makeAzureHeader(session.AccessToken).Get("Authorization"))
 
 	return session, nil
 }
@@ -252,7 +246,7 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 	}
 
 	if queryGraph {
-		session.Groups, err = p.getGroupsFromProfileAPI(ctx)
+		session.Groups, err = p.getGroupsFromProfileAPI(ctx, session.AccessToken)
 		if err != nil {
 			return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
 		}
@@ -344,20 +338,26 @@ func makeAzureHeader(accessToken string) http.Header {
 	return makeAuthorizationHeader(tokenTypeBearer, accessToken, nil)
 }
 
-func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context) ([]string, error) {
+func makeGraphAuthHeader(accessToken string) *abstractions.RequestHeaders {
+	headers := abstractions.NewRequestHeaders()
+	headers.Add("Authorization", makeAzureHeader(accessToken).Get("Authorization"))
+	return headers
+}
+
+func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, accessToken string) ([]string, error) {
 	groups := make([]string, 0)
 
 	// Query Graph API for user's groups
 	// https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages
 	// https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof?view=graph-rest-1.0&tabs=go
-	groupsResponse, err := p.graphClient.Me().TransitiveMemberOf().GraphGroup().Get(ctx, &users.ItemTransitiveMemberOfGraphGroupRequestBuilderGetRequestConfiguration{Headers: p.graphClientHeaders})
+	groupsResponse, err := p.graphClient.Me().TransitiveMemberOf().GraphGroup().Get(ctx, &users.ItemTransitiveMemberOfGraphGroupRequestBuilderGetRequestConfiguration{Headers: makeGraphAuthHeader(accessToken)})
 	if err != nil {
 		return nil, fmt.Errorf("unable to query user's groups from Microsoft Graph API: %v", getOdataError(err))
 	}
 	// Use PageIterator to iterate through all groups
 	pageIterator, err := msgraphcore.NewPageIterator[models.Groupable](groupsResponse, p.graphClient.GetAdapter(), models.CreateGroupCollectionResponseFromDiscriminatorValue)
 	// Set the authorization header for the page iterator
-	pageIterator.SetHeaders(p.graphClientHeaders)
+	pageIterator.SetHeaders(makeGraphAuthHeader(accessToken))
 	err = pageIterator.Iterate(ctx, func(groupObj models.Groupable) bool {
 		var group *string
 		// check if displayName was requested
@@ -383,7 +383,7 @@ func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context) ([]string, 
 func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
 	// Query Graph API for user's profile
 	// https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof?view=graph-rest-1.0&tabs=go
-	profileResponse, err := p.graphClient.Me().Get(ctx, &users.UserItemRequestBuilderGetRequestConfiguration{Headers: p.graphClientHeaders})
+	profileResponse, err := p.graphClient.Me().Get(ctx, &users.UserItemRequestBuilderGetRequestConfiguration{Headers: makeGraphAuthHeader(accessToken)})
 	if err != nil {
 		return "", fmt.Errorf("unable to query user's profile from Microsoft Graph API: %v", getOdataError(err))
 	}
