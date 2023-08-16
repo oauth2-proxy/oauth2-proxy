@@ -58,7 +58,7 @@ func Validate(cookie *http.Cookie, seed string, expiration time.Duration) (value
 		// creation timestamp stored in the cookie falls within the
 		// window defined by (Now()-expiration, Now()].
 		t = time.Unix(int64(ts), 0)
-		if t.After(time.Now().Add(expiration*-1)) && t.Before(time.Now().Add(time.Minute*5)) {
+		if (expiration == time.Duration(0)) || (t.After(time.Now().Add(expiration*-1)) && t.Before(time.Now().Add(time.Minute*5))) {
 			// it's a valid cookie. now get the contents
 			rawValue, err := base64.URLEncoding.DecodeString(parts[0])
 			if err == nil {
