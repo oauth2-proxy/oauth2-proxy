@@ -31,6 +31,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			Secure:         true,
 			HTTPOnly:       true,
 			CSRFPerRequest: false,
+			CSRFExpire:     time.Hour,
 		}
 
 		var err error
