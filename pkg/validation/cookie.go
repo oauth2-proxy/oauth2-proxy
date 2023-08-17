@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
@@ -12,7 +13,7 @@ import (
 func validateCookie(o options.Cookie) []string {
 	msgs := validateCookieSecret(o.Secret)
 
-	if o.Refresh >= o.Expire {
+	if o.Expire != time.Duration(0) && o.Refresh >= o.Expire {
 		msgs = append(msgs, fmt.Sprintf(
 			"cookie_refresh (%q) must be less than cookie_expire (%q)",
 			o.Refresh.String(),
