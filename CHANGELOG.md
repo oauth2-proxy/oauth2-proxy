@@ -14,6 +14,7 @@
 - [#1906](https://github.com/oauth2-proxy/oauth2-proxy/pull/1906) Fix PKCE code verifier generation to never use UTF-8 characters
 - [#1839](https://github.com/oauth2-proxy/oauth2-proxy/pull/1839) Add readiness checks for deeper health checks (@kobim)
 - [#1927](https://github.com/oauth2-proxy/oauth2-proxy/pull/1927) Fix default scope settings for none oidc providers
+- [#1713](https://github.com/oauth2-proxy/oauth2-proxy/pull/1713) Add session cookie support (@t-katsumura @tanuki884)
 - [#1951](https://github.com/oauth2-proxy/oauth2-proxy/pull/1951) Fix validate URL, check if query string marker (?) or separator (&) needs to be appended (@miguelborges99)
 - [#1920](https://github.com/oauth2-proxy/oauth2-proxy/pull/1920) Make sure emailClaim is not overriden if userIDClaim is not set
 - [#2010](https://github.com/oauth2-proxy/oauth2-proxy/pull/2010) Log the difference between invalid email and not authorized session
