@@ -299,7 +299,7 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
-	// likelihood of multiple reuests trying to referesh sessions simultaneously.
+	// likelihood of multiple requests trying to refresh sessions simultaneously.
 	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
 
 	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
