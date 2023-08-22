@@ -110,11 +110,12 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		}
 	}
 
-	if opts.ServiceAccountJSON != "" || opts.UseApplicationDefaultCredentials {
-		// Backwards compatibility with `--google-group` option
-		if len(opts.Groups) > 0 {
-			provider.setAllowedGroups(opts.Groups)
-		}
+	// Backwards compatibility with `--google-group` option
+	if len(opts.Groups) > 0 {
+		provider.setAllowedGroups(opts.Groups)
+	}
+	
+	provider.setGroupRestriction(opts)
 		provider.setGroupRestriction(opts, file)
 	}
 
@@ -236,7 +237,7 @@ func (p *GoogleProvider) setGroupRestriction(opts options.GoogleOptions, credent
 	}
 }
 
-func getAdminService(adminEmail string, targetPrincipal string, useADC bool, credentialsReader io.Reader) *admin.Service {
+func getAdminService(opts *options.GoogleOptions) *admin.Service {
 	ctx := context.Background()
 	var client *http.Client
 	if useADC {
@@ -250,6 +251,12 @@ func getAdminService(adminEmail string, targetPrincipal string, useADC bool, cre
 		}
 		client = oauth2.NewClient(ctx, ts)
 	} else {
+		credentialsReader, err := os.Open(opts.ServiceAccountJSON)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't open Google credentials file: %s", err.Error())
+		}
+		
+		...
 		data, err := io.ReadAll(credentialsReader)
 		if err != nil {
 			logger.Fatal("can't read Google credentials file:", err)
