@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,6 +51,7 @@ const (
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
+	staticPathPrefix  = "/static/"
 )
 
 var (
@@ -58,6 +60,9 @@ var (
 
 	// ErrAccessDenied means the user should receive a 401 Unauthorized response
 	ErrAccessDenied = errors.New("access denied")
+
+	//go:embed static/*
+	staticFiles embed.FS
 )
 
 // allowedRoute manages method + path based allowlists
@@ -320,6 +325,9 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
+	// Static file paths
+	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
+
 	// The userinfo endpoint needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
 }
@@ -554,7 +562,7 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(req.URL.Path)
+	matches := route.pathRegex.MatchString(requestutil.GetRequestURI(req))
 
 	if route.negate {
 		return !matches
@@ -575,7 +583,7 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 
 func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 	for _, route := range p.apiRoutes {
-		if route.pathRegex.MatchString(req.URL.Path) {
+		if route.pathRegex.MatchString(requestutil.GetRequestURI(req)) {
 			return true
 		}
 	}
