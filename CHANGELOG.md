@@ -23,6 +23,7 @@
 - [#2013](https://github.com/oauth2-proxy/oauth2-proxy/pull/2013) Upgrade alpine to version 3.17.2 and library dependencies (@miguelborges99)
 - [#2047](https://github.com/oauth2-proxy/oauth2-proxy/pull/2047) CVE-2022-41717: DoS in Go net/http may lead to DoS (@miguelborges99)
 - [#1921](https://github.com/oauth2-proxy/oauth2-proxy/pull/1921) Check jsonpath syntax before interpretation
+- [#2025](https://github.com/oauth2-proxy/oauth2-proxy/pull/2025) Embed static stylesheets and dependencies
 
 # V7.4.0
 
