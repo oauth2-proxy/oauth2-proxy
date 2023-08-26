@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +18,7 @@ type Builder interface {
 	WithMethod(string) Builder
 	WithHeaders(http.Header) Builder
 	SetHeader(key, value string) Builder
+	SetBasicHeader(id, password string) Builder
 	Do() Result
 }
 
@@ -69,6 +71,13 @@ func (r *builder) SetHeader(key, value string) Builder {
 		r.header = make(http.Header)
 	}
 	r.header.Set(key, value)
+	return r
+}
+
+// SetBasicHeader sets a authorization header for basic authentication
+// for given user-id and password.
+func (r *builder) SetBasicHeader(id, password string) Builder {
+	r.SetHeader("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(id+":"+password))))
 	return r
 }
 

@@ -60,6 +60,7 @@ type Options struct {
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
+	IntrospectToken       bool     `flag:"introspect-token" cfg:"introspect_token"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
@@ -126,6 +127,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
 	flagSet.Bool("force-json-errors", false, "will force JSON errors instead of HTTP error pages or redirects")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
+	flagSet.Bool("introspect-token", false, "if skip-jwt-bearer-tokens is set, validate token with token introspection endpoint (default false)")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")

@@ -33,6 +33,7 @@ type ProviderData struct {
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
+	IntrospectURL     *url.URL
 	ClientID          string
 	ClientSecret      string
 	ClientSecretFile  string
@@ -179,12 +180,13 @@ func (p *ProviderData) setAllowedGroups(groups []string) {
 }
 
 type providerDefaults struct {
-	name        string
-	loginURL    *url.URL
-	redeemURL   *url.URL
-	profileURL  *url.URL
-	validateURL *url.URL
-	scope       string
+	name          string
+	loginURL      *url.URL
+	redeemURL     *url.URL
+	profileURL    *url.URL
+	validateURL   *url.URL
+	introspectURL *url.URL
+	scope         string
 }
 
 func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
@@ -193,6 +195,7 @@ func (p *ProviderData) setProviderDefaults(defaults providerDefaults) {
 	p.RedeemURL = defaultURL(p.RedeemURL, defaults.redeemURL)
 	p.ProfileURL = defaultURL(p.ProfileURL, defaults.profileURL)
 	p.ValidateURL = defaultURL(p.ValidateURL, defaults.validateURL)
+	p.IntrospectURL = defaultURL(p.IntrospectURL, defaults.introspectURL)
 
 	if p.Scope == "" {
 		p.Scope = defaults.scope
