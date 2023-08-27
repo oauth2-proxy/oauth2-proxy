@@ -20,16 +20,24 @@ type OIDCProvider struct {
 	SkipNonce bool
 }
 
+const oidcDefaultScope = "openid email profile"
+
 // NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
-	p.setProviderDefaults(providerDefaults{
+	oidcProviderDefaults := providerDefaults{
 		name:        "OpenID Connect",
 		loginURL:    nil,
 		redeemURL:   nil,
 		profileURL:  nil,
 		validateURL: nil,
-		scope:       "",
-	})
+		scope:       oidcDefaultScope,
+	}
+
+	if len(p.AllowedGroups) > 0 {
+		oidcProviderDefaults.scope += " groups"
+	}
+
+	p.setProviderDefaults(oidcProviderDefaults)
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 
 	return &OIDCProvider{
