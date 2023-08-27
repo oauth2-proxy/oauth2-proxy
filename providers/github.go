@@ -443,12 +443,7 @@ func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) 
 			"page":     {strconv.Itoa(pn)},
 		}
 
-		endpoint := &url.URL{
-			Scheme:   p.ValidateURL.Scheme,
-			Host:     p.ValidateURL.Host,
-			Path:     path.Join(p.ValidateURL.Path, "/user/orgs"),
-			RawQuery: params.Encode(),
-		}
+		endpoint := p.makeGitHubAPIEndpoint("/user/orgs", &params)
 
 		var orgs []Organization
 		err := requests.New(endpoint.String()).
@@ -491,12 +486,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 			"page":     {strconv.Itoa(pn)},
 		}
 
-		endpoint := &url.URL{
-			Scheme:   p.ValidateURL.Scheme,
-			Host:     p.ValidateURL.Host,
-			Path:     path.Join(p.ValidateURL.Path, "/user/teams"),
-			RawQuery: params.Encode(),
-		}
+		endpoint := p.makeGitHubAPIEndpoint("/user/teams", &params)
 
 		var teams []Team
 		err := requests.New(endpoint.String()).
@@ -516,6 +506,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 			logger.Printf("Member of Github Organization/Team:%q/%q", team.Org.Login, team.Slug)
 			s.Groups = append(s.Groups, team.Org.Login+orgTeamSeparator+team.Slug)
 		}
+
 		pn++
 	}
 

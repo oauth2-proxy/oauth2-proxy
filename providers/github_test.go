@@ -82,7 +82,7 @@ func TestNewGitHubProvider(t *testing.T) {
 	g.Expect(providerData.LoginURL.String()).To(Equal(githubDefaultLoginURL.String()))
 	g.Expect(providerData.RedeemURL.String()).To(Equal(githubDefaultRedeemURL.String()))
 	g.Expect(providerData.ProfileURL.String()).To(Equal(""))
-	g.Expect(providerData.ValidateURL.String()).To(Equal(githubDefaultValidateURL.String()))
+	g.Expect(providerData.ValidateURL.String()).To(Equal("https://api.github.com/"))
 	g.Expect(providerData.Scope).To(Equal("user:email read:org"))
 }
 
