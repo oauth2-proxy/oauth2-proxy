@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/drone/envsubst"
+	"github.com/a8m/envsubst"
 	"github.com/ghodss/yaml"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/pflag"
@@ -146,22 +146,20 @@ func LoadYAML(configFileName string, into interface{}) error {
 		return errors.New("no configuration file provided")
 	}
 
-	data, err := os.ReadFile(configFileName)
+	unparsedBuffer, err := os.ReadFile(configFileName)
 	if err != nil {
 		return fmt.Errorf("unable to load config file: %w", err)
 	}
 
 	// We now parse over the yaml with env substring, and fill in the ENV's
-	datastring, err := envsubst.EvalEnv(string(data))
+	buffer, err := envsubst.Bytes(unparsedBuffer)
 	if err != nil {
 		return fmt.Errorf("error in substituting env variables : %w", err)
 	}
 
-	data = []byte(datastring)
-
 	// UnmarshalStrict will return an error if the config includes options that are
 	// not mapped to felds of the into struct
-	if err := yaml.UnmarshalStrict(data, into, yaml.DisallowUnknownFields); err != nil {
+	if err := yaml.UnmarshalStrict(buffer, into, yaml.DisallowUnknownFields); err != nil {
 		return fmt.Errorf("error unmarshalling config: %w", err)
 	}
 
