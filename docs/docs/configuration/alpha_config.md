@@ -69,8 +69,8 @@ oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existin
 
 ## Using ENV variables in the alpha configuration
 
-The alpha package supports the use of environmental variables in place of yaml keys, allowing sensitive values to be pulled from somewhere other than the yaml file.
-When using environmental variables, your yaml will look like this:
+The alpha package supports the use of environment variables in place of yaml keys, allowing sensitive values to be pulled from somewhere other than the yaml file.
+When using environment variables, your yaml will look like this:
 
 ```yaml
     providers:
@@ -78,8 +78,8 @@ When using environmental variables, your yaml will look like this:
       clientSecret: ${CLIENT_SECRET}
       ...
 ```
-Where CLIENT_SECRET is an environmental variable.
-More information and available patterns can be found [here](https://github.com/drone/envsubst#supported-functions)
+Where CLIENT_SECRET is an environment variable.
+More information and available patterns can be found [here](https://github.com/a8m/envsubst#docs)
 
 ## Removed options
 
