@@ -28,6 +28,7 @@ type RedisStoreOptions struct {
 	SentinelPassword       string   `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
 	SentinelMasterName     string   `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
 	SentinelConnectionURLs []string `flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls"`
+	SentinelDB             int      `flag:"redis-sentinel-db" cfg:"redis_sentinel_db"`
 	UseCluster             bool     `flag:"redis-use-cluster" cfg:"redis_use_cluster"`
 	ClusterConnectionURLs  []string `flag:"redis-cluster-connection-urls" cfg:"redis_cluster_connection_urls"`
 	CAPath                 string   `flag:"redis-ca-path" cfg:"redis_ca_path"`
