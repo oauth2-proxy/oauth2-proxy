@@ -126,9 +126,14 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, err
 	}
 
+	if opts.Password != "" {
+		opt.Password = opts.Password
+	}
+
 	client := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:           addrs,
-		Password:        opts.Password,
+		Username:        opt.Username,
+		Password:        opt.Password,
 		TLSConfig:       opt.TLSConfig,
 		ConnMaxIdleTime: time.Duration(opts.IdleTimeout) * time.Second,
 	})
