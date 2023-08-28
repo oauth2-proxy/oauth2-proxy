@@ -70,7 +70,7 @@ func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, caFiles ..
 
 	if certFile != "" && keyFile != "" {
 		certs, err := getClientCertificates(certFile, keyFile)
-		if err == nil {
+		if err != nil {
 			return nil, err
 		}
 		transport.TLSClientConfig.Certificates = certs
