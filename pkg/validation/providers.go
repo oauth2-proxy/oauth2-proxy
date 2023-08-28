@@ -71,9 +71,8 @@ func validateGoogleConfig(provider options.Provider) []string {
 	hasAdminEmail := provider.GoogleConfig.AdminEmail != ""
 	hasSAJSON := provider.GoogleConfig.ServiceAccountJSON != ""
 	useADC := provider.GoogleConfig.UseApplicationDefaultCredentials
-	hasTargetPrincipal := provider.GoogleConfig.TargetPrincipal != ""
 
-	if !hasGoogleGroups && !hasAdminEmail && !hasSAJSON && !useADC && !hasTargetPrincipal {
+	if !hasGoogleGroups && !hasAdminEmail && !hasSAJSON && !useADC {
 		return []string{"missing setting: no google authentication method has been set"}
 	}
 
@@ -91,8 +90,6 @@ func validateGoogleConfig(provider options.Provider) []string {
 		msgs = append(msgs, fmt.Sprintf("Google credentials file not found: %s", provider.GoogleConfig.ServiceAccountJSON))
 	} else if useADC && hasSAJSON {
 		msgs = append(msgs, "invalid setting: can't use both google-service-account-json and google-use-application-default-credentials")
-	} else if useADC && !hasTargetPrincipal {
-		msgs = append(msgs, "missing setting: google-target-principal must be set when using google-use-application-default-credentials")
 	}
 
 	return msgs

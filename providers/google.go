@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/impersonate"
 	"io"
 	"net/http"
 	"net/url"
@@ -230,15 +229,14 @@ func getAdminService(opts options.GoogleOptions) *admin.Service {
 	ctx := context.Background()
 	var client *http.Client
 	if opts.UseApplicationDefaultCredentials {
-		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
-			TargetPrincipal: opts.TargetPrincipal,
-			Subject:         opts.AdminEmail,
-			Scopes:          []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
+		ts, err := google.FindDefaultCredentialsWithParams(ctx, google.CredentialsParams{
+			Subject: opts.AdminEmail,
+			Scopes:  []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
 		})
 		if err != nil {
 			logger.Fatal("failed to fetch application default credentials: ", err)
 		}
-		client = oauth2.NewClient(ctx, ts)
+		client = oauth2.NewClient(ctx, ts.TokenSource)
 	} else {
 		credentialsReader, err := os.Open(opts.ServiceAccountJSON)
 		if err != nil {

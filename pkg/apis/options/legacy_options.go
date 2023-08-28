@@ -498,7 +498,6 @@ type LegacyProvider struct {
 	GoogleAdminEmail                       string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON               string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
 	GoogleUseApplicationDefaultCredentials bool     `flag:"google-use-application-default-credentials" cfg:"google_use_application_default_credentials"`
-	TargetPrincipal                        string   `flag:"google-target-principal" cfg:"google_target_principal"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -734,7 +733,6 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			AdminEmail:                       l.GoogleAdminEmail,
 			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
 			UseApplicationDefaultCredentials: l.GoogleUseApplicationDefaultCredentials,
-			TargetPrincipal:                  l.TargetPrincipal,
 		}
 	}
 
