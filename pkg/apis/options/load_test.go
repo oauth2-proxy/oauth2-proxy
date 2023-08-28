@@ -390,6 +390,10 @@ sub:
 
 				os.Setenv("TESTUSER", "Alice")
 
+				// Unset the environment variables after running the test
+
+				defer os.Unsetenv("TESTUSER")
+
 				var configFileName string
 				if in.configFile != nil {
 					By("Creating a config file")
@@ -418,10 +422,6 @@ sub:
 				}
 
 				Expect(input).To(Equal(in.expectedOutput))
-
-				// Unset the environment variables after running the test
-
-				os.Unsetenv("TESTUSER")
 
 			},
 			Entry("with a valid input", loadYAMLTableInput{
