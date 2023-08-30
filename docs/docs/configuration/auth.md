@@ -51,7 +51,7 @@ It's recommended to refresh sessions on a short interval (1h) with `cookie-refre
 #### Restrict auth to specific Google groups on your domain. (optional)
 
 1.  Create a [service account](https://developers.google.com/identity/protocols/OAuth2ServiceAccount) and download the json 
-file if you're not using [Application Default Credentials / Workload Identity / Workload Identity Federation (recommended)](##### Using Application Default Credentials (ADC) / Workload Identity / Workload Identity Federation (recommended)).
+file if you're not using [Application Default Credentials / Workload Identity / Workload Identity Federation (recommended)](#using-application-default-credentials-adc--workload-identity--workload-identity-federation-recommended).
 2.  Make note of the Client ID for a future step.
 3.  Under "APIs & Auth", choose APIs.
 4.  Click on Admin SDK and then Enable API.
