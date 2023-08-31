@@ -14,6 +14,16 @@ var OIDCAudienceClaims = []string{"aud"}
 // Providers is a collection of definitions for providers.
 type Providers []Provider
 
+func (p *Providers) SetDefaultIfNil() {
+	if len(*p) == 0 {
+		*p = providerDefaults()
+	}
+	for i, provider := range *p {
+		provider.SetDefaultIfNil()
+		(*p)[i] = provider
+	}
+}
+
 // Provider holds all configuration for a single provider
 type Provider struct {
 	// ClientID is the OAuth Client ID that is defined in the provider
@@ -78,6 +88,10 @@ type Provider struct {
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
 	// The code challenge method
 	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
+}
+
+func (p *Provider) SetDefaultIfNil() {
+	p.OIDCConfig.SetDefaultIfNil()
 }
 
 // ProviderType is used to enumerate the different provider type options
@@ -228,6 +242,21 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
+}
+
+func (o *OIDCOptions) SetDefaultIfNil() {
+	if o.EmailClaim == "" {
+		o.EmailClaim = OIDCEmailClaim
+	}
+	if o.UserIDClaim == "" {
+		o.UserIDClaim = OIDCEmailClaim
+	}
+	if o.GroupsClaim == "" {
+		o.GroupsClaim = OIDCGroupsClaim
+	}
+	if len(o.AudienceClaims) == 0 {
+		o.AudienceClaims = OIDCAudienceClaims
+	}
 }
 
 type LoginGovOptions struct {

@@ -45,6 +45,10 @@ type AlphaOptions struct {
 	Providers Providers `json:"providers,omitempty"`
 }
 
+func (a *AlphaOptions) SetDefaultIfNil() {
+	a.Providers.SetDefaultIfNil()
+}
+
 // MergeInto replaces alpha options in the Options struct with the values
 // from the AlphaOptions
 func (a *AlphaOptions) MergeInto(opts *Options) {
