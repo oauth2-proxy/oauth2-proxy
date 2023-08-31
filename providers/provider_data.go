@@ -265,7 +265,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
-	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
+	verifyEmail := (p.EmailClaim == DefaultEmailClaim) && !p.AllowUnverifiedEmail
 
 	if verifyEmail {
 		var verified bool

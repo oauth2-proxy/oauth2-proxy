@@ -256,10 +256,6 @@ func providerDefaults() Providers {
 				InsecureAllowUnverifiedEmail: false,
 				InsecureSkipNonce:            true,
 				SkipDiscovery:                false,
-				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
-				EmailClaim:                   OIDCEmailClaim,
-				GroupsClaim:                  OIDCGroupsClaim,
-				AudienceClaims:               OIDCAudienceClaims,
 				ExtraAudiences:               []string{},
 			},
 		},

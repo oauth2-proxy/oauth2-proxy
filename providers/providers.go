@@ -13,9 +13,18 @@ import (
 )
 
 const (
+	// DefaultEmailClaim is the generic email claim used by the OIDC provider.
+	DefaultEmailClaim = options.OIDCEmailClaim
+
+	// DefaultGroupsClaim is the generic groups claim used by the OIDC provider.
+	DefaultGroupsClaim = options.OIDCGroupsClaim
+
 	CodeChallengeMethodPlain = "plain"
 	CodeChallengeMethodS256  = "S256"
 )
+
+// DefaultAudienceClaims is the generic audience claim list used by the OIDC provider.
+var DefaultAudienceClaims = options.OIDCAudienceClaims
 
 // Provider represents an upstream identity provider implementation
 type Provider interface {
@@ -84,7 +93,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 
 	if needsVerifier {
-		pv, err := internaloidc.NewProviderVerifier(context.TODO(), internaloidc.ProviderVerifierOptions{
+		opts := internaloidc.ProviderVerifierOptions{
 			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
 			ClientID:               providerConfig.ClientID,
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
@@ -92,7 +101,11 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
 			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
 			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
-		})
+		}
+		if len(opts.AudienceClaims) == 0 {
+			opts.AudienceClaims = DefaultAudienceClaims
+		}
+		pv, err := internaloidc.NewProviderVerifier(context.TODO(), opts)
 		if err != nil {
 			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
 		}
@@ -151,11 +164,25 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option
-	if providerConfig.OIDCConfig.EmailClaim == options.OIDCEmailClaim &&
-		providerConfig.OIDCConfig.UserIDClaim != options.OIDCEmailClaim {
+	if providerConfig.OIDCConfig.EmailClaim == DefaultEmailClaim &&
+		providerConfig.OIDCConfig.UserIDClaim != DefaultEmailClaim {
 		p.EmailClaim = providerConfig.OIDCConfig.UserIDClaim
 	}
 
+	if providerConfig.Type == "oidc" && p.Scope == "" {
+		p.Scope = "openid email profile"
+
+		if len(providerConfig.AllowedGroups) > 0 {
+			p.Scope += " groups"
+		}
+	}
+
+	if p.EmailClaim == "" {
+		p.EmailClaim = DefaultEmailClaim
+	}
+	if p.GroupsClaim == "" {
+		p.GroupsClaim = DefaultGroupsClaim
+	}
 	p.setAllowedGroups(providerConfig.AllowedGroups)
 
 	return p, nil
