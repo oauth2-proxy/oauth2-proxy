@@ -41,6 +41,16 @@ type Provider interface {
 }
 
 func NewProvider(providerConfig options.Provider) (Provider, error) {
+	if providerConfig.OIDCConfig.EmailClaim == "" {
+		providerConfig.OIDCConfig.EmailClaim = DefaultEmailClaim
+	}
+	if providerConfig.OIDCConfig.GroupsClaim == "" {
+		providerConfig.OIDCConfig.GroupsClaim = DefaultGroupsClaim
+	}
+	if len(providerConfig.OIDCConfig.AudienceClaims) == 0 {
+		providerConfig.OIDCConfig.AudienceClaims = DefaultAudienceClaims
+	}
+
 	providerData, err := newProviderDataFromConfig(providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
@@ -93,7 +103,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 
 	if needsVerifier {
-		opts := internaloidc.ProviderVerifierOptions{
+		pv, err := internaloidc.NewProviderVerifier(context.TODO(), internaloidc.ProviderVerifierOptions{
 			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
 			ClientID:               providerConfig.ClientID,
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
@@ -101,11 +111,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
 			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
 			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
-		}
-		if len(opts.AudienceClaims) == 0 {
-			opts.AudienceClaims = DefaultAudienceClaims
-		}
-		pv, err := internaloidc.NewProviderVerifier(context.TODO(), opts)
+		})
 		if err != nil {
 			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
 		}
@@ -177,12 +183,6 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		}
 	}
 
-	if p.EmailClaim == "" {
-		p.EmailClaim = DefaultEmailClaim
-	}
-	if p.GroupsClaim == "" {
-		p.GroupsClaim = DefaultGroupsClaim
-	}
 	p.setAllowedGroups(providerConfig.AllowedGroups)
 
 	return p, nil
