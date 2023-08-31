@@ -19,6 +19,7 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/oauth2-proxy/mockoidc v0.0.0-20220221072942-e3afe97dec43
 	github.com/oauth2-proxy/tools/reference-gen v0.0.0-20210118095127-56ffd7384404
+	github.com/ohler55/ojg v1.14.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.6
 	github.com/pierrec/lz4/v4 v4.1.17

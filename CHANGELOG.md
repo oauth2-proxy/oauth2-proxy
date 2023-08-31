@@ -7,6 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.4.0
+- [#2133](https://github.com/oauth2-proxy/oauth2-proxy/pull/2133) Use X-Forwarded-Uri if it exists for pathRegex match
 - [#2028](https://github.com/oauth2-proxy/oauth2-proxy/pull/2028) Update golang.org/x/net to v0.7.0 ato address GHSA-vvpx-j8f3-3w6h
 - [#1873](https://github.com/oauth2-proxy/oauth2-proxy/pull/1873) Fix empty users with some OIDC providers (@babs)
 - [#1882](https://github.com/oauth2-proxy/oauth2-proxy/pull/1882) Make `htpasswd.GetUsers` racecondition safe
@@ -21,8 +22,10 @@
 - [#1988](https://github.com/oauth2-proxy/oauth2-proxy/pull/1988) Ensure sign-in page background is uniform throughout the page
 - [#2013](https://github.com/oauth2-proxy/oauth2-proxy/pull/2013) Upgrade alpine to version 3.17.2 and library dependencies (@miguelborges99)
 - [#2047](https://github.com/oauth2-proxy/oauth2-proxy/pull/2047) CVE-2022-41717: DoS in Go net/http may lead to DoS (@miguelborges99)
+- [#1921](https://github.com/oauth2-proxy/oauth2-proxy/pull/1921) Check jsonpath syntax before interpretation
+- [#2025](https://github.com/oauth2-proxy/oauth2-proxy/pull/2025) Embed static stylesheets and dependencies
 - [#1949](https://github.com/oauth2-proxy/oauth2-proxy/pull/1949) Allow cookie names with dots in redis sessions (@miguelborges99)
-
+- 
 # V7.4.0
 
 ## Release Highlights
