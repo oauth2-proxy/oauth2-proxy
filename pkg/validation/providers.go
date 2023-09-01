@@ -84,11 +84,13 @@ func validateGoogleConfig(provider options.Provider) []string {
 	}
 
 	_, err := os.Stat(provider.GoogleConfig.ServiceAccountJSON)
-	if !useADC && !hasSAJSON {
-		msgs = append(msgs, "missing setting: google-service-account-json or google-use-application-default-credentials")
-	} else if !useADC && err != nil {
-		msgs = append(msgs, fmt.Sprintf("Google credentials file not found: %s", provider.GoogleConfig.ServiceAccountJSON))
-	} else if useADC && hasSAJSON {
+	if !useADC {
+		if !hasSAJSON {
+			msgs = append(msgs, "missing setting: google-service-account-json or google-use-application-default-credentials")
+		} else if err != nil {
+			msgs = append(msgs, fmt.Sprintf("Google credentials file not found: %s", provider.GoogleConfig.ServiceAccountJSON))
+		}
+	} else if hasSAJSON {
 		msgs = append(msgs, "invalid setting: can't use both google-service-account-json and google-use-application-default-credentials")
 	}
 
