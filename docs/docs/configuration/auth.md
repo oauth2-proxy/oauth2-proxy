@@ -80,9 +80,6 @@ https://www.googleapis.com/auth/admin.directory.user.readonly
 
 Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
 
-#### 
-
-
 ### Azure Auth Provider
 
 1. Add an application: go to [https://portal.azure.com](https://portal.azure.com), choose **Azure Active Directory**, select 
