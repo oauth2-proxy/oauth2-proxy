@@ -73,7 +73,7 @@ func validateGoogleConfig(provider options.Provider) []string {
 	useADC := provider.GoogleConfig.UseApplicationDefaultCredentials
 
 	if !hasGoogleGroups && !hasAdminEmail && !hasSAJSON && !useADC {
-		return []string{"missing setting: no google authentication method has been set"}
+		return msgs
 	}
 
 	if !hasGoogleGroups {

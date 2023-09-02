@@ -100,12 +100,14 @@ func NewGoogleProvider(p *ProviderData, opts options.GoogleOptions) (*GoogleProv
 		},
 	}
 
-	// Backwards compatibility with `--google-group` option
-	if len(opts.Groups) > 0 {
-		provider.setAllowedGroups(opts.Groups)
-	}
+	if opts.ServiceAccountJSON != "" || opts.UseApplicationDefaultCredentials {
+		// Backwards compatibility with `--google-group` option
+		if len(opts.Groups) > 0 {
+			provider.setAllowedGroups(opts.Groups)
+		}
 
-	provider.setGroupRestriction(opts)
+		provider.setGroupRestriction(opts)
+	}
 
 	return provider, nil
 }
