@@ -142,26 +142,38 @@ func isUnexported(name string) bool {
 // LoadYAML will load a YAML based configuration file into the options interface provided.
 func LoadYAML(configFileName string, into interface{}) error {
 
-	if configFileName == "" {
-		return errors.New("no configuration file provided")
-	}
-
-	unparsedBuffer, err := os.ReadFile(configFileName)
+	buffer, err := loadAndParseYaml(configFileName)
 	if err != nil {
-		return fmt.Errorf("unable to load config file: %w", err)
-	}
-
-	// We now parse over the yaml with env substring, and fill in the ENV's
-	buffer, err := envsubst.Bytes(unparsedBuffer)
-	if err != nil {
-		return fmt.Errorf("error in substituting env variables : %w", err)
+		return err
 	}
 
 	// UnmarshalStrict will return an error if the config includes options that are
-	// not mapped to felds of the into struct
+	// not mapped to fields of the into struct
 	if err := yaml.UnmarshalStrict(buffer, into, yaml.DisallowUnknownFields); err != nil {
 		return fmt.Errorf("error unmarshalling config: %w", err)
 	}
 
 	return nil
+}
+
+// Performs the heavy lifting of the LoadYaml function
+func loadAndParseYaml(configFileName string) ([]byte, error) {
+
+	if configFileName == "" {
+		return nil, errors.New("no configuration file provided")
+	}
+
+	unparsedBuffer, err := os.ReadFile(configFileName)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load config file: %w", err)
+	}
+
+	// We now parse over the yaml with env substring, and fill in the ENV's
+	buffer, err := envsubst.Bytes(unparsedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("error in substituting env variables : %w", err)
+	}
+
+	return buffer, nil
+
 }
