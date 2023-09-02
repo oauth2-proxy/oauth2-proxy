@@ -284,7 +284,8 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 }
 
 func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {
-	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, p.ProfileURL, p.getAuthorizationHeader(accessToken))
+	ctxWithClient := context.WithValue(context.TODO(), oauth2.HTTPClient, p.Client)
+	extractor, err := util.NewClaimExtractor(ctxWithClient, rawIDToken, p.ProfileURL, p.getAuthorizationHeader(accessToken))
 	if err != nil {
 		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}

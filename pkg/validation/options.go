@@ -2,7 +2,6 @@ package validation
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -13,7 +12,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 )
 
 // Validate checks that required options are set and validates those that they
@@ -28,28 +26,6 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateAPIRoutes(o)...)
 	msgs = configureLogger(o.Logging, msgs)
 	msgs = parseSignatureKey(o, msgs)
-
-	if o.SSLInsecureSkipVerify {
-		// InsecureSkipVerify is a configurable option we allow
-		/* #nosec G402 */
-		insecureTransport := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		http.DefaultClient = &http.Client{Transport: insecureTransport}
-	} else if len(o.Providers[0].CAFiles) > 0 {
-		pool, err := util.GetCertPool(o.Providers[0].CAFiles)
-		if err == nil {
-			transport := http.DefaultTransport.(*http.Transport).Clone()
-			transport.TLSClientConfig = &tls.Config{
-				RootCAs:    pool,
-				MinVersion: tls.VersionTLS12,
-			}
-
-			http.DefaultClient = &http.Client{Transport: transport}
-		} else {
-			msgs = append(msgs, fmt.Sprintf("unable to load provider CA file(s): %v", err))
-		}
-	}
 
 	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
