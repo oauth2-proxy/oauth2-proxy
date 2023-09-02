@@ -123,7 +123,8 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 		return false, nil
 	}
 
-	err := p.redeemRefreshToken(ctx, s)
+	ctxWithClient := context.WithValue(ctx, oauth2.HTTPClient, p.Client)
+	err := p.redeemRefreshToken(ctxWithClient, s)
 	if err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
 	}

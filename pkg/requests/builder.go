@@ -34,7 +34,7 @@ type builder struct {
 // New provides a new Builder for the given endpoint.
 func New(endpoint string) Builder {
 	return &builder{
-		client:   http.DefaultClient,
+		client:   &http.Client{Transport: http.DefaultTransport},
 		endpoint: endpoint,
 		method:   "GET",
 	}

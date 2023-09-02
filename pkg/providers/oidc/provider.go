@@ -55,6 +55,7 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 	// we get the URLs, we'll just use the non-discovery path.
 
 	logger.Printf("Performing OIDC Discovery...")
+
 	var p providerJSON
 	requestURL := strings.TrimSuffix(issuerURL, "/") + "/.well-known/openid-configuration"
 
