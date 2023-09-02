@@ -94,6 +94,7 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 		return nil, fmt.Errorf("error converting provider: %v", err)
 	}
 	l.Options.Providers = providers
+	l.Options.SSLInsecureSkipVerify = l.LegacyProvider.SslInsecureSkipVerify
 
 	return &l.Options, nil
 }
@@ -506,6 +507,7 @@ type LegacyProvider struct {
 	ProviderType                       string   `flag:"provider" cfg:"provider"`
 	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
 	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
+	SslInsecureSkipVerify              bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	TLSCertFile                        string   `flag:"provider-tls-cert-file" cfg:"provider_tls_cert_file"`
 	TLSKeyFile                         string   `flag:"provider-tls-key-file" cfg:"provider_tls_key_file"`
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
@@ -562,6 +564,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.StringSlice("provider-ca-file", []string{}, "One or more paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead.")
+	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.String("provider-tls-cert-file", "", "Path to the PEM encoded X.509 certificate to use when connecting to the provider.")
 	flagSet.String("provider-tls-key-file", "", "Path to the PEM encoded X.509 key to use when connecting to the provider.")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
@@ -656,21 +659,22 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers := Providers{}
 
 	provider := Provider{
-		ClientID:            l.ClientID,
-		ClientSecret:        l.ClientSecret,
-		ClientSecretFile:    l.ClientSecretFile,
-		Type:                ProviderType(l.ProviderType),
-		CAFiles:             l.ProviderCAFiles,
-		TLSCertFile:         l.TLSCertFile,
-		TLSKeyFile:          l.TLSKeyFile,
-		LoginURL:            l.LoginURL,
-		RedeemURL:           l.RedeemURL,
-		ProfileURL:          l.ProfileURL,
-		ProtectedResource:   l.ProtectedResource,
-		ValidateURL:         l.ValidateURL,
-		Scope:               l.Scope,
-		AllowedGroups:       l.AllowedGroups,
-		CodeChallengeMethod: l.CodeChallengeMethod,
+		ClientID:              l.ClientID,
+		ClientSecret:          l.ClientSecret,
+		ClientSecretFile:      l.ClientSecretFile,
+		Type:                  ProviderType(l.ProviderType),
+		CAFiles:               l.ProviderCAFiles,
+		SSLInsecureSkipVerify: l.SslInsecureSkipVerify,
+		TLSCertFile:           l.TLSCertFile,
+		TLSKeyFile:            l.TLSKeyFile,
+		LoginURL:              l.LoginURL,
+		RedeemURL:             l.RedeemURL,
+		ProfileURL:            l.ProfileURL,
+		ProtectedResource:     l.ProtectedResource,
+		ValidateURL:           l.ValidateURL,
+		Scope:                 l.Scope,
+		AllowedGroups:         l.AllowedGroups,
+		CodeChallengeMethod:   l.CodeChallengeMethod,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC
