@@ -50,11 +50,21 @@ It's recommended to refresh sessions on a short interval (1h) with `cookie-refre
 
 #### Restrict auth to specific Google groups on your domain. (optional)
 
-1.  Create a service account: https://developers.google.com/identity/protocols/OAuth2ServiceAccount and make sure to download the json file.
+1.  Create a [service account](https://developers.google.com/identity/protocols/OAuth2ServiceAccount) and download the json 
+file if you're not using [Application Default Credentials / Workload Identity / Workload Identity Federation (recommended)](#using-application-default-credentials-adc--workload-identity--workload-identity-federation-recommended).
 2.  Make note of the Client ID for a future step.
 3.  Under "APIs & Auth", choose APIs.
 4.  Click on Admin SDK and then Enable API.
 5.  Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account and give the client id from step 2 the following oauth scopes:
+
+
+##### Using Application Default Credentials (ADC) / Workload Identity / Workload Identity Federation (recommended)
+oauth2-proxy can make use of [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials).
+When deployed within GCP, this means that it can automatically use the service account attached to the resource. When deployed to GKE, ADC
+can be leveraged through a feature called Workload Identity. Follow Google's [guide](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+to set up Workload Identity.
+
+When deployed outside of GCP, [Workload Identity Federation](https://cloud.google.com/docs/authentication/provide-credentials-adc#wlif) might be an option.
 
 ```
 https://www.googleapis.com/auth/admin.directory.group.readonly

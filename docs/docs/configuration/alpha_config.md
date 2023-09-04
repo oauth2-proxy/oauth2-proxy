@@ -236,6 +236,7 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | `group` | _[]string_ | Groups sets restrict logins to members of this google group |
 | `adminEmail` | _string_ | AdminEmail is the google admin to impersonate for api calls |
 | `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
+| `useApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
 
 ### Header
 
