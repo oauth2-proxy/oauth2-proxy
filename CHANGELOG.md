@@ -7,6 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.5.0
+- [#2220](https://github.com/oauth2-proxy/oauth2-proxy/pull/2220) Added binary and docker release platforms (@kvanzuijlen)
 
 # V7.5.0
 
