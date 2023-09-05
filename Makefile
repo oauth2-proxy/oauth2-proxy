@@ -2,10 +2,9 @@ GO ?= go
 GOLANGCILINT ?= golangci-lint
 
 BINARY := oauth2-proxy
-#VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
-VERSION := "7.5.0"
+VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
-REGISTRY ?= ghcr.io/kvanzuijlen/oauth2-proxy
+REGISTRY ?= quay.io/oauth2-proxy
 .NOTPARALLEL:
 
 GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
