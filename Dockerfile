@@ -38,6 +38,7 @@ RUN case ${TARGETPLATFORM} in \
          "linux/arm64" | "linux/arm/v8")  GOARCH=arm64  ;; \
          "linux/ppc64le")  GOARCH=ppc64le  ;; \
          "linux/arm/v6") GOARCH=arm GOARM=6  ;; \
+         "linux/arm/v7") GOARCH=arm GOARM=7 ;; \
     esac && \
     printf "Building OAuth2 Proxy for arch ${GOARCH}\n" && \
     GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem
