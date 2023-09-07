@@ -53,11 +53,11 @@ docker:
 
 .PHONY: docker-all
 docker-all: docker
-	$(DOCKER_BUILDX) --platform linux/amd64 -t $(REGISTRY)/oauth2-proxy:latest-amd64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
-	$(DOCKER_BUILDX) --platform linux/arm64 -t $(REGISTRY)/oauth2-proxy:latest-arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
+	$(DOCKER_BUILDX) --platform linux/amd64   -t $(REGISTRY)/oauth2-proxy:latest-amd64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
+	$(DOCKER_BUILDX) --platform linux/arm64   -t $(REGISTRY)/oauth2-proxy:latest-arm64 -t $(REGISTRY)/oauth2-proxy:${VERSION}-arm64 .
 	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:latest-ppc64le -t $(REGISTRY)/oauth2-proxy:${VERSION}-ppc64le .
-	$(DOCKER_BUILDX) --platform linux/arm/v6 -t $(REGISTRY)/oauth2-proxy:latest-armv6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
-	$(DOCKER_BUILDX) --platform linux/arm/v7 -t $(REGISTRY)/oauth2-proxy:latest-armv7 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv7 .
+	$(DOCKER_BUILDX) --platform linux/arm/v6  -t $(REGISTRY)/oauth2-proxy:latest-armv6 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
+	$(DOCKER_BUILDX) --platform linux/arm/v7  -t $(REGISTRY)/oauth2-proxy:latest-armv7 -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv7 .
 
 .PHONY: docker-push
 docker-push:
