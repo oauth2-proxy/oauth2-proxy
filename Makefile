@@ -49,7 +49,7 @@ DOCKER_BUILDX_PUSH_X_PLATFORM := $(DOCKER_BUILDX_PUSH) --platform ${DOCKER_BUILD
 
 .PHONY: docker
 docker:
-	$(DOCKER_BUILDX_X_PLATFORM) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest -f Dockerfile -t $(REGISTRY)/oauth2-proxy:${VERSION} .
+	$(DOCKER_BUILDX_X_PLATFORM) -f Dockerfile -t $(REGISTRY)/oauth2-proxy:latest -t $(REGISTRY)/oauth2-proxy:${VERSION} .
 
 .PHONY: docker-all
 docker-all: docker
