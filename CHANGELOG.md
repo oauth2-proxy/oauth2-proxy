@@ -7,6 +7,8 @@
 ## Breaking Changes
 
 ## Changes since v7.5.0
+
+- [#2221](https://github.com/oauth2-proxy/oauth2-proxy/pull/2221) Backwards compatible fix for wrong environment variable name (OAUTH2_PROXY_GOOGLE_GROUPS) (@kvanzuijlen)
 - [#1989](https://github.com/oauth2-proxy/oauth2-proxy/pull/1989) Fix default scope for keycloak-oidc provider
 
 # V7.5.0
