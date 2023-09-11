@@ -170,6 +170,15 @@ var _ = Describe("Gitlab Provider Tests", func() {
 		b.Close()
 	})
 
+	Context("New Provider Init", func() {
+		It("creates new keycloak oidc provider with expected defaults", func() {
+			providerData := p.Data()
+			Expect(providerData.ProviderName).To(Equal(gitlabProviderName))
+			Expect(providerData.Scope).To(Equal(gitlabDefaultScope))
+			Expect(providerData.ProviderName).NotTo(Equal(oidcDefaultScope))
+		})
+	})
+
 	Context("with bad token", func() {
 		It("should trigger an error", func() {
 			p.AllowUnverifiedEmail = false
