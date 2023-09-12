@@ -215,7 +215,7 @@ type OIDCOptions struct {
 	// JwksURL is the OpenID Connect JWKS URL
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JwksURL string `json:"jwksURL,omitempty"`
-	// PublicKeys is a list of files pointing to public keys in PEM format to use
+	// PublicKeys is a list of paths pointing to public key files in PEM format to use
 	// for verifying JWT tokens
 	PublicKeys []string `json:"publicKeys,omitempty"`
 	// EmailClaim indicates which claim contains the user email,
