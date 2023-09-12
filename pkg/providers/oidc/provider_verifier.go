@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/coreos/go-oidc/v3/oidc"
-	"io/ioutil"
+	"os"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
