@@ -130,11 +130,10 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 		if opts.JWKsURL != "" {
 			keySet = oidc.NewRemoteKeySet(ctx, opts.JWKsURL)
 		} else {
-			_keySet, err := newKeySetFromStatic(opts.PublicKeys)
+			keySet, err := newKeySetFromStatic(opts.PublicKeys)
 			if err != nil {
 				return nil, nil, fmt.Errorf("error while parsing public keys: %v", err)
 			}
-			keySet = _keySet
 		}
 		// Instead of discovering the JWKs URK, it needs to be specified in the opts already
 		return newVerifierBuilder(
