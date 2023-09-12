@@ -10,7 +10,7 @@ slug: /
 
     b. Build with `$ go install github.com/oauth2-proxy/oauth2-proxy/v7@latest` which will put the binary in `$GOPATH/bin`
 
-    c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, ARMv6 and ARM64 tags available)
+    c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, PPC64LE, ARMv6, ARMv7, and ARM64 tags available)
 
     d. Using a [Kubernetes manifest](https://github.com/oauth2-proxy/manifests) (Helm)
 
