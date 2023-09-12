@@ -88,7 +88,7 @@ var _ = Describe("ProviderVerifier", func() {
 			},
 			expectedError: "invalid provider verifier options: mutually exclusive settings: jwks-url and public-keys",
 		}),
-		Entry("should be succesfful when skipping discovery with the JWKs URL specified", &newProviderVerifierTableInput{
+		Entry("should be successful when skipping discovery with the JWKs URL specified", &newProviderVerifierTableInput{
 			modifyOpts: func(p *ProviderVerifierOptions) {
 				p.SkipDiscovery = true
 				p.JWKsURL = m.JWKSEndpoint()
