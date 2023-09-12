@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/coreos/go-oidc/v3/oidc"
-	"os"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
+	"os"
 )
 
 // ProviderVerifier represents the OIDC discovery and verification process
@@ -130,7 +130,8 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 		if opts.JWKsURL != "" {
 			keySet = oidc.NewRemoteKeySet(ctx, opts.JWKsURL)
 		} else {
-			keySet, err := newKeySetFromStatic(opts.PublicKeys)
+			var err error
+			keySet, err = newKeySetFromStatic(opts.PublicKeys)
 			if err != nil {
 				return nil, nil, fmt.Errorf("error while parsing public keys: %v", err)
 			}
@@ -151,18 +152,9 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 	return verifierBuilder, provider, nil
 }
 
-// ReadFile reads the contents of a file into a byte array.
-func ReadFile(filename string) ([]byte, error) {
-	bytes, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-	return bytes, nil
-}
-
 // GetPublicKeyFromBytes parses a PEM-encoded public key from a byte array
 // and returns a crypto.PublicKey object.
-func GetPublicKeyFromBytes(bytes []byte) (crypto.PublicKey, error) {
+func getPublicKeyFromBytes(bytes []byte) (crypto.PublicKey, error) {
 	block, _ := pem.Decode(bytes)
 	if block == nil {
 		return nil, fmt.Errorf("failed to parse PEM block containing the public key")
@@ -184,12 +176,12 @@ func GetPublicKeyFromBytes(bytes []byte) (crypto.PublicKey, error) {
 func newKeySetFromStatic(keys []string) (*oidc.StaticKeySet, error) {
 	var keySet []crypto.PublicKey
 	for _, keyFile := range keys {
-		bytes, err := ReadFile(keyFile)
+		bytes, err := os.ReadFile(keyFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file: %w", err)
 		}
 
-		publicKey, err := GetPublicKeyFromBytes(bytes)
+		publicKey, err := getPublicKeyFromBytes(bytes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create keys: %w", err)
 		}
