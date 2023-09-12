@@ -154,7 +154,7 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 
 // ReadFile reads the contents of a file into a byte array.
 func ReadFile(filename string) ([]byte, error) {
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
