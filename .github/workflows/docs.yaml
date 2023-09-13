@@ -9,63 +9,64 @@ on:
     paths: ['docs/**']
 
 jobs:
-  checks:
-    if: github.event_name != 'push'
+  pull-request-check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v3
         with:
-          node-version: '17.x'
+          node-version: 18
+
       - name: Test Build
         working-directory: ./docs
-        env:
-          NODE_OPTIONS: --openssl-legacy-provider
         run: |
-          if [ -e yarn.lock ]; then
-          yarn install --frozen-lockfile
-          elif [ -e package-lock.json ]; then
           npm ci
-          else
-          npm i
-          fi
           npm run build
-  gh-release:
-    if: github.event_name != 'pull_request'
+
+  gh-pages-release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
         with:
-          node-version: '17.x'
-      - name: Add key to allow access to repository
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-          NODE_OPTIONS: --openssl-legacy-provider
+          path: master
+      
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Build docusaurus
+        working-directory: master/docs
+        id: build
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          echo "${{ secrets.GH_PAGES_DEPLOY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          cat <<EOT >> ~/.ssh/config
-          Host github.com
-          HostName github.com
-          IdentityFile ~/.ssh/id_rsa
-          EOT
-      - name: Release to GitHub Pages
-        working-directory: ./docs
-        env:
-          USE_SSH: true
-          GIT_USER: git
-          NODE_OPTIONS: --openssl-legacy-provider
-        run: |
-          git config --global user.email "actions@gihub.com"
-          git config --global user.name "gh-actions"
-          if [ -e yarn.lock ]; then
-          yarn install --frozen-lockfile
-          elif [ -e package-lock.json ]; then
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           npm ci
-          else
-          npm i
-          fi
-          npx docusaurus deploy
+          npm run build
+
+      - name: Release to github pages
+        env:
+          GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: gh-pages
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Remove all files except .git
+          git rm -r *
+
+          # Copy the build files from master/docs/build to gh-pages
+          cp -r ../master/docs/build/* .
+
+          # Commit and push
+          git add .
+          git commit -m "Update documentation based on ${{ steps.build.outputs.sha }}"
+          git push origin gh-pages
