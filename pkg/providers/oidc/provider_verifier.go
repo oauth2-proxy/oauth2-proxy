@@ -40,7 +40,8 @@ type ProviderVerifierOptions struct {
 	// eg: https://www.googleapis.com/oauth2/v3/certs
 	JWKsURL string
 
-	// TODO:
+	// PublicKeys is a list of paths pointing to public key files in PEM format to use
+	// for verifying JWT tokens
 	PublicKeys []string
 
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
