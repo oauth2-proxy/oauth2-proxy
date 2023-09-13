@@ -3,6 +3,7 @@ package options
 import (
 	"fmt"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -70,6 +71,7 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(legacyHeadersFlagSet())
 	flagSet.AddFlagSet(legacyServerFlagset())
 	flagSet.AddFlagSet(legacyProviderFlagSet())
+	flagSet.AddFlagSet(legacyGoogleFlagSet())
 
 	return flagSet
 }
@@ -481,21 +483,23 @@ type LegacyProvider struct {
 	ClientSecret     string `flag:"client-secret" cfg:"client_secret"`
 	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file"`
 
-	KeycloakGroups           []string `flag:"keycloak-group" cfg:"keycloak_groups"`
-	AzureTenant              string   `flag:"azure-tenant" cfg:"azure_tenant"`
-	AzureGraphGroupField     string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
-	BitbucketTeam            string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
-	BitbucketRepository      string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
-	GitHubOrg                string   `flag:"github-org" cfg:"github_org"`
-	GitHubTeam               string   `flag:"github-team" cfg:"github_team"`
-	GitHubRepo               string   `flag:"github-repo" cfg:"github_repo"`
-	GitHubToken              string   `flag:"github-token" cfg:"github_token"`
-	GitHubUsers              []string `flag:"github-user" cfg:"github_users"`
-	GitLabGroup              []string `flag:"gitlab-group" cfg:"gitlab_groups"`
-	GitLabProjects           []string `flag:"gitlab-project" cfg:"gitlab_projects"`
-	GoogleGroups             []string `flag:"google-group" cfg:"google_group"`
-	GoogleAdminEmail         string   `flag:"google-admin-email" cfg:"google_admin_email"`
-	GoogleServiceAccountJSON string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
+	KeycloakGroups                         []string `flag:"keycloak-group" cfg:"keycloak_groups"`
+	AzureTenant                            string   `flag:"azure-tenant" cfg:"azure_tenant"`
+	AzureGraphGroupField                   string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
+	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
+	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
+	GitHubOrg                              string   `flag:"github-org" cfg:"github_org"`
+	GitHubTeam                             string   `flag:"github-team" cfg:"github_team"`
+	GitHubRepo                             string   `flag:"github-repo" cfg:"github_repo"`
+	GitHubToken                            string   `flag:"github-token" cfg:"github_token"`
+	GitHubUsers                            []string `flag:"github-user" cfg:"github_users"`
+	GitLabGroup                            []string `flag:"gitlab-group" cfg:"gitlab_groups"`
+	GitLabProjects                         []string `flag:"gitlab-project" cfg:"gitlab_projects"`
+	GoogleGroupsLegacy                     []string `flag:"google-group" cfg:"google_group"`
+	GoogleGroups                           []string `flag:"google-group" cfg:"google_groups"`
+	GoogleAdminEmail                       string   `flag:"google-admin-email" cfg:"google_admin_email"`
+	GoogleServiceAccountJSON               string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
+	GoogleUseApplicationDefaultCredentials bool     `flag:"google-use-application-default-credentials" cfg:"google_use_application_default_credentials"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -549,9 +553,6 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project=accesslevel`). Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent")
-	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
-	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
-	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
@@ -588,6 +589,17 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
+
+	return flagSet
+}
+
+func legacyGoogleFlagSet() *pflag.FlagSet {
+	flagSet := pflag.NewFlagSet("google", pflag.ExitOnError)
+
+	flagSet.StringSlice("google-group", []string{}, "restrict logins to members of this google group (may be given multiple times).")
+	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
+	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
+	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. GKE Workload Identity)")
 
 	return flagSet
 }
@@ -717,10 +729,18 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Repository: l.BitbucketRepository,
 		}
 	case "google":
+		if len(l.GoogleGroupsLegacy) != 0 && !reflect.DeepEqual(l.GoogleGroupsLegacy, l.GoogleGroups) {
+			// Log the deprecation notice
+			logger.Error(
+				"WARNING: The 'OAUTH2_PROXY_GOOGLE_GROUP' environment variable is deprecated and will likely be removed in the next major release. Use 'OAUTH2_PROXY_GOOGLE_GROUPS' instead.",
+			)
+			l.GoogleGroups = l.GoogleGroupsLegacy
+		}
 		provider.GoogleConfig = GoogleOptions{
-			Groups:             l.GoogleGroups,
-			AdminEmail:         l.GoogleAdminEmail,
-			ServiceAccountJSON: l.GoogleServiceAccountJSON,
+			Groups:                           l.GoogleGroups,
+			AdminEmail:                       l.GoogleAdminEmail,
+			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
+			UseApplicationDefaultCredentials: l.GoogleUseApplicationDefaultCredentials,
 		}
 	}
 
