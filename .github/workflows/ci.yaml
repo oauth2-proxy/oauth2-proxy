@@ -34,7 +34,7 @@ jobs:
     - name: Verify Code Generation
       run: |
         make verify-generate
-  
+
     - name: Lint
       uses: golangci/golangci-lint-action@v3
       with:
