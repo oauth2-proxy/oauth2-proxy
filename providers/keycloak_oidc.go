@@ -22,9 +22,7 @@ func NewKeycloakOIDCProvider(p *ProviderData, opts options.KeycloakOptions) *Key
 	})
 
 	provider := &KeycloakOIDCProvider{
-		OIDCProvider: &OIDCProvider{
-			ProviderData: p,
-		},
+		OIDCProvider: NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false}),
 	}
 
 	provider.addAllowedRoles(opts.Roles)

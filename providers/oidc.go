@@ -24,8 +24,14 @@ const oidcDefaultScope = "openid email profile"
 
 // NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
+	name := "OpenID Connect"
+
+	if p.ProviderName != "" {
+		name = p.ProviderName
+	}
+
 	oidcProviderDefaults := providerDefaults{
-		name:        "OpenID Connect",
+		name:        name,
 		loginURL:    nil,
 		redeemURL:   nil,
 		profileURL:  nil,
