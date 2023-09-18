@@ -9,9 +9,10 @@
 ## Changes since v7.5.0
 - [#2220](https://github.com/oauth2-proxy/oauth2-proxy/pull/2220) Added binary and docker release platforms (@kvanzuijlen)
 - [#2221](https://github.com/oauth2-proxy/oauth2-proxy/pull/2221) Backwards compatible fix for wrong environment variable name (OAUTH2_PROXY_GOOGLE_GROUPS) (@kvanzuijlen)
-- [#1989](https://github.com/oauth2-proxy/oauth2-proxy/pull/1989) Fix default scope for keycloak-oidc provider
+- [#1989](https://github.com/oauth2-proxy/oauth2-proxy/pull/1989) Fix default scope for keycloak-oidc provider (@tuunit)
 - [#2217](https://github.com/oauth2-proxy/oauth2-proxy/pull/2217) Upgrade alpine to version 3.18 (@polarctos)
-- [#2229](https://github.com/oauth2-proxy/oauth2-proxy/pull/2229) bugfix: default scopes for OIDCProvider based providers
+- [#2229](https://github.com/oauth2-proxy/oauth2-proxy/pull/2229) bugfix: default scopes for OIDCProvider based providers (@tuunit)
+- [#2194](https://github.com/oauth2-proxy/oauth2-proxy/pull/2194) Fix Gitea token validation (@tuunit)
 - [#2047](https://github.com/oauth2-proxy/oauth2-proxy/pull/2047) CVE-2022-41717: DoS in Go net/http may lead to DoS (@miguelborges99)
 
 # V7.5.0
