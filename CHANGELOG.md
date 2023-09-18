@@ -32,6 +32,7 @@
 - [#2356](https://github.com/oauth2-proxy/oauth2-proxy/pull/2356) Update go-jose dependency (@dasvh)
 - [#2357](https://github.com/oauth2-proxy/oauth2-proxy/pull/2357) Update ojg to latest release (@bitfehler)
 - [#1922](https://github.com/oauth2-proxy/oauth2-proxy/pull/1922) Added support for env variables in the alpha struct (@hevans-dglcom)
+- [#2235](https://github.com/oauth2-proxy/oauth2-proxy/pull/2235) Bump golang to 1.21 and min allowed version to 1.20 (@tuunit)
 
 # V7.5.1
 
@@ -58,7 +59,6 @@ N/A
 - [#2208](https://github.com/oauth2-proxy/oauth2-proxy/pull/2208) Improved session documentation (@lathspell)
 - [#2229](https://github.com/oauth2-proxy/oauth2-proxy/pull/2229) bugfix: default scopes for OIDCProvider based providers (@tuunit)
 - [#2194](https://github.com/oauth2-proxy/oauth2-proxy/pull/2194) Fix Gitea token validation (@tuunit)
-- [#2235](https://github.com/oauth2-proxy/oauth2-proxy/pull/2235) Bump golang to 1.21 and min allowed version to 1.20 (@tuunit)
 
 # V7.5.0
 
