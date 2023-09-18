@@ -115,7 +115,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
 				opts.Redis.UseSentinel = true
 				opts.Redis.SentinelMasterName = ms.MasterInfo().Name
-
+				opts.Redis.SentinelDB = 1
 				// Capture the session store so that we can close the client
 				var err error
 				ss, err = NewRedisSessionStore(opts, cookieOpts)
@@ -196,6 +196,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					opts.Redis.UseSentinel = true
 					opts.Redis.SentinelMasterName = ms.MasterInfo().Name
 					opts.Redis.Password = redisPassword
+					opts.Redis.SentinelDB = 1
 
 					// Capture the session store so that we can close the client
 					var err error

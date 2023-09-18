@@ -203,9 +203,9 @@ var _ = Describe("Sessions", func() {
 		setAddr         bool
 		setSentinelAddr bool
 		setMasterName   bool
-
-		opts       *options.Options
-		errStrings []string
+		setSentinelDB   bool
+		opts            *options.Options
+		errStrings      []string
 	}
 
 	DescribeTable("validateRedisSessionStore",
@@ -229,6 +229,9 @@ var _ = Describe("Sessions", func() {
 				}
 				if o.setMasterName {
 					o.opts.Session.Redis.SentinelMasterName = ms.MasterInfo().Name
+				}
+				if o.setSentinelDB {
+					o.opts.Session.Redis.SentinelDB = 1
 				}
 			}
 
@@ -317,6 +320,7 @@ var _ = Describe("Sessions", func() {
 			useSentinel:     true,
 			setSentinelAddr: true,
 			setMasterName:   true,
+			setSentinelDB:   true,
 
 			opts: &options.Options{
 				Session: options.SessionOptions{
@@ -333,6 +337,7 @@ var _ = Describe("Sessions", func() {
 			useSentinel:     true,
 			setSentinelAddr: true,
 			setMasterName:   true,
+			setSentinelDB:   true,
 
 			opts: &options.Options{
 				Session: options.SessionOptions{
@@ -350,6 +355,7 @@ var _ = Describe("Sessions", func() {
 			useSentinel:     true,
 			setSentinelAddr: true,
 			setMasterName:   true,
+			setSentinelDB:   true,
 
 			opts: &options.Options{
 				Session: options.SessionOptions{
@@ -380,6 +386,7 @@ var _ = Describe("Sessions", func() {
 		Entry("failed connection to sentinel redis with wrong address", &redisStoreTableInput{
 			useSentinel:   true,
 			setMasterName: true,
+			setSentinelDB: true,
 
 			opts: &options.Options{
 				Session: options.SessionOptions{
