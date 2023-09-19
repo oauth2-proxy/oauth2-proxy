@@ -21,18 +21,33 @@ func GetCertPool(paths []string, append bool) (*x509.CertPool, error) {
 
 	var pool *x509.CertPool
 	if append == true {
-		rootPool, err := x509.SystemCertPool()
+		rootPool, err := getSystemCertPool()
 		if err != nil {
 			return nil, fmt.Errorf("unable to get SystemCertPool when append is true - #{err}")
-		}
-		if rootPool == nil {
-			return nil, fmt.Errorf("empty SystemCertPool, unable to append")
 		}
 		pool = rootPool
 	} else {
 		pool = x509.NewCertPool()
 	}
 
+	return loadCertsFromPaths(paths, pool)
+
+}
+
+func getSystemCertPool() (*x509.CertPool, error) {
+	rootPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+
+	if rootPool == nil {
+		return nil, fmt.Errorf("SystemCertPool is empty")
+	}
+
+	return rootPool, nil
+}
+
+func loadCertsFromPaths(paths []string, pool *x509.CertPool) (*x509.CertPool, error) {
 	for _, path := range paths {
 		// Cert paths are a configurable option
 		data, err := os.ReadFile(path) // #nosec G304
