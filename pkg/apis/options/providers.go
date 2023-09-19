@@ -59,7 +59,9 @@ type Provider struct {
 	// CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
 	// If not specified, the default Go trust sources are used instead
 	CAFiles []string `json:"caFiles,omitempty"`
-
+	// CAFilesAppend determines if CAFiles are appended to the default store
+	// If set to true, CAFiles will be appended to the default Go trust stores, otherwise it will replace it
+	CAFilesAppend bool `json:"caFilesAppend,omitempty"`
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL

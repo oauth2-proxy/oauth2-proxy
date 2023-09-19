@@ -14,11 +14,25 @@ import (
 	"time"
 )
 
-func GetCertPool(paths []string) (*x509.CertPool, error) {
+func GetCertPool(paths []string, append bool) (*x509.CertPool, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("invalid empty list of Root CAs file paths")
 	}
-	pool := x509.NewCertPool()
+
+	var pool *x509.CertPool
+	if append == true {
+		rootPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("unable to get SystemCertPool when append is true - #{err}")
+		}
+		if rootPool == nil {
+			return nil, fmt.Errorf("empty SystemCertPool, unable to append")
+		}
+		pool = rootPool
+	} else {
+		pool = x509.NewCertPool()
+	}
+
 	for _, path := range paths {
 		// Cert paths are a configurable option
 		data, err := os.ReadFile(path) // #nosec G304
