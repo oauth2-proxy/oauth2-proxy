@@ -506,7 +506,7 @@ type LegacyProvider struct {
 	ProviderType                       string   `flag:"provider" cfg:"provider"`
 	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
 	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
-	UseSystemTrustStore              bool     `flag:"use-system-trust-store" cfg:"use_system_trust_store"`
+	UseSystemTrustStore                bool     `flag:"use-system-trust-store" cfg:"use_system_trust_store"`
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
@@ -659,7 +659,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientSecretFile:    l.ClientSecretFile,
 		Type:                ProviderType(l.ProviderType),
 		CAFiles:             l.ProviderCAFiles,
-		UseSystemTrustStore:       l.UseSystemTrustStore,
+		UseSystemTrustStore: l.UseSystemTrustStore,
 		LoginURL:            l.LoginURL,
 		RedeemURL:           l.RedeemURL,
 		ProfileURL:          l.ProfileURL,
