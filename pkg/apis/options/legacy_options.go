@@ -3,6 +3,7 @@ package options
 import (
 	"fmt"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -494,7 +495,8 @@ type LegacyProvider struct {
 	GitHubUsers                            []string `flag:"github-user" cfg:"github_users"`
 	GitLabGroup                            []string `flag:"gitlab-group" cfg:"gitlab_groups"`
 	GitLabProjects                         []string `flag:"gitlab-project" cfg:"gitlab_projects"`
-	GoogleGroups                           []string `flag:"google-group" cfg:"google_group"`
+	GoogleGroupsLegacy                     []string `flag:"google-group" cfg:"google_group"`
+	GoogleGroups                           []string `flag:"google-group" cfg:"google_groups"`
 	GoogleAdminEmail                       string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON               string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
 	GoogleUseApplicationDefaultCredentials bool     `flag:"google-use-application-default-credentials" cfg:"google_use_application_default_credentials"`
@@ -727,6 +729,13 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			Repository: l.BitbucketRepository,
 		}
 	case "google":
+		if len(l.GoogleGroupsLegacy) != 0 && !reflect.DeepEqual(l.GoogleGroupsLegacy, l.GoogleGroups) {
+			// Log the deprecation notice
+			logger.Error(
+				"WARNING: The 'OAUTH2_PROXY_GOOGLE_GROUP' environment variable is deprecated and will likely be removed in the next major release. Use 'OAUTH2_PROXY_GOOGLE_GROUPS' instead.",
+			)
+			l.GoogleGroups = l.GoogleGroupsLegacy
+		}
 		provider.GoogleConfig = GoogleOptions{
 			Groups:                           l.GoogleGroups,
 			AdminEmail:                       l.GoogleAdminEmail,

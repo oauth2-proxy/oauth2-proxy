@@ -67,7 +67,7 @@ func newKeycloakOIDCProvider(serverURL *url.URL, opts options.KeycloakOptions) *
 				Scheme: "https",
 				Host:   "keycloak-oidc.com",
 				Path:   "/api/v3/user"},
-			Scope: "openid email profile"},
+		},
 		opts)
 
 	if serverURL != nil {
@@ -97,7 +97,15 @@ var _ = Describe("Keycloak OIDC Provider Tests", func() {
 			Expect(providerData.RedeemURL.String()).To(Equal("https://keycloak-oidc.com/oauth/token"))
 			Expect(providerData.ProfileURL.String()).To(Equal("https://keycloak-oidc.com/api/v3/user"))
 			Expect(providerData.ValidateURL.String()).To(Equal("https://keycloak-oidc.com/api/v3/user"))
-			Expect(providerData.Scope).To(Equal("openid email profile"))
+			Expect(providerData.Scope).To(Equal(oidcDefaultScope))
+		})
+		It("creates new keycloak oidc provider with custom scope", func() {
+			p := NewKeycloakOIDCProvider(&ProviderData{Scope: "openid email"}, options.KeycloakOptions{})
+			providerData := p.Data()
+
+			Expect(providerData.ProviderName).To(Equal(keycloakOIDCProviderName))
+			Expect(providerData.Scope).To(Equal("openid email"))
+			Expect(providerData.Scope).NotTo(Equal(oidcDefaultScope))
 		})
 	})
 
