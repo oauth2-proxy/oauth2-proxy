@@ -153,7 +153,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `--provider` | string | OAuth provider | google |
 | `--provider-ca-file` |  string \| list |  Paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead. |
-| `--provider-ca-file-append` | bool | Determines if `provider-ca-file` files are appended to the default store.  If set to true, files will be appended to the default Go trust stores, otherwise it will replace it. |
+| `--use-system-trust-store` | bool | Determines if `provider-ca-file` files are and the system trust store are used.  If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.  | false |
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |

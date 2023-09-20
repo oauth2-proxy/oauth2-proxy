@@ -14,13 +14,13 @@ import (
 	"time"
 )
 
-func GetCertPool(paths []string, append bool) (*x509.CertPool, error) {
+func GetCertPool(paths []string, useSystemPool bool) (*x509.CertPool, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("invalid empty list of Root CAs file paths")
 	}
 
 	var pool *x509.CertPool
-	if append == true {
+	if useSystemPool {
 		rootPool, err := getSystemCertPool()
 		if err != nil {
 			return nil, fmt.Errorf("unable to get SystemCertPool when append is true - #{err}")
