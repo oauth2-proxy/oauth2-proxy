@@ -1,7 +1,7 @@
 {
   "name": "oauth2-proxy Dev",
   "context": "..",
-  "dockerFile": "../Dockerfile.devcontainer",
+  "dockerFile": "./Dockerfile",
   "postCreateCommand": "pre-commit install && go mod download",
   "containerEnv": { "DEVCONTAINER": "1" },
   "appPort": ["4180:4180"],
@@ -32,5 +32,15 @@
         ]
       }
     }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker": {},
+    "ghcr.io/devcontainers/features/common-utils": {
+      "configureZshAsDefaultShell": true,
+      "username": "vscode",
+      "userUid": 1000,
+      "userGid": 1000
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube": {}
   }
 }

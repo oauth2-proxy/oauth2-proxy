@@ -6,14 +6,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # They would conflict with our pinned versions
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    git \
-    make \
     pre-commit \
+    vim \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /go/pkg \
     && chmod -R a+w /go/pkg
 
-WORKDIR /workspaces
-
-# Set the default shell to bash instead of sh
-ENV SHELL /bin/bash
+WORKDIR /workspace
