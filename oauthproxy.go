@@ -849,7 +849,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf.ClearCookie(rw, req)
 
-	nonce, appRedirect, err := decodeState(req, p.shouldEncodeState)
+	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.shouldEncodeState)
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -1200,20 +1200,18 @@ func encodeState(nonce string, redirect string, shouldEncode bool) string {
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(req *http.Request, shouldEncode bool) (string, string, error) {
-	rawState := req.Form.Get("state")
-
-	toParse := rawState
+func decodeState(state string, shouldEncode bool) (string, string, error) {
+	toParse := state
 	if shouldEncode {
-		decoded, _ := base64.RawURLEncoding.DecodeString(rawState)
+		decoded, _ := base64.RawURLEncoding.DecodeString(state)
 		toParse = string(decoded)
 	}
 
-	state := strings.SplitN(toParse, ":", 2)
-	if len(state) != 2 {
+	parsedState := strings.SplitN(toParse, ":", 2)
+	if len(parsedState) != 2 {
 		return "", "", errors.New("invalid length")
 	}
-	return state[0], state[1], nil
+	return parsedState[0], parsedState[1], nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
