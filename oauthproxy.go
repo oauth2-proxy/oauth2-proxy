@@ -110,7 +110,7 @@ type OAuthProxy struct {
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
 
-	shouldBase64Encode bool
+	shouldEncodeState bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -238,7 +238,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
-		shouldBase64Encode: opts.EncodeState,
+		shouldEncodeState:  opts.EncodeState,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -791,7 +791,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect, p.shouldBase64Encode),
+		encodeState(csrf.HashOAuthState(), appRedirect, p.shouldEncodeState),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
@@ -849,7 +849,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf.ClearCookie(rw, req)
 
-	nonce, appRedirect, err := decodeState(req, p.shouldBase64Encode)
+	nonce, appRedirect, err := decodeState(req, p.shouldEncodeState)
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
