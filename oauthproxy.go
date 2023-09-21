@@ -110,7 +110,7 @@ type OAuthProxy struct {
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
 
-	shouldEncodeState bool
+	encodeState bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -238,7 +238,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
-		shouldEncodeState:  opts.EncodeState,
+		encodeState:        opts.EncodeState,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -791,7 +791,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect, p.shouldEncodeState),
+		encodeState(csrf.HashOAuthState(), appRedirect, p.encodeState),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
@@ -849,7 +849,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf.ClearCookie(rw, req)
 
-	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.shouldEncodeState)
+	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -1189,9 +1189,9 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(nonce string, redirect string, shouldEncode bool) string {
+func encodeState(nonce string, redirect string, encode bool) string {
 	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
-	if shouldEncode {
+	if encode {
 		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
 	} else {
 		return rawString
@@ -1200,9 +1200,9 @@ func encodeState(nonce string, redirect string, shouldEncode bool) string {
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(state string, shouldEncode bool) (string, string, error) {
+func decodeState(state string, encode bool) (string, string, error) {
 	toParse := state
-	if shouldEncode {
+	if encode {
 		decoded, _ := base64.RawURLEncoding.DecodeString(state)
 		toParse = string(decoded)
 	}
