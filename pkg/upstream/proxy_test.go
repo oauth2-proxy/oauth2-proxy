@@ -52,6 +52,12 @@ var _ = Describe("Proxy Suite", func() {
 							URI:  fmt.Sprintf("file:///%s", filesDir),
 						},
 						{
+							ID:            "rewrite-file-backend",
+							Path:          "^/rewrite-files/.*/(.*)$",
+							RewriteTarget: "/$1",
+							URI:           fmt.Sprintf("file:///%s", filesDir),
+						},
+						{
 							ID:         "static-backend",
 							Path:       "/static/",
 							Static:     true,
@@ -173,6 +179,17 @@ var _ = Describe("Proxy Suite", func() {
 					raw: "foo",
 				},
 				upstream: "file-backend",
+			}),
+			Entry("with a request to the File backend with rewrite", &proxyTableInput{
+				target: "http://example.localhost/rewrite-files/anything-at-all/foo",
+				response: testHTTPResponse{
+					code: 200,
+					header: map[string][]string{
+						contentType: {textPlainUTF8},
+					},
+					raw: "foo",
+				},
+				upstream: "rewrite-file-backend",
 			}),
 			Entry("with a request to the Static backend", &proxyTableInput{
 				target: "http://example.localhost/static/bar",
