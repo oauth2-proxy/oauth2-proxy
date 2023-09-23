@@ -136,7 +136,13 @@ var _ = Describe("ADFS Provider Tests", func() {
 		It("uses defaults", func() {
 			providerData := NewADFSProvider(&ProviderData{}, options.ADFSOptions{}).Data()
 			Expect(providerData.ProviderName).To(Equal("ADFS"))
-			Expect(providerData.Scope).To(Equal("openid email profile"))
+			Expect(providerData.Scope).To(Equal(oidcDefaultScope))
+		})
+		It("uses custom scope", func() {
+			providerData := NewADFSProvider(&ProviderData{Scope: "openid email"}, options.ADFSOptions{}).Data()
+			Expect(providerData.ProviderName).To(Equal("ADFS"))
+			Expect(providerData.Scope).To(Equal("openid email"))
+			Expect(providerData.Scope).NotTo(Equal(oidcDefaultScope))
 		})
 	})
 

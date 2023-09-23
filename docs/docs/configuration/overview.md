@@ -88,7 +88,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--code-challenge-method` | string | use PKCE code challenges with the specified method. Either 'plain' or 'S256' (recommended) | |
 | `--config` | string | path to config file | |
 | `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
-| `--cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
+| `--cookie-expire` | duration | expire timeframe for cookie. If set to 0, cookie becomes a session-cookie which will expire when the browser is closed. | 168h0m0s |
 | `--cookie-httponly` | bool | set HttpOnly cookie flag | true |
 | `--cookie-name` | string | the name of the cookie that the oauth_proxy creates. Should be changed to use a [cookie prefix](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#cookie_prefixes) (`__Host-` or `__Secure-`) if `--cookie-secure` is set. | `"_oauth2_proxy"` |
 | `--cookie-path` | string | an optional cookie path to force cookies to (e.g. `/poc/`) | `"/"` |
@@ -102,7 +102,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--custom-sign-in-logo` | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo. |
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
 | `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
-| `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
+| `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | false |
 | `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
 | `--exchange-refresh-bearer-tokens` | bool | will exchange refresh bearer tokens for access tokens | false |
 | `--exclude-logging-path` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
@@ -123,6 +123,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--google-admin-email` | string | the google admin to impersonate for api calls | |
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
 | `--google-service-account-json` | string | the path to the service account json credentials | |
+| `--google-use-application-default-credentials` | bool | use application default credentials instead of service account json (i.e. GKE Workload Identity) | |
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption | |
 | `--htpasswd-user-group` | string \| list | the groups to be set on sessions for htpasswd users | |
 | `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180` | `"127.0.0.1:4180"` |
