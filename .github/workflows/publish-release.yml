@@ -73,13 +73,17 @@ jobs:
         # Get version from tag
         version=$(git describe --tags --abbrev=0)
 
+        # Extract CHANGELOG
+        numericVersion="${version#v}"
+        notes=$(sed -E "/^# (v|V)$numericVersion$/,/^# (v|V)/!d;//d" CHANGELOG.md)
+
         # Publish release tag
         git push origin "${version}"
 
         # Create github release
         gh release create "${version}" \
           --title "${version}" \
-          --generate-notes \
+          --notes "${notes}" \
           --prerelease
         
         # Upload artifacts
