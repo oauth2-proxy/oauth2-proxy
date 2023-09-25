@@ -203,7 +203,7 @@ var _ = Describe("Sessions", func() {
 		setAddr         bool
 		setSentinelAddr bool
 		setMasterName   bool
-		setSentinelDB   bool
+		setSentinelDB   int
 		opts            *options.Options
 		errStrings      []string
 	}
