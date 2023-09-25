@@ -320,7 +320,6 @@ var _ = Describe("Sessions", func() {
 			useSentinel:     true,
 			setSentinelAddr: true,
 			setMasterName:   true,
-			setSentinelDB:   true,
 
 			opts: &options.Options{
 				Session: options.SessionOptions{
@@ -337,7 +336,20 @@ var _ = Describe("Sessions", func() {
 			useSentinel:     true,
 			setSentinelAddr: true,
 			setMasterName:   true,
-			setSentinelDB:   true,
+
+			opts: &options.Options{
+				Session: options.SessionOptions{
+					Type: options.RedisSessionStoreType,
+					Redis: options.RedisStoreOptions{
+						Password:    "abcdef123",
+						UseSentinel: true,
+					},
+				},
+			},
+			errStrings: []string{},
+		}),
+		Entry("connect successfully to sentinel redis with custom db", &redisStoreTableInput{
+			setSentinelDB: true,
 
 			opts: &options.Options{
 				Session: options.SessionOptions{
@@ -355,7 +367,6 @@ var _ = Describe("Sessions", func() {
 			useSentinel:     true,
 			setSentinelAddr: true,
 			setMasterName:   true,
-			setSentinelDB:   true,
 
 			opts: &options.Options{
 				Session: options.SessionOptions{
@@ -386,7 +397,6 @@ var _ = Describe("Sessions", func() {
 		Entry("failed connection to sentinel redis with wrong address", &redisStoreTableInput{
 			useSentinel:   true,
 			setMasterName: true,
-			setSentinelDB: true,
 
 			opts: &options.Options{
 				Session: options.SessionOptions{
