@@ -230,8 +230,8 @@ var _ = Describe("Sessions", func() {
 				if o.setMasterName {
 					o.opts.Session.Redis.SentinelMasterName = ms.MasterInfo().Name
 				}
-				if o.setSentinelDB {
-					o.opts.Session.Redis.SentinelDB = 1
+				if o.setSentinelDB != 0 {
+					o.opts.Session.Redis.SentinelDB = o.setSentinelDB
 				}
 			}
 
