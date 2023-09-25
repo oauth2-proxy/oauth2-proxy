@@ -52,6 +52,33 @@ in redis via the `SETEX` command.
 Encrypting every session uniquely protects the refresh/access/id tokens stored in the session from
 disclosure.
 
+Additionally the browser only has to send a short Cookie with every request and not the whole JWT, which can get quite big.
+
+Two settings are used to configure the OAuth2 Proxy cookie lifetime:
+
+    --cookie-refresh duration   refresh the cookie after this duration; 0 to disable
+    --cookie-expire duration    expire timeframe for cookie     168h0m0s
+
+The "cookie-expire" value should be equal to the lifetime of the Refresh-Token that is issued by the OAuth2 authorization server.
+If it expires earlier and is deleted by the browser, OAuth2 Proxy cannot find the stored Refresh-Tokens in Redis and thus cannot start
+the refresh flow to get new Access-Tokens. If it is longer, it might be that the old Refresh-Token will be found in Redis but has already
+expired.
+
+The "cookie-refresh" value controls when OAuth2 Proxy tries to refresh an Access-Token. If it is set to "0", the
+Access-Token will never be refreshed, even it is already expired and there would be a valid Refresh-Token in the
+available. If set, OAuth2 Proxy will refresh the Access-Token after this many seconds even if it is still valid.
+Of course, it will also be refreshed after it has expired, as long as a Refresh Token is available.
+
+Caveat: It can happen that the Access-Token is valid for e.g. "1m" and a request happens after exactly "59s".
+It would pass OAuth2 Proxy and be forwarded to the backend but is just expired when the backend tries to validate
+it. This is especially relevant if the backend uses the JWT to make requests to other backends.
+For this reason, it's advised to set the cookie-refresh a couple of seconds less than the Access-Token lifespan.
+
+Recommended settings:
+
+* cookie\_refresh := Access-Token lifespan - 1m
+* cookie\_expire := Refresh-Token lifespan (i.e. Keycloak's client\_session\_idle)
+
 #### Usage
 
 When using the redis store, specify `--session-store-type=redis` as well as the Redis connection URL, via
