@@ -279,7 +279,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 
 	// Option: AllowQuerySemicolons
 	if opts.AllowQuerySemicolons {
-		serverOpts.Handler = http.AllowQuerySemicolons(p)
+		serverOpts.Handler = http.AllowQuerySemicolons(serverOpts.Handler)
 	}
 
 	appServer, err := proxyhttp.NewServer(serverOpts)
