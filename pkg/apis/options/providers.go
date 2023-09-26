@@ -61,9 +61,9 @@ type Provider struct {
 	// CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
 	// If not specified, the default Go trust sources are used instead
 	CAFiles []string `json:"caFiles,omitempty"`
-	// CertFiles is list of paths to certificates that should be used when connecting to the provider.
+	// TLSCertFile is the path to a PEM encoded X.509 certificate to use when connecting to the provider
 	TLSCertFile string `json:"certFile,omitempty"`
-	// KeyFiles is a list of paths to keys that should be paired with certificates when connecting to the provider.
+	// TLSKeyFile is the path to a PEM encoded X.509 key to use when connecting to the provider
 	TLSKeyFile string `json:"keyFile,omitempty"`
 
 	// LoginURL is the authentication endpoint
