@@ -71,7 +71,7 @@
 
 ## mark paths as API routes to get HTTP Status code 401 instead of redirect to login page
 # api_routes = [
-#   "^/api
+#   "^/api"
 # ]
 
 ## Templates
