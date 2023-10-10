@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1186,7 +1187,8 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce string, redirect string) string {
-	return fmt.Sprintf("%v:%v", nonce, redirect)
+	redirectB64 := base64.StdEncoding.EncodeToString([]byte(redirect))
+	return fmt.Sprintf("%v:%v", nonce, redirectB64)
 }
 
 // decodeState splits the reflected OAuth state response back into
@@ -1196,7 +1198,11 @@ func decodeState(req *http.Request) (string, string, error) {
 	if len(state) != 2 {
 		return "", "", errors.New("invalid length")
 	}
-	return state[0], state[1], nil
+	redirect, err := base64.StdEncoding.DecodeString(state[1])
+	if err != nil {
+		return "", "", err
+	}
+	return state[0], string(redirect), nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
