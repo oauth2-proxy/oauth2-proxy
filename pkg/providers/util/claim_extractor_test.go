@@ -25,6 +25,10 @@ const (
       "groups": [
         "idTokenGroup1",
         "idTokenGroup2"
+      ],
+      "https://groups.test": [
+        "fqdnGroup1",
+        "fqdnGroup2"
       ]
     }`
 	basicProfileURLPayload = `{
@@ -222,6 +226,18 @@ var _ = Describe("Claim Extractor Suite", func() {
 				claim:         "auth.user.username",
 				expectExists:  true,
 				expectedValue: "nestedUser",
+				expectedError: nil,
+			}),
+			Entry("retrieves claim for with FQDN", getClaimTableInput{
+				testClaimExtractorOpts: testClaimExtractorOpts{
+					idTokenPayload:        basicIDTokenPayload,
+					setProfileURL:         true,
+					profileRequestHeaders: newAuthorizedHeader(),
+					profileRequestHandler: shouldNotBeRequestedProfileHandler,
+				},
+				claim:         "https://groups.test",
+				expectExists:  true,
+				expectedValue: []interface{}{"fqdnGroup1", "fqdnGroup2"},
 				expectedError: nil,
 			}),
 		)

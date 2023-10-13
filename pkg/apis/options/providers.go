@@ -189,6 +189,8 @@ type GoogleOptions struct {
 	AdminEmail string `json:"adminEmail,omitempty"`
 	// ServiceAccountJSON is the path to the service account json credentials
 	ServiceAccountJSON string `json:"serviceAccountJson,omitempty"`
+	// UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON
+	UseApplicationDefaultCredentials bool `json:"useApplicationDefaultCredentials,omitempty"`
 }
 
 type OIDCOptions struct {
