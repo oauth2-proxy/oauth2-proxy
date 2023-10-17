@@ -8,6 +8,7 @@
 
 ## Changes since v7.5.1
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
+- [#2239](https://github.com/oauth2-proxy/oauth2-proxy/pull/2239) Add possibility to encode the state param as UrlEncodedBase64 (@brezinajn)
 
 # V7.5.1
 
