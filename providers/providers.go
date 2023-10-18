@@ -68,7 +68,7 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	case options.OIDCProvider:
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
 	case options.CidaasProvider:
-		return NewCIDAASProvider(providerData, providerConfig.CidaasConfig), nil
+		return NewCIDAASProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}

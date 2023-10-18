@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/stretchr/testify/assert"
 
@@ -39,7 +37,7 @@ func newCidaasProvider(serverURL *url.URL) *CIDAASProvider {
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
 			Path:   "/api"},
-		Scope:       "openid profile offline_access",
+		Scope:       "openid profile offline_access roles groups",
 		EmailClaim:  "email",
 		GroupsClaim: "groups",
 		Verifier: oidc.NewVerifier(
@@ -49,7 +47,7 @@ func newCidaasProvider(serverURL *url.URL) *CIDAASProvider {
 		),
 	}
 
-	p := NewCIDAASProvider(providerData, options.CidaasOptions{})
+	p := NewCIDAASProvider(providerData)
 
 	return p
 }
@@ -79,7 +77,6 @@ func TestCidaasProvider_EnrichSession(t *testing.T) {
 		ExistingSession *sessions.SessionState
 		EmailClaim      string
 		GroupsClaim     string
-		FilterGroups    FilterGroups
 		ProfileJSON     map[string]interface{}
 		ExpectedError   error
 		ExpectedSession *sessions.SessionState
@@ -240,13 +237,13 @@ func TestCidaasProvider_EnrichSession(t *testing.T) {
 				"email": "already@populated.com",
 				"groups2": []map[string]interface{}{
 					{
-						"sub":     "aa4980ee-0939-4ea7-b67f-81883f143d39",
+						"sub":     "aa5181ea-0841-4ea7-b67f-81882f153d40",
 						"groupId": "CIDAAS_ADMINS",
 						"path":    "/CIDAAS_ADMINS/",
 						"roles":   []string{"ADMIN"},
 					},
 					{
-						"sub":       "aa4980ee-0939-4ea7-b67f-81883f143d39",
+						"sub":       "aa5181ea-0841-4ea7-b67f-81882f153d39",
 						"groupId":   "customers",
 						"groupType": "Customers",
 						"path":      "/customers/",
@@ -272,7 +269,7 @@ func TestCidaasProvider_EnrichSession(t *testing.T) {
 				RefreshToken: refreshToken,
 			},
 		},
-		"Filter Groups": {
+		"Just format Groups": {
 			ExistingSession: &sessions.SessionState{
 				User:         "already",
 				Email:        "already@populated.com",
@@ -281,20 +278,13 @@ func TestCidaasProvider_EnrichSession(t *testing.T) {
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
 			},
-			EmailClaim:   "email",
-			GroupsClaim:  "groups2",
-			FilterGroups: []string{"customers"},
+			EmailClaim:  "email",
+			GroupsClaim: "groups2",
 			ProfileJSON: map[string]interface{}{
 				"email": "already@populated.com",
 				"groups2": []map[string]interface{}{
 					{
-						"sub":     "aa4980ee-0939-4ea7-b67f-81883f143d39",
-						"groupId": "CIDAAS_ADMINS",
-						"path":    "/CIDAAS_ADMINS/",
-						"roles":   []string{"ADMIN"},
-					},
-					{
-						"sub":       "aa4980ee-0939-4ea7-b67f-81883f143d39",
+						"sub":       "aa5181ea-0841-4ea7-b67f-81882f153d39",
 						"groupId":   "customers",
 						"groupType": "Customers",
 						"path":      "/customers/",
@@ -314,7 +304,7 @@ func TestCidaasProvider_EnrichSession(t *testing.T) {
 			ExpectedSession: &sessions.SessionState{
 				User:         "already",
 				Email:        "already@populated.com",
-				Groups:       []string{"customers:CUSTOMER_ACCOUNT_LOGIN", "customers:GROUP_ADMIN"},
+				Groups:       []string{"customers:CUSTOMER_ACCOUNT_LOGIN", "customers:GROUP_ADMIN", "CIDAAS_USERS:USER", "cidaas:USER"},
 				IDToken:      idToken,
 				AccessToken:  accessToken,
 				RefreshToken: refreshToken,
@@ -334,13 +324,13 @@ func TestCidaasProvider_EnrichSession(t *testing.T) {
 			ProfileJSON: map[string]interface{}{
 				"groups": []map[string]interface{}{
 					{
-						"sub":     "aa4980ee-0939-4ea7-b67f-81883f143d39",
+						"sub":     "aa5181ea-0841-4ea7-b67f-81882f153d40",
 						"groupId": "CIDAAS_ADMINS",
 						"path":    "/CIDAAS_ADMINS/",
 						"roles":   []string{"ADMIN"},
 					},
 					{
-						"sub":       "aa4980ee-0939-4ea7-b67f-81883f143d39",
+						"sub":       "aa5181ea-0841-4ea7-b67f-81882f153d39",
 						"groupId":   "customers",
 						"groupType": "Customers",
 						"path":      "/customers/",
@@ -401,7 +391,6 @@ func TestCidaasProvider_EnrichSession(t *testing.T) {
 
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
-			provider.FilterGroups = tc.FilterGroups
 			defer server.Close()
 
 			err = provider.EnrichSession(context.Background(), tc.ExistingSession)
