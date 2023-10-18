@@ -29,7 +29,7 @@ var _ Provider = (*CIDAASProvider)(nil)
 const (
 	CidaasProviderName = "CIDAAS"
 	CidaasGroupName    = "cidaas"
-	CidaasDefaultScope = "openid email profile roles"
+	CidaasDefaultScope = "openid email profile roles groups"
 )
 
 // NewCIDAASProvider initiates a new CIDAASProvider
