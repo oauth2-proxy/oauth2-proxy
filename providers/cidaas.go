@@ -5,8 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-
+	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -38,17 +37,6 @@ func NewCIDAASProvider(p *ProviderData) *CIDAASProvider {
 		name:  CidaasProviderName,
 		scope: CidaasDefaultScope,
 	})
-
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		resource := p.ProtectedResource.String()
-		if !strings.HasSuffix(resource, "/") {
-			resource += "/"
-		}
-
-		if p.Scope != "" && !strings.HasPrefix(p.Scope, resource) {
-			p.Scope = resource + p.Scope
-		}
-	}
 
 	return &CIDAASProvider{
 		OIDCProvider: &OIDCProvider{
@@ -116,14 +104,24 @@ func (p *CIDAASProvider) enrichFromUserinfoEndpoint(ctx context.Context, s *sess
 		s.Email = email
 	}
 
-	rawGroupClaim, err := respJSON.Get(p.GroupsClaim).MarshalJSON()
+	groups, err := p.extractGroups(respJSON)
 	if err != nil {
-		return err
+		return fmt.Errorf("extracting groups failed: %w", err)
+	}
+
+	s.Groups = groups
+	return nil
+}
+
+func (p *CIDAASProvider) extractGroups(respJSON *simplejson.Json) ([]string, error) {
+	rawGroupsClaim, err := respJSON.Get(p.GroupsClaim).MarshalJSON()
+	if err != nil {
+		return nil, err
 	}
 	var groupsClaimList GroupsClaimList
-	err = json.Unmarshal(rawGroupClaim, &groupsClaimList)
+	err = json.Unmarshal(rawGroupsClaim, &groupsClaimList)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var groups []string
@@ -137,7 +135,7 @@ func (p *CIDAASProvider) enrichFromUserinfoEndpoint(ctx context.Context, s *sess
 	if rolesVal, rolesClaimExists := respJSON.CheckGet("roles"); rolesClaimExists {
 		cidaasRoles, err := rolesVal.StringArray()
 		if err != nil {
-			return fmt.Errorf("unmarshal roles failed: %w", err)
+			return nil, fmt.Errorf("unmarshal roles failed: %w", err)
 		}
 
 		for _, role := range cidaasRoles {
@@ -145,6 +143,5 @@ func (p *CIDAASProvider) enrichFromUserinfoEndpoint(ctx context.Context, s *sess
 		}
 	}
 
-	s.Groups = groups
-	return nil
+	return groups, nil
 }
