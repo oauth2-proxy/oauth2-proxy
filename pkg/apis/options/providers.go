@@ -147,6 +147,9 @@ const (
 
 	// OIDCProvider is the provider type for OIDC
 	OIDCProvider ProviderType = "oidc"
+
+	// CidaasProvider is the provider type for Cidaas IDP
+	CidaasProvider ProviderType = "cidaas"
 )
 
 type KeycloakOptions struct {
