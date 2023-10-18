@@ -7,6 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.5.1
+- [#2237](https://github.com/oauth2-proxy/oauth2-proxy/pull/2237) adds an option to append CA certificates (@emsixteeen)
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
 
 # V7.5.1
