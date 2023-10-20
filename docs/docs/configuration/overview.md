@@ -361,6 +361,7 @@ server {
     proxy_set_header Host             $host;
     proxy_set_header X-Real-IP        $remote_addr;
     proxy_set_header X-Scheme         $scheme;
+    proxy_set_header X-Forwarded-Uri  $request_uri;
     # nginx auth_request includes headers but not body
     proxy_set_header Content-Length   "";
     proxy_pass_request_body           off;
