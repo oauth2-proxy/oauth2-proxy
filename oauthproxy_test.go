@@ -2632,6 +2632,104 @@ func TestAllowedRequest(t *testing.T) {
 	}
 }
 
+func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	opts := baseTestOptions()
+	opts.ReverseProxy = true
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
+		},
+	}
+	opts.SkipAuthRegex = []string{
+		"^/skip/auth/regex$",
+	}
+	opts.SkipAuthRoutes = []string{
+		"GET=^/skip/auth/routes/get",
+	}
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name    string
+		method  string
+		url     string
+		allowed bool
+	}{
+		{
+			name:    "Regex GET allowed",
+			method:  "GET",
+			url:     "/skip/auth/regex",
+			allowed: true,
+		},
+		{
+			name:    "Regex POST allowed ",
+			method:  "POST",
+			url:     "/skip/auth/regex",
+			allowed: true,
+		},
+		{
+			name:    "Regex denied",
+			method:  "GET",
+			url:     "/wrong/denied",
+			allowed: false,
+		},
+		{
+			name:    "Route allowed",
+			method:  "GET",
+			url:     "/skip/auth/routes/get",
+			allowed: true,
+		},
+		{
+			name:    "Route denied with wrong method",
+			method:  "PATCH",
+			url:     "/skip/auth/routes/get",
+			allowed: false,
+		},
+		{
+			name:    "Route denied with wrong path",
+			method:  "GET",
+			url:     "/skip/auth/routes/wrong/path",
+			allowed: false,
+		},
+		{
+			name:    "Route denied with wrong path and method",
+			method:  "POST",
+			url:     "/skip/auth/routes/wrong/path",
+			allowed: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(tc.method, opts.ProxyPrefix+"/auth", nil)
+			req.Header.Set("X-Forwarded-Uri", tc.url)
+			assert.NoError(t, err)
+
+			rw := httptest.NewRecorder()
+			proxy.ServeHTTP(rw, req)
+
+			if tc.allowed {
+				assert.Equal(t, 202, rw.Code)
+			} else {
+				assert.Equal(t, 401, rw.Code)
+			}
+		})
+	}
+}
+
 func TestAllowedRequestNegateWithoutMethod(t *testing.T) {
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
