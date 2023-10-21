@@ -339,6 +339,8 @@ Available variables for standard logging:
 
 ## Configuring for use with the Nginx `auth_request` directive
 
+**This option requires `--reverse-proxy` option to be set.**
+
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2-proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
 ```nginx
