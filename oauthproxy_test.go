@@ -2714,7 +2714,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			req, err := http.NewRequest(tc.method, opts.ProxyPrefix+"/auth", nil)
+			req, err := http.NewRequest(tc.method, opts.ProxyPrefix+authOnlyPath, nil)
 			req.Header.Set("X-Forwarded-Uri", tc.url)
 			assert.NoError(t, err)
 
