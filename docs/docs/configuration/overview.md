@@ -353,7 +353,6 @@ server {
     proxy_pass       http://127.0.0.1:4180;
     proxy_set_header Host                    $host;
     proxy_set_header X-Real-IP               $remote_addr;
-    proxy_set_header X-Scheme                $scheme;
     proxy_set_header X-Auth-Request-Redirect $request_uri;
     # or, if you are handling multiple domains:
     # proxy_set_header X-Auth-Request-Redirect $scheme://$host$request_uri;
@@ -362,7 +361,6 @@ server {
     proxy_pass       http://127.0.0.1:4180;
     proxy_set_header Host             $host;
     proxy_set_header X-Real-IP        $remote_addr;
-    proxy_set_header X-Scheme         $scheme;
     proxy_set_header X-Forwarded-Uri  $request_uri;
     # nginx auth_request includes headers but not body
     proxy_set_header Content-Length   "";
