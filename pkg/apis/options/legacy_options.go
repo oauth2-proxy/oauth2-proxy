@@ -501,6 +501,7 @@ type LegacyProvider struct {
 	GoogleAdminEmail                       string   `flag:"google-admin-email" cfg:"google_admin_email"`
 	GoogleServiceAccountJSON               string   `flag:"google-service-account-json" cfg:"google_service_account_json"`
 	GoogleUseApplicationDefaultCredentials bool     `flag:"google-use-application-default-credentials" cfg:"google_use_application_default_credentials"`
+	GoogleTargetPrincipal                  string   `flag:"google-target-principal" cfg:"google_target_principal"`
 
 	// These options allow for other providers besides Google, with
 	// potential overrides.
@@ -607,6 +608,7 @@ func legacyGoogleFlagSet() *pflag.FlagSet {
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
 	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. GKE Workload Identity)")
+	flagSet.String("google-target-principal", "", "the targetprincipal to impersonate when using ADC")
 
 	return flagSet
 }
@@ -751,6 +753,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 			AdminEmail:                       l.GoogleAdminEmail,
 			ServiceAccountJSON:               l.GoogleServiceAccountJSON,
 			UseApplicationDefaultCredentials: l.GoogleUseApplicationDefaultCredentials,
+			TargetPrincipal:                  l.GoogleTargetPrincipal,
 		}
 	}
 
