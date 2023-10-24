@@ -271,28 +271,29 @@ func getAdminService(opts options.GoogleOptions) *admin.Service {
 func getTargetPrincipal(ctx context.Context, opts options.GoogleOptions) (targetPrincipal string) {
 	targetPrincipal = opts.TargetPrincipal
 
-	if targetPrincipal == "" {
-		logger.Print("INFO: no target principal set, trying to automatically determine one instead.")
-		credential, err := google.FindDefaultCredentials(ctx)
-		if err != nil {
-			logger.Fatal("failed to fetch application default credentials: ", err)
-		}
-		content := map[string]interface{}{}
+	if targetPrincipal != "" {
+		return targetPrincipal
+	}
+	logger.Print("INFO: no target principal set, trying to automatically determine one instead.")
+	credential, err := google.FindDefaultCredentials(ctx)
+	if err != nil {
+		logger.Fatal("failed to fetch application default credentials: ", err)
+	}
+	content := map[string]interface{}{}
 
-		err = json.Unmarshal(credential.JSON, &content)
-		switch {
-		case err != nil && !metadata.OnGCE():
-			logger.Fatal("unable to unmarshal Application Default Credentials JSON", err)
-		case content["client_email"] != nil:
-			targetPrincipal = fmt.Sprintf("%v", content["client_email"])
-		case metadata.OnGCE():
-			targetPrincipal, err = metadata.Email("")
-			if err != nil {
-				logger.Fatal("error while calling the GCE metadata server", err)
-			}
-		default:
-			logger.Fatal("unable to determine Application Default Credentials TargetPrincipal, try overriding with --target-principal instead.")
+	err = json.Unmarshal(credential.JSON, &content)
+	switch {
+	case err != nil && !metadata.OnGCE():
+		logger.Fatal("unable to unmarshal Application Default Credentials JSON", err)
+	case content["client_email"] != nil:
+		targetPrincipal = fmt.Sprintf("%v", content["client_email"])
+	case metadata.OnGCE():
+		targetPrincipal, err = metadata.Email("")
+		if err != nil {
+			logger.Fatal("error while calling the GCE metadata server", err)
 		}
+	default:
+		logger.Fatal("unable to determine Application Default Credentials TargetPrincipal, try overriding with --target-principal instead.")
 	}
 	return targetPrincipal
 }
