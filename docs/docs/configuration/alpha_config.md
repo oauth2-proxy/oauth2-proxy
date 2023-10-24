@@ -223,7 +223,7 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `group` | _[]string_ | Group sets restrict logins to members of this group |
-| `projects` | _[]string_ | Projects restricts logins to members of any of these projects |
+| `projects` | _[]string_ | Projects restricts logins to members of these projects |
 
 ### GoogleOptions
 
@@ -233,10 +233,11 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `group` | _[]string_ | Groups sets restrict logins to members of this google group |
-| `adminEmail` | _string_ | AdminEmail is the google admin to impersonate for api calls |
+| `group` | _[]string_ | Groups sets restrict logins to members of this Google group |
+| `adminEmail` | _string_ | AdminEmail is the Google admin to impersonate for api calls |
 | `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
 | `useApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
+| `targetPrincipal` | _string_ | TargetPrincipal is the Google Service Account used for Application Default Credentials |
 
 ### Header
 
