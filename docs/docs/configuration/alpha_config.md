@@ -237,6 +237,7 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | `adminEmail` | _string_ | AdminEmail is the google admin to impersonate for api calls |
 | `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
 | `useApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
+| `targetPrincipal` | string | TargetPrincipal is the Google Service Account used for Application Default Credentials |
 
 ### Header
 
