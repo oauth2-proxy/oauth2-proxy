@@ -448,9 +448,8 @@ func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoin
 		value = strings.TrimPrefix(field, keyPrefix)
 		if value != field {
 			break
-		} else {
-			value = ""
 		}
+		value = ""
 	}
 	if value == "" {
 		return 0, ""
@@ -612,7 +611,7 @@ func (sipTest *SignInPageTest) GetEndpoint(endpoint string) (int, string) {
 type AlwaysSuccessfulValidator struct {
 }
 
-func (AlwaysSuccessfulValidator) Validate(user, password string) bool {
+func (AlwaysSuccessfulValidator) Validate(_, _ string) bool {
 	return true
 }
 
