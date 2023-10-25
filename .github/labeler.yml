@@ -12,3 +12,10 @@ tests:
 
 provider:
   - 'providers/**/*'
+
+dependencies:
+  - 'go.mod'
+  - 'go.sum'
+
+docker:
+  - '**/Dockerfile'
