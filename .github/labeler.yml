@@ -1,0 +1,14 @@
+go:
+  - changed-files: '**/*.go'
+
+docs:
+  - changed-files: 'docs/**/*'
+
+changelog:
+  - changed-files: 'CHANGELOG.md'
+
+tests:
+  - changed-files: '**/*_test.go'
+
+provider:
+  - changed-files: 'providers/**/*'

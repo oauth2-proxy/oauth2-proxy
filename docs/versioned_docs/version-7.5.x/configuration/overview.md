@@ -499,7 +499,7 @@ http:
         status:
           - "401-403"
         service: oauth-backend
-        query: "/oauth2/sign_in"
+        query: "/oauth2/sign_in?rd={url}"
 ```
 
 ### ForwardAuth with static upstreams configuration
