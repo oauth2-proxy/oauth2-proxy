@@ -1,0 +1,14 @@
+go:
+  - '**/*.go'
+
+docs:
+  - 'docs/**/*'
+
+changelog:
+  - 'CHANGELOG.md'
+
+tests:
+  - '**/*_test.go'
+
+provider:
+  - 'providers/**/*'

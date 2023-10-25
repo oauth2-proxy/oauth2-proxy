@@ -218,7 +218,7 @@ you should define the 'keycloak-group' value to /admin.
     --client-id=<your client's id>
     --client-secret=<your client's secret>
     --redirect-url=https://internal.yourcompany.com/oauth2/callback
-    --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
+    --oidc-issuer-url=https://<keycloak host>/realms/<your realm> // For Keycloak versions <17: --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
     --email-domain=<yourcompany.com> // Validate email domain for users, see option documentation
     --allowed-role=<realm role name> // Optional, required realm role
     --allowed-role=<client id>:<client role name> // Optional, required client role
