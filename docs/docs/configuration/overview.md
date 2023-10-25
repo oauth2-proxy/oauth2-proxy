@@ -113,7 +113,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
 | `--google-service-account-json` | string | the path to the service account json credentials | |
 | `--google-use-application-default-credentials` | bool | use application default credentials instead of service account json (i.e. GKE Workload Identity) | |
-| `--google-target-principal` | bool | the targetprincipal to impersonate when using ADC | defaults to the service account configured for ADC |
+| `--google-target-principal` | bool | the target principal to impersonate when using ADC | defaults to the service account configured for ADC |
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption | |
 | `--htpasswd-user-group` | string \| list | the groups to be set on sessions for htpasswd users | |
 | `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180` | `"127.0.0.1:4180"` |
@@ -168,7 +168,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
-| `--redis-connection-idle-timeout` | int | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Exmpale: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0 |
+| `--redis-connection-idle-timeout` | int | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Example: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0 |
 | `--request-id-header` | string | Request header to use as the request ID in logging | X-Request-Id |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
