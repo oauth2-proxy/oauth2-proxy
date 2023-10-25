@@ -1,15 +1,13 @@
 ---
 id: keycloak
-title: Keycloak Provider Configuration
+title: Keycloak
 ---
 
-### Keycloak Auth Provider
-
 :::note
-This is the legacy provider for Keycloak, use [Keycloak OIDC Auth Provider](#keycloak-oidc-auth-provider) if possible.
+This is the legacy provider for Keycloak, use [Keycloak OIDC Auth Provider](keycloak_oidc.md) if possible.
 :::
 
-1.  Create new client in your Keycloak realm with **Access Type** 'confidental' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
+1.  Create new client in your Keycloak realm with **Access Type** 'confidential' and **Valid Redirect URIs** 'https://internal.yourcompany.com/oauth2/callback'
 2.  Take note of the Secret in the credential tab of the client
 3.  Create a mapper with **Mapper Type** 'Group Membership' and **Token Claim Name** 'groups'.
 

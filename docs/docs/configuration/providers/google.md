@@ -1,9 +1,7 @@
 ---
 id: google
-title: Google Provider Configuration
+title: Google (default)
 ---
-
-### Google Auth Provider
 
 For Google, the registration steps are:
 
@@ -48,7 +46,7 @@ account is still authorized.
 8.  Create or choose an existing email group and set that email to the `google-group` flag. You can pass multiple instances 
     of this flag with different groups and the user will be checked against all the provided groups.
 
-(Only if using a JSON file (step 1))
+(Only if using a JSON file (see step 1))
 9.  Lock down the permissions on the json file downloaded from step 1 so only oauth2-proxy is able to read the file and 
     set the path to the file in the `google-service-account-json` flag.
 10. Restart oauth2-proxy.

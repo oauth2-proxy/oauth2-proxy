@@ -1,9 +1,7 @@
 ---
 id: linkedin
-title: LinkedIn Provider Configuration
+title: LinkedIn
 ---
-
-### LinkedIn Auth Provider
 
 For LinkedIn, the registration steps are:
 

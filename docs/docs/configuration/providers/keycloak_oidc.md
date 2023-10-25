@@ -1,16 +1,14 @@
 ---
 id: keycloak_oidc
-title: Keycloak OIDC Provider Configuration
+title: Keycloak OIDC
 ---
-
-### Keycloak OIDC Auth Provider
 
 ```
     --provider=keycloak-oidc
     --client-id=<your client's id>
     --client-secret=<your client's secret>
     --redirect-url=https://internal.yourcompany.com/oauth2/callback
-    --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
+    --oidc-issuer-url=https://<keycloak host>/realms/<your realm> // For Keycloak versions <17: --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
     --email-domain=<yourcompany.com> // Validate email domain for users, see option documentation
     --allowed-role=<realm role name> // Optional, required realm role
     --allowed-role=<client id>:<client role name> // Optional, required client role
@@ -48,17 +46,17 @@ through "dedicated" client mappers._
 
 1. Create a new OIDC client in your Keycloak realm by navigating to:  
    **Clients** -> **Create client**
-* **Client Type** 'OpenID Connect'
-* **Client ID** `<your client's id>`, please complete the remaining fields as appropriate and click **Next**.
-    * **Client authentication** 'On'
-    * **Authentication flow**
-        * **Standard flow**  'selected'
-        * **Direct access grants** 'deselect'
-            * _Save the configuration._
-    * **Settings / Access settings**:
-        * **Valid redirect URIs** `https://internal.yourcompany.com/oauth2/callback`
-            * _Save the configuration._
-    * Under the **Credentials** tab you will now be able to locate `<your client's secret>`.
+   * **Client Type** 'OpenID Connect'
+   * **Client ID** `<your client's id>`, please complete the remaining fields as appropriate and click **Next**.
+       * **Client authentication** 'On'
+       * **Authentication flow**
+           * **Standard flow**  'selected'
+           * **Direct access grants** 'deselect'
+               * _Save the configuration._
+       * **Settings / Access settings**:
+           * **Valid redirect URIs** `https://internal.yourcompany.com/oauth2/callback`
+               * _Save the configuration._
+       * Under the **Credentials** tab you will now be able to locate `<your client's secret>`.
 2. Configure a dedicated *audience mapper* for your client by navigating to **Clients** -> **<your client's id>** -> **Client scopes**.
 * Access the dedicated mappers pane by clicking **<your client's id>-dedicated**, located under *Assigned client scope*.  
   _(It should have a description of "Dedicated scope and mappers for this client")_
@@ -125,7 +123,7 @@ To summarize, the steps required to authorize Keycloak group membership with OAu
     * Include a mapper of type **Group Membership**.
     * Set the "Token Claim Name" to **groups** or customize by matching it to the `--oidc-groups-claim` option of OAuth2 Proxy.
     * If the "Full group path" option is selected, you need to include a "/" separator in the group names defined in the 
-      `--allowed-group` option of OAuth2 Proxy. Example: "/groupname" or "/groupname/childgroup".
+      `--allowed-group` option of OAuth2 Proxy. Example: "/groupname" or "/groupname/child_group".
 
 After creating the _Client Scope_ named _groups_ you will need to attach it to your client.  
 **Clients** -> `<your client's id>` -> **Client scopes** -> **Add client scope** -> Select **groups** and choose Optional 

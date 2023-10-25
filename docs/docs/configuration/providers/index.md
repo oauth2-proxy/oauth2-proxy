@@ -1,5 +1,5 @@
 ---
-id: oauth_provider
+id: index
 title: OAuth Provider Configuration
 ---
 

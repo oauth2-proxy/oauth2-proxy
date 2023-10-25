@@ -12,48 +12,40 @@ To generate a strong cookie secret use one of the below commands:
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-<Tabs
-  defaultValue="python"
-  values={[
-    {label: 'Python', value: 'python'},
-    {label: 'Bash', value: 'bash'},
-    {label: 'OpenSSL', value: 'openssl'},
-    {label: 'PowerShell', value: 'powershell'},
-    {label: 'Terraform', value: 'terraform'},
-  ]}>
-  <TabItem value="python">
+<Tabs defaultValue="python">
+  <TabItem value="python" label="Python">
 
   ```shell
   python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
   ```
-
+  
   </TabItem>
-  <TabItem value="bash">
+  <TabItem value="bash" label="Bash">
 
   ```shell
-  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_'; echo
+  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
   ```
-
+  
   </TabItem>
-  <TabItem value="openssl">
+  <TabItem value="openssl" label="OpenSSL">
 
   ```shell
   openssl rand -base64 32 | tr -- '+/' '-_'
   ```
 
   </TabItem>
-  <TabItem value="powershell">
+  <TabItem value="powershell" label="PowerShell">
 
-  ```shell
+  ```powershell
   # Add System.Web assembly to session, just in case
   Add-Type -AssemblyName System.Web
   [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
   ```
 
   </TabItem>
-  <TabItem value="terraform">
+  <TabItem value="terraform" label="Terraform">
 
-  ```shell
+  ```hcl
   # Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
   resource "random_password" "cookie_secret" {
     length           = 32
@@ -173,7 +165,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
-| `--redis-connection-idle-timeout` | int | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Exmpale: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0 |
+| `--redis-connection-idle-timeout` | int | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Example: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0 |
 | `--request-id-header` | string | Request header to use as the request ID in logging | X-Request-Id |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
@@ -212,9 +204,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` or a `*.` to allow subdomains (e.g. `.example.com`, `*.example.com`)&nbsp;\[[2](#footnote2)\] | |
 | `--trusted-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in an HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
 
-\[<a name="footnote1">1</a>\]: Only these providers support `--cookie-refresh`: GitLab, Google and OIDC
-
-\[<a name="footnote2">2</a>\]: When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
+> ###### 1. Only these providers support `--cookie-refresh`: GitLab, Google and OIDC {#footnote1}
+> ###### 2. When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URLs protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`. {#footnote2}
 
 See below for provider specific options
 
@@ -233,7 +224,7 @@ prefixing it with `OAUTH2_PROXY_`, capitalising it, and replacing hyphens (`-`)
 with underscores (`_`). If the argument can be specified multiple times, the
 environment variable should be plural (trailing `S`).
 
-This is particularly useful for storing secrets outside of a configuration file
+This is particularly useful for storing secrets outside a configuration file
 or the command line.
 
 For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET`,
@@ -247,7 +238,7 @@ If logging to a file you can also configure the maximum file size (`--logging-ma
 
 There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
 
-Each type of logging has its own configurable format and variables. By default these formats are similar to the Apache Combined Log.
+Each type of logging has its own configurable format and variables. By default, these formats are similar to the Apache Combined Log.
 
 Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging` reducing log volume.
 

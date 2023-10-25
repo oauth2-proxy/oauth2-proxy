@@ -1,9 +1,7 @@
 ---
 id: nextcloud
-title: NextCloud Provider Configuration
+title: NextCloud
 ---
-
-### Nextcloud Provider
 
 The Nextcloud provider allows you to authenticate against users in your
 Nextcloud instance.
@@ -15,7 +13,7 @@ form `/index.php/apps/oauth2/*` or `/apps/oauth2/*`.
 
 Refer to the [OAuth2
 documentation](https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/oauth2.html)
-to setup the client id and client secret. Your "Redirection URI" will be
+to set up the client id and client secret. Your "Redirection URI" will be
 `https://internalapp.yourcompany.com/oauth2/callback`.
 
 ```

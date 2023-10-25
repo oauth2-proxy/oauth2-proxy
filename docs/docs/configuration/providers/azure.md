@@ -1,9 +1,7 @@
 ---
 id: azure
-title: Azure Provider Configuration
+title: Azure
 ---
-
-### Azure Auth Provider
 
 1. Add an application: go to [https://portal.azure.com](https://portal.azure.com), choose **Azure Active Directory**, select
    **App registrations** and then click on **New registration**.
@@ -45,4 +43,4 @@ title: Azure Provider Configuration
   https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#the-default-scope for more details.
 - When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't
   get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the 
-  [redis session storage](sessions.md#redis-storage) should resolve this.
+  [redis session storage](../sessions.md#redis-storage) should resolve this.

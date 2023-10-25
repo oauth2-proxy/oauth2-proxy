@@ -1,9 +1,7 @@
 ---
 id: adfs
-title: ADFS Provider Configuration
+title: ADFS
 ---
-
-### ADFS Auth Provider
 
 1. Open the ADFS administration console on your Windows Server and add a new Application Group
 2. Provide a name for the integration, select Server Application from the Standalone applications section and click Next
@@ -18,4 +16,4 @@ title: ADFS Provider Configuration
 
 Note: When using the ADFS Auth provider with nginx and the cookie session store you may find the cookie is too large and 
 doesn't get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the 
-[redis session storage](sessions.md#redis-storage) should resolve this.
+[redis session storage](../sessions.md#redis-storage) should resolve this.

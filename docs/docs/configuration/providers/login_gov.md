@@ -1,9 +1,7 @@
 ---
 id: login_gov
-title: Login.gov Provider Configuration
+title: Login.gov
 ---
-
-### login.gov Provider
 
 login.gov is an OIDC provider for the US Government.
 If you are a US Government agency, you can contact the login.gov team through the contact information
@@ -20,7 +18,7 @@ you have an agency integration account for testing.
 First, register your application in the dashboard.  The important bits are:
 * Identity protocol:  make this `Openid connect`
 * Issuer:  do what they say for OpenID Connect.  We will refer to this string as `${LOGINGOV_ISSUER}`.
-* Public key:  This is a self-signed certificate in .pem format generated from a 2048 bit RSA private key.
+* Public key:  This is a self-signed certificate in .pem format generated from a 2048-bit RSA private key.
   A quick way to do this is 
   `openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -nodes -subj '/C=US/ST=Washington/L=DC/O=GSA/OU=18F/CN=localhost'`.
   The contents of the `key.pem` shall be referred to as `${OAUTH2_PROXY_JWT_KEY}`.

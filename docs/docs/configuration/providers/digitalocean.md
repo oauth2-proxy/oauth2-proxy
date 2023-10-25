@@ -1,9 +1,7 @@
 ---
 id: digitalocean
-title: DigitalOcean Provider Configuration
+title: DigitalOcean
 ---
-
-### DigitalOcean Auth Provider
 
 1. [Create a new OAuth application](https://cloud.digitalocean.com/account/api/applications)
     * You can fill in the name, homepage, and description however you wish.

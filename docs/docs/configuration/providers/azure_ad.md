@@ -1,9 +1,7 @@
 ---
 id: azure_ad
-title: Microsoft Azure AD Provider Configuration
+title: Microsoft Azure AD
 ---
-
-### Microsoft Azure AD Provider
 
 For adding an application to the Microsoft Azure AD follow [these steps to add an application](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app).
 

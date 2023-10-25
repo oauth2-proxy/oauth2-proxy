@@ -1,9 +1,7 @@
 ---
 id: gitea
-title: Gitea Provider Configuration
+title: Gitea
 ---
-
-### Gitea Auth Provider
 
 1. Create a new application: `https://< your gitea host >/user/settings/applications`
 2. Under `Redirect URI` enter the correct URL i.e. `https://<proxied host>/oauth2/callback`
