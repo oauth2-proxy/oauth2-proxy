@@ -223,7 +223,7 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `group` | _[]string_ | Group sets restrict logins to members of this group |
-| `projects` | _[]string_ | Projects restricts logins to members of any of these projects |
+| `projects` | _[]string_ | Projects restricts logins to members of these projects |
 
 ### GoogleOptions
 
@@ -233,10 +233,11 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `group` | _[]string_ | Groups sets restrict logins to members of this google group |
-| `adminEmail` | _string_ | AdminEmail is the google admin to impersonate for api calls |
+| `group` | _[]string_ | Groups sets restrict logins to members of this Google group |
+| `adminEmail` | _string_ | AdminEmail is the Google admin to impersonate for api calls |
 | `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
 | `useApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
+| `targetPrincipal` | _string_ | TargetPrincipal is the Google Service Account used for Application Default Credentials |
 
 ### Header
 
@@ -414,6 +415,7 @@ Provider holds all configuration for a single provider
 | `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
 | `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
+| `useSystemTrustStore` | _bool_ | UseSystemTrustStore determines if your custom CA files and the system trust store are used<br/>If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
