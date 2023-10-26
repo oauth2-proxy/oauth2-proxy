@@ -2,7 +2,7 @@ go:
   - '**/*.go'
 
 docs:
-  - 'docs/**/*'
+  - '**/*.md'
 
 changelog:
   - 'CHANGELOG.md'
@@ -12,3 +12,10 @@ tests:
 
 provider:
   - 'providers/**/*'
+
+dependencies:
+  - 'go.mod'
+  - 'go.sum'
+
+docker:
+  - '**/Dockerfile'
