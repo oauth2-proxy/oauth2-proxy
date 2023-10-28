@@ -994,6 +994,6 @@ var _ = Describe("Server", func() {
 
 func skipDevContainer() {
 	if os.Getenv("DEVCONTAINER") != "" {
-		Skip("Skipping testing in CI environment")
+		Skip("Skipping testing in DevContainer environment")
 	}
 }
