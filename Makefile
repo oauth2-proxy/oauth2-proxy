@@ -5,6 +5,7 @@ BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
 REGISTRY ?= quay.io/tuunit
+DATE := $(shell date +"%Y%m%d")
 .NOTPARALLEL:
 
 GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
@@ -73,21 +74,21 @@ docker-push-all: docker-push
 
 .PHONY: docker-nightly-build
 docker-nightly-build:
-	$(DOCKER_BUILDX_X_PLATFORM)               -t $(REGISTRY)/oauth2-proxy:nightly .
-	$(DOCKER_BUILDX) --platform linux/amd64   -t $(REGISTRY)/oauth2-proxy:nightly-amd64 .
-	$(DOCKER_BUILDX) --platform linux/arm64   -t $(REGISTRY)/oauth2-proxy:nightly-arm64 .
-	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:nightly-ppc64le .
-	$(DOCKER_BUILDX) --platform linux/arm/v6  -t $(REGISTRY)/oauth2-proxy:nightly-armv6 .
-	$(DOCKER_BUILDX) --platform linux/arm/v7  -t $(REGISTRY)/oauth2-proxy:nightly-armv7 .
+	$(DOCKER_BUILDX_X_PLATFORM)               -t $(REGISTRY)/oauth2-proxy:nightly         -t $(REGISTRY)/oauth2-proxy:nightly-${DATE} .
+	$(DOCKER_BUILDX) --platform linux/amd64   -t $(REGISTRY)/oauth2-proxy:nightly-amd64   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-amd64 .
+	$(DOCKER_BUILDX) --platform linux/arm64   -t $(REGISTRY)/oauth2-proxy:nightly-arm64   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-arm64 .
+	$(DOCKER_BUILDX) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:nightly-ppc64le -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-ppc64le .
+	$(DOCKER_BUILDX) --platform linux/arm/v6  -t $(REGISTRY)/oauth2-proxy:nightly-armv6   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-armv6 .
+	$(DOCKER_BUILDX) --platform linux/arm/v7  -t $(REGISTRY)/oauth2-proxy:nightly-armv7   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-armv7 .
 
 .PHONY: docker-nightly-push
 docker-nightly-push:
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM)               -t $(REGISTRY)/oauth2-proxy:nightly .
-	$(DOCKER_BUILDX_PUSH) --platform linux/amd64   -t $(REGISTRY)/oauth2-proxy:nightly-amd64 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm64   -t $(REGISTRY)/oauth2-proxy:nightly-arm64 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:nightly-ppc64le .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v6  -t $(REGISTRY)/oauth2-proxy:nightly-armv6 .
-	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v7  -t $(REGISTRY)/oauth2-proxy:nightly-armv7 .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM)               -t $(REGISTRY)/oauth2-proxy:nightly 		   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE} .
+	$(DOCKER_BUILDX_PUSH) --platform linux/amd64   -t $(REGISTRY)/oauth2-proxy:nightly-amd64   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-amd64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm64   -t $(REGISTRY)/oauth2-proxy:nightly-arm64   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-arm64 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:nightly-ppc64le -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-ppc64le .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v6  -t $(REGISTRY)/oauth2-proxy:nightly-armv6   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-armv6 .
+	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v7  -t $(REGISTRY)/oauth2-proxy:nightly-armv7   -t $(REGISTRY)/oauth2-proxy:nightly-${DATE}-armv7 .
 
 .PHONY: generate
 generate:

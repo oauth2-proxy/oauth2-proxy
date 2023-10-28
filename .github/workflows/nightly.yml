@@ -1,8 +1,9 @@
 name: Nightly builds
 
 on:
-  schedule: # Run every day at 00:00 UTC
-    - cron: '0 0 * * *'
+  schedule: # Run every day at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
