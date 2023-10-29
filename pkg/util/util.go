@@ -84,7 +84,7 @@ func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, useSystemP
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	if insecureSkipVerify {
 		transport.TLSClientConfig.InsecureSkipVerify = true
-	} else {
+	} else if len(caFiles) > 0 {
 		pool, err := GetCertPool(caFiles, useSystemPool)
 		if err != nil {
 			return nil, err
