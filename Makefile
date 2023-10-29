@@ -78,11 +78,11 @@ docker-push-all: docker-push
 
 .PHONY: docker-nightly-build
 docker-nightly-build:
-	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy-nightly:latest -t $(REGISTRY)/oauth2-proxy-nightly:${DATE} .
+	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy-nightly:latest -t $(REGISTRY)/oauth2-proxy-nightly-${DATE} .
 
 .PHONY: docker-nightly-push
 docker-nightly-push:
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy-nightly:latest -t $(REGISTRY)/oauth2-proxy-nightly:${DATE} .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy-nightly:latest -t $(REGISTRY)/oauth2-proxy-nightly-${DATE} .
 
 .PHONY: generate
 generate:
