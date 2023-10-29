@@ -82,6 +82,10 @@ func getClientCertificates(certFile, keyFile string) ([]tls.Certificate, error) 
 
 func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, useSystemPool bool, caFiles ...string) (*http.Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
 	if insecureSkipVerify {
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	} else if len(caFiles) > 0 {
@@ -90,10 +94,7 @@ func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, useSystemP
 			return nil, err
 		}
 
-		transport.TLSClientConfig = &tls.Config{
-			RootCAs:    pool,
-			MinVersion: tls.VersionTLS12,
-		}
+		transport.TLSClientConfig.RootCAs = pool
 	}
 
 	if certFile != "" && keyFile != "" {
