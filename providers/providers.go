@@ -80,7 +80,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientSecretFile: providerConfig.ClientSecretFile,
 	}
 
-	client, err := util.GetHTTPClient(providerConfig.TLSCertFile, providerConfig.TLSKeyFile, providerConfig.SSLInsecureSkipVerify, providerConfig.CAFiles...)
+	client, err := util.GetHTTPClient(providerConfig.TLSCertFile, providerConfig.TLSKeyFile, providerConfig.SSLInsecureSkipVerify, providerConfig.UseSystemTrustStore, providerConfig.CAFiles...)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse tls configuration for provider client: %w", err)
 	}

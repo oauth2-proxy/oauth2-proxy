@@ -16,12 +16,40 @@ import (
 	"time"
 )
 
-func GetCertPool(paths []string) (*x509.CertPool, error) {
+func GetCertPool(paths []string, useSystemPool bool) (*x509.CertPool, error) {
 	if len(paths) == 0 {
-		return x509.SystemCertPool()
+		return nil, fmt.Errorf("invalid empty list of Root CAs file paths")
 	}
 
-	pool := x509.NewCertPool()
+	var pool *x509.CertPool
+	if useSystemPool {
+		rootPool, err := getSystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("unable to get SystemCertPool when append is true - #{err}")
+		}
+		pool = rootPool
+	} else {
+		pool = x509.NewCertPool()
+	}
+
+	return loadCertsFromPaths(paths, pool)
+
+}
+
+func getSystemCertPool() (*x509.CertPool, error) {
+	rootPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+
+	if rootPool == nil {
+		return nil, fmt.Errorf("SystemCertPool is empty")
+	}
+
+	return rootPool, nil
+}
+
+func loadCertsFromPaths(paths []string, pool *x509.CertPool) (*x509.CertPool, error) {
 	for _, path := range paths {
 		// Cert paths are a configurable option
 		data, err := os.ReadFile(path) // #nosec G304
@@ -52,12 +80,12 @@ func getClientCertificates(certFile, keyFile string) ([]tls.Certificate, error) 
 	return []tls.Certificate{cert}, nil
 }
 
-func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, caFiles ...string) (*http.Client, error) {
+func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, useSystemPool bool, caFiles ...string) (*http.Client, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	if insecureSkipVerify {
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	} else {
-		pool, err := GetCertPool(caFiles)
+		pool, err := GetCertPool(caFiles, useSystemPool)
 		if err != nil {
 			return nil, err
 		}

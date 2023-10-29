@@ -154,6 +154,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `--provider` | string | OAuth provider | google |
 | `--provider-ca-file` |  string \| list |  Paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead. |
+| `--use-system-trust-store` | bool | Determines if `provider-ca-file` files and the system trust store are used. If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. | false |
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider)                                            |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"`                                                        |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent)                                    |
@@ -165,6 +166,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--real-client-ip-header` | string | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP) | X-Real-IP                                                        |
 | `--redeem-url` | string | Token redemption endpoint |                                                                  |
 | `--redirect-url` | string | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"` |                                                                  |
+| `--relative-redirect-url` | bool | allow relative OAuth Redirect URL.` |                                                                  |
 | `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster` |                                                                  |
 | `--redis-connection-url` | string | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`) |                                                                  |
 | `--redis-insecure-skip-tls-verify` | bool | skip TLS verification when connecting to Redis | false                                                            |
@@ -221,7 +223,11 @@ See below for provider specific options
 
 ### Upstreams Configuration
 
-`oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers or serve static files from the file system. HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+`oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers, unix socket or serve static files from the file system.
+
+HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. . This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+
+Unix socket upstreams are configured as `unix:///path/to/unix.sock`.
 
 Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
 

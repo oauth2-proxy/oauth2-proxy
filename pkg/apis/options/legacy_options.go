@@ -511,6 +511,7 @@ type LegacyProvider struct {
 	SslInsecureSkipVerify              bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	TLSCertFile                        string   `flag:"provider-tls-cert-file" cfg:"provider_tls_cert_file"`
 	TLSKeyFile                         string   `flag:"provider-tls-key-file" cfg:"provider_tls_key_file"`
+	UseSystemTrustStore                bool     `flag:"use-system-trust-store" cfg:"use_system_trust_store"`
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
@@ -568,6 +569,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.String("provider-tls-cert-file", "", "Path to the PEM encoded X.509 certificate to use when connecting to the provider.")
 	flagSet.String("provider-tls-key-file", "", "Path to the PEM encoded X.509 key to use when connecting to the provider.")
+	flagSet.Bool("use-system-trust-store", false, "Determines if 'provider-ca-file' files and the system trust store are used. If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
@@ -669,6 +671,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		SSLInsecureSkipVerify: l.SslInsecureSkipVerify,
 		TLSCertFile:           l.TLSCertFile,
 		TLSKeyFile:            l.TLSKeyFile,
+		UseSystemTrustStore:   l.UseSystemTrustStore,
 		LoginURL:              l.LoginURL,
 		RedeemURL:             l.RedeemURL,
 		ProfileURL:            l.ProfileURL,

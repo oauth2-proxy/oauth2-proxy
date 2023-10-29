@@ -66,6 +66,9 @@ type Provider struct {
 	// TLSKeyFile is the path to a PEM encoded X.509 key to use when connecting to the provider
 	TLSKeyFile string `json:"keyFile,omitempty"`
 
+	// UseSystemTrustStore determines if your custom CA files and the system trust store are used
+	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
+	UseSystemTrustStore bool `json:"useSystemTrustStore,omitempty"`
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
