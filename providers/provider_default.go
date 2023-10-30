@@ -116,16 +116,17 @@ func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState
 // Authorize performs global authorization on an authenticated session.
 // This is not used for fine-grained per route authorization rules.
 func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (bool, error) {
+	if s.IsExpired() {
+		return false, nil
+	}
 	if len(p.AllowedGroups) == 0 {
 		return true, nil
 	}
-
 	for _, group := range s.Groups {
 		if _, ok := p.AllowedGroups[group]; ok {
 			return true, nil
 		}
 	}
-
 	return false, nil
 }
 
