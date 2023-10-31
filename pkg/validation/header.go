@@ -38,7 +38,7 @@ func validateHeader(header options.Header, names map[string]struct{}) []string {
 	return msgs
 }
 
-func validateHeaderValue(name string, value options.HeaderValue) []string {
+func validateHeaderValue(_ string, value options.HeaderValue) []string {
 	switch {
 	case value.SecretSource != nil && value.ClaimSource == nil:
 		return []string{validateSecretSource(*value.SecretSource)}

@@ -199,7 +199,7 @@ type testVerifier struct {
 	jwk jose.JSONWebKey
 }
 
-func (t *testVerifier) VerifySignature(ctx context.Context, jwt string) ([]byte, error) {
+func (t *testVerifier) VerifySignature(_ context.Context, jwt string) ([]byte, error) {
 	jws, err := jose.ParseSigned(jwt)
 	if err != nil {
 		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)
