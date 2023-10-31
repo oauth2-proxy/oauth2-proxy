@@ -124,7 +124,7 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	}
 }
 
-func getMicrosoftGraphGroupsURL(profileUrl *url.URL, graphGroupField string) *url.URL {
+func getMicrosoftGraphGroupsURL(profileURL *url.URL, graphGroupField string) *url.URL {
 
 	selectStatement := "$select=displayName,id"
 	if !slices.Contains([]string{"displayName", "id"}, graphGroupField) {
@@ -134,7 +134,7 @@ func getMicrosoftGraphGroupsURL(profileUrl *url.URL, graphGroupField string) *ur
 	// Select only security groups. Due to the filter option, count param is mandatory even if unused otherwise
 	return &url.URL{
 		Scheme:   "https",
-		Host:     profileUrl.Host,
+		Host:     profileURL.Host,
 		Path:     "/v1.0/me/transitiveMemberOf",
 		RawQuery: "$count=true&$filter=securityEnabled+eq+true&" + selectStatement,
 	}
