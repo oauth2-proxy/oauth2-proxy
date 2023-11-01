@@ -3,11 +3,9 @@ package providers
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -24,13 +22,6 @@ type OIDCProvider struct {
 	*ProviderData
 
 	SkipNonce bool
-
-	UseAssertionAuthentication bool
-	AssertionAuthJWTKey        *ecdsa.PrivateKey
-	AssertionAuthAlgorithm     string
-	AssertionAuthSigningMethod jwt.SigningMethod
-	AssertionAuthKeyId         string
-	AssertionAuthExpire        time.Duration
 }
 
 const oidcDefaultScope = "openid email profile"
@@ -59,52 +50,9 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) (*OIDCProvider, 
 	p.setProviderDefaults(oidcProviderDefaults)
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 
-	var signingMethod jwt.SigningMethod
-	switch opts.AssertionAuthAlgorithm {
-	case "ES256":
-		signingMethod = jwt.SigningMethodES256
-	case "ES384":
-		signingMethod = jwt.SigningMethodES384
-	case "ES512":
-		signingMethod = jwt.SigningMethodES512
-	}
-
-	// JWT key can be supplied via env variable or file in the filesystem, but not both.
-	var assertionAuthJWTKey *ecdsa.PrivateKey
-	switch {
-	case opts.AssertionAuthJWTKey != "" && opts.AssertionAuthJWTKeyFile != "":
-		return nil, errors.New("cannot set both jwt-key and jwt-key-file options")
-	case opts.AssertionAuthJWTKey == "" && opts.AssertionAuthJWTKeyFile == "":
-		return nil, errors.New("provider requires a private key for signing JWTs")
-	case opts.AssertionAuthJWTKey != "":
-		// The JWT Key is in the commandline argument
-		signKey, err := jwt.ParseECPrivateKeyFromPEM([]byte(opts.AssertionAuthJWTKey))
-		if err != nil {
-			return nil, fmt.Errorf("could not parse ECDSA Private Key PEM: %v", err)
-		}
-		assertionAuthJWTKey = signKey
-	case opts.AssertionAuthJWTKeyFile != "":
-		// The JWT key is in the filesystem
-		keyData, err := os.ReadFile(opts.AssertionAuthJWTKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not read key file: %v", opts.AssertionAuthJWTKeyFile)
-		}
-		signKey, err := jwt.ParseECPrivateKeyFromPEM(keyData)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse ECDSA private key from PEM file: %v", opts.AssertionAuthJWTKeyFile)
-		}
-		assertionAuthJWTKey = signKey
-	}
-
 	return &OIDCProvider{
-		ProviderData:               p,
-		SkipNonce:                  opts.InsecureSkipNonce,
-		UseAssertionAuthentication: opts.UseAssertionAuthentication,
-		AssertionAuthJWTKey:        assertionAuthJWTKey,
-		AssertionAuthAlgorithm:     opts.AssertionAuthAlgorithm,
-		AssertionAuthSigningMethod: signingMethod,
-		AssertionAuthKeyId:         opts.AssertionAuthKeyId,
-		AssertionAuthExpire:        opts.AssertionAuthExpire,
+		ProviderData: p,
+		SkipNonce:    opts.InsecureSkipNonce,
 	}, nil
 }
 
@@ -121,11 +69,14 @@ func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string, extraParams
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
-	if p.UseAssertionAuthentication {
+	switch p.AuthenticationConfig.AuthenticationMethod {
+	case ClientSecret:
+		return p.RedeemBasic(ctx, redirectURL, code, codeVerifier)
+	case PrivateKeyJWT:
 		return p.RedeemAssertion(ctx, redirectURL, code, codeVerifier)
+	default:
+		return nil, fmt.Errorf("unsupported authentication method: %v", p.AuthenticationConfig.AuthenticationMethod)
 	}
-	// Move everything currently in the Redeem method to the new RedeemBasic method
-	return p.RedeemBasic(ctx, redirectURL, code, codeVerifier)
 }
 
 // RedeemBasic exchanges the OAuth2 authentication token for an ID token using client_secret
@@ -165,25 +116,26 @@ func (p *OIDCProvider) RedeemAssertion(ctx context.Context, redirectURL, code, c
 	if codeVerifier == "" {
 		return nil, ErrMissingOIDCVerifier
 	}
+	jwtConfig := p.AuthenticationConfig.PrivateKeyJWTData
 
 	authToken := &jwt.Token{
 		Header: map[string]interface{}{
-			"alg": p.AssertionAuthAlgorithm,
+			"alg": jwtConfig.Algorithm,
 			"typ": "JWT",
-			"kid": p.AssertionAuthKeyId,
+			"kid": jwtConfig.KeyId,
 		},
 		Claims: jwt.MapClaims{
 			"iat": time.Now().Unix(),
-			"exp": time.Now().Add(p.AssertionAuthExpire).Unix(),
+			"exp": time.Now().Add(jwtConfig.Expire).Unix(),
 			"aud": p.RedeemURL.String(),
 			"sub": p.ClientID,
 			"iss": p.ClientID,
 			"jti": uuid.New().String(),
 		},
-		Method: p.AssertionAuthSigningMethod,
+		Method: jwtConfig.SigningMethod,
 	}
 
-	signedAuthToken, err := authToken.SignedString(p.AssertionAuthJWTKey)
+	signedAuthToken, err := authToken.SignedString(jwtConfig.JWTKey)
 	if err != nil {
 		return nil, err
 	}
