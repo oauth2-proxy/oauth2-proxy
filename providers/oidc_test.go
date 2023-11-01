@@ -62,7 +62,7 @@ func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
 		), verificationOptions),
 	}
 
-	p := NewOIDCProvider(providerData, options.OIDCOptions{
+	p, _ := NewOIDCProvider(providerData, options.OIDCOptions{
 		InsecureSkipNonce: skipNonce,
 	})
 

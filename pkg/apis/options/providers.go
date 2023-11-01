@@ -1,5 +1,9 @@
 package options
 
+import (
+	"time"
+)
+
 const (
 	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
 	OIDCEmailClaim = "email"
@@ -234,6 +238,27 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
+
+	// UseAssertionAuthentication enables the use of assertion authentication
+	// instead of the default client secret authentication, this defaults to 'false'
+	UseAssertionAuthentication bool `json:"useAssertionAuthentication,omitempty"`
+	// AssertionAuthPrivateKey is the private key used to sign the assertion
+	// this is required when UseAssertionAuthentication is set to 'true'
+	// only ecdsa keys are supported for now
+	// JWTKey is a private key in PEM format used to sign JWT,
+	AssertionAuthJWTKey string `json:"assertionAuthJwtKey,omitempty"`
+	// JWTKeyFile is a path to the private key file in PEM format used to sign the JWT
+	AssertionAuthJWTKeyFile string `json:"assertionAuthJwtKeyFile,omitempty"`
+	// AssertionAuthAlgorithm is the algorithm used to sign the assertion
+	// this defaults to 'ES256'
+	AssertionAuthAlgorithm string `json:"assertionAuthAlgorithm,omitempty"`
+	// AssertionAuthKeyId is the key id used to sign the assertion
+	// it is used as the "kid" jwt token header in the assertion
+	// if not provided, the "kid" header is not set
+	AssertionAuthKeyId string `json:"assertionAuthKeyId,omitempty"`
+	// AssertionAuthExpire is the duration for which the assertion is valid
+	// this defaults to '5m'
+	AssertionAuthExpire time.Duration `json:"assertionAuthDuration,omitempty"`
 }
 
 type LoginGovOptions struct {

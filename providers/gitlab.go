@@ -40,7 +40,10 @@ func NewGitLabProvider(p *ProviderData, opts options.GitLabOptions) (*GitLabProv
 		p.Scope = gitlabDefaultScope
 	}
 
-	oidcProvider := NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false})
+	oidcProvider, err := NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false})
+	if err != nil {
+		return nil, err
+	}
 
 	provider := &GitLabProvider{
 		OIDCProvider:    oidcProvider,
