@@ -4,12 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"crypto/rsa"
-	"errors"
 	"fmt"
 	"math/big"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -26,7 +23,6 @@ type LoginGovProvider struct {
 	// TODO (@timothy-spencer): Ideally, the nonce would be in the session state, but the session state
 	// is created only upon code redemption, not during the auth, when this must be supplied.
 	Nonce     string
-	JWTKey    *rsa.PrivateKey
 	PubJWKURL *url.URL
 }
 
@@ -108,30 +104,12 @@ func (p *LoginGovProvider) configure(opts options.LoginGovOptions) error {
 	}
 	p.PubJWKURL = pubJWKURL
 
-	// JWT key can be supplied via env variable or file in the filesystem, but not both.
-	switch {
-	case opts.JWTKey != "" && opts.JWTKeyFile != "":
-		return errors.New("cannot set both jwt-key and jwt-key-file options")
-	case opts.JWTKey == "" && opts.JWTKeyFile == "":
-		return errors.New("login.gov provider requires a private key for signing JWTs")
-	case opts.JWTKey != "":
-		// The JWT Key is in the commandline argument
-		signKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(opts.JWTKey))
-		if err != nil {
-			return fmt.Errorf("could not parse RSA Private Key PEM: %v", err)
-		}
-		p.JWTKey = signKey
-	case opts.JWTKeyFile != "":
-		// The JWT key is in the filesystem
-		keyData, err := os.ReadFile(opts.JWTKeyFile)
-		if err != nil {
-			return fmt.Errorf("could not read key file: %v", opts.JWTKeyFile)
-		}
-		signKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyData)
-		if err != nil {
-			return fmt.Errorf("could not parse private key from PEM file: %v", opts.JWTKeyFile)
-		}
-		p.JWTKey = signKey
+	authConfig := p.AuthenticationConfig
+	if authConfig.AuthenticationMethod != PrivateKeyJWT {
+		return fmt.Errorf("invalid authentication method %q for login.gov provider, use 'private_key_jwt'", authConfig.AuthenticationMethod)
+	}
+	if authConfig.PrivateKeyJWTData.SigningMethod != jwt.SigningMethodRS256 {
+		return fmt.Errorf("invalid signing method %q for login.gov provider, use 'RS256'", authConfig.PrivateKeyJWTData.SigningMethod)
 	}
 	return nil
 }
@@ -214,8 +192,9 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code, codeVerifier str
 		ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
 		Id:        randSeq(32),
 	}
-	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
-	ss, err := token.SignedString(p.JWTKey)
+	authData := p.AuthenticationConfig.PrivateKeyJWTData
+	token := jwt.NewWithClaims(authData.SigningMethod, claims)
+	ss, err := token.SignedString(authData.JWTKey)
 	if err != nil {
 		return nil, err
 	}

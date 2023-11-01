@@ -1,9 +1,5 @@
 package options
 
-import (
-	"time"
-)
-
 const (
 	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
 	OIDCEmailClaim = "email"
@@ -23,12 +19,10 @@ type Provider struct {
 	// ClientID is the OAuth Client ID that is defined in the provider
 	// This value is required for all providers.
 	ClientID string `json:"clientID,omitempty"`
-	// ClientSecret is the OAuth Client Secret that is defined in the provider
+
+	// AuthenticationConfig holds all configurations for the authentication method.
 	// This value is required for all providers.
-	ClientSecret string `json:"clientSecret,omitempty"`
-	// ClientSecretFile is the name of the file
-	// containing the OAuth Client Secret, it will be used if ClientSecret is not set.
-	ClientSecretFile string `json:"clientSecretFile,omitempty"`
+	AuthenticationConfig AuthenticationOptions `json:"authenticationConfig,omitempty"`
 
 	// KeycloakConfig holds all configurations for Keycloak provider.
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
@@ -238,34 +232,9 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
-
-	// UseAssertionAuthentication enables the use of assertion authentication
-	// instead of the default client secret authentication, this defaults to 'false'
-	UseAssertionAuthentication bool `json:"useAssertionAuthentication,omitempty"`
-	// AssertionAuthPrivateKey is the private key used to sign the assertion
-	// this is required when UseAssertionAuthentication is set to 'true'
-	// only ecdsa keys are supported for now
-	// JWTKey is a private key in PEM format used to sign JWT,
-	AssertionAuthJWTKey string `json:"assertionAuthJwtKey,omitempty"`
-	// JWTKeyFile is a path to the private key file in PEM format used to sign the JWT
-	AssertionAuthJWTKeyFile string `json:"assertionAuthJwtKeyFile,omitempty"`
-	// AssertionAuthAlgorithm is the algorithm used to sign the assertion
-	// this defaults to 'ES256'
-	AssertionAuthAlgorithm string `json:"assertionAuthAlgorithm,omitempty"`
-	// AssertionAuthKeyId is the key id used to sign the assertion
-	// it is used as the "kid" jwt token header in the assertion
-	// if not provided, the "kid" header is not set
-	AssertionAuthKeyId string `json:"assertionAuthKeyId,omitempty"`
-	// AssertionAuthExpire is the duration for which the assertion is valid
-	// this defaults to '5m'
-	AssertionAuthExpire time.Duration `json:"assertionAuthDuration,omitempty"`
 }
 
 type LoginGovOptions struct {
-	// JWTKey is a private key in PEM format used to sign JWT,
-	JWTKey string `json:"jwtKey,omitempty"`
-	// JWTKeyFile is a path to the private key file in PEM format used to sign the JWT
-	JWTKeyFile string `json:"jwtKeyFile,omitempty"`
 	// PubJWKURL is the JWK pubkey access endpoint
 	PubJWKURL string `json:"pubjwkURL,omitempty"`
 }
