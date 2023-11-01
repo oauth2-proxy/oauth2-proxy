@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"crypto"
 	"errors"
 	"fmt"
 	"os"
@@ -38,9 +39,8 @@ type MutalTLSAuthenticationData struct {
 type PrivateKeyJWTAuthenticationData struct {
 	// only one of the following should be set
 	// can be one of the following: ecdsa.PrivateKey, rsa.PrivateKey
-	JWTKey interface{}
+	JWTKey crypto.PrivateKey
 
-	Algorithm     string
 	SigningMethod jwt.SigningMethod
 	KeyId         string
 	Expire        time.Duration
@@ -57,7 +57,7 @@ type AuthenticationConfig struct {
 }
 
 func NewAuthenticationConfig(opts options.AuthenticationOptions) (*AuthenticationConfig, error) {
-	switch opts.AuthenticationMethod {
+	switch opts.Method {
 	case options.ClientSecret:
 		return &AuthenticationConfig{
 			AuthenticationMethod: ClientSecret,
@@ -99,7 +99,7 @@ func NewAuthenticationConfig(opts options.AuthenticationOptions) (*Authenticatio
 		}
 
 		// JWT key can be supplied via env variable or file in the filesystem, but not both.
-		var JWTKey interface{}
+		var JWTKey crypto.PrivateKey
 		switch {
 		case opts.JWTKey != "" && opts.JWTKeyFile != "":
 			return nil, errors.New("cannot set both jwt-key and jwt-key-file options")
@@ -147,14 +147,13 @@ func NewAuthenticationConfig(opts options.AuthenticationOptions) (*Authenticatio
 			AuthenticationMethod: PrivateKeyJWT,
 			PrivateKeyJWTData: PrivateKeyJWTAuthenticationData{
 				JWTKey:        JWTKey,
-				Algorithm:     opts.JWTAlgorithm,
 				SigningMethod: signingMethod,
 				KeyId:         opts.JWTKeyId,
 				Expire:        opts.JWTExpire,
 			},
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported authentication method: %v", opts.AuthenticationMethod)
+		return nil, fmt.Errorf("unsupported authentication method: %v", opts.Method)
 	}
 }
 

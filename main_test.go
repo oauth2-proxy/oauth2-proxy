@@ -11,10 +11,16 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"github.com/spf13/pflag"
 )
 
 var _ = Describe("Configuration Loading Suite", func() {
+
+	// we are comparing very large objects and we want to see the differences
+	format.MaxLength = 50000
+	format.MaxDepth = 10
+
 	const testLegacyConfig = `
 http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
@@ -66,8 +72,10 @@ server:
 providers:
 - provider: google
   ID: google=oauth2-proxy
-  clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
+  authentication:
+    method: client_secret
+    clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   azureConfig:
     tenant: common
   oidcConfig:
@@ -143,10 +151,13 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 		opts.Providers = options.Providers{
 			options.Provider{
-				ID:           "google=oauth2-proxy",
-				Type:         "google",
-				ClientSecret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
-				ClientID:     "oauth2-proxy",
+				ID:   "google=oauth2-proxy",
+				Type: "google",
+				AuthenticationConfig: options.AuthenticationOptions{
+					Method:       options.ClientSecret,
+					ClientSecret: "b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK",
+				},
+				ClientID: "oauth2-proxy",
 				AzureConfig: options.AzureOptions{
 					Tenant: "common",
 				},

@@ -120,7 +120,7 @@ func (p *OIDCProvider) RedeemAssertion(ctx context.Context, redirectURL, code, c
 
 	authToken := &jwt.Token{
 		Header: map[string]interface{}{
-			"alg": jwtConfig.Algorithm,
+			"alg": jwtConfig.SigningMethod.Alg(),
 			"typ": "JWT",
 			"kid": jwtConfig.KeyId,
 		},

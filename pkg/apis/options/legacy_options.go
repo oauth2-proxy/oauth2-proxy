@@ -50,6 +50,7 @@ func NewLegacyOptions() *LegacyOptions {
 
 		LegacyProvider: LegacyProvider{
 			ProviderType:          "google",
+			AuthenticationMethod:  "client_secret",
 			AzureTenant:           "common",
 			ApprovalPrompt:        "force",
 			UserIDClaim:           "email",
@@ -599,16 +600,16 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
 
-	flagSet.String("authentication-method", "", "Authentication method to use; can be \"client_secret\", \"mtls\" or \"private_key_jwt\"")
+	flagSet.String("authentication-method", "client_secret", "Authentication method to use; can be \"client_secret\", \"mtls\" or \"private_key_jwt\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
 	flagSet.String("tls-cert-file", "", "path to certificate file")
 	flagSet.String("tls-key-file", "", "path to private key file")
 	flagSet.String("jwt-key", "", "private key in PEM format used to sign JWT, so that you can say something like -jwt-key=\"${OAUTH2_PROXY_JWT_KEY}\": required by login.gov and when authenticating with JWT")
 	flagSet.String("jwt-key-file", "", "path to the private key file in PEM format used to sign the JWT so that you can say something like -jwt-key-file=/etc/ssl/private/jwt_signing_key.pem: required by login.gov and when authenticating with JWT")
-	flagSet.String("jwt-algorithm", "RS256", "the algorithm to use when signing the JWT")
+	flagSet.String("jwt-algorithm", "", "the algorithm to use when signing the JWT")
 	flagSet.String("jwt-key-id", "", "the key id to use in the JWT header")
-	flagSet.String("jwt-expire", "1h", "the duration that the generated JWT will be valid")
+	flagSet.Duration("jwt-expire", time.Duration(0), "the duration that the generated JWT will be valid")
 
 	return flagSet
 }
@@ -673,9 +674,9 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers := Providers{}
 
 	providerAuthentication := AuthenticationOptions{
-		AuthenticationMethod: AuthenticationMethod(l.AuthenticationMethod),
-		ClientSecret:         l.ClientSecret,
-		ClientSecretFile:     l.ClientSecretFile,
+		Method:           AuthenticationMethod(l.AuthenticationMethod),
+		ClientSecret:     l.ClientSecret,
+		ClientSecretFile: l.ClientSecretFile,
 
 		TLSCertFile: l.TLSCertFile,
 		TLSKeyFile:  l.TLSKeyFile,
