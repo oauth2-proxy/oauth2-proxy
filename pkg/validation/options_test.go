@@ -15,7 +15,7 @@ import (
 const (
 	cookieSecret = "secretthirtytwobytes+abcdefghijk"
 	clientID     = "bazquux"
-	clientSecret = "xyzzyplugh"
+	clientSecret = "foobar"
 	providerID   = "providerID"
 )
 
@@ -29,7 +29,7 @@ func testOptions() *options.Options {
 	o.Cookie.Secret = cookieSecret
 	o.Providers[0].ID = providerID
 	o.Providers[0].ClientID = clientID
-	o.Providers[0].ClientSecret = clientSecret
+	o.Providers[0].AuthenticationConfig.ClientSecret = clientSecret
 	o.EmailDomains = []string{"*"}
 	return o
 }
@@ -63,7 +63,8 @@ func TestGoogleGroupOptions(t *testing.T) {
 
 	expected := errorMsg([]string{
 		"missing setting: google-admin-email",
-		"missing setting: google-service-account-json or google-use-application-default-credentials"})
+		"missing setting: google-service-account-json or google-use-application-default-credentials",
+	})
 	assert.Equal(t, expected, err.Error())
 }
 

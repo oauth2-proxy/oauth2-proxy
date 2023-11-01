@@ -22,7 +22,7 @@ type Provider struct {
 
 	// AuthenticationConfig holds all configurations for the authentication method.
 	// This value is required for all providers.
-	AuthenticationConfig AuthenticationOptions `json:"authenticationConfig,omitempty"`
+	AuthenticationConfig AuthenticationOptions `json:"authentication,omitempty"`
 
 	// KeycloakConfig holds all configurations for Keycloak provider.
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
@@ -243,6 +243,9 @@ func providerDefaults() Providers {
 	providers := Providers{
 		{
 			Type: "google",
+			AuthenticationConfig: AuthenticationOptions{
+				Method: ClientSecret,
+			},
 			AzureConfig: AzureOptions{
 				Tenant: "common",
 			},

@@ -10,7 +10,7 @@ import (
 func validateAuthenticationConfig(authConfig options.AuthenticationOptions) []string {
 	msgs := []string{}
 
-	switch authConfig.AuthenticationMethod {
+	switch authConfig.Method {
 	case options.ClientSecret:
 		msgs = append(msgs, validateClientSecretAuthenticationConfig(authConfig)...)
 	case options.MutualTLS:
@@ -20,6 +20,7 @@ func validateAuthenticationConfig(authConfig options.AuthenticationOptions) []st
 	default:
 		msgs = append(msgs, "invalid setting: authentication-method")
 	}
+
 	return msgs
 }
 

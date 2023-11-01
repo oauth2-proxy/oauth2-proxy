@@ -19,9 +19,9 @@ const (
 )
 
 type AuthenticationOptions struct {
-	// AuthenticationMethod defines how we should authenticate with the provider
+	// Method defines how we should authenticate with the provider
 	// possible values are: 'client_secret', 'mtls', 'private_key_jwt'
-	AuthenticationMethod AuthenticationMethod `json:"authenticationMethod,omitempty"`
+	Method AuthenticationMethod `json:"method,omitempty"`
 
 	// ClientSecret is the OAuth Client Secret that is defined in the provider
 	// This value is required when AuthenticationMethod is set to 'client_secret'

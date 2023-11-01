@@ -1,14 +1,11 @@
 package providers
 
 import (
-	"bytes"
 	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -36,29 +33,6 @@ func newLoginGovServer(body []byte) (*url.URL, *httptest.Server) {
 	return u, s
 }
 
-func newPrivateKeyBytes() ([]byte, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
-	}
-
-	keyBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	privateKeyBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: keyBytes,
-	}
-	b := &bytes.Buffer{}
-	if err := pem.Encode(b, privateKeyBlock); err != nil {
-		return nil, err
-	}
-
-	return b.Bytes(), nil
-}
-
 func newLoginGovProvider() (*LoginGovProvider, *MyKeyData, error) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -75,7 +49,7 @@ func newLoginGovProvider() (*LoginGovProvider, *MyKeyData, error) {
 		},
 	}
 
-	privKey, err := newPrivateKeyBytes()
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -87,10 +61,16 @@ func newLoginGovProvider() (*LoginGovProvider, *MyKeyData, error) {
 			RedeemURL:    &url.URL{},
 			ProfileURL:   &url.URL{},
 			ValidateURL:  &url.URL{},
-			Scope:        ""},
-		options.LoginGovOptions{
-			JWTKey: string(privKey),
+			Scope:        "",
+			AuthenticationConfig: AuthenticationConfig{
+				AuthenticationMethod: PrivateKeyJWT,
+				PrivateKeyJWTData: PrivateKeyJWTAuthenticationData{
+					JWTKey:        privKey,
+					SigningMethod: jwt.SigningMethodRS256,
+				},
+			},
 		},
+		options.LoginGovOptions{},
 	)
 	l.Nonce = "fakenonce"
 	return l, serverKey, err
@@ -99,13 +79,19 @@ func newLoginGovProvider() (*LoginGovProvider, *MyKeyData, error) {
 func TestNewLoginGovProvider(t *testing.T) {
 	g := NewWithT(t)
 
-	privKey, err := newPrivateKeyBytes()
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	// Test that defaults are set when calling for a new provider with nothing set
-	provider, err := NewLoginGovProvider(&ProviderData{}, options.LoginGovOptions{
-		JWTKey: string(privKey),
-	})
+	provider, err := NewLoginGovProvider(&ProviderData{
+		AuthenticationConfig: AuthenticationConfig{
+			AuthenticationMethod: PrivateKeyJWT,
+			PrivateKeyJWTData: PrivateKeyJWTAuthenticationData{
+				SigningMethod: jwt.SigningMethodRS256,
+				JWTKey:        privKey,
+			},
+		},
+	}, options.LoginGovOptions{})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	providerData := provider.Data()
@@ -118,7 +104,7 @@ func TestNewLoginGovProvider(t *testing.T) {
 }
 
 func TestLoginGovProviderOverrides(t *testing.T) {
-	privKey, err := newPrivateKeyBytes()
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NoError(t, err)
 
 	p, err := NewLoginGovProvider(
@@ -135,10 +121,18 @@ func TestLoginGovProviderOverrides(t *testing.T) {
 				Scheme: "https",
 				Host:   "example.com",
 				Path:   "/oauth/profile"},
-			Scope: "profile"},
-		options.LoginGovOptions{
-			JWTKey: string(privKey),
-		})
+			Scope: "profile",
+			AuthenticationConfig: AuthenticationConfig{
+				AuthenticationMethod: PrivateKeyJWT,
+				PrivateKeyJWTData: PrivateKeyJWTAuthenticationData{
+					JWTKey:        privKey,
+					SigningMethod: jwt.SigningMethodRS256,
+					KeyId:         "testkey",
+					Expire:        time.Duration(60) * time.Second,
+				},
+			},
+		},
+		options.LoginGovOptions{})
 	assert.NoError(t, err)
 	assert.NotEqual(t, nil, p)
 	assert.Equal(t, "login.gov", p.Data().ProviderName)

@@ -23,16 +23,20 @@ func TestClientSecretFileOptionFails(t *testing.T) {
 	g := NewWithT(t)
 
 	providerConfig := options.Provider{
-		ID:               providerID,
-		Type:             "google",
-		ClientID:         clientID,
-		ClientSecretFile: clientSecret,
+		ID:       providerID,
+		Type:     "google",
+		ClientID: clientID,
+		AuthenticationConfig: options.AuthenticationOptions{
+			Method:           options.ClientSecret,
+			ClientSecretFile: clientSecret,
+		},
 	}
 
 	p, err := newProviderDataFromConfig(providerConfig)
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(p.ClientSecretFile).To(Equal(clientSecret))
-	g.Expect(p.ClientSecret).To(BeEmpty())
+	g.Expect(p.AuthenticationConfig.AuthenticationMethod).To(Equal(ClientSecret))
+	g.Expect(p.AuthenticationConfig.ClientSecretData.ClientSecretFile).To(Equal(clientSecret))
+	g.Expect(p.AuthenticationConfig.ClientSecretData.ClientSecret).To(BeEmpty())
 
 	s, err := p.GetClientSecret()
 	g.Expect(err).To(HaveOccurred())
@@ -56,16 +60,20 @@ func TestClientSecretFileOption(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 
 	providerConfig := options.Provider{
-		ID:               providerID,
-		Type:             "google",
-		ClientID:         clientID,
-		ClientSecretFile: clientSecretFileName,
+		ID:       providerID,
+		Type:     "google",
+		ClientID: clientID,
+		AuthenticationConfig: options.AuthenticationOptions{
+			Method:           options.ClientSecret,
+			ClientSecretFile: clientSecretFileName,
+		},
 	}
 
 	p, err := newProviderDataFromConfig(providerConfig)
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(p.ClientSecretFile).To(Equal(clientSecretFileName))
-	g.Expect(p.ClientSecret).To(BeEmpty())
+	g.Expect(p.AuthenticationConfig.AuthenticationMethod).To(Equal(ClientSecret))
+	g.Expect(p.AuthenticationConfig.ClientSecretData.ClientSecretFile).To(Equal(clientSecretFileName))
+	g.Expect(p.AuthenticationConfig.ClientSecretData.ClientSecret).To(BeEmpty())
 
 	s, err := p.GetClientSecret()
 	g.Expect(err).ToNot(HaveOccurred())
@@ -75,10 +83,13 @@ func TestClientSecretFileOption(t *testing.T) {
 func TestSkipOIDCDiscovery(t *testing.T) {
 	g := NewWithT(t)
 	providerConfig := options.Provider{
-		ID:               providerID,
-		Type:             "oidc",
-		ClientID:         clientID,
-		ClientSecretFile: clientSecret,
+		ID:       providerID,
+		Type:     "oidc",
+		ClientID: clientID,
+		AuthenticationConfig: options.AuthenticationOptions{
+			Method:           options.ClientSecret,
+			ClientSecretFile: clientSecret,
+		},
 		OIDCConfig: options.OIDCOptions{
 			IssuerURL:     msIssuerURL,
 			SkipDiscovery: true,
@@ -100,12 +111,15 @@ func TestURLsCorrectlyParsed(t *testing.T) {
 	g := NewWithT(t)
 
 	providerConfig := options.Provider{
-		ID:               providerID,
-		Type:             "oidc",
-		ClientID:         clientID,
-		ClientSecretFile: clientSecret,
-		LoginURL:         msAuthURL,
-		RedeemURL:        msTokenURL,
+		ID:       providerID,
+		Type:     "oidc",
+		ClientID: clientID,
+		AuthenticationConfig: options.AuthenticationOptions{
+			Method:           options.ClientSecret,
+			ClientSecretFile: clientSecret,
+		},
+		LoginURL:  msAuthURL,
+		RedeemURL: msTokenURL,
 		OIDCConfig: options.OIDCOptions{
 			IssuerURL:     msIssuerURL,
 			SkipDiscovery: true,
@@ -165,14 +179,17 @@ func TestScope(t *testing.T) {
 
 	for _, tc := range testCases {
 		providerConfig := options.Provider{
-			ID:               providerID,
-			Type:             tc.configuredType,
-			ClientID:         clientID,
-			ClientSecretFile: clientSecret,
-			LoginURL:         msAuthURL,
-			RedeemURL:        msTokenURL,
-			Scope:            tc.configuredScope,
-			AllowedGroups:    tc.allowedGroups,
+			ID:       providerID,
+			Type:     tc.configuredType,
+			ClientID: clientID,
+			AuthenticationConfig: options.AuthenticationOptions{
+				Method:           options.ClientSecret,
+				ClientSecretFile: clientSecret,
+			},
+			LoginURL:      msAuthURL,
+			RedeemURL:     msTokenURL,
+			Scope:         tc.configuredScope,
+			AllowedGroups: tc.allowedGroups,
 			OIDCConfig: options.OIDCOptions{
 				IssuerURL:     msIssuerURL,
 				SkipDiscovery: true,
@@ -248,12 +265,15 @@ func TestEmailClaimCorrectlySet(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			providerConfig := options.Provider{
-				ID:               providerID,
-				Type:             "oidc",
-				ClientID:         clientID,
-				ClientSecretFile: clientSecret,
-				LoginURL:         msAuthURL,
-				RedeemURL:        msTokenURL,
+				ID:       providerID,
+				Type:     "oidc",
+				ClientID: clientID,
+				AuthenticationConfig: options.AuthenticationOptions{
+					Method:           options.ClientSecret,
+					ClientSecretFile: clientSecret,
+				},
+				LoginURL:  msAuthURL,
+				RedeemURL: msTokenURL,
 				OIDCConfig: options.OIDCOptions{
 					IssuerURL:     msIssuerURL,
 					SkipDiscovery: true,

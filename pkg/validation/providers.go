@@ -47,8 +47,8 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 	}
 
 	msgs = append(msgs, validateAuthenticationConfig(provider.AuthenticationConfig)...)
-
 	msgs = append(msgs, validateGoogleConfig(provider)...)
+	msgs = append(msgs, validateGovLoginConfig(provider)...)
 
 	return msgs
 }
@@ -81,6 +81,16 @@ func validateGoogleConfig(provider options.Provider) []string {
 		}
 	} else if hasSAJSON {
 		msgs = append(msgs, "invalid setting: can't use both google-service-account-json and google-use-application-default-credentials")
+	}
+
+	return msgs
+}
+
+func validateGovLoginConfig(provider options.Provider) []string {
+	msgs := []string{}
+
+	if provider.Type == "login.gov" && provider.AuthenticationConfig.Method != options.PrivateKeyJWT {
+		msgs = append(msgs, "login.gov configuration not using private key jwt")
 	}
 
 	return msgs

@@ -186,7 +186,7 @@ func TestGoogleProviderGetEmailAddressInvalidEncoding(t *testing.T) {
 
 func TestGoogleProviderRedeemFailsNoCLientSecret(t *testing.T) {
 	p := newGoogleProvider(t)
-	p.ProviderData.ClientSecretFile = "srvnoerre"
+	p.ProviderData.AuthenticationConfig.ClientSecretData.ClientSecretFile = "srvnoerre"
 
 	session, err := p.Redeem(context.Background(), "http://redirect/", "code1234", "123")
 	assert.NotEqual(t, nil, err)

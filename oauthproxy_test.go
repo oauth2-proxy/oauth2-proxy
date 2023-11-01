@@ -2029,7 +2029,7 @@ func baseTestOptions() *options.Options {
 	opts.Cookie.Secret = rawCookieSecret
 	opts.Providers[0].ID = "providerID"
 	opts.Providers[0].ClientID = clientID
-	opts.Providers[0].ClientSecret = clientSecret
+	opts.Providers[0].AuthenticationConfig.ClientSecret = clientSecret
 	opts.EmailDomains = []string{"*"}
 
 	// Default injected headers for legacy configuration
