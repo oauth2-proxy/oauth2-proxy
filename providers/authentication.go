@@ -59,102 +59,114 @@ type AuthenticationConfig struct {
 func NewAuthenticationConfig(opts options.AuthenticationOptions) (*AuthenticationConfig, error) {
 	switch opts.Method {
 	case options.ClientSecret:
-		return &AuthenticationConfig{
-			AuthenticationMethod: ClientSecret,
-			ClientSecretData: ClientSecretAuthenticationData{
-				ClientSecret:     opts.ClientSecret,
-				ClientSecretFile: opts.ClientSecretFile,
-			},
-		}, nil
+		return NewClientSecretAuthenticationConfig(opts)
 	case options.MutualTLS:
-		return &AuthenticationConfig{
-			AuthenticationMethod: MutualTLS,
-			MutalTLSData: MutalTLSAuthenticationData{
-				TLSCertFile: opts.TLSCertFile,
-				TLSKeyFile:  opts.TLSKeyFile,
-			},
-		}, nil
+		return NewMutualTLSAuthenticationConfig(opts)
 	case options.PrivateKeyJWT:
-		var signingMethod jwt.SigningMethod
-		var signingAlgorithmType string
-		switch opts.JWTAlgorithm {
-		case "ES256":
-			signingMethod = jwt.SigningMethodES256
-			signingAlgorithmType = "ECDSA"
-		case "ES384":
-			signingMethod = jwt.SigningMethodES384
-			signingAlgorithmType = "ECDSA"
-		case "ES512":
-			signingMethod = jwt.SigningMethodES512
-			signingAlgorithmType = "ECDSA"
-		case "RS256":
-			signingMethod = jwt.SigningMethodRS256
-			signingAlgorithmType = "RSA"
-		case "RS384":
-			signingMethod = jwt.SigningMethodRS384
-			signingAlgorithmType = "RSA"
-		case "RS512":
-			signingMethod = jwt.SigningMethodRS512
-			signingAlgorithmType = "RSA"
-		}
-
-		// JWT key can be supplied via env variable or file in the filesystem, but not both.
-		var JWTKey crypto.PrivateKey
-		switch {
-		case opts.JWTKey != "" && opts.JWTKeyFile != "":
-			return nil, errors.New("cannot set both jwt-key and jwt-key-file options")
-		case opts.JWTKey == "" && opts.JWTKeyFile == "":
-			return nil, errors.New("provider requires a private key for signing JWTs")
-		case opts.JWTKey != "" && signingAlgorithmType == "RSA":
-			// The JWT Key is in the commandline argument
-			signKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(opts.JWTKey))
-			if err != nil {
-				return nil, fmt.Errorf("could not parse ECDSA Private Key PEM: %v", err)
-			}
-			JWTKey = signKey
-		case opts.JWTKeyFile != "" && signingAlgorithmType == "RSA":
-			// The JWT key is in the filesystem
-			keyData, err := os.ReadFile(opts.JWTKeyFile)
-			if err != nil {
-				return nil, fmt.Errorf("could not read key file: %v", opts.JWTKeyFile)
-			}
-			signKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyData)
-			if err != nil {
-				return nil, fmt.Errorf("could not parse ECDSA private key from PEM file: %v", opts.JWTKeyFile)
-			}
-			JWTKey = signKey
-		case opts.JWTKey != "" && signingAlgorithmType == "ECDSA":
-			// The JWT Key is in the commandline argument
-			signKey, err := jwt.ParseECPrivateKeyFromPEM([]byte(opts.JWTKey))
-			if err != nil {
-				return nil, fmt.Errorf("could not parse ECDSA Private Key PEM: %v", err)
-			}
-			JWTKey = signKey
-		case opts.JWTKeyFile != "" && signingAlgorithmType == "ECDSA":
-			// The JWT key is in the filesystem
-			keyData, err := os.ReadFile(opts.JWTKeyFile)
-			if err != nil {
-				return nil, fmt.Errorf("could not read key file: %v", opts.JWTKeyFile)
-			}
-			signKey, err := jwt.ParseECPrivateKeyFromPEM(keyData)
-			if err != nil {
-				return nil, fmt.Errorf("could not parse ECDSA private key from PEM file: %v", opts.JWTKeyFile)
-			}
-			JWTKey = signKey
-		}
-
-		return &AuthenticationConfig{
-			AuthenticationMethod: PrivateKeyJWT,
-			PrivateKeyJWTData: PrivateKeyJWTAuthenticationData{
-				JWTKey:        JWTKey,
-				SigningMethod: signingMethod,
-				KeyId:         opts.JWTKeyId,
-				Expire:        opts.JWTExpire,
-			},
-		}, nil
+		return NewPrivateKeyJWTAuthenticationConfig(opts)
 	default:
 		return nil, fmt.Errorf("unsupported authentication method: %v", opts.Method)
 	}
+}
+
+func NewClientSecretAuthenticationConfig(opts options.AuthenticationOptions) (*AuthenticationConfig, error) {
+	return &AuthenticationConfig{
+		AuthenticationMethod: ClientSecret,
+		ClientSecretData: ClientSecretAuthenticationData{
+			ClientSecret:     opts.ClientSecret,
+			ClientSecretFile: opts.ClientSecretFile,
+		},
+	}, nil
+}
+
+func NewMutualTLSAuthenticationConfig(opts options.AuthenticationOptions) (*AuthenticationConfig, error) {
+	return &AuthenticationConfig{
+		AuthenticationMethod: MutualTLS,
+		MutalTLSData: MutalTLSAuthenticationData{
+			TLSCertFile: opts.TLSCertFile,
+			TLSKeyFile:  opts.TLSKeyFile,
+		},
+	}, nil
+}
+
+func NewPrivateKeyJWTAuthenticationConfig(opts options.AuthenticationOptions) (*AuthenticationConfig, error) {
+
+	signingMethod, err := getJWTPrivateKeySigninMethod(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	JWTKey, err := getJWTPrivateKeyObject(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthenticationConfig{
+		AuthenticationMethod: PrivateKeyJWT,
+		PrivateKeyJWTData: PrivateKeyJWTAuthenticationData{
+			JWTKey:        JWTKey,
+			SigningMethod: signingMethod,
+			KeyId:         opts.JWTKeyId,
+			Expire:        opts.JWTExpire,
+		},
+	}, nil
+}
+
+func getJWTPrivateKeySigninMethod(opts options.AuthenticationOptions) (jwt.SigningMethod, error) {
+	var signingMethod jwt.SigningMethod
+	switch opts.JWTAlgorithm {
+	case "ES256":
+		signingMethod = jwt.SigningMethodES256
+	case "ES384":
+		signingMethod = jwt.SigningMethodES384
+	case "ES512":
+		signingMethod = jwt.SigningMethodES512
+	case "RS256":
+		signingMethod = jwt.SigningMethodRS256
+	case "RS384":
+		signingMethod = jwt.SigningMethodRS384
+	case "RS512":
+		signingMethod = jwt.SigningMethodRS512
+	}
+	return signingMethod, nil
+}
+
+func getJWTPrivateKeyObject(opts options.AuthenticationOptions) (crypto.PrivateKey, error) {
+	// JWT key can be supplied via env variable or file in the filesystem, but not both.
+	var JWTKey crypto.PrivateKey
+	if opts.JWTKey != "" && opts.JWTKeyFile != "" {
+		return nil, errors.New("cannot set both jwt-key and jwt-key-file options")
+	} else if opts.JWTKey == "" && opts.JWTKeyFile == "" {
+		return nil, errors.New("provider requires a private key for signing JWTs")
+	}
+
+	var keyBytes []byte
+	if opts.JWTKey != "" {
+		keyBytes = []byte(opts.JWTKey)
+	} else {
+		keyData, err := os.ReadFile(opts.JWTKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not read key file: %v", opts.JWTKeyFile)
+		}
+		keyBytes = keyData
+	}
+
+	switch opts.JWTAlgorithm {
+	case "ES256", "ES384", "ES512":
+		signKey, err := jwt.ParseECPrivateKeyFromPEM(keyBytes)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse ECDSA private key from PEM file: %v", opts.JWTKeyFile)
+		}
+		JWTKey = signKey
+	case "RS256", "RS384", "RS512":
+		signKey, err := jwt.ParseRSAPrivateKeyFromPEM(keyBytes)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse RSA private key from PEM file: %v", opts.JWTKeyFile)
+		}
+		JWTKey = signKey
+	}
+
+	return JWTKey, nil
 }
 
 func (a *AuthenticationConfig) GetClientSecret() (clientSecret string, err error) {
