@@ -8,6 +8,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 // ADFSProvider represents an ADFS based Identity Provider
@@ -46,8 +47,11 @@ func NewADFSProvider(p *ProviderData, opts options.Provider) *ADFSProvider {
 		}
 	}
 
-	oidcProvider := NewOIDCProvider(p, opts.OIDCConfig)
-
+	oidcProvider, err := NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false})
+	if err != nil {
+		logger.Errorf("could not create oidc provider: %v", err)
+		return nil
+	}
 	return &ADFSProvider{
 		OIDCProvider:    oidcProvider,
 		skipScope:       opts.ADFSConfig.SkipScope,

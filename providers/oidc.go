@@ -1,15 +1,21 @@
 package providers
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"golang.org/x/oauth2"
 )
 
@@ -18,12 +24,19 @@ type OIDCProvider struct {
 	*ProviderData
 
 	SkipNonce bool
+
+	UseAssertionAuthentication bool
+	AssertionAuthJWTKey        *ecdsa.PrivateKey
+	AssertionAuthAlgorithm     string
+	AssertionAuthSigningMethod jwt.SigningMethod
+	AssertionAuthKeyId         string
+	AssertionAuthExpire        time.Duration
 }
 
 const oidcDefaultScope = "openid email profile"
 
 // NewOIDCProvider initiates a new OIDCProvider
-func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
+func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) (*OIDCProvider, error) {
 	name := "OpenID Connect"
 
 	if p.ProviderName != "" {
@@ -46,10 +59,53 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 	p.setProviderDefaults(oidcProviderDefaults)
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 
-	return &OIDCProvider{
-		ProviderData: p,
-		SkipNonce:    opts.InsecureSkipNonce,
+	var signingMethod jwt.SigningMethod
+	switch opts.AssertionAuthAlgorithm {
+	case "ES256":
+		signingMethod = jwt.SigningMethodES256
+	case "ES384":
+		signingMethod = jwt.SigningMethodES384
+	case "ES512":
+		signingMethod = jwt.SigningMethodES512
 	}
+
+	// JWT key can be supplied via env variable or file in the filesystem, but not both.
+	var assertionAuthJWTKey *ecdsa.PrivateKey
+	switch {
+	case opts.AssertionAuthJWTKey != "" && opts.AssertionAuthJWTKeyFile != "":
+		return nil, errors.New("cannot set both jwt-key and jwt-key-file options")
+	case opts.AssertionAuthJWTKey == "" && opts.AssertionAuthJWTKeyFile == "":
+		return nil, errors.New("provider requires a private key for signing JWTs")
+	case opts.AssertionAuthJWTKey != "":
+		// The JWT Key is in the commandline argument
+		signKey, err := jwt.ParseECPrivateKeyFromPEM([]byte(opts.AssertionAuthJWTKey))
+		if err != nil {
+			return nil, fmt.Errorf("could not parse ECDSA Private Key PEM: %v", err)
+		}
+		assertionAuthJWTKey = signKey
+	case opts.AssertionAuthJWTKeyFile != "":
+		// The JWT key is in the filesystem
+		keyData, err := os.ReadFile(opts.AssertionAuthJWTKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not read key file: %v", opts.AssertionAuthJWTKeyFile)
+		}
+		signKey, err := jwt.ParseECPrivateKeyFromPEM(keyData)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse ECDSA private key from PEM file: %v", opts.AssertionAuthJWTKeyFile)
+		}
+		assertionAuthJWTKey = signKey
+	}
+
+	return &OIDCProvider{
+		ProviderData:               p,
+		SkipNonce:                  opts.InsecureSkipNonce,
+		UseAssertionAuthentication: opts.UseAssertionAuthentication,
+		AssertionAuthJWTKey:        assertionAuthJWTKey,
+		AssertionAuthAlgorithm:     opts.AssertionAuthAlgorithm,
+		AssertionAuthSigningMethod: signingMethod,
+		AssertionAuthKeyId:         opts.AssertionAuthKeyId,
+		AssertionAuthExpire:        opts.AssertionAuthExpire,
+	}, nil
 }
 
 var _ Provider = (*OIDCProvider)(nil)
@@ -65,6 +121,15 @@ func (p *OIDCProvider) GetLoginURL(redirectURI, state, nonce string, extraParams
 
 // Redeem exchanges the OAuth2 authentication token for an ID token
 func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	if p.UseAssertionAuthentication {
+		return p.RedeemAssertion(ctx, redirectURL, code, codeVerifier)
+	}
+	// Move everything currently in the Redeem method to the new RedeemBasic method
+	return p.RedeemBasic(ctx, redirectURL, code, codeVerifier)
+}
+
+// RedeemBasic exchanges the OAuth2 authentication token for an ID token using client_secret
+func (p *OIDCProvider) RedeemBasic(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
 		return nil, err
@@ -89,6 +154,80 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 	}
 
 	return p.createSession(ctx, token, false)
+}
+
+// RedeemAssertion exchanges the OAuth2 authentication token for an ID token using client assertions
+func (p *OIDCProvider) RedeemAssertion(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	if code == "" {
+		return nil, ErrMissingCode
+	}
+
+	if codeVerifier == "" {
+		return nil, ErrMissingOIDCVerifier
+	}
+
+	authToken := &jwt.Token{
+		Header: map[string]interface{}{
+			"alg": p.AssertionAuthAlgorithm,
+			"typ": "JWT",
+			"kid": p.AssertionAuthKeyId,
+		},
+		Claims: jwt.MapClaims{
+			"iat": time.Now().Unix(),
+			"exp": time.Now().Add(p.AssertionAuthExpire).Unix(),
+			"aud": p.RedeemURL.String(),
+			"sub": p.ClientID,
+			"iss": p.ClientID,
+			"jti": uuid.New().String(),
+		},
+		Method: p.AssertionAuthSigningMethod,
+	}
+
+	signedAuthToken, err := authToken.SignedString(p.AssertionAuthJWTKey)
+	if err != nil {
+		return nil, err
+	}
+
+	params := url.Values{}
+	params.Add("client_id", p.ClientID)
+	params.Add("grant_type", "authorization_code")
+	params.Add("redirect_uri", redirectURL)
+	params.Add("code", code)
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
+	params.Add("client_assertion", signedAuthToken)
+	params.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	params.Add("scope", p.Scope)
+
+	// Get the token from the body that we got from the token endpoint.
+	var jsonResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		IDToken      string `json:"id_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int64  `json:"expires_in"`
+		Scope        string `json:"scope"`
+	}
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalInto(&jsonResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	token := oauth2.Token{
+		AccessToken:  jsonResponse.AccessToken,
+		RefreshToken: jsonResponse.RefreshToken,
+		TokenType:    jsonResponse.TokenType,
+		Expiry:       time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second),
+	}
+
+	return p.createSession(ctx, &token, false)
 }
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields

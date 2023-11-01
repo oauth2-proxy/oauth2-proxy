@@ -6,6 +6,7 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 )
 
 const keycloakOIDCProviderName = "Keycloak OIDC"
@@ -21,8 +22,14 @@ func NewKeycloakOIDCProvider(p *ProviderData, opts options.Provider) *KeycloakOI
 		name: keycloakOIDCProviderName,
 	})
 
+	oidcProvider, err := NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false})
+	if err != nil {
+		logger.Errorf("could not create oidc provider: %v", err)
+		return nil
+	}
+
 	provider := &KeycloakOIDCProvider{
-		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
+		OIDCProvider: oidcProvider,
 	}
 
 	provider.addAllowedRoles(opts.KeycloakConfig.Roles)
