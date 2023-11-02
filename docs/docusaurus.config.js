@@ -37,6 +37,9 @@ module.exports = {
       style: 'dark',
       copyright: `Copyright © ${new Date().getFullYear()} OAuth2 Proxy.`,
     },
+    prism: {
+      additionalLanguages: ['hcl', 'powershell'],
+    },
   },
   presets: [
     [
