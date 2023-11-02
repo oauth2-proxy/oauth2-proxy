@@ -10,6 +10,7 @@
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
 - [#2274](https://github.com/oauth2-proxy/oauth2-proxy/pull/2274) Upgrade golang.org/x/net to v0.17.0 (@pierluigilenoci)
 - [#2282](https://github.com/oauth2-proxy/oauth2-proxy/pull/2282) Fixed checking Google Groups membership using Google Application Credentials (@kvanzuijlen)
+- [#2053](https://github.com/oauth2-proxy/oauth2-proxy/pull/2053) Respect db parameter when using redis sentinel (@5h4k4r)
 
 # V7.5.1
 
@@ -75,8 +76,6 @@ N/A
 - [#2126](https://github.com/oauth2-proxy/oauth2-proxy/pull/2126) Added support for GKE Workload Identity (@kvanzuijlen)
 - [#1921](https://github.com/oauth2-proxy/oauth2-proxy/pull/1921) Check jsonpath syntax before interpretation (@eloo-abi)
 - [#2025](https://github.com/oauth2-proxy/oauth2-proxy/pull/2025) Embed static stylesheets and dependencies (@corybolar)
-- [#2053](https://github.com/oauth2-proxy/oauth2-proxy/pull/2053) Respect db parameter when using redis sentinel (@5h4k4r)
-
 # V7.4.0
 
 ## Release Highlights
