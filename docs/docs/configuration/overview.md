@@ -339,6 +339,8 @@ Available variables for standard logging:
 
 ## Configuring for use with the Nginx `auth_request` directive
 
+**This option requires `--reverse-proxy` option to be set.**
+
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2-proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
 ```nginx
@@ -351,7 +353,6 @@ server {
     proxy_pass       http://127.0.0.1:4180;
     proxy_set_header Host                    $host;
     proxy_set_header X-Real-IP               $remote_addr;
-    proxy_set_header X-Scheme                $scheme;
     proxy_set_header X-Auth-Request-Redirect $request_uri;
     # or, if you are handling multiple domains:
     # proxy_set_header X-Auth-Request-Redirect $scheme://$host$request_uri;
@@ -360,7 +361,7 @@ server {
     proxy_pass       http://127.0.0.1:4180;
     proxy_set_header Host             $host;
     proxy_set_header X-Real-IP        $remote_addr;
-    proxy_set_header X-Scheme         $scheme;
+    proxy_set_header X-Forwarded-Uri  $request_uri;
     # nginx auth_request includes headers but not body
     proxy_set_header Content-Length   "";
     proxy_pass_request_body           off;
