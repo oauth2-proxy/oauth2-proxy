@@ -379,12 +379,18 @@ func (p *OIDCProvider) fetchTokenUsingAssertionsAuth(ctx context.Context, params
 	if err != nil {
 		return nil, err
 	}
+	logger.Errorln("jsonResponse", jsonResponse)
 
 	token := oauth2.Token{
 		AccessToken:  jsonResponse.AccessToken,
 		RefreshToken: jsonResponse.RefreshToken,
 		TokenType:    jsonResponse.TokenType,
-		Expiry:       time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second),
+
+		Expiry: time.Now().Add(time.Duration(jsonResponse.ExpiresIn) * time.Second),
 	}
+	token = *token.WithExtra(map[string]interface{}{
+		"id_token": jsonResponse.IDToken,
+		"scope":    jsonResponse.Scope,
+	})
 	return &token, nil
 }
