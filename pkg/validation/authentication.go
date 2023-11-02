@@ -66,6 +66,9 @@ func validateMutualTLSAuthenticationConfig(authConfig options.AuthenticationOpti
 func validatePrivateKeyJWTAuthenticationConfig(authConfig options.AuthenticationOptions) []string {
 	msgs := []string{}
 
+	if authConfig.JWTKey != "" && authConfig.JWTKeyFile != "" {
+		msgs = append(msgs, "cannot set both jwt-key and jwt-key-file")
+	}
 	if authConfig.JWTKey == "" && authConfig.JWTKeyFile == "" {
 		msgs = append(msgs, "missing setting: jwt-key or jwt-key-file")
 	}
