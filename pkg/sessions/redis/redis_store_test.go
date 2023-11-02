@@ -125,40 +125,28 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				return nil
 			},
 		)
-	})
-	Context("sentienl with custom db", func() {
-		var ms *minisentinel.Sentinel
-
-		BeforeEach(func() {
-			ms = minisentinel.NewSentinel(mr)
-			Expect(ms.Start()).To(Succeed())
+		Context("with custom db", func() {
+			tests.RunSessionStoreTests(
+				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+					// Set the sentinel connection URL
+					sentinelAddr := "redis://" + ms.Addr()
+					opts.Type = options.RedisSessionStoreType
+					opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
+					opts.Redis.UseSentinel = true
+					opts.Redis.SentinelMasterName = ms.MasterInfo().Name
+					opts.Redis.SentinelDB = 1
+					// Capture the session store so that we can close the client
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					return ss, err
+				},
+				func(d time.Duration) error {
+					mr.FastForward(d)
+					return nil
+				},
+			)
 		})
-
-		AfterEach(func() {
-			ms.Close()
-		})
-
-		tests.RunSessionStoreTests(
-			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
-				// Set the sentinel connection URL
-				sentinelAddr := "redis://" + ms.Addr()
-				opts.Type = options.RedisSessionStoreType
-				opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
-				opts.Redis.UseSentinel = true
-				opts.Redis.SentinelMasterName = ms.MasterInfo().Name
-				opts.Redis.SentinelDB = 1
-				// Capture the session store so that we can close the client
-				var err error
-				ss, err = NewRedisSessionStore(opts, cookieOpts)
-				return ss, err
-			},
-			func(d time.Duration) error {
-				mr.FastForward(d)
-				return nil
-			},
-		)
 	})
-
 	Context("with cluster", func() {
 		tests.RunSessionStoreTests(
 			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
