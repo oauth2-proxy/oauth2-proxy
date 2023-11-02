@@ -132,14 +132,6 @@ func getJWTPrivateKeySigninMethod(opts options.AuthenticationOptions) (jwt.Signi
 }
 
 func getJWTPrivateKeyObject(opts options.AuthenticationOptions) (crypto.PrivateKey, error) {
-	// JWT key can be supplied via env variable or file in the filesystem, but not both.
-	var JWTKey crypto.PrivateKey
-	if opts.JWTKey != "" && opts.JWTKeyFile != "" {
-		return nil, errors.New("cannot set both jwt-key and jwt-key-file options")
-	} else if opts.JWTKey == "" && opts.JWTKeyFile == "" {
-		return nil, errors.New("provider requires a private key for signing JWTs")
-	}
-
 	var keyBytes []byte
 	if opts.JWTKey != "" {
 		keyBytes = []byte(opts.JWTKey)
@@ -151,6 +143,7 @@ func getJWTPrivateKeyObject(opts options.AuthenticationOptions) (crypto.PrivateK
 		keyBytes = keyData
 	}
 
+	var JWTKey crypto.PrivateKey
 	switch opts.JWTAlgorithm {
 	case "ES256", "ES384", "ES512":
 		signKey, err := jwt.ParseECPrivateKeyFromPEM(keyBytes)
