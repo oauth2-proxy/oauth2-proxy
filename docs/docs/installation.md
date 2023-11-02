@@ -14,13 +14,13 @@ slug: /
 
     d. Using a [Kubernetes manifest](https://github.com/oauth2-proxy/manifests) (Helm)
 
-Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
+    Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
+    
+    ```
+    $ sha256sum -c sha256sum.txt
+    oauth2-proxy-x.y.z.linux-amd64: OK
+    ```
 
-```
-$ sha256sum -c sha256sum.txt
-oauth2-proxy-x.y.z.linux-amd64: OK
-```
-
-2.  [Select a Provider and Register an OAuth Application with a Provider](configuration/auth.md)
+2.  [Select a Provider and Register an OAuth Application with a Provider](configuration/providers/index.md)
 3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](configuration/overview.md)
-4.  [Configure SSL or Deploy behind a SSL endpoint](configuration/tls.md) (example provided for Nginx)
+4.  [Configure SSL or Deploy behind an SSL endpoint](configuration/tls.md) (example provided for Nginx)

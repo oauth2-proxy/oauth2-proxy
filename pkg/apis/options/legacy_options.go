@@ -605,7 +605,7 @@ func legacyGoogleFlagSet() *pflag.FlagSet {
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
 	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. GKE Workload Identity)")
-	flagSet.String("google-target-principal", "", "the targetprincipal to impersonate when using ADC")
+	flagSet.String("google-target-principal", "", "the target principal to impersonate when using ADC")
 
 	return flagSet
 }

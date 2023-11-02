@@ -12,6 +12,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/bitly/go-simplejson"
+
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -33,7 +34,6 @@ const (
 	azureProviderName           = "Azure"
 	azureDefaultScope           = "openid"
 	azureDefaultGraphGroupField = "id"
-	azureV2Scope                = "https://graph.microsoft.com/.default"
 )
 
 var (
@@ -90,15 +90,16 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	isV2Endpoint := false
 	if strings.Contains(p.LoginURL.String(), "v2.0") {
 		isV2Endpoint = true
+		azureV2GraphScope := fmt.Sprintf("https://%s/.default", p.ProfileURL.Host)
 
 		if strings.Contains(p.Scope, " groups") {
 			logger.Print("WARNING: `groups` scope is not an accepted scope when using Azure OAuth V2 endpoint. Removing it from the scope list")
 			p.Scope = strings.ReplaceAll(p.Scope, " groups", "")
 		}
 
-		if !strings.Contains(p.Scope, " "+azureV2Scope) {
+		if !strings.Contains(p.Scope, " "+azureV2GraphScope) {
 			// In order to be able to query MS Graph we must pass the ms graph default endpoint
-			p.Scope += " " + azureV2Scope
+			p.Scope += " " + azureV2GraphScope
 		}
 
 		if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
@@ -118,12 +119,12 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	if current == nil || current.String() == "" || current.String() == defaultURL.String() {
 		*current = url.URL{
 			Scheme: "https",
-			Host:   "login.microsoftonline.com",
+			Host:   current.Host,
 			Path:   "/" + tenant + "/oauth2/" + path}
 	}
 }
 
-func getMicrosoftGraphGroupsURL(graphGroupField string) *url.URL {
+func getMicrosoftGraphGroupsURL(profileURL *url.URL, graphGroupField string) *url.URL {
 
 	selectStatement := "$select=displayName,id"
 	if !slices.Contains([]string{"displayName", "id"}, graphGroupField) {
@@ -133,7 +134,7 @@ func getMicrosoftGraphGroupsURL(graphGroupField string) *url.URL {
 	// Select only security groups. Due to the filter option, count param is mandatory even if unused otherwise
 	return &url.URL{
 		Scheme:   "https",
-		Host:     "graph.microsoft.com",
+		Host:     profileURL.Host,
 		Path:     "/v1.0/me/transitiveMemberOf",
 		RawQuery: "$count=true&$filter=securityEnabled+eq+true&" + selectStatement,
 	}
@@ -368,7 +369,7 @@ func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, s *sessions
 		return nil, fmt.Errorf("missing access token")
 	}
 
-	groupsURL := getMicrosoftGraphGroupsURL(p.GraphGroupField).String()
+	groupsURL := getMicrosoftGraphGroupsURL(p.ProfileURL, p.GraphGroupField).String()
 
 	// Need and extra header while talking with MS Graph. For more context see
 	// https://docs.microsoft.com/en-us/graph/api/group-list-transitivememberof?view=graph-rest-1.0&tabs=http#request-headers
