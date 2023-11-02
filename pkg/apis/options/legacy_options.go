@@ -176,6 +176,8 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
 			upstream.Timeout = nil
+		case "unix":
+			upstream.Path = "/"
 		}
 
 		upstreams.Upstreams = append(upstreams.Upstreams, upstream)
@@ -507,6 +509,7 @@ type LegacyProvider struct {
 	ProviderType                       string   `flag:"provider" cfg:"provider"`
 	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
 	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
+	UseSystemTrustStore                bool     `flag:"use-system-trust-store" cfg:"use_system_trust_store"`
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
 	InsecureOIDCSkipIssuerVerification bool     `flag:"insecure-oidc-skip-issuer-verification" cfg:"insecure_oidc_skip_issuer_verification"`
@@ -561,6 +564,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.StringSlice("provider-ca-file", []string{}, "One or more paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead.")
+	flagSet.Bool("use-system-trust-store", false, "Determines if 'provider-ca-file' files and the system trust store are used. If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
 	flagSet.Bool("insecure-oidc-skip-issuer-verification", false, "Do not verify if issuer matches OIDC discovery URL")
@@ -601,7 +605,7 @@ func legacyGoogleFlagSet() *pflag.FlagSet {
 	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
 	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
 	flagSet.String("google-use-application-default-credentials", "", "use application default credentials instead of service account json (i.e. GKE Workload Identity)")
-	flagSet.String("google-target-principal", "", "the targetprincipal to impersonate when using ADC")
+	flagSet.String("google-target-principal", "", "the target principal to impersonate when using ADC")
 
 	return flagSet
 }
@@ -659,6 +663,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientSecretFile:    l.ClientSecretFile,
 		Type:                ProviderType(l.ProviderType),
 		CAFiles:             l.ProviderCAFiles,
+		UseSystemTrustStore: l.UseSystemTrustStore,
 		LoginURL:            l.LoginURL,
 		RedeemURL:           l.RedeemURL,
 		ProfileURL:          l.ProfileURL,

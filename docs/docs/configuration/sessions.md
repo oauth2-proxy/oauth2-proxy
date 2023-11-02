@@ -32,7 +32,7 @@ users to re-authenticate
 
 ### Redis Storage
 
-The Redis Storage backend stores sessions, encrypted, in redis. Instead sending all the information
+The Redis Storage backend stores encrypted sessions in redis. Instead of sending all the information
 back the client for storage, as in the [Cookie storage](#cookie-storage), a ticket is sent back
 to the user as the cookie value instead.
 
@@ -43,16 +43,15 @@ A ticket is composed as the following:
 Where:
 
 - The `CookieName` is the OAuth2 cookie name (_oauth2_proxy by default)
-- The `ticketID` is a 128 bit random number, hex-encoded
-- The `secret` is a 128 bit random number, base64url encoded (no padding). The secret is unique for every session.
+- The `ticketID` is a 128-bit random number, hex-encoded
+- The `secret` is a 128-bit random number, base64url encoded (no padding). The secret is unique for every session.
 - The pair of `{CookieName}-{ticketID}` comprises a ticket handle, and thus, the redis key
 to which the session is stored. The encoded session is encrypted with the secret and stored
 in redis via the `SETEX` command.
 
 Encrypting every session uniquely protects the refresh/access/id tokens stored in the session from
-disclosure.
-
-Additionally the browser only has to send a short Cookie with every request and not the whole JWT, which can get quite big.
+disclosure. Additionally, the browser only has to send a short Cookie with every request and not the whole JWT, 
+which can get quite big.
 
 Two settings are used to configure the OAuth2 Proxy cookie lifetime:
 
@@ -76,8 +75,8 @@ For this reason, it's advised to set the cookie-refresh a couple of seconds less
 
 Recommended settings:
 
-* cookie\_refresh := Access-Token lifespan - 1m
-* cookie\_expire := Refresh-Token lifespan (i.e. Keycloak's client\_session\_idle)
+* cookie_refresh := Access-Token lifespan - 1m
+* cookie_expire := Refresh-Token lifespan (i.e. Keycloak client_session_idle)
 
 #### Usage
 

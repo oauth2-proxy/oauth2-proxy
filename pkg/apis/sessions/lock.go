@@ -7,18 +7,18 @@ import (
 
 type NoOpLock struct{}
 
-func (l *NoOpLock) Obtain(ctx context.Context, expiration time.Duration) error {
+func (l *NoOpLock) Obtain(_ context.Context, _ time.Duration) error {
 	return nil
 }
 
-func (l *NoOpLock) Peek(ctx context.Context) (bool, error) {
+func (l *NoOpLock) Peek(_ context.Context) (bool, error) {
 	return false, nil
 }
 
-func (l *NoOpLock) Refresh(ctx context.Context, expiration time.Duration) error {
+func (l *NoOpLock) Refresh(_ context.Context, _ time.Duration) error {
 	return nil
 }
 
-func (l *NoOpLock) Release(ctx context.Context) error {
+func (l *NoOpLock) Release(_ context.Context) error {
 	return nil
 }

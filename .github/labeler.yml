@@ -1,0 +1,21 @@
+go:
+  - '**/*.go'
+
+docs:
+  - '**/*.md'
+
+changelog:
+  - 'CHANGELOG.md'
+
+tests:
+  - '**/*_test.go'
+
+provider:
+  - 'providers/**/*'
+
+dependencies:
+  - 'go.mod'
+  - 'go.sum'
+
+docker:
+  - '**/Dockerfile'
