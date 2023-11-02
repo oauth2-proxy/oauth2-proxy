@@ -72,6 +72,42 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	}
 }
 
+func configureVerifier(ctx context.Context, providerConfig options.Provider, p *ProviderData) error {
+	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
+	if err != nil {
+		return err
+	}
+
+	if needsVerifier {
+		pv, err := internaloidc.NewProviderVerifier(ctx, internaloidc.ProviderVerifierOptions{
+			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
+			ClientID:               providerConfig.ClientID,
+			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
+			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
+			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
+			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
+			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
+		})
+		if err != nil {
+			return fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
+		}
+
+		p.Verifier = pv.Verifier()
+		if pv.DiscoveryEnabled() {
+			// Use the discovered values rather than any specified values
+			endpoints := pv.Provider().Endpoints()
+			pkce := pv.Provider().PKCE()
+			providerConfig.LoginURL = endpoints.AuthURL
+			providerConfig.RedeemURL = endpoints.TokenURL
+			providerConfig.ProfileURL = endpoints.UserInfoURL
+			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
+			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
+		}
+	}
+
+	return nil
+}
+
 func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
 	p := &ProviderData{
 		Scope:            providerConfig.Scope,
@@ -87,37 +123,8 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	p.Client = client
 	ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, client)
-
-	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
-	if err != nil {
+	if err = configureVerifier(ctx, providerConfig, p); err != nil {
 		return nil, err
-	}
-
-	if needsVerifier {
-		pv, err := internaloidc.NewProviderVerifier(ctx, internaloidc.ProviderVerifierOptions{
-			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
-			ClientID:               providerConfig.ClientID,
-			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
-			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
-			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
-			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
-			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
-		}
-
-		p.Verifier = pv.Verifier()
-		if pv.DiscoveryEnabled() {
-			// Use the discovered values rather than any specified values
-			endpoints := pv.Provider().Endpoints()
-			pkce := pv.Provider().PKCE()
-			providerConfig.LoginURL = endpoints.AuthURL
-			providerConfig.RedeemURL = endpoints.TokenURL
-			providerConfig.ProfileURL = endpoints.UserInfoURL
-			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
-			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
-		}
 	}
 
 	errs := []error{}
