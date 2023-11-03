@@ -3,6 +3,7 @@ package providers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -209,6 +210,8 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 		session.Email = email
 	}
 
+	p.setUser(ctx, session)
+
 	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph
 	if p.isV2Endpoint {
 		groups, err := p.getGroupsFromProfileAPI(ctx, session)
@@ -218,6 +221,35 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 		session.Groups = util.RemoveDuplicateStr(append(session.Groups, groups...))
 	}
 	return nil
+}
+
+func (p *AzureProvider) setUser(ctx context.Context, s *sessions.SessionState) {
+	header := makeAzureHeader(s.AccessToken)
+	endpoint := p.Data().ValidateURL.String()
+	if len(header) == 0 {
+		params := url.Values{"access_token": {s.AccessToken}}
+		if hasQueryParams(endpoint) {
+			endpoint = endpoint + "&" + params.Encode()
+		} else {
+			endpoint = endpoint + "?" + params.Encode()
+		}
+	}
+
+	result := requests.New(endpoint).
+		WithContext(ctx).
+		WithHeaders(header).
+		Do()
+	if result.Error() != nil {
+		logger.Errorf("GET %s", stripToken(endpoint))
+	}
+
+	logger.Printf("%d GET %s %s", result.StatusCode(), stripToken(endpoint), result.Body())
+	var jsonMap map[string]interface{}
+	err := json.Unmarshal(result.Body(), &jsonMap)
+	if err != nil {
+		return
+	}
+	s.User = jsonMap["name"].(string)
 }
 
 func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (url.Values, error) {
