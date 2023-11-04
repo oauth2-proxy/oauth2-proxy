@@ -237,7 +237,7 @@ var _ = Describe("Proxy Suite", func() {
 						URL:    "http://example.localhost/different/backend/path/1234",
 						Header: map[string][]string{
 							"Gap-Auth":      {""},
-							"Gap-Signature": {"sha256 jeAeM7wHSj2ab/l9YPvtTJ9l/8q1tpY2V/iwXF48bgw="},
+							"Gap-Signature": {"sha256 Pzy0fSFhzbhY0R9rj8vl5LCiIQaKVB0s6h9BADgIT4I="},
 						},
 						Body:       []byte{},
 						Host:       "example.localhost",
@@ -258,7 +258,7 @@ var _ = Describe("Proxy Suite", func() {
 						URL:    "http://example.localhost/different/backend/path/1234/abc",
 						Header: map[string][]string{
 							"Gap-Auth":      {""},
-							"Gap-Signature": {"sha256 rAkAc9gp7EndoOppJuvbuPnYuBcqrTkBnQx6iPS8xTA="},
+							"Gap-Signature": {"sha256 uqIAxSgz+onqHDMMl/EAZWbwSw56PzM90iCocNUEqmw="},
 						},
 						Body:       []byte{},
 						Host:       "example.localhost",
@@ -308,7 +308,7 @@ var _ = Describe("Proxy Suite", func() {
 						URL:    "http://example.localhost/double-match/rewrite/foo",
 						Header: map[string][]string{
 							"Gap-Auth":      {""},
-							"Gap-Signature": {"sha256 eYyUNdsrTmnvFpavpP8AdHGUGzqJ39QEjqn0/3fQPHA="},
+							"Gap-Signature": {"sha256 Ii7wKYBkRkJH556gRUsVUwGPgF7IG7V7X4vhkiyzfQ0="},
 						},
 						Body:       []byte{},
 						Host:       "example.localhost",
