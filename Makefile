@@ -4,11 +4,7 @@ GOLANGCILINT ?= golangci-lint
 BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
-<<<<<<< HEAD
 REGISTRY ?= quay.io/oauth2-proxy
-=======
-REGISTRY ?= quay.io/tuunit
->>>>>>> 5ab6f1fc (add date based nightly build tags)
 DATE := $(shell date +"%Y%m%d")
 .NOTPARALLEL:
 
