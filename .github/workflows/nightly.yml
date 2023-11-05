@@ -26,9 +26,9 @@ jobs:
     - name: Login to quay.io
       uses: docker/login-action@v2
       with:
-        registry: quay.io/tuunit
-        username: ${{ secrets.REGISTRY_USERNAME }}
-        password: ${{ secrets.REGISTRY_PASSWORD }}
+        registry: quay.io/oauth2-proxy
+        username: ${{ secrets.REGISTRY_USERNAME_NIGHTLY }}
+        password: ${{ secrets.REGISTRY_PASSWORD_NIGHTLY }}
 
     - name: Build images
       run: |

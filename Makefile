@@ -4,7 +4,7 @@ GOLANGCILINT ?= golangci-lint
 BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
-REGISTRY ?= quay.io/tuunit
+REGISTRY ?= quay.io/oauth2-proxy
 DATE := $(shell date +"%Y%m%d")
 .NOTPARALLEL:
 
@@ -74,11 +74,11 @@ docker-push-all: docker-push
 
 .PHONY: docker-nightly-build
 docker-nightly-build:
-	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:nightly -t $(REGISTRY)/oauth2-proxy:nightly-${DATE} .
+	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy-nightly:latest -t $(REGISTRY)/oauth2-proxy-nightly-${DATE} .
 
 .PHONY: docker-nightly-push
 docker-nightly-push:
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:nightly -t $(REGISTRY)/oauth2-proxy:nightly-${DATE} .
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy-nightly:latest -t $(REGISTRY)/oauth2-proxy-nightly-${DATE} .
 
 .PHONY: generate
 generate:
