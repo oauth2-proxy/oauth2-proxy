@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,6 +51,7 @@ const (
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
+	staticPathPrefix  = "/static/"
 )
 
 var (
@@ -58,6 +60,9 @@ var (
 
 	// ErrAccessDenied means the user should receive a 401 Unauthorized response
 	ErrAccessDenied = errors.New("access denied")
+
+	//go:embed static/*
+	staticFiles embed.FS
 )
 
 // allowedRoute manages method + path based allowlists
@@ -81,6 +86,7 @@ type OAuthProxy struct {
 	allowedRoutes       []allowedRoute
 	apiRoutes           []apiRoute
 	redirectURL         *url.URL // the url to receive requests at
+	relativeRedirectURL bool
 	whitelistDomains    []string
 	provider            providers.Provider
 	sessionStore        sessionsapi.SessionStore
@@ -211,6 +217,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		provider:            provider,
 		sessionStore:        sessionStore,
 		redirectURL:         redirectURL,
+		relativeRedirectURL: opts.RelativeRedirectURL,
 		apiRoutes:           apiRoutes,
 		allowedRoutes:       allowedRoutes,
 		whitelistDomains:    opts.WhitelistDomains,
@@ -299,7 +306,7 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
-	// likelihood of multiple reuests trying to referesh sessions simultaneously.
+	// likelihood of multiple requests trying to refresh sessions simultaneously.
 	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
 
 	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
@@ -319,6 +326,9 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
+
+	// Static file paths
+	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
 
 	// The userinfo endpoint needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
@@ -554,7 +564,7 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(req.URL.Path)
+	matches := route.pathRegex.MatchString(requestutil.GetRequestURI(req))
 
 	if route.negate {
 		return !matches
@@ -575,7 +585,7 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 
 func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 	for _, route := range p.apiRoutes {
-		if route.pathRegex.MatchString(req.URL.Path) {
+		if route.pathRegex.MatchString(requestutil.GetRequestURI(req)) {
 			return true
 		}
 	}
@@ -1010,7 +1020,7 @@ func prepareNoCacheMiddleware(next http.Handler) http.Handler {
 // This is usually the OAuthProxy callback URL.
 func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	// if `p.redirectURL` already has a host, return it
-	if p.redirectURL.Host != "" {
+	if p.relativeRedirectURL || p.redirectURL.Host != "" {
 		return p.redirectURL.String()
 	}
 

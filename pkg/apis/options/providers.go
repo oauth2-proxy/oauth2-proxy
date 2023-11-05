@@ -59,7 +59,9 @@ type Provider struct {
 	// CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
 	// If not specified, the default Go trust sources are used instead
 	CAFiles []string `json:"caFiles,omitempty"`
-
+	// UseSystemTrustStore determines if your custom CA files and the system trust store are used
+	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
+	UseSystemTrustStore bool `json:"useSystemTrustStore,omitempty"`
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
@@ -178,17 +180,21 @@ type GitHubOptions struct {
 type GitLabOptions struct {
 	// Group sets restrict logins to members of this group
 	Group []string `json:"group,omitempty"`
-	// Projects restricts logins to members of any of these projects
+	// Projects restricts logins to members of these projects
 	Projects []string `json:"projects,omitempty"`
 }
 
 type GoogleOptions struct {
-	// Groups sets restrict logins to members of this google group
+	// Groups sets restrict logins to members of this Google group
 	Groups []string `json:"group,omitempty"`
-	// AdminEmail is the google admin to impersonate for api calls
+	// AdminEmail is the Google admin to impersonate for api calls
 	AdminEmail string `json:"adminEmail,omitempty"`
 	// ServiceAccountJSON is the path to the service account json credentials
 	ServiceAccountJSON string `json:"serviceAccountJson,omitempty"`
+	// UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON
+	UseApplicationDefaultCredentials bool `json:"useApplicationDefaultCredentials,omitempty"`
+	// TargetPrincipal is the Google Service Account used for Application Default Credentials
+	TargetPrincipal string `json:"targetPrincipal,omitempty"`
 }
 
 type OIDCOptions struct {

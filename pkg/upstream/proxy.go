@@ -48,9 +48,9 @@ func NewProxy(upstreams options.UpstreamConfig, sigData *options.SignatureData, 
 			if err := m.registerFileServer(upstream, u, writer); err != nil {
 				return nil, fmt.Errorf("could not register file upstream %q: %v", upstream.ID, err)
 			}
-		case httpScheme, httpsScheme:
+		case httpScheme, httpsScheme, unixScheme:
 			if err := m.registerHTTPUpstreamProxy(upstream, u, sigData, writer); err != nil {
-				return nil, fmt.Errorf("could not register HTTP upstream %q: %v", upstream.ID, err)
+				return nil, fmt.Errorf("could not register %s upstream %q: %v", u.Scheme, upstream.ID, err)
 			}
 		default:
 			return nil, fmt.Errorf("unknown scheme for upstream %q: %q", upstream.ID, u.Scheme)
