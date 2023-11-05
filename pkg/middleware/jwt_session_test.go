@@ -397,8 +397,6 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		expiresFuture := time.Now().Add(time.Duration(5) * time.Minute)
 		verified := true
 		notVerified := false
-		allowUnverified := true
-		notAllowUnverified := false
 
 		type idTokenClaims struct {
 			Email    string `json:"email,omitempty"`
@@ -464,7 +462,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 						Subject:   "123456789",
 					},
 				},
-				allowUnverifiedEmail: notAllowUnverified,
+				allowUnverifiedEmail: false,
 				expectedErr:          nil,
 				expectedUser:         "123456789",
 				expectedEmail:        "123456789",
@@ -482,7 +480,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 						Subject:   "123456789",
 					},
 				},
-				allowUnverifiedEmail: allowUnverified,
+				allowUnverifiedEmail: true,
 				expectedErr:          nil,
 				expectedUser:         "123456789",
 				expectedEmail:        "123456789",
@@ -502,7 +500,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Email:    "foo@example.com",
 					Verified: &verified,
 				},
-				allowUnverifiedEmail: notAllowUnverified,
+				allowUnverifiedEmail: false,
 				expectedErr:          nil,
 				expectedUser:         "123456789",
 				expectedEmail:        "foo@example.com",
@@ -522,7 +520,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Email:    "foo@example.com",
 					Verified: &verified,
 				},
-				allowUnverifiedEmail: allowUnverified,
+				allowUnverifiedEmail: true,
 				expectedErr:          nil,
 				expectedUser:         "123456789",
 				expectedEmail:        "foo@example.com",
@@ -542,7 +540,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Email:    "foo@example.com",
 					Verified: &notVerified,
 				},
-				allowUnverifiedEmail: notAllowUnverified,
+				allowUnverifiedEmail: false,
 				expectedErr:          errors.New("email in id_token (foo@example.com) isn't verified"),
 			}),
 			Entry("with a non-verified email (Unverified Allowed)", tokenToSessionTableInput{
@@ -559,7 +557,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Email:    "foo@example.com",
 					Verified: &notVerified,
 				},
-				allowUnverifiedEmail: allowUnverified,
+				allowUnverifiedEmail: true,
 				expectedErr:          nil,
 				expectedUser:         "123456789",
 				expectedEmail:        "foo@example.com",
