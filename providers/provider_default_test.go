@@ -75,6 +75,8 @@ func TestProviderDataAuthorize(t *testing.T) {
 		name          string
 		allowedGroups []string
 		groups        []string
+		now           time.Time
+		expires       time.Time
 		expectedAuthZ bool
 	}{
 		{
@@ -101,6 +103,12 @@ func TestProviderDataAuthorize(t *testing.T) {
 			groups:        []string{"baz", "foo"},
 			expectedAuthZ: false,
 		},
+		{
+			name:          "SessionExpired",
+			now:           time.Unix(1234567890, 0),
+			expires:       time.Unix(1234567889, 0),
+			expectedAuthZ: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -110,6 +118,8 @@ func TestProviderDataAuthorize(t *testing.T) {
 			session := &sessions.SessionState{
 				Groups: tc.groups,
 			}
+			session.Clock.Set(tc.now)
+			session.SetExpiresOn(tc.expires)
 			p := &ProviderData{}
 			p.setAllowedGroups(tc.allowedGroups)
 
