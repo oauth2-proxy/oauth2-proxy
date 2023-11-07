@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -109,6 +110,8 @@ type OAuthProxy struct {
 	serveMux          *mux.Router
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
+
+	encodeState bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -237,6 +240,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
+		encodeState:        opts.EncodeState,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -789,7 +793,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect),
+		encodeState(csrf.HashOAuthState(), appRedirect, p.encodeState),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
@@ -847,7 +851,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf.ClearCookie(rw, req)
 
-	nonce, appRedirect, err := decodeState(req)
+	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -1187,18 +1191,29 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(nonce string, redirect string) string {
-	return fmt.Sprintf("%v:%v", nonce, redirect)
+func encodeState(nonce string, redirect string, encode bool) string {
+	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
+	if encode {
+		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
+	} else {
+		return rawString
+	}
 }
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(req *http.Request) (string, string, error) {
-	state := strings.SplitN(req.Form.Get("state"), ":", 2)
-	if len(state) != 2 {
+func decodeState(state string, encode bool) (string, string, error) {
+	toParse := state
+	if encode {
+		decoded, _ := base64.RawURLEncoding.DecodeString(state)
+		toParse = string(decoded)
+	}
+
+	parsedState := strings.SplitN(toParse, ":", 2)
+	if len(parsedState) != 2 {
 		return "", "", errors.New("invalid length")
 	}
-	return state[0], state[1], nil
+	return parsedState[0], parsedState[1], nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
