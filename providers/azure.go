@@ -211,7 +211,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 
 	user, err := p.getUser(ctx, session.AccessToken)
 	if err != nil {
-		logger.Printf("unable to get user from github provider: %v", err)
+		logger.Printf("unable to get username from azure provider: %v", err)
 	} else {
 		session.User = user
 	}
@@ -253,7 +253,7 @@ func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string
 
 	user := jsonResponse["name"].(string)
 	if user == "" {
-		return "", fmt.Errorf("empty user variable: %v", err)
+		return "", fmt.Errorf("empty username: %v", err)
 	}
 
 	return user, nil
