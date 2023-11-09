@@ -379,7 +379,9 @@ func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string
 		}
 	}
 
-	var jsonResponse map[string]interface{}
+	var jsonResponse struct {
+		Name string `json:"name"`
+	}
 
 	err := requests.New(endpoint).
 		WithContext(ctx).
@@ -391,12 +393,11 @@ func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string
 		return "", err
 	}
 
-	user := jsonResponse["name"].(string)
-	if user == "" {
+	if jsonResponse.Name == "" {
 		return "", fmt.Errorf("empty username: %v", err)
 	}
 
-	return user, nil
+	return jsonResponse.Name, nil
 }
 
 func makeAzureHeader(accessToken string) http.Header {
