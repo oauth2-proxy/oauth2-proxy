@@ -235,20 +235,20 @@ func (p *AzureProvider) setUser(ctx context.Context, s *sessions.SessionState) e
 		}
 	}
 
-	result := requests.New(endpoint).
+  
+	var jsonResponse map[string]interface{}
+
+	err := requests.New(endpoint).
 		WithContext(ctx).
 		WithHeaders(header).
-		Do()
-	if result.Error() != nil {
-		logger.Errorf("GET %s", stripToken(endpoint))
-	}
-
-	logger.Printf("%d GET %s %s", result.StatusCode(), stripToken(endpoint), result.Body())
-	var jsonMap map[string]interface{}
-	err := json.Unmarshal(result.Body(), &jsonMap)
+		Do().
+		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return
+		logger.Printf("GET %s %w", stripToken(endpoint), err)
+		return err
 	}
+	
+	s.User = jsonResponse["name"].(string)
 	s.User = jsonMap["name"].(string)
 }
 
