@@ -227,38 +227,6 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 	return nil
 }
 
-func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string, error) {
-	header := makeAzureHeader(accessToken)
-	endpoint := p.Data().ValidateURL.String()
-	if len(header) == 0 {
-		params := url.Values{"access_token": {accessToken}}
-		if hasQueryParams(endpoint) {
-			endpoint = endpoint + "&" + params.Encode()
-		} else {
-			endpoint = endpoint + "?" + params.Encode()
-		}
-	}
-
-	var jsonResponse map[string]interface{}
-
-	err := requests.New(endpoint).
-		WithContext(ctx).
-		WithHeaders(header).
-		Do().
-		UnmarshalInto(&jsonResponse)
-	if err != nil {
-		logger.Printf("GET %s %w", stripToken(endpoint), err)
-		return "", err
-	}
-
-	user := jsonResponse["name"].(string)
-	if user == "" {
-		return "", fmt.Errorf("empty username: %v", err)
-	}
-
-	return user, nil
-}
-
 func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (url.Values, error) {
 	params := url.Values{}
 	if code == "" {
@@ -397,6 +365,38 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	}
 
 	return nil
+}
+
+func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string, error) {
+	header := makeAzureHeader(accessToken)
+	endpoint := p.Data().ValidateURL.String()
+	if len(header) == 0 {
+		params := url.Values{"access_token": {accessToken}}
+		if hasQueryParams(endpoint) {
+			endpoint = endpoint + "&" + params.Encode()
+		} else {
+			endpoint = endpoint + "?" + params.Encode()
+		}
+	}
+
+	var jsonResponse map[string]interface{}
+
+	err := requests.New(endpoint).
+		WithContext(ctx).
+		WithHeaders(header).
+		Do().
+		UnmarshalInto(&jsonResponse)
+	if err != nil {
+		logger.Printf("GET %s %w", stripToken(endpoint), err)
+		return "", err
+	}
+
+	user := jsonResponse["name"].(string)
+	if user == "" {
+		return "", fmt.Errorf("empty username: %v", err)
+	}
+
+	return user, nil
 }
 
 func makeAzureHeader(accessToken string) http.Header {
