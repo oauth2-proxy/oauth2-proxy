@@ -223,7 +223,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 	return nil
 }
 
-func (p *AzureProvider) setUser(ctx context.Context, s *sessions.SessionState) {
+func (p *AzureProvider) setUser(ctx context.Context, s *sessions.SessionState) error {
 	header := makeAzureHeader(s.AccessToken)
 	endpoint := p.Data().ValidateURL.String()
 	if len(header) == 0 {
