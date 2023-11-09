@@ -389,7 +389,6 @@ func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string
 		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		logger.Printf("GET %s %w", stripToken(endpoint), err)
 		return "", err
 	}
 
