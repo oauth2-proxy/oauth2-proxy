@@ -209,7 +209,12 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 		session.Email = email
 	}
 
-	p.setUser(ctx, session)
+	user, err := p.getUser(ctx, session.AccessToken)
+	if err != nil {
+		logger.Printf("unable to get user from github provider: %v", err)
+	} else {
+		session.User = user
+	}
 
 	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph
 	if p.isV2Endpoint {
@@ -222,11 +227,11 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 	return nil
 }
 
-func (p *AzureProvider) setUser(ctx context.Context, s *sessions.SessionState) error {
-	header := makeAzureHeader(s.AccessToken)
+func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string, error) {
+	header := makeAzureHeader(accessToken)
 	endpoint := p.Data().ValidateURL.String()
 	if len(header) == 0 {
-		params := url.Values{"access_token": {s.AccessToken}}
+		params := url.Values{"access_token": {accessToken}}
 		if hasQueryParams(endpoint) {
 			endpoint = endpoint + "&" + params.Encode()
 		} else {
@@ -243,11 +248,15 @@ func (p *AzureProvider) setUser(ctx context.Context, s *sessions.SessionState) e
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
 		logger.Printf("GET %s %w", stripToken(endpoint), err)
-		return err
+		return "", err
 	}
 
-	s.User = jsonResponse["name"].(string)
-	return nil
+	user := jsonResponse["name"].(string)
+	if user == "" {
+		return "", fmt.Errorf("empty user variable: %v", err)
+	}
+
+	return user, nil
 }
 
 func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (url.Values, error) {
