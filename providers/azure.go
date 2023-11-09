@@ -3,7 +3,6 @@ package providers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -235,7 +234,6 @@ func (p *AzureProvider) setUser(ctx context.Context, s *sessions.SessionState) e
 		}
 	}
 
-  
 	var jsonResponse map[string]interface{}
 
 	err := requests.New(endpoint).
@@ -247,9 +245,9 @@ func (p *AzureProvider) setUser(ctx context.Context, s *sessions.SessionState) e
 		logger.Printf("GET %s %w", stripToken(endpoint), err)
 		return err
 	}
-	
+
 	s.User = jsonResponse["name"].(string)
-	s.User = jsonMap["name"].(string)
+	return nil
 }
 
 func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (url.Values, error) {
