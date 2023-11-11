@@ -24,7 +24,7 @@ module.exports = {
       type: 'category',
       label: 'Community',
       collapsed: false,
-      items: ['community/security'],
+      items: ['community/contribution', 'community/security'],
     },
   ],
 };
