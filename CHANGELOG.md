@@ -80,8 +80,7 @@ N/A
 - [#2010](https://github.com/oauth2-proxy/oauth2-proxy/pull/2010) Log the difference between invalid email and not authorized session (@omBratteng)
 - [#1988](https://github.com/oauth2-proxy/oauth2-proxy/pull/1988) Ensure sign-in page background is uniform throughout the page (@corybolar)
 - [#2013](https://github.com/oauth2-proxy/oauth2-proxy/pull/2013) Upgrade alpine to version 3.17.2 and library dependencies (@miguelborges99)
-- [#1921](https://github.com/oauth2-proxy/oauth2-proxy/pull/1921) Check jsonpath syntax before interpretation
-- [#2025](https://github.com/oauth2-proxy/oauth2-proxy/pull/2025) Embed static stylesheets and dependencies
+- [#2047](https://github.com/oauth2-proxy/oauth2-proxy/pull/2047) CVE-2022-41717: DoS in Go net/http may lead to DoS (@miguelborges99)
 - [#2126](https://github.com/oauth2-proxy/oauth2-proxy/pull/2126) Added support for GKE Workload Identity (@kvanzuijlen)
 - [#1921](https://github.com/oauth2-proxy/oauth2-proxy/pull/1921) Check jsonpath syntax before interpretation (@eloo-abi)
 - [#2025](https://github.com/oauth2-proxy/oauth2-proxy/pull/2025) Embed static stylesheets and dependencies (@corybolar)
