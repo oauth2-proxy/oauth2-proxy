@@ -9,7 +9,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 - /ping - returns a 200 OK response, which is intended for use with health checks
 - /ready - returns a 200 OK response if all the underlying connections (e.g., Redis store) are connected
 - /metrics - Metrics endpoint for Prometheus to scrape, serve on the address specified by `--metrics-address`, disabled by default
-- /oauth2/sign_in - the login page, which also doubles as a sign out page (it clears cookies)
+- /oauth2/sign_in - the login page, which also doubles as a sign-out page (it clears cookies)
 - /oauth2/sign_out - this URL is used to clear the session cookie
 - /oauth2/start - a URL that will redirect to start the OAuth cycle
 - /oauth2/callback - the URL used at the end of the OAuth cycle. The oauth app will be configured with this as the callback url.
@@ -19,7 +19,7 @@ OAuth2 Proxy responds directly to the following endpoints. All other endpoints w
 
 ### Sign out
 
-To sign the user out, redirect them to `/oauth2/sign_out`. This endpoint only removes oauth2-proxy's own cookies, i.e. the user is still logged in with the authentication provider and may automatically re-login when accessing the application again. You will also need to redirect the user to the authentication provider's sign out page afterwards using the `rd` query parameter, i.e. redirect the user to something like (notice the url-encoding!):
+To sign the user out, redirect them to `/oauth2/sign_out`. This endpoint only removes oauth2-proxy's own cookies, i.e. the user is still logged in with the authentication provider and may automatically re-login when accessing the application again. You will also need to redirect the user to the authentication provider's sign-out page afterward using the `rd` query parameter, i.e. redirect the user to something like (notice the url-encoding!):
 
 ```
 /oauth2/sign_out?rd=https%3A%2F%2Fmy-oidc-provider.example.com%2Fsign_out_page
@@ -41,7 +41,7 @@ BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` i
 
 This endpoint returns 202 Accepted response or a 401 Unauthorized response.
 
-It can be configured using the following query parameters query parameters:
+It can be configured using the following query parameters:
 - `allowed_groups`: comma separated list of allowed groups
 - `allowed_email_domains`: comma separated list of allowed email domains
 - `allowed_emails`: comma separated list of allowed emails

@@ -6,12 +6,43 @@
 
 ## Breaking Changes
 
+## Changes since v7.5.1
+
+- [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
+- [#2269](https://github.com/oauth2-proxy/oauth2-proxy/pull/2269) Added Azure China (and other air gaped cloud) support (@mblaschke)
+- [#2237](https://github.com/oauth2-proxy/oauth2-proxy/pull/2237) adds an option to append CA certificates (@emsixteeen)
+- [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
+- [#2274](https://github.com/oauth2-proxy/oauth2-proxy/pull/2274) Upgrade golang.org/x/net to v0.17.0 (@pierluigilenoci)
+- [#2278](https://github.com/oauth2-proxy/oauth2-proxy/pull/2278) Improve the Nginx auth_request example (@akunzai)
+- [#2282](https://github.com/oauth2-proxy/oauth2-proxy/pull/2282) Fixed checking Google Groups membership using Google Application Credentials (@kvanzuijlen)
+- [#2183](https://github.com/oauth2-proxy/oauth2-proxy/pull/2183) Allowing relative redirect url though an option
+- [#1866](https://github.com/oauth2-proxy/oauth2-proxy/pull/1866) Add support for unix socker as upstream (@babs)
+
+# V7.5.1
+
+## Release Highlights
+- 🐛 Several bugs have been squashed
+- 🕵️‍♀️ Vulnerabilities have been addressed
+- 📖Improved docs
+
+## Important Notes
+
+- This release includes fixes for a number of CVEs, we recommend to upgrade as soon as possible.
+- The environment variable OAUTH2_PROXY_GOOGLE_GROUP has been deprecated in favor of OAUTH2_PROXY_GOOGLE_GROUPS. Next major release
+will remove this option. This change makes sure that the configuration options follow the documentation.
+
+## Breaking Changes
+
+N/A
+
 ## Changes since v7.5.0
 - [#2220](https://github.com/oauth2-proxy/oauth2-proxy/pull/2220) Added binary and docker release platforms (@kvanzuijlen)
 - [#2221](https://github.com/oauth2-proxy/oauth2-proxy/pull/2221) Backwards compatible fix for wrong environment variable name (OAUTH2_PROXY_GOOGLE_GROUPS) (@kvanzuijlen)
-- [#1989](https://github.com/oauth2-proxy/oauth2-proxy/pull/1989) Fix default scope for keycloak-oidc provider
+- [#1989](https://github.com/oauth2-proxy/oauth2-proxy/pull/1989) Fix default scope for keycloak-oidc provider (@tuunit)
 - [#2217](https://github.com/oauth2-proxy/oauth2-proxy/pull/2217) Upgrade alpine to version 3.18 (@polarctos)
-- [#2229](https://github.com/oauth2-proxy/oauth2-proxy/pull/2229) bugfix: default scopes for OIDCProvider based providers
+- [#2208](https://github.com/oauth2-proxy/oauth2-proxy/pull/2208) Improved session documentation (@lathspell)
+- [#2229](https://github.com/oauth2-proxy/oauth2-proxy/pull/2229) bugfix: default scopes for OIDCProvider based providers (@tuunit)
+- [#2194](https://github.com/oauth2-proxy/oauth2-proxy/pull/2194) Fix Gitea token validation (@tuunit)
 
 # V7.5.0
 
@@ -25,6 +56,8 @@
 ## Important Notes
 
 - This release includes fixes for a number of CVEs, we recommend to upgrade as soon as possible.
+- This release was pushed with the wrong Docker platform type for arm64/armv8. Use v7.5.1 instead.
+- This release introduced a bug with the Keycloak OIDC provider causing no scopes to be send along with the request. Use v7.5.1 instead.
 
 ## Breaking Changes
 

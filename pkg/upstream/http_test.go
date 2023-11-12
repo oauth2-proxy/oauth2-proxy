@@ -312,6 +312,29 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			},
 			expectedUpstream: "passExistingHostHeader",
 		}),
+		Entry("request using UNIX socket upstream", &httpUpstreamTableInput{
+			id:           "unix-upstream",
+			serverAddr:   &unixServerAddr,
+			target:       "http://example.localhost/file",
+			method:       "GET",
+			body:         []byte{},
+			errorHandler: nil,
+			expectedResponse: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method:     "GET",
+					URL:        "http://example.localhost/file",
+					Header:     map[string][]string{},
+					Body:       []byte{},
+					Host:       "example.localhost",
+					RequestURI: "http://example.localhost/file",
+				},
+			},
+			expectedUpstream: "unix-upstream",
+		}),
 	)
 
 	It("ServeHTTP, when not passing a host header", func() {

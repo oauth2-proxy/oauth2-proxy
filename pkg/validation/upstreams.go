@@ -102,7 +102,7 @@ func validateUpstreamURI(upstream options.Upstream) []string {
 	}
 
 	switch u.Scheme {
-	case "http", "https", "file":
+	case "http", "https", "file", "unix":
 		// Valid, do nothing
 	default:
 		msgs = append(msgs, fmt.Sprintf("upstream %q has invalid scheme: %q", upstream.ID, u.Scheme))
