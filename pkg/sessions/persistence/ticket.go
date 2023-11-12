@@ -123,11 +123,11 @@ func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error)
 	}
 	ticketID, errTicketID := decodeTicketID(ticketParts)
 	if errTicketID != nil {
-		return nil, errTicketID
+		return nil, fmt.Errorf("Unable to decode ticket: %v", errTicketID)
 	}
 	secret, errSecret := decodeTicketSecret(ticketParts)
 	if errSecret != nil {
-		return nil, errSecret
+		return nil, fmt.Errorf("Unable to decode ticket: %v", errSecret)
 	}
 	return &ticket{
 		id:      ticketID,
