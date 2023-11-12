@@ -46,10 +46,7 @@ func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
 		}
 	}
 
-	oidcProvider := &OIDCProvider{
-		ProviderData: p,
-		SkipNonce:    false,
-	}
+	oidcProvider := NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false})
 
 	return &ADFSProvider{
 		OIDCProvider:    oidcProvider,
@@ -96,7 +93,7 @@ func (p *ADFSProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 	return refreshed, err
 }
 
-func (p *ADFSProvider) fallbackUPN(ctx context.Context, s *sessions.SessionState) error {
+func (p *ADFSProvider) fallbackUPN(_ context.Context, s *sessions.SessionState) error {
 	claims, err := p.getClaimExtractor(s.IDToken, s.AccessToken)
 	if err != nil {
 		return fmt.Errorf("could not extract claims: %v", err)

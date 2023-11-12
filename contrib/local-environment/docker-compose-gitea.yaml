@@ -1,0 +1,65 @@
+# This docker-compose file can be used to bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features.
+# Alongside OAuth2-Proxy, this file also starts Gitea to act as the identity provider,
+# HTTPBin as an example upstream.
+#
+# This can either be created using docker-compose
+#    docker-compose -f docker-compose-gitea.yaml <command>
+# Or:
+#    make gitea-<command> (eg. make gitea-up, make gitea-down)
+#
+# Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle using user=admin@example.com, password=password
+# Access http://gitea.localtest.me:3000 with the same credentials to check out the settings
+version: '3.0'
+services:
+  oauth2-proxy:
+    container_name: oauth2-proxy
+    image: gitea-oauth #quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    command: --config /oauth2-proxy.cfg
+    hostname: oauth2-proxy
+    volumes:
+      - "./oauth2-proxy-gitea.cfg:/oauth2-proxy.cfg"
+    restart: unless-stopped
+    networks:
+      gitea: {}
+      httpbin: {}
+      oauth2-proxy: {}
+    depends_on:
+      - httpbin
+      - gitea
+    ports:
+      - 4180:4180/tcp
+
+  httpbin:
+    container_name: httpbin
+    image: kennethreitz/httpbin:latest
+    hostname: httpbin
+    ports:
+      - 8080:80
+    networks:
+      httpbin:
+        aliases:
+          - httpbin.localtest.me
+
+  gitea:
+    image: gitea/gitea:latest
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    restart: always
+    networks:
+      gitea:
+        aliases:
+          - gitea.localtest.me
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "222:22"
+
+networks:
+  httpbin: {}
+  gitea: {}
+  oauth2-proxy: {}

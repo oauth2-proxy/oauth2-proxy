@@ -37,6 +37,9 @@ module.exports = {
       style: 'dark',
       copyright: `Copyright © ${new Date().getFullYear()} OAuth2 Proxy.`,
     },
+    prism: {
+      additionalLanguages: ['hcl', 'powershell'],
+    },
   },
   presets: [
     [
@@ -52,6 +55,15 @@ module.exports = {
           customCss: require.resolve('./src/css/custom.css'),
         },
       },
+    ],
+  ],
+  themes: [
+    [
+      require.resolve("@easyops-cn/docusaurus-search-local"),
+      /** @type {import("@easyops-cn/docusaurus-search-local").PluginOptions} */
+      ({
+        hashed: true,
+      }),
     ],
   ],
 };

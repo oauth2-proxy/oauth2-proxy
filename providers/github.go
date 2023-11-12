@@ -89,6 +89,27 @@ func makeGitHubHeader(accessToken string) http.Header {
 	return makeAuthorizationHeader(tokenTypeToken, accessToken, extraHeaders)
 }
 
+func (p *GitHubProvider) makeGitHubAPIEndpoint(endpoint string, params *url.Values) *url.URL {
+	basePath := p.ValidateURL.Path
+
+	re := regexp.MustCompile(`^/api/v\d+`)
+	match := re.FindString(p.ValidateURL.Path)
+	if match != "" {
+		basePath = match
+	}
+
+	if params == nil {
+		params = &url.Values{}
+	}
+
+	return &url.URL{
+		Scheme:   p.ValidateURL.Scheme,
+		Host:     p.ValidateURL.Host,
+		Path:     path.Join(basePath, endpoint),
+		RawQuery: params.Encode(),
+	}
+}
+
 // setOrgTeam adds GitHub org reading parameters to the OAuth2 scope
 func (p *GitHubProvider) setOrgTeam(org, team string) {
 	p.Org = org
@@ -141,12 +162,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, accessToken string) (bool, 
 			"page":     {strconv.Itoa(pn)},
 		}
 
-		endpoint := &url.URL{
-			Scheme:   p.ValidateURL.Scheme,
-			Host:     p.ValidateURL.Host,
-			Path:     path.Join(p.ValidateURL.Path, "/user/orgs"),
-			RawQuery: params.Encode(),
-		}
+		endpoint := p.makeGitHubAPIEndpoint("/user/orgs", &params)
 
 		var op orgsPage
 		err := requests.New(endpoint.String()).
@@ -206,12 +222,7 @@ func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, accessToken string) 
 			"page":     {strconv.Itoa(pn)},
 		}
 
-		endpoint := &url.URL{
-			Scheme:   p.ValidateURL.Scheme,
-			Host:     p.ValidateURL.Host,
-			Path:     path.Join(p.ValidateURL.Path, "/user/teams"),
-			RawQuery: params.Encode(),
-		}
+		endpoint := p.makeGitHubAPIEndpoint("/user/teams", &params)
 
 		// bodyclose cannot detect that the body is being closed later in requests.Into,
 		// so have to skip the linting for the next line.
@@ -309,11 +320,7 @@ func (p *GitHubProvider) hasRepo(ctx context.Context, accessToken string) (bool,
 		Private     bool        `json:"private"`
 	}
 
-	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo),
-	}
+	endpoint := p.makeGitHubAPIEndpoint("/repos/"+p.Repo, nil)
 
 	var repo repository
 	err := requests.New(endpoint.String()).
@@ -338,11 +345,7 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 		Email string `json:"email"`
 	}
 
-	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/user"),
-	}
+	endpoint := p.makeGitHubAPIEndpoint("/user", nil)
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
@@ -362,11 +365,7 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessToken string) (bool, error) {
 	//https://developer.github.com/v3/repos/collaborators/#check-if-a-user-is-a-collaborator
 
-	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/repos/", p.Repo, "/collaborators/", username),
-	}
+	endpoint := p.makeGitHubAPIEndpoint("/repos/"+p.Repo+"/collaborators/"+username, nil)
 	result := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(makeGitHubHeader(accessToken)).
@@ -426,11 +425,7 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 		}
 	}
 
-	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/user/emails"),
-	}
+	endpoint := p.makeGitHubAPIEndpoint("/user/emails", nil)
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
 		WithHeaders(makeGitHubHeader(s.AccessToken)).
@@ -459,11 +454,7 @@ func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) 
 		Email string `json:"email"`
 	}
 
-	endpoint := &url.URL{
-		Scheme: p.ValidateURL.Scheme,
-		Host:   p.ValidateURL.Host,
-		Path:   path.Join(p.ValidateURL.Path, "/user"),
-	}
+	endpoint := p.makeGitHubAPIEndpoint("/user", nil)
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
