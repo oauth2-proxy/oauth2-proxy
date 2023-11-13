@@ -14,8 +14,8 @@ Versions v3.0.0 and up are from this fork and will have diverged from any change
 A list of changes can be seen in the [CHANGELOG](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/CHANGELOG.md).
 :::
 
-![Sign In Page](../../static/img/sign-in-page.png)
+![Sign In Page](/img/sign-in-page.png)
 
 ## Architecture
 
-![OAuth2 Proxy Architecture](../../static/img/architecture.png)
+![OAuth2 Proxy Architecture](/img/architecture.png)
