@@ -8,6 +8,7 @@
 
 ## Changes since v7.5.1
 
+- [#2307](https://github.com/oauth2-proxy/oauth2-proxy/pull/2307) Add the assignment of user to userinfo at azure provider
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
 - [#2269](https://github.com/oauth2-proxy/oauth2-proxy/pull/2269) Added Azure China (and other air gaped cloud) support (@mblaschke)
 - [#2237](https://github.com/oauth2-proxy/oauth2-proxy/pull/2237) adds an option to append CA certificates (@emsixteeen)
