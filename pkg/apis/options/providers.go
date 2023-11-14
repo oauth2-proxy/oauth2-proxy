@@ -234,6 +234,9 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
+	// SkipClaimsFromProfileURL skips HTTP request to ProfileURL for loading missing claims
+	// default set to 'false'
+	SkipClaimsFromProfileURL bool `json:"skipClaimsFromProfileURL,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -261,6 +264,7 @@ func providerDefaults() Providers {
 				GroupsClaim:                  OIDCGroupsClaim,
 				AudienceClaims:               OIDCAudienceClaims,
 				ExtraAudiences:               []string{},
+				SkipClaimsFromProfileURL:     false,
 			},
 		},
 	}
