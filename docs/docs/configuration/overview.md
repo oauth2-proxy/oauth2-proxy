@@ -88,6 +88,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
+| `--cookie-csrf-samesite` | string | set SameSite CSRF cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`) | `""` |
 | `--cookie-csrf-per-request` | bool | Enable having different CSRF cookies per request, making it possible to have parallel requests. | false |
 | `--cookie-csrf-expire` | duration | expire timeframe for CSRF cookie | 15m |
 | `--custom-templates-dir` | string | path to custom html templates | |
@@ -159,6 +160,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redeem-url` | string | Token redemption endpoint | |
 | `--redirect-url` | string | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"` | |
 | `--relative-redirect-url` | bool | allow relative OAuth Redirect URL.` | |
+| `--use-redirect-page` | bool | When enabled, instead of redirecting to redirect-url at Oauth2 callback with HTTP 302 Found, go to redirect_page.html to perform a meta refresh redirect to redirect-url with HTTP 200 OK. | false |
 | `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster` | |
 | `--redis-connection-url` | string | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`) | |
 | `--redis-insecure-skip-tls-verify` | bool | skip TLS verification when connecting to Redis | false |

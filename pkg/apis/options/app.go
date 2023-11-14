@@ -5,8 +5,8 @@ import "github.com/spf13/pflag"
 // Templates includes options for configuring the sign in and error pages
 // appearance.
 type Templates struct {
-	// Path is the path to a folder containing a sign_in.html and an error.html
-	// template.
+	// Path is the path to a folder containing a sign_in.html, error.html
+	// and redirect_page.html template.
 	// These files will be used instead of the default templates if present.
 	// If either file is missing, the default will be used instead.
 	Path string `flag:"custom-templates-dir" cfg:"custom_templates_dir"`

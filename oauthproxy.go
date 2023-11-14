@@ -109,6 +109,7 @@ type OAuthProxy struct {
 	serveMux          *mux.Router
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
+	useRedirectPage   bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -237,6 +238,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
+		useRedirectPage:    opts.UseRedirectPage,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -550,6 +552,13 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		RequestID:   scope.RequestID,
 		AppError:    appError,
 		Messages:    messages,
+	})
+}
+
+// RedirectPage writes a redirect page response
+func (p *OAuthProxy) RedirectPage(rw http.ResponseWriter, redirectURL string) {
+	p.pageWriter.WriteRedirectPage(rw, pagewriter.RedirectPageOpts{
+		RedirectURL: redirectURL,
 	})
 }
 
@@ -884,7 +893,11 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
-		http.Redirect(rw, req, appRedirect, http.StatusFound)
+		if p.useRedirectPage {
+			p.RedirectPage(rw, appRedirect)
+		} else {
+			http.Redirect(rw, req, appRedirect, http.StatusFound)
+		}
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
 		p.ErrorPage(rw, req, http.StatusForbidden, "Invalid session: unauthorized")

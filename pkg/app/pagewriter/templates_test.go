@@ -23,6 +23,8 @@ var _ = Describe("Templates", func() {
 		Expect(os.WriteFile(signInFile, []byte(templateHTML), 0600)).To(Succeed())
 		errorFile := filepath.Join(customDir, errorTemplateName)
 		Expect(os.WriteFile(errorFile, []byte(templateHTML), 0600)).To(Succeed())
+		redirectFile := filepath.Join(customDir, redirectTemplateName)
+		Expect(os.WriteFile(redirectFile, []byte(templateHTML), 0600)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -112,6 +114,12 @@ var _ = Describe("Templates", func() {
 					Expect(t.ExecuteTemplate(buf, errorTemplateName, data)).To(Succeed())
 					Expect(buf.String()).To(Equal("Testing testing TESTING"))
 				})
+
+				It("Use the custom redirect page", func() {
+					buf := bytes.NewBuffer([]byte{})
+					Expect(t.ExecuteTemplate(buf, redirectTemplateName, data)).To(Succeed())
+					Expect(buf.String()).To(Equal("Testing testing TESTING"))
+				})
 			})
 
 			Context("With no error template", func() {
@@ -126,6 +134,12 @@ var _ = Describe("Templates", func() {
 				It("Use the custom sign_in page", func() {
 					buf := bytes.NewBuffer([]byte{})
 					Expect(t.ExecuteTemplate(buf, signInTemplateName, data)).To(Succeed())
+					Expect(buf.String()).To(Equal("Testing testing TESTING"))
+				})
+
+				It("Use the custom redirect page", func() {
+					buf := bytes.NewBuffer([]byte{})
+					Expect(t.ExecuteTemplate(buf, redirectTemplateName, data)).To(Succeed())
 					Expect(buf.String()).To(Equal("Testing testing TESTING"))
 				})
 
@@ -149,6 +163,40 @@ var _ = Describe("Templates", func() {
 					buf := bytes.NewBuffer([]byte{})
 					Expect(t.ExecuteTemplate(buf, signInTemplateName, data)).To(Succeed())
 					Expect(buf.String()).To(HavePrefix("\n<!DOCTYPE html>"))
+				})
+
+				It("Use the custom error page", func() {
+					buf := bytes.NewBuffer([]byte{})
+					Expect(t.ExecuteTemplate(buf, errorTemplateName, data)).To(Succeed())
+					Expect(buf.String()).To(Equal("Testing testing TESTING"))
+				})
+
+				It("Use the custom redirect page", func() {
+					buf := bytes.NewBuffer([]byte{})
+					Expect(t.ExecuteTemplate(buf, redirectTemplateName, data)).To(Succeed())
+					Expect(buf.String()).To(Equal("Testing testing TESTING"))
+				})
+			})
+
+			Context("With no redirect template", func() {
+				BeforeEach(func() {
+					Expect(os.Remove(filepath.Join(customDir, redirectTemplateName))).To(Succeed())
+
+					var err error
+					t, err = loadTemplates(customDir)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("Use the default redirect page", func() {
+					buf := bytes.NewBuffer([]byte{})
+					Expect(t.ExecuteTemplate(buf, redirectTemplateName, data)).To(Succeed())
+					Expect(buf.String()).To(HavePrefix("\n<!DOCTYPE html>"))
+				})
+
+				It("Use the custom sign_in page", func() {
+					buf := bytes.NewBuffer([]byte{})
+					Expect(t.ExecuteTemplate(buf, signInTemplateName, data)).To(Succeed())
+					Expect(buf.String()).To(Equal("Testing testing TESTING"))
 				})
 
 				It("Use the custom error page", func() {
@@ -180,6 +228,19 @@ var _ = Describe("Templates", func() {
 				It("Should return an error when loading templates", func() {
 					t, err := loadTemplates(customDir)
 					Expect(err).To(MatchError(HavePrefix("could not add Error template:")))
+					Expect(t).To(BeNil())
+				})
+			})
+
+			Context("With an invalid redirect page template", func() {
+				BeforeEach(func() {
+					errorFile := filepath.Join(customDir, redirectTemplateName)
+					Expect(os.WriteFile(errorFile, []byte("{{"), 0600))
+				})
+
+				It("Should return an error when loading templates", func() {
+					t, err := loadTemplates(customDir)
+					Expect(err).To(MatchError(HavePrefix("could not add redirect page template:")))
 					Expect(t).To(BeNil())
 				})
 			})

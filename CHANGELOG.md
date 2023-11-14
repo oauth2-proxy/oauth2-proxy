@@ -1,8 +1,10 @@
 # Vx.x.x (Pre-release)
 
 ## Release Highlights
+- It is now possible to set a SameSite in CSRF cookie different from the one defined for the session cookie.
 
 ## Important Notes
+- [#1947](https://github.com/oauth2-proxy/oauth2-proxy/pull/1947) New option "--cookie-csrf-samesite" added, to define the SameSite value of CSRF cookie. If option is not configured, then CSRF cookie SameSite is equal to the one configured for the session cookie.
 
 ## Breaking Changes
 
@@ -17,6 +19,9 @@
 - [#2282](https://github.com/oauth2-proxy/oauth2-proxy/pull/2282) Fixed checking Google Groups membership using Google Application Credentials (@kvanzuijlen)
 - [#2183](https://github.com/oauth2-proxy/oauth2-proxy/pull/2183) Allowing relative redirect url though an option
 - [#1866](https://github.com/oauth2-proxy/oauth2-proxy/pull/1866) Add support for unix socker as upstream (@babs)
+- [#1947](https://github.com/oauth2-proxy/oauth2-proxy/pull/1947) Added new option to configure the SameSite value of csrf cookie (e.g.: "--cookie-csrf-samesite"). 
+Also, added a new option to redirect to a page (e.g. --use-redirect-page=true), instead of redirecting to <redirect-url> with HTTP 302 Found, 
+go to a redirect page to perform a meta refresh redirect to <redirect-url> with HTTP 200 OK, so that strict cookies can go through.(@miguelborges99)
 
 # V7.5.1
 

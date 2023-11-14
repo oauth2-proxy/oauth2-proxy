@@ -171,14 +171,21 @@ func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *session
 // clearCookie removes any cookies that would be where this ticket
 // would set them
 func (t *ticket) clearCookie(rw http.ResponseWriter, req *http.Request) {
-	http.SetCookie(rw, cookies.MakeCookieFromOptions(
-		req,
-		t.options.Name,
-		"",
-		t.options,
-		time.Hour*-1,
-		time.Now(),
-	))
+	cookieOptions := &cookies.CookieOptions{
+		Name:       t.options.Name,
+		Value:      "",
+		Domains:    t.options.Domains,
+		Expiration: time.Hour * -1,
+		Now:        time.Now(),
+		SameSite:   t.options.SameSite,
+		Path:       t.options.Path,
+		HTTPOnly:   t.options.HTTPOnly,
+		Secure:     t.options.Secure,
+	}
+
+	cookie := cookies.MakeCookieFromOptions(req, cookieOptions)
+
+	http.SetCookie(rw, cookie)
 }
 
 // makeCookie makes a cookie, signing the value if present
@@ -190,14 +197,20 @@ func (t *ticket) makeCookie(req *http.Request, value string, expires time.Durati
 			return nil, err
 		}
 	}
-	return cookies.MakeCookieFromOptions(
-		req,
-		t.options.Name,
-		value,
-		t.options,
-		expires,
-		now,
-	), nil
+
+	cookieOptions := &cookies.CookieOptions{
+		Name:       t.options.Name,
+		Value:      value,
+		Domains:    t.options.Domains,
+		Expiration: expires,
+		Now:        now,
+		SameSite:   t.options.SameSite,
+		Path:       t.options.Path,
+		HTTPOnly:   t.options.HTTPOnly,
+		Secure:     t.options.Secure,
+	}
+
+	return cookies.MakeCookieFromOptions(req, cookieOptions), nil
 }
 
 // makeCipher makes a AES-GCM cipher out of the ticket's secret

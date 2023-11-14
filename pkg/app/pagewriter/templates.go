@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	errorTemplateName  = "error.html"
-	signInTemplateName = "sign_in.html"
+	errorTemplateName    = "error.html"
+	redirectTemplateName = "redirect_page.html"
+	signInTemplateName   = "sign_in.html"
 )
 
 //go:embed error.html
@@ -24,7 +25,10 @@ var defaultErrorTemplate string
 //go:embed sign_in.html
 var defaultSignInTemplate string
 
-// loadTemplates adds the Sign In and Error templates from the custom template
+//go:embed redirect_page.html
+var defaultRedirectTemplate string
+
+// loadTemplates adds the Sign In, Error and redirect page templates from the custom template
 // directory, or uses the defaults if they do not exist or the custom directory
 // is not provided.
 func loadTemplates(customDir string) (*template.Template, error) {
@@ -40,6 +44,10 @@ func loadTemplates(customDir string) (*template.Template, error) {
 	t, err = addTemplate(t, customDir, errorTemplateName, defaultErrorTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("could not add Error template: %v", err)
+	}
+	t, err = addTemplate(t, customDir, redirectTemplateName, defaultRedirectTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("could not add redirect page template: %v", err)
 	}
 
 	return t, nil
