@@ -58,7 +58,7 @@ var _ = Describe("ProviderVerifier", func() {
 			Expect(endpoints.UserInfoURL).To(Equal(m.UserinfoEndpoint()))
 		}
 	},
-		Entry("should be succesfful when discovering the OIDC provider", &newProviderVerifierTableInput{
+		Entry("should be successful when discovering the OIDC provider", &newProviderVerifierTableInput{
 			modifyOpts: func(_ *ProviderVerifierOptions) {},
 		}),
 		Entry("when the issuer URL is missing", &newProviderVerifierTableInput{

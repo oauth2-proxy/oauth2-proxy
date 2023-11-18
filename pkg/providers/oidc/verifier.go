@@ -8,9 +8,14 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 )
 
-// idTokenVerifier allows an ID Token to be verified against the issue and provided keys.
+// IDTokenVerifier allows an ID Token to be verified against the issue and provided keys.
 type IDTokenVerifier interface {
 	Verify(context.Context, string) (*oidc.IDToken, error)
+}
+
+// IDTokenExpirationCheck allows an ID Token to be verified if it is expired.
+type IDTokenExpirationCheck interface {
+	Verify(context.Context, string) (bool, error)
 }
 
 // idTokenVerifier Used to verify an ID Token and extends oidc.idTokenVerifier from the underlying oidc library
@@ -18,6 +23,11 @@ type idTokenVerifier struct {
 	verifier            *oidc.IDTokenVerifier
 	verificationOptions IDTokenVerificationOptions
 	allowedAudiences    map[string]struct{}
+}
+
+// idTokenExpirationCheck Used to verify an ID Token has expired
+type idTokenExpirationCheck struct {
+	expirationCheck *oidc.IDTokenVerifier
 }
 
 // IDTokenVerificationOptions options for the oidc.idTokenVerifier that are required to verify an ID Token
@@ -41,6 +51,13 @@ func NewVerifier(iv *oidc.IDTokenVerifier, vo IDTokenVerificationOptions) IDToke
 	}
 }
 
+// NewExpirationCheck constructs a new idTokenExpirationCheck
+func NewExpirationCheck(iv *oidc.IDTokenVerifier) IDTokenExpirationCheck {
+	return &idTokenExpirationCheck{
+		expirationCheck: iv,
+	}
+}
+
 // Verify verifies incoming ID Token
 func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.IDToken, error) {
 	token, err := v.verifier.Verify(ctx, rawIDToken)
@@ -58,6 +75,15 @@ func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 	}
 
 	return token, err
+}
+
+// Verify checks if ID Token is not expired
+func (v *idTokenExpirationCheck) Verify(ctx context.Context, rawIDToken string) (bool, error) {
+	token, err := v.expirationCheck.Verify(ctx, rawIDToken)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if token is expired: %v", err)
+	}
+	return token != nil, err
 }
 
 func (v *idTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {

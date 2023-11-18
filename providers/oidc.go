@@ -121,6 +121,17 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	return true
 }
 
+// IsSessionExpired checks that the session's IDToken has reach its maximum time to live
+func (p *OIDCProvider) IsSessionExpired(ctx context.Context, s *sessions.SessionState) bool {
+	_, err := p.ExpirationCheck.Verify(ctx, s.IDToken)
+	if err != nil {
+		logger.Errorf("id_token expired: %v", err)
+		return true
+	}
+
+	return false
+}
+
 // RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
 func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	if s == nil || s.RefreshToken == "" {

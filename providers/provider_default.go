@@ -134,6 +134,11 @@ func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionS
 	return validateToken(ctx, p, s.AccessToken, nil)
 }
 
+// IsSessionExpired check if session did not expire.
+func (p *ProviderData) IsSessionExpired(_ context.Context, _ *sessions.SessionState) bool {
+	return false
+}
+
 // RefreshSession refreshes the user's session
 func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionState) (bool, error) {
 	return false, ErrNotImplemented
