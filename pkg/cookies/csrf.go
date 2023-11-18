@@ -3,7 +3,9 @@ package cookies
 import (
 	"errors"
 	"fmt"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -78,10 +80,32 @@ func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
 
 	cookie, err := req.Cookie(cookieName)
 	if err != nil {
-		return nil, err
+		LoggingCSRFCookies(req, cookieName)
+		return nil, fmt.Errorf("the CSRF cookie with name was not found: %v", cookieName)
 	}
 
 	return decodeCSRFCookie(cookie, opts)
+}
+
+// LoggingCSRFCookies Log all CSRF cookies found in HTTP request, which were successfully parsed
+func LoggingCSRFCookies(req *http.Request, cookieName string) {
+	cookies := req.Cookies()
+	if len(cookies) == 0 {
+		logger.Println(req, logger.AuthFailure, "No valid cookies were found.")
+	} else {
+		var anyFound = false
+		for i := range cookies {
+			var c = cookies[i]
+			if strings.Contains(c.Name, "_csrf") {
+				continue
+			}
+			logger.Println(req, logger.AuthFailure, "The CSRF cookie %s was expected, but it was found %s cookie.", cookieName, c.Name)
+			anyFound = true
+		}
+		if !anyFound {
+			logger.Println(req, logger.AuthFailure, "Valid cookies were found, but none is a CSRF cookie.")
+		}
+	}
 }
 
 // GenerateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise
@@ -218,12 +242,9 @@ func ExtractStateSubstring(req *http.Request) string {
 	lastChar := csrfStateLength - 1
 	stateSubstring := ""
 
-	state := req.URL.Query()["state"]
-	if state[0] != "" {
-		state := state[0]
-		if lastChar <= len(state) {
-			stateSubstring = state[0:lastChar]
-		}
+	state := req.Form.Get("state")
+	if len(state) > 0 && lastChar <= len(state) {
+		stateSubstring = state[0:lastChar]
 	}
 	return stateSubstring
 }
