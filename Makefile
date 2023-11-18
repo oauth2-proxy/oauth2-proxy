@@ -5,6 +5,7 @@ BINARY := oauth2-proxy
 VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "undefined")
 # Allow to override image registry.
 REGISTRY ?= quay.io/oauth2-proxy
+DATE := $(shell date +"%Y%m%d")
 .NOTPARALLEL:
 
 GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
@@ -51,6 +52,10 @@ DOCKER_BUILDX_PUSH_X_PLATFORM := $(DOCKER_BUILDX_PUSH) --platform ${DOCKER_BUILD
 docker:
 	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:latest -t $(REGISTRY)/oauth2-proxy:${VERSION} .
 
+.PHONY: docker-push
+docker-push:
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:latest -t $(REGISTRY)/oauth2-proxy:${VERSION} .
+
 .PHONY: docker-all
 docker-all: docker
 	$(DOCKER_BUILDX) --platform linux/amd64   -t $(REGISTRY)/oauth2-proxy:latest-amd64   -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
@@ -59,10 +64,6 @@ docker-all: docker
 	$(DOCKER_BUILDX) --platform linux/arm/v6  -t $(REGISTRY)/oauth2-proxy:latest-armv6   -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
 	$(DOCKER_BUILDX) --platform linux/arm/v7  -t $(REGISTRY)/oauth2-proxy:latest-armv7   -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv7 .
 
-.PHONY: docker-push
-docker-push:
-	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy:latest -t $(REGISTRY)/oauth2-proxy:${VERSION} .
-
 .PHONY: docker-push-all
 docker-push-all: docker-push
 	$(DOCKER_BUILDX_PUSH) --platform linux/amd64   -t $(REGISTRY)/oauth2-proxy:latest-amd64   -t $(REGISTRY)/oauth2-proxy:${VERSION}-amd64 .
@@ -70,6 +71,14 @@ docker-push-all: docker-push
 	$(DOCKER_BUILDX_PUSH) --platform linux/ppc64le -t $(REGISTRY)/oauth2-proxy:latest-ppc64le -t $(REGISTRY)/oauth2-proxy:${VERSION}-ppc64le .
 	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v6  -t $(REGISTRY)/oauth2-proxy:latest-armv6   -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv6 .
 	$(DOCKER_BUILDX_PUSH) --platform linux/arm/v7  -t $(REGISTRY)/oauth2-proxy:latest-armv7   -t $(REGISTRY)/oauth2-proxy:${VERSION}-armv7 .
+
+.PHONY: docker-nightly-build
+docker-nightly-build:
+	$(DOCKER_BUILDX_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy-nightly:latest -t $(REGISTRY)/oauth2-proxy-nightly-${DATE} .
+
+.PHONY: docker-nightly-push
+docker-nightly-push:
+	$(DOCKER_BUILDX_PUSH_X_PLATFORM) -t $(REGISTRY)/oauth2-proxy-nightly:latest -t $(REGISTRY)/oauth2-proxy-nightly-${DATE} .
 
 .PHONY: generate
 generate:
@@ -101,10 +110,10 @@ validate-go-version:
 
 # local-env can be used to interact with the local development environment
 # eg:
-#    make local-env-up 					# Bring up a basic test environment
-#    make local-env-down 				# Tear down the basic test environment
-#    make local-env-nginx-up 		# Bring up an nginx based test environment
-#    make local-env-nginx-down 	# Tead down the nginx based test environment
+#    make local-env-up          # Bring up a basic test environment
+#    make local-env-down        # Tear down the basic test environment
+#    make local-env-nginx-up    # Bring up an nginx based test environment
+#    make local-env-nginx-down  # Tead down the nginx based test environment
 .PHONY: local-env-%
 local-env-%:
 	make -C contrib/local-environment $*
