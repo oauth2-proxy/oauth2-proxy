@@ -787,17 +787,25 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	}
 
 	callbackRedirect := p.getOAuthRedirectURI(req)
+	hashOAuthState := csrf.HashOAuthState()
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect),
+		encodeState(hashOAuthState, appRedirect),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
 
-	if _, err := csrf.SetCookie(rw, req); err != nil {
+	csrfCookie, err := csrf.SetCookie(rw, req)
+	if err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
+	} else {
+		// There are a lot of issues opened complaining about missing CSRF cookies.
+		// The reasons can be several: network policies, bad configuration, or may even be a from OAuthProxy.
+		// Do some logging to show what CSRF cookies were sent.
+		// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
+		logger.Println("CSRF cookie %s was sent in request (state=%s).", csrfCookie.Name, hashOAuthState)
 	}
 
 	http.Redirect(rw, req, loginURL, http.StatusFound)
@@ -837,6 +845,10 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	// Try to find the CSRF cookie and decode it
 	csrf, err := cookies.LoadCSRFCookie(req, cookieName, p.CookieOptions)
 	if err != nil {
+		// There are a lot of issues opened complaining about missing CSRF cookies.
+		// The reasons can be several: network policies, bad configuration, or may even be a from OAuthProxy.
+		// Do some logging to show what CSRF cookies were received in OAuth callback.
+		// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
 		LoggingCSRFCookiesInOAuthCallback(req, cookieName)
 		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s (state=%s)", err, nonce)
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
