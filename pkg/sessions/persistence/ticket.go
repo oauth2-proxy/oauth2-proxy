@@ -67,22 +67,68 @@ func newTicket(cookieOpts *options.Cookie) (*ticket, error) {
 
 // encodeTicket encodes the Ticket to a string for usage in cookies
 func (t *ticket) encodeTicket() string {
-	return fmt.Sprintf("%s.%s", t.id, base64.RawURLEncoding.EncodeToString(t.secret))
+	return fmt.Sprintf("v2.%s.%s", base64.RawURLEncoding.EncodeToString([]byte(t.id)),
+		base64.RawURLEncoding.EncodeToString(t.secret))
+}
+
+// decodeTicketID Tickets are encoded with format: {encoding version}.{ticketID base64}.{ticketSecret base 64}.
+// Tickets from old oauth2-proxy versions do not have the same format, and this method tries
+// to decode the ticket ID part based on the encoding version, or lack of it.
+func decodeTicketID(ticketParts []string) (string, error) {
+	switch {
+	case len(ticketParts) == 2:
+		// old ticket encoding
+		return ticketParts[0], nil
+	case len(ticketParts) == 3 && ticketParts[0] == "v2":
+		// v2 ticket encoding
+		ticketID, err := base64.RawURLEncoding.DecodeString(ticketParts[1])
+		if err != nil {
+			return "", fmt.Errorf("failed to decode ticket Id: %v", err)
+		}
+		return string(ticketID), nil
+	default:
+		return "", errors.New("failed to decode ticket Id")
+	}
+}
+
+// decodeTicketSecret Tickets are encoded with format: {encoding version}.{ticketID base64}.{ticketSecret base 64}.
+// Tickets from old oauth2-proxy versions do not have the same format, and this method tries
+// to decode the ticket secret part based on the encoding version, or lack of it.
+func decodeTicketSecret(ticketParts []string) ([]byte, error) {
+	switch {
+	case len(ticketParts) == 2:
+		// old ticket encoding
+		secret, err := base64.RawURLEncoding.DecodeString(ticketParts[1])
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode encryption secret: %v", err)
+		}
+		return secret, nil
+	case len(ticketParts) == 3 && ticketParts[0] == "v2":
+		// new ticket encode
+		secret, err := base64.RawURLEncoding.DecodeString(ticketParts[2])
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode encryption secret: %v", err)
+		}
+		return secret, nil
+	default:
+		return nil, errors.New("failed to decode encryption secret")
+	}
 }
 
 // decodeTicket decodes an encoded ticket string
 func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error) {
 	ticketParts := strings.Split(encTicket, ".")
-	if len(ticketParts) != 2 {
+	if len(ticketParts) != 2 && len(ticketParts) != 3 {
 		return nil, errors.New("failed to decode ticket")
 	}
-	ticketID, secretBase64 := ticketParts[0], ticketParts[1]
-
-	secret, err := base64.RawURLEncoding.DecodeString(secretBase64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode encryption secret: %v", err)
+	ticketID, errTicketID := decodeTicketID(ticketParts)
+	if errTicketID != nil {
+		return nil, fmt.Errorf("failed to decode ticket: %v", errTicketID)
 	}
-
+	secret, errSecret := decodeTicketSecret(ticketParts)
+	if errSecret != nil {
+		return nil, fmt.Errorf("failed to decode ticket: %v", errSecret)
+	}
 	return &ticket{
 		id:      ticketID,
 		secret:  secret,
