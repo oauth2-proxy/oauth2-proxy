@@ -80,6 +80,7 @@ func LoadCSRFCookie(req *http.Request, state string, opts *options.Cookie) (CSRF
 
 	cookie, err := req.Cookie(cookieName)
 	if err != nil {
+		logger.Println(req, logger.AuthFailure, "Expected to find a CSRF cookie %s, but it was not found. (state=%s)", cookieName, state)
 		LoggingCSRFCookies(req, cookieName)
 		return nil, fmt.Errorf("the CSRF cookie with name was not found: %v", cookieName)
 	}
