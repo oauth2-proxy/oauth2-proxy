@@ -4,14 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -194,30 +192,6 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 	}
 
 	return csrf, nil
-}
-
-// LoggingCSRFCookiesInOAuthCallback Log all CSRF cookies found in HTTP request OAuth callback,
-// which were successfully parsed
-func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
-	cookies := req.Cookies()
-	if len(cookies) == 0 {
-		logger.Println(req, logger.AuthFailure, "No cookies were found in OAuth callback.")
-	} else {
-		var anyFound = false
-		for i := range cookies {
-			var c = cookies[i]
-			if cookieName == c.Name {
-				logger.Println(req, logger.AuthFailure, "The CSRF cookie %s was found in OAuth callback.", c.Name)
-				anyFound = true
-			} else if strings.Contains(c.Name, "_csrf") {
-				logger.Println(req, logger.AuthFailure, "The CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
-				anyFound = true
-			}
-		}
-		if !anyFound {
-			logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
-		}
-	}
 }
 
 // cookieName returns the CSRF cookie's name
