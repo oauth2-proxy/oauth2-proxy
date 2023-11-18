@@ -4,14 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -74,44 +72,18 @@ func NewCSRF(opts *options.Cookie, codeVerifier string) (CSRF, error) {
 }
 
 // LoadCSRFCookie loads a CSRF object from a request's CSRF cookie
-func LoadCSRFCookie(req *http.Request, state string, opts *options.Cookie) (CSRF, error) {
-
-	cookieName := GenerateCookieName(opts, state)
-
+func LoadCSRFCookie(req *http.Request, cookieName string, opts *options.Cookie) (CSRF, error) {
 	cookie, err := req.Cookie(cookieName)
 	if err != nil {
-		logger.Println(req, logger.AuthFailure, "Expected to find a CSRF cookie %s, but it was not found. (state=%s)", cookieName, state)
-		LoggingCSRFCookies(req, cookieName)
 		return nil, fmt.Errorf("the CSRF cookie with name was not found: %v", cookieName)
 	}
 
 	return decodeCSRFCookie(cookie, opts)
 }
 
-// LoggingCSRFCookies Log all CSRF cookies found in HTTP request, which were successfully parsed
-func LoggingCSRFCookies(req *http.Request, cookieName string) {
-	cookies := req.Cookies()
-	if len(cookies) == 0 {
-		logger.Println(req, logger.AuthFailure, "No valid cookies were found.")
-	} else {
-		var anyFound = false
-		for i := range cookies {
-			var c = cookies[i]
-			if strings.Contains(c.Name, "_csrf") {
-				continue
-			}
-			logger.Println(req, logger.AuthFailure, "The CSRF cookie %s was expected, but it was found %s cookie.", cookieName, c.Name)
-			anyFound = true
-		}
-		if !anyFound {
-			logger.Println(req, logger.AuthFailure, "Valid cookies were found, but none is a CSRF cookie.")
-		}
-	}
-}
-
-// GenerateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise
+// CalculateCookieName in case cookie options state that CSRF cookie has fixed name then set fixed name, otherwise
 // build name based on the state
-func GenerateCookieName(opts *options.Cookie, state string) string {
+func CalculateCookieName(opts *options.Cookie, state string) string {
 	stateSubstring := ""
 	if opts.CSRFPerRequest {
 		// csrfCookieName will include a substring of the state to enable multiple csrf cookies
