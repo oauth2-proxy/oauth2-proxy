@@ -3,7 +3,6 @@ package cookies
 import (
 	"errors"
 	"fmt"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
