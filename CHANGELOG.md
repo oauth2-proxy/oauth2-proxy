@@ -17,7 +17,8 @@
 - [#2282](https://github.com/oauth2-proxy/oauth2-proxy/pull/2282) Fixed checking Google Groups membership using Google Application Credentials (@kvanzuijlen)
 - [#2183](https://github.com/oauth2-proxy/oauth2-proxy/pull/2183) Allowing relative redirect url though an option
 - [#1866](https://github.com/oauth2-proxy/oauth2-proxy/pull/1866) Add support for unix socker as upstream (@babs)
-
+- [#1955](https://github.com/oauth2-proxy/oauth2-proxy/pull/1955) Refresh expired OIDC tokens (@miguelborges99)
+- 
 # V7.5.1
 
 ## Release Highlights
@@ -82,7 +83,6 @@ N/A
 - [#2126](https://github.com/oauth2-proxy/oauth2-proxy/pull/2126) Added support for GKE Workload Identity (@kvanzuijlen)
 - [#1921](https://github.com/oauth2-proxy/oauth2-proxy/pull/1921) Check jsonpath syntax before interpretation (@eloo-abi)
 - [#2025](https://github.com/oauth2-proxy/oauth2-proxy/pull/2025) Embed static stylesheets and dependencies (@corybolar)
-- [#1955](https://github.com/oauth2-proxy/oauth2-proxy/pull/1955) Refresh expired OIDC tokens (@miguelborges99)
 
 # V7.4.0
 
