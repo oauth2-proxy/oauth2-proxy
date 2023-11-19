@@ -7,7 +7,6 @@
 ## Breaking Changes
 
 ## Changes since v7.5.1
-
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
 - [#2269](https://github.com/oauth2-proxy/oauth2-proxy/pull/2269) Added Azure China (and other air gaped cloud) support (@mblaschke)
 - [#2237](https://github.com/oauth2-proxy/oauth2-proxy/pull/2237) adds an option to append CA certificates (@emsixteeen)
@@ -19,6 +18,7 @@
 - [#1866](https://github.com/oauth2-proxy/oauth2-proxy/pull/1866) Add support for unix socker as upstream (@babs)
 - [#1949](https://github.com/oauth2-proxy/oauth2-proxy/pull/1949) Allow cookie names with dots in redis sessions (@miguelborges99)
 - [#2297](https://github.com/oauth2-proxy/oauth2-proxy/pull/2297) Add nightly build and push (@tuunit)
+- [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings.
 
 # V7.5.1
 
@@ -89,7 +89,6 @@ N/A
 
 ## Release Highlights
 
-- Added support for semicolons in query strings.
 - New Azure groups support for Azure OAuth2 v2.0
 - Option to configure API routes - paths that will not redirect to login when unauthenticated
 - CSRF and session cookies now have different timeouts
