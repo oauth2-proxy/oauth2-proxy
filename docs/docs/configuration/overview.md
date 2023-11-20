@@ -143,6 +143,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--pass-host-header` | bool | pass the request Host Header to upstream | true |
 | `--pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Groups, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `--profile-url` | string | Profile access endpoint | |
+| `--skip-claims-from-profile-url` | bool | skip request to Profile URL for resolving claims not present in id_token | false |
 | `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `--provider` | string | OAuth provider | google |
 | `--provider-ca-file` | string \| list | Paths to CA certificates that should be used when connecting to the provider. If not specified, the default Go trust sources are used instead. |
