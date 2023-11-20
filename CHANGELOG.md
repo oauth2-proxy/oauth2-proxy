@@ -19,7 +19,6 @@
 - [#1949](https://github.com/oauth2-proxy/oauth2-proxy/pull/1949) Allow cookie names with dots in redis sessions (@miguelborges99)
 - [#2297](https://github.com/oauth2-proxy/oauth2-proxy/pull/2297) Add nightly build and push (@tuunit)
 - [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
-- [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings.
 - [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings. (@timwsuqld)
 - [#2196](https://github.com/oauth2-proxy/oauth2-proxy/pull/2196) Add GitHub groups (orgs/teams) support. Including `X-Forwarded-Groups` header (@tuunit)
 
@@ -78,7 +77,6 @@ N/A
 - [#1839](https://github.com/oauth2-proxy/oauth2-proxy/pull/1839) Add readiness checks for deeper health checks (@kobim)
 - [#1927](https://github.com/oauth2-proxy/oauth2-proxy/pull/1927) Fix default scope settings for none oidc providers (@tuunit)
 - [#1713](https://github.com/oauth2-proxy/oauth2-proxy/pull/1713) Add session cookie support (@t-katsumura @tanuki884)
-- [#2196](https://github.com/oauth2-proxy/oauth2-proxy/pull/2196) Add GitHub groups (orgs/teams) support. Including `X-Forwarded-Groups` header
 - [#1951](https://github.com/oauth2-proxy/oauth2-proxy/pull/1951) Fix validate URL, check if query string marker (?) or separator (&) needs to be appended (@miguelborges99)
 - [#1920](https://github.com/oauth2-proxy/oauth2-proxy/pull/1920) Make sure emailClaim is not overriden if userIDClaim is not set (@mdreem)
 - [#2010](https://github.com/oauth2-proxy/oauth2-proxy/pull/2010) Log the difference between invalid email and not authorized session (@omBratteng)
