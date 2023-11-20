@@ -17,6 +17,7 @@
 - [#2282](https://github.com/oauth2-proxy/oauth2-proxy/pull/2282) Fixed checking Google Groups membership using Google Application Credentials (@kvanzuijlen)
 - [#2183](https://github.com/oauth2-proxy/oauth2-proxy/pull/2183) Allowing relative redirect url though an option
 - [#1866](https://github.com/oauth2-proxy/oauth2-proxy/pull/1866) Add support for unix socker as upstream (@babs)
+- [#2316](https://github.com/oauth2-proxy/oauth2-proxy/pull/2316) Proxied auth will now also consider query param overrides (@flashpaper12)
 
 # V7.5.1
 
