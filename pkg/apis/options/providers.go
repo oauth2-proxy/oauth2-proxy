@@ -70,6 +70,9 @@ type Provider struct {
 	RedeemURL string `json:"redeemURL,omitempty"`
 	// ProfileURL is the profile access endpoint
 	ProfileURL string `json:"profileURL,omitempty"`
+	// SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token
+	// default set to 'false'
+	SkipClaimsFromProfileURL bool `json:"skipClaimsFromProfileURL,omitempty"`
 	// ProtectedResource is the resource that is protected (Azure AD and ADFS only)
 	ProtectedResource string `json:"resource,omitempty"`
 	// ValidateURL is the access token validation endpoint
@@ -234,9 +237,6 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
-	// SkipClaimsFromProfileURL skip request to ProfileURL to acquire missing claims
-	// default set to 'false'
-	SkipClaimsFromProfileURL bool `json:"skipClaimsFromProfileURL,omitempty"`
 }
 
 type LoginGovOptions struct {
@@ -264,7 +264,6 @@ func providerDefaults() Providers {
 				GroupsClaim:                  OIDCGroupsClaim,
 				AudienceClaims:               OIDCAudienceClaims,
 				ExtraAudiences:               []string{},
-				SkipClaimsFromProfileURL:     false,
 			},
 		},
 	}

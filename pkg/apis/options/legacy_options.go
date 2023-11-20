@@ -523,6 +523,7 @@ type LegacyProvider struct {
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
+	SkipClaimsFromProfileURL           bool     `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
 	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
 	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
 	Scope                              string   `flag:"scope" cfg:"scope"`
@@ -531,7 +532,6 @@ type LegacyProvider struct {
 	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
 	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
 	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
-	SkipClaimsFromProfileURL           bool     `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -660,20 +660,21 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers := Providers{}
 
 	provider := Provider{
-		ClientID:            l.ClientID,
-		ClientSecret:        l.ClientSecret,
-		ClientSecretFile:    l.ClientSecretFile,
-		Type:                ProviderType(l.ProviderType),
-		CAFiles:             l.ProviderCAFiles,
-		UseSystemTrustStore: l.UseSystemTrustStore,
-		LoginURL:            l.LoginURL,
-		RedeemURL:           l.RedeemURL,
-		ProfileURL:          l.ProfileURL,
-		ProtectedResource:   l.ProtectedResource,
-		ValidateURL:         l.ValidateURL,
-		Scope:               l.Scope,
-		AllowedGroups:       l.AllowedGroups,
-		CodeChallengeMethod: l.CodeChallengeMethod,
+		ClientID:                 l.ClientID,
+		ClientSecret:             l.ClientSecret,
+		ClientSecretFile:         l.ClientSecretFile,
+		Type:                     ProviderType(l.ProviderType),
+		CAFiles:                  l.ProviderCAFiles,
+		UseSystemTrustStore:      l.UseSystemTrustStore,
+		LoginURL:                 l.LoginURL,
+		RedeemURL:                l.RedeemURL,
+		ProfileURL:               l.ProfileURL,
+		SkipClaimsFromProfileURL: l.SkipClaimsFromProfileURL,
+		ProtectedResource:        l.ProtectedResource,
+		ValidateURL:              l.ValidateURL,
+		Scope:                    l.Scope,
+		AllowedGroups:            l.AllowedGroups,
+		CodeChallengeMethod:      l.CodeChallengeMethod,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC
@@ -689,7 +690,6 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		GroupsClaim:                    l.OIDCGroupsClaim,
 		AudienceClaims:                 l.OIDCAudienceClaims,
 		ExtraAudiences:                 l.OIDCExtraAudiences,
-		SkipClaimsFromProfileURL:       l.SkipClaimsFromProfileURL,
 	}
 
 	// Support for legacy configuration option
