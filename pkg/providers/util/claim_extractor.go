@@ -28,7 +28,7 @@ type ClaimExtractor interface {
 // NewClaimExtractor constructs a new ClaimExtractor from the raw ID Token.
 // If needed, it will use the profile URL to look up a claim if it isn't present
 // within the ID Token.
-func NewClaimExtractor(ctx context.Context, idToken string, profileURL *url.URL, profileRequestHeaders http.Header, skipClaimFromProfileURL bool) (ClaimExtractor, error) {
+func NewClaimExtractor(ctx context.Context, idToken string, profileURL *url.URL, profileRequestHeaders http.Header) (ClaimExtractor, error) {
 	payload, err := parseJWT(idToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse ID Token: %v", err)
@@ -40,22 +40,20 @@ func NewClaimExtractor(ctx context.Context, idToken string, profileURL *url.URL,
 	}
 
 	return &claimExtractor{
-		ctx:                     ctx,
-		profileURL:              profileURL,
-		requestHeaders:          profileRequestHeaders,
-		tokenClaims:             tokenClaims,
-		skipClaimFromProfileURL: skipClaimFromProfileURL,
+		ctx:            ctx,
+		profileURL:     profileURL,
+		requestHeaders: profileRequestHeaders,
+		tokenClaims:    tokenClaims,
 	}, nil
 }
 
 // claimExtractor implements the ClaimExtractor interface
 type claimExtractor struct {
-	profileURL              *url.URL
-	ctx                     context.Context
-	requestHeaders          map[string][]string
-	tokenClaims             *simplejson.Json
-	profileClaims           *simplejson.Json
-	skipClaimFromProfileURL bool
+	profileURL     *url.URL
+	ctx            context.Context
+	requestHeaders map[string][]string
+	tokenClaims    *simplejson.Json
+	profileClaims  *simplejson.Json
 }
 
 // GetClaim will return the value claim if it exists.
@@ -89,7 +87,7 @@ func (c *claimExtractor) GetClaim(claim string) (interface{}, bool, error) {
 // loadProfileClaims will fetch the profileURL using the provided headers as
 // authentication.
 func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
-	if c.skipClaimFromProfileURL || c.profileURL == nil || c.profileURL.String() == "" || c.requestHeaders == nil {
+	if c.profileURL == nil || c.profileURL.String() == "" || c.requestHeaders == nil {
 		// When no profileURL is set, we return a non-empty map so that
 		// we don't attempt to populate the profile claims again.
 		// If there are no headers, the request would be unauthorized so we also skip

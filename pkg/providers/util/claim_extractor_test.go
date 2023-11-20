@@ -69,7 +69,7 @@ var _ = Describe("Claim Extractor Suite", func() {
 
 		DescribeTable("NewClaimExtractor",
 			func(in newClaimExtractorTableInput) {
-				_, err := NewClaimExtractor(context.Background(), in.idToken, nil, nil, false)
+				_, err := NewClaimExtractor(context.Background(), in.idToken, nil, nil)
 				if in.expectedError != nil {
 					Expect(err).To(MatchError(in.expectedError))
 				} else {
@@ -273,32 +273,6 @@ var _ = Describe("Claim Extractor Suite", func() {
 		Expect(exists).To(BeTrue())
 		Expect(value).To(Equal("profileEmail"))
 		Expect(counter).To(BeEquivalentTo(1))
-	})
-
-	It("GetClaim should not call profile URL", func() {
-		var counter int32
-		countRequestsHandler := func(rw http.ResponseWriter, _ *http.Request) {
-			atomic.AddInt32(&counter, 1)
-			rw.Write([]byte(basicProfileURLPayload))
-		}
-
-		claimExtractor, serverClose, err := newTestClaimExtractor(testClaimExtractorOpts{
-			idTokenPayload:           "{}",
-			setProfileURL:            true,
-			profileRequestHeaders:    newAuthorizedHeader(),
-			profileRequestHandler:    countRequestsHandler,
-			skipClaimsFromProfileURL: true,
-		})
-		Expect(err).ToNot(HaveOccurred())
-		if serverClose != nil {
-			defer serverClose()
-		}
-
-		value, exists, err := claimExtractor.GetClaim("user")
-		Expect(err).ToNot(HaveOccurred())
-		Expect(exists).To(BeFalse())
-		Expect(value).To(BeNil())
-		Expect(counter).To(BeEquivalentTo(0))
 	})
 
 	It("GetClaim should not return an error with a non-nil empty ProfileURL", func() {
@@ -513,11 +487,10 @@ var _ = Describe("Claim Extractor Suite", func() {
 // ******************************************
 
 type testClaimExtractorOpts struct {
-	idTokenPayload           string
-	setProfileURL            bool
-	profileRequestHeaders    http.Header
-	profileRequestHandler    http.HandlerFunc
-	skipClaimsFromProfileURL bool
+	idTokenPayload        string
+	setProfileURL         bool
+	profileRequestHeaders http.Header
+	profileRequestHandler http.HandlerFunc
 }
 
 func newTestClaimExtractor(in testClaimExtractorOpts) (ClaimExtractor, func(), error) {
@@ -534,7 +507,7 @@ func newTestClaimExtractor(in testClaimExtractorOpts) (ClaimExtractor, func(), e
 
 	rawIDToken := createJWTFromPayload(in.idTokenPayload)
 
-	claimExtractor, err := NewClaimExtractor(context.Background(), rawIDToken, profileURL, in.profileRequestHeaders, in.skipClaimsFromProfileURL)
+	claimExtractor, err := NewClaimExtractor(context.Background(), rawIDToken, profileURL, in.profileRequestHeaders)
 	return claimExtractor, closeServer, err
 }
 

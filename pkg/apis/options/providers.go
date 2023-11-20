@@ -234,7 +234,7 @@ type OIDCOptions struct {
 	// ExtraAudiences is a list of additional audiences that are allowed
 	// to pass verification in addition to the client id.
 	ExtraAudiences []string `json:"extraAudiences,omitempty"`
-	// SkipClaimsFromProfileURL skips HTTP request to ProfileURL for loading missing claims
+	// SkipClaimsFromProfileURL skip request to ProfileURL to acquire missing claims
 	// default set to 'false'
 	SkipClaimsFromProfileURL bool `json:"skipClaimsFromProfileURL,omitempty"`
 }
