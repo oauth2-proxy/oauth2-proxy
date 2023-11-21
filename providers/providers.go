@@ -90,6 +90,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
 			IssuerURL:              providerConfig.OIDCConfig.IssuerURL,
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
+			PublicKeys:             providerConfig.OIDCConfig.PublicKeys,
 			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
 			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
 		})
