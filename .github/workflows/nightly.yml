@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # only run this build in the main repository, not in forks
+    if: github.repository == 'oauth2-proxy/oauth2-proxy'
     steps:
     - name: Check out code
       uses: actions/checkout@v3
