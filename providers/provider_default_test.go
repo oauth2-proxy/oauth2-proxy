@@ -75,31 +75,85 @@ func TestProviderDataAuthorize(t *testing.T) {
 		name          string
 		allowedGroups []string
 		groups        []string
+		url           *url.URL
 		expectedAuthZ bool
 	}{
 		{
 			name:          "NoAllowedGroups",
 			allowedGroups: []string{},
 			groups:        []string{},
+			url: &url.URL{
+				Scheme: "http",
+				Host:   "my.test.idp",
+				Path:   "/",
+			},
 			expectedAuthZ: true,
 		},
 		{
 			name:          "NoAllowedGroupsUserHasGroups",
 			allowedGroups: []string{},
 			groups:        []string{"foo", "bar"},
+			url: &url.URL{
+				Scheme: "http",
+				Host:   "my.test.idp",
+				Path:   "/",
+			},
 			expectedAuthZ: true,
 		},
 		{
 			name:          "UserInAllowedGroup",
 			allowedGroups: []string{"foo"},
 			groups:        []string{"foo", "bar"},
+			url: &url.URL{
+				Scheme: "http",
+				Host:   "my.test.idp",
+				Path:   "/",
+			},
 			expectedAuthZ: true,
 		},
 		{
 			name:          "UserNotInAllowedGroup",
 			allowedGroups: []string{"bar"},
 			groups:        []string{"baz", "foo"},
+			url: &url.URL{
+				Scheme: "http",
+				Host:   "my.test.idp",
+				Path:   "/",
+			},
 			expectedAuthZ: false,
+		},
+		{
+			name:          "NoAllowedGroupsMatchingPath",
+			allowedGroups: []string{"bar", "/path|doo"},
+			groups:        []string{"foo"},
+			url: &url.URL{
+				Scheme: "http",
+				Host:   "my.test.idp",
+				Path:   "/path",
+			},
+			expectedAuthZ: false,
+		},
+		{
+			name:          "AllowedGroupsMatchingPath",
+			allowedGroups: []string{"bar", "/path|foo"},
+			groups:        []string{"foo"},
+			url: &url.URL{
+				Scheme: "http",
+				Host:   "my.test.idp",
+				Path:   "/path",
+			},
+			expectedAuthZ: true,
+		},
+		{
+			name:          "MoreSpecificPathMatches",
+			allowedGroups: []string{"bar", "/p|bar", "/pa|bar", "/pat|bar", "/path|foo"},
+			groups:        []string{"foo"},
+			url: &url.URL{
+				Scheme: "http",
+				Host:   "my.test.idp",
+				Path:   "/path",
+			},
+			expectedAuthZ: true,
 		},
 	}
 
@@ -113,7 +167,7 @@ func TestProviderDataAuthorize(t *testing.T) {
 			p := &ProviderData{}
 			p.setAllowedGroups(tc.allowedGroups)
 
-			authorized, err := p.Authorize(context.Background(), session)
+			authorized, err := p.Authorize(context.Background(), session, tc.url.Path)
 			g.Expect(err).ToNot(HaveOccurred())
 			g.Expect(authorized).To(Equal(tc.expectedAuthZ))
 		})

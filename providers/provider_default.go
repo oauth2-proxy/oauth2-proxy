@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -114,14 +115,25 @@ func (p *ProviderData) EnrichSession(_ context.Context, _ *sessions.SessionState
 }
 
 // Authorize performs global authorization on an authenticated session.
-// This is not used for fine-grained per route authorization rules.
-func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (bool, error) {
-	if len(p.AllowedGroups) == 0 {
+// This can be used for fine-grained per route authorization rules.
+func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState, path string) (bool, error) {
+	allowedGroups := p.AllowedGroups["/"]
+	var matchPathLen int
+	for groupsPath, groups := range p.AllowedGroups {
+		if strings.HasPrefix(path, groupsPath) {
+			if len(groupsPath) > matchPathLen {
+				matchPathLen = len(groupsPath)
+				allowedGroups = groups
+			}
+		}
+	}
+
+	if len(allowedGroups) == 0 {
 		return true, nil
 	}
 
 	for _, group := range s.Groups {
-		if _, ok := p.AllowedGroups[group]; ok {
+		if _, ok := allowedGroups[group]; ok {
 			return true, nil
 		}
 	}
