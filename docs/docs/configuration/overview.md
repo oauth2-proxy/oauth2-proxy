@@ -67,6 +67,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | Option | Type | Description | Default |
 | ------ | ---- | ----------- | ------- |
 | `--acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
+| `--allow-query-semicolons` | bool | allow the use of semicolons in query args ([required for some legacy applications](https://github.com/golang/go/issues/25192)) | `false` |
 | `--api-route` | string \| list | return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex | |
 | `--approval-prompt` | string | OAuth approval_prompt | `"force"` |
 | `--auth-logging` | bool | Log authentication attempts | true |
