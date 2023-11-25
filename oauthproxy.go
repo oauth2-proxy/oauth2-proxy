@@ -804,9 +804,6 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-	// There are a lot of issues opened complaining about missing CSRF cookies.
-	// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
-	logger.Printf("CSRF cookie %v was sent in request (state=%v).", csrfCookie.Name, hashOAuthState)
 
 	http.Redirect(rw, req, loginURL, http.StatusFound)
 }
