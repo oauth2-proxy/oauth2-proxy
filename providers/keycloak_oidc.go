@@ -16,16 +16,16 @@ type KeycloakOIDCProvider struct {
 }
 
 // NewKeycloakOIDCProvider makes a KeycloakOIDCProvider using the ProviderData
-func NewKeycloakOIDCProvider(p *ProviderData, opts options.KeycloakOptions) *KeycloakOIDCProvider {
+func NewKeycloakOIDCProvider(p *ProviderData, opts options.Provider) *KeycloakOIDCProvider {
 	p.setProviderDefaults(providerDefaults{
 		name: keycloakOIDCProviderName,
 	})
 
 	provider := &KeycloakOIDCProvider{
-		OIDCProvider: NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false}),
+		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 	}
 
-	provider.addAllowedRoles(opts.Roles)
+	provider.addAllowedRoles(opts.KeycloakConfig.Roles)
 	return provider
 }
 
