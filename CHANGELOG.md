@@ -21,7 +21,7 @@
 - [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
 - [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings.
 - [#2311](https://github.com/oauth2-proxy/oauth2-proxy/pull/2311) runtime error: index out of range (0) with length 0 (@miguelborges99)
-- 
+
 # V7.5.1
 
 ## Release Highlights
