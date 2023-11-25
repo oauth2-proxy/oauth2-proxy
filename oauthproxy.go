@@ -798,8 +798,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	loginURL := p.provider.GetLoginURL(callbackRedirect, encodeState(hashOAuthState, appRedirect),
 		csrf.HashOIDCNonce(), extraParams)
 
-	_, err := csrf.SetCookie(rw, req)
-	if err != nil {
+	if _, err := csrf.SetCookie(rw, req); err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
