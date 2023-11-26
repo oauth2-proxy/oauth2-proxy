@@ -40,7 +40,7 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	}
 	switch providerConfig.Type {
 	case options.ADFSProvider:
-		return NewADFSProvider(providerData, providerConfig.ADFSConfig), nil
+		return NewADFSProvider(providerData, providerConfig), nil
 	case options.AzureProvider:
 		return NewAzureProvider(providerData, providerConfig.AzureConfig), nil
 	case options.BitbucketProvider:
@@ -52,13 +52,13 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	case options.GitHubProvider:
 		return NewGitHubProvider(providerData, providerConfig.GitHubConfig), nil
 	case options.GitLabProvider:
-		return NewGitLabProvider(providerData, providerConfig.GitLabConfig)
+		return NewGitLabProvider(providerData, providerConfig)
 	case options.GoogleProvider:
 		return NewGoogleProvider(providerData, providerConfig.GoogleConfig)
 	case options.KeycloakProvider:
 		return NewKeycloakProvider(providerData, providerConfig.KeycloakConfig), nil
 	case options.KeycloakOIDCProvider:
-		return NewKeycloakOIDCProvider(providerData, providerConfig.KeycloakConfig), nil
+		return NewKeycloakOIDCProvider(providerData, providerConfig), nil
 	case options.LinkedInProvider:
 		return NewLinkedInProvider(providerData), nil
 	case options.LoginGovProvider:
