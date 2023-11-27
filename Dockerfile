@@ -43,7 +43,7 @@ RUN case ${TARGETPLATFORM} in \
     printf "Building OAuth2 Proxy for arch ${GOARCH}\n" && \
     GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem
 
-# Copy binary to distroless
+# Copy binary to runtime image
 FROM ${RUNTIME_IMAGE}
 COPY nsswitch.conf /etc/nsswitch.conf
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy
