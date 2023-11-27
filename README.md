@@ -1,4 +1,4 @@
-![OAuth2 Proxy](/docs/static/img/logos/OAuth2_Proxy_horizontal.svg)
+![OAuth2 Proxy](docs/static/img/logos/OAuth2_Proxy_horizontal.svg)
 
 [![Continuous Integration](https://github.com/oauth2-proxy/oauth2-proxy/actions/workflows/ci.yaml/badge.svg)](https://github.com/oauth2-proxy/oauth2-proxy/actions/workflows/ci.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/oauth2-proxy/oauth2-proxy)](https://goreportcard.com/report/github.com/oauth2-proxy/oauth2-proxy)
@@ -7,7 +7,7 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/maintainability)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/test_coverage)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/test_coverage)
 
-A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
+A reverse proxy and static file server that provides authentication using Providers (Google, Keycloak, GitHub and others)
 to validate accounts by email, domain or group.
 
 **Note:** This repository was forked from [bitly/OAuth2_Proxy](https://github.com/bitly/oauth2_proxy) on 27/11/2018.
@@ -17,17 +17,24 @@ A list of changes can be seen in the [CHANGELOG](CHANGELOG.md).
 **Note:** This project was formerly hosted as `pusher/oauth2_proxy` but has been renamed as of 29/03/2020 to `oauth2-proxy/oauth2-proxy`.
 Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-proxy` and binaries will be named `oauth2-proxy`.
 
-![Sign In Page](https://cloud.githubusercontent.com/assets/45028/4970624/7feb7dd8-6886-11e4-93e0-c9904af44ea8.png)
+![Sign In Page](docs/static/img/sign-in-page.png)
 
 ## Installation
 
 1.  Choose how to deploy:
 
-    a. Download [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.5.0`)
+    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.5.1`)
 
-    b. Build with `$ go install github.com/oauth2-proxy/oauth2-proxy/v7@latest` which will put the binary in `$GOROOT/bin`
+    b. Using Go to install the latest release
+    ```bash
+    $ go install github.com/oauth2-proxy/oauth2-proxy/v7@latest
+    # which will put the binary in `$GOROOT/bin`
+    ```
+    c. Using a [Prebuilt Docker Image](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, PPC64LE, ARMv6, ARMv7, and ARM64 available)
 
-    c. Using the prebuilt docker image [quay.io/oauth2-proxy/oauth2-proxy](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, PPC64LE, ARMv6, ARMv7, and ARM64 available)
+    d. Using a [Pre-Release Nightly Docker Image](https://quay.io/oauth2-proxy/oauth2-proxy-nightly) (AMD64, PPC64LE, ARMv6, ARMv7, and ARM64 available)
+
+    e. Using the official [Kubernetes manifest](https://github.com/oauth2-proxy/manifests) (Helm)
 
     Prebuilt binaries can be validated by extracting the file and verifying it against the `sha256sum.txt` checksum file provided for each release starting with version `v3.0.0`.
 
@@ -50,7 +57,7 @@ See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/s
 
 Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/docs/).
 
-![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
+![OAuth2 Proxy Architecture](docs/static/img/architecture.svg)
 
 ## Getting Involved
 

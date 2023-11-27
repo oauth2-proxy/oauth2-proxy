@@ -67,7 +67,7 @@ module.exports = {
         id: 'community/security',
       },
       collapsed: false,
-      items: ['community/security'],
+      items: ['community/contribution', 'community/security'],
     },
   ],
 };

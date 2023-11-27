@@ -33,6 +33,7 @@
       "label": "Community",
       "collapsed": false,
       "items": [
+        "community/contribution",
         "community/security"
       ]
     }
