@@ -8,19 +8,19 @@
 # Or:
 #    make <command> (eg. make up, make down)
 #
-# Access http://localhost:4180 to initiate a login cycle
+# Access http://oauth2-proxy.localtest.me:4180 to initiate a login cycle
 version: '3.0'
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.0
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
     command: --config /oauth2-proxy.cfg
-    ports:
-      - 4180:4180/tcp
     hostname: oauth2-proxy
     volumes:
       - "./oauth2-proxy.cfg:/oauth2-proxy.cfg"
     restart: unless-stopped
+    ports:
+      - 4180:4180/tcp
     networks:
       dex: {}
       httpbin: {}
@@ -31,16 +31,16 @@ services:
     container_name: dex
     image: ghcr.io/dexidp/dex:v2.30.3
     command: dex serve /dex.yaml
-    ports:
-      - 4190:4190/tcp
     hostname: dex
     volumes:
       - "./dex.yaml:/dex.yaml"
     restart: unless-stopped
+    ports:
+      - 4190:4190/tcp
     networks:
       dex:
         aliases:
-        - dex.localhost
+          - dex.localtest.me
       etcd: {}
     depends_on:
       - etcd
@@ -50,7 +50,9 @@ services:
     ports:
       - 8080:80/tcp
     networks:
-      httpbin: {}
+      httpbin:
+        aliases:
+          - httpbin.localtest.me
   etcd:
     container_name: etcd
     image: gcr.io/etcd-development/etcd:v3.4.7
