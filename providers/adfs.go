@@ -29,7 +29,7 @@ const (
 )
 
 // NewADFSProvider initiates a new ADFSProvider
-func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
+func NewADFSProvider(p *ProviderData, opts options.Provider) *ADFSProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:  adfsProviderName,
 		scope: adfsDefaultScope,
@@ -46,11 +46,11 @@ func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
 		}
 	}
 
-	oidcProvider := NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false})
+	oidcProvider := NewOIDCProvider(p, opts.OIDCConfig)
 
 	return &ADFSProvider{
 		OIDCProvider:    oidcProvider,
-		skipScope:       opts.SkipScope,
+		skipScope:       opts.ADFSConfig.SkipScope,
 		oidcEnrichFunc:  oidcProvider.EnrichSession,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
