@@ -370,14 +370,6 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string, error) {
 	header := makeAzureHeader(accessToken)
 	endpoint := p.Data().ValidateURL.String()
-	if len(header) == 0 {
-		params := url.Values{"access_token": {accessToken}}
-		if hasQueryParams(endpoint) {
-			endpoint = endpoint + "&" + params.Encode()
-		} else {
-			endpoint = endpoint + "?" + params.Encode()
-		}
-	}
 
 	var jsonResponse struct {
 		Name string `json:"name"`
