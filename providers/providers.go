@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
-	"golang.org/x/oauth2"
-
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"golang.org/x/oauth2"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
