@@ -663,23 +663,26 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers := Providers{}
 
 	provider := Provider{
-		ClientID:              l.ClientID,
-		ClientSecret:          l.ClientSecret,
-		ClientSecretFile:      l.ClientSecretFile,
-		Type:                  ProviderType(l.ProviderType),
-		CAFiles:               l.ProviderCAFiles,
-		SSLInsecureSkipVerify: l.SslInsecureSkipVerify,
-		TLSCertFile:           l.TLSCertFile,
-		TLSKeyFile:            l.TLSKeyFile,
-		UseSystemTrustStore:   l.UseSystemTrustStore,
-		LoginURL:              l.LoginURL,
-		RedeemURL:             l.RedeemURL,
-		ProfileURL:            l.ProfileURL,
-		ProtectedResource:     l.ProtectedResource,
-		ValidateURL:           l.ValidateURL,
-		Scope:                 l.Scope,
-		AllowedGroups:         l.AllowedGroups,
-		CodeChallengeMethod:   l.CodeChallengeMethod,
+		ClientID:            l.ClientID,
+		ClientSecret:        l.ClientSecret,
+		ClientSecretFile:    l.ClientSecretFile,
+		Type:                ProviderType(l.ProviderType),
+		LoginURL:            l.LoginURL,
+		RedeemURL:           l.RedeemURL,
+		ProfileURL:          l.ProfileURL,
+		ProtectedResource:   l.ProtectedResource,
+		ValidateURL:         l.ValidateURL,
+		Scope:               l.Scope,
+		AllowedGroups:       l.AllowedGroups,
+		CodeChallengeMethod: l.CodeChallengeMethod,
+	}
+
+	provider.TLS = ProviderTLS{
+		CAFiles:             l.ProviderCAFiles,
+		InsecureSkipVerify:  l.SslInsecureSkipVerify,
+		CertFile:            l.TLSCertFile,
+		KeyFile:             l.TLSKeyFile,
+		UseSystemTrustStore: l.UseSystemTrustStore,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC

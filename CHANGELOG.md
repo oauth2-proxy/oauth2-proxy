@@ -20,6 +20,7 @@
 - [#2297](https://github.com/oauth2-proxy/oauth2-proxy/pull/2297) Add nightly build and push (@tuunit)
 - [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
 - [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings.
+- [#1838](https://github.com/oauth2-proxy/oauth2-proxy/pull/1838) Add configuration for provider client mTLS
 
 # V7.5.1
 
@@ -46,7 +47,6 @@ N/A
 - [#2208](https://github.com/oauth2-proxy/oauth2-proxy/pull/2208) Improved session documentation (@lathspell)
 - [#2229](https://github.com/oauth2-proxy/oauth2-proxy/pull/2229) bugfix: default scopes for OIDCProvider based providers (@tuunit)
 - [#2194](https://github.com/oauth2-proxy/oauth2-proxy/pull/2194) Fix Gitea token validation (@tuunit)
-- [#1838](https://github.com/oauth2-proxy/oauth2-proxy/pull/1838) Add configuration for provider client mTLS
 
 # V7.5.0
 

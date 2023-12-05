@@ -39,7 +39,7 @@ func GetCertPool(paths []string, useSystemPool bool) (*x509.CertPool, error) {
 func getSystemCertPool() (*x509.CertPool, error) {
 	rootPool, err := x509.SystemCertPool()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed getting system cert pool: %w", err)
 	}
 
 	if rootPool == nil {
@@ -91,7 +91,7 @@ func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, useSystemP
 	} else if len(caFiles) > 0 {
 		pool, err := GetCertPool(caFiles, useSystemPool)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not build TLS truststore for client: %w", err)
 		}
 
 		transport.TLSClientConfig.RootCAs = pool
@@ -100,7 +100,7 @@ func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, useSystemP
 	if certFile != "" && keyFile != "" {
 		certs, err := getClientCertificates(certFile, keyFile)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to parse TLS client certificates: %w", err)
 		}
 		transport.TLSClientConfig.Certificates = certs
 	}

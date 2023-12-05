@@ -3,9 +3,10 @@ package providers
 import (
 	"context"
 	"fmt"
+	"net/url"
+
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	"golang.org/x/oauth2"
-	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -116,15 +117,15 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		ClientSecretFile: providerConfig.ClientSecretFile,
 	}
 
-	client, err := util.GetHTTPClient(providerConfig.TLSCertFile, providerConfig.TLSKeyFile, providerConfig.SSLInsecureSkipVerify, providerConfig.UseSystemTrustStore, providerConfig.CAFiles...)
+	client, err := util.GetHTTPClient(providerConfig.TLS.CertFile, providerConfig.TLS.KeyFile, providerConfig.TLS.InsecureSkipVerify, providerConfig.TLS.UseSystemTrustStore, providerConfig.TLS.CAFiles...)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse tls configuration for provider client: %w", err)
 	}
 
 	p.Client = client
 	ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, client)
-	if err = configureVerifier(ctx, providerConfig, p); err != nil {
-		return nil, err
+	if err := configureVerifier(ctx, providerConfig, p); err != nil {
+		return nil, fmt.Errorf("unable to confiigure token verifier for provider: %w", err)
 	}
 
 	errs := []error{}
