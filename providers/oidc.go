@@ -108,8 +108,8 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 		logger.Errorf("id_token verification failed: %v", err)
 		return false
 	}
-
-	if p.SkipNonce {
+	var action = s.Action
+	if p.SkipNonce || action == "refresh" {
 		return true
 	}
 	err = p.checkNonce(s)
@@ -126,7 +126,7 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 	if s == nil || s.RefreshToken == "" {
 		return false, nil
 	}
-
+	s.Action = "refresh"
 	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
