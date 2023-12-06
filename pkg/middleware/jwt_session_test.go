@@ -108,7 +108,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rw := httptest.NewRecorder()
 
 				sessionLoaders := []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier, false),
+					middlewareapi.CreateTokenToSessionFunc(verifier),
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -182,7 +182,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 			j = &jwtSessionLoader{
 				jwtRegex: regexp.MustCompile(jwtRegexFormat),
 				sessionLoaders: []middlewareapi.TokenToSessionFunc{
-					middlewareapi.CreateTokenToSessionFunc(verifier, false),
+					middlewareapi.CreateTokenToSessionFunc(verifier),
 				},
 			}
 		})
@@ -405,12 +405,11 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 		}
 
 		type tokenToSessionTableInput struct {
-			idToken              idTokenClaims
-			allowUnverifiedEmail bool
-			expectedErr          error
-			expectedUser         string
-			expectedEmail        string
-			expectedExpires      *time.Time
+			idToken         idTokenClaims
+			expectedErr     error
+			expectedUser    string
+			expectedEmail   string
+			expectedExpires *time.Time
 		}
 
 		DescribeTable("when creating a session from an IDToken",
@@ -434,7 +433,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 				rawIDToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, in.idToken).SignedString(key)
 				Expect(err).ToNot(HaveOccurred())
 
-				session, err := middlewareapi.CreateTokenToSessionFunc(verifier, in.allowUnverifiedEmail)(ctx, rawIDToken)
+				session, err := middlewareapi.CreateTokenToSessionFunc(verifier)(ctx, rawIDToken)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 					Expect(session).To(BeNil())
@@ -462,29 +461,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 						Subject:   "123456789",
 					},
 				},
-				allowUnverifiedEmail: false,
-				expectedErr:          nil,
-				expectedUser:         "123456789",
-				expectedEmail:        "123456789",
-				expectedExpires:      &expiresFuture,
-			}),
-			Entry("with no email (Unverified Allowed)", tokenToSessionTableInput{
-				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
-						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
-						Subject:   "123456789",
-					},
-				},
-				allowUnverifiedEmail: true,
-				expectedErr:          nil,
-				expectedUser:         "123456789",
-				expectedEmail:        "123456789",
-				expectedExpires:      &expiresFuture,
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "123456789",
+				expectedExpires: &expiresFuture,
 			}),
 			Entry("with a verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
@@ -500,31 +480,10 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Email:    "foo@example.com",
 					Verified: &verified,
 				},
-				allowUnverifiedEmail: false,
-				expectedErr:          nil,
-				expectedUser:         "123456789",
-				expectedEmail:        "foo@example.com",
-				expectedExpires:      &expiresFuture,
-			}),
-			Entry("with a verified email (Unverified Allowed)", tokenToSessionTableInput{
-				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
-						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
-						Subject:   "123456789",
-					},
-					Email:    "foo@example.com",
-					Verified: &verified,
-				},
-				allowUnverifiedEmail: true,
-				expectedErr:          nil,
-				expectedUser:         "123456789",
-				expectedEmail:        "foo@example.com",
-				expectedExpires:      &expiresFuture,
+				expectedErr:     nil,
+				expectedUser:    "123456789",
+				expectedEmail:   "foo@example.com",
+				expectedExpires: &expiresFuture,
 			}),
 			Entry("with a non-verified email", tokenToSessionTableInput{
 				idToken: idTokenClaims{
@@ -540,28 +499,7 @@ Nnc3a3lGVWFCNUMxQnNJcnJMTWxka1dFaHluYmI4Ongtb2F1dGgtYmFzaWM=`
 					Email:    "foo@example.com",
 					Verified: &notVerified,
 				},
-				allowUnverifiedEmail: false,
-				expectedErr:          errors.New("email in id_token (foo@example.com) isn't verified"),
-			}),
-			Entry("with a non-verified email (Unverified Allowed)", tokenToSessionTableInput{
-				idToken: idTokenClaims{
-					StandardClaims: jwt.StandardClaims{
-						Audience:  "asdf1234",
-						ExpiresAt: expiresFuture.Unix(),
-						Id:        "id-some-id",
-						IssuedAt:  time.Now().Unix(),
-						Issuer:    "https://issuer.example.com",
-						NotBefore: 0,
-						Subject:   "123456789",
-					},
-					Email:    "foo@example.com",
-					Verified: &notVerified,
-				},
-				allowUnverifiedEmail: true,
-				expectedErr:          nil,
-				expectedUser:         "123456789",
-				expectedEmail:        "foo@example.com",
-				expectedExpires:      &expiresFuture,
+				expectedErr: errors.New("email in id_token (foo@example.com) isn't verified"),
 			}),
 		)
 	})

@@ -142,7 +142,7 @@ func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionStat
 // CreateSessionFromToken converts Bearer IDTokens into sessions
 func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
 	if p.Verifier != nil {
-		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify, p.AllowUnverifiedEmail)(ctx, token)
+		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)
 	}
 	return nil, ErrNotImplemented
 }

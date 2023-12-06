@@ -22,9 +22,10 @@ type idTokenVerifier struct {
 
 // IDTokenVerificationOptions options for the oidc.idTokenVerifier that are required to verify an ID Token
 type IDTokenVerificationOptions struct {
-	AudienceClaims []string
-	ClientID       string
-	ExtraAudiences []string
+	AudienceClaims       []string
+	ClientID             string
+	ExtraAudiences       []string
+	AllowUnverifiedEmail bool
 }
 
 // NewVerifier constructs a new idTokenVerifier
@@ -54,6 +55,10 @@ func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 	}
 
 	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
+		return nil, err
+	}
+
+	if isVerifiedEmail, err := v.verifyEmail(token); !isVerifiedEmail {
 		return nil, err
 	}
 
@@ -106,4 +111,31 @@ func (v *idTokenVerifier) interfaceSliceToString(slice interface{}) []string {
 		strings = append(strings, s.Index(i).Interface().(string))
 	}
 	return strings
+}
+
+func (v *idTokenVerifier) verifyEmail(token *oidc.IDToken) (bool, error) {
+
+	if v.verificationOptions.AllowUnverifiedEmail {
+		return true, nil
+	}
+
+	var claims struct {
+		Subject  string `json:"sub"`
+		Email    string `json:"email"`
+		Verified *bool  `json:"email_verified"`
+	}
+
+	if err := token.Claims(&claims); err != nil {
+		return false, fmt.Errorf("failed to parse bearer token claims: %v", err)
+	}
+
+	if claims.Email == "" {
+		claims.Email = claims.Subject
+	}
+
+	if claims.Verified != nil && !*claims.Verified {
+		return false, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	}
+
+	return true, nil
 }

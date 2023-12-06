@@ -145,8 +145,8 @@ var _ = Describe("Verify", func() {
 			Aud:      "1226737",
 		})
 
-		Expect(err).To(MatchError("audience claims [not_exists] do not exist in claims: " +
-			"map[aud:1226737 client_id:1226737 iss:https://foo]"))
+		Expect(err).To(MatchError("audience claims [not_exists] do not exist in claims: map[aud:1226737 " +
+			"client_id:1226737 email: email_verified:<nil> iss:https://foo sub:]"))
 		Expect(result).To(BeNil())
 	})
 
@@ -181,12 +181,82 @@ var _ = Describe("Verify", func() {
 		Expect(result.Issuer).To(Equal("https://foo"))
 		Expect(result.Audience).To(Equal([]string{"1226737"}))
 	})
+
+	It("Succeeds with default email_verified behavior", func() {
+		verified := true
+		_, err := verify(ctx, IDTokenVerificationOptions{
+			AudienceClaims: []string{"aud"},
+			ClientID:       "1226737",
+			ExtraAudiences: []string{},
+		}, payload{
+			Iss:      "https://foo",
+			Aud:      "1226737",
+			Email:    "test@example.com",
+			Verified: &verified,
+		})
+
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("Succeeds if unverified email is allowed", func() {
+		verified := false
+		_, err := verify(ctx, IDTokenVerificationOptions{
+			AudienceClaims:       []string{"aud"},
+			ClientID:             "1226737",
+			ExtraAudiences:       []string{},
+			AllowUnverifiedEmail: true,
+		}, payload{
+			Iss:      "https://foo",
+			Aud:      "1226737",
+			Email:    "test@example.com",
+			Verified: &verified,
+		})
+
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("Fails with with default email_verified behavior", func() {
+		verified := false
+		_, err := verify(ctx, IDTokenVerificationOptions{
+			AudienceClaims: []string{"aud"},
+			ClientID:       "1226737",
+			ExtraAudiences: []string{},
+		}, payload{
+			Iss:      "https://foo",
+			Aud:      "1226737",
+			Email:    "test@example.com",
+			Verified: &verified,
+		})
+
+		Expect(err).To(MatchError("email in id_token (test@example.com) isn't verified"))
+	})
+
+	It("Fails with with non default email_verified behavior", func() {
+		verified := false
+		_, err := verify(ctx, IDTokenVerificationOptions{
+			AudienceClaims:       []string{"aud"},
+			ClientID:             "1226737",
+			ExtraAudiences:       []string{},
+			AllowUnverifiedEmail: false,
+		}, payload{
+			Iss:      "https://foo",
+			Aud:      "1226737",
+			Email:    "test@example.com",
+			Verified: &verified,
+		})
+
+		Expect(err).To(MatchError("email in id_token (test@example.com) isn't verified"))
+	})
+
 })
 
 type payload struct {
 	Iss      string      `json:"iss,omitempty"`
 	Aud      interface{} `json:"aud,omitempty"`
 	ClientID string      `json:"client_id,omitempty"`
+	Subject  string      `json:"sub"`
+	Email    string      `json:"email"`
+	Verified *bool       `json:"email_verified"`
 }
 
 type jwtToken struct {
