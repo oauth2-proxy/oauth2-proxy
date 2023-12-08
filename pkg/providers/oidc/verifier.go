@@ -54,15 +54,23 @@ func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
 	}
 
-	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
-		return nil, err
-	}
-
-	if isVerifiedEmail, err := v.verifyEmail(token); !isVerifiedEmail {
+	if hasVerifiedClaims, err := v.verifyClaims(token, claims); !hasVerifiedClaims {
 		return nil, err
 	}
 
 	return token, err
+}
+
+func (v *idTokenVerifier) verifyClaims(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
+	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
+		return false, err
+	}
+
+	if isVerifiedEmail, err := v.verifyEmail(token); !isVerifiedEmail {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (v *idTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
