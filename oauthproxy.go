@@ -794,12 +794,9 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	}
 
 	callbackRedirect := p.getOAuthRedirectURI(req)
-	loginURL := p.provider.GetLoginURL(
-		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect),
-		csrf.HashOIDCNonce(),
-		extraParams,
-	)
+	hashOAuthState := csrf.HashOAuthState()
+	loginURL := p.provider.GetLoginURL(callbackRedirect, encodeState(hashOAuthState, appRedirect),
+		csrf.HashOIDCNonce(), extraParams)
 
 	if _, err := csrf.SetCookie(rw, req); err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
@@ -831,9 +828,22 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
+	nonce, appRedirect, err := decodeState(req)
 	if err != nil {
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
+		logger.Errorf("Error while parsing OAuth2 state: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// calculate the cookie name
+	cookieName := cookies.CalculateCookieName(p.CookieOptions, nonce)
+	// Try to find the CSRF cookie and decode it
+	csrf, err := cookies.LoadCSRFCookie(req, cookieName, p.CookieOptions)
+	if err != nil {
+		// There are a lot of issues opened complaining about missing CSRF cookies.
+		// Try to log the INs and OUTs of OAuthProxy, to be easier to analyse these issues.
+		LoggingCSRFCookiesInOAuthCallback(req, cookieName)
+		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie: %s (state=%s)", err, nonce)
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
@@ -853,13 +863,6 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	csrf.ClearCookie(rw, req)
-
-	nonce, appRedirect, err := decodeState(req)
-	if err != nil {
-		logger.Errorf("Error while parsing OAuth2 state: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
 
 	if !csrf.CheckOAuthState(nonce) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
@@ -1247,4 +1250,28 @@ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
 	// we need to send some JSON response because we set the Content-Type to
 	// application/json
 	rw.Write([]byte("{}"))
+}
+
+// LoggingCSRFCookiesInOAuthCallback Log all CSRF cookies found in HTTP request OAuth callback,
+// which were successfully parsed
+func LoggingCSRFCookiesInOAuthCallback(req *http.Request, cookieName string) {
+	cookies := req.Cookies()
+	if len(cookies) == 0 {
+		logger.Println(req, logger.AuthFailure, "No cookies were found in OAuth callback.")
+	} else {
+		var anyFound = false
+		for i := range cookies {
+			var c = cookies[i]
+			if cookieName == c.Name {
+				logger.Println(req, logger.AuthFailure, "The CSRF cookie %s was found in OAuth callback.", c.Name)
+				anyFound = true
+			} else if strings.Contains(c.Name, "_csrf") {
+				logger.Println(req, logger.AuthFailure, "The CSRF cookie %s was found in OAuth callback, but it is not the expected one (%s).", c.Name, cookieName)
+				anyFound = true
+			}
+		}
+		if !anyFound {
+			logger.Println(req, logger.AuthFailure, "Cookies were found in OAuth callback, but none was a CSRF cookie.")
+		}
+	}
 }
