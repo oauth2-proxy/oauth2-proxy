@@ -116,17 +116,17 @@ type OAuthProxy struct {
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
-func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
+func NewOAuthProxy(opts *options.AlphaOptions, validator func(string) bool) (*OAuthProxy, error) {
 	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
 	var basicAuthValidator basic.Validator
-	if opts.HtpasswdFile != "" {
-		logger.Printf("using htpasswd file: %s", opts.HtpasswdFile)
+	if opts.ProxyOptions.HtpasswdFile != "" {
+		logger.Printf("using htpasswd file: %s", opts.ProxyOptions.HtpasswdFile)
 		var err error
-		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.HtpasswdFile)
+		basicAuthValidator, err = basic.NewHTPasswdValidator(opts.ProxyOptions.HtpasswdFile)
 		if err != nil {
 			return nil, fmt.Errorf("could not validate htpasswd: %v", err)
 		}
@@ -138,15 +138,15 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
-		TemplatesPath:    opts.Templates.Path,
-		CustomLogo:       opts.Templates.CustomLogo,
-		ProxyPrefix:      opts.ProxyPrefix,
-		Footer:           opts.Templates.Footer,
+		TemplatesPath:    opts.PageTemplates.Path,
+		CustomLogo:       opts.PageTemplates.CustomLogo,
+		ProxyPrefix:      opts.ProxyOptions.ProxyPrefix,
+		Footer:           opts.PageTemplates.Footer,
 		Version:          VERSION,
-		Debug:            opts.Templates.Debug,
+		Debug:            opts.PageTemplates.Debug,
 		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
 		SignInMessage:    buildSignInMessage(opts),
-		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+		DisplayLoginForm: basicAuthValidator != nil && opts.PageTemplates.DisplayLoginForm,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error initialising page writer: %v", err)
@@ -157,15 +157,15 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising upstream proxy: %v", err)
 	}
 
-	if opts.SkipJwtBearerTokens {
+	if opts.ProxyOptions.SkipJwtBearerTokens {
 		logger.Printf("Skipping JWT tokens from configured OIDC issuer: %q", opts.Providers[0].OIDCConfig.IssuerURL)
-		for _, issuer := range opts.ExtraJwtIssuers {
+		for _, issuer := range opts.ProxyOptions.ExtraJwtIssuers {
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
 	}
 	redirectURL := opts.GetRedirectURL()
 	if redirectURL.Path == "" {
-		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyPrefix)
+		redirectURL.Path = fmt.Sprintf("%s/callback", opts.ProxyOptions.ProxyPrefix)
 	}
 
 	logger.Printf("OAuthProxy configured for %s Client ID: %s", provider.Data().ProviderName, opts.Providers[0].ClientID)
@@ -177,7 +177,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	logger.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domains:%s path:%s samesite:%s refresh:%s", opts.Cookie.Name, opts.Cookie.Secure, opts.Cookie.HTTPOnly, opts.Cookie.Expire, strings.Join(opts.Cookie.Domains, ","), opts.Cookie.Path, opts.Cookie.SameSite, refresh)
 
 	trustedIPs := ip.NewNetSet()
-	for _, ipStr := range opts.TrustedIPs {
+	for _, ipStr := range opts.ProxyOptions.TrustedIPs {
 		if ipNet := ip.ParseIPNet(ipStr); ipNet != nil {
 			trustedIPs.AddIPNet(*ipNet)
 		} else {
@@ -205,9 +205,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
 	}
 
-	redirectValidator := redirect.NewValidator(opts.WhitelistDomains)
+	redirectValidator := redirect.NewValidator(opts.ProxyOptions.WhitelistDomains)
 	appDirector := redirect.NewAppDirector(redirect.AppDirectorOpts{
-		ProxyPrefix: opts.ProxyPrefix,
+		ProxyPrefix: opts.ProxyOptions.ProxyPrefix,
 		Validator:   redirectValidator,
 	})
 
@@ -215,26 +215,26 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		CookieOptions: &opts.Cookie,
 		Validator:     validator,
 
-		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
+		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyOptions.ProxyPrefix),
 
-		ProxyPrefix:          opts.ProxyPrefix,
+		ProxyPrefix:          opts.ProxyOptions.ProxyPrefix,
 		provider:             provider,
 		sessionStore:         sessionStore,
 		redirectURL:          redirectURL,
-		relativeRedirectURL:  opts.RelativeRedirectURL,
+		relativeRedirectURL:  opts.ProxyOptions.RelativeRedirectURL,
 		apiRoutes:            apiRoutes,
 		allowedRoutes:        allowedRoutes,
-		whitelistDomains:     opts.WhitelistDomains,
-		skipAuthPreflight:    opts.SkipAuthPreflight,
-		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
+		whitelistDomains:     opts.ProxyOptions.WhitelistDomains,
+		skipAuthPreflight:    opts.ProxyOptions.SkipAuthPreflight,
+		skipJwtBearerTokens:  opts.ProxyOptions.SkipJwtBearerTokens,
 		realClientIPParser:   opts.GetRealClientIPParser(),
-		SkipProviderButton:   opts.SkipProviderButton,
-		forceJSONErrors:      opts.ForceJSONErrors,
-		allowQuerySemicolons: opts.AllowQuerySemicolons,
+		SkipProviderButton:   opts.ProxyOptions.SkipProviderButton,
+		forceJSONErrors:      opts.ProxyOptions.ForceJSONErrors,
+		allowQuerySemicolons: opts.ProxyOptions.AllowQuerySemicolons,
 		trustedIPs:           trustedIPs,
 
 		basicAuthValidator: basicAuthValidator,
-		basicAuthGroups:    opts.HtpasswdUserGroups,
+		basicAuthGroups:    opts.ProxyOptions.HtpasswdUserGroups,
 		sessionChain:       sessionChain,
 		headersChain:       headersChain,
 		preAuthChain:       preAuthChain,
@@ -242,9 +242,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
-		encodeState:        opts.EncodeState,
+		encodeState:        opts.ProxyOptions.EncodeState,
 	}
-	p.buildServeMux(opts.ProxyPrefix)
+	p.buildServeMux(opts.ProxyOptions.ProxyPrefix)
 
 	if err := p.setupServer(opts); err != nil {
 		return nil, fmt.Errorf("error setting up server: %v", err)
@@ -253,6 +253,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	return p, nil
 }
 
+// Start starts the authentication proxy server
 func (p *OAuthProxy) Start() error {
 	if p.server == nil {
 		// We have to call setupServer before Start is called.
@@ -273,7 +274,7 @@ func (p *OAuthProxy) Start() error {
 	return p.server.Start(ctx)
 }
 
-func (p *OAuthProxy) setupServer(opts *options.Options) error {
+func (p *OAuthProxy) setupServer(opts *options.AlphaOptions) error {
 	serverOpts := proxyhttp.Opts{
 		Handler:           p,
 		BindAddress:       opts.Server.BindAddress,
@@ -282,7 +283,7 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 	}
 
 	// Option: AllowQuerySemicolons
-	if opts.AllowQuerySemicolons {
+	if opts.ProxyOptions.AllowQuerySemicolons {
 		serverOpts.Handler = http.AllowQuerySemicolons(serverOpts.Handler)
 	}
 
@@ -348,10 +349,10 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore) (alice.Chain, error) {
-	chain := alice.New(middleware.NewScope(opts.ReverseProxy, opts.Logging.RequestIDHeader))
+func buildPreAuthChain(opts *options.AlphaOptions, sessionStore sessionsapi.SessionStore) (alice.Chain, error) {
+	chain := alice.New(middleware.NewScope(opts.ProxyOptions.ReverseProxy, opts.Logging.RequestIDHeader))
 
-	if opts.ForceHTTPS {
+	if opts.ProxyOptions.ForceHTTPS {
 		_, httpsPort, err := net.SplitHostPort(opts.Server.SecureBindAddress)
 		if err != nil {
 			return alice.Chain{}, fmt.Errorf("invalid HTTPS address %q: %v", opts.Server.SecureBindAddress, err)
@@ -359,9 +360,9 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 		chain = chain.Append(middleware.NewRedirectToHTTPS(httpsPort))
 	}
 
-	healthCheckPaths := []string{opts.PingPath}
-	healthCheckUserAgents := []string{opts.PingUserAgent}
-	if opts.GCPHealthChecks {
+	healthCheckPaths := []string{opts.ProbeOptions.PingPath}
+	healthCheckUserAgents := []string{opts.ProbeOptions.PingUserAgent}
+	if opts.ProbeOptions.LegacyGCPHealthChecks {
 		logger.Printf("WARNING: GCP HealthChecks are now deprecated: Reconfigure apps to use the ping path for liveness and readiness checks, set the ping user agent to \"GoogleHC/1.0\" to preserve existing behaviour")
 		healthCheckPaths = append(healthCheckPaths, "/liveness_check", "/readiness_check")
 		healthCheckUserAgents = append(healthCheckUserAgents, "GoogleHC/1.0")
@@ -372,14 +373,14 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	if opts.Logging.SilencePing {
 		chain = chain.Append(
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
-			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
+			middleware.NewReadynessCheck(opts.ProbeOptions.ReadyPath, sessionStore),
 			middleware.NewRequestLogger(),
 		)
 	} else {
 		chain = chain.Append(
 			middleware.NewRequestLogger(),
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
-			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
+			middleware.NewReadynessCheck(opts.ProbeOptions.ReadyPath, sessionStore),
 		)
 	}
 
@@ -388,10 +389,10 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	return chain, nil
 }
 
-func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
+func buildSessionChain(opts *options.AlphaOptions, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
 	chain := alice.New()
 
-	if opts.SkipJwtBearerTokens {
+	if opts.ProxyOptions.SkipJwtBearerTokens {
 		sessionLoaders := []middlewareapi.TokenToSessionFunc{
 			provider.CreateSessionFromToken,
 		}
@@ -405,7 +406,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 	}
 
 	if validator != nil {
-		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups, opts.LegacyPreferEmailToUser))
+		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.ProxyOptions.HtpasswdUserGroups, opts.ProxyOptions.LegacyPreferEmailToUser))
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
@@ -418,7 +419,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 	return chain
 }
 
-func buildHeadersChain(opts *options.Options) (alice.Chain, error) {
+func buildHeadersChain(opts *options.AlphaOptions) (alice.Chain, error) {
 	requestInjector, err := middleware.NewRequestHeaderInjector(opts.InjectRequestHeaders)
 	if err != nil {
 		return alice.Chain{}, fmt.Errorf("error constructing request header injector: %v", err)
@@ -432,19 +433,19 @@ func buildHeadersChain(opts *options.Options) (alice.Chain, error) {
 	return alice.New(requestInjector, responseInjector), nil
 }
 
-func buildSignInMessage(opts *options.Options) string {
+func buildSignInMessage(opts *options.AlphaOptions) string {
 	var msg string
-	if len(opts.Templates.Banner) >= 1 {
-		if opts.Templates.Banner == "-" {
+	if len(opts.PageTemplates.Banner) >= 1 {
+		if opts.PageTemplates.Banner == "-" {
 			msg = ""
 		} else {
-			msg = opts.Templates.Banner
+			msg = opts.PageTemplates.Banner
 		}
-	} else if len(opts.EmailDomains) != 0 && opts.AuthenticatedEmailsFile == "" {
-		if len(opts.EmailDomains) > 1 {
-			msg = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.EmailDomains, ", "))
-		} else if opts.EmailDomains[0] != "*" {
-			msg = fmt.Sprintf("Authenticate using %v", opts.EmailDomains[0])
+	} else if len(opts.ProxyOptions.EmailDomains) != 0 && opts.ProxyOptions.AuthenticatedEmailsFile == "" {
+		if len(opts.ProxyOptions.EmailDomains) > 1 {
+			msg = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.ProxyOptions.EmailDomains, ", "))
+		} else if opts.ProxyOptions.EmailDomains[0] != "*" {
+			msg = fmt.Sprintf("Authenticate using %v", opts.ProxyOptions.EmailDomains[0])
 		}
 	}
 	return msg
@@ -460,10 +461,10 @@ func buildProviderName(p providers.Provider, override string) string {
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
 // SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
 // (method=path support)
-func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
-	routes := make([]allowedRoute, 0, len(opts.SkipAuthRegex)+len(opts.SkipAuthRoutes))
+func buildRoutesAllowlist(opts *options.AlphaOptions) ([]allowedRoute, error) {
+	routes := make([]allowedRoute, 0, len(opts.ProxyOptions.SkipAuthRegex)+len(opts.ProxyOptions.SkipAuthRoutes))
 
-	for _, path := range opts.SkipAuthRegex {
+	for _, path := range opts.ProxyOptions.SkipAuthRegex {
 		compiledRegex, err := regexp.Compile(path)
 		if err != nil {
 			return nil, err
@@ -475,7 +476,7 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		})
 	}
 
-	for _, methodPath := range opts.SkipAuthRoutes {
+	for _, methodPath := range opts.ProxyOptions.SkipAuthRoutes {
 		var (
 			method string
 			path   string
@@ -507,10 +508,10 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 }
 
 // buildAPIRoutes builds an []apiRoute from ApiRoutes option
-func buildAPIRoutes(opts *options.Options) ([]apiRoute, error) {
-	routes := make([]apiRoute, 0, len(opts.APIRoutes))
+func buildAPIRoutes(opts *options.AlphaOptions) ([]apiRoute, error) {
+	routes := make([]apiRoute, 0, len(opts.ProxyOptions.APIRoutes))
 
-	for _, path := range opts.APIRoutes {
+	for _, path := range opts.ProxyOptions.APIRoutes {
 		compiledRegex, err := regexp.Compile(path)
 		if err != nil {
 			return nil, err

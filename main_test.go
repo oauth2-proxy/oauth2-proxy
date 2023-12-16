@@ -21,6 +21,13 @@ var _ = Describe("Configuration Loading Suite", func() {
 	format.MaxLength = 50000
 	format.MaxDepth = 10
 
+	const testCoreConfig = `
+cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+email_domains="example.com"
+cookie_secure="false"
+
+redirect_url="http://localhost:4180/oauth2/callback"
+`
 	const testLegacyConfig = `
 http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
@@ -30,7 +37,14 @@ client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 `
 
-	const testAlphaConfig = `
+	const testYamlConfig = `
+proxyOptions:
+  redirectUrl: http://localhost:4180/oauth2/callback
+  emailDomains:
+  - example.com
+cookie:
+  secret: OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w=
+  secure: false
 upstreamConfig:
   proxyrawpath: false
   upstreams:
@@ -89,14 +103,6 @@ providers:
     - force
 `
 
-	const testCoreConfig = `
-cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
-email_domains="example.com"
-cookie_secure="false"
-
-redirect_url="http://localhost:4180/oauth2/callback"
-`
-
 	boolPtr := func(b bool) *bool {
 		return &b
 	}
@@ -106,14 +112,14 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		return &du
 	}
 
-	testExpectedOptions := func() *options.Options {
+	testExpectedOptions := func() *options.AlphaOptions {
 		opts, err := options.NewLegacyOptions().ToOptions()
 		Expect(err).ToNot(HaveOccurred())
 
 		opts.Cookie.Secret = "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
-		opts.EmailDomains = []string{"example.com"}
+		opts.ProxyOptions.EmailDomains = []string{"example.com"}
 		opts.Cookie.Secure = false
-		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
+		opts.ProxyOptions.RedirectURL = "http://localhost:4180/oauth2/callback"
 
 		opts.UpstreamServers = options.UpstreamConfig{
 			Upstreams: []options.Upstream{
@@ -173,49 +179,49 @@ redirect_url="http://localhost:4180/oauth2/callback"
 	}
 
 	type loadConfigurationTableInput struct {
-		configContent      string
-		alphaConfigContent string
-		args               []string
-		extraFlags         func() *pflag.FlagSet
-		expectedOptions    func() *options.Options
-		expectedErr        error
+		legacyConfigContent string
+		yamlConfigContent   string
+		args                []string
+		extraFlags          func() *pflag.FlagSet
+		expectedOptions     func() *options.AlphaOptions
+		expectedErr         error
 	}
 
 	DescribeTable("LoadConfiguration",
 		func(in loadConfigurationTableInput) {
-			var configFileName, alphaConfigFileName string
+			var legacyConfigFilename, yamlConfigFilename string
 
 			defer func() {
-				if configFileName != "" {
-					Expect(os.Remove(configFileName)).To(Succeed())
+				if legacyConfigFilename != "" {
+					Expect(os.Remove(legacyConfigFilename)).To(Succeed())
 				}
-				if alphaConfigFileName != "" {
-					Expect(os.Remove(alphaConfigFileName)).To(Succeed())
+				if yamlConfigFilename != "" {
+					Expect(os.Remove(yamlConfigFilename)).To(Succeed())
 				}
 			}()
 
-			if in.configContent != "" {
+			if in.legacyConfigContent != "" {
 				By("Writing the config to a temporary file", func() {
 					file, err := os.CreateTemp("", "oauth2-proxy-test-config-XXXX.cfg")
 					Expect(err).ToNot(HaveOccurred())
 					defer file.Close()
 
-					configFileName = file.Name()
+					legacyConfigFilename = file.Name()
 
-					_, err = file.WriteString(in.configContent)
+					_, err = file.WriteString(in.legacyConfigContent)
 					Expect(err).ToNot(HaveOccurred())
 				})
 			}
 
-			if in.alphaConfigContent != "" {
+			if in.yamlConfigContent != "" {
 				By("Writing the config to a temporary file", func() {
-					file, err := os.CreateTemp("", "oauth2-proxy-test-alpha-config-XXXX.yaml")
+					file, err := os.CreateTemp("", "oauth2-proxy-test-config-XXXX.yaml")
 					Expect(err).ToNot(HaveOccurred())
 					defer file.Close()
 
-					alphaConfigFileName = file.Name()
+					yamlConfigFilename = file.Name()
 
-					_, err = file.WriteString(in.alphaConfigContent)
+					_, err = file.WriteString(in.yamlConfigContent)
 					Expect(err).ToNot(HaveOccurred())
 				})
 			}
@@ -225,7 +231,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				extraFlags = in.extraFlags()
 			}
 
-			opts, err := loadConfiguration(configFileName, alphaConfigFileName, extraFlags, in.args)
+			opts, err := loadConfiguration(legacyConfigFilename, yamlConfigFilename, extraFlags, in.args)
 			if in.expectedErr != nil {
 				Expect(err).To(MatchError(in.expectedErr.Error()))
 			} else {
@@ -235,30 +241,27 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			Expect(opts).To(EqualOpts(in.expectedOptions()))
 		},
 		Entry("with legacy configuration", loadConfigurationTableInput{
-			configContent:   testCoreConfig + testLegacyConfig,
-			expectedOptions: testExpectedOptions,
+			legacyConfigContent: testCoreConfig + testLegacyConfig,
+			expectedOptions:     testExpectedOptions,
 		}),
-		Entry("with alpha configuration", loadConfigurationTableInput{
-			configContent:      testCoreConfig,
-			alphaConfigContent: testAlphaConfig,
-			expectedOptions:    testExpectedOptions,
+		Entry("with yaml configuration", loadConfigurationTableInput{
+			yamlConfigContent: testYamlConfig,
+			expectedOptions:   testExpectedOptions,
 		}),
 		Entry("with bad legacy configuration", loadConfigurationTableInput{
-			configContent:   testCoreConfig + "unknown_field=\"something\"",
-			expectedOptions: func() *options.Options { return nil },
-			expectedErr:     errors.New("failed to load config: error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_field"),
+			legacyConfigContent: testCoreConfig + "unknown_field=\"something\"",
+			expectedOptions:     func() *options.AlphaOptions { return nil },
+			expectedErr:         errors.New("failed to load config: error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_field"),
 		}),
-		Entry("with bad alpha configuration", loadConfigurationTableInput{
-			configContent:      testCoreConfig,
-			alphaConfigContent: testAlphaConfig + ":",
-			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        fmt.Errorf("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testAlphaConfig, "\n")),
+		Entry("with bad yaml configuration", loadConfigurationTableInput{
+			yamlConfigContent: testYamlConfig + ":",
+			expectedOptions:   func() *options.AlphaOptions { return nil },
+			expectedErr:       fmt.Errorf("failed to load yaml options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testYamlConfig, "\n")),
 		}),
-		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
-			configContent:      testCoreConfig + "unknown_field=\"something\"",
-			alphaConfigContent: testAlphaConfig,
-			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load core options: failed to load config: error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_field"),
+		Entry("with yaml and legacy configuration", loadConfigurationTableInput{
+			legacyConfigContent: testCoreConfig,
+			yamlConfigContent:   testYamlConfig,
+			expectedOptions:     testExpectedOptions,
 		}),
 	)
 })

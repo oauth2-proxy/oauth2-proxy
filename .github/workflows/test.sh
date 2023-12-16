@@ -10,7 +10,7 @@ else
 fi
 
 echo "2. Running test"
-make test
+make test 2>&1 | go-junit-report -set-exit-code > report.xml
 TEST_STATUS=$?
 
 if [ -z $CC_TEST_REPORTER_ID ]; then

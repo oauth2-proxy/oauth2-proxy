@@ -82,11 +82,11 @@ type Upstream struct {
 	// PassHostHeader determines whether the request host header should be proxied
 	// to the upstream server.
 	// Defaults to true.
-	PassHostHeader *bool `json:"passHostHeader,omitempty"`
+	PassHostHeader *bool `json:"passHostHeader"`
 
 	// ProxyWebSockets enables proxying of websockets to upstream servers
 	// Defaults to true.
-	ProxyWebSockets *bool `json:"proxyWebSockets,omitempty"`
+	ProxyWebSockets *bool `json:"proxyWebSockets"`
 
 	// Timeout is the maximum duration the server will wait for a response from the upstream server.
 	// Defaults to 30 seconds.

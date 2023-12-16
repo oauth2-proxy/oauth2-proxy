@@ -33,7 +33,17 @@ func main() {
 	}
 
 	if *convertConfig && *alphaConfig != "" {
-		logger.Fatal("cannot use alpha-config and convert-config-to-alpha together")
+		logger.Fatal("ERROR: cannot use alpha-config and convert-config-to-alpha together")
+	}
+
+	if *config != "" && *alphaConfig != "" {
+		logger.Fatal("ERROR: cannot use config and alpha-config together anymore.\n" +
+			"If you want to convert your legacy config and flags to the new format, use the convert-config-to-alpha flag.")
+	}
+
+	if *alphaConfig != "" && len(os.Args[1:]) > 2 {
+		logger.Fatal("ERROR: cannot use alpha-config with other flags.\n" +
+			"If you want to convert your legacy config and flags to the new format, use the convert-config-to-alpha flag.")
 	}
 
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
@@ -52,7 +62,7 @@ func main() {
 		logger.Fatalf("%s", err)
 	}
 
-	validator := NewValidator(opts.EmailDomains, opts.AuthenticatedEmailsFile)
+	validator := NewValidator(opts.ProxyOptions.EmailDomains, opts.ProxyOptions.AuthenticatedEmailsFile)
 	oauthproxy, err := NewOAuthProxy(opts, validator)
 	if err != nil {
 		logger.Fatalf("ERROR: Failed to initialise OAuth2 Proxy: %v", err)
@@ -66,25 +76,26 @@ func main() {
 // loadConfiguration will load in the user's configuration.
 // It will either load the alpha configuration (if alphaConfig is given)
 // or the legacy configuration.
-func loadConfiguration(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
+func loadConfiguration(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.AlphaOptions, error) {
 	if alphaConfig != "" {
-		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
-		return loadAlphaOptions(config, alphaConfig, extraFlags, args)
+		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice.")
+
+		return loadYamlOptions(alphaConfig)
 	}
 	return loadLegacyOptions(config, extraFlags, args)
 }
 
 // loadLegacyOptions loads the old toml options using the legacy flagset
 // and legacy options struct.
-func loadLegacyOptions(config string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
-	optionsFlagSet := options.NewLegacyFlagSet()
-	optionsFlagSet.AddFlagSet(extraFlags)
-	if err := optionsFlagSet.Parse(args); err != nil {
+func loadLegacyOptions(legacyConfig string, extraFlags *pflag.FlagSet, args []string) (*options.AlphaOptions, error) {
+	legacyFlagSet := options.NewLegacyFlagSet()
+	legacyFlagSet.AddFlagSet(extraFlags)
+	if err := legacyFlagSet.Parse(args); err != nil {
 		return nil, fmt.Errorf("failed to parse flags: %v", err)
 	}
 
 	legacyOpts := options.NewLegacyOptions()
-	if err := options.Load(config, optionsFlagSet, legacyOpts); err != nil {
+	if err := options.Load(legacyConfig, legacyFlagSet, legacyOpts); err != nil {
 		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
@@ -96,50 +107,20 @@ func loadLegacyOptions(config string, extraFlags *pflag.FlagSet, args []string) 
 	return opts, nil
 }
 
-// loadAlphaOptions loads the old style config excluding options converted to
-// the new alpha format, then merges the alpha options, loaded from YAML,
-// into the core configuration.
-func loadAlphaOptions(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
-	opts, err := loadOptions(config, extraFlags, args)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load core options: %v", err)
-	}
-
-	alphaOpts := &options.AlphaOptions{}
-	if err := options.LoadYAML(alphaConfig, alphaOpts); err != nil {
-		return nil, fmt.Errorf("failed to load alpha options: %v", err)
-	}
-
-	alphaOpts.MergeInto(opts)
-	return opts, nil
-}
-
-// loadOptions loads the configuration using the old style format into the
-// core options.Options struct.
-// This means that none of the options that have been converted to alpha config
-// will be loaded using this method.
-func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
-	optionsFlagSet := options.NewFlagSet()
-	optionsFlagSet.AddFlagSet(extraFlags)
-	if err := optionsFlagSet.Parse(args); err != nil {
-		return nil, fmt.Errorf("failed to parse flags: %v", err)
-	}
-
+// loadYamlOptions loads all options using the new structured format
+func loadYamlOptions(alphaConfig string) (*options.AlphaOptions, error) {
 	opts := options.NewOptions()
-	if err := options.Load(config, optionsFlagSet, opts); err != nil {
-		return nil, fmt.Errorf("failed to load config: %v", err)
+	if err := options.LoadYAML(alphaConfig, opts); err != nil {
+		return nil, fmt.Errorf("failed to load yaml options: %v", err)
 	}
 
 	return opts, nil
 }
 
-// printConvertedConfig extracts alpha options from the loaded configuration
+// printConvertedConfig extracts yaml options from the loaded configuration
 // and renders these to stdout in YAML format.
-func printConvertedConfig(opts *options.Options) error {
-	alphaConfig := &options.AlphaOptions{}
-	alphaConfig.ExtractFrom(opts)
-
-	data, err := yaml.Marshal(alphaConfig)
+func printConvertedConfig(opts *options.AlphaOptions) error {
+	data, err := yaml.Marshal(opts)
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}

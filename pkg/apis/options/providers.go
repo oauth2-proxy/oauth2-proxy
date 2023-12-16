@@ -218,7 +218,7 @@ type OIDCOptions struct {
 	// after the initial OAuth redeem & subsequent token refreshes.
 	// default set to 'true'
 	// Warning: In a future release, this will change to 'false' by default for enhanced security.
-	InsecureSkipNonce bool `json:"insecureSkipNonce,omitempty"`
+	InsecureSkipNonce bool `json:"insecureSkipNonce"`
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
 	SkipDiscovery bool `json:"skipDiscovery,omitempty"`

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -14,10 +15,11 @@ import (
 )
 
 var _ = Describe("Load", func() {
-	optionsWithNilProvider := NewOptions()
-	optionsWithNilProvider.Providers = nil
-
 	legacyOptionsWithNilProvider := &LegacyOptions{
+		LegacyProxyOptions: LegacyProxyOptions{
+			ProxyPrefix:        "/oauth2",
+			RealClientIPHeader: "X-Real-IP",
+		},
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
@@ -47,17 +49,57 @@ var _ = Describe("Load", func() {
 			InsecureOIDCSkipNonce: true,
 		},
 
-		Options: Options{
-			ProxyPrefix:        "/oauth2",
-			PingPath:           "/ping",
-			ReadyPath:          "/ready",
-			RealClientIPHeader: "X-Real-IP",
-			ForceHTTPS:         false,
-			Cookie:             cookieDefaults(),
-			Session:            sessionOptionsDefaults(),
-			Templates:          templatesDefaults(),
-			SkipAuthPreflight:  false,
-			Logging:            loggingDefaults(),
+		LegacyCookie: LegacyCookie{
+			Name:           "_oauth2_proxy",
+			Secret:         "",
+			Domains:        nil,
+			Path:           "/",
+			Expire:         time.Duration(168) * time.Hour,
+			Refresh:        time.Duration(0),
+			Secure:         true,
+			HTTPOnly:       true,
+			SameSite:       "",
+			CSRFPerRequest: false,
+			CSRFExpire:     time.Duration(15) * time.Minute,
+		},
+
+		LegacySessionOptions: LegacySessionOptions{
+			Type: "cookie",
+			Cookie: LegacyCookieStoreOptions{
+				Minimal: false,
+			},
+		},
+
+		LegacyPageTemplates: LegacyPageTemplates{
+			DisplayLoginForm: true,
+		},
+
+		LegacyProbeOptions: LegacyProbeOptions{
+			PingPath:        "/ping",
+			PingUserAgent:   "",
+			ReadyPath:       "/ready",
+			GCPHealthChecks: false,
+		},
+
+		LegacyLogging: LegacyLogging{
+			ExcludePaths:    nil,
+			LocalTime:       true,
+			SilencePing:     false,
+			RequestIDHeader: "X-Request-Id",
+			AuthEnabled:     true,
+			AuthFormat:      logger.DefaultAuthLoggingFormat,
+			RequestEnabled:  true,
+			RequestFormat:   logger.DefaultRequestLoggingFormat,
+			StandardEnabled: true,
+			StandardFormat:  logger.DefaultStandardLoggingFormat,
+			ErrToInfo:       false,
+			File: LegacyLogFileOptions{
+				Filename:   "",
+				MaxSize:    100,
+				MaxAge:     7,
+				MaxBackups: 0,
+				Compress:   false,
+			},
 		},
 	}
 
@@ -338,11 +380,6 @@ var _ = Describe("Load", func() {
 					},
 				},
 			}),
-			Entry("with an empty Options struct, should return default values", &testOptionsTableInput{
-				flagSet:        NewFlagSet,
-				input:          &Options{},
-				expectedOutput: optionsWithNilProvider,
-			}),
 			Entry("with an empty LegacyOptions struct, should return default values", &testOptionsTableInput{
 				flagSet:        NewLegacyFlagSet,
 				input:          &LegacyOptions{},
@@ -490,7 +527,7 @@ sub:
 		)
 	})
 
-	It("should load a full example AlphaOptions", func() {
+	It("should load a full example YamlOptions", func() {
 		config := []byte(`
 upstreamConfig:
   upstreams:
@@ -526,7 +563,7 @@ injectResponseHeaders:
 		flushInterval := Duration(500 * time.Millisecond)
 
 		Expect(into).To(Equal(&AlphaOptions{
-			UpstreamConfig: UpstreamConfig{
+			UpstreamServers: UpstreamConfig{
 				Upstreams: []Upstream{
 					{
 						ID:            "httpbin",

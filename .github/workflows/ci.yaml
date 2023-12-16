@@ -37,6 +37,7 @@ jobs:
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-${CODECLIMATE_VERSION}-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
+        go install github.com/jstemmer/go-junit-report@latest
 
     - name: Verify Code Generation
       run: |
@@ -55,6 +56,12 @@ jobs:
         CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       run: |
         ./.github/workflows/test.sh
+
+    - name: Test Summary
+      uses: test-summary/action@v2
+      with:
+        paths: report.xml
+      if: always()
 
   docker:
     runs-on: ubuntu-latest
