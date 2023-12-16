@@ -25,6 +25,18 @@ type LegacyOptions struct {
 	// Legacy options for single provider
 	LegacyProvider LegacyProvider `cfg:",squash"`
 
+	LegacyCookie LegacyCookie `cfg:",squash"`
+
+	LegacySessionOptions LegacySessionOptions `cfg:",squash"`
+
+	LegacyLogging LegacyLogging `cfg:",squash"`
+
+	LegacyPageTemplates LegacyPageTemplates `cfg:",squash"`
+
+	LegacyProxyOptions LegacyProxyOptions `cfg:",squash"`
+
+	LegacyProbeOptions LegacyProbeOptions `cfg:",squash"`
+
 	Options Options `cfg:",squash"`
 }
 
@@ -60,6 +72,64 @@ func NewLegacyOptions() *LegacyOptions {
 			InsecureOIDCSkipNonce: true,
 		},
 
+		LegacyCookie: LegacyCookie{
+			Name:           "_oauth2_proxy",
+			Secret:         "",
+			Domains:        nil,
+			Path:           "/",
+			Expire:         time.Duration(168) * time.Hour,
+			Refresh:        time.Duration(0),
+			Secure:         true,
+			HTTPOnly:       true,
+			SameSite:       "",
+			CSRFPerRequest: false,
+			CSRFExpire:     time.Duration(15) * time.Minute,
+		},
+
+		LegacySessionOptions: LegacySessionOptions{
+			Type: "cookie",
+			Cookie: LegacyCookieStoreOptions{
+				Minimal: false,
+			},
+		},
+
+		LegacyPageTemplates: LegacyPageTemplates{
+			Path:             "",
+			CustomLogo:       "",
+			Banner:           "",
+			Footer:           "",
+			DisplayLoginForm: true,
+			Debug:            false,
+		},
+
+		LegacyProbeOptions: LegacyProbeOptions{
+			PingPath:        "/ping",
+			PingUserAgent:   "",
+			ReadyPath:       "/ready",
+			GCPHealthChecks: false,
+		},
+
+		LegacyLogging: LegacyLogging{
+			ExcludePaths:    nil,
+			LocalTime:       true,
+			SilencePing:     false,
+			RequestIDHeader: "X-Request-Id",
+			AuthEnabled:     true,
+			AuthFormat:      logger.DefaultAuthLoggingFormat,
+			RequestEnabled:  true,
+			RequestFormat:   logger.DefaultRequestLoggingFormat,
+			StandardEnabled: true,
+			StandardFormat:  logger.DefaultStandardLoggingFormat,
+			ErrToInfo:       false,
+			File: LegacyLogFileOptions{
+				Filename:   "",
+				MaxSize:    100,
+				MaxAge:     7,
+				MaxBackups: 0,
+				Compress:   false,
+			},
+		},
+
 		Options: *NewOptions(),
 	}
 }
@@ -70,6 +140,12 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
 	flagSet.AddFlagSet(legacyHeadersFlagSet())
 	flagSet.AddFlagSet(legacyServerFlagset())
+	flagSet.AddFlagSet(legacyProxyOptionsFlagSet())
+	flagSet.AddFlagSet(legacyCookieFlagSet())
+	flagSet.AddFlagSet(legacySessionFlagSet())
+	flagSet.AddFlagSet(legacyLoggingFlagSet())
+	flagSet.AddFlagSet(legacyPageTemplatesFlagSet())
+	flagSet.AddFlagSet(legacyProbeOptionsFlagSet())
 	flagSet.AddFlagSet(legacyProviderFlagSet())
 	flagSet.AddFlagSet(legacyGoogleFlagSet())
 
@@ -86,6 +162,18 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 	l.Options.InjectRequestHeaders, l.Options.InjectResponseHeaders = l.LegacyHeaders.convert()
 
 	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
+
+	l.Options.Cookie = l.LegacyCookie.convert()
+
+	l.Options.Session = l.LegacySessionOptions.convert()
+
+	l.Options.Logging = l.LegacyLogging.convert()
+
+	l.Options.PageTemplates = l.LegacyPageTemplates.convert()
+
+	l.Options.ProxyOptions = l.LegacyProxyOptions.convert()
+
+	l.Options.ProbeOptions = l.LegacyProbeOptions.convert()
 
 	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
 
@@ -780,4 +868,30 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers = append(providers, provider)
 
 	return providers, nil
+}
+
+type LegacyProbeOptions struct {
+	PingPath        string `flag:"ping-path" cfg:"ping_path"`
+	PingUserAgent   string `flag:"ping-user-agent" cfg:"ping_user_agent"`
+	ReadyPath       string `flag:"ready-path" cfg:"ready_path"`
+	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
+}
+
+func legacyProbeOptionsFlagSet() *pflag.FlagSet {
+	flagSet := pflag.NewFlagSet("probe", pflag.ExitOnError)
+
+	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
+	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
+	flagSet.String("ready-path", "/ready", "the ready endpoint that can be used for deep health checks")
+	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+
+	return flagSet
+}
+
+func (l *LegacyProbeOptions) convert() ProbeOptions {
+	return ProbeOptions{
+		PingPath:      l.PingPath,
+		PingUserAgent: l.PingUserAgent,
+		ReadyPath:     l.ReadyPath,
+	}
 }

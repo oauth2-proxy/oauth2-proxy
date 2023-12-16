@@ -105,9 +105,9 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		Expect(err).ToNot(HaveOccurred())
 
 		opts.Cookie.Secret = "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
-		opts.EmailDomains = []string{"example.com"}
+		opts.ProxyOptions.EmailDomains = []string{"example.com"}
 		opts.Cookie.Secure = false
-		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
+		opts.ProxyOptions.RedirectURL = "http://localhost:4180/oauth2/callback"
 
 		opts.UpstreamServers = options.UpstreamConfig{
 			Upstreams: []options.Upstream{
