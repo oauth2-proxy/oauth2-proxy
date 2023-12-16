@@ -168,7 +168,7 @@ ClaimSource allows loading a header value from a claim within the session
 
 ### Cookie
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 Cookie contains configuration options relating to Cookie configuration
 
@@ -248,7 +248,7 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 ### Header
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 Header represents an individual header that will be added to a request or
 response header.
@@ -302,7 +302,7 @@ LogFileOptions contains options for configuring logging to a file
 
 ### Logging
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 Logging contains all options required for configuring the logging
 
@@ -433,9 +433,35 @@ character.
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 
+### Options
+
+Options holds Configuration Options that can be set by Command Line Flag,
+or Config File
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `proxyOptions` | _[ProxyOptions](#proxyoptions)_ |  |
+| `probeOptions` | _[ProbeOptions](#probeoptions)_ |  |
+| `cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the cookie used to store the session state. |
+| `session` | _[SessionOptions](#sessionoptions)_ |  |
+| `logging` | _[Logging](#logging)_ |  |
+| `pageTemplates` | _[PageTemplates](#pagetemplates)_ |  |
+| `upstreamConfig` | _[UpstreamConfig](#upstreamconfig)_ | UpstreamConfig is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list.<br/><br/>Not used in the legacy config, name not allowed to match an external key (upstreams)<br/>TODO(JoelSpeed): Rename when legacy config is removed |
+| `injectRequestHeaders` | _[[]Header](#header)_ | InjectRequestHeaders is used to configure headers that should be added<br/>to requests to upstream servers.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
+| `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
+| `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
+| `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
+| `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers.<br/>As of yet multiple providers aren't supported only the first entry is actually used. |
+| `LegacyPreferEmailToUser` | _bool_ | This is used for backwards compatibility for basic auth users |
+| `redirectURL` | _net/url.URL_ | internal values that are set after config validation |
+| `signatureData` | _[SignatureData](#signaturedata)_ |  |
+| `oidcVerifier` | _github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc.IDTokenVerifier_ |  |
+| `jwtBearerVerifiers` | _[]github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc.IDTokenVerifier_ |  |
+| `realClientIPParser` | _github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip.RealClientIPParser_ |  |
+
 ### PageTemplates
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 Templates includes options for configuring the sign in and error pages
 appearance.
@@ -451,7 +477,7 @@ appearance.
 
 ### ProbeOptions
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 
 
@@ -511,14 +537,14 @@ and oidc.
 
 #### ([[]Provider](#provider) alias)
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 Providers is a collection of definitions for providers.
 
 
 ### ProxyOptions
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 
 
@@ -530,6 +556,7 @@ Providers is a collection of definitions for providers.
 | `trustedIPs` | _[]string_ |  |
 | `forceHttps` | _bool_ |  |
 | `forceJsonErrors` | _bool_ |  |
+| `allowQuerySemicolons` | _bool_ |  |
 | `sslInsecureSkipVerify` | _bool_ |  |
 | `skipAuthRegex` | _[]string_ |  |
 | `skipAuthRoutes` | _[]string_ |  |
@@ -581,7 +608,7 @@ Only one source within the struct should be defined at any time.
 
 ### Server
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 Server represents the configuration for an HTTP(S) server
 
@@ -593,7 +620,7 @@ Server represents the configuration for an HTTP(S) server
 
 ### SessionOptions
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 SessionOptions contains configuration options for the SessionStore providers.
 
@@ -602,6 +629,17 @@ SessionOptions contains configuration options for the SessionStore providers.
 | `type` | _string_ |  |
 | `cookie` | _[CookieStoreOptions](#cookiestoreoptions)_ |  |
 | `redis` | _[RedisStoreOptions](#redisstoreoptions)_ |  |
+
+### SignatureData
+
+(**Appears on:** [Options](#options))
+
+SignatureData holds hmacauth signature hash and key
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Hash` | _crypto.Hash_ |  |
+| `Key` | _string_ |  |
 
 ### TLS
 
@@ -654,7 +692,7 @@ Requests will be proxied to this upstream if the path matches the request path.
 
 ### UpstreamConfig
 
-(**Appears on:** [YamlOptions](#yamloptions))
+(**Appears on:** [Options](#options))
 
 UpstreamConfig is a collection of definitions for upstream servers.
 
@@ -662,22 +700,3 @@ UpstreamConfig is a collection of definitions for upstream servers.
 | ----- | ---- | ----------- |
 | `proxyRawPath` | _bool_ | ProxyRawPath will pass the raw url path to upstream allowing for urls<br/>like: "/%2F/" which would otherwise be redirected to "/" |
 | `upstreams` | _[[]Upstream](#upstream)_ | Upstreams represents the configuration for the upstream servers.<br/>Requests will be proxied to this upstream if the path matches the request path. |
-
-### YamlOptions
-
-YamlOptions contains structured configuration options.
-
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `upstreamConfig` | _[UpstreamConfig](#upstreamconfig)_ | UpstreamConfig is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list. |
-| `injectRequestHeaders` | _[[]Header](#header)_ | InjectRequestHeaders is used to configure headers that should be added<br/>to requests to upstream servers.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
-| `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
-| `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the cookie used to store the session state. |
-| `session` | _[SessionOptions](#sessionoptions)_ |  |
-| `logging` | _[Logging](#logging)_ |  |
-| `pageTemplates` | _[PageTemplates](#pagetemplates)_ |  |
-| `proxyOptions` | _[ProxyOptions](#proxyoptions)_ |  |
-| `probeOptions` | _[ProbeOptions](#probeoptions)_ |  |
-| `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
