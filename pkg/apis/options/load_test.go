@@ -532,13 +532,13 @@ injectResponseHeaders:
 		configFileName := configFile.Name()
 
 		By("Loading the example config")
-		into := &YamlOptions{}
+		into := &Options{}
 		Expect(LoadYAML(configFileName, into)).To(Succeed())
 
 		flushInterval := Duration(500 * time.Millisecond)
 
-		Expect(into).To(Equal(&YamlOptions{
-			UpstreamConfig: UpstreamConfig{
+		Expect(into).To(Equal(&Options{
+			UpstreamServers: UpstreamConfig{
 				Upstreams: []Upstream{
 					{
 						ID:            "httpbin",

@@ -42,6 +42,13 @@ type LegacyOptions struct {
 
 func NewLegacyOptions() *LegacyOptions {
 	return &LegacyOptions{
+		LegacyProxyOptions: LegacyProxyOptions{
+			ProxyPrefix:        "/oauth2",
+			RealClientIPHeader: "X-Real-IP",
+			ForceHTTPS:         false,
+			SkipAuthPreflight:  false,
+		},
+
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,

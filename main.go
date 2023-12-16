@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -32,10 +33,6 @@ func main() {
 	if *showVersion {
 		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
 		return
-	}
-
-	if *config != "" && *legacyConfig != "" {
-		logger.Fatal("cannot use config and legacy-config together. either continue using the legacy-config or convert it to the new config structure using convert-legacy-config.")
 	}
 
 	if *convertConfig && *config != "" {
@@ -74,6 +71,10 @@ func main() {
 // loadConfiguration will load in the user's configuration.
 // It will either load the yaml configuration or the legacy configuration.
 func loadConfiguration(config, legacyConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
+	if config != "" && legacyConfig != "" {
+		return nil, errors.New("cannot use config and legacy-config together. either continue using the legacy-config or convert it to the new config structure using convert-legacy-config")
+	}
+
 	if legacyConfig != "" {
 		logger.Printf("WARNING: You are still using the legacy configuration. This configuration has been deprecated and will be removed in a future release. Please consider converting to the new configuration format.")
 		return loadLegacyOptions(legacyConfig, extraFlags, args)
@@ -107,23 +108,18 @@ func loadLegacyOptions(legacyConfig string, extraFlags *pflag.FlagSet, args []st
 // the new structured format, then merges the structured options, loaded from YAML,
 // into the core configuration.
 func loadYamlOptions(configFile string) (*options.Options, error) {
-	yamlOpts := &options.YamlOptions{}
-	if err := options.LoadYAML(configFile, yamlOpts); err != nil {
+	opts := options.NewOptions()
+	if err := options.LoadYAML(configFile, opts); err != nil {
 		return nil, fmt.Errorf("failed to load yaml options: %v", err)
 	}
 
-	opts := options.NewOptions()
-	yamlOpts.MergeInto(opts)
 	return opts, nil
 }
 
 // printConvertedConfig extracts yaml options from the loaded configuration
 // and renders these to stdout in YAML format.
 func printConvertedConfig(opts *options.Options) error {
-	yamlConfig := &options.YamlOptions{}
-	yamlConfig.ExtractFrom(opts)
-
-	data, err := yaml.Marshal(yamlConfig)
+	data, err := yaml.Marshal(opts)
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}
