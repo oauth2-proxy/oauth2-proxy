@@ -15,6 +15,10 @@ import (
 
 var _ = Describe("Load", func() {
 	legacyOptionsWithNilProvider := &LegacyOptions{
+		LegacyProxyOptions: LegacyProxyOptions{
+			ProxyPrefix:        "/oauth2",
+			RealClientIPHeader: "X-Real-IP",
+		},
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
