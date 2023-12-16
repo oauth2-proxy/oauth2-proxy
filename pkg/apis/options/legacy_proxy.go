@@ -6,6 +6,7 @@ import (
 
 type LegacyProxyOptions struct {
 	// networking
+	AllowQuerySemicolons    bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
 	ProxyPrefix             string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
 	RealClientIPHeader      string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
 	ReverseProxy            bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
@@ -21,6 +22,7 @@ type LegacyProxyOptions struct {
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 	RawRedirectURL          string   `flag:"redirect-url" cfg:"redirect_url"`
+	RelativeRedirectURL     bool     `flag:"relative-redirect-url" cfg:"relative_redirect_url"`
 	APIRoutes               []string `flag:"api-route" cfg:"api_routes"`
 	SkipJwtBearerTokens     bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
 	ExtraJwtIssuers         []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
@@ -58,16 +60,14 @@ func legacyProxyOptionsFlagSet() *pflag.FlagSet {
 
 func (l *LegacyProxyOptions) convert() ProxyOptions {
 	return ProxyOptions{
-		// networking
-		ProxyPrefix:           l.ProxyPrefix,
-		RealClientIPHeader:    l.RealClientIPHeader,
-		ReverseProxy:          l.ReverseProxy,
-		TrustedIPs:            l.TrustedIPs,
+		// security
+		AllowQuerySemicolons:  l.AllowQuerySemicolons,
 		ForceHTTPS:            l.ForceHTTPS,
-		ForceJSONErrors:       l.ForceJSONErrors,
-		SSLInsecureSkipVerify: l.SSLInsecureSkipVerify,
 		SkipAuthRegex:         l.SkipAuthRegex,
 		SkipAuthRoutes:        l.SkipAuthRoutes,
+		SkipAuthPreflight:     l.SkipAuthPreflight,
+		SSLInsecureSkipVerify: l.SSLInsecureSkipVerify,
+		TrustedIPs:            l.TrustedIPs,
 
 		// authentication
 		AuthenticatedEmailsFile: l.AuthenticatedEmailsFile,
@@ -75,13 +75,16 @@ func (l *LegacyProxyOptions) convert() ProxyOptions {
 		WhitelistDomains:        l.WhitelistDomains,
 		HtpasswdFile:            l.HtpasswdFile,
 		HtpasswdUserGroups:      l.HtpasswdUserGroups,
+		SkipJwtBearerTokens:     l.SkipJwtBearerTokens,
+		ExtraJwtIssuers:         l.ExtraJwtIssuers,
 
-		// proxy
-		RedirectURL:         l.RawRedirectURL,
+		// routing
 		APIRoutes:           l.APIRoutes,
-		SkipJwtBearerTokens: l.SkipJwtBearerTokens,
-		ExtraJwtIssuers:     l.ExtraJwtIssuers,
+		ReverseProxy:        l.ReverseProxy,
+		ProxyPrefix:         l.ProxyPrefix,
+		RedirectURL:         l.RawRedirectURL,
+		RelativeRedirectURL: l.RelativeRedirectURL,
+		RealClientIPHeader:  l.RealClientIPHeader,
 		SkipProviderButton:  l.SkipProviderButton,
-		SkipAuthPreflight:   l.SkipAuthPreflight,
 	}
 }

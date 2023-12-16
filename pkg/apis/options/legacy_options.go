@@ -36,8 +36,6 @@ type LegacyOptions struct {
 	LegacyProxyOptions LegacyProxyOptions `cfg:",squash"`
 
 	LegacyProbeOptions LegacyProbeOptions `cfg:",squash"`
-
-	Options Options `cfg:",squash"`
 }
 
 func NewLegacyOptions() *LegacyOptions {
@@ -136,8 +134,6 @@ func NewLegacyOptions() *LegacyOptions {
 				Compress:   false,
 			},
 		},
-
-		Options: *NewOptions(),
 	}
 }
 
@@ -160,37 +156,40 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 }
 
 func (l *LegacyOptions) ToOptions() (*Options, error) {
+	opts := NewOptions()
+
+	opts.ProxyOptions = l.LegacyProxyOptions.convert()
+	opts.ForceJSONErrors = l.LegacyProxyOptions.ForceJSONErrors
+
+	opts.ProbeOptions = l.LegacyProbeOptions.convert()
+
 	upstreams, err := l.LegacyUpstreams.convert()
 	if err != nil {
 		return nil, fmt.Errorf("error converting upstreams: %v", err)
 	}
-	l.Options.UpstreamServers = upstreams
+	opts.UpstreamServers = upstreams
 
-	l.Options.InjectRequestHeaders, l.Options.InjectResponseHeaders = l.LegacyHeaders.convert()
+	opts.InjectRequestHeaders, opts.InjectResponseHeaders = l.LegacyHeaders.convert()
 
-	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
+	opts.Server, opts.MetricsServer = l.LegacyServer.convert()
 
-	l.Options.Cookie = l.LegacyCookie.convert()
+	opts.Cookie = l.LegacyCookie.convert()
 
-	l.Options.Session = l.LegacySessionOptions.convert()
+	opts.Session = l.LegacySessionOptions.convert()
 
-	l.Options.Logging = l.LegacyLogging.convert()
+	opts.Logging = l.LegacyLogging.convert()
 
-	l.Options.PageTemplates = l.LegacyPageTemplates.convert()
+	opts.PageTemplates = l.LegacyPageTemplates.convert()
 
-	l.Options.ProxyOptions = l.LegacyProxyOptions.convert()
-
-	l.Options.ProbeOptions = l.LegacyProbeOptions.convert()
-
-	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
+	opts.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
 
 	providers, err := l.LegacyProvider.convert()
 	if err != nil {
 		return nil, fmt.Errorf("error converting provider: %v", err)
 	}
-	l.Options.Providers = providers
+	opts.Providers = providers
 
-	return &l.Options, nil
+	return opts, nil
 }
 
 type LegacyUpstreams struct {

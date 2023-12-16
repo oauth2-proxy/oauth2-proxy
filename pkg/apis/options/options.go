@@ -69,6 +69,9 @@ type Options struct {
 	// As of yet multiple providers aren't supported only the first entry is actually used.
 	Providers Providers `cfg:",internal" json:"providers,omitempty"`
 
+	// Force oauth2-proxy error responses to be JSON
+	ForceJSONErrors bool `json:"forceJsonErrors,omitempty"`
+
 	// This is used for backwards compatibility for basic auth users
 	LegacyPreferEmailToUser bool `cfg:",internal"`
 

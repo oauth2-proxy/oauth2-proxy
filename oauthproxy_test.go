@@ -1589,7 +1589,7 @@ type ajaxRequestTest struct {
 func newAjaxRequestTest(forceJSONErrors bool) (*ajaxRequestTest, error) {
 	test := &ajaxRequestTest{}
 	test.opts = baseTestOptions()
-	test.opts.ProxyOptions.ForceJSONErrors = forceJSONErrors
+	test.opts.ForceJSONErrors = forceJSONErrors
 	err := validation.Validate(test.opts)
 	if err != nil {
 		return nil, err

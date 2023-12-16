@@ -452,6 +452,7 @@ or Config File
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers.<br/>As of yet multiple providers aren't supported only the first entry is actually used. |
+| `forceJsonErrors` | _bool_ | Force oauth2-proxy error responses to be JSON |
 | `LegacyPreferEmailToUser` | _bool_ | This is used for backwards compatibility for basic auth users |
 | `redirectURL` | _net/url.URL_ | internal values that are set after config validation |
 | `signatureData` | _[SignatureData](#signaturedata)_ |  |
@@ -550,28 +551,27 @@ Providers is a collection of definitions for providers.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `proxyPrefix` | _string_ | networking |
-| `realClientIPHeader` | _string_ |  |
-| `reverseProxy` | _bool_ |  |
-| `trustedIPs` | _[]string_ |  |
+| `allowQuerySemicolons` | _bool_ | security |
 | `forceHttps` | _bool_ |  |
-| `forceJsonErrors` | _bool_ |  |
-| `allowQuerySemicolons` | _bool_ |  |
-| `sslInsecureSkipVerify` | _bool_ |  |
 | `skipAuthRegex` | _[]string_ |  |
 | `skipAuthRoutes` | _[]string_ |  |
+| `skipAuthPreflight` | _bool_ |  |
+| `sslInsecureSkipVerify` | _bool_ |  |
+| `trustedIPs` | _[]string_ |  |
 | `authenticatedEmailsFile` | _string_ | authentication |
 | `emailDomains` | _[]string_ |  |
 | `whitelistDomains` | _[]string_ |  |
 | `htpasswdFile` | _string_ |  |
 | `htpasswdUserGroups` | _[]string_ |  |
-| `redirectUrl` | _string_ | proxy |
-| `relativeRedirectUrl` | _bool_ |  |
-| `apiRoutes` | _[]string_ |  |
 | `skipJwtBearerTokens` | _bool_ |  |
 | `extraJwtIssuers` | _[]string_ |  |
+| `apiRoutes` | _[]string_ | routing |
+| `reverseProxy` | _bool_ |  |
+| `proxyPrefix` | _string_ |  |
+| `redirectUrl` | _string_ |  |
+| `relativeRedirectUrl` | _bool_ |  |
+| `realClientIPHeader` | _string_ |  |
 | `skipProviderButton` | _bool_ |  |
-| `skipAuthPreflight` | _bool_ |  |
 
 ### RedisStoreOptions
 

@@ -226,7 +226,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		skipJwtBearerTokens:  opts.ProxyOptions.SkipJwtBearerTokens,
 		realClientIPParser:   opts.GetRealClientIPParser(),
 		SkipProviderButton:   opts.ProxyOptions.SkipProviderButton,
-		forceJSONErrors:      opts.ProxyOptions.ForceJSONErrors,
+		forceJSONErrors:      opts.ForceJSONErrors,
 		allowQuerySemicolons: opts.ProxyOptions.AllowQuerySemicolons,
 		trustedIPs:           trustedIPs,
 
