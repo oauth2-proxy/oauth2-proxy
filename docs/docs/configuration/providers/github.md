@@ -7,7 +7,7 @@ title: GitHub
 2.  Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
 
 The GitHub auth provider supports two additional ways to restrict authentication to either organization and optional 
-team level access, or to collaborators of a repository. Restricting by these options is normally accompanied with `--email-domain=*`
+team level access, or to collaborators of a repository. Restricting by these options is normally accompanied with `--email-domain=*`. Additionally, all the organizations and teams a user belongs to are set as part of the `X-Forwarded-Groups` header. e.g. `org1:team1,org1:team2,org2:team1`
 
 NOTE: When `--github-user` is set, the specified users are allowed to log in even if they do not belong to the specified 
 org and team or collaborators.
