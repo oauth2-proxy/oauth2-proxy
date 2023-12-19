@@ -1202,9 +1202,8 @@ func encodeState(nonce string, redirect string, encode bool) string {
 	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
 	if encode {
 		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
-	} else {
-		return rawString
 	}
+	return rawString
 }
 
 // decodeState splits the reflected OAuth state response back into
