@@ -51,7 +51,7 @@ const (
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
-	staticPathPrefix  = "/static/"
+	staticPathPrefix  = "/oauth2-proxy-static/"
 )
 
 var (
@@ -61,7 +61,7 @@ var (
 	// ErrAccessDenied means the user should receive a 401 Unauthorized response
 	ErrAccessDenied = errors.New("access denied")
 
-	//go:embed static/*
+	//go:embed oauth2-proxy-static/*
 	staticFiles embed.FS
 )
 
