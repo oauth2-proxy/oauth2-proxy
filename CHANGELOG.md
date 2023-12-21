@@ -20,7 +20,8 @@
 - [#2297](https://github.com/oauth2-proxy/oauth2-proxy/pull/2297) Add nightly build and push (@tuunit)
 - [#2329](https://github.com/oauth2-proxy/oauth2-proxy/pull/2329) Add an option to skip request to profile URL for resolving missing claims in id_token (@nilsgstrabo)
 - [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
-- [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings.
+- [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings. (@timwsuqld)
+- [#2196](https://github.com/oauth2-proxy/oauth2-proxy/pull/2196) Add GitHub groups (orgs/teams) support. Including `X-Forwarded-Groups` header (@tuunit)
 
 # V7.5.1
 
