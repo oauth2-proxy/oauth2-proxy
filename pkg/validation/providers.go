@@ -46,20 +46,32 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 		msgs = append(msgs, "provider missing setting: client-id")
 	}
 
-	// login.gov uses a signed JWT to authenticate, not a client-secret
-	if provider.Type != "login.gov" {
-		if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
-			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
-		}
-		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
-			_, err := os.ReadFile(provider.ClientSecretFile)
-			if err != nil {
-				msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
-			}
-		}
+	// login.gov and Azure with workload identity uses a signed JWT to authenticate, not a client-secret
+	if provider.Type != "login.gov" && provider.Type != "azure" {
+		msgs = append(msgs, validateClientSecrets(provider)...)
 	}
 
 	msgs = append(msgs, validateGoogleConfig(provider)...)
+	msgs = append(msgs, validateAzureConfig(provider)...)
+
+	return msgs
+}
+
+func validateAzureConfig(provider options.Provider) []string {
+	msgs := []string{}
+
+	if provider.AzureConfig.UseFederatedToken {
+		federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
+		if federatedTokenPath == "" {
+			msgs = append(msgs, "azure federated token is enabled, but AZURE_FEDERATED_TOKEN_FILE env var is not set, check azure workload identity configuration on your cluster.")
+		}
+		_, err := os.ReadFile(federatedTokenPath)
+		if err != nil {
+			msgs = append(msgs, "could not read azure federated token file")
+		}
+	} else {
+		msgs = append(msgs, validateClientSecrets(provider)...)
+	}
 
 	return msgs
 }
@@ -92,6 +104,22 @@ func validateGoogleConfig(provider options.Provider) []string {
 		}
 	} else if hasSAJSON {
 		msgs = append(msgs, "invalid setting: can't use both google-service-account-json and google-use-application-default-credentials")
+	}
+
+	return msgs
+}
+
+func validateClientSecrets(provider options.Provider) []string {
+	msgs := []string{}
+
+	if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
+		msgs = append(msgs, "missing setting: client-secret or client-secret-file")
+	}
+	if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
+		_, err := os.ReadFile(provider.ClientSecretFile)
+		if err != nil {
+			msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
+		}
 	}
 
 	return msgs
