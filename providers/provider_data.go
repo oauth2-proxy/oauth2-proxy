@@ -284,9 +284,9 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 }
 
 func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {
-	var profileURL *url.URL
-	if !p.SkipClaimsFromProfileURL {
-		profileURL = p.ProfileURL
+	profileURL := p.ProfileURL
+	if p.SkipClaimsFromProfileURL {
+		profileURL = &url.URL{}
 	}
 
 	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
