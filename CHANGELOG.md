@@ -3,6 +3,9 @@
 ## Release Highlights
 
 ## Important Notes
+- [#2364](https://github.com/oauth2-proxy/oauth2-proxy/pull/2364) Add Azure Workload Identity support for certificate credentials (@jjlakis)
+  - Azure provider can now be configured with certificate credential and corresponding federated credentials, instead of using client-secret.
+  - Added new flag `--azure-federated-token-auth-enabled`
 
 ## Breaking Changes
 
@@ -21,6 +24,7 @@
 - [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
 - [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings. (@timwsuqld)
 - [#2196](https://github.com/oauth2-proxy/oauth2-proxy/pull/2196) Add GitHub groups (orgs/teams) support. Including `X-Forwarded-Groups` header (@tuunit)
+- [#2364](https://github.com/oauth2-proxy/oauth2-proxy/pull/2364) Add Azure Workload Identity support for certificate credentials (@jjlakis)
 
 # V7.5.1
 
