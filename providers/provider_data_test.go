@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -22,6 +24,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 	"golang.org/x/oauth2"
 )
 
@@ -232,14 +235,20 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 }
 
 func TestProviderData_buildSessionFromClaims(t *testing.T) {
+	type profileURLRequest struct {
+		Response string
+	}
 	testCases := map[string]struct {
-		IDToken         idTokenClaims
-		AllowUnverified bool
-		UserClaim       string
-		EmailClaim      string
-		GroupsClaim     string
-		ExpectedError   error
-		ExpectedSession *sessions.SessionState
+		IDToken                   idTokenClaims
+		AllowUnverified           bool
+		UserClaim                 string
+		EmailClaim                string
+		GroupsClaim               string
+		SkipClaimsFromProfileURL  bool
+		SetProfileURL             bool
+		ExpectedError             error
+		ExpectedSession           *sessions.SessionState
+		ExpectedProfileURLRequest *profileURLRequest
 	}{
 		"Standard": {
 			IDToken:         defaultIDToken,
@@ -408,10 +417,41 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
+		"Request claim from ProfileURL": {
+			IDToken:                   minimalIDToken,
+			SetProfileURL:             true,
+			ExpectedProfileURLRequest: &profileURLRequest{Response: "{}"},
+			ExpectedSession:           &sessions.SessionState{},
+		},
+		"Skip claims request to ProfileURL": {
+			IDToken:                  minimalIDToken,
+			SetProfileURL:            true,
+			SkipClaimsFromProfileURL: true,
+			ExpectedSession:          &sessions.SessionState{},
+		},
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			g := NewWithT(t)
+
+			var (
+				profileURL        *url.URL
+				profileURLTracker mock.Mock
+			)
+			if tc.SetProfileURL {
+				profileURLSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					responseBody := profileURLTracker.MethodCalled(fmt.Sprintf("%s %s%s", r.Method, profileURL.Host, profileURL.Path)).Get(0)
+					w.Write(responseBody.([]byte))
+				}))
+				defer profileURLSrv.Close()
+				profileURL, _ = url.Parse(profileURLSrv.URL)
+				if tc.ExpectedProfileURLRequest != nil {
+					profileURLTracker.
+						On(fmt.Sprintf("GET %s%s", profileURL.Host, profileURL.Path)).
+						Return([]byte(tc.ExpectedProfileURLRequest.Response)).
+						Times(1)
+				}
+			}
 
 			verificationOptions := internaloidc.IDTokenVerificationOptions{
 				AudienceClaims: []string{"aud"},
@@ -423,22 +463,26 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 					mockJWKS{},
 					&oidc.Config{ClientID: oidcClientID},
 				), verificationOptions),
+				ProfileURL:                 profileURL,
+				getAuthorizationHeaderFunc: func(s string) http.Header { return http.Header{} },
 			}
 			provider.AllowUnverifiedEmail = tc.AllowUnverified
 			provider.UserClaim = tc.UserClaim
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
+			provider.SkipClaimsFromProfileURL = tc.SkipClaimsFromProfileURL
 
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			ss, err := provider.buildSessionFromClaims(rawIDToken, "")
+			ss, err := provider.buildSessionFromClaims(rawIDToken, "testtoken")
 			if err != nil {
 				g.Expect(err).To(Equal(tc.ExpectedError))
 			}
 			if ss != nil {
 				g.Expect(ss).To(Equal(tc.ExpectedSession))
 			}
+			profileURLTracker.AssertExpectations(t)
 		})
 	}
 }
