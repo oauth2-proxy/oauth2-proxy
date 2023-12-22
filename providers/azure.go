@@ -237,10 +237,6 @@ func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (u
 		params.Add("client_secret", clientSecret)
 	} else {
 		federatedTokenPath := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
-		if federatedTokenPath == "" {
-			return nil, fmt.Errorf("AZURE_FEDERATED_TOKEN_FILE variable is not set!")
-		}
-
 		federatedToken, err := os.ReadFile(federatedTokenPath)
 		if err != nil {
 			return nil, fmt.Errorf("error reading federated token file %s: %s", federatedTokenPath, err)
