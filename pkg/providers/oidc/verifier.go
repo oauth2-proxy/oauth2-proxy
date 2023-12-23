@@ -123,10 +123,6 @@ func (v *idTokenVerifier) interfaceSliceToString(slice interface{}) []string {
 
 func (v *idTokenVerifier) verifyEmail(token *oidc.IDToken) (bool, error) {
 
-	if v.verificationOptions.AllowUnverifiedEmail {
-		return true, nil
-	}
-
 	var claims struct {
 		Subject  string `json:"sub"`
 		Email    string `json:"email"`
@@ -141,7 +137,7 @@ func (v *idTokenVerifier) verifyEmail(token *oidc.IDToken) (bool, error) {
 		claims.Email = claims.Subject
 	}
 
-	if claims.Verified != nil && !*claims.Verified {
+	if claims.Verified != nil && !*claims.Verified && !v.verificationOptions.AllowUnverifiedEmail {
 		return false, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
 	}
 
