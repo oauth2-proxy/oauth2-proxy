@@ -182,7 +182,7 @@ var _ = Describe("Verify", func() {
 		Expect(result.Audience).To(Equal([]string{"1226737"}))
 	})
 
-	It("Succeeds with default email_verified behavior", func() {
+	It("Succeeds with verified email", func() {
 		verified := true
 		_, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims: []string{"aud"},
