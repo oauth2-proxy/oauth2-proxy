@@ -231,7 +231,7 @@ var _ = Describe("Verify", func() {
 		Expect(err).To(MatchError("email in id_token (test@example.com) isn't verified"))
 	})
 
-	It("Fails with with non default email_verified behavior", func() {
+	It("Fails with unverified email if AllowUnverifiedEmail is set to false", func() {
 		verified := false
 		_, err := verify(ctx, IDTokenVerificationOptions{
 			AudienceClaims:       []string{"aud"},
