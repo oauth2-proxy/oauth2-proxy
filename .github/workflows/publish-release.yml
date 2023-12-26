@@ -47,15 +47,17 @@ jobs:
       with:
         go-version: 1.19
 
-    - name: Build Artifacts
+    - name: Get dependencies
       run: |
-        # Install golangci-lint
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.0
+        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+        chmod +x ./cc-test-reporter
 
-        # Install depedencies
+        # Install go depedencies
         go mod download
 
-        make release
+    - name: Build Artifacts
+      run: make release
     
     # Upload artifacts in case of workflow failure
     - name: Upload Artifacts
