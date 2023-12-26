@@ -47,6 +47,8 @@ module.exports = {
         'configuration/session_storage',
         'configuration/tls',
         'configuration/alpha-config',
+        'configuration/logging',
+        'configuration/integration',
       ],
     },
     {

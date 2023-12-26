@@ -13,6 +13,59 @@ At present the available backends are (as passed to `--session-store-type`):
 - [cookie](#cookie-storage) (default)
 - [redis](#redis-storage)
 
+
+### Generating a Cookie Secret
+
+The cookie containing session data is encrypted by a string called a cookie secret.   
+To generate a strong cookie secret use one of the below commands:
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs defaultValue="python">
+  <TabItem value="python" label="Python">
+
+  ```shell
+  python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
+  ```
+  
+  </TabItem>
+  <TabItem value="bash" label="Bash">
+
+  ```shell
+  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
+  ```
+  
+  </TabItem>
+  <TabItem value="openssl" label="OpenSSL">
+
+  ```shell
+  openssl rand -base64 32 | tr -- '+/' '-_'
+  ```
+
+  </TabItem>
+  <TabItem value="powershell" label="PowerShell">
+
+  ```powershell
+  # Add System.Web assembly to session, just in case
+  Add-Type -AssemblyName System.Web
+  [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
+  ```
+
+  </TabItem>
+  <TabItem value="terraform" label="Terraform">
+
+  ```hcl
+  # Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
+  resource "random_password" "cookie_secret" {
+    length           = 32
+    override_special = "-_"
+  }
+  ```
+
+  </TabItem>
+</Tabs>
+
 ### Cookie Storage
 
 The Cookie storage backend is the default backend implementation and has

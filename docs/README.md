@@ -1,12 +1,15 @@
 # Website
 
-This website is built using [Docusaurus 2](https://v2.docusaurus.io/), a modern static website generator.
+This website is built using [Docusaurus 2](https://v2.docusaurus.io/), a modern static website generator.  
+The structure of this folder follows the [versionned exemple exposed on their docs](https://docusaurus.io/docs/versioning#overview)
 
-## Installation
+## Install dependencies
 
 ```console
 yarn install
 ```
+
+note: you can use npm instead of yarn.
 
 ## Local Development
 
