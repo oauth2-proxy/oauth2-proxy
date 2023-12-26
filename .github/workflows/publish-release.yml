@@ -111,7 +111,7 @@ jobs:
     - name: Login to quay.io
       uses: docker/login-action@v2
       with:
-        registry: quay.io/tuunit
+        registry: quay.io/oauth2-proxy
         username: ${{ secrets.REGISTRY_USERNAME }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
 
@@ -122,4 +122,3 @@ jobs:
     - name: Push images
       run: |
         make docker-push-all
-    
