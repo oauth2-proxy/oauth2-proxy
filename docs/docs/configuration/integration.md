@@ -3,7 +3,7 @@ id: integration
 title: Integration
 ---
 
-OAuth2 Proxy can be integrated in differents setups.   Here you can find relevant informations to help you easily integrate OAuth2 Proxy with your favorites technologies. 
+OAuth2-Proxy can be integrated in a variety of setups. Here you can find relevant information on how to easily integrate OAuth2-Proxy with your favorite tech stack.
 ## Nginx `auth_request` directive
 
 :::info
