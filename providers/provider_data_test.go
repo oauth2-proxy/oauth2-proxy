@@ -24,7 +24,6 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
 	"golang.org/x/oauth2"
 )
 
@@ -235,20 +234,17 @@ func TestProviderData_verifyIDToken(t *testing.T) {
 }
 
 func TestProviderData_buildSessionFromClaims(t *testing.T) {
-	type profileURLRequest struct {
-		Response string
-	}
 	testCases := map[string]struct {
-		IDToken                   idTokenClaims
-		AllowUnverified           bool
-		UserClaim                 string
-		EmailClaim                string
-		GroupsClaim               string
-		SkipClaimsFromProfileURL  bool
-		SetProfileURL             bool
-		ExpectedError             error
-		ExpectedSession           *sessions.SessionState
-		ExpectedProfileURLRequest *profileURLRequest
+		IDToken                  idTokenClaims
+		AllowUnverified          bool
+		UserClaim                string
+		EmailClaim               string
+		GroupsClaim              string
+		SkipClaimsFromProfileURL bool
+		SetProfileURL            bool
+		ExpectedError            error
+		ExpectedSession          *sessions.SessionState
+		ExpectProfileURLCalled   bool
 	}{
 		"Standard": {
 			IDToken:         defaultIDToken,
@@ -417,11 +413,11 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
-		"Request claim from ProfileURL": {
-			IDToken:                   minimalIDToken,
-			SetProfileURL:             true,
-			ExpectedProfileURLRequest: &profileURLRequest{Response: "{}"},
-			ExpectedSession:           &sessions.SessionState{},
+		"Request claims from ProfileURL": {
+			IDToken:                minimalIDToken,
+			SetProfileURL:          true,
+			ExpectProfileURLCalled: true,
+			ExpectedSession:        &sessions.SessionState{},
 		},
 		"Skip claims request to ProfileURL": {
 			IDToken:                  minimalIDToken,
@@ -435,22 +431,16 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			g := NewWithT(t)
 
 			var (
-				profileURL        *url.URL
-				profileURLTracker mock.Mock
+				profileURL       *url.URL
+				profileURLCalled bool
 			)
 			if tc.SetProfileURL {
 				profileURLSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					responseBody := profileURLTracker.MethodCalled(fmt.Sprintf("%s %s%s", r.Method, profileURL.Host, profileURL.Path)).Get(0)
-					w.Write(responseBody.([]byte))
+					profileURLCalled = true
+					w.Write([]byte("{}"))
 				}))
 				defer profileURLSrv.Close()
 				profileURL, _ = url.Parse(profileURLSrv.URL)
-				if tc.ExpectedProfileURLRequest != nil {
-					profileURLTracker.
-						On(fmt.Sprintf("GET %s%s", profileURL.Host, profileURL.Path)).
-						Return([]byte(tc.ExpectedProfileURLRequest.Response)).
-						Times(1)
-				}
 			}
 
 			verificationOptions := internaloidc.IDTokenVerificationOptions{
@@ -482,7 +472,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			if ss != nil {
 				g.Expect(ss).To(Equal(tc.ExpectedSession))
 			}
-			profileURLTracker.AssertExpectations(t)
+			g.Expect(profileURLCalled).To(Equal(tc.ExpectProfileURLCalled))
 		})
 	}
 }
