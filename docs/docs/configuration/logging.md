@@ -81,7 +81,7 @@ Available variables for request logging:
 | Username | username@email.com | The email or username of the auth request. |
 
 ### Standard Log Format
-All other logging that is not covered by the above two types of logging will be output in this standard logging format. This includes configuration information at startup and errors that occur outside of a session. The default format is below:
+All other logging that is not covered by the two types mentioned above. Will be using the following standard logging format. This includes configuration information at startup and errors that occur outside of a session:
 
 ```
 [19/Mar/2015:17:20:19 -0400] [main.go:40] <MESSAGE>
