@@ -111,7 +111,9 @@ This option requires `--reverse-proxy` option to be set
 
 ### ForwardAuth with 401 errors middleware
 
-The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) allows Traefik to authenticate requests via the oauth2-proxy's `/oauth2/auth` endpoint on every request, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the whole request through. For example, on Dynamic File (YAML) Configuration:
+The [Traefik v2 `ForwardAuth` middleware](https://doc.traefik.io/traefik/middlewares/forwardauth/) allows Traefik to authenticate requests via oauth2-proxy's `/oauth2/auth` endpoint for every request, which either returns a 202 Accepted status or a 401 Unauthorized. 
+
+Example Traefik configuration:
 
 ```yaml
 http:
