@@ -9,7 +9,7 @@ The structure of this folder follows the versioned example detailed in the [offi
 yarn install
 ```
 
-note: you can use npm instead of yarn.
+Note: You can use npm instead of yarn as well.
 
 ## Local Development
 
