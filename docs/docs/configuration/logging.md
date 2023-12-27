@@ -87,7 +87,7 @@ All other logging that is not covered by the two types mentioned above. Will be 
 [19/Mar/2015:17:20:19 -0400] [main.go:40] <MESSAGE>
 ```
 
-If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default format is configured as follows:
+If you require a different format than that, you can configure it with the `--standard-logging-format` flag. By default the format is configured as follows:
 
 ```
 [{{.Timestamp}}] [{{.File}}] {{.Message}}
