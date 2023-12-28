@@ -6,8 +6,7 @@ title: Session Storage
 Sessions allow a user's authentication to be tracked between multiple HTTP
 requests to a service.
 
-The OAuth2 Proxy uses a Cookie to track user sessions and will store the session
-data in one of the available session storage backends.
+The OAuth2 Proxy uses cookies to track user sessions. Cookies are encrypted and stored in one of the available session storage backends.
 
 At present the available backends are (as passed to `--session-store-type`):
 - [cookie](#cookie-storage) (default)
@@ -16,7 +15,7 @@ At present the available backends are (as passed to `--session-store-type`):
 
 ### Generating a Cookie Secret
 
-The cookie containing session data is encrypted by a string called a cookie secret.   
+For encrypting the session data stored inside a `cookie` a `cookie secret` needs to be generated. 
 To generate a strong cookie secret use one of the below commands:
 
 import Tabs from '@theme/Tabs';
