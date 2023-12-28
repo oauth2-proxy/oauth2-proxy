@@ -82,8 +82,7 @@ server {
 ```
 
 When using `ingress-nginx` as your ingress controller for Kubernetes, we suggest you to use [kubernetes/ingress-nginx](https://github.com/kubernetes/ingress-nginx). Which includes some beneficial lua modules as demonstrated below inside the configuration snippet.
-Variables set with `auth_request_set` are not `set`-able in plain nginx config when the location is processed via `proxy_pass` and then may only be processed by Lua.
-Note that `nginxinc/kubernetes-ingress` does not include the Lua module.
+Note that [nginxinc/kubernetes-ingress](https://github.com/nginxinc/kubernetes-ingress) does not include the lua module for this by default.
 
 ```yaml
 nginx.ingress.kubernetes.io/auth-response-headers: Authorization
