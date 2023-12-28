@@ -14,7 +14,7 @@ Each type of logging has its own configurable format and variables. By default, 
 For reducing the log volume, logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging`.
 
 ### Auth Log Format
-Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
+Authentication logs contain personal information (username or email address) of a user attempting to authenticate. By default these logs are using the following format:
 
 ```
 <REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] [<STATUS>] <MESSAGE>
