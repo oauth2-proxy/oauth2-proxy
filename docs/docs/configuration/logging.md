@@ -7,7 +7,7 @@ By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to
 
 If logging to a file you can also configure the maximum file size (`--logging-max-size`), age (`--logging-max-age`), max backup logs (`--logging-max-backups`), and if backup logs should be compressed (`--logging-compress`).
 
-There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
+There are three different types of logging: standard, authentication, and HTTP requests. These can be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging` respectively.
 
 Each type of logging has its own configurable format and variables. By default, these formats are similar to the Apache Combined Log.
 
