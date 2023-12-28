@@ -5,7 +5,7 @@ title: Logging
 
 By default, OAuth2 Proxy logs all output to stdout. Logging can be configured to output to a rotating log file using the `--logging-filename` command.
 
-If logging to a file you can also configure the maximum file size (`--logging-max-size`), age (`--logging-max-age`), max backup logs (`--logging-max-backups`), and if backup logs should be compressed (`--logging-compress`).
+If you are logging to a file instead of stdout. You can also configure the maximum file size (`--logging-max-size`), age (`--logging-max-age`), max backup logs (`--logging-max-backups`), and if backup logs should be compressed (`--logging-compress`).
 
 There are three different types of logging: standard, authentication, and HTTP requests. These can be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging` respectively.
 
