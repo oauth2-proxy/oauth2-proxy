@@ -23,7 +23,7 @@ Authentication logs contain personal information (username or email address) of 
 The status block will contain one of the below strings:
 
 - `AuthSuccess` If the user has authenticated successfully
-- `AuthFailure` If the user failed to authenticate explicitly
+- `AuthFailure` If the user authentication failed
 - `AuthError` If there was an unexpected error during authentication
 
 If you require a different format than that, you can configure it with the `--auth-logging-format` flag.
