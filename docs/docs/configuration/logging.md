@@ -11,7 +11,7 @@ There are three different types of logging: standard, authentication, and HTTP r
 
 Each type of logging has its own configurable format and variables. By default, these formats are similar to the Apache Combined Log.
 
-Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging` reducing log volume.
+For reducing the log volume, logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging`.
 
 ### Auth Log Format
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
