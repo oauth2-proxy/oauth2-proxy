@@ -22,7 +22,7 @@ Authentication logs are logs which are guaranteed to contain a username or email
 
 The status block will contain one of the below strings:
 
-- `AuthSuccess` If a user has authenticated successfully by any method
+- `AuthSuccess` If the user has authenticated successfully
 - `AuthFailure` If the user failed to authenticate explicitly
 - `AuthError` If there was an unexpected error during authentication
 
