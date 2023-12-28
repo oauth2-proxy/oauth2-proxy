@@ -26,7 +26,7 @@ The status block will contain one of the below strings:
 - `AuthFailure` If the user authentication failed
 - `AuthError` If there was an unexpected error during authentication
 
-If you require a different format than that, you can configure it with the `--auth-logging-format` flag.
+If you require a custom format, you can configure it with the `--auth-logging-format` flag.
 The default format is configured as follows:
 
 ```
@@ -49,14 +49,14 @@ Available variables for auth logging:
 | Status | AuthSuccess | The status of the auth request. See above for details. |
 
 ### Request Log Format
-HTTP request logs will output by default in the below format:
+By default HTTP request logs are using the following format:
 
 ```
 <REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
 ```
 
 If you require a different format than that, you can configure it with the `--request-logging-format` flag.
-The default format is configured as follows:
+By default the format is configured as follows:
 
 ```
 {{.Client}} - {{.RequestID}} - {{.Username}} [{{.Timestamp}}] {{.Host}} {{.RequestMethod}} {{.Upstream}} {{.RequestURI}} {{.Protocol}} {{.UserAgent}} {{.StatusCode}} {{.ResponseSize}} {{.RequestDuration}}
