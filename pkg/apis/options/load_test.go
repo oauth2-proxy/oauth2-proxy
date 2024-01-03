@@ -279,12 +279,12 @@ var _ = Describe("Load", func() {
 					},
 				},
 			}),
-			//Entry("with an invalid config file", &testOptionsTableInput{
-			//	configFile:     []byte(`slice_option = foo`),
-			//	flagSet:        func() *pflag.FlagSet { return testOptionsFlagSet },
-			//	expectedErr:    fmt.Errorf("unable to load config file: While parsing config: (1, 16): no value can start with f"),
-			//	expectedOutput: &TestOptions{},
-			//}),
+			Entry("with an invalid config file", &testOptionsTableInput{
+				configFile:     []byte(`slice_option = foo`),
+				flagSet:        func() *pflag.FlagSet { return testOptionsFlagSet },
+				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: toml: expected 'false'"),
+				expectedOutput: &TestOptions{},
+			}),
 			Entry("with an invalid flagset", &testOptionsTableInput{
 				flagSet: func() *pflag.FlagSet {
 					// Missing a flag
