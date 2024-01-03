@@ -141,7 +141,6 @@ func isUnexported(name string) bool {
 
 // LoadYAML will load a YAML based configuration file into the options interface provided.
 func LoadYAML(configFileName string, into interface{}) error {
-
 	buffer, err := loadAndParseYaml(configFileName)
 	if err != nil {
 		return err
@@ -158,7 +157,6 @@ func LoadYAML(configFileName string, into interface{}) error {
 
 // Performs the heavy lifting of the LoadYaml function
 func loadAndParseYaml(configFileName string) ([]byte, error) {
-
 	if configFileName == "" {
 		return nil, errors.New("no configuration file provided")
 	}

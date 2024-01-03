@@ -387,11 +387,9 @@ sub:
 		DescribeTable("LoadYAML",
 			func(in loadYAMLTableInput) {
 				// Set the required environment variables before running the test
-
 				os.Setenv("TESTUSER", "Alice")
 
 				// Unset the environment variables after running the test
-
 				defer os.Unsetenv("TESTUSER")
 
 				var configFileName string
@@ -414,6 +412,7 @@ sub:
 				} else {
 					input = &TestOptions{}
 				}
+
 				err := LoadYAML(configFileName, input)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr.Error()))
@@ -422,7 +421,6 @@ sub:
 				}
 
 				Expect(input).To(Equal(in.expectedOutput))
-
 			},
 			Entry("with a valid input", loadYAMLTableInput{
 				configFile: testOptionsConfigBytesFull,
