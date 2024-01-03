@@ -6,6 +6,9 @@ const (
 
 	// OIDCGroupsClaim is the generic groups claim used by the OIDC provider.
 	OIDCGroupsClaim = "groups"
+
+	// OIDCRolesClaim is the generic roles claim used by the OIDC provider.
+	OIDCRolesClaim = "roles"
 )
 
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
@@ -78,6 +81,8 @@ type Provider struct {
 	Scope string `json:"scope,omitempty"`
 	// AllowedGroups is a list of restrict logins to members of this group
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
+	// AllowedRoles is a list of restrict logins to users with role
+	AllowedRoles []string `json:"allowedRoles,omitempty"`
 	// The code challenge method
 	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
 }
@@ -225,6 +230,9 @@ type OIDCOptions struct {
 	// GroupsClaim indicates which claim contains the user groups
 	// default set to 'groups'
 	GroupsClaim string `json:"groupsClaim,omitempty"`
+	// RolesClaim indicates which claim contains the user roles
+	// default set to 'roles'
+	RolesClaim string `json:"rolesClaim,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
@@ -259,6 +267,7 @@ func providerDefaults() Providers {
 				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
 				GroupsClaim:                  OIDCGroupsClaim,
+				RolesClaim:                   OIDCRolesClaim,
 				AudienceClaims:               OIDCAudienceClaims,
 				ExtraAudiences:               []string{},
 			},

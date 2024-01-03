@@ -277,6 +277,10 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 		session.Groups = s.Groups
 	}
 
+	if s.Roles != nil {
+		session.Roles = s.Roles
+	}
+
 	return nil
 }
 

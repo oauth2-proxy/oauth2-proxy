@@ -76,6 +76,18 @@ var (
 		StandardClaims: standardClaims,
 	}
 
+	numericRolesIDToken = idTokenClaims{
+		Name:           "Jane Dobbs",
+		Email:          "janed@me.com",
+		Phone:          "+4798765432",
+		Picture:        "http://mugbook.com/janed/me.jpg",
+		Groups:         []string{"test:a", "test:b"},
+		Roles:          []interface{}{1, 2, 3},
+		Verified:       &verified,
+		Nonce:          encryption.HashNonce([]byte(oidcNonce)),
+		StandardClaims: standardClaims,
+	}
+
 	complexGroupsIDToken = idTokenClaims{
 		Name:    "Complex Claim",
 		Email:   "complex@claims.com",
@@ -238,6 +250,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		UserClaim       string
 		EmailClaim      string
 		GroupsClaim     string
+		RolesClaim      string
 		ExpectedError   error
 		ExpectedSession *sessions.SessionState
 	}{
@@ -246,11 +259,13 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			AllowUnverified: false,
 			EmailClaim:      "email",
 			GroupsClaim:     "groups",
+			RolesClaim:      "roles",
 			UserClaim:       "sub",
 			ExpectedSession: &sessions.SessionState{
 				User:              "123456789",
 				Email:             "janed@me.com",
 				Groups:            []string{"test:a", "test:b"},
+				Roles:             []string{"test:c", "test:d"},
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
@@ -408,6 +423,66 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 				PreferredUsername: "Jane Dobbs",
 			},
 		},
+		"Roles Claim switched": {
+			IDToken:         defaultIDToken,
+			AllowUnverified: false,
+			EmailClaim:      "email",
+			GroupsClaim:     "groups",
+			RolesClaim:      "email",
+			UserClaim:       "sub",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				Roles:             []string{"janed@me.com"},
+				PreferredUsername: "Jane Dobbs",
+			},
+		},
+		"Roles Claim Non Existent": {
+			IDToken:         defaultIDToken,
+			AllowUnverified: false,
+			EmailClaim:      "email",
+			GroupsClaim:     "groups",
+			RolesClaim:      "thisisnotaroleatall",
+			UserClaim:       "sub",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				Roles:             nil,
+				PreferredUsername: "Jane Dobbs",
+			},
+		},
+		"Roles Claim Numeric values": {
+			IDToken:         numericRolesIDToken,
+			AllowUnverified: false,
+			EmailClaim:      "email",
+			GroupsClaim:     "groups",
+			RolesClaim:      "roles",
+			UserClaim:       "sub",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				Roles:             []string{"1", "2", "3"},
+				PreferredUsername: "Jane Dobbs",
+			},
+		},
+		"Roles Claim string values": {
+			IDToken:         defaultIDToken,
+			AllowUnverified: false,
+			EmailClaim:      "email",
+			GroupsClaim:     "groups",
+			RolesClaim:      "roles",
+			UserClaim:       "sub",
+			ExpectedSession: &sessions.SessionState{
+				User:              "123456789",
+				Email:             "janed@me.com",
+				Groups:            []string{"test:a", "test:b"},
+				Roles:             []string{"test:c", "test:d"},
+				PreferredUsername: "Jane Dobbs",
+			},
+		},
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
@@ -428,6 +503,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			provider.UserClaim = tc.UserClaim
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
+			provider.RolesClaim = tc.RolesClaim
 
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			g.Expect(err).ToNot(HaveOccurred())
