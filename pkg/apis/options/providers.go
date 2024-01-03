@@ -78,6 +78,8 @@ type Provider struct {
 	Scope string `json:"scope,omitempty"`
 	// AllowedGroups is a list of restrict logins to members of this group
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
+	// AllowedRoles is a list of restrict logins to users with role
+	AllowedRoles []string `json:"allowedRoles,omitempty"`
 	// The code challenge method
 	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
 }

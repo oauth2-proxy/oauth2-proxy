@@ -671,6 +671,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ValidateURL:         l.ValidateURL,
 		Scope:               l.Scope,
 		AllowedGroups:       l.AllowedGroups,
+		AllowedRoles:        l.AllowedRoles,
 		CodeChallengeMethod: l.CodeChallengeMethod,
 	}
 
