@@ -597,7 +597,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("user-id-claim", OIDCEmailClaim, "(DEPRECATED for `oidc-email-claim`) which claim contains the user ID")
 	flagSet.StringSlice("allowed-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("allowed-role", []string{}, "(keycloak-oidc) restrict logins to members of these roles (may be given multiple times)")
-	flagSet.String("backend-logout-url", "", "url to call to perfrom a backend logout, {id_token} can be used as placeholder for the id_token")
+	flagSet.String("backend-logout-url", "", "url to perform a backend logout, {id_token} can be used as placeholder for the id_token")
 
 	return flagSet
 }
