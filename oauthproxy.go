@@ -747,24 +747,34 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, err := p.getAuthenticatedSession(rw, req)
-	if err == nil && session != nil {
-		providerDatas := p.provider.Data()
-		if providerDatas.BackendLogoutURL != "" {
-			backendLogoutURL := strings.ReplaceAll(providerDatas.BackendLogoutURL, "{id_token}", session.IDToken)
-			resp, err := http.Get(backendLogoutURL) // #nosec G107
-			if err != nil {
-				logger.Errorf("error while calling backend logout: %v", err)
-			} else {
-				defer resp.Body.Close()
-				if resp.StatusCode != 200 {
-					logger.Errorf("error while calling backend logout, %v returned a %v", backendLogoutURL, resp.StatusCode)
-				}
-			}
-		}
-	}
+	p.backendLogout(rw, req)
 
 	http.Redirect(rw, req, redirect, http.StatusFound)
+}
+
+func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
+		logger.Errorf("error getting authenticated session during backend logout: %v", err)
+		return
+	}
+	if session == nil {
+		return
+	}
+	providerDatas := p.provider.Data()
+	if providerDatas.BackendLogoutURL == "" {
+		return
+	}
+	backendLogoutURL := strings.ReplaceAll(providerDatas.BackendLogoutURL, "{id_token}", session.IDToken)
+	resp, err := http.Get(backendLogoutURL) // #nosec G107
+	if err != nil {
+		logger.Errorf("error while calling backend logout: %v", err)
+	} else {
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			logger.Errorf("error while calling backend logout, %v returned a %v", backendLogoutURL, resp.StatusCode)
+		}
+	}
 }
 
 // OAuthStart starts the OAuth2 authentication flow
