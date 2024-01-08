@@ -5,7 +5,8 @@ go 1.21
 require (
 	cloud.google.com/go/compute/metadata v0.2.3
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
-	github.com/alicebob/miniredis/v2 v2.31.0
+	github.com/a8m/envsubst v1.4.2
+	github.com/alicebob/miniredis/v2 v2.31.1
 	github.com/benbjohnson/clock v1.3.5
 	github.com/bitly/go-simplejson v0.5.1
 	github.com/bsm/redislock v0.9.4
@@ -27,20 +28,19 @@ require (
 	github.com/onsi/gomega v1.30.0
 	github.com/pierrec/lz4/v4 v4.1.19
 	github.com/prometheus/client_golang v1.18.0
-	github.com/redis/go-redis/v9 v9.3.1
+	github.com/redis/go-redis/v9 v9.4.0
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	github.com/vmihailenco/msgpack/v5 v5.4.1
-	golang.org/x/crypto v0.17.0
-	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
-	golang.org/x/net v0.19.0
-	golang.org/x/oauth2 v0.15.0
-	golang.org/x/sync v0.5.0
-	google.golang.org/api v0.154.0
+	golang.org/x/crypto v0.18.0
+	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc
+	golang.org/x/net v0.20.0
+	golang.org/x/oauth2 v0.16.0
+	golang.org/x/sync v0.6.0
+	google.golang.org/api v0.155.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gopkg.in/square/go-jose.v2 v2.6.0
 	k8s.io/apimachinery v0.29.0
 )
 
@@ -54,7 +54,6 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.1 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -84,7 +83,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.21.0 // indirect
 	go.opentelemetry.io/otel/trace v1.21.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
