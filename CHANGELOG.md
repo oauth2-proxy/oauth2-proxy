@@ -7,6 +7,7 @@
 ## Breaking Changes
 
 ## Changes since v7.5.1
+
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
 - [#2269](https://github.com/oauth2-proxy/oauth2-proxy/pull/2269) Added Azure China (and other air gaped cloud) support (@mblaschke)
 - [#2237](https://github.com/oauth2-proxy/oauth2-proxy/pull/2237) adds an option to append CA certificates (@emsixteeen)
@@ -22,6 +23,8 @@
 - [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
 - [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings. (@timwsuqld)
 - [#2196](https://github.com/oauth2-proxy/oauth2-proxy/pull/2196) Add GitHub groups (orgs/teams) support. Including `X-Forwarded-Groups` header (@tuunit)
+- [#2356](https://github.com/oauth2-proxy/oauth2-proxy/pull/2356) Update go-jose dependency (@dasvh)
+- [#2357](https://github.com/oauth2-proxy/oauth2-proxy/pull/2357) Update ojg to latest release (@bitfehler)
 
 # V7.5.1
 
