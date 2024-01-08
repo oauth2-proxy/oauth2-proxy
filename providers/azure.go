@@ -381,7 +381,7 @@ func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string
 		Do().
 		UnmarshalInto(&jsonResponse)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error while fetching and parsing username: %w", err)
 	}
 
 	if jsonResponse.Name == "" {
