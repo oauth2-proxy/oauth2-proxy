@@ -385,7 +385,7 @@ func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string
 	}
 
 	if jsonResponse.Name == "" {
-		return "", fmt.Errorf("empty username: %v", err)
+		return "", fmt.Errorf("empty username")
 	}
 
 	return jsonResponse.Name, nil
