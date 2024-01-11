@@ -1,0 +1,50 @@
+name: Feature request
+description: Feature requests or proposals related to the overall project or specific providers
+title: "[Feature]: <Short description>"
+labels: ["enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: Motivation
+      description: Tell us the motivation behind your feature request or proposal.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Possible solution
+      description: |
+        If you already have a possible solution in mind. Write some more details about it or add some pseudo code.
+
+        Tip 1: You can attach images or log files by clicking this area to highlight it and then dragging files in.
+        Tip 2: You can add code snippets in triple backtiks like so:
+               \`\`\`golang
+               func hello() {
+                 fmt.Println("world")
+               }
+               \`\`\`
+    validations:
+      required: false
+  - type: dropdown
+    attributes:
+      label: Provider
+      description: Is it a feature request for a specific provider. Not mandatory.
+      options:
+        - new provider
+        - adfs
+        - azure
+        - bitbucket
+        - digitalocean
+        - facebook
+        - gitea
+        - github
+        - gitlab
+        - google
+        - keycloak
+        - keycloak-oidc
+        - linkedin
+        - logingov
+        - nextcloud
+        - oidc
+    validations:
+      required: false
+
