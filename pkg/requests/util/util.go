@@ -2,6 +2,7 @@ package util
 
 import (
 	"net/http"
+	"strings"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 )
@@ -29,7 +30,7 @@ func GetRequestHost(req *http.Request) string {
 	if !IsProxied(req) || host == "" {
 		host = req.Host
 	}
-	return host
+	return strings.Split(host, ":")[0]
 }
 
 // GetRequestURI return the request URI or X-Forwarded-Uri if present and the
