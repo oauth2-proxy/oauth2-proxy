@@ -30,6 +30,8 @@ type Provider struct {
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
 	// AzureConfig holds all configurations for Azure provider.
 	AzureConfig AzureOptions `json:"azureConfig,omitempty"`
+	// AzureConfig holds all configurations for Azure provider.
+	AzureEntraOIDCConfig AzureEntraOIDCOptions `json:"azureEntraOidcConfig,omitempty"`
 	// ADFSConfig holds all configurations for ADFS provider.
 	ADFSConfig ADFSOptions `json:"ADFSConfig,omitempty"`
 	// BitbucketConfig holds all configurations for Bitbucket provider.
@@ -101,6 +103,9 @@ const (
 	// AzureProvider is the provider type for Azure
 	AzureProvider ProviderType = "azure"
 
+	// AzureProvider is the provider type for Azure Entra OIDC
+	AzureEntraOIDCProvider ProviderType = "azure-oidc"
+
 	// BitbucketProvider is the provider type for Bitbucket
 	BitbucketProvider ProviderType = "bitbucket"
 
@@ -153,6 +158,11 @@ type AzureOptions struct {
 	// GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph
 	// Default value is 'id'
 	GraphGroupField string `json:"graphGroupField,omitempty"`
+}
+
+type AzureEntraOIDCOptions struct {
+	DisableGroupsFromGraph    bool     `json:"disableGroupsFromGraph,omitempty"`
+	MultiTenantAllowedTenants []string `json:"multiTenantAllowedTenants,omitempty"`
 }
 
 type ADFSOptions struct {
