@@ -677,6 +677,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		Scope:                    l.Scope,
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,
+		BackendLogoutURL:         l.BackendLogoutURL,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC
@@ -717,14 +718,12 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		}
 	case "keycloak-oidc":
 		provider.KeycloakConfig = KeycloakOptions{
-			Groups:           l.KeycloakGroups,
-			Roles:            l.AllowedRoles,
-			BackendLogoutURL: l.BackendLogoutURL,
+			Groups: l.KeycloakGroups,
+			Roles:  l.AllowedRoles,
 		}
 	case "keycloak":
 		provider.KeycloakConfig = KeycloakOptions{
-			Groups:           l.KeycloakGroups,
-			BackendLogoutURL: l.BackendLogoutURL,
+			Groups: l.KeycloakGroups,
 		}
 	case "gitlab":
 		provider.GitLabConfig = GitLabOptions{
