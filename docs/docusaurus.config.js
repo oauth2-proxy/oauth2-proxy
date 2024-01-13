@@ -8,7 +8,7 @@ import { themes as prismThemes } from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'OAuth2 Proxy Docs',
+  title: 'OAuth2 Proxy',
   tagline: 'A lightweight authentication proxy written in Go',
   favicon: 'img/logos/OAuth2_Proxy_icon.svg',
 
@@ -40,7 +40,8 @@ const config = {
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
-          sidebarPath: './sidebars.js',
+          sidebarPath: require.resolve('./sidebars.js'),
+          routeBasePath: '/',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
@@ -75,10 +76,10 @@ const config = {
       // Replace with your project's social card
       image: 'img/logos/OAuth2_Proxy_horizontal.png',
       navbar: {
-        title: 'OAuth2 Proxy Docs',
+        title: 'OAuth2 Proxy',
         logo: {
           alt: 'OAuth2 Proxy',
-          src: 'img/logos/OAuth2_Proxy_horizontal.png',
+          src: 'img/logos/OAuth2_Proxy_icon.svg',
         },
         items: [
           {
