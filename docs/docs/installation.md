@@ -1,7 +1,7 @@
 ---
 id: installation
 title: Installation
-slug: /
+sidebar_position: 2
 ---
 
 1.  Choose how to deploy:

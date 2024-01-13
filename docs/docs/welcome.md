@@ -1,6 +1,7 @@
 ---
 title: Welcome to OAuth2 Proxy
 hide_table_of_contents: true
+sidebar_position: 1
 ---
 
 ![OAuth2 Proxy](/img/logos/OAuth2_Proxy_horizontal.svg)

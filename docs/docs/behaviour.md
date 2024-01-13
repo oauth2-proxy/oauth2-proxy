@@ -1,6 +1,7 @@
 ---
 id: behaviour
 title: Behaviour
+sidebar_position: 3
 ---
 
 1. Any request passing through the proxy (and not matched by `--skip-auth-regex`) is checked for the proxy's session cookie (`--cookie-name`) (or, if allowed, a JWT token - see `--skip-jwt-bearer-tokens`).
