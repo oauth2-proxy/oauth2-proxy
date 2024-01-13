@@ -3,7 +3,7 @@ title: Welcome to OAuth2 Proxy
 hide_table_of_contents: true
 ---
 
-![OAuth2 Proxy](../../static/img/logos/OAuth2_Proxy_horizontal.svg)
+![OAuth2 Proxy](/img/logos/OAuth2_Proxy_horizontal.svg)
 
 A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
 to validate accounts by email, domain or group.
@@ -14,8 +14,8 @@ Versions v3.0.0 and up are from this fork and will have diverged from any change
 A list of changes can be seen in the [CHANGELOG](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/CHANGELOG.md).
 :::
 
-![Sign In Page](../../static/img/sign-in-page.png)
+![Sign In Page](/img/sign-in-page.png)
 
 ## Architecture
 
-![OAuth2 Proxy Architecture](../../static/img/architecture.png)
+![OAuth2 Proxy Architecture](/img/architecture.svg)

@@ -18,15 +18,16 @@ type SignatureData struct {
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
-	PingPath           string   `flag:"ping-path" cfg:"ping_path"`
-	PingUserAgent      string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
-	ReadyPath          string   `flag:"ready-path" cfg:"ready_path"`
-	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
-	RealClientIPHeader string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
-	TrustedIPs         []string `flag:"trusted-ip" cfg:"trusted_ips"`
-	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https"`
-	RawRedirectURL     string   `flag:"redirect-url" cfg:"redirect_url"`
+	ProxyPrefix         string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
+	PingPath            string   `flag:"ping-path" cfg:"ping_path"`
+	PingUserAgent       string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
+	ReadyPath           string   `flag:"ready-path" cfg:"ready_path"`
+	ReverseProxy        bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
+	RealClientIPHeader  string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
+	TrustedIPs          []string `flag:"trusted-ip" cfg:"trusted_ips"`
+	ForceHTTPS          bool     `flag:"force-https" cfg:"force_https"`
+	RawRedirectURL      string   `flag:"redirect-url" cfg:"redirect_url"`
+	RelativeRedirectURL bool     `flag:"relative-redirect-url" cfg:"relative_redirect_url"`
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
@@ -60,6 +61,7 @@ type Options struct {
 	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
 	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
+	AllowQuerySemicolons  bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
@@ -117,6 +119,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("trusted-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: trusting by IP has inherent security flaws, read the configuration documentation for more information.")
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")
+	flagSet.Bool("relative-redirect-url", false, "allow relative OAuth Redirect URL.")
 	flagSet.StringSlice("skip-auth-regex", []string{}, "(DEPRECATED for --skip-auth-route) bypass authentication for requests path's that match (may be given multiple times)")
 	flagSet.StringSlice("skip-auth-route", []string{}, "bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex")
 	flagSet.StringSlice("api-route", []string{}, "return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex")
@@ -125,6 +128,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
 	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
 	flagSet.Bool("force-json-errors", false, "will force JSON errors instead of HTTP error pages or redirects")
+	flagSet.Bool("allow-query-semicolons", false, "allow the use of semicolons in query args")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")

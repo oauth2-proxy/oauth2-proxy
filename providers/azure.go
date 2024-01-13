@@ -108,7 +108,7 @@ func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
 	if current == nil || current.String() == "" || current.String() == defaultURL.String() {
 		*current = url.URL{
 			Scheme: "https",
-			Host:   "login.microsoftonline.com",
+			Host:   current.Host,
 			Path:   "/" + tenant + "/oauth2/v2.0/" + path}
 	}
 }

@@ -29,7 +29,7 @@ const (
 )
 
 // NewADFSProvider initiates a new ADFSProvider
-func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
+func NewADFSProvider(p *ProviderData, opts options.Provider) *ADFSProvider {
 	p.setProviderDefaults(providerDefaults{
 		name:  adfsProviderName,
 		scope: adfsDefaultScope,
@@ -46,11 +46,11 @@ func NewADFSProvider(p *ProviderData, opts options.ADFSOptions) *ADFSProvider {
 		}
 	}
 
-	oidcProvider := NewOIDCProvider(p, options.OIDCOptions{InsecureSkipNonce: false})
+	oidcProvider := NewOIDCProvider(p, opts.OIDCConfig)
 
 	return &ADFSProvider{
 		OIDCProvider:    oidcProvider,
-		skipScope:       opts.SkipScope,
+		skipScope:       opts.ADFSConfig.SkipScope,
 		oidcEnrichFunc:  oidcProvider.EnrichSession,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
@@ -93,7 +93,7 @@ func (p *ADFSProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 	return refreshed, err
 }
 
-func (p *ADFSProvider) fallbackUPN(ctx context.Context, s *sessions.SessionState) error {
+func (p *ADFSProvider) fallbackUPN(_ context.Context, s *sessions.SessionState) error {
 	claims, err := p.getClaimExtractor(s.IDToken, s.AccessToken)
 	if err != nil {
 		return fmt.Errorf("could not extract claims: %v", err)
