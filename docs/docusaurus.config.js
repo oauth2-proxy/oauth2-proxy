@@ -94,6 +94,11 @@ const config = {
             dropdownActiveClassDisabled: true,
           },
           {
+            href: 'https://gophers.slack.com/messages/CM2RSS25N',
+            label: 'Slack',
+            position: 'right',
+          },
+          {
             href: 'https://github.com/oauth2-proxy/oauth2-proxy',
             label: 'GitHub',
             position: 'right',
@@ -102,17 +107,6 @@ const config = {
       },
       footer: {
         style: 'dark',
-        links: [
-          {
-            title: 'Community',
-            items: [
-              {
-                label: 'Slack',
-                href: 'https://gophers.slack.com/messages/CM2RSS25N',
-              },
-            ],
-          }
-        ],
         copyright: `Copyright © ${new Date().getFullYear()} OAuth2 Proxy.`,
       },
       prism: {
