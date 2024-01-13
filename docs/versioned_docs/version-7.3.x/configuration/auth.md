@@ -201,7 +201,7 @@ Make sure you set the following to the appropriate url:
 
 ```
     --provider=keycloak-oidc
-    --client-id=\<your client's id\>
+    --client-id=<your client's id>
     --client-secret=<your client's secret>
     --redirect-url=https://myapp.com/oauth2/callback
     --oidc-issuer-url=https://<keycloak host>/realms/<your realm>

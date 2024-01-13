@@ -227,7 +227,7 @@ you should define the 'keycloak-group' value to /admin.
 
 ```
     --provider=keycloak-oidc
-    --client-id=\<your client's id\>
+    --client-id=<your client's id>
     --client-secret=<your client's secret>
     --redirect-url=https://internal.yourcompany.com/oauth2/callback
     --oidc-issuer-url=https://<keycloak host>/realms/<your realm> // For Keycloak versions <17: --oidc-issuer-url=https://<keycloak host>/auth/realms/<your realm>
@@ -263,7 +263,7 @@ _In Keycloak, claims are added to JWT tokens through the use of mappers at eithe
 1. Create a new OIDC client in your Keycloak realm by navigating to:  
    **Clients** -> **Create client**
 * **Client Type** 'OpenID Connect'
-* **Client ID** `\<your client's id\>`, please complete the remaining fields as appropriate and click **Next**.
+* **Client ID** `<your client's id>`, please complete the remaining fields as appropriate and click **Next**.
     * **Client authentication** 'On'
     * **Authentication flow**
         * **Standard flow**  'selected'
@@ -278,7 +278,7 @@ _In Keycloak, claims are added to JWT tokens through the use of mappers at eithe
   _(It should have a description of "Dedicated scope and mappers for this client")_
     * Click **Configure a new mapper** and select **Audience**
         * **Name** 'aud-mapper-\<your client's id\>'
-        * **Included Client Audience** select `\<your client's id\>` from the dropdown.
+        * **Included Client Audience** select `<your client's id>` from the dropdown.
             * _OAuth2 proxy can be set up to pass both the access and ID JWT tokens to your upstream services. 
               If you require additional audience entries, you can use the **Included Custom Audience** field in addition to the "Included Client Audience" dropdown. Note that the "aud" claim of a JWT token should be limited and only specify its intended recipients._
         * **Add to ID token** 'On'
@@ -303,7 +303,7 @@ _Creating a realm role_
     * **Role name**, *`<realm role name>`* -> **save**
 
 _Creating a client role_
-* Navigate to **Clients** -> `\<your client's id\>` -> **Roles** -> **Create role**
+* Navigate to **Clients** -> `<your client's id>` -> **Roles** -> **Create role**
     * **Role name**, *`<client role name>`* -> **save**
 
 
@@ -311,10 +311,10 @@ _Assign a role to a user_
 
 **Users** -> _Username_ -> **Role mapping** -> **Assign role** -> _filter by roles or clients and select_ -> **Assign**.
 
-Keycloak "realm roles" can be authorized using the `--allowed-role=<realm role name>` option, while "client roles" can be evaluated using `--allowed-role=\<your client's id\>:<client role name>`.
+Keycloak "realm roles" can be authorized using the `--allowed-role=<realm role name>` option, while "client roles" can be evaluated using `--allowed-role=<your client's id>:<client role name>`.
 
 You may limit the _realm roles_ included in the JWT tokens for any given client by navigating to:  
-**Clients** -> `\<your client's id\>` -> **Client scopes** ->  _\<your client's id\>-dedicated_ -> **Scope**  
+**Clients** -> `<your client's id>` -> **Client scopes** ->  _\<your client's id\>-dedicated_ -> **Scope**  
 Disabling **Full scope allowed** activates the **Assign role** option, allowing you to select which roles, if assigned to a user, will be included in the user's JWT tokens. This can be useful when a user has many associated roles, and you want to reduce the size and impact of the JWT token.
 
 
@@ -331,7 +331,7 @@ To summarize, the steps required to authorize Keycloak group membership with OAu
     * If the "Full group path" option is selected, you need to include a "/" separator in the group names defined in the `--allowed-group` option of OAuth2 Proxy. Example: "/groupname" or "/groupname/childgroup".
 
 After creating the _Client Scope_ named _groups_ you will need to attach it to your client.  
-**Clients** -> `\<your client's id\>` -> **Client scopes** -> **Add client scope** -> Select **groups** and choose Optional and you should now have a client that maps group memberships into the JWT tokens so that Oauth2 Proxy may evaluate them.
+**Clients** -> `<your client's id>` -> **Client scopes** -> **Add client scope** -> Select **groups** and choose Optional and you should now have a client that maps group memberships into the JWT tokens so that Oauth2 Proxy may evaluate them.
 
 Create a group by navigating to **Groups** -> **Create group** and _add_ your test user as a member.
 
@@ -342,7 +342,7 @@ Keycloak also has the option of attaching roles to groups, please refer to the K
 **Tip**
 
 To check if roles or groups are added to JWT tokens, you can preview a users token in the Keycloak console by following these steps:
-**Clients** -> `\<your client's id\>` -> **Client scopes** -> **Evaluate**.  
+**Clients** -> `<your client's id>` -> **Client scopes** -> **Evaluate**.  
 Select a _realm user_ and optional _scope parameters_ such as groups, and generate the JSON representation of an access or id token to examine its contents.
 
 
