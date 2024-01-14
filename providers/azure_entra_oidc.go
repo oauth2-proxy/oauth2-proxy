@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -16,28 +17,38 @@ import (
 // AzureEntraOIDCProvider represents provider for Azure Entra Authentication V2 endpoint
 type AzureEntraOIDCProvider struct {
 	*OIDCProvider
-	isMultiTenant             bool
 	skipGraphGroups           bool
 	multiTenantAllowedTenants []string
+
+	isMultiTenant bool
 }
 
 const (
 	azureEntraOIDCProviderName = "Azure Entra OIDC"
-	azureEntraOIDCGroupsURL    = "https://graph.microsoft.com/v1.0/me/transitiveMemberOf?$count=true&$filter=securityEnabled+eq+true&$select=id"
+)
+
+var (
+	azureEntraGraphURL = &url.URL{
+		Scheme: "https",
+		Host:   "graph.microsoft.com",
+		Path:   "/v1.0/me",
+	}
 )
 
 // NewAzureProvider initiates a new AzureProvider
 func NewAzureEntraOIDCProvider(p *ProviderData, opts options.Provider) *AzureEntraOIDCProvider {
 	// TODO: Add validation for issuer URL to be https://login.microsoftonline.com/{tenant or common}/v2.0
 	p.setProviderDefaults(providerDefaults{
-		name: azureEntraOIDCProviderName,
+		name:       azureEntraOIDCProviderName,
+		profileURL: azureEntraGraphURL,
 	})
 
 	return &AzureEntraOIDCProvider{
-		OIDCProvider:              NewOIDCProvider(p, opts.OIDCConfig),
-		isMultiTenant:             strings.Contains(opts.OIDCConfig.IssuerURL, "common"),
+		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
+
 		skipGraphGroups:           opts.AzureEntraOIDCConfig.DisableGroupsFromGraph,
 		multiTenantAllowedTenants: opts.AzureEntraOIDCConfig.MultiTenantAllowedTenants,
+		isMultiTenant:             strings.Contains(opts.OIDCConfig.IssuerURL, "common"),
 	}
 }
 
@@ -115,7 +126,9 @@ func (p *AzureEntraOIDCProvider) addGraphGroupsToSesion(ctx context.Context, s *
 	groupsHeaders := makeAuthorizationHeader(tokenTypeBearer, s.AccessToken, nil)
 	groupsHeaders.Add("ConsistencyLevel", "eventual")
 
-	jsonRequest, err := requests.New(azureEntraOIDCGroupsURL).WithContext(ctx).WithHeaders(groupsHeaders).Do().UnmarshalSimpleJSON()
+	groupsURL := fmt.Sprintf("%s/transitiveMemberOf?$select=id", p.ProfileURL.String())
+
+	jsonRequest, err := requests.New(groupsURL).WithContext(ctx).WithHeaders(groupsHeaders).Do().UnmarshalSimpleJSON()
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal Microsoft Graph response: %v", err)
 	}
