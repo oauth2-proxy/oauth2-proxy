@@ -3,6 +3,11 @@ id: azure
 title: Azure
 ---
 
+## Register an application with the Microsoft identity platform
+
+The Azure provider facilitates authentication through the Microsoft identity platform. Follow the steps outlined below
+for basic configuration of the provider. For detailed guidance, refer to the [Microsoft documentation](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+
 1. Add an application.
       1. Navigate to the [Azure Portal](https://portal.azure.com).
       2. Click **Azure Active Directory**
@@ -51,15 +56,16 @@ title: Azure
 
         :::tip
 
-         If you've created a multi-tenant app registration, each tenant will need to grant
-         admin consent for the application. See [request the permissions from a directory admin](https://learn.microsoft.com/en-us/entra/identity-platform/v2-admin-consent#request-the-permissions-from-a-directory-admin).
-         Below is an example of the URL that needs to be visited to grant admin consent:
+         For multitenant app registrations, each tenant is required to provide admin consent to the application.
+         Instructions on how to request these permissions from a directory admin can be found [here](https://learn.microsoft.com/en-us/entra/identity-platform/v2-admin-consent#request-the-permissions-from-a-directory-admin).
+         An example URL for granting admin consent is shown below:
 
          ```
          https://login.microsoftonline.com/organizations/v2.0/adminconsent?client_id={client_id}&scope=https://graph.microsoft.com/.default&redirect_uri=http://localhost:4180/oauth2/callback
          ```
       
-         Replace `{client_id}` with the application's client ID.
+         Replace `{client_id}` with your application's client ID. Note that the redirect back to your application does
+         not need to be successful for the admin consent to be granted.
 
         :::
 
@@ -75,21 +81,25 @@ This will be the value of `client-secret` in the configuration.
 
       :::tip
    
-       If you've created a multi-tenant app registration, `tenant-id` will be `organizations`, and you will also need
+       If you've created a multitenant app registration, `tenant-id` will be `organizations`, and you will also need
        to specify the `insecure-oidc-skip-issuer-verify` flag per Microsoft's [documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant#update-your-code-to-handle-multiple-issuer-values).
 
       :::
 
    3. The **Client secret** is the `client-secret` you noted down earlier.
 
-***Notes***:
-- When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't 
-get passed through correctly. Increasing the proxy_buffer_size in nginx or implementing the [redis session storage](sessions.md#redis-storage) 
+:::warning
+
+When using the Azure Auth provider with nginx and the cookie session store you may find the cookie is too large and doesn't 
+get passed through correctly. Increasing the `proxy_buffer_size` in nginx or implementing the [redis session storage](sessions.md#redis-storage) 
 should resolve this.
 
-#### Configuration Examples
+:::
 
-##### v2 Azure Auth endpoint (Microsoft Identity Platform Endpoints - https://login.microsoftonline.com/common/oauth2/v2.0/authorize)
+## Configuration Examples
+
+### Single Tenant App Registration 
+
 ```
    --provider=azure
    --client-id=<Application (client) ID>
@@ -97,12 +107,13 @@ should resolve this.
    --oidc-issuer-url=https://login.microsoftonline.com/{tenant-id}/v2.0
 ```
 
-##### [Multi-tenant Configuration](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant)
+### [Multi-tenant App Registration](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-convert-app-to-be-multi-tenant)
 
-```
+```bash
    --provider=azure
    --client-id=<Application (client) ID>
-   --client-secret=<value from step 4>
+   --client-secret=<value from step 3>
    --oidc-issuer-url=https://login.microsoftonline.com/organizations/v2.0
+   # highlight-next-line
    --insecure-oidc-skip-issuer-verification
 ```
