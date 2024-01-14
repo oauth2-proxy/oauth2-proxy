@@ -141,9 +141,6 @@ type KeycloakOptions struct {
 }
 
 type AzureOptions struct {
-	// Tenant directs to a tenant-specific or common (tenant-independent) endpoint
-	// Default value is 'common'
-	Tenant string `json:"tenant,omitempty"`
 	// GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph
 	// Default value is 'id'
 	GraphGroupField string `json:"graphGroupField,omitempty"`
@@ -250,7 +247,7 @@ func providerDefaults() Providers {
 		{
 			Type: "google",
 			AzureConfig: AzureOptions{
-				Tenant: "common",
+				GraphGroupField: "id",
 			},
 			OIDCConfig: OIDCOptions{
 				InsecureAllowUnverifiedEmail: false,

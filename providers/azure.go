@@ -28,7 +28,6 @@ import (
 // AzureProvider represents an Azure based Identity Provider
 type AzureProvider struct {
 	*ProviderData
-	Tenant          string
 	GraphGroupField string
 	graphClient     *msgraphsdk.GraphServiceClient
 }
@@ -80,13 +79,6 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	}
 	p.getAuthorizationHeaderFunc = makeAzureHeader
 
-	tenant := "common"
-	if opts.Tenant != "" {
-		tenant = opts.Tenant
-		overrideTenantURL(p.LoginURL, azureDefaultLoginURL, tenant, "authorize")
-		overrideTenantURL(p.RedeemURL, azureDefaultRedeemURL, tenant, "token")
-	}
-
 	graphGroupField := azureDefaultGraphGroupField
 	if opts.GraphGroupField != "" {
 		graphGroupField = opts.GraphGroupField
@@ -98,18 +90,8 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 
 	return &AzureProvider{
 		ProviderData:    p,
-		Tenant:          tenant,
 		GraphGroupField: graphGroupField,
 		graphClient:     msgraphsdk.NewGraphServiceClient(adapter),
-	}
-}
-
-func overrideTenantURL(current, defaultURL *url.URL, tenant, path string) {
-	if current == nil || current.String() == "" || current.String() == defaultURL.String() {
-		*current = url.URL{
-			Scheme: "https",
-			Host:   current.Host,
-			Path:   "/" + tenant + "/oauth2/v2.0/" + path}
 	}
 }
 

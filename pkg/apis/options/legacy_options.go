@@ -50,7 +50,6 @@ func NewLegacyOptions() *LegacyOptions {
 
 		LegacyProvider: LegacyProvider{
 			ProviderType:          "google",
-			AzureTenant:           "common",
 			ApprovalPrompt:        "force",
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
@@ -486,7 +485,6 @@ type LegacyProvider struct {
 	ClientSecretFile string `flag:"client-secret-file" cfg:"client_secret_file"`
 
 	KeycloakGroups                         []string `flag:"keycloak-group" cfg:"keycloak_groups"`
-	AzureTenant                            string   `flag:"azure-tenant" cfg:"azure_tenant"`
 	AzureGraphGroupField                   string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
 	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
@@ -546,7 +544,6 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("provider", pflag.ExitOnError)
 
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
-	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("azure-graph-group-field", "id", "group field to use when building the groups list from Microsoft Graph (available only for v2.0 oidc url). Valid values are \"id\" and \"displayName\". The values specified for `allowed-group` must align to this setting.")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
@@ -697,7 +694,6 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	// This part is out of the switch section because azure has a default tenant
 	// that needs to be added from legacy options
 	provider.AzureConfig = AzureOptions{
-		Tenant:          l.AzureTenant,
 		GraphGroupField: l.AzureGraphGroupField,
 	}
 
