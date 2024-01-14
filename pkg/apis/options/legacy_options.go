@@ -488,7 +488,7 @@ type LegacyProvider struct {
 	KeycloakGroups                         []string `flag:"keycloak-group" cfg:"keycloak_groups"`
 	AzureTenant                            string   `flag:"azure-tenant" cfg:"azure_tenant"`
 	AzureGraphGroupField                   string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
-	AzureOIDCSkipGraphGroups               bool     `flag:"azure-oidc-skip-graph-groups" cfg:"azure_oidc_skip_graph_groups"`
+	AzureOIDCSkipGroupsFromGraph           bool     `flag:"azure-oidc-skip-groups-from-graph" cfg:"azure_oidc_skip_groups_from_graph"`
 	AzureOIDCMutliTenantAllowedTenants     []string `flag:"azure-oidc-multi-tenant-allowed-tenant" cfg:"azure_oidc_multi_tenant_allowed_tenants"`
 	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
@@ -552,7 +552,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("azure-graph-group-field", "", "configures the group field to be used when building the groups list(`id` or `displayName`. Default is `id`) from Microsoft Graph(available only for v2.0 oidc url). Based on this value, the `allowed-group` config values should be adjusted accordingly. If using `id` as group field, `allowed-group` should contains groups IDs, if using `displayName` as group field, `allowed-group` should contains groups name")
-	flagSet.Bool("azure-oidc-skip-graph-groups", false, "when set, azure oidc provider doesn' try to read groups from microsoft graph even in case of group overage")
+	flagSet.Bool("azure-oidc-skip-groups-from-graph", false, "when set, azure oidc provider doesn' try to read groups from microsoft graph even in case of group overage")
 	flagSet.StringSlice("azure-oidc-multi-tenant-allowed-tenant", []string{}, "list of tenants allowed for multi-tenant application")
 	flagSet.String("bitbucket-team", "", "restrict logins to members of this team")
 	flagSet.String("bitbucket-repository", "", "restrict logins to user with access to this repository")
@@ -712,7 +712,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	}
 
 	provider.AzureEntraOIDCConfig = AzureEntraOIDCOptions{
-		DisableGroupsFromGraph:    l.AzureOIDCSkipGraphGroups,
+		DisableGroupsFromGraph:    l.AzureOIDCSkipGroupsFromGraph,
 		MultiTenantAllowedTenants: l.AzureOIDCMutliTenantAllowedTenants,
 	}
 
