@@ -184,6 +184,8 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 		}
 	}
 
+	// if we have a groups overage, or if the GraphGroupField is set to
+	// "displayName", we need to query the Graph API for the user's groups
 	if groupOverage || (session.Groups != nil && strings.EqualFold(p.GraphGroupField, "displayName")) {
 		err = p.processGroupOverage(ctx, session)
 		if err != nil {
