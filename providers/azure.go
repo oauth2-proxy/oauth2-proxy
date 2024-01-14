@@ -175,61 +175,80 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 	if s.Groups != nil {
 		session.Groups = s.Groups
 	} else {
-		// Check for group overage
-		// https://learn.microsoft.com/en-us/azure/active-directory/external-identities/customers/how-to-web-app-role-based-access-control#handle-groups-overage
-		// https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages
-		extractor, err := p.getClaimExtractor(session.IDToken, session.AccessToken)
+		groupOverage, err = p.checkGroupOverage(session)
 		if err != nil {
-			return fmt.Errorf("unable to get claim extractor: %v", err)
-		}
-		claimNames, exists, err := extractor.GetClaim("_claim_names")
-		if err != nil {
-			return fmt.Errorf("unable to extract _claim_names from token: %v", err)
-		}
-		if exists {
-			claimNamesMap := cast.ToStringMapString(claimNames)
-			// if the _claim_names claim exists, and it has a "groups" entry, we should query the Graph API
-			_, groupOverage = claimNamesMap["groups"]
-		}
-		// implicit flow overage indication uses the "hasgroups" claim, so check for its existence as well
-		if !groupOverage {
-			var err error
-			_, groupOverage, err = extractor.GetClaim("hasgroups")
-			if err != nil {
-				return fmt.Errorf("unable to extract hasgroups from token: %v", err)
-			}
+			return fmt.Errorf("unable to check for groups overage: %v", err)
 		}
 	}
 
 	if groupOverage || (session.Groups != nil && strings.EqualFold(p.GraphGroupField, "displayName")) {
-		groupsMap, err := p.getGroupsFromProfileAPI(ctx, session.AccessToken)
+		err = p.processGroupOverage(ctx, session)
 		if err != nil {
-			return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
-		}
-		// if we have groups from the token, and we're here, we need to translate group
-		// IDs to display names
-		if session.Groups != nil {
-			for key, group := range session.Groups {
-				if displayName, ok := groupsMap[group]; ok {
-					session.Groups[key] = displayName
-				}
-			}
-		} else { // Process the group overage
-			session.Groups = make([]string, 0)
-			if strings.EqualFold(p.GraphGroupField, "displayName") {
-				for _, displayName := range groupsMap {
-					session.Groups = append(session.Groups, displayName)
-				}
-			} else {
-				for group := range groupsMap {
-					session.Groups = append(session.Groups, group)
-				}
-			}
+			return err
 		}
 	}
 	sort.Strings(session.Groups)
 
 	return nil
+}
+
+// processGroupOverage queries the Graph API for the user's groups and translates
+// group IDs to display names if the GraphGroupField is set to "displayName"
+func (p *AzureProvider) processGroupOverage(ctx context.Context, session *sessions.SessionState) error {
+	groupsMap, err := p.getGroupsFromProfileAPI(ctx, session.AccessToken)
+	if err != nil {
+		return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
+	}
+	// if we have groups from the token, and we're here, we need to translate group
+	// IDs to display names
+	if session.Groups != nil {
+		for key, group := range session.Groups {
+			if displayName, ok := groupsMap[group]; ok {
+				session.Groups[key] = displayName
+			}
+		}
+	} else { // Process the group overage
+		session.Groups = make([]string, 0)
+		if strings.EqualFold(p.GraphGroupField, "displayName") {
+			for _, displayName := range groupsMap {
+				session.Groups = append(session.Groups, displayName)
+			}
+		} else {
+			for group := range groupsMap {
+				session.Groups = append(session.Groups, group)
+			}
+		}
+	}
+	return nil
+}
+
+// checkGroupOverage checks for group overages
+// https://learn.microsoft.com/en-us/azure/active-directory/external-identities/customers/how-to-web-app-role-based-access-control#handle-groups-overage
+// https://learn.microsoft.com/en-us/security/zero-trust/develop/configure-tokens-group-claims-app-roles#group-overages
+func (p *AzureProvider) checkGroupOverage(session *sessions.SessionState) (bool, error) {
+	var groupOverage bool
+	extractor, err := p.getClaimExtractor(session.IDToken, session.AccessToken)
+	if err != nil {
+		return false, fmt.Errorf("unable to get claim extractor: %v", err)
+	}
+	claimNames, exists, err := extractor.GetClaim("_claim_names")
+	if err != nil {
+		return false, fmt.Errorf("unable to extract _claim_names from token: %v", err)
+	}
+	if exists {
+		claimNamesMap := cast.ToStringMapString(claimNames)
+		// if the _claim_names claim exists, and it has a "groups" entry, we should query the Graph API
+		_, groupOverage = claimNamesMap["groups"]
+	}
+	// implicit flow overage indication uses the "hasgroups" claim, so check for its existence as well
+	if !groupOverage {
+		var err error
+		_, groupOverage, err = extractor.GetClaim("hasgroups")
+		if err != nil {
+			return false, fmt.Errorf("unable to extract hasgroups from token: %v", err)
+		}
+	}
+	return groupOverage, nil
 }
 
 // verifySessionToken tries to validate id_token if present or access token when oidc verifier is configured
@@ -359,22 +378,34 @@ func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, accessToken
 }
 
 func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
-	// Query Graph API for user's profile
-	// https://learn.microsoft.com/en-us/graph/api/user-list-transitivememberof?view=graph-rest-1.0&tabs=go
-	profileResponse, err := p.graphClient.Me().Get(ctx, &users.UserItemRequestBuilderGetRequestConfiguration{Headers: makeGraphAuthHeader(accessToken)})
+	// Query the Microsoft Graph API for the user's profile
+	profileResponse, err := p.graphClient.Me().Get(ctx, &users.UserItemRequestBuilderGetRequestConfiguration{
+		Headers: makeGraphAuthHeader(accessToken),
+	})
 	if err != nil {
-		return "", fmt.Errorf("unable to query user's profile from Microsoft Graph API: %v", getOdataError(err))
+		return "", fmt.Errorf("failed to query user's profile: %v", getOdataError(err))
 	}
+
+	// Extract the email from the response
+	email := getFirstAvailableEmail(profileResponse)
+	if email == "" {
+		return "", fmt.Errorf("email address not found in user's profile")
+	}
+	return email, nil
+}
+
+// getFirstAvailableEmail tries to retrieve the email from various fields in the profile response
+func getFirstAvailableEmail(profileResponse models.Userable) string {
 	if profileResponse.GetMail() != nil {
-		return *profileResponse.GetMail(), nil
+		return *profileResponse.GetMail()
 	}
-	if profileResponse.GetOtherMails() != nil && len(profileResponse.GetOtherMails()) > 0 {
-		return (profileResponse.GetOtherMails())[0], nil
+	if len(profileResponse.GetOtherMails()) > 0 {
+		return profileResponse.GetOtherMails()[0]
 	}
 	if profileResponse.GetUserPrincipalName() != nil {
-		return *profileResponse.GetUserPrincipalName(), nil
+		return *profileResponse.GetUserPrincipalName()
 	}
-	return "", fmt.Errorf("unable to find email address in user's profile from Microsoft Graph API")
+	return ""
 }
 
 func getOdataError(err error) error {
