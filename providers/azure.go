@@ -40,38 +40,11 @@ const (
 	azureDefaultGraphGroupField = "id"
 )
 
-var (
-	// Default Login URL for Azure. Pre-parsed URL of https://login.microsoftonline.com/common/oauth2/authorize.
-	azureDefaultLoginURL = &url.URL{
-		Scheme: "https",
-		Host:   "login.microsoftonline.com",
-		Path:   "/common/oauth2/v2.0/authorize",
-	}
-
-	// Default Redeem URL for Azure. Pre-parsed URL of https://login.microsoftonline.com/common/oauth2/token.
-	azureDefaultRedeemURL = &url.URL{
-		Scheme: "https",
-		Host:   "login.microsoftonline.com",
-		Path:   "/common/oauth2/v2.0/token",
-	}
-
-	// Default Profile URL for Azure. Pre-parsed URL of https://graph.microsoft.com/v1.0/me.
-	azureDefaultProfileURL = &url.URL{
-		Scheme: "https",
-		Host:   "graph.microsoft.com",
-		Path:   "/v1.0/me",
-	}
-)
-
 // NewAzureProvider initiates a new AzureProvider
 func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider {
 	p.setProviderDefaults(providerDefaults{
-		name:        azureProviderName,
-		loginURL:    azureDefaultLoginURL,
-		redeemURL:   azureDefaultRedeemURL,
-		profileURL:  azureDefaultProfileURL,
-		validateURL: nil,
-		scope:       azureDefaultScope,
+		name:  azureProviderName,
+		scope: azureDefaultScope,
 	})
 
 	if p.ValidateURL == nil || p.ValidateURL.String() == "" {
