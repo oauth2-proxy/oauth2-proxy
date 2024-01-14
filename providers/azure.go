@@ -158,14 +158,17 @@ func (p *AzureProvider) extractClaimsIntoSession(ctx context.Context, session *s
 	var s *sessions.SessionState
 
 	// First let's verify session token
-	if err := p.verifySessionToken(ctx, session); err != nil {
-		return fmt.Errorf("unable to verify token: %v", err)
-	}
-
-	var err error
-	s, err = p.buildSessionFromClaims(session.IDToken, session.AccessToken)
+	err := p.verifySessionToken(ctx, session)
 	if err != nil {
-		return fmt.Errorf("unable to get claims from token: %v", err)
+		err = fmt.Errorf("unable to verify token: %v", err)
+	} else {
+		s, err = p.buildSessionFromClaims(session.IDToken, session.AccessToken)
+		if err != nil {
+			err = fmt.Errorf("unable to get claims from token: %v", err)
+		}
+	}
+	if err != nil {
+		return err
 	}
 
 	session.Email = s.Email
