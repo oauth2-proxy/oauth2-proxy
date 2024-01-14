@@ -8,7 +8,7 @@ OIDC-compliant provider for Azure Entra ID application registrations. This provi
 To start, create an App registration with minimal permissions, assign redirect URI and generate secret. All account types are supported (Single tenant, multi tenant, multi tenant with MS accounts, MS accounts only).
 <details>
     <summary>See Azure Portal example</summary>
-    <IMG src="azure-entra/create-app-reg.gif"  alt="Create app registration"/>
+    <img src="/oauth2-proxy/img/azure-create-app-reg.gif"/>
 
 When created with Portal, App registration automatically creates a delegated API permission for `User.Read`. 
 </details>
@@ -44,10 +44,10 @@ When created with Portal, App registration automatically creates a delegated API
 This is sufficient for a simple authentication scenario.
 
 ### Configure `groups` claim
-If you want to make use of groups (for example, use `--allowed-groups` feature of oauth2-proxy or authorize based on groups inside your service), you need to configure `groups` claim to be present in the ID token:
+If you want to make use of groups (for example, use `--allowed-group` feature of oauth2-proxy or authorize based on groups inside your service), you need to configure `groups` claim to be present in the ID token:
 <details>
     <summary>See Azure Portal example</summary>
-    <IMG src="azure-entra/create-groups-claim.gif"  alt="Add groups claim"/>
+    <img src="/oauth2-proxy/img/azure-create-groups-claim.gif"/>
 </details>
 <details>
     <summary>See Terraform example</summary>
@@ -91,7 +91,7 @@ If you want to make use of groups (for example, use `--allowed-groups` feature o
 Azure has a limit of 200 groups in the JWT. If you can't avoid such a bug number and still want to access the groups, you need to grant `GroupMember.Read.All` delegated permission to the app registration so oauth2-proxy can read all the groups from Graph API. **NOTE**: This permission by default requires an admin consent!
 <details>
     <summary>See Azure Portal example</summary>
-    <IMG src="azure-entra/group-overage-permission.gif"  alt="Assign permission for group overage"/>
+    <img src="/oauth2-proxy/img/azure-group-overage-permission.gif"/>
 </details>
 <details>
     <summary>See Terraform example</summary>
@@ -138,23 +138,32 @@ Admin consent is required after creation by Terraform
 </details>
 
 ## Configure provider
-Provider is configured via OIDC-related oauth2-proxy parameters + following provider-specific parameters:
-* `azure-oidc-skip-groups-from-graph` - never read groups from Graph API, even when ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`
-* `azure-oidc-multi-tenant-allowed-tenant` - speciy list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]`.
+Provider is OIDC-compliant, so all the OIDC parameters are honoured. Additional provider-specific configuration parameters are:
+* `azure-oidc-skip-groups-from-graph` - never read groups from Graph API, even when ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping `groups` claim in the app registration.
+* `azure-oidc-multi-tenant-allowed-tenant` - speciy list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]` (all tenants).
 
-See examples below
+### Scope
+For Azure-only apps (multi-tenant and single-tenant), the only required oAuth scope is `openid`:
+```
+- --scope=openid
+```
+For personal MS accounts, the scope has to be extended with `email` and `profile`:
+```
+- --scope=openid profile email
+```
+It's recommended to configure the scopes explicitly, otherwise you may experience issues with allowing groups (Azure doesn't support `groups` scope which is automatically included when you configure allowed groups).
 
 ### Single-tenant
-
+Simple single-tenant configuration:
 ```
 - --provider=azure-oidc
 - --oidc-issuer-url=https://login.microsoftonline.com/{tenantId}/v2.0
 - --client-id=<valid-client-id>
 - --client-secret=<valid-client-secret>
+- --scope=openid
 ```
 
-
-### Multi-tenant app
+### Multi-tenant
 Multi-tenant apps require to disable OIDC issuer verification, as `issuer` field in the [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) is a template, not an exact value:
 ```
 - --provider=azure-oidc
@@ -162,6 +171,7 @@ Multi-tenant apps require to disable OIDC issuer verification, as `issuer` field
 - --client-id=<valid-client-id>
 - --client-secret=<valid-client-secret>
 - --insecure-oidc-skip-issuer-verification
+- --scope=openid profile email
 ```
 
 Configuration above insecurely allows all tenants, to allow specific tenants:
@@ -173,4 +183,5 @@ Configuration above insecurely allows all tenants, to allow specific tenants:
 - --azure-oidc-multi-tenant-allowed-tenant=66209a4a-80f3-4602-8126-2193115722f8
 - --azure-oidc-multi-tenant-allowed-tenant=a47d1522-8e8c-4546-a2c8-d6590ea9d6f3
 - --insecure-oidc-skip-issuer-verification
+- --scope=openid profile email
 ```

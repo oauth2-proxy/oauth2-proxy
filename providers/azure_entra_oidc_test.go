@@ -106,7 +106,7 @@ func TestAzureEntraOIDCProviderEnrichSessionGroupOverage(t *testing.T) {
 	// Create mocked Azure Graph server and override Graph URL
 	mockedGraph := mockGraphAPI(false)
 	mockedGraphURL, _ := url.Parse(mockedGraph.URL)
-	updateURL(provider.ProfileURL, mockedGraphURL.Host)
+	updateURL(provider.azureEntraGraphURL, mockedGraphURL.Host)
 
 	// Test EnrichSession
 	err = provider.EnrichSession(context.Background(), session)
