@@ -28,6 +28,7 @@ module.exports = {
           items: [
             'configuration/providers/google',
             'configuration/providers/azure',
+            'configuration/providers/azure_entra_oidc',
             'configuration/providers/adfs',
             'configuration/providers/facebook',
             'configuration/providers/github',
@@ -36,7 +37,6 @@ module.exports = {
             'configuration/providers/keycloak_oidc',
             'configuration/providers/gitlab',
             'configuration/providers/linkedin',
-            'configuration/providers/azure_ad',
             'configuration/providers/openid_connect',
             'configuration/providers/login_gov',
             'configuration/providers/nextcloud',

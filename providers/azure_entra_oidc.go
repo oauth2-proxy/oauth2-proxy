@@ -20,7 +20,8 @@ type AzureEntraOIDCProvider struct {
 	skipGraphGroups           bool
 	multiTenantAllowedTenants []string
 
-	isMultiTenant bool
+	azureEntraGraphURL *url.URL
+	isMultiTenant      bool
 }
 
 const (
@@ -37,10 +38,8 @@ var (
 
 // NewAzureProvider initiates a new AzureProvider
 func NewAzureEntraOIDCProvider(p *ProviderData, opts options.Provider) *AzureEntraOIDCProvider {
-	// TODO: Add validation for issuer URL to be https://login.microsoftonline.com/{tenant or common}/v2.0
 	p.setProviderDefaults(providerDefaults{
-		name:       azureEntraOIDCProviderName,
-		profileURL: azureEntraGraphURL,
+		name: azureEntraOIDCProviderName,
 	})
 
 	return &AzureEntraOIDCProvider{
@@ -49,6 +48,7 @@ func NewAzureEntraOIDCProvider(p *ProviderData, opts options.Provider) *AzureEnt
 		skipGraphGroups:           opts.AzureEntraOIDCConfig.DisableGroupsFromGraph,
 		multiTenantAllowedTenants: opts.AzureEntraOIDCConfig.MultiTenantAllowedTenants,
 		isMultiTenant:             strings.Contains(opts.OIDCConfig.IssuerURL, "common"),
+		azureEntraGraphURL:        azureEntraGraphURL,
 	}
 }
 
@@ -100,7 +100,7 @@ func (p *AzureEntraOIDCProvider) checkGroupOverage(session *sessions.SessionStat
 	}
 
 	claimNames, _, _ := extractor.GetClaim("_claim_names")
-	hasGroups, _, _ := extractor.GetClaim("hasGroups")
+	hasGroups, _, _ := extractor.GetClaim("hasgroups")
 
 	if claimNames == nil && hasGroups == nil {
 		return false, nil
@@ -126,7 +126,7 @@ func (p *AzureEntraOIDCProvider) addGraphGroupsToSesion(ctx context.Context, s *
 	groupsHeaders := makeAuthorizationHeader(tokenTypeBearer, s.AccessToken, nil)
 	groupsHeaders.Add("ConsistencyLevel", "eventual")
 
-	groupsURL := fmt.Sprintf("%s/transitiveMemberOf?$select=id", p.ProfileURL.String())
+	groupsURL := fmt.Sprintf("%s/transitiveMemberOf?$select=id", p.azureEntraGraphURL)
 
 	jsonRequest, err := requests.New(groupsURL).WithContext(ctx).WithHeaders(groupsHeaders).Do().UnmarshalSimpleJSON()
 	if err != nil {
