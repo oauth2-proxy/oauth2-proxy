@@ -8,7 +8,11 @@ OIDC-compliant provider for Azure Entra ID application registrations. This provi
 To start, create an App registration with minimal permissions, assign redirect URI and generate secret. All account types are supported (Single tenant, multi tenant, multi tenant with MS accounts, MS accounts only).
 <details>
     <summary>See Azure Portal example</summary>
-    <img src="/oauth2-proxy/img/azure-create-app-reg.gif"/>
+    <div class="videoBlock">
+        <video controls>
+            <source src="/oauth2-proxy/azure-videos/create-app-reg.mkv"/>
+        </video>
+    </div>
 
 When created with Portal, App registration automatically creates a delegated API permission for `User.Read`. 
 </details>
@@ -47,7 +51,11 @@ This is sufficient for a simple authentication scenario.
 If you want to make use of groups (for example, use `--allowed-group` feature of oauth2-proxy or authorize based on groups inside your service), you need to configure `groups` claim to be present in the ID token:
 <details>
     <summary>See Azure Portal example</summary>
-    <img src="/oauth2-proxy/img/azure-create-groups-claim.gif"/>
+    <div class="videoBlock">
+        <video controls>
+            <source src="/oauth2-proxy/azure-videos/create-groups-claim.mkv"/>
+        </video>
+    </div>
 </details>
 <details>
     <summary>See Terraform example</summary>
@@ -91,7 +99,11 @@ If you want to make use of groups (for example, use `--allowed-group` feature of
 Azure has a limit of 200 groups in the JWT. If you can't avoid such a bug number and still want to access the groups, you need to grant `GroupMember.Read.All` delegated permission to the app registration so oauth2-proxy can read all the groups from Graph API. **NOTE**: This permission by default requires an admin consent!
 <details>
     <summary>See Azure Portal example</summary>
-    <img src="/oauth2-proxy/img/azure-group-overage-permission.gif"/>
+    <div class="videoBlock">
+        <video controls>
+            <source src="/oauth2-proxy/azure-videos/group-overage.mkv"/>
+        </video>
+    </div>
 </details>
 <details>
     <summary>See Terraform example</summary>
