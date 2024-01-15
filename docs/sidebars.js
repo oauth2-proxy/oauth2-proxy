@@ -28,7 +28,7 @@ module.exports = {
           items: [
             'configuration/providers/google',
             'configuration/providers/azure',
-            'configuration/providers/azure_entra_oidc',
+            'configuration/providers/ms_entra_id',
             'configuration/providers/adfs',
             'configuration/providers/facebook',
             'configuration/providers/github',

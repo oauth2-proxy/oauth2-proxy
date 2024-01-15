@@ -10,7 +10,7 @@ Valid providers are :
 
 - [Google](google.md) _default_
 - [Azure](azure.md)
-- [Azure Entra OIDC](azure_entra_oidc.md)
+- [Microsoft Entra ID](ms_entra_id.md)
 - [ADFS](adfs.md)
 - [Facebook](facebook.md)
 - [GitHub](github.md)
