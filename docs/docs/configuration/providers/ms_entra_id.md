@@ -1,8 +1,8 @@
 ---
-id: azure_entra_oidc
-title: Azure Entra ID OIDC
+id: ms_entra_id
+title: Microsoft Entra ID
 ---
-OIDC-compliant provider for Azure Entra ID application registrations. This providers support Azure oAuth V2 endpoint only, if you want to use V1 endpoint, try legacy `azure` provider.
+OIDC-compliant provider for Microsoft Entra ID (Azure AD successor) application registrations. This providers support Azure oAuth V2 endpoint only, if you want to use V1 endpoint, try legacy `azure` provider. 
 
 ## Configure application registration
 To start, create an App registration with minimal permissions, assign redirect URI and generate secret. All account types are supported (Single tenant, multi tenant, multi tenant with MS accounts, MS accounts only).
