@@ -14,46 +14,46 @@ import (
 	"github.com/spf13/cast"
 )
 
-// AzureEntraOIDCProvider represents provider for Azure Entra Authentication V2 endpoint
-type AzureEntraOIDCProvider struct {
+// MicrosoftEntraIDProvider represents provider for Azure Entra Authentication V2 endpoint
+type MicrosoftEntraIDProvider struct {
 	*OIDCProvider
 	skipGraphGroups           bool
 	multiTenantAllowedTenants []string
 
-	azureEntraGraphURL *url.URL
-	isMultiTenant      bool
+	microsoftGraphURL *url.URL
+	isMultiTenant     bool
 }
 
 const (
-	azureEntraOIDCProviderName = "Azure Entra OIDC"
+	microsoftEntraIDProviderName = "Microsoft Entra ID"
 )
 
 var (
-	azureEntraGraphURL = &url.URL{
+	microsoftGraphURL = &url.URL{
 		Scheme: "https",
 		Host:   "graph.microsoft.com",
 		Path:   "/v1.0/me",
 	}
 )
 
-// NewAzureProvider initiates a new AzureProvider
-func NewAzureEntraOIDCProvider(p *ProviderData, opts options.Provider) *AzureEntraOIDCProvider {
+// NewAzureProvider initiates a new MicrosoftEntraIDProvider
+func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *MicrosoftEntraIDProvider {
 	p.setProviderDefaults(providerDefaults{
-		name: azureEntraOIDCProviderName,
+		name: microsoftEntraIDProviderName,
 	})
 
-	return &AzureEntraOIDCProvider{
+	return &MicrosoftEntraIDProvider{
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 
-		skipGraphGroups:           opts.AzureEntraOIDCConfig.DisableGroupsFromGraph,
-		multiTenantAllowedTenants: opts.AzureEntraOIDCConfig.MultiTenantAllowedTenants,
+		skipGraphGroups:           opts.MicrosoftEntraIDConfig.DisableGroupsFromGraph,
+		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.MultiTenantAllowedTenants,
 		isMultiTenant:             strings.Contains(opts.OIDCConfig.IssuerURL, "common"),
-		azureEntraGraphURL:        azureEntraGraphURL,
+		microsoftGraphURL:         microsoftGraphURL,
 	}
 }
 
 // EnrichSession checks for group overage and passes through to generic EnrichSession()
-func (p *AzureEntraOIDCProvider) EnrichSession(ctx context.Context, session *sessions.SessionState) error {
+func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *sessions.SessionState) error {
 	err := p.OIDCProvider.EnrichSession(ctx, session)
 
 	if !p.skipGraphGroups {
@@ -72,7 +72,7 @@ func (p *AzureEntraOIDCProvider) EnrichSession(ctx context.Context, session *ses
 }
 
 // ValidateSession checks for allowed tenants for multi-tenant apps and passes through to generic ValidateSession
-func (p *AzureEntraOIDCProvider) ValidateSession(ctx context.Context, session *sessions.SessionState) bool {
+func (p *MicrosoftEntraIDProvider) ValidateSession(ctx context.Context, session *sessions.SessionState) bool {
 
 	if p.isMultiTenant {
 		issuer, exists, error := p.getIssuer(session)
@@ -93,7 +93,7 @@ func (p *AzureEntraOIDCProvider) ValidateSession(ctx context.Context, session *s
 }
 
 // checkGroupOverage checks is claims present in ID Token indicate group overage
-func (p *AzureEntraOIDCProvider) checkGroupOverage(session *sessions.SessionState) (bool, error) {
+func (p *MicrosoftEntraIDProvider) checkGroupOverage(session *sessions.SessionState) (bool, error) {
 	extractor, err := p.getClaimExtractor(session.IDToken, session.AccessToken)
 	if err != nil {
 		return false, fmt.Errorf("unable to get claim extractor: %v", err)
@@ -121,12 +121,12 @@ func (p *AzureEntraOIDCProvider) checkGroupOverage(session *sessions.SessionStat
 	return false, nil
 }
 
-func (p *AzureEntraOIDCProvider) addGraphGroupsToSesion(ctx context.Context, s *sessions.SessionState) error {
+func (p *MicrosoftEntraIDProvider) addGraphGroupsToSesion(ctx context.Context, s *sessions.SessionState) error {
 
 	groupsHeaders := makeAuthorizationHeader(tokenTypeBearer, s.AccessToken, nil)
 	groupsHeaders.Add("ConsistencyLevel", "eventual")
 
-	groupsURL := fmt.Sprintf("%s/transitiveMemberOf?$select=id", p.azureEntraGraphURL)
+	groupsURL := fmt.Sprintf("%s/transitiveMemberOf?$select=id", p.microsoftGraphURL)
 
 	jsonRequest, err := requests.New(groupsURL).WithContext(ctx).WithHeaders(groupsHeaders).Do().UnmarshalSimpleJSON()
 	if err != nil {
@@ -144,7 +144,7 @@ func (p *AzureEntraOIDCProvider) addGraphGroupsToSesion(ctx context.Context, s *
 	return nil
 }
 
-func (p *AzureEntraOIDCProvider) getIssuer(session *sessions.SessionState) (string, bool, error) {
+func (p *MicrosoftEntraIDProvider) getIssuer(session *sessions.SessionState) (string, bool, error) {
 	extractor, err := p.getClaimExtractor(session.IDToken, session.AccessToken)
 	if err != nil {
 		return "", false, fmt.Errorf("unable to get claim extractor: %v", err)
@@ -154,7 +154,7 @@ func (p *AzureEntraOIDCProvider) getIssuer(session *sessions.SessionState) (stri
 	return value.(string), exists, error
 }
 
-func (p *AzureEntraOIDCProvider) checkIssuerMatchesTenantList(issuer string, tenantList []string) bool {
+func (p *MicrosoftEntraIDProvider) checkIssuerMatchesTenantList(issuer string, tenantList []string) bool {
 	for _, tenant := range tenantList {
 		if strings.Contains(issuer, tenant) {
 			logger.Printf("Issuer %s found in the list of allowed tenants for multi-tenant apps, passing", issuer)
