@@ -20,25 +20,25 @@ import (
 func TestAzureEntraOIDCProviderNewMultiTenant(t *testing.T) {
 	g := NewWithT(t)
 
-	provider := NewAzureEntraOIDCProvider(&ProviderData{},
+	provider := NewMicrosoftEntraIDProvider(&ProviderData{},
 		options.Provider{OIDCConfig: options.OIDCOptions{
 			IssuerURL:                      "https://login.microsoftonline.com/common/v2.0",
 			InsecureSkipIssuerVerification: true,
 		}},
 	)
-	g.Expect(provider.Data().ProviderName).To(Equal("Azure Entra OIDC"))
+	g.Expect(provider.Data().ProviderName).To(Equal("Microsoft Entra ID"))
 	g.Expect(provider.isMultiTenant).To(Equal(true))
 }
 
 func TestAzureEntraOIDCProviderNewSingleTenant(t *testing.T) {
 	g := NewWithT(t)
 
-	provider := NewAzureEntraOIDCProvider(&ProviderData{},
+	provider := NewMicrosoftEntraIDProvider(&ProviderData{},
 		options.Provider{OIDCConfig: options.OIDCOptions{
 			IssuerURL: "https://login.microsoftonline.com/18014347-dd57-41a1-8191-7a1f734ea457/v2.0",
 		}},
 	)
-	g.Expect(provider.Data().ProviderName).To(Equal("Azure Entra OIDC"))
+	g.Expect(provider.Data().ProviderName).To(Equal("Microsoft Entra ID"))
 	g.Expect(provider.isMultiTenant).To(Equal(false))
 }
 
@@ -97,7 +97,7 @@ func TestAzureEntraOIDCProviderEnrichSessionGroupOverage(t *testing.T) {
 	session.IDToken = signedJWT
 
 	// Create provider
-	provider := NewAzureEntraOIDCProvider(&ProviderData{},
+	provider := NewMicrosoftEntraIDProvider(&ProviderData{},
 		options.Provider{OIDCConfig: options.OIDCOptions{
 			IssuerURL: "https://login.microsoftonline.com/18014347-dd57-41a1-8191-7a1f734ea457/v2.0",
 		}},
@@ -106,7 +106,7 @@ func TestAzureEntraOIDCProviderEnrichSessionGroupOverage(t *testing.T) {
 	// Create mocked Azure Graph server and override Graph URL
 	mockedGraph := mockGraphAPI(false)
 	mockedGraphURL, _ := url.Parse(mockedGraph.URL)
-	updateURL(provider.azureEntraGraphURL, mockedGraphURL.Host)
+	updateURL(provider.microsoftGraphURL, mockedGraphURL.Host)
 
 	// Test EnrichSession
 	err = provider.EnrichSession(context.Background(), session)
@@ -126,7 +126,7 @@ func (v *mockedVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.I
 
 func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 	// Create multi-tenant Azure Entra provider with allowed tenants
-	provider := NewAzureEntraOIDCProvider(
+	provider := NewMicrosoftEntraIDProvider(
 		&ProviderData{
 			Verifier: &mockedVerifier{},
 		},
@@ -136,7 +136,7 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 				InsecureSkipIssuerVerification: true,
 				InsecureSkipNonce:              true,
 			},
-			AzureEntraOIDCConfig: options.AzureEntraOIDCOptions{
+			MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
 				MultiTenantAllowedTenants: []string{"85d7d600-7804-4d92-8d43-9c33c21c130c"},
 			},
 		},

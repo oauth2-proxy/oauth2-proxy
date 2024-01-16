@@ -151,8 +151,8 @@ Admin consent is required after creation by Terraform
 
 ## Configure provider
 Provider is OIDC-compliant, so all the OIDC parameters are honoured. Additional provider-specific configuration parameters are:
-* `azure-oidc-skip-groups-from-graph` - never read groups from Graph API, even when ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping `groups` claim in the app registration.
-* `azure-oidc-multi-tenant-allowed-tenant` - speciy list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]` (all tenants).
+* `ms-entra-id-skip-groups-from-graph` - never read groups from Graph API, even when ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping `groups` claim in the app registration.
+* `ms-entra-id-multi-tenant-allowed-tenant` - speciy list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]` (all tenants).
 
 ### Scope
 For Azure-only apps (multi-tenant and single-tenant), the only required oAuth scope is `openid`:
@@ -168,7 +168,7 @@ It's recommended to configure the scopes explicitly, otherwise you may experienc
 ### Single-tenant
 Simple single-tenant configuration:
 ```
-- --provider=azure-oidc
+- --provider=ms-entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/{tenantId}/v2.0
 - --client-id=<valid-client-id>
 - --client-secret=<valid-client-secret>
@@ -178,7 +178,7 @@ Simple single-tenant configuration:
 ### Multi-tenant
 Multi-tenant apps require to disable OIDC issuer verification, as `issuer` field in the [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) is a template, not an exact value:
 ```
-- --provider=azure-oidc
+- --provider=ms-entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/common/v2.0
 - --client-id=<valid-client-id>
 - --client-secret=<valid-client-secret>
@@ -188,12 +188,12 @@ Multi-tenant apps require to disable OIDC issuer verification, as `issuer` field
 
 Configuration above insecurely allows all tenants, to allow specific tenants:
 ```
-- --provider=azure-oidc
+- --provider=ms-entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/common/v2.0
 - --client-id=<valid-client-id>
 - --client-secret=<valid-client-secret>
-- --azure-oidc-multi-tenant-allowed-tenant=66209a4a-80f3-4602-8126-2193115722f8
-- --azure-oidc-multi-tenant-allowed-tenant=a47d1522-8e8c-4546-a2c8-d6590ea9d6f3
+- --ms-entra-id-multi-tenant-allowed-tenant=66209a4a-80f3-4602-8126-2193115722f8
+- --ms-entra-id-multi-tenant-allowed-tenant=a47d1522-8e8c-4546-a2c8-d6590ea9d6f3
 - --insecure-oidc-skip-issuer-verification
 - --scope=openid profile email
 ```
