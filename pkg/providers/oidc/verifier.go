@@ -130,7 +130,7 @@ func (v *idTokenVerifier) verifyEmail(token *oidc.IDToken) (bool, error) {
 	}
 
 	if err := token.Claims(&claims); err != nil {
-		return false, fmt.Errorf("failed to parse bearer token claims: %v", err)
+		return false, fmt.Errorf("failed to parse bearer token claims: %w", err)
 	}
 
 	if claims.Email == "" {
