@@ -434,6 +434,7 @@ Provider holds all configuration for a single provider
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
+| `skipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
 | `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |

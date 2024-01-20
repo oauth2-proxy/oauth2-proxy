@@ -523,6 +523,7 @@ type LegacyProvider struct {
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
 	RedeemURL                          string   `flag:"redeem-url" cfg:"redeem_url"`
 	ProfileURL                         string   `flag:"profile-url" cfg:"profile_url"`
+	SkipClaimsFromProfileURL           bool     `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
 	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
 	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
 	Scope                              string   `flag:"scope" cfg:"scope"`
@@ -578,6 +579,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
+	flagSet.Bool("skip-claims-from-profile-url", false, "Skip loading missing claims from profile URL")
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
@@ -658,20 +660,21 @@ func (l *LegacyProvider) convert() (Providers, error) {
 	providers := Providers{}
 
 	provider := Provider{
-		ClientID:            l.ClientID,
-		ClientSecret:        l.ClientSecret,
-		ClientSecretFile:    l.ClientSecretFile,
-		Type:                ProviderType(l.ProviderType),
-		CAFiles:             l.ProviderCAFiles,
-		UseSystemTrustStore: l.UseSystemTrustStore,
-		LoginURL:            l.LoginURL,
-		RedeemURL:           l.RedeemURL,
-		ProfileURL:          l.ProfileURL,
-		ProtectedResource:   l.ProtectedResource,
-		ValidateURL:         l.ValidateURL,
-		Scope:               l.Scope,
-		AllowedGroups:       l.AllowedGroups,
-		CodeChallengeMethod: l.CodeChallengeMethod,
+		ClientID:                 l.ClientID,
+		ClientSecret:             l.ClientSecret,
+		ClientSecretFile:         l.ClientSecretFile,
+		Type:                     ProviderType(l.ProviderType),
+		CAFiles:                  l.ProviderCAFiles,
+		UseSystemTrustStore:      l.UseSystemTrustStore,
+		LoginURL:                 l.LoginURL,
+		RedeemURL:                l.RedeemURL,
+		ProfileURL:               l.ProfileURL,
+		SkipClaimsFromProfileURL: l.SkipClaimsFromProfileURL,
+		ProtectedResource:        l.ProtectedResource,
+		ValidateURL:              l.ValidateURL,
+		Scope:                    l.Scope,
+		AllowedGroups:            l.AllowedGroups,
+		CodeChallengeMethod:      l.CodeChallengeMethod,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC

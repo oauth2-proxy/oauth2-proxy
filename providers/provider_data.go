@@ -43,11 +43,12 @@ type ProviderData struct {
 	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
 
 	// Common OIDC options for any OIDC-based providers to consume
-	AllowUnverifiedEmail bool
-	UserClaim            string
-	EmailClaim           string
-	GroupsClaim          string
-	Verifier             internaloidc.IDTokenVerifier
+	AllowUnverifiedEmail     bool
+	UserClaim                string
+	EmailClaim               string
+	GroupsClaim              string
+	Verifier                 internaloidc.IDTokenVerifier
+	SkipClaimsFromProfileURL bool
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
@@ -283,7 +284,12 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 }
 
 func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {
-	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, p.ProfileURL, p.getAuthorizationHeader(accessToken))
+	profileURL := p.ProfileURL
+	if p.SkipClaimsFromProfileURL {
+		profileURL = &url.URL{}
+	}
+
+	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
 	if err != nil {
 		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}
