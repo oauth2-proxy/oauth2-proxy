@@ -209,6 +209,13 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 		session.Email = email
 	}
 
+	user, err := p.getUser(ctx, session.AccessToken)
+	if err != nil {
+		logger.Printf("unable to get username from azure provider: %v", err)
+	} else {
+		session.User = user
+	}
+
 	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph
 	if p.isV2Endpoint {
 		groups, err := p.getGroupsFromProfileAPI(ctx, session)
@@ -358,6 +365,30 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 	}
 
 	return nil
+}
+
+func (p *AzureProvider) getUser(ctx context.Context, accessToken string) (string, error) {
+	header := makeAzureHeader(accessToken)
+	endpoint := p.Data().ValidateURL.String()
+
+	var jsonResponse struct {
+		Name string `json:"name"`
+	}
+
+	err := requests.New(endpoint).
+		WithContext(ctx).
+		WithHeaders(header).
+		Do().
+		UnmarshalInto(&jsonResponse)
+	if err != nil {
+		return "", fmt.Errorf("error while fetching and parsing username: %w", err)
+	}
+
+	if jsonResponse.Name == "" {
+		logger.Printf("empty username")
+	}
+
+	return jsonResponse.Name, nil
 }
 
 func makeAzureHeader(accessToken string) http.Header {
