@@ -28,6 +28,7 @@
 - [#2295](https://github.com/oauth2-proxy/oauth2-proxy/pull/2295) Change base-image to [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless) (@kvanzuijlen)
 - [#2356](https://github.com/oauth2-proxy/oauth2-proxy/pull/2356) Update go-jose dependency (@dasvh)
 - [#2357](https://github.com/oauth2-proxy/oauth2-proxy/pull/2357) Update ojg to latest release (@bitfehler)
+- [#1922](https://github.com/oauth2-proxy/oauth2-proxy/pull/1922) Added support for env variables in the alpha struct (@hevans-dglcom)
 
 # V7.5.1
 

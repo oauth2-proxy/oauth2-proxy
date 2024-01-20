@@ -67,6 +67,20 @@ the new config.
 oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
 ```
 
+## Using ENV variables in the alpha configuration
+
+The alpha package supports the use of environment variables in place of yaml keys, allowing sensitive values to be pulled from somewhere other than the yaml file.
+When using environment variables, your yaml will look like this:
+
+```yaml
+    providers:
+    - provider: azure
+      clientSecret: ${CLIENT_SECRET}
+      ...
+```
+Where CLIENT_SECRET is an environment variable.
+More information and available patterns can be found [here](https://github.com/a8m/envsubst#docs)
+
 ## Removed options
 
 The following flags/options and their respective environment variables are no
