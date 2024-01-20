@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -27,9 +26,8 @@ func Validate(o *options.Options) error {
 	msgs = append(msgs, validateProviders(o)...)
 	msgs = append(msgs, validateAPIRoutes(o)...)
 	msgs = configureLogger(o.Logging, msgs)
-	msgs = parseSignatureKey(o, msgs)
 
-	if o.SSLInsecureSkipVerify {
+	if o.ProxyOptions.SSLInsecureSkipVerify {
 		// InsecureSkipVerify is a configurable option we allow
 		/* #nosec G402 */
 		insecureTransport := &http.Transport{
@@ -51,16 +49,16 @@ func Validate(o *options.Options) error {
 		}
 	}
 
-	if o.AuthenticatedEmailsFile == "" && len(o.EmailDomains) == 0 && o.HtpasswdFile == "" {
+	if o.ProxyOptions.AuthenticatedEmailsFile == "" && len(o.ProxyOptions.EmailDomains) == 0 && o.ProxyOptions.HtpasswdFile == "" {
 		msgs = append(msgs, "missing setting for email validation: email-domain or authenticated-emails-file required."+
 			"\n      use email-domain=* to authorize all email addresses")
 	}
 
-	if o.SkipJwtBearerTokens {
+	if o.ProxyOptions.SkipJwtBearerTokens {
 		// Configure extra issuers
-		if len(o.ExtraJwtIssuers) > 0 {
+		if len(o.ProxyOptions.ExtraJwtIssuers) > 0 {
 			var jwtIssuers []jwtIssuer
-			jwtIssuers, msgs = parseJwtIssuers(o.ExtraJwtIssuers, msgs)
+			jwtIssuers, msgs = parseJwtIssuers(o.ProxyOptions.ExtraJwtIssuers, msgs)
 			for _, jwtIssuer := range jwtIssuers {
 				verifier, err := newVerifierFromJwtIssuer(
 					o.Providers[0].OIDCConfig.AudienceClaims,
@@ -76,18 +74,18 @@ func Validate(o *options.Options) error {
 	}
 
 	var redirectURL *url.URL
-	redirectURL, msgs = parseURL(o.RawRedirectURL, "redirect", msgs)
+	redirectURL, msgs = parseURL(o.ProxyOptions.RedirectURL, "redirect", msgs)
 	o.SetRedirectURL(redirectURL)
-	if o.RawRedirectURL == "" && !o.Cookie.Secure && !o.ReverseProxy {
+	if o.ProxyOptions.RedirectURL == "" && !o.Cookie.Secure && !o.ProxyOptions.ReverseProxy {
 		logger.Print("WARNING: no explicit redirect URL: redirects will default to insecure HTTP")
 	}
 
 	msgs = append(msgs, validateUpstreams(o.UpstreamServers)...)
 
-	if o.ReverseProxy {
-		parser, err := ip.GetRealClientIPParser(o.RealClientIPHeader)
+	if o.ProxyOptions.ReverseProxy {
+		parser, err := ip.GetRealClientIPParser(o.ProxyOptions.RealClientIPHeader)
 		if err != nil {
-			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.RealClientIPHeader, err))
+			msgs = append(msgs, fmt.Sprintf("real_client_ip_header (%s) not accepted parameter value: %v", o.ProxyOptions.RealClientIPHeader, err))
 		}
 		o.SetRealClientIPParser(parser)
 
@@ -105,28 +103,6 @@ func Validate(o *options.Options) error {
 			strings.Join(msgs, "\n  "))
 	}
 	return nil
-}
-
-func parseSignatureKey(o *options.Options, msgs []string) []string {
-	if o.SignatureKey == "" {
-		return msgs
-	}
-
-	logger.Print("WARNING: `--signature-key` is deprecated. It will be removed in a future release")
-
-	components := strings.Split(o.SignatureKey, ":")
-	if len(components) != 2 {
-		return append(msgs, "invalid signature hash:key spec: "+
-			o.SignatureKey)
-	}
-
-	algorithm, secretKey := components[0], components[1]
-	hash, err := hmacauth.DigestNameToCryptoHash(algorithm)
-	if err != nil {
-		return append(msgs, "unsupported signature hash algorithm: "+o.SignatureKey)
-	}
-	o.SetSignatureData(&options.SignatureData{Hash: hash, Key: secretKey})
-	return msgs
 }
 
 // parseJwtIssuers takes in an array of strings in the form of issuer=audience

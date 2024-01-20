@@ -72,7 +72,9 @@ var _ = Describe("Providers", func() {
 		}),
 		Entry("with multiple providers and skip provider button", &validateProvidersTableInput{
 			options: &options.Options{
-				SkipProviderButton: true,
+				ProxyOptions: options.ProxyOptions{
+					SkipProviderButton: true,
+				},
 				Providers: options.Providers{
 					validProvider,
 					validLoginGovProvider,
