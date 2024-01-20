@@ -371,7 +371,7 @@ server {
 
   location / {
     auth_request /oauth2/auth;
-    error_page 401 = /oauth2/sign_in;
+    error_page 401 =403 /oauth2/sign_in;
 
     # pass information via X-User and X-Email headers to backend,
     # requires running with --set-xauthrequest flag
