@@ -139,6 +139,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.AllowUnverifiedEmail = providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
+	p.SkipClaimsFromProfileURL = providerConfig.SkipClaimsFromProfileURL
 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)

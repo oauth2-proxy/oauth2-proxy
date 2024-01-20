@@ -8,10 +8,13 @@
 
 ## Changes since v7.5.1
 
+- [#2381](https://github.com/oauth2-proxy/oauth2-proxy/pull/2381) Allow username authentication to Redis cluster (@rossigee)
+- [#2345](https://github.com/oauth2-proxy/oauth2-proxy/pull/2345) Log error details when failed loading CSRF cookie (@charvadzo)
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
 - [#2269](https://github.com/oauth2-proxy/oauth2-proxy/pull/2269) Added Azure China (and other air gaped cloud) support (@mblaschke)
 - [#2237](https://github.com/oauth2-proxy/oauth2-proxy/pull/2237) adds an option to append CA certificates (@emsixteeen)
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
+- [#2239](https://github.com/oauth2-proxy/oauth2-proxy/pull/2312) Add possibility to encode the state param as UrlEncodedBase64 (@brezinajn)
 - [#2274](https://github.com/oauth2-proxy/oauth2-proxy/pull/2274) Upgrade golang.org/x/net to v0.17.0 (@pierluigilenoci)
 - [#2278](https://github.com/oauth2-proxy/oauth2-proxy/pull/2278) Improve the Nginx auth_request example (@akunzai)
 - [#2282](https://github.com/oauth2-proxy/oauth2-proxy/pull/2282) Fixed checking Google Groups membership using Google Application Credentials (@kvanzuijlen)
@@ -20,11 +23,16 @@
 - [#2308](https://github.com/oauth2-proxy/oauth2-proxy/pull/2308) Allow unverified email also in default implementation (@bbodensieck)
 - [#1949](https://github.com/oauth2-proxy/oauth2-proxy/pull/1949) Allow cookie names with dots in redis sessions (@miguelborges99)
 - [#2297](https://github.com/oauth2-proxy/oauth2-proxy/pull/2297) Add nightly build and push (@tuunit)
+- [#2329](https://github.com/oauth2-proxy/oauth2-proxy/pull/2329) Add an option to skip request to profile URL for resolving missing claims in id_token (@nilsgstrabo)
 - [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
+- [#2343](https://github.com/oauth2-proxy/oauth2-proxy/pull/2343) chore: Added checksums for .tar.gz (@kvanzuijlen)
 - [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings. (@timwsuqld)
 - [#2196](https://github.com/oauth2-proxy/oauth2-proxy/pull/2196) Add GitHub groups (orgs/teams) support. Including `X-Forwarded-Groups` header (@tuunit)
+- [#2371](https://github.com/oauth2-proxy/oauth2-proxy/pull/2371) Remove nsswitch DNS resolution workaround (@tuunit)
+- [#2295](https://github.com/oauth2-proxy/oauth2-proxy/pull/2295) Change base-image to [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless) (@kvanzuijlen)
 - [#2356](https://github.com/oauth2-proxy/oauth2-proxy/pull/2356) Update go-jose dependency (@dasvh)
 - [#2357](https://github.com/oauth2-proxy/oauth2-proxy/pull/2357) Update ojg to latest release (@bitfehler)
+- [#1922](https://github.com/oauth2-proxy/oauth2-proxy/pull/1922) Added support for env variables in the alpha struct (@hevans-dglcom)
 
 # V7.5.1
 

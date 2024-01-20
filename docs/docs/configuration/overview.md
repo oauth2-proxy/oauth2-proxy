@@ -144,6 +144,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--pass-host-header` | bool | pass the request Host Header to upstream | true |
 | `--pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Groups, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `--profile-url` | string | Profile access endpoint | |
+| `--skip-claims-from-profile-url` | bool | skip request to Profile URL for resolving claims not present in id_token | false |
 | `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `--provider` | string | OAuth provider | google |
 | `--provider-ca-file` | string \| list | Paths to CA certificates that should be used when connecting to the provider. If not specified, the default Go trust sources are used instead. |
@@ -207,6 +208,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--version` | n/a | print version string | |
 | `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` or a `*.` to allow subdomains (e.g. `.example.com`, `*.example.com`)&nbsp;\[[2](#footnote2)\] | |
 | `--trusted-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in an HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
+| `--encode-state` | bool | encode the state parameter as UrlEncodedBase64 | false |
 
 > ###### 1. Only these providers support `--cookie-refresh`: GitLab, Google and OIDC {#footnote1}
 > ###### 2. When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URLs protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`. {#footnote2}
@@ -370,7 +372,7 @@ server {
 
   location / {
     auth_request /oauth2/auth;
-    error_page 401 = /oauth2/sign_in;
+    error_page 401 =403 /oauth2/sign_in;
 
     # pass information via X-User and X-Email headers to backend,
     # requires running with --set-xauthrequest flag

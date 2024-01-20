@@ -5,13 +5,14 @@ go 1.19
 require (
 	cloud.google.com/go/compute/metadata v0.2.3
 	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
+	github.com/a8m/envsubst v1.4.2
 	github.com/alicebob/miniredis/v2 v2.23.0
 	github.com/benbjohnson/clock v1.3.0
 	github.com/bitly/go-simplejson v0.5.1
 	github.com/bsm/redislock v0.9.3
 	github.com/coreos/go-oidc/v3 v3.6.0
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
+	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344
 	github.com/go-jose/go-jose/v3 v3.0.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.1
@@ -32,7 +33,7 @@ require (
 	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.8.3
 	github.com/vmihailenco/msgpack/v5 v5.3.5
-	golang.org/x/crypto v0.14.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	golang.org/x/net v0.17.0
 	golang.org/x/oauth2 v0.13.0
@@ -72,8 +73,8 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a // indirect
 	google.golang.org/grpc v1.58.3 // indirect
