@@ -59,6 +59,15 @@ Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/doc
 
 ![OAuth2 Proxy Architecture](docs/static/img/architecture.svg)
 
+## Images
+
+From `v7.6.0` and up the base image has been changed from Alpine to [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless).
+This image comes with even fewer installed dependencies and thus should improve security. The image therefore is also slightly smaller than Alpine.
+For debugging purposes (and those who really need it (i.e. `armv6`)) we still provide images based on Alpine. The tags of these images are suffixed with `-alpine`.
+
+Since 2023-11-18 we provide nightly images. These images are build and pushed nightly to `quay.io/oauth2-proxy/oauth2-proxy-nightly` from `master`.
+These images should be considered alpha and therefore *should not* be used for production purposes unless you know what you're doing.
+
 ## Getting Involved
 
 If you would like to reach out to the maintainers, come talk to us in the `#oauth2-proxy` channel in the [Gophers slack](http://gophers.slack.com/).
