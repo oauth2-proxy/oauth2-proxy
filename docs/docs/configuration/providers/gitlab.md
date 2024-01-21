@@ -26,13 +26,13 @@ The following config should be set to ensure that the oauth will work properly. 
 
 Restricting by group membership is possible with the following option:
 
-```
-    --gitlab-group="mygroup,myothergroup": restrict logins to members of any of these groups (slug), separated by a comma
+```shell
+    --gitlab-group="mygroup,myothergroup"  # restrict logins to members of any of these groups (slug), separated by a comma
 ```
 
 If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
 
-```
+```shell
     --oidc-issuer-url="<your gitlab url>"
 ```
 

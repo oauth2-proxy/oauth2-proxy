@@ -39,7 +39,7 @@ To configure the OIDC provider for Dex, perform the following steps:
 
 4. In a second terminal, run the oauth2-proxy with the following args:
 
-    ```
+    ```shell
     --provider oidc
     --provider-display-name "My OIDC Provider"
     --client-id oauth2-proxy
@@ -53,7 +53,7 @@ To configure the OIDC provider for Dex, perform the following steps:
 
    To serve the current working directory as a website under the `/static` endpoint, add:
 
-    ```
+    ```shell
     --upstream file://$PWD/#/static/
     ```
 
@@ -124,7 +124,7 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
 4. Make note of the `Client ID` and `Client secret`, they are needed in a future step
 5. Make note of the **default** Authorization Server Issuer URI from: https://$\{your-okta-domain\}/admin/oauth2/as
 6. Example config file `/etc/localhost.cfg`
-    ```
+    ```shell
     provider = "oidc"
     redirect_url = "http://localhost:4180/oauth2/callback"
     oidc_issuer_url = "https://$\{your-okta-domain\}/oauth2/default"

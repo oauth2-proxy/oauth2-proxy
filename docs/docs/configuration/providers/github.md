@@ -14,29 +14,29 @@ org and team or collaborators.
 
 To restrict by organization only, include the following flag:
 
-```
-    --github-org="": restrict logins to members of this organisation
+```shell
+    --github-org=""  # restrict logins to members of this organisation
 ```
 
 To restrict within an organization to specific teams, include the following flag in addition to `-github-org`:
 
-```
-    --github-team="": restrict logins to members of any of these teams (slug), separated by a comma
+```shell
+    --github-team=""  # restrict logins to members of any of these teams (slug), separated by a comma
 ```
 
 If you would rather restrict access to collaborators of a repository, those users must either have push access to a 
 public repository or any access to a private repository:
 
-```
-    --github-repo="": restrict logins to collaborators of this repository formatted as orgname/repo
+```shell
+    --github-repo=""  # restrict logins to collaborators of this repository formatted as orgname/repo
 ```
 
 If you'd like to allow access to users with **read only** access to a **public** repository you will need to provide a 
 [token](https://github.com/settings/tokens) for a user that has write access to the repository. The token must be 
 created with at least the `public_repo` scope:
 
-```
-    --github-token="": the token to use when verifying repository collaborators
+```shell
+    --github-token=""  # the token to use when verifying repository collaborators
 ```
 
 To allow a user to log in with their username even if they do not belong to the specified org and team or collaborators, 
