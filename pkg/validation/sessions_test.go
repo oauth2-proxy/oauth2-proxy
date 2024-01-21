@@ -19,7 +19,7 @@ var _ = Describe("Sessions", func() {
 	)
 
 	type cookieMinimalTableInput struct {
-		opts       *options.Options
+		opts       *options.AlphaOptions
 		errStrings []string
 	}
 
@@ -28,7 +28,7 @@ var _ = Describe("Sessions", func() {
 			Expect(validateSessionCookieMinimal(o.opts)).To(ConsistOf(o.errStrings))
 		},
 		Entry("No minimal cookie session", &cookieMinimalTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: false,
@@ -38,7 +38,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{},
 		}),
 		Entry("No minimal cookie session & request header has access_token claim", &cookieMinimalTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: false,
@@ -60,7 +60,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{},
 		}),
 		Entry("Minimal cookie session no conflicts", &cookieMinimalTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: true,
@@ -70,7 +70,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{},
 		}),
 		Entry("Request Header id_token conflict", &cookieMinimalTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: true,
@@ -92,7 +92,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{idTokenConflictMsg},
 		}),
 		Entry("Response Header id_token conflict", &cookieMinimalTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: true,
@@ -114,7 +114,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{idTokenConflictMsg},
 		}),
 		Entry("Request Header access_token conflict", &cookieMinimalTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: true,
@@ -136,7 +136,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{accessTokenConflictMsg},
 		}),
 		Entry("CookieRefresh conflict", &cookieMinimalTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Cookie: options.Cookie{
 					Refresh: time.Hour,
 				},
@@ -149,7 +149,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{cookieRefreshMsg},
 		}),
 		Entry("Multiple conflicts", &cookieMinimalTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Cookie: options.CookieStoreOptions{
 						Minimal: true,
@@ -204,7 +204,7 @@ var _ = Describe("Sessions", func() {
 		setSentinelAddr bool
 		setMasterName   bool
 
-		opts       *options.Options
+		opts       *options.AlphaOptions
 		errStrings []string
 	}
 
@@ -235,7 +235,7 @@ var _ = Describe("Sessions", func() {
 			Expect(validateRedisSessionStore(o.opts)).To(ConsistOf(o.errStrings))
 		},
 		Entry("cookie sessions are skipped", &redisStoreTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.CookieSessionStoreType,
 				},
@@ -245,7 +245,7 @@ var _ = Describe("Sessions", func() {
 		Entry("connect successfully to pure redis", &redisStoreTableInput{
 			setAddr: true,
 
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 				},
@@ -253,7 +253,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{},
 		}),
 		Entry("failed redis connection with wrong address", &redisStoreTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -264,7 +264,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{unreachableRedisSetMsg, unreachableRedisDelMsg},
 		}),
 		Entry("fail to parse an invalid connection URL with wrong scheme", &redisStoreTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -275,7 +275,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{parseWrongSchemeMsg},
 		}),
 		Entry("fail to parse an invalid connection URL with invalid format", &redisStoreTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -289,7 +289,7 @@ var _ = Describe("Sessions", func() {
 			password: "abcdef123",
 			setAddr:  true,
 
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -303,7 +303,7 @@ var _ = Describe("Sessions", func() {
 			password: "abcdef123",
 			setAddr:  true,
 
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -318,7 +318,7 @@ var _ = Describe("Sessions", func() {
 			setSentinelAddr: true,
 			setMasterName:   true,
 
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -334,7 +334,7 @@ var _ = Describe("Sessions", func() {
 			setSentinelAddr: true,
 			setMasterName:   true,
 
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -351,7 +351,7 @@ var _ = Describe("Sessions", func() {
 			setSentinelAddr: true,
 			setMasterName:   true,
 
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -366,7 +366,7 @@ var _ = Describe("Sessions", func() {
 			useSentinel:     true,
 			setSentinelAddr: true,
 
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -381,7 +381,7 @@ var _ = Describe("Sessions", func() {
 			useSentinel:   true,
 			setMasterName: true,
 
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
@@ -393,7 +393,7 @@ var _ = Describe("Sessions", func() {
 			errStrings: []string{unreachableSentinelSetMsg, unrechableSentinelDelMsg},
 		}),
 		Entry("sentinel and cluster both enabled fails", &redisStoreTableInput{
-			opts: &options.Options{
+			opts: &options.AlphaOptions{
 				Session: options.SessionOptions{
 					Type: options.RedisSessionStoreType,
 					Redis: options.RedisStoreOptions{
