@@ -21,7 +21,7 @@ require (
 	github.com/mbland/hmacauth v0.0.0-20170912233209-44256dfd4bfa
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/oauth2-proxy/mockoidc v0.0.0-20220221072942-e3afe97dec43
-	github.com/oauth2-proxy/tools/reference-gen v0.0.0-20210118095127-56ffd7384404
+	github.com/oauth2-proxy/tools/reference-gen v0.0.0-20220223111546-d3b50d1a591a
 	github.com/ohler55/ojg v1.19.4
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.8
