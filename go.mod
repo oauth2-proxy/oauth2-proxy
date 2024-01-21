@@ -10,7 +10,7 @@ require (
 	github.com/benbjohnson/clock v1.3.0
 	github.com/bitly/go-simplejson v0.5.1
 	github.com/bsm/redislock v0.9.4
-	github.com/coreos/go-oidc/v3 v3.6.0
+	github.com/coreos/go-oidc/v3 v3.9.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.1-0.20220118164431-d8423dcdf344
 	github.com/go-jose/go-jose/v3 v3.0.1
@@ -75,7 +75,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a // indirect
 	google.golang.org/grpc v1.58.3 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
