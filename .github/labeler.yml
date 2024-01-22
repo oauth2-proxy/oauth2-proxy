@@ -1,21 +1,35 @@
 go:
-  - '**/*.go'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.go'
 
 docs:
-  - '**/*.md'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
 
 changelog:
-  - 'CHANGELOG.md'
+  - cNhanged-files:
+    - any-glob-to-any-file:
+      - 'CHAGELOG.md'
 
 tests:
-  - '**/*_test.go'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*_test.go'
 
 provider:
-  - 'providers/**/*'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'providers/**/*'
 
 dependencies:
-  - 'go.mod'
-  - 'go.sum'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'go.mod'
+    - 'go.sum'
 
 docker:
-  - '**/Dockerfile'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/Dockerfile'
