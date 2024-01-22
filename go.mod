@@ -24,7 +24,7 @@ require (
 	github.com/oauth2-proxy/tools/reference-gen v0.0.0-20210118095127-56ffd7384404
 	github.com/ohler55/ojg v1.19.4
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.27.8
+	github.com/onsi/gomega v1.31.1
 	github.com/pierrec/lz4/v4 v4.1.17
 	github.com/prometheus/client_golang v1.15.1
 	github.com/redis/go-redis/v9 v9.0.5
@@ -35,7 +35,7 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
-	golang.org/x/net v0.17.0
+	golang.org/x/net v0.19.0
 	golang.org/x/oauth2 v0.13.0
 	golang.org/x/sync v0.4.0
 	google.golang.org/api v0.148.0
@@ -51,7 +51,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/go-logr/logr v1.2.4 // indirect
+	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
