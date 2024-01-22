@@ -1,4 +1,4 @@
-package loadtest
+package testutil
 
 import (
 	"errors"
