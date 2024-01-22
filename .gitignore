@@ -18,7 +18,8 @@ c.out
 _obj
 _test
 .idea/
-.vscode/
+.vscode/*
+!/.vscode/tasks.json
 
 # Architecture specific extensions/prefixes
 *.[568vq]

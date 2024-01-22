@@ -67,6 +67,20 @@ the new config.
 oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
 ```
 
+## Using ENV variables in the alpha configuration
+
+The alpha package supports the use of environment variables in place of yaml keys, allowing sensitive values to be pulled from somewhere other than the yaml file.
+When using environment variables, your yaml will look like this:
+
+```yaml
+    providers:
+    - provider: azure
+      clientSecret: ${CLIENT_SECRET}
+      ...
+```
+Where CLIENT_SECRET is an environment variable.
+More information and available patterns can be found [here](https://github.com/a8m/envsubst#docs)
+
 ## Removed options
 
 The following flags/options and their respective environment variables are no
@@ -420,6 +434,7 @@ Provider holds all configuration for a single provider
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
+| `skipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
 | `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |

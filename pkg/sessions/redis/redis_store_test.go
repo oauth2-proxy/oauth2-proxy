@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const redisUsername = "testuser"
 const redisPassword = "0123456789abcdefghijklmnopqrstuv"
 
 var (
@@ -216,6 +217,56 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
 					opts.Redis.UseCluster = true
+					opts.Redis.Password = redisPassword
+
+					// Capture the session store so that we can close the client
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					return ss, err
+				},
+				func(d time.Duration) error {
+					mr.FastForward(d)
+					return nil
+				},
+			)
+		})
+	})
+
+	Context("with a redis username and password", func() {
+		BeforeEach(func() {
+			mr.RequireUserAuth(redisUsername, redisPassword)
+		})
+
+		AfterEach(func() {
+			mr.RequireUserAuth("", "")
+		})
+
+		tests.RunSessionStoreTests(
+			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+				// Set the connection URL
+				opts.Type = options.RedisSessionStoreType
+				opts.Redis.ConnectionURL = "redis://" + redisUsername + "@" + mr.Addr()
+				opts.Redis.Password = redisPassword
+
+				// Capture the session store so that we can close the client
+				var err error
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				return ss, err
+			},
+			func(d time.Duration) error {
+				mr.FastForward(d)
+				return nil
+			},
+		)
+
+		Context("with cluster", func() {
+			tests.RunSessionStoreTests(
+				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+					clusterAddr := "redis://" + redisUsername + "@" + mr.Addr()
+					opts.Type = options.RedisSessionStoreType
+					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
+					opts.Redis.UseCluster = true
+					opts.Redis.Username = redisUsername
 					opts.Redis.Password = redisPassword
 
 					// Capture the session store so that we can close the client

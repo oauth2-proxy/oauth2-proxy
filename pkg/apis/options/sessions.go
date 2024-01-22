@@ -23,6 +23,7 @@ type CookieStoreOptions struct {
 // RedisStoreOptions contains configuration options for the RedisSessionStore.
 type RedisStoreOptions struct {
 	ConnectionURL          string   `flag:"redis-connection-url" cfg:"redis_connection_url"`
+	Username               string   `flag:"redis-username" cfg:"redis_username"`
 	Password               string   `flag:"redis-password" cfg:"redis_password"`
 	UseSentinel            bool     `flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
 	SentinelPassword       string   `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
