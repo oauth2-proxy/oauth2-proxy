@@ -11,5 +11,5 @@ jobs:
     steps:
       - uses: actions/labeler@v5
         with:
-          sync: true
+          sync-labels: true
           dot: true
