@@ -1,12 +1,21 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   semanticCommits: "auto",
+  schedule: [
+    "after 8am on sunday"
+  ],
   enabledManagers: [
     "dockerfile",
     "gomod",
     "github-actions",
     "npm",
     "regex",
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["dockerfile", "gomod", "github-actions", "npm", "regex"],
+      "groupName": "{{manager}}"
+    }
   ],
   customManagers: [
     {
