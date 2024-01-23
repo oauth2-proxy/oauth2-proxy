@@ -111,9 +111,8 @@ var _ = Describe("Headers", func() {
 					Name: "Without-Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: &options.ClaimSource{
-								Prefix: "prefix",
-							},
+							ClaimSource: &options.ClaimSource{},
+							Prefix:      "prefix",
 						},
 					},
 				},

@@ -46,9 +46,9 @@ type valueInjector interface {
 func newValueinjector(name string, value options.HeaderValue) (valueInjector, error) {
 	switch {
 	case value.SecretSource != nil && value.ClaimSource == nil:
-		return newSecretInjector(name, value.SecretSource)
+		return newSecretInjector(name, value.Prefix, value.SecretSource)
 	case value.SecretSource == nil && value.ClaimSource != nil:
-		return newClaimInjector(name, value.ClaimSource)
+		return newClaimInjector(name, value.Prefix, value.ClaimSource)
 	default:
 		return nil, fmt.Errorf("header %q value has multiple entries: only one entry per value is allowed", name)
 	}
@@ -66,18 +66,18 @@ func newInjectorFunc(injectFunc func(header http.Header, session *sessionsapi.Se
 	return &injectorFunc{injectFunc: injectFunc}
 }
 
-func newSecretInjector(name string, source *options.SecretSource) (valueInjector, error) {
+func newSecretInjector(name string, prefix string, source *options.SecretSource) (valueInjector, error) {
 	value, err := util.GetSecretValue(source)
 	if err != nil {
 		return nil, fmt.Errorf("error getting secret value: %v", err)
 	}
 
 	return newInjectorFunc(func(header http.Header, _ *sessionsapi.SessionState) {
-		header.Add(name, string(value))
+		header.Add(name, prefix+string(value))
 	}), nil
 }
 
-func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, error) {
+func newClaimInjector(name string, prefix string, source *options.ClaimSource) (valueInjector, error) {
 	switch {
 	case source.BasicAuthPassword != nil:
 		password, err := util.GetSecretValue(source.BasicAuthPassword)
@@ -94,16 +94,6 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 				header.Add(name, fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth))))
 			}
 		}), nil
-	case source.Prefix != "":
-		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
-			claimValues := session.GetClaim(source.Claim)
-			for _, claim := range claimValues {
-				if claim == "" {
-					continue
-				}
-				header.Add(name, source.Prefix+claim)
-			}
-		}), nil
 	default:
 		return newInjectorFunc(func(header http.Header, session *sessionsapi.SessionState) {
 			claimValues := session.GetClaim(source.Claim)
@@ -111,7 +101,7 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 				if claim == "" {
 					continue
 				}
-				header.Add(name, claim)
+				header.Add(name, prefix+claim)
 			}
 		}), nil
 	}

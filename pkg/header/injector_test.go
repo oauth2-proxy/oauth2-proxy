@@ -95,6 +95,30 @@ var _ = Describe("Injector Suite", func() {
 				},
 				expectedErr: nil,
 			}),
+			Entry("with a prefixed static valued header from env", newInjectorTableInput{
+				headers: []options.Header{
+					{
+						Name: "Secret",
+						Values: []options.HeaderValue{
+							{
+								SecretSource: &options.SecretSource{
+									FromEnv: "SECRET_ENV",
+								},
+								Prefix: "Bearer ",
+							},
+						},
+					},
+				},
+				initialHeaders: http.Header{
+					"foo": []string{"bar", "baz"},
+				},
+				session: &sessionsapi.SessionState{},
+				expectedHeaders: http.Header{
+					"foo":    []string{"bar", "baz"},
+					"Secret": []string{"Bearer super-secret-env"},
+				},
+				expectedErr: nil,
+			}),
 			Entry("with a claim valued header", newInjectorTableInput{
 				headers: []options.Header{
 					{
@@ -149,9 +173,9 @@ var _ = Describe("Injector Suite", func() {
 						Values: []options.HeaderValue{
 							{
 								ClaimSource: &options.ClaimSource{
-									Claim:  "id_token",
-									Prefix: "Bearer ",
+									Claim: "id_token",
 								},
+								Prefix: "Bearer ",
 							},
 						},
 					},
@@ -175,9 +199,9 @@ var _ = Describe("Injector Suite", func() {
 						Values: []options.HeaderValue{
 							{
 								ClaimSource: &options.ClaimSource{
-									Claim:  "idToken",
-									Prefix: "Bearer ",
+									Claim: "idToken",
 								},
+								Prefix: "Bearer ",
 							},
 						},
 					},

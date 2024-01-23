@@ -1824,9 +1824,9 @@ func TestGetJwtSession(t *testing.T) {
 				Values: []options.HeaderValue{
 					{
 						ClaimSource: &options.ClaimSource{
-							Claim:  "id_token",
-							Prefix: "Bearer ",
+							Claim: "id_token",
 						},
+						Prefix: "Bearer ",
 					},
 				},
 			},
@@ -1858,9 +1858,9 @@ func TestGetJwtSession(t *testing.T) {
 				Values: []options.HeaderValue{
 					{
 						ClaimSource: &options.ClaimSource{
-							Claim:  "id_token",
-							Prefix: "Bearer ",
+							Claim: "id_token",
 						},
+						Prefix: "Bearer ",
 					},
 				},
 			},

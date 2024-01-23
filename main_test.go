@@ -134,12 +134,12 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			Values: []options.HeaderValue{
 				{
 					ClaimSource: &options.ClaimSource{
-						Claim:  "user",
-						Prefix: "Basic ",
+						Claim: "user",
 						BasicAuthPassword: &options.SecretSource{
 							Value: []byte("super-secret-password"),
 						},
 					},
+					Prefix: "Basic ",
 				},
 			},
 		}

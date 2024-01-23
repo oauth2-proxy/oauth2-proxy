@@ -286,12 +286,12 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
-					Claim:  claim,
-					Prefix: "Basic ",
+					Claim: claim,
 					BasicAuthPassword: &SecretSource{
 						Value: []byte(basicAuthPassword),
 					},
 				},
+				Prefix: "Basic ",
 			},
 		},
 	}
@@ -369,9 +369,9 @@ func getAuthorizationHeader() Header {
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
-					Claim:  "id_token",
-					Prefix: "Bearer ",
+					Claim: "id_token",
 				},
+				Prefix: "Bearer ",
 			},
 		},
 	}

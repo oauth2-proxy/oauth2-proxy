@@ -8,6 +8,8 @@
 
 ## Changes since v7.6.0
 
+- [#2451](https://github.com/oauth2-proxy/oauth2-proxy/pull/2451) Add support for prefix in SecretSource (@aslafy-z)
+
 # V7.6.0
 
 ## Release Highlights
