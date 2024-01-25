@@ -152,7 +152,7 @@ func (p *GitHubProvider) ValidateSession(ctx context.Context, s *sessions.Sessio
 	return validateToken(ctx, p, s.AccessToken, makeGitHubHeader(s.AccessToken))
 }
 
-func (p *GitHubProvider) hasOrg(ctx context.Context, s *sessions.SessionState) error {
+func (p *GitHubProvider) hasOrg(s *sessions.SessionState) error {
 	// https://developer.github.com/v3/orgs/#list-your-organizations
 	var orgs []string
 
@@ -175,7 +175,7 @@ func (p *GitHubProvider) hasOrg(ctx context.Context, s *sessions.SessionState) e
 	return errors.New("user is missing required organization")
 }
 
-func (p *GitHubProvider) hasOrgAndTeam(ctx context.Context, s *sessions.SessionState) error {
+func (p *GitHubProvider) hasOrgAndTeam(s *sessions.SessionState) error {
 	type orgTeam struct {
 		Org  string `json:"org"`
 		Team string `json:"team"`
@@ -378,7 +378,7 @@ func (p *GitHubProvider) checkRestrictions(ctx context.Context, s *sessions.Sess
 		return err
 	}
 
-	if err := p.hasOrgAndTeamAccess(ctx, s); err != nil {
+	if err := p.hasOrgAndTeamAccess(s); err != nil {
 		return err
 	}
 
@@ -408,13 +408,13 @@ func (p *GitHubProvider) checkUserRestriction(ctx context.Context, s *sessions.S
 	return verifiedUser, nil
 }
 
-func (p *GitHubProvider) hasOrgAndTeamAccess(ctx context.Context, s *sessions.SessionState) error {
+func (p *GitHubProvider) hasOrgAndTeamAccess(s *sessions.SessionState) error {
 	if p.Org != "" && p.Team != "" {
-		return p.hasOrgAndTeam(ctx, s)
+		return p.hasOrgAndTeam(s)
 	}
 
 	if p.Org != "" {
-		return p.hasOrg(ctx, s)
+		return p.hasOrg(s)
 	}
 
 	return nil

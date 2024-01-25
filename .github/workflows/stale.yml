@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/stale@v8
+    - uses: actions/stale@v9
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         stale-issue-message: 'This issue has been inactive for 60 days. If the issue is still relevant please comment to re-activate the issue. If no action is taken within 7 days, the issue will be marked closed.'

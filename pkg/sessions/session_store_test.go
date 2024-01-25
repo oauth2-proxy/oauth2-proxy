@@ -1,8 +1,8 @@
 package sessions_test
 
 import (
+	"crypto/rand"
 	"encoding/base64"
-	"math/rand"
 	"testing"
 	"time"
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -158,7 +159,7 @@ var _ = Describe("Load", func() {
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
-				Expect(input).To(Equal(o.expectedOutput))
+				Expect(input).To(EqualOpts(o.expectedOutput))
 			},
 			Entry("with just a config file", &testOptionsTableInput{
 				configFile: testOptionsConfigBytes,
@@ -281,7 +282,7 @@ var _ = Describe("Load", func() {
 			Entry("with an invalid config file", &testOptionsTableInput{
 				configFile:     []byte(`slice_option = foo`),
 				flagSet:        func() *pflag.FlagSet { return testOptionsFlagSet },
-				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: (1, 16): no value can start with f"),
+				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: toml: expected 'false'"),
 				expectedOutput: &TestOptions{},
 			}),
 			Entry("with an invalid flagset", &testOptionsTableInput{
@@ -419,8 +420,7 @@ sub:
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
-
-				Expect(input).To(Equal(in.expectedOutput))
+				Expect(input).To(EqualOpts(in.expectedOutput))
 			},
 			Entry("with a valid input", loadYAMLTableInput{
 				configFile: testOptionsConfigBytesFull,
