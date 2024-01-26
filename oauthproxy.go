@@ -334,15 +334,15 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Use(prepareNoCacheMiddleware)
 
 	s.Path(signInPath).HandlerFunc(p.SignIn)
-	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
 	// Static file paths
 	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
 
-	// The userinfo endpoint needs to load sessions before handling the request
+	// The userinfo and logout endpoints needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
+	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -746,7 +746,41 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	p.backendLogout(rw, req)
+
 	http.Redirect(rw, req, redirect, http.StatusFound)
+}
+
+func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
+		logger.Errorf("error getting authenticated session during backend logout: %v", err)
+		return
+	}
+
+	if session == nil {
+		return
+	}
+
+	providerData := p.provider.Data()
+	if providerData.BackendLogoutURL == "" {
+		return
+	}
+
+	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
+	// security exception because URL is dynamic ({id_token} replacement) but
+	// base is not end-user provided but comes from configuration somewhat secure
+	resp, err := http.Get(backendLogoutURL) // #nosec G107
+	if err != nil {
+		logger.Errorf("error while calling backend logout: %v", err)
+		return
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
+	}
 }
 
 // OAuthStart starts the OAuth2 authentication flow
