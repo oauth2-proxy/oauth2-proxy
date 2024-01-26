@@ -42,13 +42,13 @@ created with at least the `public_repo` scope:
 To allow a user to log in with their username even if they do not belong to the specified org and team or collaborators, 
 separated by a comma
 
-```
-    --github-user="": allow logins by username, separated by a comma
+```shell
+    --github-user="" #allow logins by username, separated by a comma
 ```
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 
-```
+```shell
     --login-url="http(s)://<enterprise github host>/login/oauth/authorize"
     --redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
     --validate-url="http(s)://<enterprise github host>/api/v3"
