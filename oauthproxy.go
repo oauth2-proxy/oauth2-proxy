@@ -769,6 +769,8 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
+	// security exception because URL is dynamic ({id_token} replacement) but
+	// base is not end-user provided but comes from configuration somewhat secure
 	resp, err := http.Get(backendLogoutURL) // #nosec G107
 	if err != nil {
 		logger.Errorf("error while calling backend logout: %v", err)
@@ -777,7 +779,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		logger.Errorf("error while calling backend logout url %q: returned error code %v", backendLogoutURL, resp.StatusCode)
+		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
 	}
 }
 
