@@ -1,5 +1,6 @@
 ---
-title: Welcome to OAuth2 Proxy
+id: welcome
+title: Welcome
 hide_table_of_contents: true
 ---
 

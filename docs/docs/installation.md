@@ -1,7 +1,6 @@
 ---
 id: installation
 title: Installation
-slug: /
 ---
 
 1.  Choose how to deploy:
