@@ -13,7 +13,7 @@
     "github-actions",
     "helmv3",
     "npm",
-    "regex"
+    "regex",
   ],
   packageRules: [
     {
@@ -22,30 +22,30 @@
         "docker-compose",
         "gomod",
         "helmv3",
-        "npm"
+        "npm",
       ],
-      groupName: "{{{manager}}}"
-    }
+      groupName: "{{{manager}}}",
+    },
   ],
   customManagers: [
     {
       customType: "regex",
       fileMatch: [
-        "^Makefile"
+        "^Makefile",
       ],
       matchStrings: [
         "DOCKER_BUILD_RUNTIME_IMAGE_ALPINE\\s+?\\?= alpine:(?<currentValue>.*)\\s"
       ],
       depNameTemplate: "alpine",
-      datasourceTemplate: "docker"
+      datasourceTemplate: "docker",
     },
     {
       customType: "regex",
       fileMatch: ["(^|/)\\.github/workflows/[^/]+\\.ya?ml$", "(^|/)\\.github/[^/]+\\.sh$"],
       matchStrings: [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+?[\\w\\s-]*?version: (?<currentValue>.*)\\s",
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+?[\\w\\s]*?_VERSION: (?<currentValue>.*)\\s"
-      ]
-    }
-  ]
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+?[\\w\\s]*?_VERSION: (?<currentValue>.*)\\s",
+      ],
+    },
+  ],
 }
