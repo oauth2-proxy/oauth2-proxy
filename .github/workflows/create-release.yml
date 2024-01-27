@@ -56,7 +56,8 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v4
       with:
-        node-version: latest
+        # renovate: datasource=node-version depName=node
+        node-version: 20
       
     - name: Update documentation
       run: |

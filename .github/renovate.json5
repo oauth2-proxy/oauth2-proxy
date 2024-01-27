@@ -1,12 +1,31 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  semanticCommits: "auto",
+  semanticCommits: "enabled",
+  schedule: [
+    "after 8am on sunday"
+  ],
+  prConcurrentLimit: 0,
+  prHourlyLimit: 0,
   enabledManagers: [
     "dockerfile",
+    "docker-compose",
     "gomod",
     "github-actions",
+    "helmv3",
     "npm",
-    "regex",
+    "regex"
+  ],
+  packageRules: [
+    {
+      matchManagers: [
+        "dockerfile",
+        "docker-compose",
+        "gomod",
+        "helmv3",
+        "npm"
+      ],
+      groupName: "{{{manager}}}"
+    }
   ],
   customManagers: [
     {
@@ -18,7 +37,15 @@
         "DOCKER_BUILD_RUNTIME_IMAGE_ALPINE\\s+?\\?= alpine:(?<currentValue>.*)\\s"
       ],
       depNameTemplate: "alpine",
-      datasourceTemplate: "docker",
+      datasourceTemplate: "docker"
     },
-  ],
+    {
+      customType: "regex",
+      fileMatch: ["(^|/)\\.github/workflows/[^/]+\\.ya?ml$", "(^|/)\\.github/[^/]+\\.sh$"],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+?[\\w\\s-]*?version: (?<currentValue>.*)\\s",
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+?[\\w\\s]*?_VERSION: (?<currentValue>.*)\\s"
+      ]
+    }
+  ]
 }
