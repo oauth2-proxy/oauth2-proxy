@@ -57,11 +57,11 @@ through "dedicated" client mappers._
            * **Valid redirect URIs** `https://internal.yourcompany.com/oauth2/callback`
                * _Save the configuration._
        * Under the **Credentials** tab you will now be able to locate `<your client's secret>`.
-2. Configure a dedicated *audience mapper* for your client by navigating to **Clients** -> **<your client's id>** -> **Client scopes**.
-* Access the dedicated mappers pane by clicking **<your client's id>-dedicated**, located under *Assigned client scope*.  
+2. Configure a dedicated *audience mapper* for your client by navigating to **Clients** -> **\<your client's id\>** -> **Client scopes**.
+* Access the dedicated mappers pane by clicking **\<your client's id\>-dedicated**, located under *Assigned client scope*.  
   _(It should have a description of "Dedicated scope and mappers for this client")_
     * Click **Configure a new mapper** and select **Audience**
-        * **Name** 'aud-mapper-<your client's id>'
+        * **Name** 'aud-mapper-\<your client's id\>'
         * **Included Client Audience** select `<your client's id>` from the dropdown.
             * _OAuth2 proxy can be set up to pass both the access and ID JWT tokens to your upstream services.
               If you require additional audience entries, you can use the **Included Custom Audience** field in addition 
@@ -105,7 +105,7 @@ Keycloak "realm roles" can be authorized using the `--allowed-role=<realm role n
 evaluated using `--allowed-role=<your client's id>:<client role name>`.
 
 You may limit the _realm roles_ included in the JWT tokens for any given client by navigating to:  
-**Clients** -> `<your client's id>` -> **Client scopes** ->  _<your client's id>-dedicated_ -> **Scope**  
+**Clients** -> `<your client's id>` -> **Client scopes** ->  _\<your client's id\>-dedicated_ -> **Scope**  
 Disabling **Full scope allowed** activates the **Assign role** option, allowing you to select which roles, if assigned 
 to a user, will be included in the user's JWT tokens. This can be useful when a user has many associated roles, and you 
 want to reduce the size and impact of the JWT token.
