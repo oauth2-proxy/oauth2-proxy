@@ -139,7 +139,7 @@ Note: When using the ADFS Auth provider with nginx and the cookie session store 
 
 ### Facebook Auth Provider
 
-1.  Create a new FB App from <https://developers.facebook.com/>
+1.  Create a new FB App from https://developers.facebook.com/
 2.  Under FB Login, set your Valid OAuth redirect URIs to `https://internal.yourcompany.com/oauth2/callback`
 
 ### GitHub Auth Provider
@@ -153,29 +153,41 @@ NOTE: When `--github-user` is set, the specified users are allowed to login even
 
 To restrict by organization only, include the following flag:
 
-    -github-org="": restrict logins to members of this organisation
+```
+    --github-org="": restrict logins to members of this organisation
+```
 
 To restrict within an organization to specific teams, include the following flag in addition to `-github-org`:
 
-    -github-team="": restrict logins to members of any of these teams (slug), separated by a comma
+```
+    --github-team="": restrict logins to members of any of these teams (slug), separated by a comma
+```
 
 If you would rather restrict access to collaborators of a repository, those users must either have push access to a public repository or any access to a private repository:
 
-    -github-repo="": restrict logins to collaborators of this repository formatted as orgname/repo
+```
+    --github-repo="": restrict logins to collaborators of this repository formatted as orgname/repo
+```
 
 If you'd like to allow access to users with **read only** access to a **public** repository you will need to provide a [token](https://github.com/settings/tokens) for a user that has write access to the repository. The token must be created with at least the `public_repo` scope:
 
-    -github-token="": the token to use when verifying repository collaborators
+```
+    --github-token="": the token to use when verifying repository collaborators
+```
 
 To allow a user to login with their username even if they do not belong to the specified org and team or collaborators, separated by a comma
 
-    -github-user="": allow logins by username, separated by a comma
+```
+    --github-user="": allow logins by username, separated by a comma
+```
 
 If you are using GitHub enterprise, make sure you set the following to the appropriate url:
 
-    -login-url="http(s)://<enterprise github host>/login/oauth/authorize"
-    -redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
-    -validate-url="http(s)://<enterprise github host>/api/v3"
+```
+    --login-url="http(s)://<enterprise github host>/login/oauth/authorize"
+    --redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
+    --validate-url="http(s)://<enterprise github host>/api/v3"
+```
 
 ### Keycloak Auth Provider
 
@@ -261,11 +273,11 @@ _In Keycloak, claims are added to JWT tokens through the use of mappers at eithe
         * **Valid redirect URIs** `https://internal.yourcompany.com/oauth2/callback`
             * _Save the configuration._
     * Under the **Credentials** tab you will now be able to locate `<your client's secret>`.
-2. Configure a dedicated *audience mapper* for your client by navigating to **Clients** -> **<your client's id>** -> **Client scopes**.
-* Access the dedicated mappers pane by clicking **<your client's id>-dedicated**, located under *Assigned client scope*.  
+2. Configure a dedicated *audience mapper* for your client by navigating to **Clients** -> **\<your client's id\>** -> **Client scopes**.
+* Access the dedicated mappers pane by clicking **\<your client's id\>-dedicated**, located under *Assigned client scope*.  
   _(It should have a description of "Dedicated scope and mappers for this client")_
     * Click **Configure a new mapper** and select **Audience**
-        * **Name** 'aud-mapper-<your client's id>'
+        * **Name** 'aud-mapper-\<your client's id\>'
         * **Included Client Audience** select `<your client's id>` from the dropdown.
             * _OAuth2 proxy can be set up to pass both the access and ID JWT tokens to your upstream services. 
               If you require additional audience entries, you can use the **Included Custom Audience** field in addition to the "Included Client Audience" dropdown. Note that the "aud" claim of a JWT token should be limited and only specify its intended recipients._
@@ -302,7 +314,7 @@ _Assign a role to a user_
 Keycloak "realm roles" can be authorized using the `--allowed-role=<realm role name>` option, while "client roles" can be evaluated using `--allowed-role=<your client's id>:<client role name>`.
 
 You may limit the _realm roles_ included in the JWT tokens for any given client by navigating to:  
-**Clients** -> `<your client's id>` -> **Client scopes** ->  _<your client's id>-dedicated_ -> **Scope**  
+**Clients** -> `<your client's id>` -> **Client scopes** ->  _\<your client's id\>-dedicated_ -> **Scope**  
 Disabling **Full scope allowed** activates the **Assign role** option, allowing you to select which roles, if assigned to a user, will be included in the user's JWT tokens. This can be useful when a user has many associated roles, and you want to reduce the size and impact of the JWT token.
 
 
@@ -354,11 +366,15 @@ The following config should be set to ensure that the oauth will work properly. 
 
 Restricting by group membership is possible with the following option:
 
+```
     --gitlab-group="mygroup,myothergroup": restrict logins to members of any of these groups (slug), separated by a comma
+```
 
 If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
 
+```
     --oidc-issuer-url="<your gitlab url>"
+```
 
 If your self-hosted GitLab is on a sub-directory (e.g. domain.tld/gitlab), as opposed to its own sub-domain (e.g. gitlab.domain.tld), you may need to add a redirect from domain.tld/oauth pointing at e.g. domain.tld/gitlab/oauth.
 
@@ -489,7 +505,7 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
 #### Okta - localhost
 
 1. Signup for developer account: https://developer.okta.com/signup/
-2. Create New `Web` Application: https://${your-okta-domain}/dev/console/apps/new
+2. Create New `Web` Application: https://$\{your-okta-domain\}/dev/console/apps/new
 3. Example Application Settings for localhost:
    * **Name:** My Web App
    * **Base URIs:** http://localhost:4180/
@@ -498,12 +514,12 @@ Then you can start the oauth2-proxy with `./oauth2-proxy --config /etc/example.c
    * **Group assignments:** `Everyone`
    * **Grant type allowed:** `Authorization Code` and `Refresh Token`
 4. Make note of the `Client ID` and `Client secret`, they are needed in a future step
-5. Make note of the **default** Authorization Server Issuer URI from: https://${your-okta-domain}/admin/oauth2/as
+5. Make note of the **default** Authorization Server Issuer URI from: https://$\{your-okta-domain\}/admin/oauth2/as
 6. Example config file `/etc/localhost.cfg`
     ```
     provider = "oidc"
     redirect_url = "http://localhost:4180/oauth2/callback"
-    oidc_issuer_url = "https://${your-okta-domain}/oauth2/default"
+    oidc_issuer_url = "https://$\{your-okta-domain\}/oauth2/default"
     upstreams = [
         "http://0.0.0.0:8080"
     ]

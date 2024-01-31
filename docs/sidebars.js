@@ -1,5 +1,9 @@
-module.exports = {
+const sidebars = {
   docs: [
+    {
+      type: 'doc',
+      id: 'welcome',
+    },
     {
       type: 'doc',
       id: 'installation',
@@ -71,3 +75,5 @@ module.exports = {
     },
   ],
 };
+
+export default sidebars;

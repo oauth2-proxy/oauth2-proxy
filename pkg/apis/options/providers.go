@@ -83,6 +83,9 @@ type Provider struct {
 	AllowedGroups []string `json:"allowedGroups,omitempty"`
 	// The code challenge method
 	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
+
+	// URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session
+	BackendLogoutURL string `json:"backendLogoutURL"`
 }
 
 // ProviderType is used to enumerate the different provider type options
