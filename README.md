@@ -55,7 +55,7 @@ See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/s
 
 ## Docs
 
-Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/docs/).
+Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/).
 
 ![OAuth2 Proxy Architecture](docs/static/img/architecture.svg)
 
