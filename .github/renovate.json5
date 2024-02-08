@@ -26,6 +26,13 @@
       ],
       groupName: "{{{manager}}}",
     },
+    {
+      matchDepNames: [
+        "docker.io/library/golang",
+        "mcr.microsoft.com/vscode/devcontainers/go",
+      ],
+      groupName: "golang",
+    },
   ],
   customManagers: [
     {
