@@ -14,7 +14,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -79,11 +79,12 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		}
 	})
 
+	const redisProtocol = "redis://"
 	tests.RunSessionStoreTests(
 		func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 			// Set the connection URL
 			opts.Type = options.RedisSessionStoreType
-			opts.Redis.ConnectionURL = "redis://" + mr.Addr()
+			opts.Redis.ConnectionURL = redisProtocol + mr.Addr()
 
 			// Capture the session store so that we can close the client
 			var err error
@@ -111,7 +112,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		tests.RunSessionStoreTests(
 			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 				// Set the sentinel connection URL
-				sentinelAddr := "redis://" + ms.Addr()
+				sentinelAddr := redisProtocol + ms.Addr()
 				opts.Type = options.RedisSessionStoreType
 				opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
 				opts.Redis.UseSentinel = true
@@ -132,7 +133,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 	Context("with cluster", func() {
 		tests.RunSessionStoreTests(
 			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
-				clusterAddr := "redis://" + mr.Addr()
+				clusterAddr := redisProtocol + mr.Addr()
 				opts.Type = options.RedisSessionStoreType
 				opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
 				opts.Redis.UseCluster = true
@@ -162,7 +163,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 				// Set the connection URL
 				opts.Type = options.RedisSessionStoreType
-				opts.Redis.ConnectionURL = "redis://" + mr.Addr()
+				opts.Redis.ConnectionURL = redisProtocol + mr.Addr()
 				opts.Redis.Password = redisPassword
 
 				// Capture the session store so that we can close the client
@@ -191,7 +192,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			tests.RunSessionStoreTests(
 				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 					// Set the sentinel connection URL
-					sentinelAddr := "redis://" + ms.Addr()
+					sentinelAddr := redisProtocol + ms.Addr()
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
 					opts.Redis.UseSentinel = true
@@ -213,7 +214,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		Context("with cluster", func() {
 			tests.RunSessionStoreTests(
 				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
-					clusterAddr := "redis://" + mr.Addr()
+					clusterAddr := redisProtocol + mr.Addr()
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
 					opts.Redis.UseCluster = true
@@ -282,6 +283,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		})
 	})
 
+	const redissProtocol = "rediss://"
 	Context("with TLS connection", func() {
 		BeforeEach(func() {
 			mr.Close()
@@ -303,7 +305,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 					// Set the connection URL
 					opts.Type = options.RedisSessionStoreType
-					opts.Redis.ConnectionURL = "rediss://" + mr.Addr()
+					opts.Redis.ConnectionURL = redissProtocol + mr.Addr()
 					opts.Redis.CAPath = caPath
 
 					// Capture the session store so that we can close the client
@@ -320,7 +322,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		Context("with cluster", func() {
 			tests.RunSessionStoreTests(
 				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
-					clusterAddr := "rediss://" + mr.Addr()
+					clusterAddr := redissProtocol + mr.Addr()
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
 					opts.Redis.UseCluster = true
@@ -360,7 +362,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 					// Set the connection URL
 					opts.Type = options.RedisSessionStoreType
-					opts.Redis.ConnectionURL = "rediss://" + mr.Addr()
+					opts.Redis.ConnectionURL = redissProtocol + mr.Addr()
 					opts.Redis.InsecureSkipTLSVerify = true
 
 					// Capture the session store so that we can close the client
@@ -377,7 +379,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		Context("with cluster", func() {
 			tests.RunSessionStoreTests(
 				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
-					clusterAddr := "rediss://" + mr.Addr()
+					clusterAddr := redissProtocol + mr.Addr()
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
 					opts.Redis.UseCluster = true
@@ -417,7 +419,7 @@ var _ = Describe("Redis SessionStore Tests", func() {
 			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
 				// Set the connection URL
 				opts.Type = options.RedisSessionStoreType
-				opts.Redis.ConnectionURL = "redis://" + mr.Addr()
+				opts.Redis.ConnectionURL = redisProtocol + mr.Addr()
 				opts.Redis.CAPath = caPath
 
 				// Capture the session store so that we can close the client
