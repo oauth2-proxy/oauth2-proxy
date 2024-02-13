@@ -5,7 +5,7 @@ ARG RUNTIME_IMAGE=gcr.io/distroless/static:nonroot
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
 #  multiple platforms.
-FROM --platform=${BUILDPLATFORM} docker.io/library/golang:1.21-bookworm AS builder
+FROM --platform=${BUILDPLATFORM} docker.io/library/golang:1.22-bookworm AS builder
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
