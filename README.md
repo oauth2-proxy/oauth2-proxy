@@ -23,7 +23,7 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
 1.  Choose how to deploy:
 
-    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.5.1`)
+    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.6.0`)
 
     b. Using Go to install the latest release
     ```bash
