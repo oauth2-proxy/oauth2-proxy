@@ -62,7 +62,7 @@ func testADFSProvider(hostname string) *ADFSProvider {
 		ValidateURL:  &url.URL{},
 		Scope:        "",
 		Verifier:     o,
-		EmailClaim:   options.OIDCEmailClaim,
+		EmailClaim:   DefaultEmailClaim,
 	}, options.Provider{})
 
 	if hostname != "" {

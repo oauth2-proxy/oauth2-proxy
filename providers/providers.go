@@ -13,9 +13,18 @@ import (
 )
 
 const (
+	// DefaultEmailClaim is the generic email claim used by the OIDC provider.
+	DefaultEmailClaim = options.OIDCEmailClaim
+
+	// DefaultGroupsClaim is the generic groups claim used by the OIDC provider.
+	DefaultGroupsClaim = options.OIDCGroupsClaim
+
 	CodeChallengeMethodPlain = "plain"
 	CodeChallengeMethodS256  = "S256"
 )
+
+// DefaultAudienceClaims is the generic audience claim list used by the OIDC provider.
+var DefaultAudienceClaims = options.OIDCAudienceClaims
 
 // Provider represents an upstream identity provider implementation
 type Provider interface {
@@ -32,6 +41,16 @@ type Provider interface {
 }
 
 func NewProvider(providerConfig options.Provider) (Provider, error) {
+	if providerConfig.OIDCConfig.EmailClaim == "" {
+		providerConfig.OIDCConfig.EmailClaim = DefaultEmailClaim
+	}
+	if providerConfig.OIDCConfig.GroupsClaim == "" {
+		providerConfig.OIDCConfig.GroupsClaim = DefaultGroupsClaim
+	}
+	if len(providerConfig.OIDCConfig.AudienceClaims) == 0 {
+		providerConfig.OIDCConfig.AudienceClaims = DefaultAudienceClaims
+	}
+
 	providerData, err := newProviderDataFromConfig(providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
@@ -152,9 +171,17 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 
 	// TODO (@NickMeves) - Remove This
 	// Backwards Compatibility for Deprecated UserIDClaim option
-	if providerConfig.OIDCConfig.EmailClaim == options.OIDCEmailClaim &&
-		providerConfig.OIDCConfig.UserIDClaim != options.OIDCEmailClaim {
+	if providerConfig.OIDCConfig.EmailClaim == DefaultEmailClaim &&
+		providerConfig.OIDCConfig.UserIDClaim != DefaultEmailClaim {
 		p.EmailClaim = providerConfig.OIDCConfig.UserIDClaim
+	}
+
+	if providerConfig.Type == "oidc" && p.Scope == "" {
+		p.Scope = "openid email profile"
+
+		if len(providerConfig.AllowedGroups) > 0 {
+			p.Scope += " groups"
+		}
 	}
 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
