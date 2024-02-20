@@ -56,7 +56,8 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 
 	var p providerJSON
 	requestURL := strings.TrimSuffix(issuerURL, "/") + "/.well-known/openid-configuration"
-	if err := requests.New(requestURL).WithContext(ctx).Do().UnmarshalInto(&p); err != nil {
+
+	if err := requests.New(requestURL).WithClientFromContext(ctx).Do().UnmarshalInto(&p); err != nil {
 		return nil, fmt.Errorf("failed to discover OIDC configuration: %v", err)
 	}
 

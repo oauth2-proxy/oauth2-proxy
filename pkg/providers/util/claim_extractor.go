@@ -95,8 +95,7 @@ func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
 		return simplejson.New(), nil
 	}
 
-	claims, err := requests.New(c.profileURL.String()).
-		WithContext(c.ctx).
+	claims, err := requests.New(c.profileURL.String()).WithClientFromContext(c.ctx).
 		WithHeaders(c.requestHeaders).
 		Do().
 		UnmarshalSimpleJSON()

@@ -3,7 +3,6 @@ package validation
 import (
 	"crypto"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -201,17 +200,4 @@ func TestRealClientIPHeader(t *testing.T) {
 	})
 	assert.Equal(t, expected, err.Error())
 	assert.Nil(t, o.GetRealClientIPParser())
-}
-
-func TestProviderCAFilesError(t *testing.T) {
-	file, err := os.CreateTemp("", "absent.*.crt")
-	assert.NoError(t, err)
-	assert.NoError(t, file.Close())
-	assert.NoError(t, os.Remove(file.Name()))
-
-	o := testOptions()
-	o.Providers[0].CAFiles = append(o.Providers[0].CAFiles, file.Name())
-	err = Validate(o)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unable to load provider CA file(s)")
 }

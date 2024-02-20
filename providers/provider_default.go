@@ -66,6 +66,7 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 
 	result := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").

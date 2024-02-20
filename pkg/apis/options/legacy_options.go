@@ -176,8 +176,6 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
 			upstream.Timeout = nil
-		case "unix":
-			upstream.Path = "/"
 		}
 
 		upstreams.Upstreams = append(upstreams.Upstreams, upstream)
@@ -509,6 +507,9 @@ type LegacyProvider struct {
 	ProviderType                       string   `flag:"provider" cfg:"provider"`
 	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
 	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
+	SSLInsecureSkipVerify              bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
+	TLSCertFile                        string   `flag:"provider-tls-cert-file" cfg:"provider_tls_cert_file"`
+	TLSKeyFile                         string   `flag:"provider-tls-key-file" cfg:"provider_tls_key_file"`
 	UseSystemTrustStore                bool     `flag:"use-system-trust-store" cfg:"use_system_trust_store"`
 	OIDCIssuerURL                      string   `flag:"oidc-issuer-url" cfg:"oidc_issuer_url"`
 	InsecureOIDCAllowUnverifiedEmail   bool     `flag:"insecure-oidc-allow-unverified-email" cfg:"insecure_oidc_allow_unverified_email"`
@@ -566,6 +567,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
 	flagSet.StringSlice("provider-ca-file", []string{}, "One or more paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead.")
+	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
+	flagSet.String("provider-tls-cert-file", "", "Path to the PEM encoded X.509 certificate to use when connecting to the provider.")
+	flagSet.String("provider-tls-key-file", "", "Path to the PEM encoded X.509 key to use when connecting to the provider.")
 	flagSet.Bool("use-system-trust-store", false, "Determines if 'provider-ca-file' files and the system trust store are used. If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.")
 	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.Bool("insecure-oidc-allow-unverified-email", false, "Don't fail if an email address in an id_token is not verified")
@@ -666,8 +670,6 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		ClientSecret:             l.ClientSecret,
 		ClientSecretFile:         l.ClientSecretFile,
 		Type:                     ProviderType(l.ProviderType),
-		CAFiles:                  l.ProviderCAFiles,
-		UseSystemTrustStore:      l.UseSystemTrustStore,
 		LoginURL:                 l.LoginURL,
 		RedeemURL:                l.RedeemURL,
 		ProfileURL:               l.ProfileURL,
@@ -678,6 +680,14 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,
 		BackendLogoutURL:         l.BackendLogoutURL,
+	}
+
+	provider.TLS = ProviderTLS{
+		CAFiles:             l.ProviderCAFiles,
+		InsecureSkipVerify:  l.SSLInsecureSkipVerify,
+		CertFile:            l.TLSCertFile,
+		KeyFile:             l.TLSKeyFile,
+		UseSystemTrustStore: l.UseSystemTrustStore,
 	}
 
 	// This part is out of the switch section for all providers that support OIDC

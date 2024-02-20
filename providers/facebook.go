@@ -76,6 +76,7 @@ func (p *FacebookProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	requestURL := p.ProfileURL.String() + "?fields=name,email"
 	err := requests.New(requestURL).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&r)

@@ -167,6 +167,7 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code, codeVerif
 
 	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
@@ -335,6 +336,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 
 	err = requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
@@ -381,6 +383,7 @@ func (p *AzureProvider) getGroupsFromProfileAPI(ctx context.Context, s *sessions
 	for groupsURL != "" {
 		jsonRequest, err := requests.New(groupsURL).
 			WithContext(ctx).
+			WithClient(p.Client).
 			WithHeaders(extraHeader).
 			Do().
 			UnmarshalSimpleJSON()
@@ -417,6 +420,7 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 
 	json, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeAzureHeader(accessToken)).
 		Do().
 		UnmarshalSimpleJSON()

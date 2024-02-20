@@ -70,6 +70,7 @@ func (p *DigitalOceanProvider) GetEmailAddress(ctx context.Context, s *sessions.
 
 	json, err := requests.New(p.ProfileURL.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeOIDCHeader(s.AccessToken)).
 		Do().
 		UnmarshalSimpleJSON()

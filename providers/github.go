@@ -238,6 +238,7 @@ func (p *GitHubProvider) hasRepoAccess(ctx context.Context, accessToken string) 
 	var repo repository
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(accessToken)).
 		Do().
 		UnmarshalInto(&repo)
@@ -267,6 +268,7 @@ func (p *GitHubProvider) hasUser(ctx context.Context, accessToken string) (bool,
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(accessToken)).
 		Do().
 		UnmarshalInto(&user)
@@ -286,6 +288,7 @@ func (p *GitHubProvider) isCollaborator(ctx context.Context, username, accessTok
 	endpoint := p.makeGitHubAPIEndpoint("/repos/"+p.Repo+"/collaborators/"+username, nil)
 	result := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(accessToken)).
 		Do()
 	if result.Error() != nil {
@@ -315,6 +318,7 @@ func (p *GitHubProvider) getEmail(ctx context.Context, s *sessions.SessionState)
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&emails)
@@ -345,6 +349,7 @@ func (p *GitHubProvider) getUser(ctx context.Context, s *sessions.SessionState) 
 
 	err := requests.New(endpoint.String()).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeGitHubHeader(s.AccessToken)).
 		Do().
 		UnmarshalInto(&user)
@@ -448,6 +453,7 @@ func (p *GitHubProvider) getOrgs(ctx context.Context, s *sessions.SessionState) 
 		var orgs []Organization
 		err := requests.New(endpoint.String()).
 			WithContext(ctx).
+			WithClient(p.Client).
 			WithHeaders(makeGitHubHeader(s.AccessToken)).
 			Do().
 			UnmarshalInto(&orgs)
@@ -491,6 +497,7 @@ func (p *GitHubProvider) getTeams(ctx context.Context, s *sessions.SessionState)
 		var teams []Team
 		err := requests.New(endpoint.String()).
 			WithContext(ctx).
+			WithClient(p.Client).
 			WithHeaders(makeGitHubHeader(s.AccessToken)).
 			Do().
 			UnmarshalInto(&teams)

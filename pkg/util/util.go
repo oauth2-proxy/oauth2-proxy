@@ -3,11 +3,13 @@ package util
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -37,7 +39,7 @@ func GetCertPool(paths []string, useSystemPool bool) (*x509.CertPool, error) {
 func getSystemCertPool() (*x509.CertPool, error) {
 	rootPool, err := x509.SystemCertPool()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed getting system cert pool: %w", err)
 	}
 
 	if rootPool == nil {
@@ -59,6 +61,53 @@ func loadCertsFromPaths(paths []string, pool *x509.CertPool) (*x509.CertPool, er
 		}
 	}
 	return pool, nil
+}
+
+func getClientCertificates(certFile, keyFile string) ([]tls.Certificate, error) {
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("unable to locate certificate %s: %w", certFile, err)
+	}
+
+	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("unable to locate key %s: %w", keyFile, err)
+	}
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse cert/key pair %s, %s: %w", certFile, keyFile, err)
+	}
+
+	return []tls.Certificate{cert}, nil
+}
+
+func GetHTTPClient(certFile, keyFile string, insecureSkipVerify bool, useSystemPool bool, caFiles ...string) (*http.Client, error) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
+	if insecureSkipVerify {
+		transport.TLSClientConfig.InsecureSkipVerify = true
+	} else if len(caFiles) > 0 {
+		pool, err := GetCertPool(caFiles, useSystemPool)
+		if err != nil {
+			return nil, fmt.Errorf("could not build TLS truststore for client: %w", err)
+		}
+
+		transport.TLSClientConfig.RootCAs = pool
+	}
+
+	if certFile != "" && keyFile != "" {
+		certs, err := getClientCertificates(certFile, keyFile)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse TLS client certificates: %w", err)
+		}
+		transport.TLSClientConfig.Certificates = certs
+	}
+
+	return &http.Client{
+		Transport: transport,
+	}, nil
 }
 
 // https://golang.org/src/crypto/tls/generate_cert.go as a function

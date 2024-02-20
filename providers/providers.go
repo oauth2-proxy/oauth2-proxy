@@ -9,6 +9,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"golang.org/x/oauth2"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -70,21 +72,14 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	}
 }
 
-func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
-	p := &ProviderData{
-		Scope:            providerConfig.Scope,
-		ClientID:         providerConfig.ClientID,
-		ClientSecret:     providerConfig.ClientSecret,
-		ClientSecretFile: providerConfig.ClientSecretFile,
-	}
-
+func configureVerifier(ctx context.Context, providerConfig options.Provider, p *ProviderData) error {
 	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if needsVerifier {
-		pv, err := internaloidc.NewProviderVerifier(context.TODO(), internaloidc.ProviderVerifierOptions{
+		pv, err := internaloidc.NewProviderVerifier(ctx, internaloidc.ProviderVerifierOptions{
 			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
 			ClientID:               providerConfig.ClientID,
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
@@ -94,7 +89,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
+			return fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
 		}
 
 		p.Verifier = pv.Verifier()
@@ -108,6 +103,28 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
 			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
 		}
+	}
+
+	return nil
+}
+
+func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
+	p := &ProviderData{
+		Scope:            providerConfig.Scope,
+		ClientID:         providerConfig.ClientID,
+		ClientSecret:     providerConfig.ClientSecret,
+		ClientSecretFile: providerConfig.ClientSecretFile,
+	}
+
+	client, err := util.GetHTTPClient(providerConfig.TLS.CertFile, providerConfig.TLS.KeyFile, providerConfig.TLS.InsecureSkipVerify, providerConfig.TLS.UseSystemTrustStore, providerConfig.TLS.CAFiles...)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse tls configuration for provider client: %w", err)
+	}
+
+	p.Client = client
+	ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, client)
+	if err := configureVerifier(ctx, providerConfig, p); err != nil {
+		return nil, fmt.Errorf("unable to configure token verifier for provider: %w", err)
 	}
 
 	errs := []error{}

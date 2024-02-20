@@ -33,6 +33,7 @@ type ProviderData struct {
 	ProfileURL        *url.URL
 	ProtectedResource *url.URL
 	ValidateURL       *url.URL
+	Client            *http.Client
 	ClientID          string
 	ClientSecret      string
 	ClientSecretFile  string
@@ -291,7 +292,8 @@ func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.C
 		profileURL = &url.URL{}
 	}
 
-	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
+	ctxWithClient := context.WithValue(context.TODO(), oauth2.HTTPClient, p.Client)
+	extractor, err := util.NewClaimExtractor(ctxWithClient, rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
 	if err != nil {
 		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}

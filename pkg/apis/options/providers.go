@@ -56,12 +56,9 @@ type Provider struct {
 	// Name is the providers display name
 	// if set, it will be shown to the users in the login page.
 	Name string `json:"name,omitempty"`
-	// CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
-	// If not specified, the default Go trust sources are used instead
-	CAFiles []string `json:"caFiles,omitempty"`
-	// UseSystemTrustStore determines if your custom CA files and the system trust store are used
-	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
-	UseSystemTrustStore bool `json:"useSystemTrustStore,omitempty"`
+	// TLS configures the ProviderTLS settings for clients.
+	TLS ProviderTLS `json:"tls,omitempty"`
+
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL
@@ -249,6 +246,21 @@ type LoginGovOptions struct {
 	JWTKeyFile string `json:"jwtKeyFile,omitempty"`
 	// PubJWKURL is the JWK pubkey access endpoint
 	PubJWKURL string `json:"pubjwkURL,omitempty"`
+}
+
+type ProviderTLS struct {
+	// InsecureSkipVerify disables verification of the providers CA
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+	// CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.
+	// If not specified, the default Go trust sources are used instead
+	CAFiles []string `json:"caFiles,omitempty"`
+	// CertFile is the path to a PEM encoded X.509 certificate to use when connecting to the provider
+	CertFile string `json:"certFile,omitempty"`
+	// KeyFile is the path to a PEM encoded X.509 key to use when connecting to the provider
+	KeyFile string `json:"keyFile,omitempty"`
+	// UseSystemTrustStore determines if your custom CA files and the system trust store are used
+	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
+	UseSystemTrustStore bool `json:"useSystemTrustStore,omitempty"`
 }
 
 func providerDefaults() Providers {

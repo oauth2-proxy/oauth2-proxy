@@ -88,6 +88,7 @@ func (p *LinkedInProvider) GetEmailAddress(ctx context.Context, s *sessions.Sess
 	requestURL := p.ProfileURL.String() + "?q=members&projection=(elements*(handle~))"
 	json, err := requests.New(requestURL).
 		WithContext(ctx).
+		WithClient(p.Client).
 		WithHeaders(makeLinkedInHeader(s.AccessToken)).
 		Do().
 		UnmarshalSimpleJSON()

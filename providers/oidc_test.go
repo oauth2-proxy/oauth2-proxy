@@ -35,6 +35,7 @@ func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
 		ProviderName: "oidc",
 		ClientID:     oidcClientID,
 		ClientSecret: oidcSecret,
+		Client:       &http.Client{Transport: http.DefaultTransport},
 		LoginURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,

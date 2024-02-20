@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 
@@ -51,6 +52,7 @@ func newKeycloakOIDCProvider(serverURL *url.URL, opts options.Provider) *Keycloa
 	}
 	p := NewKeycloakOIDCProvider(
 		&ProviderData{
+			Client: &http.Client{Transport: http.DefaultTransport},
 			LoginURL: &url.URL{
 				Scheme: "https",
 				Host:   "keycloak-oidc.com",
