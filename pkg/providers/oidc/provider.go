@@ -3,10 +3,7 @@ package oidc
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
-
-	"golang.org/x/oauth2"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
@@ -60,12 +57,7 @@ func NewProvider(ctx context.Context, issuerURL string, skipIssuerVerification b
 	var p providerJSON
 	requestURL := strings.TrimSuffix(issuerURL, "/") + "/.well-known/openid-configuration"
 
-	requestBuilder := requests.New(requestURL)
-	if client, ok := ctx.Value(oauth2.HTTPClient).(*http.Client); ok {
-		requestBuilder = requestBuilder.WithClient(client)
-	}
-
-	if err := requestBuilder.WithContext(ctx).Do().UnmarshalInto(&p); err != nil {
+	if err := requests.New(requestURL).WithClientFromContext(ctx).Do().UnmarshalInto(&p); err != nil {
 		return nil, fmt.Errorf("failed to discover OIDC configuration: %v", err)
 	}
 

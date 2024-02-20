@@ -57,7 +57,7 @@ type Provider struct {
 	// if set, it will be shown to the users in the login page.
 	Name string `json:"name,omitempty"`
 	// TLS configures the ProviderTLS settings for clients.
-	TLS ProviderTLS `json:",inline"`
+	TLS ProviderTLS `json:"tls,omitempty"`
 
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`

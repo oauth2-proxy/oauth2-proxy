@@ -94,7 +94,6 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 		return nil, fmt.Errorf("error converting provider: %v", err)
 	}
 	l.Options.Providers = providers
-	l.Options.SSLInsecureSkipVerify = l.LegacyProvider.SslInsecureSkipVerify
 
 	return &l.Options, nil
 }
@@ -508,7 +507,7 @@ type LegacyProvider struct {
 	ProviderType                       string   `flag:"provider" cfg:"provider"`
 	ProviderName                       string   `flag:"provider-display-name" cfg:"provider_display_name"`
 	ProviderCAFiles                    []string `flag:"provider-ca-file" cfg:"provider_ca_files"`
-	SslInsecureSkipVerify              bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
+	SSLInsecureSkipVerify              bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
 	TLSCertFile                        string   `flag:"provider-tls-cert-file" cfg:"provider_tls_cert_file"`
 	TLSKeyFile                         string   `flag:"provider-tls-key-file" cfg:"provider_tls_key_file"`
 	UseSystemTrustStore                bool     `flag:"use-system-trust-store" cfg:"use_system_trust_store"`
@@ -685,7 +684,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 
 	provider.TLS = ProviderTLS{
 		CAFiles:             l.ProviderCAFiles,
-		InsecureSkipVerify:  l.SslInsecureSkipVerify,
+		InsecureSkipVerify:  l.SSLInsecureSkipVerify,
 		CertFile:            l.TLSCertFile,
 		KeyFile:             l.TLSKeyFile,
 		UseSystemTrustStore: l.UseSystemTrustStore,

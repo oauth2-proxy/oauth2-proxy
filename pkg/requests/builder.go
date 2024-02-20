@@ -3,6 +3,7 @@ package requests
 import (
 	"context"
 	"fmt"
+	"golang.org/x/oauth2"
 	"io"
 	"net/http"
 )
@@ -16,6 +17,7 @@ type Builder interface {
 	WithBody(io.Reader) Builder
 	WithMethod(string) Builder
 	WithHeaders(http.Header) Builder
+	WithClientFromContext(context.Context) Builder
 	WithClient(*http.Client) Builder
 	SetHeader(key, value string) Builder
 	Do() Result
@@ -34,7 +36,7 @@ type builder struct {
 // New provides a new Builder for the given endpoint.
 func New(endpoint string) Builder {
 	return &builder{
-		client:   &http.Client{Transport: http.DefaultTransport},
+		client:   http.DefaultClient,
 		endpoint: endpoint,
 		method:   "GET",
 	}
@@ -63,6 +65,11 @@ func (r *builder) WithMethod(method string) Builder {
 func (r *builder) WithHeaders(header http.Header) Builder {
 	r.header = header
 	return r
+}
+
+func (r *builder) WithClientFromContext(ctx context.Context) Builder {
+	return r.WithContext(ctx).
+		WithClient(ctx.Value(oauth2.HTTPClient).(*http.Client))
 }
 
 func (r *builder) WithClient(client *http.Client) Builder {

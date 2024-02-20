@@ -124,7 +124,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.Client = client
 	ctx := context.WithValue(context.TODO(), oauth2.HTTPClient, client)
 	if err := configureVerifier(ctx, providerConfig, p); err != nil {
-		return nil, fmt.Errorf("unable to confiigure token verifier for provider: %w", err)
+		return nil, fmt.Errorf("unable to configure token verifier for provider: %w", err)
 	}
 
 	errs := []error{}

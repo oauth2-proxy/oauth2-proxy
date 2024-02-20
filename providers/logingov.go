@@ -8,12 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net/http"
 	"net/url"
 	"os"
 	"time"
-
-	"golang.org/x/oauth2"
 
 	"github.com/go-jose/go-jose/v3"
 	"github.com/golang-jwt/jwt"
@@ -185,13 +182,8 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 		EmailVerified bool   `json:"email_verified"`
 	}
 
-	requestBuilder := requests.New(userInfoEndpoint)
-	if client, ok := ctx.Value(oauth2.HTTPClient).(*http.Client); ok {
-		requestBuilder = requestBuilder.WithClient(client)
-	}
-
-	// query the user info endpoint for user attributes
-	err := requestBuilder.WithContext(ctx).
+	err := requests.New(userInfoEndpoint).
+		WithClientFromContext(ctx).
 		SetHeader("Authorization", tokenTypeBearer+" "+accessToken).
 		Do().
 		UnmarshalInto(&emailData)

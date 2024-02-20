@@ -9,8 +9,6 @@ import (
 	"net/url"
 	"strings"
 
-	"golang.org/x/oauth2"
-
 	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	"github.com/ohler55/ojg/jp"
@@ -97,12 +95,7 @@ func (c *claimExtractor) loadProfileClaims() (*simplejson.Json, error) {
 		return simplejson.New(), nil
 	}
 
-	requestBuilder := requests.New(c.profileURL.String())
-	if client, ok := c.ctx.Value(oauth2.HTTPClient).(*http.Client); ok {
-		requestBuilder = requestBuilder.WithClient(client)
-	}
-
-	claims, err := requestBuilder.WithContext(c.ctx).
+	claims, err := requests.New(c.profileURL.String()).WithClientFromContext(c.ctx).
 		WithHeaders(c.requestHeaders).
 		Do().
 		UnmarshalSimpleJSON()
