@@ -46,7 +46,7 @@ func (p *NextcloudProvider) EnrichSession(ctx context.Context, s *sessions.Sessi
 	json, err := requests.New(profileURL).
 		WithContext(ctx).
 		WithClient(p.Client).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalSimpleJSON()
 	if err != nil {

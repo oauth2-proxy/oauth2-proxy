@@ -1,5 +1,7 @@
 # Release
 
+The is a legacy document to explain the manual process of creating and publishing a new release of oauth2-proxy. As of now the release process has been automated with GitHub Actions workflows. For more information have a look at the workflows `create-release.yml` and `publish-release.yml`.
+
 Here's how OAuth2 Proxy releases are created.
 
 ## Schedule

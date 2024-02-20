@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	. "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options/testutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -158,7 +159,7 @@ var _ = Describe("Load", func() {
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
-				Expect(input).To(Equal(o.expectedOutput))
+				Expect(input).To(EqualOpts(o.expectedOutput))
 			},
 			Entry("with just a config file", &testOptionsTableInput{
 				configFile: testOptionsConfigBytes,
@@ -281,7 +282,7 @@ var _ = Describe("Load", func() {
 			Entry("with an invalid config file", &testOptionsTableInput{
 				configFile:     []byte(`slice_option = foo`),
 				flagSet:        func() *pflag.FlagSet { return testOptionsFlagSet },
-				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: (1, 16): no value can start with f"),
+				expectedErr:    fmt.Errorf("unable to load config file: While parsing config: toml: expected 'false'"),
 				expectedOutput: &TestOptions{},
 			}),
 			Entry("with an invalid flagset", &testOptionsTableInput{
@@ -386,8 +387,13 @@ sub:
 
 		DescribeTable("LoadYAML",
 			func(in loadYAMLTableInput) {
-				var configFileName string
+				// Set the required environment variables before running the test
+				os.Setenv("TESTUSER", "Alice")
 
+				// Unset the environment variables after running the test
+				defer os.Unsetenv("TESTUSER")
+
+				var configFileName string
 				if in.configFile != nil {
 					By("Creating a config file")
 					configFile, err := os.CreateTemp("", "oauth2-proxy-test-config-file")
@@ -407,13 +413,14 @@ sub:
 				} else {
 					input = &TestOptions{}
 				}
+
 				err := LoadYAML(configFileName, input)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr.Error()))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
-				Expect(input).To(Equal(in.expectedOutput))
+				Expect(input).To(EqualOpts(in.expectedOutput))
 			},
 			Entry("with a valid input", loadYAMLTableInput{
 				configFile: testOptionsConfigBytesFull,
@@ -465,6 +472,20 @@ sub:
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
 				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
+			}),
+			Entry("with a config file containing environment variable references", loadYAMLTableInput{
+				configFile: []byte("stringOption: ${TESTUSER}"),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "Alice",
+				},
+			}),
+			Entry("with a config file containing env variable references, with a fallback value", loadYAMLTableInput{
+				configFile: []byte("stringOption: ${TESTUSER2=Bob}"),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "Bob",
+				},
 			}),
 		)
 	})

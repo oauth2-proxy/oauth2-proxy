@@ -41,11 +41,14 @@ for ARCH in "${ARCHS[@]}"; do
 
 	cd release
 
-	# Create sha256sum for architecture specific binary
-	sha256sum ${BINARY}-${VERSION}.${ARCH}/${BINARY} > ${BINARY}-${VERSION}.${ARCH}-sha256sum.txt
-
 	# Create tar file for architecture specific binary
 	tar -czvf ${BINARY}-${VERSION}.${ARCH}.tar.gz ${BINARY}-${VERSION}.${ARCH}
+
+	# Create sha256sum for architecture-specific tar
+	sha256sum ${BINARY}-${VERSION}.${ARCH}.tar.gz > ${BINARY}-${VERSION}.${ARCH}.tar.gz-sha256sum.txt
+
+	# Create sha256sum for architecture specific binary
+  sha256sum ${BINARY}-${VERSION}.${ARCH}/${BINARY} > ${BINARY}-${VERSION}.${ARCH}-sha256sum.txt
 
 	cd ..
 done

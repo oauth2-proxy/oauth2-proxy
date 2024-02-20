@@ -7,18 +7,19 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"golang.org/x/oauth2"
 	"math/big"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
 
+	"golang.org/x/oauth2"
+
+	"github.com/go-jose/go-jose/v3"
 	"github.com/golang-jwt/jwt"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
-	"gopkg.in/square/go-jose.v2"
 )
 
 // LoginGovProvider represents an OIDC based Identity Provider
@@ -191,7 +192,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 
 	// query the user info endpoint for user attributes
 	err := requestBuilder.WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+accessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+accessToken).
 		Do().
 		UnmarshalInto(&emailData)
 	if err != nil {

@@ -1,11 +1,11 @@
 # This ARG has to be at the top, otherwise the docker daemon does not known what to do with FROM ${RUNTIME_IMAGE}
-ARG RUNTIME_IMAGE=docker.io/library/alpine:3.18
+ARG RUNTIME_IMAGE=gcr.io/distroless/static:nonroot
 
 # All builds should be done using the platform native to the build node to allow
 #  cache sharing of the go mod download step.
 # Go cross compilation is also faster than emulation the go compilation across
 #  multiple platforms.
-FROM --platform=${BUILDPLATFORM} docker.io/library/golang:1.19-buster AS builder
+FROM --platform=${BUILDPLATFORM} docker.io/library/golang:1.22-bookworm AS builder
 
 # Copy sources
 WORKDIR $GOPATH/src/github.com/oauth2-proxy/oauth2-proxy
@@ -43,13 +43,9 @@ RUN case ${TARGETPLATFORM} in \
     printf "Building OAuth2 Proxy for arch ${GOARCH}\n" && \
     GOARCH=${GOARCH} VERSION=${VERSION} make build && touch jwt_signing_key.pem
 
-# Copy binary to alpine
+# Copy binary to runtime image
 FROM ${RUNTIME_IMAGE}
-COPY nsswitch.conf /etc/nsswitch.conf
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/jwt_signing_key.pem /etc/ssl/private/jwt_signing_key.pem
-
-# UID/GID 65532 is also known as nonroot user in distroless image
-USER 65532:65532
 
 ENTRYPOINT ["/bin/oauth2-proxy"]

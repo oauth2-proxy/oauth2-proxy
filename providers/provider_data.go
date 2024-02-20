@@ -44,11 +44,12 @@ type ProviderData struct {
 	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
 
 	// Common OIDC options for any OIDC-based providers to consume
-	AllowUnverifiedEmail bool
-	UserClaim            string
-	EmailClaim           string
-	GroupsClaim          string
-	Verifier             internaloidc.IDTokenVerifier
+	AllowUnverifiedEmail     bool
+	UserClaim                string
+	EmailClaim               string
+	GroupsClaim              string
+	Verifier                 internaloidc.IDTokenVerifier
+	SkipClaimsFromProfileURL bool
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
@@ -57,6 +58,8 @@ type ProviderData struct {
 	getAuthorizationHeaderFunc func(string) http.Header
 	loginURLParameterDefaults  url.Values
 	loginURLParameterOverrides map[string]*regexp.Regexp
+
+	BackendLogoutURL string
 }
 
 // Data returns the ProviderData
@@ -284,8 +287,13 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 }
 
 func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.ClaimExtractor, error) {
+	profileURL := p.ProfileURL
+	if p.SkipClaimsFromProfileURL {
+		profileURL = &url.URL{}
+	}
+
 	ctxWithClient := context.WithValue(context.TODO(), oauth2.HTTPClient, p.Client)
-	extractor, err := util.NewClaimExtractor(ctxWithClient, rawIDToken, p.ProfileURL, p.getAuthorizationHeader(accessToken))
+	extractor, err := util.NewClaimExtractor(ctxWithClient, rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
 	if err != nil {
 		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}
