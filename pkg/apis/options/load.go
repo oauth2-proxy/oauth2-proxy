@@ -167,6 +167,21 @@ func loadAndParseYaml(configFileName string) ([]byte, error) {
 		return nil, fmt.Errorf("unable to load config file: %w", err)
 	}
 
+	modifiedBuffer, err := normalizeSubstitution(unparsedBuffer, err)
+	if err != nil {
+		return nil, fmt.Errorf("error normalizing substitution string : %w", err)
+	}
+
+	// We now parse over the yaml with env substring, and fill in the ENV's
+	buffer, err := envsubst.Bytes(modifiedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("error in substituting env variables : %w", err)
+	}
+
+	return buffer, nil
+}
+
+func normalizeSubstitution(unparsedBuffer []byte, err error) ([]byte, error) {
 	// Convert the byte array to a string for regex processing
 	unparsedString := string(unparsedBuffer)
 
@@ -179,13 +194,5 @@ func loadAndParseYaml(configFileName string) ([]byte, error) {
 	substitutedString := regexPattern.ReplaceAllString(unparsedString, `$$$$1`)
 
 	modifiedBuffer := []byte(substitutedString)
-
-	// We now parse over the yaml with env substring, and fill in the ENV's
-	buffer, err := envsubst.Bytes(modifiedBuffer)
-	if err != nil {
-		return nil, fmt.Errorf("error in substituting env variables : %w", err)
-	}
-
-	return buffer, nil
-
+	return modifiedBuffer, nil
 }
