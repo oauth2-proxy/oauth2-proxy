@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/a8m/envsubst"
@@ -166,8 +167,21 @@ func loadAndParseYaml(configFileName string) ([]byte, error) {
 		return nil, fmt.Errorf("unable to load config file: %w", err)
 	}
 
+	// Convert the byte array to a string for regex processing
+	unparsedString := string(unparsedBuffer)
+
+	// Compile the regex pattern
+	regexPattern, err := regexp.Compile(`\$(\d+)`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile regex pattern: %w", err)
+	}
+
+	substitutedString := regexPattern.ReplaceAllString(unparsedString, `$$$$1`)
+
+	modifiedBuffer := []byte(substitutedString)
+
 	// We now parse over the yaml with env substring, and fill in the ENV's
-	buffer, err := envsubst.Bytes(unparsedBuffer)
+	buffer, err := envsubst.Bytes(modifiedBuffer)
 	if err != nil {
 		return nil, fmt.Errorf("error in substituting env variables : %w", err)
 	}
