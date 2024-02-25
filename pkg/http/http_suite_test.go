@@ -14,8 +14,10 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gexec"
 )
 
+var cmdPath string
 var ipv4CertData, ipv6CertData []byte
 var ipv4CertDataSource, ipv4KeyDataSource options.SecretSource
 var ipv6CertDataSource, ipv6KeyDataSource options.SecretSource
@@ -84,5 +86,16 @@ var _ = BeforeSuite(func() {
 
 		transport = http.DefaultTransport.(*http.Transport).Clone()
 		transport.TLSClientConfig.RootCAs = certpool
+	})
+	By("Generating server binary", func() {
+		p, err := Build("./testserver")
+		Expect(err).ToNot(HaveOccurred())
+		cmdPath = p
+	})
+})
+
+var _ = AfterSuite(func() {
+	By("Cleaning up server binary", func() {
+		CleanupBuildArtifacts()
 	})
 })
