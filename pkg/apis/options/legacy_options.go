@@ -103,6 +103,8 @@ type LegacyUpstreams struct {
 	PassHostHeader                bool          `flag:"pass-host-header" cfg:"pass_host_header"`
 	ProxyWebSockets               bool          `flag:"proxy-websockets" cfg:"proxy_websockets"`
 	SSLUpstreamInsecureSkipVerify bool          `flag:"ssl-upstream-insecure-skip-verify" cfg:"ssl_upstream_insecure_skip_verify"`
+	CAFiles                       []string      `flag:"upstream-ca-files" cfg:"upstream_ca_files"`
+	UseSystemTrustStore           bool          `flag:"upstream-use-system-trust-store" cfg:"upstream_use_system_trust_store"`
 	Upstreams                     []string      `flag:"upstream" cfg:"upstreams"`
 	Timeout                       time.Duration `flag:"upstream-timeout" cfg:"upstream_timeout"`
 }
@@ -114,6 +116,8 @@ func legacyUpstreamsFlagSet() *pflag.FlagSet {
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
 	flagSet.Bool("proxy-websockets", true, "enables WebSocket proxying")
 	flagSet.Bool("ssl-upstream-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS upstreams")
+	flagSet.StringSlice("upstream-ca-files", []string{}, "use custom CA certs for upstream")
+	flagSet.Bool("upstream-use-system-trust-store", false, "when using custom CA certs append to existing system certs")
 	flagSet.StringSlice("upstream", []string{}, "the http url(s) of the upstream endpoint, file:// paths for static files or static://<status_code> for static response. Routing is based on the path")
 	flagSet.Duration("upstream-timeout", DefaultUpstreamTimeout, "maximum amount of time the server will wait for a response from the upstream")
 
@@ -140,6 +144,8 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			Path:                  u.Path,
 			URI:                   upstreamString,
 			InsecureSkipTLSVerify: l.SSLUpstreamInsecureSkipVerify,
+			CAFiles:               l.CAFiles,
+			UseSystemTrustStore:   l.UseSystemTrustStore,
 			PassHostHeader:        &l.PassHostHeader,
 			ProxyWebSockets:       &l.ProxyWebSockets,
 			FlushInterval:         &flushInterval,

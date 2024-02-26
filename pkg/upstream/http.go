@@ -11,6 +11,7 @@ import (
 	"github.com/mbland/hmacauth"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
 )
 
 const (
@@ -41,7 +42,7 @@ var SignatureHeaders = []string{
 
 // newHTTPUpstreamProxy creates a new httpUpstreamProxy that can serve requests
 // to a single upstream host.
-func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, errorHandler ProxyErrorHandler) http.Handler {
+func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, errorHandler ProxyErrorHandler) (http.Handler, error) {
 	// Set path to empty so that request paths start at the server root
 	// Unix scheme need the path to find the socket
 	if u.Scheme != "unix" {
@@ -49,7 +50,10 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 	}
 
 	// Create a ReverseProxy
-	proxy := newReverseProxy(u, upstream, errorHandler)
+	proxy, err := newReverseProxy(u, upstream, errorHandler)
+	if err != nil {
+		return nil, err
+	}
 
 	// Set up a WebSocket proxy if required
 	var wsProxy http.Handler
@@ -67,7 +71,7 @@ func newHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *option
 		handler:   proxy,
 		wsHandler: wsProxy,
 		auth:      auth,
-	}
+	}, nil
 }
 
 // httpUpstreamProxy represents a single HTTP(S) upstream proxy
@@ -121,7 +125,7 @@ func (t *unixRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 // servers based on the upstream configuration provided.
 // The proxy should render an error page if there are failures connecting to the
 // upstream server.
-func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler ProxyErrorHandler) http.Handler {
+func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler ProxyErrorHandler) (http.Handler, error) {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
 	// Inherit default transport options from Go's stdlib
@@ -153,6 +157,16 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
+	// Set custom CA upstream certs, if applicable
+	if len(upstream.CAFiles) > 0 {
+		certs, err := util.GetCertPool(upstream.CAFiles, upstream.UseSystemTrustStore)
+		if err != nil {
+			return nil, err
+		}
+
+		transport.TLSClientConfig.RootCAs = certs
+	}
+
 	// Ensure we always pass the original request path
 	setProxyDirector(proxy)
 
@@ -169,7 +183,7 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 	// Apply the customized transport to our proxy before returning it
 	proxy.Transport = transport
 
-	return proxy
+	return proxy, nil
 }
 
 // setProxyUpstreamHostHeader sets the proxy.Director so that upstream requests

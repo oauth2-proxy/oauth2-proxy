@@ -75,9 +75,10 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			u, err := url.Parse(*in.serverAddr)
 			Expect(err).ToNot(HaveOccurred())
 
-			handler := newHTTPUpstreamProxy(upstream, u, in.signatureData, in.errorHandler)
+			handler, err := newHTTPUpstreamProxy(upstream, u, in.signatureData, in.errorHandler)
 			handler.ServeHTTP(rw, req)
 
+			Expect(err).ToNot(HaveOccurred())
 			Expect(rw.Code).To(Equal(in.expectedResponse.code))
 
 			scope := middlewareapi.GetRequestScope(req)
@@ -354,7 +355,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		u, err := url.Parse(serverAddr)
 		Expect(err).ToNot(HaveOccurred())
 
-		handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
+		handler, err := newHTTPUpstreamProxy(upstream, u, nil, nil)
+		Expect(err).ToNot(HaveOccurred())
+
 		httpUpstream, ok := handler.(*httpUpstreamProxy)
 		Expect(ok).To(BeTrue())
 
@@ -372,10 +375,25 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		Expect(req.Host).To(Equal(strings.TrimPrefix(serverAddr, "http://")))
 	})
 
+	It("fail when passing bad CA certs file", func() {
+		upstream := options.Upstream{
+			ID:      "badCertFiles",
+			CAFiles: []string{"/bad/path"},
+		}
+
+		u, err := url.Parse(serverAddr)
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = newHTTPUpstreamProxy(upstream, u, nil, nil)
+		Expect(err).To(HaveOccurred())
+	})
+
 	type newUpstreamTableInput struct {
 		proxyWebSockets bool
 		flushInterval   options.Duration
 		skipVerify      bool
+		caFiles         []string
+		useSystemCerts  bool
 		sigData         *options.SignatureData
 		errorHandler    func(http.ResponseWriter, *http.Request, error)
 		timeout         options.Duration
@@ -394,7 +412,9 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				Timeout:               &in.timeout,
 			}
 
-			handler := newHTTPUpstreamProxy(upstream, u, in.sigData, in.errorHandler)
+			handler, err := newHTTPUpstreamProxy(upstream, u, in.sigData, in.errorHandler)
+			Expect(err).ToNot(HaveOccurred())
+
 			upstreamProxy, ok := handler.(*httpUpstreamProxy)
 			Expect(ok).To(BeTrue())
 
@@ -484,7 +504,8 @@ var _ = Describe("HTTP Upstream Suite", func() {
 			u, err := url.Parse(serverAddr)
 			Expect(err).ToNot(HaveOccurred())
 
-			handler := newHTTPUpstreamProxy(upstream, u, nil, nil)
+			handler, err := newHTTPUpstreamProxy(upstream, u, nil, nil)
+			Expect(err).ToNot(HaveOccurred())
 
 			proxyServer = httptest.NewServer(middleware.NewScope(false, "X-Request-Id")(handler))
 		})
