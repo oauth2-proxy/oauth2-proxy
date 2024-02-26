@@ -392,8 +392,6 @@ var _ = Describe("HTTP Upstream Suite", func() {
 		proxyWebSockets bool
 		flushInterval   options.Duration
 		skipVerify      bool
-		caFiles         []string
-		useSystemCerts  bool
 		sigData         *options.SignatureData
 		errorHandler    func(http.ResponseWriter, *http.Request, error)
 		timeout         options.Duration
