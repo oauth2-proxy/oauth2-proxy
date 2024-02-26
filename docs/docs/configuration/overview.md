@@ -203,6 +203,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--tls-min-version` | string | minimum TLS version that is acceptable, either `"TLS1.2"` or `"TLS1.3"` | `"TLS1.2"` |
 | `--upstream` | string \| list | the http url(s) of the upstream endpoint, file:// paths for static files or `static://<status_code>` for static response. Routing is based on the path | |
 | `--upstream-timeout` | duration | maximum amount of time the server will wait for a response from the upstream | 30s |
+| `--upstream-ca-files` | string \| list | Paths to CA certificates that should be used when connecting to the upstream. If not specified, the default Go trust sources are used instead. | |
+| `--upstream-use-system-trust-store` | bool | Determines if `upstream-ca-files` files and the system trust store are used. If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. | false |
 | `--allowed-group` | string \| list | restrict logins to members of this group (may be given multiple times) | |
 | `--allowed-role` | string \| list | restrict logins to users with this role (may be given multiple times). Only works with the keycloak-oidc provider. | |
 | `--validate-url` | string | Access token validation endpoint | |
