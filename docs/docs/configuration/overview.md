@@ -74,6 +74,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `--azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
+| `--azure-groups-in-ticket` | bool | If true do not fetch groups from Microsoft graph api, but instead take them from the oidc ticket, see [docs](https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims#configure-groups-optional-claims) | `false` |
 | `--backend-logout-url` | string | URL to perform backend logout, if you use `{id_token}` in the url it will be replaced by the actual `id_token` of the user session | |
 | `--basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |

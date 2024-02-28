@@ -14,6 +14,14 @@ title: Azure
    <br/>**IMPORTANT**: Even if this permission is listed with **"Admin consent required=No"** the consent might actually 
    be required, due to AAD policies you won't be able to see. If you get a **"Need admin approval"** during login, 
    most likely this is what you're missing!
+
+   Alternatively to require **Group.Read.All** we can configure that the groups come as a part of the oidc ticket itself.
+   This is enabled by providing a command line argument `--azure-groups-in-ticket`. In this case there will be no request
+   to Microsoft Graph api to obtain the groups that the user have.
+   For this go to **App registrations** and select your application. Then in **Manage** select **Token configuration** and
+   click on **+ Add groups claim**. On the right a menu will open where you can select the group claims. Typically it makes sense
+   to choose **Groups assigned to the application** in order not to exceed the number of groups that can be placed in the
+   oidc ticket itself.
 4. Next, if you are planning to use v2.0 Azure Auth endpoint, go to the **Manifest** page and set `"accessTokenAcceptedVersion": 2`
    in the App registration manifest file.
 5. On the **Certificates & secrets** page of the app, add a new client secret and note down the value after hitting **Add**.

@@ -141,17 +141,20 @@ func TestAzureSetTenant(t *testing.T) {
 	assert.Equal(t, "openid", p.Data().Scope)
 }
 
-func testAzureBackend(payload string, accessToken, refreshToken string) *httptest.Server {
-	return testAzureBackendWithError(payload, accessToken, refreshToken, false)
+func testAzureBackend(t *testing.T, payload string, accessToken, refreshToken string) *httptest.Server {
+	return testAzureBackendWithError(t, payload, accessToken, refreshToken, false, false)
 }
 
-func testAzureBackendWithError(payload string, accessToken, refreshToken string, injectError bool) *httptest.Server {
+func testAzureBackendWithError(t *testing.T, payload string, accessToken, refreshToken string, injectError bool, noCallToGraphApi bool) *httptest.Server {
 	path := "/v1.0/me"
-	pathGroups := path + "/transitiveMemberOf/microsoft.graph.group"
+	pathGroups := path + "/transitiveMemberOf"
 
 	return httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == pathGroups && r.Method == http.MethodGet {
+				if noCallToGraphApi {
+					assert.FailNow(t, "should be no call to graph api")
+				}
 				w.Write([]byte(`{
 					"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups(displayName,id)",
 					"value": [
@@ -189,6 +192,9 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 		Description             string
 		Email                   string
 		PayloadFromAzureBackend string
+		IsV2Endpoint		bool
+		IsGroupsInTicket	bool
+		ExpectedGroups		[]string
 		ExpectedEmail           string
 		ExpectedError           error
 	}{
@@ -196,6 +202,30 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 			Description:             "should return email using mail property from Azure backend",
 			PayloadFromAzureBackend: `{ "mail": "user@windows.net", "groups": ["aa", "bb"] }`,
 			ExpectedEmail:           "user@windows.net",
+		},
+		{
+			Description:             "should return groups from graph api for v2 endpoint",
+			PayloadFromAzureBackend: `{ "mail": "user@windows.net" }`,
+			ExpectedEmail:           "user@windows.net",
+			ExpectedGroups:          []string{"11111111-2222-3333-4444-555555555555", "555555555555-4444-3333-2222-11111111"},
+			IsV2Endpoint:            true,
+			IsGroupsInTicket:        false,
+		},
+		{
+			Description:             "should be no call to graph api for v1 endpoint",
+			PayloadFromAzureBackend: `{ "mail": "user@windows.net" }`,
+			ExpectedEmail:           "user@windows.net",
+			ExpectedGroups:          nil,
+			IsV2Endpoint:            false,
+			IsGroupsInTicket:        false,
+		},
+		{
+			Description:             "should be no call to graph api for v2 endpoint and groups in ticket",
+			PayloadFromAzureBackend: `{ "mail": "user@windows.net" }`,
+			ExpectedEmail:           "user@windows.net",
+			ExpectedGroups:          nil,
+			IsV2Endpoint:            false,
+			IsGroupsInTicket:        true,
 		},
 		{
 			Description:             "should return email using otherMails property returned from Azure backend",
@@ -236,18 +266,20 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 				host string
 			)
 
-			b = testAzureBackend(testCase.PayloadFromAzureBackend, authorizedAccessToken, "")
+			b = testAzureBackendWithError(t, testCase.PayloadFromAzureBackend, authorizedAccessToken, "", false, !shouldCallGraphApi(testCase.IsV2Endpoint, testCase.IsGroupsInTicket))
 			defer b.Close()
 
 			bURL, _ := url.Parse(b.URL)
 			host = bURL.Host
 
-			p := testAzureProvider(host, options.AzureOptions{})
+			p := testAzureProvider(host, options.AzureOptions{AzureGroupsInTicket: testCase.IsGroupsInTicket})
+			p.isV2Endpoint = testCase.IsV2Endpoint
 			session := CreateAuthorizedSession()
 			session.Email = testCase.Email
 			err := p.EnrichSession(context.Background(), session)
 			assert.Equal(t, testCase.ExpectedError, err)
 			assert.Equal(t, testCase.ExpectedEmail, session.Email)
+			assert.Equal(t, testCase.ExpectedGroups, session.Groups)
 		})
 	}
 }
@@ -341,7 +373,7 @@ func TestAzureProviderRedeem(t *testing.T) {
 			payloadBytes, err := json.Marshal(payload)
 			assert.NoError(t, err)
 
-			b := testAzureBackendWithError(string(payloadBytes), accessTokenString, testCase.RefreshToken, testCase.InjectRedeemURLError)
+			b := testAzureBackendWithError(t, string(payloadBytes), accessTokenString, testCase.RefreshToken, testCase.InjectRedeemURLError, false)
 			defer b.Close()
 
 			bURL, _ := url.Parse(b.URL)
@@ -412,7 +444,7 @@ func TestAzureProviderRefresh(t *testing.T) {
 	assert.NoError(t, err)
 
 	refreshToken := "some_refresh_token"
-	b := testAzureBackend(string(payloadBytes), newAccessToken, refreshToken)
+	b := testAzureBackend(t, string(payloadBytes), newAccessToken, refreshToken)
 	defer b.Close()
 	bURL, _ := url.Parse(b.URL)
 	p := testAzureProvider(bURL.Host, options.AzureOptions{})
