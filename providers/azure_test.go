@@ -165,6 +165,8 @@ func testAzureBackendWithError(payload string, accessToken, refreshToken string,
 						}
 					]
 				}`))
+			} else if r.URL.Path == path && r.Method == http.MethodGet {
+				w.Write([]byte(payload))
 			} else if (r.URL.Path != path) && r.Method != http.MethodPost {
 				w.WriteHeader(404)
 			} else if r.Method == http.MethodPost && r.Body != nil {
@@ -189,6 +191,7 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 		Description             string
 		Email                   string
 		PayloadFromAzureBackend string
+		ExpectedUser            string
 		ExpectedEmail           string
 		ExpectedError           error
 	}{
@@ -227,6 +230,13 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 			Email:         "user@windows.net",
 			ExpectedEmail: "user@windows.net",
 		},
+		{
+			Description:             "should enrich username from Azure provider",
+			Email:                   "user@windows.net",
+			PayloadFromAzureBackend: `{ "name": "User" }`,
+			ExpectedEmail:           "user@windows.net",
+			ExpectedUser:            "User",
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -248,6 +258,7 @@ func TestAzureProviderEnrichSession(t *testing.T) {
 			err := p.EnrichSession(context.Background(), session)
 			assert.Equal(t, testCase.ExpectedError, err)
 			assert.Equal(t, testCase.ExpectedEmail, session.Email)
+			assert.Equal(t, testCase.ExpectedUser, session.User)
 		})
 	}
 }

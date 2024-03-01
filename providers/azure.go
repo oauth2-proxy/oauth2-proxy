@@ -201,8 +201,16 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 		logger.Printf("unable to get email and/or groups claims from token: %v", err)
 	}
 
+	if session.User == "" {
+		user, err := p.getDataFromProfileAPI(ctx, session.AccessToken, getUserFromJSON)
+		if err != nil {
+			return fmt.Errorf("unable to get user from profile URL: %v", err)
+		}
+		session.User = user
+	}
+
 	if session.Email == "" {
-		email, err := p.getEmailFromProfileAPI(ctx, session.AccessToken)
+		email, err := p.getDataFromProfileAPI(ctx, session.AccessToken, getEmailFromJSON)
 		if err != nil {
 			return fmt.Errorf("unable to get email address from profile URL: %v", err)
 		}
@@ -410,7 +418,8 @@ func getGroupsFromJSON(json *simplejson.Json, graphGroupField string) []string {
 	return groups
 }
 
-func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken string) (string, error) {
+func (p *AzureProvider) getDataFromProfileAPI(ctx context.Context, accessToken string, jsonExtractFunc func(*simplejson.Json) (string, error)) (string, error) {
+
 	if accessToken == "" {
 		return "", fmt.Errorf("missing access token")
 	}
@@ -424,14 +433,28 @@ func (p *AzureProvider) getEmailFromProfileAPI(ctx context.Context, accessToken 
 		return "", err
 	}
 
-	email, err := getEmailFromJSON(json)
-	if email == "" {
-		return "", fmt.Errorf("empty email address: %v", err)
+	data, err := jsonExtractFunc(json)
+	return data, nil
+}
+
+func getUserFromJSON(json *simplejson.Json) (string, error) {
+
+	user, err := json.Get("name").String()
+
+	if err != nil {
+		logger.Errorf("unable to find name: %s", err)
+		return "", err
 	}
-	return email, nil
+
+	if user == "" {
+		return "", fmt.Errorf("empty user: %v", err)
+	}
+
+	return user, nil
 }
 
 func getEmailFromJSON(json *simplejson.Json) (string, error) {
+
 	email, err := json.Get("mail").String()
 
 	if err != nil || email == "" {
@@ -448,6 +471,10 @@ func getEmailFromJSON(json *simplejson.Json) (string, error) {
 			logger.Errorf("unable to find userPrincipalName: %s", err)
 			return "", err
 		}
+	}
+
+	if email == "" {
+		return "", fmt.Errorf("empty email address: %v", err)
 	}
 
 	return email, nil
