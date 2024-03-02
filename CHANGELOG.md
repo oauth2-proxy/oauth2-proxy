@@ -8,6 +8,8 @@
 
 ## Changes since v7.6.0
 
+- [#2537](https://github.com/oauth2-proxy/oauth2-proxy/pull/2537) Allow setting unix socket file mode when declaring listener (@Tristan971)
+
 # V7.6.0
 
 ## Release Highlights
