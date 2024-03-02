@@ -584,8 +584,8 @@ Server represents the configuration for an HTTP(S) server
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `bindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
-| `secureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
+| `bindAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Different types of bind addresses are supported:<br/>* `[http://]<addr>:<port>`<br/>* `fd:<int>` (case insensitive)<br/>* `unix://<path>`<br/>Unix sockets are created with default system umask mode, which can be overridden, e.g.: `unix://my-socket,mode=0777`<br/>Square brackets are required for ipv6 address, e.g. `http://[::1]:4180`<br/>Leave blank or set to "-" to disable. |
+| `secureBindAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Secure bind addresses need to respond with valid SSL and use the following format:<br/>* `[https://]<addr>:<port>`<br/>Square brackets are required for ipv6 address, e.g. `https://[::1]:4180`<br/>Leave blank or set to "-" to disable. |
 | `tls` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
 
 ### TLS

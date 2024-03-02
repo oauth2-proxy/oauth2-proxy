@@ -17,6 +17,7 @@
 - [#3365](https://github.com/oauth2-proxy/oauth2-proxy/pull/3365) fix: filter empty strings from allowed groups (@Br1an67)
 - [#3338](https://github.com/oauth2-proxy/oauth2-proxy/pull/3338) feat: add --config-test flag for validating configuration (@MayorFaj)
 - [#3347](https://github.com/oauth2-proxy/oauth2-proxy/pull/3347) feat: add same site option for csrf cookies (@jvnoije)
+- [#3376](https://github.com/oauth2-proxy/oauth2-proxy/pull/3376) feat: allow setting unix socket file mode when declaring listener (@Tristan971 / @tuunit)
 
 # V7.14.3
 
