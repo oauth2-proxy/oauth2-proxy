@@ -14,7 +14,7 @@ version: '3.0'
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
     command: --config /oauth2-proxy.cfg
     hostname: oauth2-proxy
     volumes:
