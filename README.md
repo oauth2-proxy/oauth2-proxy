@@ -23,7 +23,7 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
 1.  Choose how to deploy:
 
-    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.5.1`)
+    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.6.0`)
 
     b. Using Go to install the latest release
     ```bash
@@ -43,9 +43,9 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
     oauth2-proxy-x.y.z.linux-amd64: OK
     ```
 
-2.  [Select a Provider and Register an OAuth Application with a Provider](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/oauth_provider)
-3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview)
-4.  [Configure SSL or Deploy behind a SSL endpoint](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/tls) (example provided for Nginx)
+2.  [Select a Provider and Register an OAuth Application with a Provider](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/)
+3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview)
+4.  [Configure SSL or Deploy behind a SSL endpoint](https://oauth2-proxy.github.io/oauth2-proxy/configuration/tls) (example provided for Nginx)
 
 
 ## Security
@@ -55,7 +55,7 @@ See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/s
 
 ## Docs
 
-Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/docs/).
+Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/).
 
 ![OAuth2 Proxy Architecture](docs/static/img/architecture.svg)
 
