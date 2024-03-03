@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gleak"
 )
 
 const hello = "Hello World!"
@@ -559,6 +560,8 @@ var _ = Describe("Server", func() {
 
 		AfterEach(func() {
 			cancel()
+			Eventually(Goroutines).ShouldNot(HaveLeaked())
+
 		})
 
 		Context("with an ipv4 http server", func() {
