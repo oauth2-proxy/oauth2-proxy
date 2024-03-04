@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -97,7 +98,12 @@ func setupUnixSocketListener(networkType string, address string) (net.Listener, 
 	}
 
 	socketPath := socketOpts[0]
-	socketMode := os.FileMode(0o644)
+
+	// must set umask to find out the previous value, so we set-store-reset it
+	currentUmask := syscall.Umask(0o777)
+	syscall.Umask(currentUmask)
+	socketMode := os.FileMode(currentUmask)
+
 	for _, socketOpt := range socketOpts[1:] {
 		socketOpt := strings.SplitN(socketOpt, "=", 2)
 		if len(socketOpt) != 2 {
