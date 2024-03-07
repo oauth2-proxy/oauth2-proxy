@@ -79,6 +79,11 @@ func (store *SessionStore) VerifyConnection(ctx context.Context) error {
 // NewRedisClient makes a redis.Client (either standalone, sentinel aware, or
 // redis cluster)
 func NewRedisClient(opts options.RedisStoreOptions) (Client, error) {
+	// Allow Redis password to be specified as an environment variable
+	if redisPassword, ok := os.LookupEnv("REDIS_PASSWORD"); ok {
+		opts.Password = redisPassword
+	}
+
 	if opts.UseSentinel && opts.UseCluster {
 		return nil, fmt.Errorf("options redis-use-sentinel and redis-use-cluster are mutually exclusive")
 	}
@@ -98,6 +103,11 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 	addrs, opt, err := parseRedisURLs(opts.SentinelConnectionURLs)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
+	}
+
+	// Allow Redis Sentinel password to be specified as an environment variable
+	if redisSentinelPassword, ok := os.LookupEnv("REDIS_SENTINEL_PASSWORD"); ok {
+		opts.SentinelPassword = redisSentinelPassword
 	}
 
 	if opts.Password != "" {

@@ -232,6 +232,88 @@ var _ = Describe("Redis SessionStore Tests", func() {
 		})
 	})
 
+	Context("with a redis password as environment variable", func() {
+		BeforeEach(func() {
+			os.Setenv("REDIS_PASSWORD", redisPassword)
+			mr.RequireAuth(redisPassword)
+		})
+
+		AfterEach(func() {
+			os.Unsetenv("REDIS_PASSWORD")
+			mr.RequireAuth("")
+		})
+
+		tests.RunSessionStoreTests(
+			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+				// Set the connection URL
+				opts.Type = options.RedisSessionStoreType
+				opts.Redis.ConnectionURL = "redis://" + mr.Addr()
+
+				// Capture the session store so that we can close the client
+				var err error
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				return ss, err
+			},
+			func(d time.Duration) error {
+				mr.FastForward(d)
+				return nil
+			},
+		)
+
+		Context("with sentinel", func() {
+			var ms *minisentinel.Sentinel
+
+			BeforeEach(func() {
+				ms = minisentinel.NewSentinel(mr)
+				Expect(ms.Start()).To(Succeed())
+			})
+
+			AfterEach(func() {
+				ms.Close()
+			})
+
+			tests.RunSessionStoreTests(
+				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+					// Set the sentinel connection URL
+					sentinelAddr := "redis://" + ms.Addr()
+					opts.Type = options.RedisSessionStoreType
+					opts.Redis.SentinelConnectionURLs = []string{sentinelAddr}
+					opts.Redis.UseSentinel = true
+					opts.Redis.SentinelMasterName = ms.MasterInfo().Name
+
+					// Capture the session store so that we can close the client
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					return ss, err
+				},
+				func(d time.Duration) error {
+					mr.FastForward(d)
+					return nil
+				},
+			)
+		})
+
+		Context("with cluster", func() {
+			tests.RunSessionStoreTests(
+				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+					clusterAddr := "redis://" + mr.Addr()
+					opts.Type = options.RedisSessionStoreType
+					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
+					opts.Redis.UseCluster = true
+
+					// Capture the session store so that we can close the client
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					return ss, err
+				},
+				func(d time.Duration) error {
+					mr.FastForward(d)
+					return nil
+				},
+			)
+		})
+	})
+
 	Context("with a redis username and password", func() {
 		BeforeEach(func() {
 			mr.RequireUserAuth(redisUsername, redisPassword)

@@ -18,6 +18,7 @@
 
 ## Changes since v7.5.1
 
+- [#nnnn](https://github.com/oauth2-proxy/oauth2-proxy/pull/nnnn) Allow Redis password to be specified as an environment variable (@rossigee)
 - [#2381](https://github.com/oauth2-proxy/oauth2-proxy/pull/2381) Allow username authentication to Redis cluster (@rossigee)
 - [#2345](https://github.com/oauth2-proxy/oauth2-proxy/pull/2345) Log error details when failed loading CSRF cookie (@charvadzo)
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
