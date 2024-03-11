@@ -85,10 +85,15 @@ When using the redis store, specify `--session-store-type=redis` as well as the 
 
 You may also configure the store for Redis Sentinel. In this case, you will want to use the
 `--redis-use-sentinel=true` flag, as well as configure the flags `--redis-sentinel-master-name`
-and `--redis-sentinel-connection-urls` appropriately.
+and `--redis-sentinel-connection-urls` appropriately. A sentinel password can be supplied via the flag
+`--redis-sentinel-password` or the environment variable `REDIS_SENTINEL_PASSWORD`. The Redis connection
+password can be supplied via the flag `--redis-password` or the environment variable `REDIS_PASSWORD`
+if it is present.
 
 Redis Cluster is available to be the backend store as well. To leverage it, you will need to set the
-`--redis-use-cluster=true` flag, and configure the flags `--redis-cluster-connection-urls` appropriately.
+`--redis-use-cluster=true` flag, and configure the flags `--redis-cluster-connection-urls` appropriately. A
+password can be supplied via the flag `--redis-password` or the environment variable `REDIS_PASSWORD` if
+it is present.
 
 Note that flags `--redis-use-sentinel=true` and `--redis-use-cluster=true` are mutually exclusive.
 
