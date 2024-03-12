@@ -40,11 +40,11 @@ func getAccessToken() string {
 
 func newTestKeycloakOIDCSetup() (*httptest.Server, *KeycloakOIDCProvider) {
 	redeemURL, server := newOIDCServer([]byte(fmt.Sprintf(`{"email": "new@thing.com", "expires_in": 300, "access_token": "%v"}`, getAccessToken())))
-	provider := newKeycloakOIDCProvider(redeemURL, options.KeycloakOptions{})
+	provider := newKeycloakOIDCProvider(redeemURL, options.Provider{})
 	return server, provider
 }
 
-func newKeycloakOIDCProvider(serverURL *url.URL, opts options.KeycloakOptions) *KeycloakOIDCProvider {
+func newKeycloakOIDCProvider(serverURL *url.URL, opts options.Provider) *KeycloakOIDCProvider {
 	verificationOptions := internaloidc.IDTokenVerificationOptions{
 		AudienceClaims: []string{defaultAudienceClaim},
 		ClientID:       mockClientID,
@@ -67,7 +67,7 @@ func newKeycloakOIDCProvider(serverURL *url.URL, opts options.KeycloakOptions) *
 				Scheme: "https",
 				Host:   "keycloak-oidc.com",
 				Path:   "/api/v3/user"},
-			Scope: "openid email profile"},
+		},
 		opts)
 
 	if serverURL != nil {
@@ -90,21 +90,31 @@ func newKeycloakOIDCProvider(serverURL *url.URL, opts options.KeycloakOptions) *
 var _ = Describe("Keycloak OIDC Provider Tests", func() {
 	Context("New Provider Init", func() {
 		It("creates new keycloak oidc provider with expected defaults", func() {
-			p := newKeycloakOIDCProvider(nil, options.KeycloakOptions{})
+			p := newKeycloakOIDCProvider(nil, options.Provider{})
 			providerData := p.Data()
 			Expect(providerData.ProviderName).To(Equal(keycloakOIDCProviderName))
 			Expect(providerData.LoginURL.String()).To(Equal("https://keycloak-oidc.com/oauth/auth"))
 			Expect(providerData.RedeemURL.String()).To(Equal("https://keycloak-oidc.com/oauth/token"))
 			Expect(providerData.ProfileURL.String()).To(Equal("https://keycloak-oidc.com/api/v3/user"))
 			Expect(providerData.ValidateURL.String()).To(Equal("https://keycloak-oidc.com/api/v3/user"))
-			Expect(providerData.Scope).To(Equal("openid email profile"))
+			Expect(providerData.Scope).To(Equal(oidcDefaultScope))
+		})
+		It("creates new keycloak oidc provider with custom scope", func() {
+			p := NewKeycloakOIDCProvider(&ProviderData{Scope: "openid email"}, options.Provider{})
+			providerData := p.Data()
+
+			Expect(providerData.ProviderName).To(Equal(keycloakOIDCProviderName))
+			Expect(providerData.Scope).To(Equal("openid email"))
+			Expect(providerData.Scope).NotTo(Equal(oidcDefaultScope))
 		})
 	})
 
 	Context("Allowed Roles", func() {
 		It("should prefix allowed roles and add them to groups", func() {
-			p := newKeycloakOIDCProvider(nil, options.KeycloakOptions{
-				Roles: []string{"admin", "editor"},
+			p := newKeycloakOIDCProvider(nil, options.Provider{
+				KeycloakConfig: options.KeycloakOptions{
+					Roles: []string{"admin", "editor"},
+				},
 			})
 			Expect(p.AllowedGroups).To(HaveKey("role:admin"))
 			Expect(p.AllowedGroups).To(HaveKey("role:editor"))

@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func testGitLabProvider(hostname, scope string, opts options.GitLabOptions) (*GitLabProvider, error) {
+func testGitLabProvider(hostname, scope string, opts options.Provider) (*GitLabProvider, error) {
 	p, err := NewGitLabProvider(
 		&ProviderData{
 			ProviderName: "",
@@ -162,12 +162,21 @@ var _ = Describe("Gitlab Provider Tests", func() {
 		bURL, err := url.Parse(b.URL)
 		Expect(err).To(BeNil())
 
-		p, err = testGitLabProvider(bURL.Host, "", options.GitLabOptions{})
+		p, err = testGitLabProvider(bURL.Host, "", options.Provider{})
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
 		b.Close()
+	})
+
+	Context("New Provider Init", func() {
+		It("creates new keycloak oidc provider with expected defaults", func() {
+			providerData := p.Data()
+			Expect(providerData.ProviderName).To(Equal(gitlabProviderName))
+			Expect(providerData.Scope).To(Equal(gitlabDefaultScope))
+			Expect(providerData.ProviderName).NotTo(Equal(oidcDefaultScope))
+		})
 	})
 
 	Context("with bad token", func() {
@@ -228,9 +237,11 @@ var _ = Describe("Gitlab Provider Tests", func() {
 				bURL, err := url.Parse(b.URL)
 				Expect(err).To(BeNil())
 
-				p, err := testGitLabProvider(bURL.Host, in.scope, options.GitLabOptions{
-					Group:    in.allowedGroups,
-					Projects: in.allowedProjects,
+				p, err := testGitLabProvider(bURL.Host, in.scope, options.Provider{
+					GitLabConfig: options.GitLabOptions{
+						Group:    in.allowedGroups,
+						Projects: in.allowedProjects,
+					},
 				})
 				if in.expectedError == nil {
 					Expect(err).To(BeNil())

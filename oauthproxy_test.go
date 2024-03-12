@@ -460,7 +460,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 		http.MethodGet,
 		fmt.Sprintf(
 			"/oauth2/callback?code=callback_code&state=%s",
-			encodeState(csrf.HashOAuthState(), "%2F", ""),
+			encodeState(csrf.HashOAuthState(), "%2F", "", false),
 		),
 		strings.NewReader(""),
 	)
@@ -495,9 +495,8 @@ func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoin
 		value = strings.TrimPrefix(field, keyPrefix)
 		if value != field {
 			break
-		} else {
-			value = ""
 		}
+		value = ""
 	}
 	if value == "" {
 		return 0, ""
@@ -663,7 +662,7 @@ func (sipTest *SignInPageTest) GetEndpoint(endpoint string) (int, string) {
 type AlwaysSuccessfulValidator struct {
 }
 
-func (AlwaysSuccessfulValidator) Validate(user, password string) bool {
+func (AlwaysSuccessfulValidator) Validate(_, _ string) bool {
 	return true
 }
 
@@ -2767,6 +2766,104 @@ func TestAllowedRequest(t *testing.T) {
 	}
 }
 
+func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	opts := baseTestOptions()
+	opts.ReverseProxy = true
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
+		},
+	}
+	opts.SkipAuthRegex = []string{
+		"^/skip/auth/regex$",
+	}
+	opts.SkipAuthRoutes = []string{
+		"GET=^/skip/auth/routes/get",
+	}
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name    string
+		method  string
+		url     string
+		allowed bool
+	}{
+		{
+			name:    "Regex GET allowed",
+			method:  "GET",
+			url:     "/skip/auth/regex",
+			allowed: true,
+		},
+		{
+			name:    "Regex POST allowed ",
+			method:  "POST",
+			url:     "/skip/auth/regex",
+			allowed: true,
+		},
+		{
+			name:    "Regex denied",
+			method:  "GET",
+			url:     "/wrong/denied",
+			allowed: false,
+		},
+		{
+			name:    "Route allowed",
+			method:  "GET",
+			url:     "/skip/auth/routes/get",
+			allowed: true,
+		},
+		{
+			name:    "Route denied with wrong method",
+			method:  "PATCH",
+			url:     "/skip/auth/routes/get",
+			allowed: false,
+		},
+		{
+			name:    "Route denied with wrong path",
+			method:  "GET",
+			url:     "/skip/auth/routes/wrong/path",
+			allowed: false,
+		},
+		{
+			name:    "Route denied with wrong path and method",
+			method:  "POST",
+			url:     "/skip/auth/routes/wrong/path",
+			allowed: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(tc.method, opts.ProxyPrefix+authOnlyPath, nil)
+			req.Header.Set("X-Forwarded-Uri", tc.url)
+			assert.NoError(t, err)
+
+			rw := httptest.NewRecorder()
+			proxy.ServeHTTP(rw, req)
+
+			if tc.allowed {
+				assert.Equal(t, 202, rw.Code)
+			} else {
+				assert.Equal(t, 401, rw.Code)
+			}
+		})
+	}
+}
+
 func TestAllowedRequestNegateWithoutMethod(t *testing.T) {
 	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
@@ -3333,6 +3430,29 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 	}
 }
 
+func TestStateEncodesCorrectly(t *testing.T) {
+	state := "some_state_to_test"
+	nonce := "some_nonce_to_test"
+
+	encodedResult := encodeState(nonce, state, true)
+	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", encodedResult)
+
+	notEncodedResult := encodeState(nonce, state, false)
+	assert.Equal(t, "some_nonce_to_test:some_state_to_test", notEncodedResult)
+}
+
+func TestStateDecodesCorrectly(t *testing.T) {
+	nonce, redirect, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
+
+	assert.Equal(t, "some_nonce_to_test", nonce)
+	assert.Equal(t, "some_state_to_test", redirect)
+
+	nonce2, redirect2, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
+
+	assert.Equal(t, "some_nonce_to_test", nonce2)
+	assert.Equal(t, "some_state_to_test", redirect2)
+}
+
 func TestAuthOnlyAllowedEmails(t *testing.T) {
 	testCases := []struct {
 		name               string
@@ -3396,6 +3516,93 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
 			test.proxy.ServeHTTP(test.rw, test.req)
 
 			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
+func TestGetOAuthRedirectURI(t *testing.T) {
+	tests := []struct {
+		name      string
+		setupOpts func(*options.Options) *options.Options
+		req       *http.Request
+		want      string
+	}{
+		{
+			name: "redirect with https schema",
+			setupOpts: func(baseOpts *options.Options) *options.Options {
+				return baseOpts
+			},
+			req: &http.Request{
+				Host: "example",
+				URL: &url.URL{
+					Scheme: schemeHTTPS,
+				},
+			},
+			want: "https://example/oauth2/callback",
+		},
+		{
+			name: "redirect with http schema",
+			setupOpts: func(baseOpts *options.Options) *options.Options {
+				baseOpts.Cookie.Secure = false
+				return baseOpts
+			},
+			req: &http.Request{
+				Host: "example",
+				URL: &url.URL{
+					Scheme: schemeHTTP,
+				},
+			},
+			want: "http://example/oauth2/callback",
+		},
+		{
+			name: "relative redirect url",
+			setupOpts: func(baseOpts *options.Options) *options.Options {
+				baseOpts.RelativeRedirectURL = true
+				return baseOpts
+			},
+			req:  &http.Request{},
+			want: "/oauth2/callback",
+		},
+		{
+			name: "proxy prefix",
+			setupOpts: func(baseOpts *options.Options) *options.Options {
+				baseOpts.ProxyPrefix = "/prefix"
+				return baseOpts
+			},
+			req: &http.Request{
+				Host: "example",
+				URL: &url.URL{
+					Scheme: schemeHTTP,
+				},
+			},
+			want: "https://example/prefix/callback",
+		},
+		{
+			name: "proxy prefix with relative redirect",
+			setupOpts: func(baseOpts *options.Options) *options.Options {
+				baseOpts.ProxyPrefix = "/prefix"
+				baseOpts.RelativeRedirectURL = true
+				return baseOpts
+			},
+			req: &http.Request{
+				Host: "example",
+				URL: &url.URL{
+					Scheme: schemeHTTP,
+				},
+			},
+			want: "/prefix/callback",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseOpts := baseTestOptions()
+			err := validation.Validate(baseOpts)
+			assert.NoError(t, err)
+
+			proxy, err := NewOAuthProxy(tt.setupOpts(baseOpts), func(string) bool { return true })
+			assert.NoError(t, err)
+
+			assert.Equalf(t, tt.want, proxy.getOAuthRedirectURI(tt.req), "getOAuthRedirectURI(%v)", tt.req)
 		})
 	}
 }

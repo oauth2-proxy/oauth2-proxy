@@ -38,7 +38,7 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	}
 	switch providerConfig.Type {
 	case options.ADFSProvider:
-		return NewADFSProvider(providerData, providerConfig.ADFSConfig), nil
+		return NewADFSProvider(providerData, providerConfig), nil
 	case options.AzureProvider:
 		return NewAzureProvider(providerData, providerConfig.AzureConfig), nil
 	case options.BitbucketProvider:
@@ -50,13 +50,13 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 	case options.GitHubProvider:
 		return NewGitHubProvider(providerData, providerConfig.GitHubConfig), nil
 	case options.GitLabProvider:
-		return NewGitLabProvider(providerData, providerConfig.GitLabConfig)
+		return NewGitLabProvider(providerData, providerConfig)
 	case options.GoogleProvider:
 		return NewGoogleProvider(providerData, providerConfig.GoogleConfig)
 	case options.KeycloakProvider:
 		return NewKeycloakProvider(providerData, providerConfig.KeycloakConfig), nil
 	case options.KeycloakOIDCProvider:
-		return NewKeycloakOIDCProvider(providerData, providerConfig.KeycloakConfig), nil
+		return NewKeycloakOIDCProvider(providerData, providerConfig), nil
 	case options.LinkedInProvider:
 		return NewLinkedInProvider(providerData), nil
 	case options.LoginGovProvider:
@@ -138,6 +138,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	p.AllowUnverifiedEmail = providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
+	p.SkipClaimsFromProfileURL = providerConfig.SkipClaimsFromProfileURL
 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
@@ -156,15 +157,9 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 		p.EmailClaim = providerConfig.OIDCConfig.UserIDClaim
 	}
 
-	if providerConfig.Type == "oidc" && p.Scope == "" {
-		p.Scope = "openid email profile"
-
-		if len(providerConfig.AllowedGroups) > 0 {
-			p.Scope += " groups"
-		}
-	}
-
 	p.setAllowedGroups(providerConfig.AllowedGroups)
+
+	p.BackendLogoutURL = providerConfig.BackendLogoutURL
 
 	return p, nil
 }

@@ -44,8 +44,8 @@ var _ = Describe("Session Ticket Tests", func() {
 						NamePrefix: "dummy",
 					},
 				},
-				encodedTicket: fmt.Sprintf("%s.%s",
-					"dummy-0123456789abcdef",
+				encodedTicket: fmt.Sprintf("v2.%s.%s",
+					base64.RawURLEncoding.EncodeToString([]byte("dummy-0123456789abcdef")),
 					base64.RawURLEncoding.EncodeToString([]byte("0123456789abcdef"))),
 				expectedError: nil,
 			}),
@@ -57,7 +57,7 @@ var _ = Describe("Session Ticket Tests", func() {
 			Entry("with an invalid base64 encoded secret", ticketTableInput{
 				ticket:        nil,
 				encodedTicket: "dummy-0123456789abcdef.@)#($*@)#(*$@)#(*$",
-				expectedError: fmt.Errorf("failed to decode encryption secret: illegal base64 data at input byte 0"),
+				expectedError: fmt.Errorf("failed to decode ticket: failed to decode encryption secret: illegal base64 data at input byte 0"),
 			}),
 		)
 	})

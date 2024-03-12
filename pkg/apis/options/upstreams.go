@@ -12,7 +12,7 @@ const (
 
 // UpstreamConfig is a collection of definitions for upstream servers.
 type UpstreamConfig struct {
-	// ProxyRawPath will pass the raw url path to upstream allowing for url's
+	// ProxyRawPath will pass the raw url path to upstream allowing for urls
 	// like: "/%2F/" which would otherwise be redirected to "/"
 	ProxyRawPath bool `json:"proxyRawPath,omitempty"`
 
@@ -60,7 +60,7 @@ type Upstream struct {
 
 	// InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.
 	// This option is insecure and will allow potential Man-In-The-Middle attacks
-	// betweem OAuth2 Proxy and the usptream server.
+	// between OAuth2 Proxy and the upstream server.
 	// Defaults to false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 

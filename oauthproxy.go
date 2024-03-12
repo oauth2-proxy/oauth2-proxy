@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -56,6 +57,7 @@ const (
 	oauthCallbackPath = "/callback"
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
+	staticPathPrefix  = "/static/"
 )
 
 var (
@@ -64,6 +66,9 @@ var (
 
 	// ErrAccessDenied means the user should receive a 401 Unauthorized response
 	ErrAccessDenied = errors.New("access denied")
+
+	//go:embed static/*
+	staticFiles embed.FS
 )
 
 // allowedRoute manages method + path based allowlists
@@ -84,20 +89,22 @@ type OAuthProxy struct {
 
 	SignInPath string
 
-	allowedRoutes       []allowedRoute
-	apiRoutes           []apiRoute
-	redirectURL         *url.URL // the url to receive requests at
-	whitelistDomains    []string
-	sessionStore        sessionsapi.SessionStore
-	ProxyPrefix         string
-	basicAuthValidator  basic.Validator
-	basicAuthGroups     []string
-	SkipProviderButton  bool
-	skipAuthPreflight   bool
-	skipJwtBearerTokens bool
-	forceJSONErrors     bool
-	realClientIPParser  ipapi.RealClientIPParser
-	trustedIPs          *ip.NetSet
+	allowedRoutes        []allowedRoute
+	apiRoutes            []apiRoute
+	redirectURL          *url.URL // the url to receive requests at
+	relativeRedirectURL  bool
+	whitelistDomains     []string
+	sessionStore         sessionsapi.SessionStore
+	ProxyPrefix          string
+	basicAuthValidator   basic.Validator
+	basicAuthGroups      []string
+	SkipProviderButton   bool
+	skipAuthPreflight    bool
+	skipJwtBearerTokens  bool
+	forceJSONErrors      bool
+	allowQuerySemicolons bool
+	realClientIPParser   ipapi.RealClientIPParser
+	trustedIPs           *ip.NetSet
 
 	tenantMatcherChain  alice.Chain // middleware that loads tenantId from the http request and then stores it in the context
 	providerLoaderChain alice.Chain // middleware that loads provider from the hproviderLoader and then stores it in the context
@@ -113,6 +120,7 @@ type OAuthProxy struct {
 
 	tenantMatcher  *tenantmatcher.Matcher
 	providerLoader providerloader.Loader
+	encodeState    bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -228,18 +236,20 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 
 		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
-		ProxyPrefix:         opts.ProxyPrefix,
-		sessionStore:        sessionStore,
-		redirectURL:         redirectURL,
-		apiRoutes:           apiRoutes,
-		allowedRoutes:       allowedRoutes,
-		whitelistDomains:    opts.WhitelistDomains,
-		skipAuthPreflight:   opts.SkipAuthPreflight,
-		skipJwtBearerTokens: opts.SkipJwtBearerTokens,
-		realClientIPParser:  opts.GetRealClientIPParser(),
-		SkipProviderButton:  opts.SkipProviderButton,
-		forceJSONErrors:     opts.ForceJSONErrors,
-		trustedIPs:          trustedIPs,
+		ProxyPrefix:          opts.ProxyPrefix,
+		sessionStore:         sessionStore,
+		redirectURL:          redirectURL,
+		relativeRedirectURL:  opts.RelativeRedirectURL,
+		apiRoutes:            apiRoutes,
+		allowedRoutes:        allowedRoutes,
+		whitelistDomains:     opts.WhitelistDomains,
+		skipAuthPreflight:    opts.SkipAuthPreflight,
+		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
+		realClientIPParser:   opts.GetRealClientIPParser(),
+		SkipProviderButton:   opts.SkipProviderButton,
+		forceJSONErrors:      opts.ForceJSONErrors,
+		allowQuerySemicolons: opts.AllowQuerySemicolons,
+		trustedIPs:           trustedIPs,
 
 		tenantMatcherChain:  tenantmatcherChain,
 		providerLoaderChain: providerLoaderChain,
@@ -254,6 +264,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		appDirector:         appDirector,
 		providerLoader:      providerLoader,
 		tenantMatcher:       tenantmatcher,
+		encodeState:         opts.EncodeState,
 	}
 
 	return p, nil
@@ -295,6 +306,11 @@ func (p *OAuthProxy) setupServer(opts *options.Options) error {
 		TLS:               opts.Server.TLS,
 	}
 
+	// Option: AllowQuerySemicolons
+	if opts.AllowQuerySemicolons {
+		serverOpts.Handler = http.AllowQuerySemicolons(serverOpts.Handler)
+	}
+
 	appServer, err := proxyhttp.NewServer(serverOpts)
 	if err != nil {
 		return fmt.Errorf("could not build app server: %v", err)
@@ -329,7 +345,7 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 
 	// The authonly path should be registered separately to prevent it from getting no-cache headers.
 	// We do this to allow users to have a short cache (via nginx) of the response to reduce the
-	// likelihood of multiple reuests trying to referesh sessions simultaneously.
+	// likelihood of multiple requests trying to refresh sessions simultaneously.
 	r.Path(proxyPrefix + authOnlyPath).Handler(p.sessionChain.ThenFunc(p.AuthOnly))
 	// This will register all of the paths under the proxy prefix, except the auth only path so that no cache headers
 	// are not applied.
@@ -345,12 +361,15 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Use(prepareNoCacheMiddleware)
 
 	s.Path(signInPath).HandlerFunc(p.SignIn)
-	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
-	// The userinfo endpoint needs to load sessions before handling the request
+	// Static file paths
+	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
+
+	// The userinfo and logout endpoints needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
+	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -592,7 +611,7 @@ func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
-	matches := route.pathRegex.MatchString(req.URL.Path)
+	matches := route.pathRegex.MatchString(requestutil.GetRequestURI(req))
 
 	if route.negate {
 		return !matches
@@ -613,7 +632,7 @@ func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 
 func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 	for _, route := range p.apiRoutes {
-		if route.pathRegex.MatchString(req.URL.Path) {
+		if route.pathRegex.MatchString(requestutil.GetRequestURI(req)) {
 			return true
 		}
 	}
@@ -783,7 +802,48 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	p.backendLogout(rw, req)
+
 	http.Redirect(rw, req, redirect, http.StatusFound)
+}
+
+func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
+
+	provider := providerLoaderUtil.FromContext(req.Context())
+	if provider == nil {
+		logger.Errorf("no provider found in request context")
+		return
+	}
+
+	session, err := p.getAuthenticatedSession(rw, req, provider)
+	if err != nil {
+		logger.Errorf("error getting authenticated session during backend logout: %v", err)
+		return
+	}
+
+	if session == nil {
+		return
+	}
+
+	providerData := provider.Data()
+	if providerData.BackendLogoutURL == "" {
+		return
+	}
+
+	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
+	// security exception because URL is dynamic ({id_token} replacement) but
+	// base is not end-user provided but comes from configuration somewhat secure
+	resp, err := http.Get(backendLogoutURL) // #nosec G107
+	if err != nil {
+		logger.Errorf("error while calling backend logout: %v", err)
+		return
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
+	}
 }
 
 // OAuthStart starts the OAuth2 authentication flow
@@ -844,7 +904,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, pro
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect, tntID),
+		encodeState(csrf.HashOAuthState(), appRedirect, tntID, p.encodeState),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
@@ -873,13 +933,6 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	nonce, appRedirect, _, err := decodeState(req)
-	if err != nil {
-		logger.Errorf("Error while parsing OAuth2 state: %v", err)
-		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	provider := providerLoaderUtil.FromContext(req.Context())
 	if provider == nil {
 		logger.Errorf("No provider found for tenant 'id=%s'", tntID)
@@ -898,7 +951,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
 	if err != nil {
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
+		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2. Error while loading CSRF cookie:", err.Error())
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
@@ -918,6 +971,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	csrf.ClearCookie(rw, req)
+
+	nonce, appRedirect, _, err := decodeState(req.Form.Get("state"), p.encodeState)
+	if err != nil {
+		logger.Errorf("Error while parsing OAuth2 state: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	if !csrf.CheckOAuthState(nonce) {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
@@ -1019,7 +1079,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 
 	// we are authenticated
 	p.addHeadersForProxying(rw, session)
-	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.WriteHeader(http.StatusAccepted)
 	})).ServeHTTP(rw, req)
 }
@@ -1099,7 +1159,7 @@ func prepareNoCacheMiddleware(next http.Handler) http.Handler {
 // This is usually the OAuthProxy callback URL.
 func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	// if `p.redirectURL` already has a host, return it
-	if p.redirectURL.Host != "" {
+	if p.relativeRedirectURL || p.redirectURL.Host != "" {
 		rdStr := p.redirectURL.String()
 		rdStr = tenantutils.InjectTenantID(tenantutils.FromContext(req.Context()), rdStr)
 		return rdStr
@@ -1271,20 +1331,20 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(nonce, redirect, tenantID string) string {
+func encodeState(nonce, redirect, tenantID string, encode bool) string {
 
 	stateVals := []string{nonce, redirect, tenantID}
 	js, err := json.Marshal(&stateVals)
 	if err != nil {
 		panic(err)
 	}
-	return base64.StdEncoding.EncodeToString(js)
+	return base64.RawURLEncoding.EncodeToString(js)
 }
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(req *http.Request) (nonce string, redirect string, tenantID string, err error) {
-	js, err := base64.StdEncoding.DecodeString(req.Form.Get("state"))
+func decodeState(state string, encode bool) (nonce string, redirect string, tenantID string, err error) {
+	js, err := base64.RawURLEncoding.DecodeString(state)
 	if err != nil {
 		return
 	}

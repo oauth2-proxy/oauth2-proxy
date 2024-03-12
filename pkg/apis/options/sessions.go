@@ -22,24 +22,12 @@ type CookieStoreOptions struct {
 
 // RedisStoreOptions contains configuration options for the RedisSessionStore.
 type RedisStoreOptions struct {
-
-	// ConnectionURL is the host URL.
-	ConnectionURL string `flag:"redis-connection-url" cfg:"redis_connection_url"`
-
-	// Password required to allow connection with redis store.
-	Password string `flag:"redis-password" cfg:"redis_password"`
-
-	// UseSentinels will allow to use sentinels in case its value is set to true.
-	UseSentinel bool `flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
-
-	// SentinelPassword contains password for authorizing use of sentinel.
-	SentinelPassword string `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
-
-	// SentinelMasterName is the name given to master.
-	SentinelMasterName string `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
-
-	// SnetinelConnectionURLs contains the list of URLs used for connecting with the redis instances
-	// to be included in the sentinel.
+	ConnectionURL          string   `flag:"redis-connection-url" cfg:"redis_connection_url"`
+	Username               string   `flag:"redis-username" cfg:"redis_username"`
+	Password               string   `flag:"redis-password" cfg:"redis_password"`
+	UseSentinel            bool     `flag:"redis-use-sentinel" cfg:"redis_use_sentinel"`
+	SentinelPassword       string   `flag:"redis-sentinel-password" cfg:"redis_sentinel_password"`
+	SentinelMasterName     string   `flag:"redis-sentinel-master-name" cfg:"redis_sentinel_master_name"`
 	SentinelConnectionURLs []string `flag:"redis-sentinel-connection-urls" cfg:"redis_sentinel_connection_urls"`
 
 	// UseCluster sets the flag for using redis cluster or not.

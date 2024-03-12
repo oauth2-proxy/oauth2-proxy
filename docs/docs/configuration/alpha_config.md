@@ -23,13 +23,13 @@ When using alpha configuration, your config file will look something like below:
 ```yaml
 upstreams:
   - id: ...
-    ...
+    ...: ...
 injectRequestHeaders:
   - name: ...
-    ...
+    ...: ...
 injectResponseHeaders:
   - name: ...
-    ...
+    ...: ...
 ```
 
 Please browse the [reference](#configuration-reference) below for the structure
@@ -66,6 +66,20 @@ the new config.
 ```bash
 oauth2-proxy --alpha-config ./path/to/new/config.yaml --config ./path/to/existing/config.cfg
 ```
+
+## Using ENV variables in the alpha configuration
+
+The alpha package supports the use of environment variables in place of yaml keys, allowing sensitive values to be pulled from somewhere other than the yaml file.
+When using environment variables, your yaml will look like this:
+
+```yaml
+    providers:
+    - provider: azure
+      clientSecret: ${CLIENT_SECRET}
+      ...
+```
+Where CLIENT_SECRET is an environment variable.
+More information and available patterns can be found [here](https://github.com/a8m/envsubst#docs)
 
 ## Removed options
 
@@ -239,7 +253,7 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `group` | _[]string_ | Group sets restrict logins to members of this group |
-| `projects` | _[]string_ | Projects restricts logins to members of any of these projects |
+| `projects` | _[]string_ | Projects restricts logins to members of these projects |
 
 ### GoogleOptions
 
@@ -249,9 +263,11 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `group` | _[]string_ | Groups sets restrict logins to members of this google group |
-| `adminEmail` | _string_ | AdminEmail is the google admin to impersonate for api calls |
+| `group` | _[]string_ | Groups sets restrict logins to members of this Google group |
+| `adminEmail` | _string_ | AdminEmail is the Google admin to impersonate for api calls |
 | `serviceAccountJson` | _string_ | ServiceAccountJSON is the path to the service account json credentials |
+| `useApplicationDefaultCredentials` | _bool_ | UseApplicationDefaultCredentials is a boolean whether to use Application Default Credentials instead of a ServiceAccountJSON |
+| `targetPrincipal` | _string_ | TargetPrincipal is the Google Service Account used for Application Default Credentials |
 
 ### Header
 
@@ -463,15 +479,18 @@ Provider holds all configuration for a single provider
 | `provider` | _[ProviderType](#providertype)_ | Type is the OAuth provider<br/>must be set from the supported providers group,<br/>otherwise 'Google' is set as default |
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
 | `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
+| `useSystemTrustStore` | _bool_ | UseSystemTrustStore determines if your custom CA files and the system trust store are used<br/>If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
 | `profileURL` | _string_ | ProfileURL is the profile access endpoint |
+| `skipClaimsFromProfileURL` | _bool_ | SkipClaimsFromProfileURL allows to skip request to Profile URL for resolving claims not present in id_token<br/>default set to 'false' |
 | `resource` | _string_ | ProtectedResource is the resource that is protected (Azure AD and ADFS only) |
 | `validateURL` | _string_ | ValidateURL is the access token validation endpoint |
 | `scope` | _string_ | Scope is the OAuth scope specification |
 | `allowedGroups` | _[]string_ | AllowedGroups is a list of restrict logins to members of this group |
 | `code_challenge_method` | _string_ | The code challenge method |
+| `backendLogoutURL` | _string_ | URL to call to perform backend logout, `{id_token}` would be replaced by the actual `id_token` if available in the session |
 
 ### ProviderLoader
 
@@ -645,7 +664,7 @@ Requests will be proxied to this upstream if the path matches the request path.
 | `path` | _string_ | Path is used to map requests to the upstream server.<br/>The closest match will take precedence and all Paths must be unique.<br/>Path can also take a pattern when used with RewriteTarget.<br/>Path segments can be captured and matched using regular experessions.<br/>Eg:<br/>- `^/foo$`: Match only the explicit path `/foo`<br/>- `^/bar/$`: Match any path prefixed with `/bar/`<br/>- `^/baz/(.*)$`: Match any path prefixed with `/baz` and capture the remaining path for use with RewriteTarget |
 | `rewriteTarget` | _string_ | RewriteTarget allows users to rewrite the request path before it is sent to<br/>the upstream server.<br/>Use the Path to capture segments for reuse within the rewrite target.<br/>Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite<br/>the request `/baz/abc/123` to `/foo/abc/123` before proxying to the<br/>upstream server. |
 | `uri` | _string_ | The URI of the upstream server. This may be an HTTP(S) server of a File<br/>based URL. It may include a path, in which case all requests will be served<br/>under that path.<br/>Eg:<br/>- http://localhost:8080<br/>- https://service.localhost<br/>- https://service.localhost/path<br/>- file://host/path<br/>If the URI's path is "/base" and the incoming request was for "/dir",<br/>the upstream request will be for "/base/dir". |
-| `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>betweem OAuth2 Proxy and the usptream server.<br/>Defaults to false. |
+| `insecureSkipTLSVerify` | _bool_ | InsecureSkipTLSVerify will skip TLS verification of upstream HTTPS hosts.<br/>This option is insecure and will allow potential Man-In-The-Middle attacks<br/>between OAuth2 Proxy and the upstream server.<br/>Defaults to false. |
 | `static` | _bool_ | Static will make all requests to this upstream have a static response.<br/>The response will have a body of "Authenticated" and a response code<br/>matching StaticCode.<br/>If StaticCode is not set, the response will return a 200 response. |
 | `staticCode` | _int_ | StaticCode determines the response code for the Static response.<br/>This option can only be used with Static enabled. |
 | `flushInterval` | _[Duration](#duration)_ | FlushInterval is the period between flushing the response buffer when<br/>streaming response from the upstream.<br/>Defaults to 1 second. |
@@ -661,5 +680,5 @@ UpstreamConfig is a collection of definitions for upstream servers.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `proxyRawPath` | _bool_ | ProxyRawPath will pass the raw url path to upstream allowing for url's<br/>like: "/%2F/" which would otherwise be redirected to "/" |
+| `proxyRawPath` | _bool_ | ProxyRawPath will pass the raw url path to upstream allowing for urls<br/>like: "/%2F/" which would otherwise be redirected to "/" |
 | `upstreams` | _[[]Upstream](#upstream)_ | Upstreams represents the configuration for the upstream servers.<br/>Requests will be proxied to this upstream if the path matches the request path. |

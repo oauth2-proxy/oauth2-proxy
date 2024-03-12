@@ -20,16 +20,30 @@ type OIDCProvider struct {
 	SkipNonce bool
 }
 
+const oidcDefaultScope = "openid email profile"
+
 // NewOIDCProvider initiates a new OIDCProvider
 func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
-	p.setProviderDefaults(providerDefaults{
-		name:        "OpenID Connect",
+	name := "OpenID Connect"
+
+	if p.ProviderName != "" {
+		name = p.ProviderName
+	}
+
+	oidcProviderDefaults := providerDefaults{
+		name:        name,
 		loginURL:    nil,
 		redeemURL:   nil,
 		profileURL:  nil,
 		validateURL: nil,
-		scope:       "",
-	})
+		scope:       oidcDefaultScope,
+	}
+
+	if len(p.AllowedGroups) > 0 {
+		oidcProviderDefaults.scope += " groups"
+	}
+
+	p.setProviderDefaults(oidcProviderDefaults)
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 
 	return &OIDCProvider{
@@ -79,7 +93,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 
 // EnrichSession is called after Redeem to allow providers to enrich session fields
 // such as User, Email, Groups with provider specific API calls.
-func (p *OIDCProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
+func (p *OIDCProvider) EnrichSession(_ context.Context, s *sessions.SessionState) error {
 	// If a mandatory email wasn't set, error at this point.
 	if s.Email == "" {
 		return errors.New("neither the id_token nor the profileURL set an email")

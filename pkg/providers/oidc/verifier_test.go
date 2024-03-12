@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/go-jose/go-jose/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/square/go-jose.v2"
 )
 
 var _ = Describe("Verify", func() {
@@ -199,7 +199,7 @@ type testVerifier struct {
 	jwk jose.JSONWebKey
 }
 
-func (t *testVerifier) VerifySignature(ctx context.Context, jwt string) ([]byte, error) {
+func (t *testVerifier) VerifySignature(_ context.Context, jwt string) ([]byte, error) {
 	jws, err := jose.ParseSigned(jwt)
 	if err != nil {
 		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)

@@ -60,8 +60,6 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		fmt.Println("NO PROVIDER FOUND")
 	}
 
-	// We allow unescaped template.HTML since it is user configured options
-	/* #nosec G203 */
 	t := struct {
 		TenantIDInputName string
 		TenantID          string
@@ -78,14 +76,14 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 		TenantIDInputName: tenantutils.DefaultTenantIDQueryParam,
 		TenantID:          tenantutils.FromContext(req.Context()),
 		ProviderName:      provider.Data().ProviderName,
-		SignInMessage:     template.HTML(s.signInMessage),
+		SignInMessage:     template.HTML(s.signInMessage), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
 		StatusCode:        statusCode,
 		CustomLogin:       s.displayLoginForm,
 		Redirect:          redirectURL,
 		Version:           s.version,
 		ProxyPrefix:       s.proxyPrefix,
-		Footer:            template.HTML(s.footer),
-		LogoData:          template.HTML(s.logoData),
+		Footer:            template.HTML(s.footer),   // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+		LogoData:          template.HTML(s.logoData), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
 	}
 
 	err := s.template.Execute(rw, t)
