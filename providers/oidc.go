@@ -33,12 +33,13 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 	}
 
 	oidcProviderDefaults := providerDefaults{
-		name:        name,
-		loginURL:    nil,
-		redeemURL:   nil,
-		profileURL:  nil,
-		validateURL: nil,
-		scope:       oidcDefaultScope,
+		name:             name,
+		introspectionURL: nil,
+		loginURL:         nil,
+		redeemURL:        nil,
+		profileURL:       nil,
+		validateURL:      nil,
+		scope:            oidcDefaultScope,
 	}
 
 	if len(p.AllowedGroups) > 0 {

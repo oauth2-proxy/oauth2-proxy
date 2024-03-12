@@ -35,6 +35,10 @@ func newOIDCProvider(serverURL *url.URL, skipNonce bool) *OIDCProvider {
 		ProviderName: "oidc",
 		ClientID:     oidcClientID,
 		ClientSecret: oidcSecret,
+		IntrospectionURL: &url.URL{
+			Scheme: serverURL.Scheme,
+			Host:   serverURL.Host,
+			Path:   "/login/oauth/introspect"},
 		LoginURL: &url.URL{
 			Scheme: serverURL.Scheme,
 			Host:   serverURL.Host,
@@ -83,6 +87,14 @@ func newTestOIDCSetup(body []byte) (*httptest.Server, *OIDCProvider) {
 	provider := newOIDCProvider(redeemURL, false)
 	return server, provider
 }
+
+//func TestOIDCProviderIntrospectionURL(t *testing.T) {
+//	serverURL := &url.URL{
+//		Scheme: "https",
+//		Host:   "oauth2proxy.oidctest",
+//	}
+//	provider := newOIDCProvider(serverURL, true)
+//}
 
 func TestOIDCProviderGetLoginURL(t *testing.T) {
 	serverURL := &url.URL{
