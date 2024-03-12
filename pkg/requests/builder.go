@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 // Do returns a Result which allows the user to get the body,
 // unmarshal the body into an interface, or into a simplejson.Json.
 type Builder interface {
+	WithAuthorization(string, string) Builder
+	WithAuthorizationBasicBase64(username, password string) Builder
 	WithContext(context.Context) Builder
 	WithBody(io.Reader) Builder
 	WithMethod(string) Builder
@@ -35,6 +38,20 @@ func New(endpoint string) Builder {
 		endpoint: endpoint,
 		method:   "GET",
 	}
+}
+
+// WithAuthorization adds a Authorization header to the request
+func (r *builder) WithAuthorization(auth, value string) Builder {
+	return r.SetHeader("Authorization", fmt.Sprintf("%s %s", auth, value))
+}
+
+// WithAuthorization adds a Authorization Basic header to the request
+// Used for username password
+func (r *builder) WithAuthorizationBasicBase64(username, password string) Builder {
+	str := []byte(fmt.Sprintf("%s:%s", username, password))
+	value := base64.StdEncoding.EncodeToString(str)
+
+	return r.WithAuthorization("Basic", value)
 }
 
 // WithContext adds a context to the request.
