@@ -117,6 +117,13 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 		return false
 	}
 
+	if s.IntrospectToken {
+		if _, err := p.introspectToken(s.AccessToken); err != nil {
+			logger.Errorf("inspect token failed: %v", err)
+			return false
+		}
+	}
+
 	if p.SkipNonce {
 		return true
 	}
