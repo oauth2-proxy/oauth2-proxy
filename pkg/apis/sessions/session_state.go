@@ -28,6 +28,8 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+	Name              string   `msgpack:"dn,omitempty"`
+	Scopes            []string `msgpack:"s,omitempty"`
 
 	// Internal helpers, not serialized
 	Clock clock.Clock `msgpack:"-"`
@@ -101,7 +103,7 @@ func (s *SessionState) Age() time.Duration {
 
 // String constructs a summary of the session state
 func (s *SessionState) String() string {
-	o := fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s", s.Email, s.User, s.PreferredUsername)
+	o := fmt.Sprintf("Session{email:%s user:%s PreferredUsername:%s Name:%s", s.Email, s.User, s.PreferredUsername, s.Name)
 	if s.AccessToken != "" {
 		o += " token:true"
 	}
@@ -119,6 +121,9 @@ func (s *SessionState) String() string {
 	}
 	if len(s.Groups) > 0 {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
+	}
+	if len(s.Scopes) > 0 {
+		o += fmt.Sprintf(" scopes:%v", s.Scopes)
 	}
 	return o + "}"
 }
@@ -148,6 +153,12 @@ func (s *SessionState) GetClaim(claim string) []string {
 		return groups
 	case "preferred_username":
 		return []string{s.PreferredUsername}
+	case "name":
+		return []string{s.Name}
+	case "scopes":
+		scopes := make([]string, len(s.Scopes))
+		copy(scopes, s.Scopes)
+		return scopes
 	default:
 		return []string{}
 	}

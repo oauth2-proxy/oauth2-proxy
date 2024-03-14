@@ -137,7 +137,9 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	// Make the OIDC options available to all providers that support it
 	p.AllowUnverifiedEmail = providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
+	p.NameClaim = providerConfig.OIDCConfig.NameClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
+	p.ScopesClaim = providerConfig.OIDCConfig.ScopesClaim
 	p.SkipClaimsFromProfileURL = providerConfig.SkipClaimsFromProfileURL
 
 	// Set PKCE enabled or disabled based on discovery and force options

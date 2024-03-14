@@ -4,8 +4,14 @@ const (
 	// OIDCEmailClaim is the generic email claim used by the OIDC provider.
 	OIDCEmailClaim = "email"
 
+	// OIDCNameClaim is the generic name claim used by the OIDC provider.
+	OIDCNameClaim = "name"
+
 	// OIDCGroupsClaim is the generic groups claim used by the OIDC provider.
 	OIDCGroupsClaim = "groups"
+
+	// OIDCScopesClaim is the generic scopes claim used by the OIDC provider.
+	OIDCScopesClaim = "scopes"
 )
 
 // OIDCAudienceClaims is the generic audience claim list used by the OIDC provider.
@@ -228,9 +234,15 @@ type OIDCOptions struct {
 	// EmailClaim indicates which claim contains the user email,
 	// default set to 'email'
 	EmailClaim string `json:"emailClaim,omitempty"`
+	// NameClaim indicates which claim contains the user name,
+	// default set to 'name'
+	NameClaim string `json:"nameClaim,omitempty"`
 	// GroupsClaim indicates which claim contains the user groups
 	// default set to 'groups'
 	GroupsClaim string `json:"groupsClaim,omitempty"`
+	// ScopesClaim indicates which claim contains the user scopes
+	// default set to 'scopes'
+	ScopesClaim string `json:"scopesClaim,omitempty"`
 	// UserIDClaim indicates which claim contains the user ID
 	// default set to 'email'
 	UserIDClaim string `json:"userIDClaim,omitempty"`
@@ -264,7 +276,9 @@ func providerDefaults() Providers {
 				SkipDiscovery:                false,
 				UserIDClaim:                  OIDCEmailClaim, // Deprecated: Use OIDCEmailClaim
 				EmailClaim:                   OIDCEmailClaim,
+				NameClaim:                    OIDCNameClaim,
 				GroupsClaim:                  OIDCGroupsClaim,
+				ScopesClaim:                  OIDCScopesClaim,
 				AudienceClaims:               OIDCAudienceClaims,
 				ExtraAudiences:               []string{},
 			},
