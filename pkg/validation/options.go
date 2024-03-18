@@ -30,10 +30,8 @@ func Validate(o *options.Options) error {
 	msgs = parseSignatureKey(o, msgs)
 
 	if o.SSLInsecureSkipVerify {
-		// InsecureSkipVerify is a configurable option we allow
-		/* #nosec G402 */
 		insecureTransport := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- InsecureSkipVerify is a configurable option we allow
 		}
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
 	} else if len(o.Providers[0].CAFiles) > 0 {

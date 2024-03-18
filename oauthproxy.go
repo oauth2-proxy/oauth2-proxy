@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -110,6 +111,8 @@ type OAuthProxy struct {
 	serveMux          *mux.Router
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
+
+	encodeState bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -239,6 +242,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
+		encodeState:        opts.EncodeState,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -330,15 +334,15 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.Use(prepareNoCacheMiddleware)
 
 	s.Path(signInPath).HandlerFunc(p.SignIn)
-	s.Path(signOutPath).HandlerFunc(p.SignOut)
 	s.Path(oauthStartPath).HandlerFunc(p.OAuthStart)
 	s.Path(oauthCallbackPath).HandlerFunc(p.OAuthCallback)
 
 	// Static file paths
 	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
 
-	// The userinfo endpoint needs to load sessions before handling the request
+	// The userinfo and logout endpoints needs to load sessions before handling the request
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
+	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
 }
 
 // buildPreAuthChain constructs a chain that should process every request before
@@ -742,7 +746,41 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	p.backendLogout(rw, req)
+
 	http.Redirect(rw, req, redirect, http.StatusFound)
+}
+
+func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
+		logger.Errorf("error getting authenticated session during backend logout: %v", err)
+		return
+	}
+
+	if session == nil {
+		return
+	}
+
+	providerData := p.provider.Data()
+	if providerData.BackendLogoutURL == "" {
+		return
+	}
+
+	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, "{id_token}", session.IDToken)
+	// security exception because URL is dynamic ({id_token} replacement) but
+	// base is not end-user provided but comes from configuration somewhat secure
+	resp, err := http.Get(backendLogoutURL) // #nosec G107
+	if err != nil {
+		logger.Errorf("error while calling backend logout: %v", err)
+		return
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode)
+	}
 }
 
 // OAuthStart starts the OAuth2 authentication flow
@@ -796,7 +834,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect),
+		encodeState(csrf.HashOAuthState(), appRedirect, p.encodeState),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
@@ -833,7 +871,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
 	if err != nil {
-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
+		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2. Error while loading CSRF cookie:", err.Error())
 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
@@ -854,7 +892,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf.ClearCookie(rw, req)
 
-	nonce, appRedirect, err := decodeState(req)
+	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -953,7 +991,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 
 	// we are authenticated
 	p.addHeadersForProxying(rw, session)
-	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.WriteHeader(http.StatusAccepted)
 	})).ServeHTTP(rw, req)
 }
@@ -1194,18 +1232,28 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(nonce string, redirect string) string {
-	return fmt.Sprintf("%v:%v", nonce, redirect)
+func encodeState(nonce string, redirect string, encode bool) string {
+	rawString := fmt.Sprintf("%v:%v", nonce, redirect)
+	if encode {
+		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
+	}
+	return rawString
 }
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(req *http.Request) (string, string, error) {
-	state := strings.SplitN(req.Form.Get("state"), ":", 2)
-	if len(state) != 2 {
+func decodeState(state string, encode bool) (string, string, error) {
+	toParse := state
+	if encode {
+		decoded, _ := base64.RawURLEncoding.DecodeString(state)
+		toParse = string(decoded)
+	}
+
+	parsedState := strings.SplitN(toParse, ":", 2)
+	if len(parsedState) != 2 {
 		return "", "", errors.New("invalid length")
 	}
-	return state[0], state[1], nil
+	return parsedState[0], parsedState[1], nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying

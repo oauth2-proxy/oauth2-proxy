@@ -14,8 +14,8 @@ this may take longer than in projects with corporate sponsorship.
 
 :::important
 If you believe you have found a vulnerability within OAuth2 Proxy or any of its
-dependencies, please do NOT open an issue or PR on GitHub, please do NOT post any
-details publicly.
+dependencies, please do NOT open an issue or PR on GitHub, please do NOT post
+any details publicly.
 :::
 
 Security disclosures MUST be done in private.
