@@ -43,8 +43,8 @@ type Options struct {
 	// Not used in the legacy config, name not allowed to match an external key (upstreams)
 	// TODO(JoelSpeed): Rename when legacy config is removed
 
-	ProviderLoader ProviderLoader `cfg:",internal"`
-	TenantMatcher  TenantMatcher  `cfg:",internal"`
+	ProviderLoader  ProviderLoader  `cfg:",internal"`
+	ProviderMatcher ProviderMatcher `cfg:",internal"`
 
 	UpstreamServers UpstreamConfig `cfg:",internal"`
 

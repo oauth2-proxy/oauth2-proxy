@@ -37,7 +37,7 @@ func validateCookie(o options.Cookie) []string {
 
 func validateCookieName(name string) []string {
 	msgs := []string{}
-	maxLength := 256 - 64 - 1 // -64 for hex(sha256(tenantId)) length and -1 for underscore( _ separator)
+	maxLength := 256 - 64 - 1 // -64 for hex(sha256(providerId)) length and -1 for underscore( _ separator)
 
 	cookie := &http.Cookie{Name: name}
 	if cookie.String() == "" {

@@ -1,4 +1,4 @@
-package tenantmatcher
+package matcher
 
 import (
 	"encoding/base64"
@@ -11,15 +11,15 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
 
 type rule struct {
-	conf   *options.TenantMatcherRule
+	conf   *options.ProviderMatcherRule
 	regexp *regexp.Regexp
 }
 
-func newRule(conf options.TenantMatcherRule) (*rule, error) {
+func newRule(conf options.ProviderMatcherRule) (*rule, error) {
 	if conf.CaptureGroup < 0 {
 		return nil, fmt.Errorf("capture group cannot be -ve")
 	}
@@ -38,13 +38,13 @@ func (r *rule) execute(req *http.Request) string {
 	sourceStr := ""
 	// get the source string based on rule.source
 	switch r.conf.Source {
-	case options.TenantMatcherRuleSourceHost:
+	case options.ProviderMatcherRuleSourceHost:
 		sourceStr = req.Host
-	case options.TenantMatcherRuleSourcePath:
+	case options.ProviderMatcherRuleSourcePath:
 		sourceStr = req.URL.Path
-	case options.TenantMatcherRuleSourceQueryParams:
+	case options.ProviderMatcherRuleSourceQueryParams:
 		sourceStr = req.URL.Query().Get(r.conf.QueryParam)
-	case options.TenantMatcherRuleSourceHeader:
+	case options.ProviderMatcherRuleSourceHeader:
 		sourceStr = req.Header.Get(r.conf.Header)
 	}
 
@@ -57,7 +57,7 @@ func (r *rule) execute(req *http.Request) string {
 	}
 
 	if r.conf.JWTClaim != "" {
-		return exractTenantIDFromJWT(regexMatch, r.conf.JWTClaim)
+		return exractProviderIDFromJWT(regexMatch, r.conf.JWTClaim)
 	}
 
 	return regexMatch
@@ -67,7 +67,7 @@ type Matcher struct {
 	rules []*rule
 }
 
-func New(conf options.TenantMatcher) (*Matcher, error) {
+func New(conf options.ProviderMatcher) (*Matcher, error) {
 	matcher := &Matcher{}
 	for _, ruleConf := range conf.Rules {
 		rule, err := newRule(ruleConf)
@@ -82,7 +82,7 @@ func New(conf options.TenantMatcher) (*Matcher, error) {
 	return matcher, nil
 }
 
-// returns tenantId, returns empty string if unable to match
+// returns providerId, returns empty string if unable to match
 func (matcher *Matcher) Match(req *http.Request) string {
 	for _, rule := range matcher.rules {
 		id := rule.execute(req)
@@ -94,18 +94,18 @@ func (matcher *Matcher) Match(req *http.Request) string {
 }
 
 // default rule will be added to our list of rules in any case
-// this helps with self-redirects to oauth2 proxy, and oauth2 proxy will inject the tenantId in http request
+// this helps with self-redirects to oauth2 proxy, and oauth2 proxy will inject the providerId in http request
 func defaultRule() *rule {
-	rule, _ := newRule(options.TenantMatcherRule{
-		Source:       options.TenantMatcherRuleSourceQueryParams,
-		QueryParam:   tenantutils.DefaultTenantIDQueryParam,
+	rule, _ := newRule(options.ProviderMatcherRule{
+		Source:       options.ProviderMatcherRuleSourceQueryParams,
+		QueryParam:   utils.DefaultProviderIDQueryParam,
 		Expr:         ".*",
 		CaptureGroup: 0,
 	})
 	return rule
 }
 
-func exractTenantIDFromJWT(jwt string, claim string) string {
+func exractProviderIDFromJWT(jwt string, claim string) string {
 	subStrs := strings.Split(jwt, ".")
 	if len(subStrs) != 3 {
 		logger.Errorf("jwt token is not valid")

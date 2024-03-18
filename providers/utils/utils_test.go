@@ -1,4 +1,4 @@
-package tenantutils
+package utils
 
 import (
 	"context"
@@ -14,7 +14,7 @@ func TestFromContext(t *testing.T) {
 		want string
 	}{
 		{"From context with valid key",
-			context.WithValue(context.Background(), tenantIDKey, "id"),
+			context.WithValue(context.Background(), providerIDKey, "id"),
 			"id",
 		},
 		{
@@ -35,27 +35,27 @@ func TestFromContext(t *testing.T) {
 
 }
 
-func TestInjectTenantID(t *testing.T) {
+func TestInjectProviderID(t *testing.T) {
 	tests := []struct {
-		name     string
-		tenantid string
-		uri      string
-		want     string
+		name       string
+		providerid string
+		uri        string
+		want       string
 	}{
 		{
-			"inject tenant id",
-			"dummytenant",
+			"inject provider id",
+			"dummyprovider",
 			"file:website.com/pathtofile/intro.pdf",
-			"file:website.com/pathtofile/intro.pdf?tenant-id=dummytenant",
+			"file:website.com/pathtofile/intro.pdf?provider-id=dummyprovider",
 		},
 		{
-			"inject empty tenant id",
+			"inject empty provider id",
 			"",
 			"file:website.com/pathtofile/intro.pdf",
 			"file:website.com/pathtofile/intro.pdf",
 		},
 		{
-			"inject tenant id with invalid url",
+			"inject provider id with invalid url",
 			"",
 			"xxxxx",
 			"xxxxx",
@@ -64,9 +64,9 @@ func TestInjectTenantID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := InjectTenantID(tt.tenantid, tt.uri)
+			got := InjectProviderID(tt.providerid, tt.uri)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("inject tenantid  = %v, want %v", got, tt.want)
+				t.Errorf("inject providerid  = %v, want %v", got, tt.want)
 			}
 		})
 	}

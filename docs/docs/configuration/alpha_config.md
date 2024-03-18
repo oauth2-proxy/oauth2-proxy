@@ -183,7 +183,7 @@ They may change between releases without notice.
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
 | `providerLoader` | _[ProviderLoader](#providerloader)_ | ProviderLoader is used to allow multi-tenancy in oauth2-proxy.<br/>You can choose between single, config and postgres types. |
-| `tenantMatcher` | _[TenantMatcher](#tenantmatcher)_ | TenantMatcher is used to configure the tenant-id matching rules for extracting tenant-id from request<br/>which will then in turn cause providerLoader to load provider/tenant identifying from its ID.<br/>The rules define where to look for tenant-id in request header, host, query or path or their precedence. |
+| `providerMatcher` | _[ProviderMatcher](#providermatcher)_ | ProviderMatcher is used to configure the provider-id matching rules for extracting provider-id from request<br/>which will then in turn cause providerLoader to load provider identifying from its ID.<br/>The rules define where to look for provider-id in request header, host, query or path or their precedence. |
 
 ### AzureOptions
 

@@ -29,7 +29,7 @@ type SessionState struct {
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
-	TenantID string `msgpack:"tid,omitempty"`
+	ProviderID string `msgpack:"tid,omitempty"`
 
 	// Internal helpers, not serialized
 	Clock clock.Clock `msgpack:"-"`

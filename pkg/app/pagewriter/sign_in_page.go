@@ -16,7 +16,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	providerLoaderUtil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
-	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
 
 //go:embed default_logo.svg
@@ -61,29 +61,29 @@ func (s *signInPageWriter) WriteSignInPage(rw http.ResponseWriter, req *http.Req
 	}
 
 	t := struct {
-		TenantIDInputName string
-		TenantID          string
-		ProviderName      string
-		SignInMessage     template.HTML
-		StatusCode        int
-		CustomLogin       bool
-		Redirect          string
-		Version           string
-		ProxyPrefix       string
-		Footer            template.HTML
-		LogoData          template.HTML
+		ProviderIDInputName string
+		ProviderID          string
+		ProviderName        string
+		SignInMessage       template.HTML
+		StatusCode          int
+		CustomLogin         bool
+		Redirect            string
+		Version             string
+		ProxyPrefix         string
+		Footer              template.HTML
+		LogoData            template.HTML
 	}{
-		TenantIDInputName: tenantutils.DefaultTenantIDQueryParam,
-		TenantID:          tenantutils.FromContext(req.Context()),
-		ProviderName:      provider.Data().ProviderName,
-		SignInMessage:     template.HTML(s.signInMessage), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
-		StatusCode:        statusCode,
-		CustomLogin:       s.displayLoginForm,
-		Redirect:          redirectURL,
-		Version:           s.version,
-		ProxyPrefix:       s.proxyPrefix,
-		Footer:            template.HTML(s.footer),   // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
-		LogoData:          template.HTML(s.logoData), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+		ProviderIDInputName: utils.DefaultProviderIDQueryParam,
+		ProviderID:          utils.FromContext(req.Context()),
+		ProviderName:        provider.Data().ProviderName,
+		SignInMessage:       template.HTML(s.signInMessage), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+		StatusCode:          statusCode,
+		CustomLogin:         s.displayLoginForm,
+		Redirect:            redirectURL,
+		Version:             s.version,
+		ProxyPrefix:         s.proxyPrefix,
+		Footer:              template.HTML(s.footer),   // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+		LogoData:            template.HTML(s.logoData), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
 	}
 
 	err := s.template.Execute(rw, t)

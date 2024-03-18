@@ -8,7 +8,7 @@ import (
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
 
 // errorMessages are default error messages for each of the different
@@ -61,27 +61,27 @@ func (e *errorPageWriter) WriteErrorPage(ctx context.Context, rw http.ResponseWr
 	rw.WriteHeader(opts.Status)
 
 	data := struct {
-		TenantIDInputName string
-		TenantID          string
-		Title             string
-		Message           string
-		ProxyPrefix       string
-		StatusCode        int
-		Redirect          string
-		RequestID         string
-		Footer            template.HTML
-		Version           string
+		ProviderIDInputName string
+		ProviderID          string
+		Title               string
+		Message             string
+		ProxyPrefix         string
+		StatusCode          int
+		Redirect            string
+		RequestID           string
+		Footer              template.HTML
+		Version             string
 	}{
-		TenantIDInputName: tenantutils.DefaultTenantIDQueryParam,
-		TenantID:          tenantutils.FromContext(ctx),
-		Title:             http.StatusText(opts.Status),
-		Message:           e.getMessage(opts.Status, opts.AppError, opts.Messages...),
-		ProxyPrefix:       e.proxyPrefix,
-		StatusCode:        opts.Status,
-		Redirect:          opts.RedirectURL,
-		RequestID:         opts.RequestID,
-		Footer:            template.HTML(e.footer), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
-		Version:           e.version,
+		ProviderIDInputName: utils.DefaultProviderIDQueryParam,
+		ProviderID:          utils.FromContext(ctx),
+		Title:               http.StatusText(opts.Status),
+		Message:             e.getMessage(opts.Status, opts.AppError, opts.Messages...),
+		ProxyPrefix:         e.proxyPrefix,
+		StatusCode:          opts.Status,
+		Redirect:            opts.RedirectURL,
+		RequestID:           opts.RequestID,
+		Footer:              template.HTML(e.footer), // #nosec G203 -- We allow unescaped template.HTML since it is user configured options
+		Version:             e.version,
 	}
 
 	if err := e.template.Execute(rw, data); err != nil {

@@ -9,8 +9,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/configloader"
 	providerutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
-	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/stretchr/testify/assert"
@@ -21,11 +21,11 @@ func TestProviderLoader(t *testing.T) {
 	rw := httptest.NewRecorder()
 	req := httptest.NewRequest("", "/", nil)
 
-	ctx := tenantutils.AppendToContext(req.Context(), "dummy")
+	ctx := utils.AppendToContext(req.Context(), "dummy")
 	req = req.WithContext(ctx)
 
 	req2 := httptest.NewRequest("", "/", nil)
-	ctx2 := tenantutils.AppendToContext(req2.Context(), "xxxx")
+	ctx2 := utils.AppendToContext(req2.Context(), "xxxx")
 	req2 = req2.WithContext(ctx2)
 	l, _ := configloader.New(options.Providers{
 		{

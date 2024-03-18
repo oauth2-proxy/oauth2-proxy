@@ -12,7 +12,7 @@ import (
 )
 
 type Loader interface {
-	// id is provider id, which should be same as tenantId
+	// id is provider id, which should be same as providerId
 	Load(ctx context.Context, id string) (providers.Provider, error)
 }
 
@@ -27,6 +27,6 @@ func NewLoader(opts *options.Options) (Loader, error) {
 	case "postgres":
 		return postgres.New(*opts.ProviderLoader.PostgresLoader, opts.ProxyPrefix)
 	default:
-		return nil, fmt.Errorf("invalid tenant loader type '%s'", conf.Type)
+		return nil, fmt.Errorf("invalid provider loader type '%s'", conf.Type)
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -45,7 +45,7 @@ type csrf struct {
 	// which is used to compare the code challenge when exchanging the
 	// authentication code.
 	CodeVerifier string `msgpack:"cv,omitempty"`
-	TenantID     string `msgpack:"tid,omitempty"`
+	ProviderID   string `msgpack:"tid,omitempty"`
 
 	cookieOpts *options.Cookie
 	time       clock.Clock
@@ -65,13 +65,13 @@ func NewCSRF(ctx context.Context, opts *options.Cookie, codeVerifier string) (CS
 		return nil, err
 	}
 
-	tid := tenantutils.FromContext(ctx)
+	tid := utils.FromContext(ctx)
 
 	return &csrf{
 		OAuthState:   state,
 		OIDCNonce:    nonce,
 		CodeVerifier: codeVerifier,
-		TenantID:     tid,
+		ProviderID:   tid,
 
 		cookieOpts: opts,
 	}, nil
@@ -92,11 +92,11 @@ func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
 		return nil, err
 	}
 
-	// matching tenant id from request and in cookie
-	tenantIDFromRequest := tenantutils.FromContext(req.Context())
+	// matching provider id from request and in cookie
+	providerIDFromRequest := utils.FromContext(req.Context())
 
-	if tenantIDFromRequest != crf.TenantID {
-		return nil, errors.New("tenantID in request does not match tenantID in csrf cookie")
+	if providerIDFromRequest != crf.ProviderID {
+		return nil, errors.New("providerID in request does not match providerID in csrf cookie")
 	}
 
 	return crf, nil

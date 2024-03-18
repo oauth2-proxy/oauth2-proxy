@@ -3434,20 +3434,20 @@ func TestStateEncodesCorrectly(t *testing.T) {
 	state := "some_state_to_test"
 	nonce := "some_nonce_to_test"
 
-	encodedResult := encodeState(nonce, state, true)
+	encodedResult := encodeState(nonce, state, "", true)
 	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", encodedResult)
 
-	notEncodedResult := encodeState(nonce, state, false)
+	notEncodedResult := encodeState(nonce, state, "", false)
 	assert.Equal(t, "some_nonce_to_test:some_state_to_test", notEncodedResult)
 }
 
 func TestStateDecodesCorrectly(t *testing.T) {
-	nonce, redirect, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
+	nonce, redirect, _, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
 
 	assert.Equal(t, "some_nonce_to_test", nonce)
 	assert.Equal(t, "some_state_to_test", redirect)
 
-	nonce2, redirect2, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
+	nonce2, redirect2, _, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
 
 	assert.Equal(t, "some_nonce_to_test", nonce2)
 	assert.Equal(t, "some_state_to_test", redirect2)

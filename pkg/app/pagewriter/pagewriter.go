@@ -10,7 +10,7 @@ import (
 // error pages.
 // It can also be used to write errors for the http.ReverseProxy used in the
 // upstream package.
-// ProxyErrorHandler takes context input to extract tenant-ID.
+// ProxyErrorHandler takes context input to extract provider-ID.
 type Writer interface {
 	WriteSignInPage(rw http.ResponseWriter, req *http.Request, redirectURL string, statusCode int)
 	WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts)
@@ -128,7 +128,7 @@ func (w *WriterFuncs) WriteSignInPage(rw http.ResponseWriter, req *http.Request,
 // WriteErrorPage implements the Writer interface.
 // If the ErrorPageFunc is provided, this will be used, else a default
 // implementation will be used.
-// Context is added to extract tenant-ID from incoming request's context.
+// Context is added to extract provider-ID from incoming request's context.
 func (w *WriterFuncs) WriteErrorPage(ctx context.Context, rw http.ResponseWriter, opts ErrorPageOpts) {
 	if w.ErrorPageFunc != nil {
 		// The context is further passed to ErrorPage Func

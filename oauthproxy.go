@@ -32,9 +32,9 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader"
 	providerLoaderUtil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/decorators"
-	tenantmatcher "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/matcher"
-	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	providermatcher "github.com/oauth2-proxy/oauth2-proxy/v7/providers/matcher"
+	providerutils "github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -106,21 +106,21 @@ type OAuthProxy struct {
 	realClientIPParser   ipapi.RealClientIPParser
 	trustedIPs           *ip.NetSet
 
-	tenantMatcherChain  alice.Chain // middleware that loads tenantId from the http request and then stores it in the context
-	providerLoaderChain alice.Chain // middleware that loads provider from the hproviderLoader and then stores it in the context
-	sessionChain        alice.Chain
-	headersChain        alice.Chain
-	preAuthChain        alice.Chain
-	pageWriter          pagewriter.Writer
-	server              proxyhttp.Server
-	upstreamProxy       http.Handler
-	serveMux            *mux.Router
-	redirectValidator   redirect.Validator
-	appDirector         redirect.AppDirector
+	providerMatcherChain alice.Chain // middleware that loads providerId from the http request and then stores it in the context
+	providerLoaderChain  alice.Chain // middleware that loads provider from the hproviderLoader and then stores it in the context
+	sessionChain         alice.Chain
+	headersChain         alice.Chain
+	preAuthChain         alice.Chain
+	pageWriter           pagewriter.Writer
+	server               proxyhttp.Server
+	upstreamProxy        http.Handler
+	serveMux             *mux.Router
+	redirectValidator    redirect.Validator
+	appDirector          redirect.AppDirector
 
-	tenantMatcher  *tenantmatcher.Matcher
-	providerLoader providerloader.Loader
-	encodeState    bool
+	providerMatcher *providermatcher.Matcher
+	providerLoader  providerloader.Loader
+	encodeState     bool
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -130,7 +130,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("error initialising session store: %v", err)
 	}
 
-	sessionStore = decorators.TenantIDValidator(sessionStore)
+	sessionStore = decorators.ProviderIDValidator(sessionStore)
 
 	var basicAuthValidator basic.Validator
 	if opts.HtpasswdFile != "" {
@@ -199,17 +199,17 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
-	tenantmatcher, err := tenantmatcher.New(opts.TenantMatcher)
+	providermatcher, err := providermatcher.New(opts.ProviderMatcher)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create tenant matcher: %w", err)
+		return nil, fmt.Errorf("unable to create provider matcher: %w", err)
 	}
 
 	providerLoader, err := providerloader.NewLoader(opts)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create tenant loader: %w", err)
+		return nil, fmt.Errorf("unable to create provider loader: %w", err)
 	}
 
-	tenantmatcherChain := buildTenantMatcherChain(opts, tenantmatcher)
+	providermatcherChain := buildProviderMatcherChain(opts, providermatcher)
 	providerLoaderChain := buildProviderLoaderChain(opts, providerLoader)
 
 	preAuthChain, err := buildPreAuthChain(opts, sessionStore)
@@ -251,20 +251,20 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		allowQuerySemicolons: opts.AllowQuerySemicolons,
 		trustedIPs:           trustedIPs,
 
-		tenantMatcherChain:  tenantmatcherChain,
-		providerLoaderChain: providerLoaderChain,
-		basicAuthValidator:  basicAuthValidator,
-		basicAuthGroups:     opts.HtpasswdUserGroups,
-		sessionChain:        sessionChain,
-		headersChain:        headersChain,
-		preAuthChain:        preAuthChain,
-		pageWriter:          pageWriter,
-		upstreamProxy:       upstreamProxy,
-		redirectValidator:   redirectValidator,
-		appDirector:         appDirector,
-		providerLoader:      providerLoader,
-		tenantMatcher:       tenantmatcher,
-		encodeState:         opts.EncodeState,
+		providerMatcherChain: providermatcherChain,
+		providerLoaderChain:  providerLoaderChain,
+		basicAuthValidator:   basicAuthValidator,
+		basicAuthGroups:      opts.HtpasswdUserGroups,
+		sessionChain:         sessionChain,
+		headersChain:         headersChain,
+		preAuthChain:         preAuthChain,
+		pageWriter:           pageWriter,
+		upstreamProxy:        upstreamProxy,
+		redirectValidator:    redirectValidator,
+		appDirector:          appDirector,
+		providerLoader:       providerLoader,
+		providerMatcher:      providermatcher,
+		encodeState:          opts.EncodeState,
 	}
 
 	return p, nil
@@ -337,7 +337,7 @@ func (p *OAuthProxy) buildServeMux(proxyPrefix string) {
 	// Everything served by the router must go through the preAuthChain first.
 	r.Use(p.preAuthChain.Then)
 
-	r.Use(p.tenantMatcherChain.Then)
+	r.Use(p.providerMatcherChain.Then)
 	r.Use(p.providerLoaderChain.Then)
 
 	// Register the robots path writer
@@ -415,8 +415,8 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	return chain, nil
 }
 
-func buildTenantMatcherChain(opts *options.Options, tenantMatcher *tenantmatcher.Matcher) alice.Chain {
-	return alice.New(middleware.NewTenantMatcher(tenantMatcher))
+func buildProviderMatcherChain(opts *options.Options, providerMatcher *providermatcher.Matcher) alice.Chain {
+	return alice.New(middleware.NewProviderMatcher(providerMatcher))
 }
 
 func buildProviderLoaderChain(opts *options.Options, providerLoader providerloader.Loader) alice.Chain {
@@ -586,9 +586,9 @@ func (p *OAuthProxy) ErrorPage(rw http.ResponseWriter, req *http.Request, code i
 		redirectURL = "/"
 	}
 
-	tntID := tenantutils.FromContext(req.Context())
+	tntID := providerutils.FromContext(req.Context())
 
-	redirectURL = tenantutils.InjectTenantID(tntID, redirectURL)
+	redirectURL = providerutils.InjectProviderID(tntID, redirectURL)
 
 	scope := middlewareapi.GetRequestScope(req)
 	p.pageWriter.WriteErrorPage(req.Context(), rw, pagewriter.ErrorPageOpts{
@@ -663,8 +663,8 @@ func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
 func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code int) {
 	provider := providerLoaderUtil.FromContext(req.Context())
 	if provider == nil {
-		logger.Println("unable to load tenant from context")
-		p.ErrorPage(rw, req, http.StatusUnauthorized, "tenant not authourized")
+		logger.Println("unable to load provider from context")
+		p.ErrorPage(rw, req, http.StatusUnauthorized, "provider not authourized")
 		return
 	}
 
@@ -719,8 +719,8 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tntID := tenantutils.FromContext(req.Context())
-	redirect = tenantutils.InjectTenantID(tntID, redirect)
+	tntID := providerutils.FromContext(req.Context())
+	redirect = providerutils.InjectProviderID(tntID, redirect)
 
 	user, ok, statusCode := p.ManualSignIn(req)
 	if ok {
@@ -793,8 +793,8 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tntID := tenantutils.FromContext(req.Context())
-	redirect = tenantutils.InjectTenantID(tntID, redirect)
+	tntID := providerutils.FromContext(req.Context())
+	redirect = providerutils.InjectProviderID(tntID, redirect)
 
 	err = p.ClearSessionCookie(rw, req)
 	if err != nil {
@@ -858,7 +858,7 @@ func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, provider providers.Provider, overrides url.Values) {
-	tntID := tenantutils.FromContext(req.Context())
+	tntID := providerutils.FromContext(req.Context())
 
 	extraParams := provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
@@ -923,7 +923,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, pro
 func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	remoteAddr := ip.GetClientString(p.realClientIPParser, req, true)
 
-	tntID := tenantutils.FromContext(req.Context())
+	tntID := providerutils.FromContext(req.Context())
 
 	// finish the oauth cycle
 	err := req.ParseForm()
@@ -935,7 +935,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	provider := providerLoaderUtil.FromContext(req.Context())
 	if provider == nil {
-		logger.Errorf("No provider found for tenant 'id=%s'", tntID)
+		logger.Errorf("No provider found for provider 'id=%s'", tntID)
 		p.ErrorPage(rw, req, http.StatusForbidden, "no provider found")
 		return
 	}
@@ -996,7 +996,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		appRedirect = "/"
 	}
 
-	appRedirect = tenantutils.InjectTenantID(tntID, appRedirect)
+	appRedirect = providerutils.InjectProviderID(tntID, appRedirect)
 
 	// set cookie, or deny
 	authorized, err := provider.Authorize(req.Context(), session)
@@ -1161,7 +1161,7 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	// if `p.redirectURL` already has a host, return it
 	if p.relativeRedirectURL || p.redirectURL.Host != "" {
 		rdStr := p.redirectURL.String()
-		rdStr = tenantutils.InjectTenantID(tenantutils.FromContext(req.Context()), rdStr)
+		rdStr = providerutils.InjectProviderID(providerutils.FromContext(req.Context()), rdStr)
 		return rdStr
 	}
 
@@ -1182,7 +1182,7 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	}
 
 	rdStr := rd.String()
-	rdStr = tenantutils.InjectTenantID(tenantutils.FromContext(req.Context()), rdStr)
+	rdStr = providerutils.InjectProviderID(providerutils.FromContext(req.Context()), rdStr)
 	return rdStr
 }
 
@@ -1331,9 +1331,9 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(nonce, redirect, tenantID string, encode bool) string {
+func encodeState(nonce, redirect, providerID string, encode bool) string {
 
-	stateVals := []string{nonce, redirect, tenantID}
+	stateVals := []string{nonce, redirect, providerID}
 	js, err := json.Marshal(&stateVals)
 	if err != nil {
 		panic(err)
@@ -1343,7 +1343,7 @@ func encodeState(nonce, redirect, tenantID string, encode bool) string {
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(state string, encode bool) (nonce string, redirect string, tenantID string, err error) {
+func decodeState(state string, encode bool) (nonce string, redirect string, providerID string, err error) {
 	js, err := base64.RawURLEncoding.DecodeString(state)
 	if err != nil {
 		return

@@ -12,7 +12,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -39,7 +39,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		var err error
 		ctx := context.Background()
-		ctx = tenantutils.AppendToContext(ctx, "dummy")
+		ctx = utils.AppendToContext(ctx, "dummy")
 		publicCSRF, err = NewCSRF(ctx, cookieOpts, "verifier")
 		Expect(err).ToNot(HaveOccurred())
 
@@ -52,7 +52,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			Expect(privateCSRF.OIDCNonce).ToNot(BeEmpty())
 			Expect(privateCSRF.OAuthState).ToNot(Equal(privateCSRF.OIDCNonce))
 			Expect(privateCSRF.CodeVerifier).To(Equal("verifier"))
-			Expect(privateCSRF.TenantID).To(Equal("dummy"))
+			Expect(privateCSRF.ProviderID).To(Equal("dummy"))
 		})
 
 		It("makes unique nonces between multiple CSRFs", func() {
@@ -112,7 +112,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			}
 		})
 
-		It("with different tenantid", func(ctx SpecContext) {
+		It("with different providerid", func(ctx SpecContext) {
 			privateCSRF.OAuthState = []byte(csrfState)
 			privateCSRF.OIDCNonce = []byte(csrfNonce)
 
@@ -127,11 +127,11 @@ var _ = Describe("CSRF Cookie Tests", func() {
 			req.Header = http.Header{}
 			req.AddCookie(cookie)
 			_, err = LoadCSRFCookie(req, cookieOpts)
-			Expect(err).To(Equal(errors.New("tenantID in request does not match tenantID in csrf cookie")))
+			Expect(err).To(Equal(errors.New("providerID in request does not match providerID in csrf cookie")))
 		})
 
-		It("with same tenantID", func(c SpecContext) {
-			ctx := tenantutils.AppendToContext(req.Context(), "dummy")
+		It("with same providerID", func(c SpecContext) {
+			ctx := utils.AppendToContext(req.Context(), "dummy")
 			privateCSRF.OAuthState = []byte(csrfState)
 			privateCSRF.OIDCNonce = []byte(csrfNonce)
 

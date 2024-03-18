@@ -36,11 +36,11 @@ var _ = Describe("Templates", func() {
 		BeforeEach(func() {
 			data = struct {
 				// For default templates
-				TenantID          string
-				TenantIDInputName string
-				ProxyPrefix       string
-				Redirect          string
-				Footer            string
+				ProviderID          string
+				ProviderIDInputName string
+				ProxyPrefix         string
+				Redirect            string
+				Footer              string
 
 				// For default sign_in template
 				SignInMessage string
@@ -57,11 +57,11 @@ var _ = Describe("Templates", func() {
 				// For custom templates
 				TestString string
 			}{
-				TenantID:          "<tenantid>",
-				TenantIDInputName: "<tenant-id>",
-				ProxyPrefix:       "<proxy-prefix>",
-				Redirect:          "<redirect>",
-				Footer:            "<footer>",
+				ProviderID:          "<providerid>",
+				ProviderIDInputName: "<provider-id>",
+				ProxyPrefix:         "<proxy-prefix>",
+				Redirect:            "<redirect>",
+				Footer:              "<footer>",
 
 				SignInMessage: "<sign-in-message>",
 				ProviderName:  "<provider-name>",

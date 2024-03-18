@@ -124,7 +124,7 @@ func TestPostgresStore_Update(t *testing.T) {
 	}{
 		{
 			"provider config updated successfully",
-			"tenant1",
+			"provider1",
 			[]byte("clientid:xxx"),
 			1,
 			nil,
@@ -132,7 +132,7 @@ func TestPostgresStore_Update(t *testing.T) {
 		},
 		{
 			"provider config not updated successfully",
-			"tenant2",
+			"provider2",
 			[]byte("clientid:xxx"),
 			0,
 			nil,
@@ -140,7 +140,7 @@ func TestPostgresStore_Update(t *testing.T) {
 		},
 		{
 			"Network error in sql connection",
-			"tenant3",
+			"provider3",
 			[]byte("clientid:xxx"),
 			0,
 			fmt.Errorf("network timeout"),
@@ -185,14 +185,14 @@ func TestPostgresStore_Get(t *testing.T) {
 	}{
 		{
 			"provider config returned successfully",
-			"tenant1",
+			"provider1",
 			"clientid:xxx",
 			nil,
 			false,
 		},
 		{
 			"Network Error",
-			"tenant2",
+			"provider2",
 			"clientid:xxx",
 			fmt.Errorf("network timeout"),
 			true,
@@ -233,7 +233,7 @@ func TestPostgresStore_Delete(t *testing.T) {
 	}{
 		{
 			"provider config deleted successfully",
-			"tenant1",
+			"provider1",
 			1,
 			nil,
 			false,
@@ -247,7 +247,7 @@ func TestPostgresStore_Delete(t *testing.T) {
 		},
 		{
 			"Network error in sql connection",
-			"tenant3",
+			"provider3",
 			0,
 			fmt.Errorf("network timeout"),
 			true,

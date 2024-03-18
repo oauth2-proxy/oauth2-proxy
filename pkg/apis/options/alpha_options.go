@@ -48,10 +48,10 @@ type AlphaOptions struct {
 	// You can choose between single, config and postgres types.
 	ProviderLoader ProviderLoader `json:"providerLoader,omitempty"`
 
-	// TenantMatcher is used to configure the tenant-id matching rules for extracting tenant-id from request
-	// which will then in turn cause providerLoader to load provider/tenant identifying from its ID.
-	// The rules define where to look for tenant-id in request header, host, query or path or their precedence.
-	TenantMatcher TenantMatcher `json:"tenantMatcher,omitempty"`
+	// ProviderMatcher is used to configure the provider-id matching rules for extracting provider-id from request
+	// which will then in turn cause providerLoader to load provider/provider identifying from its ID.
+	// The rules define where to look for provider-id in request header, host, query or path or their precedence.
+	ProviderMatcher ProviderMatcher `json:"providerMatcher,omitempty"`
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -64,7 +64,7 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
 	opts.ProviderLoader = a.ProviderLoader
-	opts.TenantMatcher = a.TenantMatcher
+	opts.ProviderMatcher = a.ProviderMatcher
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from

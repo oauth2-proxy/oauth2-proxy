@@ -3,7 +3,7 @@ package options
 type ProviderLoader struct {
 
 	// Type defines the type of ProviderLoader which can be single, config and postgres.
-	// "single" referes to the single tenant providers.
+	// "single" referes to the single provider.
 	// "config" refers to multi-tenancy.
 	// "postgres" refers to storing provider configuration in a podtgres store and load/delete multi-tenancy
 	// providers while the service is alive.

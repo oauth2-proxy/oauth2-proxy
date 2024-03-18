@@ -1,4 +1,4 @@
-package tenantmatcher
+package matcher
 
 import (
 	"net/http"
@@ -8,24 +8,24 @@ import (
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	tenantutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/tenant/utils"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
 
 func TestNew(t *testing.T) {
 	reg, _ := regexp.Compile(".*")
 	tests := []struct {
 		name    string
-		conf    options.TenantMatcher
+		conf    options.ProviderMatcher
 		want    *Matcher
 		wantErr bool
 	}{
 		{
 			"new matcher",
-			options.TenantMatcher{
-				Rules: []options.TenantMatcherRule{
+			options.ProviderMatcher{
+				Rules: []options.ProviderMatcherRule{
 					{
-						Source:       options.TenantMatcherRuleSourceQueryParams,
-						QueryParam:   "tenantid",
+						Source:       options.ProviderMatcherRuleSourceQueryParams,
+						QueryParam:   "providerid",
 						Expr:         ".*",
 						CaptureGroup: 0,
 					},
@@ -33,19 +33,19 @@ func TestNew(t *testing.T) {
 			},
 			&Matcher{
 				rules: []*rule{{
-					conf: &options.TenantMatcherRule{
+					conf: &options.ProviderMatcherRule{
 
-						Source:       options.TenantMatcherRuleSourceQueryParams,
-						QueryParam:   "tenantid",
+						Source:       options.ProviderMatcherRuleSourceQueryParams,
+						QueryParam:   "providerid",
 						Expr:         ".*",
 						CaptureGroup: 0,
 					},
 					regexp: reg,
 				},
 					{
-						conf: &options.TenantMatcherRule{
-							Source:       options.TenantMatcherRuleSourceQueryParams,
-							QueryParam:   tenantutils.DefaultTenantIDQueryParam,
+						conf: &options.ProviderMatcherRule{
+							Source:       options.ProviderMatcherRuleSourceQueryParams,
+							QueryParam:   utils.DefaultProviderIDQueryParam,
 							Expr:         ".*",
 							CaptureGroup: 0,
 						},
@@ -57,11 +57,11 @@ func TestNew(t *testing.T) {
 		},
 		{
 			"new matcher -ve capture group",
-			options.TenantMatcher{
-				Rules: []options.TenantMatcherRule{
+			options.ProviderMatcher{
+				Rules: []options.ProviderMatcherRule{
 					{
-						Source:       options.TenantMatcherRuleSourceQueryParams,
-						QueryParam:   "tenantid",
+						Source:       options.ProviderMatcherRuleSourceQueryParams,
+						QueryParam:   "providerid",
 						Expr:         ".*",
 						CaptureGroup: -2,
 					},
@@ -72,11 +72,11 @@ func TestNew(t *testing.T) {
 		},
 		{
 			"new matcher invalid expression",
-			options.TenantMatcher{
-				Rules: []options.TenantMatcherRule{
+			options.ProviderMatcher{
+				Rules: []options.ProviderMatcherRule{
 					{
-						Source:       options.TenantMatcherRuleSourceQueryParams,
-						QueryParam:   "tenantid",
+						Source:       options.ProviderMatcherRuleSourceQueryParams,
+						QueryParam:   "providerid",
 						Expr:         `^\/(?!\/)(.*?)`,
 						CaptureGroup: 0,
 					},
@@ -109,12 +109,12 @@ func TestMatch(t *testing.T) {
 		want    string
 	}{
 		{
-			"Match with tenantid in req host",
+			"Match with providerid in req host",
 			&Matcher{
 				rules: []*rule{
 					{
-						conf: &options.TenantMatcherRule{
-							Source:       options.TenantMatcherRuleSourceHost,
+						conf: &options.ProviderMatcherRule{
+							Source:       options.ProviderMatcherRuleSourceHost,
 							Expr:         ".*",
 							CaptureGroup: 0,
 						},
@@ -128,16 +128,16 @@ func TestMatch(t *testing.T) {
 			"id",
 		},
 		{
-			"Match with tenantid in jwt token",
+			"Match with providerid in jwt token",
 			&Matcher{
 				rules: []*rule{
 
 					{
-						conf: &options.TenantMatcherRule{
-							Source:   options.TenantMatcherRuleSourceHeader,
+						conf: &options.ProviderMatcherRule{
+							Source:   options.ProviderMatcherRuleSourceHeader,
 							Expr:     `Bearer\s+([^\s]+)`,
 							Header:   "Authorization",
-							JWTClaim: "tenant.id",
+							JWTClaim: "provider.id",
 						},
 						regexp: reg2,
 					},
@@ -148,16 +148,16 @@ func TestMatch(t *testing.T) {
 					"Authorization": {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc"},
 				},
 			},
-			"tenant1",
+			"provider1",
 		},
 		{
-			"Match with tenantid in req path",
+			"Match with providerid in req path",
 			&Matcher{
 				rules: []*rule{
 
 					{
-						conf: &options.TenantMatcherRule{
-							Source:       options.TenantMatcherRuleSourcePath,
+						conf: &options.ProviderMatcherRule{
+							Source:       options.ProviderMatcherRuleSourcePath,
 							Expr:         ".*",
 							CaptureGroup: 0,
 						},
@@ -168,22 +168,22 @@ func TestMatch(t *testing.T) {
 			&http.Request{
 				Host: "id",
 				URL: &url.URL{
-					Path: "tenant",
+					Path: "provider",
 				},
 			},
-			"tenant",
+			"provider",
 		},
 		{
-			"Match with tenantid in header",
+			"Match with providerid in header",
 			&Matcher{
 				rules: []*rule{
 
 					{
-						conf: &options.TenantMatcherRule{
-							Source:       options.TenantMatcherRuleSourceHeader,
+						conf: &options.ProviderMatcherRule{
+							Source:       options.ProviderMatcherRuleSourceHeader,
 							Expr:         ".*",
 							CaptureGroup: 0,
-							Header:       "Tenantid",
+							Header:       "Providerid",
 						},
 						regexp: reg,
 					},
@@ -191,22 +191,22 @@ func TestMatch(t *testing.T) {
 			},
 			&http.Request{
 				Header: http.Header{
-					"Tenantid": {"dummytenant"},
+					"Providerid": {"dummyprovider"},
 				},
 			},
-			"dummytenant",
+			"dummyprovider",
 		},
 		{
-			"Match with tenantid in query param",
+			"Match with providerid in query param",
 			&Matcher{
 				rules: []*rule{
 
 					{
-						conf: &options.TenantMatcherRule{
-							Source:       options.TenantMatcherRuleSourceQueryParams,
+						conf: &options.ProviderMatcherRule{
+							Source:       options.ProviderMatcherRuleSourceQueryParams,
 							Expr:         ".*",
 							CaptureGroup: 0,
-							QueryParam:   "tenantid",
+							QueryParam:   "providerid",
 						},
 						regexp: reg,
 					},
@@ -215,23 +215,23 @@ func TestMatch(t *testing.T) {
 			&http.Request{
 				URL: &url.URL{
 					RawQuery: url.Values{
-						"tenantid": {"id"},
+						"providerid": {"id"},
 					}.Encode(),
 				},
 			},
 			"id",
 		},
 		{
-			"Match with tenantid not found",
+			"Match with providerid not found",
 			&Matcher{
 				rules: []*rule{
 
 					{
-						conf: &options.TenantMatcherRule{
-							Source:       options.TenantMatcherRuleSourceQueryParams,
+						conf: &options.ProviderMatcherRule{
+							Source:       options.ProviderMatcherRuleSourceQueryParams,
 							Expr:         ".*",
 							CaptureGroup: 0,
-							QueryParam:   "tenantid",
+							QueryParam:   "providerid",
 						},
 						regexp: reg,
 					},
@@ -254,7 +254,7 @@ func TestMatch(t *testing.T) {
 	}
 }
 
-func Test_exractTenantIDFromJWT(t *testing.T) {
+func Test_exractProviderIDFromJWT(t *testing.T) {
 	tests := []struct {
 		name  string
 		jwt   string
@@ -262,25 +262,25 @@ func Test_exractTenantIDFromJWT(t *testing.T) {
 		want  string
 	}{
 		{
-			"no tenant-id found due to invalid token",
+			"no provider-id found due to invalid token",
 			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0",
 			"",
 			"",
 		},
 		{
-			"no tenant-id found due to invalid base64 encoding of jwt token payload",
+			"no provider-id found due to invalid base64 encoding of jwt token payload",
 			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5%hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc",
 			"",
 			"",
 		},
 		{
-			"no error tenant-id found",
+			"no error provider-id found",
 			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc",
-			"tenant.id",
-			"tenant1",
+			"provider.id",
+			"provider1",
 		},
 		{
-			"no tenant-id found due to invalid claim",
+			"no provider-id found due to invalid claim",
 			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc",
 			"t.id",
 			"",
@@ -289,9 +289,9 @@ func Test_exractTenantIDFromJWT(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := exractTenantIDFromJWT(tt.jwt, tt.claim)
+			got := exractProviderIDFromJWT(tt.jwt, tt.claim)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("extract tenant ID from JWT = %v, want %v", got, tt.want)
+				t.Errorf("extract provider ID from JWT = %v, want %v", got, tt.want)
 			}
 		})
 	}
