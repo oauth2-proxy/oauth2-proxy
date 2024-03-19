@@ -157,7 +157,7 @@ func TestLoad(t *testing.T) {
 
 func requestWithProviderIDContext(tid string) *http.Request {
 	req := &http.Request{}
-	ctx := utils.AppendToContext(req.Context(), tid)
+	ctx := utils.AppendProviderIDToContext(req.Context(), tid)
 
 	return req.WithContext(ctx)
 }

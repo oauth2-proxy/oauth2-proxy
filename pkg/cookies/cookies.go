@@ -1,6 +1,8 @@
 package cookies
 
 import (
+	"context"
+	"crypto/sha256"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,7 +12,21 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
+
+func CookieName(ctx context.Context, opts *options.Cookie) string {
+	providerID := utils.ProviderIDFromContext(ctx)
+	if providerID == "" {
+		return opts.NamePrefix
+	}
+
+	// appending hex format of sha256 sum of providerid
+	// sha256 to keep the length of cookie name constant and deterministic
+	// hex for alphanumeric characters only
+	suffix := fmt.Sprintf("%x", sha256.Sum256([]byte(providerID)))
+	return fmt.Sprintf("%s_%s", opts.NamePrefix, suffix)
+}
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
 // value and creation time

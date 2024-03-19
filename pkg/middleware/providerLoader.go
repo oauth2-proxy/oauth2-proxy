@@ -6,17 +6,16 @@ import (
 
 	"github.com/justinas/alice"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/loader"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
 
 // middleware that loads the provider and stores it in the context
-func NewProviderLoader(loader providerloader.Loader) alice.Constructor {
+func NewProviderLoader(loader loader.Loader) alice.Constructor {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
-			providerID := utils.FromContext(req.Context())
+			providerID := utils.ProviderIDFromContext(req.Context())
 
 			provider, err := loader.Load(req.Context(), providerID)
 			if err != nil {
@@ -25,7 +24,7 @@ func NewProviderLoader(loader providerloader.Loader) alice.Constructor {
 				return
 			}
 
-			ctx := util.AppendToContext(req.Context(), provider)
+			ctx := utils.AppendProviderToContext(req.Context(), provider)
 			next.ServeHTTP(rw, req.WithContext(ctx))
 		})
 	}

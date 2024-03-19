@@ -259,7 +259,6 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with session cookie configuration",
 			cookie: options.Cookie{
-				Name:     validName,
 				Secret:   validSecret,
 				Domains:  domains,
 				Path:     "",

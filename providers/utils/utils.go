@@ -3,6 +3,8 @@ package utils
 import (
 	"context"
 	"net/url"
+
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
 
 // query parameter for the default rule
@@ -11,11 +13,14 @@ const DefaultProviderIDQueryParam = "provider-id"
 
 type contextKey string
 
-const providerIDKey contextKey = "providerId"
+const (
+	providerKey   contextKey = "provider"
+	providerIDKey contextKey = "providerId"
+)
 
 // extarcts providerId stored in a context
 // returns empty string if providerId not found
-func FromContext(ctx context.Context) string {
+func ProviderIDFromContext(ctx context.Context) string {
 	t, ok := ctx.Value(providerIDKey).(string)
 	if !ok {
 		return ""
@@ -24,13 +29,13 @@ func FromContext(ctx context.Context) string {
 }
 
 // stores providerId in the context's key value pair
-func AppendToContext(ctx context.Context, providerID string) context.Context {
+func AppendProviderIDToContext(ctx context.Context, providerID string) context.Context {
 	return context.WithValue(ctx, providerIDKey, providerID)
 }
 
 // injects provider-id in a url
 func InjectProviderID(tid string, uri string) string {
-	// if empty provider-id, no need to inject it since empty provider-id is loaded when it's not found in the request
+	// if empty provider-id, no need to inject it since empty tenant-id is loaded when it's not found in the request
 	if tid == "" {
 		return uri
 	}
@@ -42,4 +47,19 @@ func InjectProviderID(tid string, uri string) string {
 	q.Set(DefaultProviderIDQueryParam, tid)
 	u.RawQuery = q.Encode()
 	return u.String()
+}
+
+// extracts provider stored in a context
+// returns nil if provider not found
+func ProviderFromContext(ctx context.Context) providers.Provider {
+	t, ok := ctx.Value(providerKey).(providers.Provider)
+	if !ok {
+		return nil
+	}
+	return t
+}
+
+// stores provider in the context's key value pair
+func AppendProviderToContext(ctx context.Context, p providers.Provider) context.Context {
+	return context.WithValue(ctx, providerKey, p)
 }

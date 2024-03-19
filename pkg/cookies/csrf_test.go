@@ -39,7 +39,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 
 		var err error
 		ctx := context.Background()
-		ctx = utils.AppendToContext(ctx, "dummy")
+		ctx = utils.AppendProviderIDToContext(ctx, "dummy")
 		publicCSRF, err = NewCSRF(ctx, cookieOpts, "verifier")
 		Expect(err).ToNot(HaveOccurred())
 
@@ -131,7 +131,7 @@ var _ = Describe("CSRF Cookie Tests", func() {
 		})
 
 		It("with same providerID", func(c SpecContext) {
-			ctx := utils.AppendToContext(req.Context(), "dummy")
+			ctx := utils.AppendProviderIDToContext(req.Context(), "dummy")
 			privateCSRF.OAuthState = []byte(csrfState)
 			privateCSRF.OIDCNonce = []byte(csrfNonce)
 

@@ -16,7 +16,7 @@ type providerIDValidator struct {
 }
 
 func (tiv *providerIDValidator) Save(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
-	s.ProviderID = utils.FromContext(req.Context())
+	s.ProviderID = utils.ProviderIDFromContext(req.Context())
 
 	return tiv.SessionStore.Save(rw, req, s)
 }
@@ -27,7 +27,7 @@ func (tiv *providerIDValidator) Load(req *http.Request) (*sessions.SessionState,
 		return s, err
 	}
 
-	reqProviderID := utils.FromContext(req.Context())
+	reqProviderID := utils.ProviderIDFromContext(req.Context())
 	sessionsProviderID := s.ProviderID
 	if reqProviderID == sessionsProviderID {
 		return s, nil

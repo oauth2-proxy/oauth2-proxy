@@ -92,7 +92,7 @@ func TestProviderMatcher(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := NewProviderMatcher(tm)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-				gotProvider = utils.FromContext(r.Context())
+				gotProvider = utils.ProviderIDFromContext(r.Context())
 			}))
 
 			handler.ServeHTTP(rw, tt.req)

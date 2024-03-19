@@ -15,7 +15,7 @@ func NewProviderMatcher(providerMatcher *providermatcher.Matcher) alice.Construc
 
 			providerID := providerMatcher.Match(req)
 
-			ctx := utils.AppendToContext(req.Context(), providerID)
+			ctx := utils.AppendProviderIDToContext(req.Context(), providerID)
 			next.ServeHTTP(rw, req.WithContext(ctx))
 		})
 	}

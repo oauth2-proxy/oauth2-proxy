@@ -34,8 +34,8 @@ func New(conf options.Providers) (*Loader, error) {
 }
 
 func (l *Loader) Load(_ context.Context, id string) (providers.Provider, error) {
-	if tnt, ok := l.providers[id]; ok {
-		return tnt, nil
+	if provider, ok := l.providers[id]; ok {
+		return provider, nil
 	}
 	return nil, fmt.Errorf("no provider found with id='%s'", id)
 }

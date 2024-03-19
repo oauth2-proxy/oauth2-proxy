@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	providerLoaderUtil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -82,7 +82,7 @@ var _ = Describe("Writer", func() {
 			It("Writes the default sign in template", func() {
 				recorder := httptest.NewRecorder()
 
-				request = request.WithContext(providerLoaderUtil.AppendToContext(request.Context(), pd))
+				request = request.WithContext(utils.AppendProviderToContext(request.Context(), pd))
 				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 
 				body, err := io.ReadAll(recorder.Result().Body)
@@ -131,7 +131,7 @@ var _ = Describe("Writer", func() {
 			It("Writes the custom sign in template", func() {
 				recorder := httptest.NewRecorder()
 
-				request = request.WithContext(providerLoaderUtil.AppendToContext(request.Context(), pd))
+				request = request.WithContext(utils.AppendProviderToContext(request.Context(), pd))
 				writer.WriteSignInPage(recorder, request, "/redirect", http.StatusOK)
 				body, err := io.ReadAll(recorder.Result().Body)
 				Expect(err).ToNot(HaveOccurred())
@@ -202,7 +202,7 @@ var _ = Describe("Writer", func() {
 				req := httptest.NewRequest("", "/sign-in", nil)
 				redirectURL := "<redirectURL>"
 
-				req = req.WithContext(providerLoaderUtil.AppendToContext(req.Context(), pd))
+				req = req.WithContext(utils.AppendProviderToContext(req.Context(), pd))
 				in.writer.WriteSignInPage(rw, req, redirectURL, http.StatusOK)
 
 				Expect(rw.Result().StatusCode).To(Equal(in.expectedStatus))

@@ -1,14 +1,14 @@
-package providerloader
+package loader
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/configloader"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/postgres"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/single"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/loader/configloader"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/loader/postgres"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/loader/single"
 )
 
 type Loader interface {

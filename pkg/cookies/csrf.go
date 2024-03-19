@@ -65,7 +65,7 @@ func NewCSRF(ctx context.Context, opts *options.Cookie, codeVerifier string) (CS
 		return nil, err
 	}
 
-	tid := utils.FromContext(ctx)
+	tid := utils.ProviderIDFromContext(ctx)
 
 	return &csrf{
 		OAuthState:   state,
@@ -93,7 +93,7 @@ func LoadCSRFCookie(req *http.Request, opts *options.Cookie) (CSRF, error) {
 	}
 
 	// matching provider id from request and in cookie
-	providerIDFromRequest := utils.FromContext(req.Context())
+	providerIDFromRequest := utils.ProviderIDFromContext(req.Context())
 
 	if providerIDFromRequest != crf.ProviderID {
 		return nil, errors.New("providerID in request does not match providerID in csrf cookie")
@@ -226,9 +226,9 @@ func (c *csrf) cookieName(ctx context.Context) string {
 
 func csrfCookieName(ctx context.Context, opts *options.Cookie, stateSubstring string) string {
 	if stateSubstring == "" {
-		return fmt.Sprintf("%v_csrf", opts.Name(ctx))
+		return fmt.Sprintf("%v_csrf", CookieName(ctx, opts))
 	}
-	return fmt.Sprintf("%v_csrf_%v", opts.Name(ctx), stateSubstring)
+	return fmt.Sprintf("%v_csrf_%v", CookieName(ctx, opts), stateSubstring)
 }
 
 // ExtractStateSubstring extract the initial state characters, to add it to the CSRF cookie name

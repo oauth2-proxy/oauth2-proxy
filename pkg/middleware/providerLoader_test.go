@@ -6,10 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/configloader"
-	providerutils "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/loader"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/loader/configloader"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -21,11 +20,11 @@ func TestProviderLoader(t *testing.T) {
 	rw := httptest.NewRecorder()
 	req := httptest.NewRequest("", "/", nil)
 
-	ctx := utils.AppendToContext(req.Context(), "dummy")
+	ctx := utils.AppendProviderIDToContext(req.Context(), "dummy")
 	req = req.WithContext(ctx)
 
 	req2 := httptest.NewRequest("", "/", nil)
-	ctx2 := utils.AppendToContext(req2.Context(), "xxxx")
+	ctx2 := utils.AppendProviderIDToContext(req2.Context(), "xxxx")
 	req2 = req2.WithContext(ctx2)
 	l, _ := configloader.New(options.Providers{
 		{
@@ -41,7 +40,7 @@ func TestProviderLoader(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		l            providerloader.Loader
+		l            loader.Loader
 		req          *http.Request
 		wantProvider providers.Provider
 	}{
@@ -64,7 +63,7 @@ func TestProviderLoader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := NewProviderLoader(tt.l)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-				gotProvider = providerutils.FromContext(r.Context())
+				gotProvider = utils.ProviderFromContext(r.Context())
 			}))
 
 			handler.ServeHTTP(rw, tt.req)

@@ -1,12 +1,8 @@
 package options
 
 import (
-	"context"
-	"crypto/sha256"
-	"fmt"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 	"github.com/spf13/pflag"
 )
 
@@ -23,19 +19,6 @@ type Cookie struct {
 	SameSite       string        `flag:"cookie-samesite" cfg:"cookie_samesite"`
 	CSRFPerRequest bool          `flag:"cookie-csrf-per-request" cfg:"cookie_csrf_per_request"`
 	CSRFExpire     time.Duration `flag:"cookie-csrf-expire" cfg:"cookie_csrf_expire"`
-}
-
-func (c *Cookie) Name(ctx context.Context) string {
-	tntID := utils.FromContext(ctx)
-	if tntID == "" {
-		return c.NamePrefix
-	}
-
-	// appending hex format of sha256 sum of providerid
-	// sha256 to keep the length of cookie name constant and deterministic
-	// hex for alphanumeric characters only
-	suffix := fmt.Sprintf("%x", sha256.Sum256([]byte(tntID)))
-	return fmt.Sprintf("%s_%s", c.NamePrefix, suffix)
 }
 
 func cookieFlagSet() *pflag.FlagSet {

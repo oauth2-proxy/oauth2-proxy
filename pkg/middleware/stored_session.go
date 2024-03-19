@@ -11,8 +11,8 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 )
 
 const (
@@ -77,7 +77,7 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 		}
 
 		var session *sessionsapi.SessionState
-		provider := util.FromContext(req.Context())
+		provider := utils.ProviderFromContext(req.Context())
 		if provider != nil {
 			var err error
 			session, err = s.getValidatedSession(rw, req, provider)

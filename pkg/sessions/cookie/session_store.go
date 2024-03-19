@@ -34,7 +34,7 @@ type SessionStore struct {
 }
 
 func (s *SessionStore) cookieName(req *http.Request) string {
-	return s.Cookie.Name(req.Context())
+	return pkgcookies.CookieName(req.Context(), s.Cookie)
 }
 
 // Save takes a sessions.SessionState and stores the information from it

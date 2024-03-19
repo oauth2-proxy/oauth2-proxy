@@ -13,8 +13,8 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providerloader/util"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/providers/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -262,7 +262,7 @@ var _ = Describe("Stored Session Suite", func() {
 				tp.RefreshFunc = in.refreshSession
 				tp.ValidateFunc = in.validateSession
 
-				req = req.WithContext(util.AppendToContext(req.Context(), tp))
+				req = req.WithContext(utils.AppendProviderToContext(req.Context(), tp))
 
 				handler := NewStoredSessionLoader(opts)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					gotSession = middlewareapi.GetRequestScope(r).Session
@@ -460,7 +460,7 @@ var _ = Describe("Stored Session Suite", func() {
 							RefreshPeriod: in.refreshPeriod,
 						}
 
-						ctx := util.AppendToContext(req.Context(), tp)
+						ctx := utils.AppendProviderToContext(req.Context(), tp)
 						req = req.WithContext(ctx)
 
 						handler := NewStoredSessionLoader(opts)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))

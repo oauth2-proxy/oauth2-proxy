@@ -73,7 +73,7 @@ func (e *errorPageWriter) WriteErrorPage(ctx context.Context, rw http.ResponseWr
 		Version             string
 	}{
 		ProviderIDInputName: utils.DefaultProviderIDQueryParam,
-		ProviderID:          utils.FromContext(ctx),
+		ProviderID:          utils.ProviderIDFromContext(ctx),
 		Title:               http.StatusText(opts.Status),
 		Message:             e.getMessage(opts.Status, opts.AppError, opts.Messages...),
 		ProxyPrefix:         e.proxyPrefix,
