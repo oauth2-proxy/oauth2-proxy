@@ -1,24 +1,58 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  semanticCommits: "auto",
+  semanticCommits: "enabled",
+  schedule: [
+    "after 8am on sunday"
+  ],
+  prConcurrentLimit: 0,
+  prHourlyLimit: 0,
   enabledManagers: [
     "dockerfile",
+    "docker-compose",
     "gomod",
     "github-actions",
+    "helmv3",
     "npm",
     "regex",
+  ],
+  packageRules: [
+    {
+      matchManagers: [
+        "dockerfile",
+        "docker-compose",
+        "gomod",
+        "helmv3",
+        "npm",
+      ],
+      groupName: "{{{manager}}}",
+    },
+    {
+      matchDepNames: [
+        "docker.io/library/golang",
+        "mcr.microsoft.com/vscode/devcontainers/go",
+      ],
+      groupName: "golang",
+    },
   ],
   customManagers: [
     {
       customType: "regex",
       fileMatch: [
-        "^Makefile"
+        "^Makefile",
       ],
       matchStrings: [
         "DOCKER_BUILD_RUNTIME_IMAGE_ALPINE\\s+?\\?= alpine:(?<currentValue>.*)\\s"
       ],
       depNameTemplate: "alpine",
       datasourceTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      fileMatch: ["(^|/)\\.github/workflows/[^/]+\\.ya?ml$"],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+?[\\w\\s-]*?version: (?<currentValue>.*)\\s",
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+?[\\w\\s]*?_VERSION: (?<currentValue>.*)\\s",
+      ],
     },
   ],
 }
