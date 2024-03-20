@@ -1331,35 +1331,27 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
 func encodeState(nonce, redirect, providerID string, encode bool) string {
-
-	stateVals := []string{nonce, redirect, providerID}
-	js, err := json.Marshal(&stateVals)
-	if err != nil {
-		panic(err)
+	rawString := fmt.Sprintf("%v:%v:%v", nonce, redirect, providerID)
+	if encode {
+		return base64.RawURLEncoding.EncodeToString([]byte(rawString))
 	}
-	return base64.RawURLEncoding.EncodeToString(js)
+	return rawString
 }
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
 func decodeState(state string, encode bool) (nonce string, redirect string, providerID string, err error) {
-	js, err := base64.RawURLEncoding.DecodeString(state)
-	if err != nil {
-		return
+	toParse := state
+	if encode {
+		decoded, _ := base64.RawURLEncoding.DecodeString(state)
+		toParse = string(decoded)
 	}
 
-	stateVals := []string{}
-
-	err = json.Unmarshal(js, &stateVals)
-	if err != nil {
-		return
+	parsedState := strings.SplitN(toParse, ":", 2)
+	if len(parsedState) != 3 {
+		return "", "", "", errors.New("invalid length")
 	}
-	if len(stateVals) != 3 {
-		err = fmt.Errorf("invalid num of state vals")
-		return
-	}
-
-	return stateVals[0], stateVals[1], stateVals[2], nil
+	return parsedState[0], parsedState[1], parsedState[2], nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
