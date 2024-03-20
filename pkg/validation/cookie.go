@@ -3,7 +3,6 @@ package validation
 import (
 	"fmt"
 	"net/http"
-	"sort"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -25,11 +24,6 @@ func validateCookie(o options.Cookie) []string {
 	default:
 		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%q) must be one of ['', 'lax', 'strict', 'none']", o.SameSite))
 	}
-
-	// Sort cookie domains by length, so that we try longer (and more specific) domains first
-	sort.Slice(o.Domains, func(i, j int) bool {
-		return len(o.Domains[i]) > len(o.Domains[j])
-	})
 
 	msgs = append(msgs, validateCookieName(o.NamePrefix)...)
 	return msgs

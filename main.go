@@ -134,6 +134,10 @@ func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*opti
 		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
+	if err := opts.Init(); err != nil {
+		return nil, fmt.Errorf("failed to initialize config: %v", err)
+	}
+
 	return opts, nil
 }
 
