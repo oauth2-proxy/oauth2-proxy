@@ -517,7 +517,7 @@ Redirect to sign_in functionality provided without the use of `errors` middlewar
 http:
   routers:
     a-service-route-1:
-      rule: "Host(`a-service.example.com`, `b-service.example.com`) && PathPrefix(`/`)"
+      rule: "Host(`a-service.example.com`)"
       service: a-service-backend
       middlewares:
         - oauth-auth-redirect # redirects all unauthenticated to oauth2 signin
@@ -539,7 +539,7 @@ http:
             sans:
               - "*.example.com"
     services-oauth2-route:
-      rule: "Host(`a-service.example.com`, `b-service.example.com`) && PathPrefix(`/oauth2/`)"
+      rule: "Host(`a-service.example.com`) && PathPrefix(`/oauth2/`)"
       middlewares:
         - auth-headers
       service: oauth-backend
@@ -566,10 +566,6 @@ http:
       loadBalancer:
         servers:
           - url: http://172.16.0.2:7555
-    b-service-backend:
-      loadBalancer:
-        servers:
-          - url: http://172.16.0.3:7555
     oauth-backend:
       loadBalancer:
         servers:
@@ -589,14 +585,14 @@ http:
         frameDeny: true
     oauth-auth-redirect:
       forwardAuth:
-        address: https://oauth.example.com/
+        address: http://172.16.0.1:4180
         trustForwardHeader: true
         authResponseHeaders:
           - X-Auth-Request-Access-Token
           - Authorization
     oauth-auth-wo-redirect:
       forwardAuth:
-        address: https://oauth.example.com/oauth2/auth
+        address: http://172.16.0.1:4180/oauth2/auth
         trustForwardHeader: true
         authResponseHeaders:
           - X-Auth-Request-Access-Token
