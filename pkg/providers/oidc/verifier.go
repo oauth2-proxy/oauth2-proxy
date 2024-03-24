@@ -63,11 +63,11 @@ func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 
 func (v *idTokenVerifier) verifyClaims(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
 	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
-		return false, err
+		return false, fmt.Errorf("verifyAudience: %w", err)
 	}
 
 	if isVerifiedEmail, err := v.verifyEmail(token); !isVerifiedEmail {
-		return false, err
+		return false, fmt.Errorf("verifyEmail: %w", err)
 	}
 
 	return true, nil

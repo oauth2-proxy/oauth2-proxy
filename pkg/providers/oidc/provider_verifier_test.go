@@ -155,7 +155,7 @@ var _ = Describe("ProviderVerifier", func() {
 			modifyClaims: func(j *idTokenClaims) {
 				j.Audience = jwt.ClaimStrings{"OtherClient"}
 			},
-			expectedError: "audience from claim aud with value [OtherClient] does not match with any of allowed audiences",
+			expectedError: "verifyAudience: audience from claim aud with value [OtherClient] does not match with any of allowed audiences",
 		}),
 		Entry("when the audience is an extra audience", &verifierTableInput{
 			modifyOpts: func(p *ProviderVerifierOptions) {
@@ -202,7 +202,7 @@ var _ = Describe("ProviderVerifier", func() {
 				verified := false
 				j.Verified = &verified
 			},
-			expectedError: "email in id_token (user) isn't verified",
+			expectedError: "verifyEmail: email in id_token (user) isn't verified",
 		}),
 		Entry("when email is verified with unverified email allowed", &verifierTableInput{
 			modifyOpts: func(p *ProviderVerifierOptions) {
