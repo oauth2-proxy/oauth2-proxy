@@ -1347,7 +1347,7 @@ func decodeState(state string, encode bool) (nonce string, redirect string, prov
 		toParse = string(decoded)
 	}
 
-	parsedState := strings.SplitN(toParse, ":", 2)
+	parsedState := strings.SplitN(toParse, ":", 3)
 	if len(parsedState) != 3 {
 		return "", "", "", errors.New("invalid length")
 	}
