@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/mockoidc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -97,7 +97,7 @@ var _ = Describe("ProviderVerifier", func() {
 		Roles    interface{} `json:"roles,omitempty"`
 		Verified *bool       `json:"email_verified,omitempty"`
 		Nonce    string      `json:"nonce,omitempty"`
-		jwt.StandardClaims
+		jwt.RegisteredClaims
 	}
 
 	type verifierTableInput struct {
@@ -121,17 +121,16 @@ var _ = Describe("ProviderVerifier", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		now := time.Now()
-
-		claims := jwt.StandardClaims{
-			Audience:  m.Config().ClientID,
+		claims := jwt.RegisteredClaims{
+			Audience:  jwt.ClaimStrings{m.Config().ClientID},
 			Issuer:    m.Issuer(),
-			ExpiresAt: now.Add(1 * time.Hour).Unix(),
-			IssuedAt:  now.Unix(),
+			ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(now),
 			Subject:   "user",
 		}
 
 		extendedClaims := idTokenClaims{
-			StandardClaims: claims,
+			RegisteredClaims: claims,
 		}
 		if in.modifyClaims != nil {
 			in.modifyClaims(&extendedClaims)
@@ -154,7 +153,7 @@ var _ = Describe("ProviderVerifier", func() {
 		Entry("with the default opts and claims", &verifierTableInput{}),
 		Entry("when the audience is mismatched", &verifierTableInput{
 			modifyClaims: func(j *idTokenClaims) {
-				j.Audience = "OtherClient"
+				j.Audience = jwt.ClaimStrings{"OtherClient"}
 			},
 			expectedError: "audience from claim aud with value [OtherClient] does not match with any of allowed audiences",
 		}),
@@ -163,7 +162,7 @@ var _ = Describe("ProviderVerifier", func() {
 				p.ExtraAudiences = []string{"ExtraIssuer"}
 			},
 			modifyClaims: func(j *idTokenClaims) {
-				j.Audience = "ExtraIssuer"
+				j.Audience = jwt.ClaimStrings{"ExtraIssuer"}
 			},
 		}),
 		Entry("when the issuer is mismatched", &verifierTableInput{
@@ -182,7 +181,7 @@ var _ = Describe("ProviderVerifier", func() {
 		}),
 		Entry("when the token has expired", &verifierTableInput{
 			modifyClaims: func(j *idTokenClaims) {
-				j.ExpiresAt = time.Now().Add(-1 * time.Hour).Unix()
+				j.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-1 * time.Hour))
 			},
 			expectedError: "failed to verify token: oidc: token is expired",
 		}),

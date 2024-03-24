@@ -122,7 +122,7 @@ func (m *multiUpstreamProxy) registerRewriteHandler(upstream options.Upstream, h
 
 	rewrite := newRewritePath(rewriteRegExp, upstream.RewriteTarget, writer)
 	h := alice.New(rewrite).Then(handler)
-	m.serveMux.MatcherFunc(func(req *http.Request, match *mux.RouteMatch) bool {
+	m.serveMux.MatcherFunc(func(req *http.Request, _ *mux.RouteMatch) bool {
 		return rewriteRegExp.MatchString(req.URL.Path)
 	}).Handler(h)
 
