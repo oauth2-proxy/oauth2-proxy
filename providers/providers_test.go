@@ -86,7 +86,7 @@ func TestSkipOIDCDiscovery(t *testing.T) {
 	}
 
 	_, err := newProviderDataFromConfig(providerConfig)
-	g.Expect(err).To(MatchError("error building OIDC ProviderVerifier: invalid provider verifier options: missing required setting: jwks-url"))
+	g.Expect(err).To(MatchError("error building OIDC ProviderVerifier: invalid provider verifier options: missing required setting: jwks-url or public-keys"))
 
 	providerConfig.LoginURL = msAuthURL
 	providerConfig.RedeemURL = msTokenURL
