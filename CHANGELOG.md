@@ -8,6 +8,8 @@
 
 ## Changes since v7.6.0
 
+- [#2570](https://github.com/oauth2-proxy/oauth2-proxy/pull/2570) Set default user agent to oauth2-proxy/$version (from default Golang one)
+
 # V7.6.0
 
 ## Release Highlights
