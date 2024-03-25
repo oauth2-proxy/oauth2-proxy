@@ -10,6 +10,7 @@
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
 - [#4917](https://github.com/oauth2-proxy/oauth2-proxy/pull/4917) Upgraded all modules to the latest version (@pierluigilenoci)
+- [#2570](https://github.com/oauth2-proxy/oauth2-proxy/pull/2570) Set default user agent to oauth2-proxy/$version (from default Golang one)
 
 # V7.6.0
 
