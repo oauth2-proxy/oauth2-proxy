@@ -118,7 +118,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--google-target-principal` | bool | the target principal to impersonate when using ADC | defaults to the service account configured for ADC |
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption | |
 | `--htpasswd-user-group` | string \| list | the groups to be set on sessions for htpasswd users | |
-| `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180` | `"127.0.0.1:4180"` |
+| `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180` | `"127.0.0.1:4180"`. Unix sockets are created with file mode 0644 by default, which can be overriden with e.g. `unix://<path>,mode=<mode>`. |
 | `--https-address` | string | `[https://]<addr>:<port>` to listen on for HTTPS clients. Square brackets are required for ipv6 address, e.g. `https://[::1]:443` | `":443"` |
 | `--logging-compress` | bool | Should rotated log files be compressed using gzip | false |
 | `--logging-filename` | string | File to log requests to, empty for `stdout` | `""` (stdout) |

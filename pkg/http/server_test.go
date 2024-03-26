@@ -545,6 +545,46 @@ var _ = Describe("Server", func() {
 				expectTLSListener:  true,
 				ipv6:               true,
 			}),
+			Entry("with a valid unix socket path", &newServerTableInput{
+				opts: Opts{
+					Handler:     handler,
+					BindAddress: "unix:///tmp/oauth2-proxy.sock",
+				},
+				expectedErr:        nil,
+				expectHTTPListener: true,
+				expectTLSListener:  false,
+				ipv6:               false,
+			}),
+			Entry("with a valid unix socket path and a valid socket file mode", &newServerTableInput{
+				opts: Opts{
+					Handler:     handler,
+					BindAddress: "unix:///tmp/oauth2-proxy.sock,mode=0777",
+				},
+				expectedErr:        nil,
+				expectHTTPListener: true,
+				expectTLSListener:  false,
+				ipv6:               false,
+			}),
+			Entry("with a valid unix socket path and a value-less socket file mode argument", &newServerTableInput{
+				opts: Opts{
+					Handler:     handler,
+					BindAddress: "unix:///tmp/oauth2-proxy.sock,mode",
+				},
+				expectedErr:        errors.New("error setting up listener: listen (unix, /tmp/oauth2-proxy.sock,mode) failed: unix socket option mode expects a value"),
+				expectHTTPListener: false,
+				expectTLSListener:  false,
+				ipv6:               false,
+			}),
+			Entry("with a valid unix socket path and an invalid socket file mode value", &newServerTableInput{
+				opts: Opts{
+					Handler:     handler,
+					BindAddress: "unix:///tmp/oauth2-proxy.sock,mode=-1",
+				},
+				expectedErr:        errors.New("error setting up listener: listen (unix, /tmp/oauth2-proxy.sock,mode=-1) failed: unix socket file mode has invalid value -1"),
+				expectHTTPListener: false,
+				expectTLSListener:  false,
+				ipv6:               false,
+			}),
 		)
 	})
 
