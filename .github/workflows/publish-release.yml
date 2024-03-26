@@ -45,11 +45,13 @@ jobs:
     - name: Set up go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.21
+        go-version-file: go.mod
 
     - name: Get dependencies
+      env:
+        GOLANGCI_LINT_VERSION: v1.55.2
       run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
 

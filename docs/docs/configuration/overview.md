@@ -257,7 +257,7 @@ Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and t
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
 
 ```
-<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] [<STATUS>] <MESSAGE>
+<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] [<STATUS>] <MESSAGE>
 ```
 
 The status block will contain one of the below strings:
@@ -283,7 +283,7 @@ Available variables for auth logging:
 | Protocol | HTTP/1.0 | The request protocol. |
 | RequestID | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty |
 | RequestMethod | GET | The request method. |
-| Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
+| Timestamp | 2015/03/19 17:20:19 | The date and time of the logging event. |
 | UserAgent | - | The full user agent as reported by the requesting client. |
 | Username | username@email.com | The email or username of the auth request. |
 | Status | AuthSuccess | The status of the auth request. See above for details. |
@@ -292,7 +292,7 @@ Available variables for auth logging:
 HTTP request logs will output by default in the below format:
 
 ```
-<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
+<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
 ```
 
 If you require a different format than that, you can configure it with the `--request-logging-format` flag.
@@ -315,7 +315,7 @@ Available variables for request logging:
 | RequestURI | "/oauth2/auth" | The URI path of the request. |
 | ResponseSize | 12 | The size in bytes of the response. |
 | StatusCode | 200 | The HTTP status code of the response. |
-| Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
+| Timestamp | 2015/03/19 17:20:19 | The date and time of the logging event. |
 | Upstream | - | The upstream data of the HTTP request. |
 | UserAgent | - | The full user agent as reported by the requesting client. |
 | Username | username@email.com | The email or username of the auth request. |
@@ -324,7 +324,7 @@ Available variables for request logging:
 All other logging that is not covered by the above two types of logging will be output in this standard logging format. This includes configuration information at startup and errors that occur outside of a session. The default format is below:
 
 ```
-[19/Mar/2015:17:20:19 -0400] [main.go:40] <MESSAGE>
+[2015/03/19 17:20:19] [main.go:40] <MESSAGE>
 ```
 
 If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default format is configured as follows:
@@ -337,7 +337,7 @@ Available variables for standard logging:
 
 | Variable | Example | Description |
 | --- | --- | --- |
-| Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
+| Timestamp | 2015/03/19 17:20:19 | The date and time of the logging event. |
 | File | main.go:40 | The file and line number of the logging statement. |
 | Message | HTTP: listening on 127.0.0.1:4180 | The details of the log statement. |
 

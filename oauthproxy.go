@@ -991,7 +991,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
 
 	// we are authenticated
 	p.addHeadersForProxying(rw, session)
-	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.WriteHeader(http.StatusAccepted)
 	})).ServeHTTP(rw, req)
 }

@@ -31,7 +31,7 @@ account is still authorized.
 2.  Make note of the Client ID for a future step.
 3.  Under "APIs & Auth", choose APIs.
 4.  Click on Admin SDK and then Enable API.
-5.  Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account 
+5.  Follow the steps on https://developers.google.com/workspace/guides/create-credentials#optional_set_up_domain-wide_delegation_for_a_service_account 
     and give the client id from step 2 the following oauth scopes:
 
     ```
