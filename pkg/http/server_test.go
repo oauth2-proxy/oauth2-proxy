@@ -5,22 +5,148 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
+	"os/exec"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gbytes"
+	. "github.com/onsi/gomega/gexec"
+	. "github.com/onsi/gomega/gleak"
 )
 
 const hello = "Hello World!"
 
 var _ = Describe("Server", func() {
+
+	Context("StandaloneServer", func() {
+		type startServerTableInput struct {
+			fdListener       bool
+			httpAddress      string
+			listenAddress    string
+			protocol         string
+			expectStartupErr string
+			skipEnv          bool
+		}
+
+		var ctx context.Context
+		var cancel context.CancelFunc
+
+		BeforeEach(func() {
+			ctx, cancel = context.WithCancel(context.Background())
+		})
+
+		AfterEach(func() {
+			cancel()
+		})
+
+		args := []string{
+			"--cookie-secret=1234123412341234",
+			"--client-id=client_id",
+			"--client-secret=client_secret",
+			"--email-domain=*",
+		}
+
+		DescribeTable("When starting the new server from the options", func(in *startServerTableInput) {
+			var listenAddr string
+			cmdArgs := args
+			if in.httpAddress != "" {
+				cmdArgs = append(cmdArgs, fmt.Sprintf("--http-address=%s", in.httpAddress))
+			}
+
+			c := exec.CommandContext(ctx, cmdPath, cmdArgs...)
+			if in.fdListener {
+				c.ExtraFiles = []*os.File{}
+				if in.listenAddress != "" {
+					l, err := net.Listen(in.protocol, in.listenAddress)
+					Expect(err).ToNot(HaveOccurred())
+					listenAddr = fmt.Sprintf("http://%s/", l.Addr().String())
+
+					var f *os.File
+					switch ln := l.(type) {
+					case *net.TCPListener:
+						f, err = ln.File()
+					}
+					Expect(err).ToNot(HaveOccurred())
+
+					c.ExtraFiles = append(c.ExtraFiles, f)
+				}
+
+				c.Env = []string{
+					fmt.Sprintf("LISTEN_FDS=%d", len(c.ExtraFiles)),
+				}
+				if !in.skipEnv {
+					c.Env = append(c.Env, "FIX_LISTEN_PID=1")
+				}
+			}
+			session, err := Start(c, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(session).Should(Say(".*OAuthProxy configured.*"))
+			Eventually(session).Should(Say(".*Cookie settings:.*"))
+
+			if in.expectStartupErr != "" {
+				Eventually(session.Err).Should(Say(in.expectStartupErr))
+			} else {
+
+				resp, err := httpGet(ctx, listenAddr)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(403))
+				Eventually(session).Should(Say(".*No valid authentication in request. Initiating login."))
+			}
+		},
+			Entry("with an fd valid http IPv4 bind address", &startServerTableInput{
+				fdListener:    true,
+				httpAddress:   "FD:3",
+				listenAddress: "127.0.0.1:0",
+				protocol:      "tcp",
+				skipEnv:       false,
+			}),
+			Entry("with an fd valid http IPv6 bind address", &startServerTableInput{
+				fdListener:    true,
+				httpAddress:   "FD:3",
+				listenAddress: "[::1]:0",
+				protocol:      "tcp",
+				skipEnv:       false,
+			}),
+			Entry("with an fd valid http IPv4 bind address but no LISTEN_PID", &startServerTableInput{
+				expectStartupErr: ".*fd outside of range of available file descriptors",
+				fdListener:       true,
+				httpAddress:      "FD:3",
+				listenAddress:    "127.0.0.1:0",
+				protocol:         "tcp",
+				skipEnv:          true,
+			}),
+			Entry("with an fd invalid http IPv4 bind address", &startServerTableInput{
+				expectStartupErr: ".*fd outside of range of available file descriptors",
+				fdListener:       true,
+				listenAddress:    "127.0.0.1:0",
+				httpAddress:      "FD:2",
+				protocol:         "tcp",
+				skipEnv:          false,
+			}),
+			Entry("with an fd invalid http IPv4 bind address", &startServerTableInput{
+				expectStartupErr: ".*fd outside of range of available file descriptors",
+				fdListener:       true,
+				listenAddress:    "127.0.0.1:0",
+				httpAddress:      "FD:4",
+				protocol:         "tcp",
+				skipEnv:          false,
+			}),
+			Entry("with an fd without passing fd", &startServerTableInput{
+				expectStartupErr: ".*fd outside of range of available file descriptors",
+				fdListener:       false,
+				httpAddress:      "FD:4",
+			}),
+		)
+	})
 	handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write([]byte(hello))
 	})
-
 	Context("NewServer", func() {
 		type newServerTableInput struct {
 			opts               Opts
@@ -559,6 +685,8 @@ var _ = Describe("Server", func() {
 
 		AfterEach(func() {
 			cancel()
+			Eventually(Goroutines).ShouldNot(HaveLeaked())
+
 		})
 
 		Context("with an ipv4 http server", func() {
@@ -584,7 +712,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(listenAddr)
+				resp, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -599,13 +727,13 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(listenAddr)
+				_, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(listenAddr)
+					_, err := httpGet(ctx, listenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -638,7 +766,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -653,13 +781,13 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(secureListenAddr)
+				_, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(secureListenAddr)
+					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -670,7 +798,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -709,7 +837,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(listenAddr)
+				resp, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -724,7 +852,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -739,19 +867,19 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(listenAddr)
+				_, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
-				_, err = client.Get(secureListenAddr)
+				_, err = httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(listenAddr)
+					_, err := httpGet(ctx, listenAddr)
 					return err
 				}).Should(HaveOccurred())
 				Eventually(func() error {
-					_, err := client.Get(secureListenAddr)
+					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -781,7 +909,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(listenAddr)
+				resp, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -796,13 +924,13 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(listenAddr)
+				_, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(listenAddr)
+					_, err := httpGet(ctx, listenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -836,7 +964,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -851,13 +979,13 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(secureListenAddr)
+				_, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(secureListenAddr)
+					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -868,7 +996,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -908,7 +1036,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(listenAddr)
+				resp, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -923,7 +1051,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -938,19 +1066,19 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(listenAddr)
+				_, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
-				_, err = client.Get(secureListenAddr)
+				_, err = httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(listenAddr)
+					_, err := httpGet(ctx, listenAddr)
 					return err
 				}).Should(HaveOccurred())
 				Eventually(func() error {
-					_, err := client.Get(secureListenAddr)
+					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})

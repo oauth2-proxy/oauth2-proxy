@@ -605,7 +605,9 @@ func (p *OAuthProxy) isAPIPath(req *http.Request) bool {
 
 // isTrustedIP is used to check if a request comes from a trusted client IP address.
 func (p *OAuthProxy) isTrustedIP(req *http.Request) bool {
-	if p.trustedIPs == nil {
+	// RemoteAddr @ means unix socket
+	// https://github.com/golang/go/blob/0fa53e41f122b1661d0678a6d36d71b7b5ad031d/src/syscall/syscall_linux.go#L506-L511
+	if p.trustedIPs == nil && req.RemoteAddr != "@" {
 		return false
 	}
 
