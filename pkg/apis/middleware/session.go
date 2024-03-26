@@ -40,10 +40,6 @@ func CreateTokenToSessionFunc(verify VerifyFunc) TokenToSessionFunc {
 			claims.Email = claims.Subject
 		}
 
-		if claims.Verified != nil && !*claims.Verified {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-		}
-
 		newSession := &sessionsapi.SessionState{
 			Email:             claims.Email,
 			User:              claims.Subject,
