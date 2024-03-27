@@ -17,7 +17,7 @@
 ## Breaking Changes
 
 ## Changes since v7.5.1
-
+- [#2535](https://github.com/oauth2-proxy/oauth2-proxy/pull/2307) Add the assignment of user to userinfo at azure provider (@Jozefiel)
 - [#2381](https://github.com/oauth2-proxy/oauth2-proxy/pull/2381) Allow username authentication to Redis cluster (@rossigee)
 - [#2345](https://github.com/oauth2-proxy/oauth2-proxy/pull/2345) Log error details when failed loading CSRF cookie (@charvadzo)
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
