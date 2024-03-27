@@ -8,6 +8,8 @@
 
 ## Changes since v7.6.0
 
+- [#2381](https://github.com/oauth2-proxy/oauth2-proxy/pull/2531) Add new azure flag to obtain groups from the oidc ticket (@tupos)
+
 # V7.6.0
 
 ## Release Highlights

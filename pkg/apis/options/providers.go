@@ -153,6 +153,11 @@ type AzureOptions struct {
 	// GraphGroupField configures the group field to be used when building the groups list from Microsoft Graph
 	// Default value is 'id'
 	GraphGroupField string `json:"graphGroupField,omitempty"`
+	// AzureGroupsInTicket determines whether request to Microsoft Graph api
+	// should be done to obtain user groups, or the groups should be taken
+	// from the ticket
+	// Default value is false
+	AzureGroupsInTicket bool `json:"groupsInTicket,omitempty"`
 }
 
 type ADFSOptions struct {

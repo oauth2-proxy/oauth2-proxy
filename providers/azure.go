@@ -26,6 +26,7 @@ type AzureProvider struct {
 	Tenant          string
 	GraphGroupField string
 	isV2Endpoint    bool
+	isGroupsInTicket  bool
 }
 
 var _ Provider = (*AzureProvider)(nil)
@@ -108,10 +109,11 @@ func NewAzureProvider(p *ProviderData, opts options.AzureOptions) *AzureProvider
 	}
 
 	return &AzureProvider{
-		ProviderData:    p,
-		Tenant:          tenant,
-		GraphGroupField: graphGroupField,
-		isV2Endpoint:    isV2Endpoint,
+		ProviderData:     p,
+		Tenant:           tenant,
+		GraphGroupField:  graphGroupField,
+		isV2Endpoint:     isV2Endpoint,
+		isGroupsInTicket: opts.AzureGroupsInTicket,
 	}
 }
 
@@ -133,7 +135,7 @@ func getMicrosoftGraphGroupsURL(profileURL *url.URL, graphGroupField string) *ur
 
 	// Select only security groups. Due to the filter option, count param is mandatory even if unused otherwise
 	return &url.URL{
-		Scheme:   "https",
+		Scheme:   profileURL.Scheme,
 		Host:     profileURL.Host,
 		Path:     "/v1.0/me/transitiveMemberOf",
 		RawQuery: "$count=true&$filter=securityEnabled+eq+true&" + selectStatement,
@@ -210,7 +212,7 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 	}
 
 	// If using the v2.0 oidc endpoint we're also querying Microsoft Graph
-	if p.isV2Endpoint {
+	if shouldCallGraphApi(p.isV2Endpoint, p.isGroupsInTicket) {
 		groups, err := p.getGroupsFromProfileAPI(ctx, session)
 		if err != nil {
 			return fmt.Errorf("unable to get groups from Microsoft Graph: %v", err)
@@ -218,6 +220,10 @@ func (p *AzureProvider) EnrichSession(ctx context.Context, session *sessions.Ses
 		session.Groups = util.RemoveDuplicateStr(append(session.Groups, groups...))
 	}
 	return nil
+}
+
+func shouldCallGraphApi(isV2Endpoint bool, isGroupsInTicket bool) bool {
+	return isV2Endpoint && !isGroupsInTicket
 }
 
 func (p *AzureProvider) prepareRedeem(redirectURL, code, codeVerifier string) (url.Values, error) {
