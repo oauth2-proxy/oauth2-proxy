@@ -10,6 +10,7 @@ Valid providers are :
 
 - [Google](google.md) _default_
 - [Azure](azure.md)
+- [Microsoft Entra ID](ms_entra_id.md)
 - [ADFS](adfs.md)
 - [Facebook](facebook.md)
 - [GitHub](github.md)
@@ -17,7 +18,6 @@ Valid providers are :
 - [Keycloak](keycloak.md)/[Keycloak OIDC](keycloak_oidc.md)
 - [GitLab](gitlab.md)
 - [LinkedIn](linkedin.md)
-- [Microsoft Azure AD](azure_ad.md)
 - [OpenID Connect](openid_connect.md)
 - [login.gov](login_gov.md)
 - [Nextcloud](nextcloud.md)
