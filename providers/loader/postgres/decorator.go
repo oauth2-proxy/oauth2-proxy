@@ -10,7 +10,7 @@ import (
 )
 
 // this is a decorator/wrapper over ConfigStore
-// it encrypts the keycloak secret before storing in db and cache.
+// it encrypts the client secret before storing in db and cache.
 type encryptionDecorator struct {
 	ConfigStore
 	cipher encryption.Cipher
@@ -24,13 +24,14 @@ func EncryptionDecorator(c ConfigStore, cipher encryption.Cipher) (ConfigStore, 
 }
 
 type encryptOrDecryptFunc func([]byte) ([]byte, error)
+type createOrUpdateFunc func(ctx context.Context, id string, providerconf []byte) error
 
 func encryptOrDecryptClientSecret(providerconf []byte, action encryptOrDecryptFunc) ([]byte, error) {
 	var providerConf *options.Provider
 
 	err := json.Unmarshal(providerconf, &providerConf)
 	if err != nil {
-		return nil, fmt.Errorf("error while decoding JSON into provider config. %w", err)
+		return nil, fmt.Errorf("json unmarshalling error: %w", err)
 	}
 
 	UpdatedSecret, err := action([]byte(providerConf.ClientSecret))
@@ -40,26 +41,26 @@ func encryptOrDecryptClientSecret(providerconf []byte, action encryptOrDecryptFu
 	providerConf.ClientSecret = string(UpdatedSecret)
 	UpdateProviderconf, err := json.Marshal(providerConf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("json marshallig error: %w", err)
 	}
 
 	return UpdateProviderconf, nil
 }
 
 func (en *encryptionDecorator) Create(ctx context.Context, id string, providerconf []byte) error {
+	return en.createOrUpdateConfig(ctx, id, providerconf, en.ConfigStore.Create)
+}
+
+func (en *encryptionDecorator) Update(ctx context.Context, id string, providerconf []byte) error {
+	return en.createOrUpdateConfig(ctx, id, providerconf, en.ConfigStore.Update)
+}
+
+func (en *encryptionDecorator) createOrUpdateConfig(ctx context.Context, id string, providerconf []byte, f createOrUpdateFunc) error {
 	updatedProviderconf, err := encryptOrDecryptClientSecret(providerconf, en.cipher.Encrypt)
 	if err != nil {
 		return fmt.Errorf("encryption error: %w", err)
 	}
-	return en.ConfigStore.Create(ctx, id, updatedProviderconf)
-}
-
-func (en *encryptionDecorator) Update(ctx context.Context, id string, providerconf []byte) error {
-	updatedProviderconf, err := encryptOrDecryptClientSecret(providerconf, en.cipher.Encrypt) // secret in updates is encrypted
-	if err != nil {
-		return fmt.Errorf("encryption error: %w", err) // return error in case of unsuccessful
-	}
-	return en.ConfigStore.Update(ctx, id, updatedProviderconf)
+	return f(ctx, id, updatedProviderconf)
 }
 
 func (en *encryptionDecorator) Get(ctx context.Context, id string) (string, error) {
