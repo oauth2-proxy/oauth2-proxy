@@ -99,7 +99,7 @@ func (r *builder) do() Result {
 	}
 	req.Header = r.header
 
-	resp, err := DefaultHttpClient.Do(req)
+	resp, err := DefaultHTTPClient.Do(req)
 	if err != nil {
 		r.result = &result{err: fmt.Errorf("error performing request: %v", err)}
 		return r.result

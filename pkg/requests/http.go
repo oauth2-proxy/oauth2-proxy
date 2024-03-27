@@ -17,7 +17,7 @@ func (t *userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return t.next.RoundTrip(r2)
 }
 
-var DefaultHttpClient = &http.Client{Transport: &userAgentTransport{
+var DefaultHTTPClient = &http.Client{Transport: &userAgentTransport{
 	http.DefaultTransport,
 	"oauth2-proxy/" + pkg.VERSION,
 }}

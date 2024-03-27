@@ -85,7 +85,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		},
 		RedirectURL: redirectURL,
 	}
-	ctx = oidc.ClientContext(ctx, requests.DefaultHttpClient)
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	token, err := c.Exchange(ctx, code, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("token exchange failed: %v", err)
@@ -106,7 +106,7 @@ func (p *OIDCProvider) EnrichSession(_ context.Context, s *sessions.SessionState
 
 // ValidateSession checks that the session's IDToken is still valid
 func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	ctx = oidc.ClientContext(ctx, requests.DefaultHttpClient)
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	_, err := p.Verifier.Verify(ctx, s.IDToken)
 	if err != nil {
 		logger.Errorf("id_token verification failed: %v", err)
@@ -131,7 +131,7 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 		return false, nil
 	}
 
-	ctx = oidc.ClientContext(ctx, requests.DefaultHttpClient)
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	err := p.redeemRefreshToken(ctx, s)
 	if err != nil {
 		return false, fmt.Errorf("unable to redeem refresh token: %v", err)
@@ -190,7 +190,7 @@ func (p *OIDCProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sessi
 
 // CreateSessionFromToken converts Bearer IDTokens into sessions
 func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
-	ctx = oidc.ClientContext(ctx, requests.DefaultHttpClient)
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	idToken, err := p.Verifier.Verify(ctx, token)
 	if err != nil {
 		return nil, err

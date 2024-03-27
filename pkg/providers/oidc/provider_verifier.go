@@ -131,7 +131,7 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 
 // newVerifierBuilder returns a function to create a IDToken verifier from an OIDC config.
 func newVerifierBuilder(ctx context.Context, issuerURL, jwksURL string, supportedSigningAlgs []string) verifierBuilder {
-	ctx = oidc.ClientContext(ctx, requests.DefaultHttpClient)
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	keySet := oidc.NewRemoteKeySet(ctx, jwksURL)
 	return func(oidcConfig *oidc.Config) *oidc.IDTokenVerifier {
 		if len(supportedSigningAlgs) > 0 {
