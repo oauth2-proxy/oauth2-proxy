@@ -112,15 +112,15 @@ func RunSessionStoreTests(newSS NewSessionStoreFunc, persistentFastForward Persi
 		Context("with non-default options", func() {
 			BeforeEach(func() {
 				input.cookieOpts = &options.Cookie{
-					NamePrefix: "_cookie_name",
-					Path:       "/path",
-					Expire:     time.Duration(72) * time.Hour,
-					Refresh:    time.Duration(2) * time.Hour,
-					Secure:     false,
-					HTTPOnly:   false,
-					Domains:    []string{"example.com"},
-					SameSite:   "strict",
-					Secret:     string(cookieSecret),
+					NamePrefix:      "_cookie_name",
+					Path:            "/path",
+					Expire:          time.Duration(72) * time.Hour,
+					Refresh:         time.Duration(2) * time.Hour,
+					Secure:          false,
+					HTTPOnly:        false,
+					DomainTemplates: []string{"example.com"},
+					SameSite:        "strict",
+					Secret:          string(cookieSecret),
 				}
 
 				var err error
@@ -162,8 +162,8 @@ func CheckCookieOptions(in *testInput) {
 		It("have the correct domain set", func() {
 			for _, cookie := range cookies {
 				specifiedDomain := ""
-				if len(in.cookieOpts.Domains) > 0 {
-					specifiedDomain = in.cookieOpts.Domains[0]
+				if len(in.cookieOpts.Domains("")) > 0 {
+					specifiedDomain = in.cookieOpts.Domains("")[0]
 				}
 				Expect(cookie.Domain).To(Equal(specifiedDomain))
 			}

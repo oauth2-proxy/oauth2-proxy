@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -67,12 +66,13 @@ func Test_encryptOrDecryptClientSecret(t *testing.T) {
 			"with no error ",
 			[]byte("{\"id\":\"xxx'\", \"provider\":\"keycloak\", \"clientSecret\": \"secret\"}"),
 			f.Encrypt,
-			[]byte("{\"clientSecret\":\"secret\",\"keycloakConfig\":{},\"azureConfig\":{},\"ADFSConfig\":{},\"bitbucketConfig\":{},\"githubConfig\":{},\"gitlabConfig\":{},\"googleConfig\":{},\"oidcConfig\":{},\"loginGovConfig\":{},\"id\":\"xxx'\",\"provider\":\"keycloak\"}"),
+			[]byte(`{"clientSecret":"secret","keycloakConfig":{},"azureConfig":{},"ADFSConfig":{},"bitbucketConfig":{},"githubConfig":{},"gitlabConfig":{},"googleConfig":{},"oidcConfig":{},"loginGovConfig":{},"id":"xxx'","provider":"keycloak","backendLogoutURL":""}`),
 			false,
 		},
 	}
 
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := encryptOrDecryptClientSecret(tt.providerconf, tt.action)
 			if err == nil && !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
@@ -184,7 +184,7 @@ func Test_Get(t *testing.T) {
 			func(ctx context.Context, id string) (string, error) {
 				return "{\"id\":\"xxx'\", \"provider\":\"keycloak\", \"clientSecret\":\"4yxujcK/Hg2N7Cr81lLScLV2Lh6r7T9viwB2AYUVT4ujwl4M3g==\" }", nil
 			},
-			"{\"clientSecret\":\"hf39jrh93uhd93wjd4iwj\",\"keycloakConfig\":{},\"azureConfig\":{},\"ADFSConfig\":{},\"bitbucketConfig\":{},\"githubConfig\":{},\"gitlabConfig\":{},\"googleConfig\":{},\"oidcConfig\":{},\"loginGovConfig\":{},\"id\":\"xxx'\",\"provider\":\"keycloak\"}",
+			`{"clientSecret":"hf39jrh93uhd93wjd4iwj","keycloakConfig":{},"azureConfig":{},"ADFSConfig":{},"bitbucketConfig":{},"githubConfig":{},"gitlabConfig":{},"googleConfig":{},"oidcConfig":{},"loginGovConfig":{},"id":"xxx'","provider":"keycloak","backendLogoutURL":""}`,
 			false,
 		},
 	}
@@ -206,7 +206,6 @@ type FakeCipher struct {
 }
 
 func (f FakeCipher) Encrypt(value []byte) ([]byte, error) {
-	fmt.Println(string(value))
 	if string(value) == "secret" {
 		return value, nil
 	}

@@ -414,11 +414,11 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	return chain, nil
 }
 
-func buildProviderMatcherChain(opts *options.Options, providerMatcher *providermatcher.Matcher) alice.Chain {
+func buildProviderMatcherChain(_ *options.Options, providerMatcher *providermatcher.Matcher) alice.Chain {
 	return alice.New(middleware.NewProviderMatcher(providerMatcher))
 }
 
-func buildProviderLoaderChain(opts *options.Options, providerLoader loader.Loader) alice.Chain {
+func buildProviderLoaderChain(_ *options.Options, providerLoader loader.Loader) alice.Chain {
 	return alice.New(middleware.NewProviderLoader(providerLoader))
 }
 

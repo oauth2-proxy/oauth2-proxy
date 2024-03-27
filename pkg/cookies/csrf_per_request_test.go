@@ -24,19 +24,23 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 
 	BeforeEach(func() {
 		cookieOpts = &options.Cookie{
-			NamePrefix:     cookieName,
-			Secret:         cookieSecret,
-			Domains:        []string{cookieDomain},
-			Path:           cookiePath,
-			Expire:         time.Hour,
-			Secure:         true,
-			HTTPOnly:       true,
-			CSRFPerRequest: true,
-			CSRFExpire:     time.Duration(5) * time.Minute,
+			NamePrefix:      cookieName,
+			Secret:          cookieSecret,
+			DomainTemplates: []string{cookieDomainTemplate},
+			Path:            cookiePath,
+			Expire:          time.Hour,
+			Secure:          true,
+			HTTPOnly:        true,
+			CSRFPerRequest:  true,
+			CSRFExpire:      time.Duration(5) * time.Minute,
 		}
 
 		var err error
 		ctx := context.Background()
+
+		err = cookieOpts.Init()
+		Expect(err).ToNot(HaveOccurred())
+
 		publicCSRF, err = NewCSRF(ctx, cookieOpts, "verifier")
 		Expect(err).ToNot(HaveOccurred())
 
@@ -136,11 +140,11 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 			req = &http.Request{
 				Method: http.MethodGet,
 				Proto:  "HTTP/1.1",
-				Host:   cookieDomain,
+				Host:   cookieDomainTemplate,
 
 				URL: &url.URL{
 					Scheme: "https",
-					Host:   cookieDomain,
+					Host:   cookieDomainTemplate,
 					Path:   cookiePath,
 				},
 			}
@@ -164,7 +168,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 					fmt.Sprintf(
 						"; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
 						cookiePath,
-						cookieDomain,
+						cookieDomainTemplate,
 						testCookieExpires(testNow.Add(cookieOpts.CSRFExpire)),
 					),
 				))
@@ -181,7 +185,7 @@ var _ = Describe("CSRF Cookie with non-fixed name Tests", func() {
 						"%s=; Path=%s; Domain=%s; Expires=%s; HttpOnly; Secure",
 						privateCSRF.cookieName(ctx),
 						cookiePath,
-						cookieDomain,
+						cookieDomainTemplate,
 						testCookieExpires(testNow.Add(time.Hour*-1)),
 					),
 				))

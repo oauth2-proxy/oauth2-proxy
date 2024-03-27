@@ -12,8 +12,8 @@ import (
 func TestValidateCookie(t *testing.T) {
 	alphabet := "abcdefghijklmnopqrstuvwxyz"
 
-	validName := "_oauth2_proxy"
-	invalidName := "_oauth2;proxy" // Separater character not allowed
+	validNamePrefix := "_oauth2_proxy"
+	invalidNamePrefix := "_oauth2;proxy" // Separater character not allowed
 	// 10 times the alphabet should be longer than 256 characters
 	longName := strings.Repeat(alphabet, 10)
 	validSecret := "secretthirtytwobytes+abcdefghijk"
@@ -29,8 +29,8 @@ func TestValidateCookie(t *testing.T) {
 		"a.cba.localhost",
 	}
 
-	invalidNameMsg := "invalid cookie name: \"_oauth2;proxy\""
-	longNameMsg := "cookie name should be under 191 characters: cookie name is 260 characters"
+	invalidNamePrefixMsg := "invalid cookie name prefix: \"_oauth2;proxy\""
+	longNamePrefixMsg := "cookie name prefix should be under 191 characters: cookie name prefix is 260 characters"
 	missingSecretMsg := "missing setting: cookie-secret"
 	invalidSecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 6 bytes"
 	invalidBase64SecretMsg := "cookie_secret must be 16, 24, or 32 bytes to create an AES cipher, but is 10 bytes"
@@ -45,30 +45,30 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with valid configuration",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     validSecret,
-				Domains:    domains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "",
+				NamePrefix:      validNamePrefix,
+				Secret:          validSecret,
+				DomainTemplates: domains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{},
 		},
 		{
 			name: "with no cookie secret",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     "",
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "",
+				NamePrefix:      validNamePrefix,
+				Secret:          "",
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{
 				missingSecretMsg,
@@ -77,15 +77,15 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with an invalid cookie secret",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     invalidSecret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "",
+				NamePrefix:      validNamePrefix,
+				Secret:          invalidSecret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{
 				invalidSecretMsg,
@@ -94,30 +94,30 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with a valid Base64 secret",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     validBase64Secret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "",
+				NamePrefix:      validNamePrefix,
+				Secret:          validBase64Secret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{},
 		},
 		{
 			name: "with an invalid Base64 secret",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     invalidBase64Secret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "",
+				NamePrefix:      validNamePrefix,
+				Secret:          invalidBase64Secret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{
 				invalidBase64SecretMsg,
@@ -126,49 +126,49 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with an invalid name",
 			cookie: options.Cookie{
-				NamePrefix: invalidName,
-				Secret:     validSecret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "",
+				NamePrefix:      invalidNamePrefix,
+				Secret:          validSecret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{
-				invalidNameMsg,
+				invalidNamePrefixMsg,
 			},
 		},
 		{
 			name: "with a name that is too long",
 			cookie: options.Cookie{
-				NamePrefix: longName,
-				Secret:     validSecret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "",
+				NamePrefix:      longName,
+				Secret:          validSecret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{
-				longNameMsg,
+				longNamePrefixMsg,
 			},
 		},
 		{
 			name: "with refresh longer than expire",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     validSecret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     15 * time.Minute,
-				Refresh:    time.Hour,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "",
+				NamePrefix:      validNamePrefix,
+				Secret:          validSecret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          15 * time.Minute,
+				Refresh:         time.Hour,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{
 				refreshLongerThanExpireMsg,
@@ -177,60 +177,60 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with samesite \"none\"",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     validSecret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "none",
+				NamePrefix:      validNamePrefix,
+				Secret:          validSecret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "none",
 			},
 			errStrings: []string{},
 		},
 		{
 			name: "with samesite \"lax\"",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     validSecret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "none",
+				NamePrefix:      validNamePrefix,
+				Secret:          validSecret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "none",
 			},
 			errStrings: []string{},
 		},
 		{
 			name: "with samesite \"strict\"",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     validSecret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "none",
+				NamePrefix:      validNamePrefix,
+				Secret:          validSecret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "none",
 			},
 			errStrings: []string{},
 		},
 		{
 			name: "with samesite \"invalid\"",
 			cookie: options.Cookie{
-				NamePrefix: validName,
-				Secret:     validSecret,
-				Domains:    emptyDomains,
-				Path:       "",
-				Expire:     time.Hour,
-				Refresh:    15 * time.Minute,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "invalid",
+				NamePrefix:      validNamePrefix,
+				Secret:          validSecret,
+				DomainTemplates: emptyDomains,
+				Path:            "",
+				Expire:          time.Hour,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "invalid",
 			},
 			errStrings: []string{
 				invalidSameSiteMsg,
@@ -239,18 +239,18 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with a combination of configuration errors",
 			cookie: options.Cookie{
-				NamePrefix: invalidName,
-				Secret:     invalidSecret,
-				Domains:    domains,
-				Path:       "",
-				Expire:     15 * time.Minute,
-				Refresh:    time.Hour,
-				Secure:     true,
-				HTTPOnly:   false,
-				SameSite:   "invalid",
+				NamePrefix:      invalidNamePrefix,
+				Secret:          invalidSecret,
+				DomainTemplates: domains,
+				Path:            "",
+				Expire:          15 * time.Minute,
+				Refresh:         time.Hour,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "invalid",
 			},
 			errStrings: []string{
-				invalidNameMsg,
+				invalidNamePrefixMsg,
 				invalidSecretMsg,
 				refreshLongerThanExpireMsg,
 				invalidSameSiteMsg,
@@ -259,28 +259,30 @@ func TestValidateCookie(t *testing.T) {
 		{
 			name: "with session cookie configuration",
 			cookie: options.Cookie{
-				Secret:   validSecret,
-				Domains:  domains,
-				Path:     "",
-				Expire:   0,
-				Refresh:  15 * time.Minute,
-				Secure:   true,
-				HTTPOnly: false,
-				SameSite: "",
+				NamePrefix:      "",
+				Secret:          validSecret,
+				DomainTemplates: domains,
+				Path:            "",
+				Expire:          0,
+				Refresh:         15 * time.Minute,
+				Secure:          true,
+				HTTPOnly:        false,
+				SameSite:        "",
 			},
 			errStrings: []string{},
 		},
 	}
 
 	for _, tc := range testCases {
+
 		t.Run(tc.name, func(t *testing.T) {
 			errStrings := validateCookie(tc.cookie)
 			g := NewWithT(t)
 
 			g.Expect(errStrings).To(ConsistOf(tc.errStrings))
 			// Check domains were sorted to the right lengths
-			for i := 0; i < len(tc.cookie.Domains)-1; i++ {
-				g.Expect(len(tc.cookie.Domains[i])).To(BeNumerically(">=", len(tc.cookie.Domains[i+1])))
+			for i := 0; i < len(tc.cookie.Domains(""))-1; i++ {
+				g.Expect(len(tc.cookie.Domains("")[i])).To(BeNumerically(">=", len(tc.cookie.Domains("")[i+1])))
 			}
 		})
 	}

@@ -145,7 +145,7 @@ func TestMatch(t *testing.T) {
 			},
 			&http.Request{
 				Header: http.Header{
-					"Authorization": {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc"},
+					"Authorization": {"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm92aWRlciI6eyJpZCI6InByb3ZpZGVyMSJ9fQ.kIL_YY-Qa9QBiC06guK4iPSrm_DXa5PbllnjHnM57hY"},
 				},
 			},
 			"provider1",
@@ -245,6 +245,7 @@ func TestMatch(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.matcher.Match(tt.req)
 			if !reflect.DeepEqual(got, tt.want) {
@@ -275,7 +276,7 @@ func Test_exractProviderIDFromJWT(t *testing.T) {
 		},
 		{
 			"no error provider-id found",
-			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJ0ZW5hbnQiOnsiaWQiOiJ0ZW5hbnQxIn19.e5rSX1K4KNzIylFoN43hTQcwrsrt-GvDHsK3SSfTPHc",
+			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJwcm92aWRlciI6eyJpZCI6InByb3ZpZGVyMSJ9fQ.kIL_YY-Qa9QBiC06guK4iPSrm_DXa5PbllnjHnM57hY",
 			"provider.id",
 			"provider1",
 		},
@@ -288,6 +289,7 @@ func Test_exractProviderIDFromJWT(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
 			got := exractProviderIDFromJWT(tt.jwt, tt.claim)
 			if !reflect.DeepEqual(got, tt.want) {

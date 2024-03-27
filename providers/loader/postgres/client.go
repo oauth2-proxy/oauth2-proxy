@@ -9,6 +9,10 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
+const (
+	apiPath = "/provider"
+)
+
 type APIClient struct {
 	BaseURL string
 	Client  *resty.Client
@@ -25,7 +29,7 @@ func NewAPIClient(baseurl string) *APIClient {
 
 func (c *APIClient) CreateProviderConfig(ctx context.Context, opts *options.Provider) error {
 	errRes := ErrorResponse{}
-	path := c.BaseURL + "/provider"
+	path := c.BaseURL + apiPath
 	resp, err := c.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(opts).
@@ -48,7 +52,7 @@ func (c *APIClient) CreateProviderConfig(ctx context.Context, opts *options.Prov
 
 func (c *APIClient) UpdateProviderConfig(ctx context.Context, opts *options.Provider) error {
 	errRes := ErrorResponse{}
-	path := c.BaseURL + "/provider"
+	path := c.BaseURL + apiPath
 	resp, err := c.Client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(opts).
@@ -71,7 +75,7 @@ func (c *APIClient) UpdateProviderConfig(ctx context.Context, opts *options.Prov
 
 func (c *APIClient) GetProviderConfig(ctx context.Context, id string) (*options.Provider, error) {
 	errRes := ErrorResponse{}
-	path := c.BaseURL + "/provider" + "/" + id
+	path := c.BaseURL + apiPath + "/" + id
 	providerConf := &options.Provider{}
 	resp, err := c.Client.R().
 		SetResult(providerConf).
@@ -96,7 +100,7 @@ func (c *APIClient) GetProviderConfig(ctx context.Context, id string) (*options.
 
 func (c *APIClient) DeleteProviderConfig(ctx context.Context, id string) error {
 	errRes := ErrorResponse{}
-	path := c.BaseURL + "/provider" + "/" + id
+	path := c.BaseURL + apiPath + "/" + id
 	resp, err := c.Client.R().
 		SetContext(ctx).
 		SetError(&errRes).

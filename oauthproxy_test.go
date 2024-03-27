@@ -1832,7 +1832,7 @@ func TestClearSplitCookie(t *testing.T) {
 	opts := baseTestOptions()
 	opts.Cookie.Secret = base64CookieSecret
 	opts.Cookie.NamePrefix = "oauth2"
-	opts.Cookie.Domains = []string{"abc"}
+	opts.Cookie.DomainTemplates = []string{"abc"}
 	err := validation.Validate(opts)
 	assert.NoError(t, err)
 
@@ -1868,7 +1868,7 @@ func TestClearSplitCookie(t *testing.T) {
 func TestClearSingleCookie(t *testing.T) {
 	opts := baseTestOptions()
 	opts.Cookie.NamePrefix = "oauth2"
-	opts.Cookie.Domains = []string{"abc"}
+	opts.Cookie.DomainTemplates = []string{"abc"}
 	store, err := sessionscookie.NewCookieSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {
 		t.Fatal(err)
@@ -2796,6 +2796,11 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	err = proxy.Init(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testCases := []struct {
 		name    string
 		method  string
@@ -3433,24 +3438,28 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 func TestStateEncodesCorrectly(t *testing.T) {
 	state := "some_state_to_test"
 	nonce := "some_nonce_to_test"
+	providerID := "test_provider"
 
-	encodedResult := encodeState(nonce, state, "", true)
-	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", encodedResult)
+	encodedResult := encodeState(nonce, state, providerID, true)
+	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdDp0ZXN0X3Byb3ZpZGVy", encodedResult)
 
-	notEncodedResult := encodeState(nonce, state, "", false)
-	assert.Equal(t, "some_nonce_to_test:some_state_to_test", notEncodedResult)
+	notEncodedResult := encodeState(nonce, state, providerID, false)
+	assert.Equal(t, "some_nonce_to_test:some_state_to_test:test_provider", notEncodedResult)
 }
 
 func TestStateDecodesCorrectly(t *testing.T) {
-	nonce, redirect, _, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
+	nonce, redirect, providerID, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdDp0ZXN0X3Byb3ZpZGVy", true)
 
 	assert.Equal(t, "some_nonce_to_test", nonce)
 	assert.Equal(t, "some_state_to_test", redirect)
+	assert.Equal(t, "test_provider", providerID)
 
-	nonce2, redirect2, _, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
+	nonce2, redirect2, providerID2, _ := decodeState("some_nonce_to_test:some_state_to_test:test_provider", false)
 
 	assert.Equal(t, "some_nonce_to_test", nonce2)
 	assert.Equal(t, "some_state_to_test", redirect2)
+	assert.Equal(t, "test_provider", providerID2)
+
 }
 
 func TestAuthOnlyAllowedEmails(t *testing.T) {

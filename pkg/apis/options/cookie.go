@@ -50,14 +50,14 @@ func (c *Cookie) Domains(providerID string) []string {
 
 func (c *Cookie) Init() error {
 
-	var tpls []*template.Template
+	tpls := make([]*template.Template, len(c.DomainTemplates))
 
-	for _, domain := range c.DomainTemplates {
+	for i, domain := range c.DomainTemplates {
 		tpl, err := template.New("").Parse(domain)
 		if err != nil {
 			return fmt.Errorf("invalid domain template '%s': %w", domain, err)
 		}
-		tpls = append(tpls, tpl)
+		tpls[i] = tpl
 	}
 
 	c.domainTpls = tpls
