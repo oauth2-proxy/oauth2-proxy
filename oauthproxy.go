@@ -814,6 +814,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 		logger.Errorf("no provider found in request context")
 		return
 	}
+	providerData := provider.Data()
 
 	session, err := p.getAuthenticatedSession(rw, req, provider)
 	if err != nil {
@@ -821,12 +822,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if session == nil {
-		return
-	}
-
-	providerData := provider.Data()
-	if providerData.BackendLogoutURL == "" {
+	if session == nil || providerData.BackendLogoutURL == "" {
 		return
 	}
 
