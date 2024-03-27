@@ -16,9 +16,9 @@ func validateProviders(o *options.Options) []string {
 	if len(o.Providers) == 0 {
 		msgs = append(msgs, "at least one provider has to be defined")
 	}
-	if o.SkipProviderButton && len(o.Providers) > 1 {
-		msgs = append(msgs, "SkipProviderButton and multiple providers are mutually exclusive")
-	}
+	// if o.SkipProviderButton && len(o.Providers) > 1 {
+	// 	msgs = append(msgs, "SkipProviderButton and multiple providers are mutually exclusive")
+	// }
 
 	providerIDs := make(map[string]struct{})
 

@@ -36,7 +36,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
 
 	tckt, err := decodeTicketFromRequest(req, m.Options)
 	if err != nil {
-		tckt, err = newTicket(m.Options)
+		tckt, err = newTicket(req.Context(), m.Options)
 		if err != nil {
 			return fmt.Errorf("error creating a session ticket: %v", err)
 		}

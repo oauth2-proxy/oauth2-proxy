@@ -8,8 +8,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -93,7 +92,7 @@ var _ = Describe("Cookie Tests", func() {
 
 		validName := "_oauth2_proxy"
 		validSecret := "secretthirtytwobytes+abcdefghijk"
-		domains := []string{"www.cookies.test"}
+		domainTemplates := []string{"www.cookies.test"}
 
 		now := time.Now()
 		var expectedExpires time.Time
@@ -114,15 +113,14 @@ var _ = Describe("Cookie Tests", func() {
 				name:  validName,
 				value: "1",
 				opts: options.Cookie{
-					Name:     validName,
-					Secret:   validSecret,
-					Domains:  domains,
-					Path:     "",
-					Expire:   time.Hour,
-					Refresh:  15 * time.Minute,
-					Secure:   true,
-					HTTPOnly: false,
-					SameSite: "",
+					Secret:          validSecret,
+					DomainTemplates: domainTemplates,
+					Path:            "",
+					Expire:          time.Hour,
+					Refresh:         15 * time.Minute,
+					Secure:          true,
+					HTTPOnly:        false,
+					SameSite:        "",
 				},
 				expiration:     15 * time.Minute,
 				now:            now,
@@ -133,15 +131,14 @@ var _ = Describe("Cookie Tests", func() {
 				name:  validName,
 				value: "1",
 				opts: options.Cookie{
-					Name:     validName,
-					Secret:   validSecret,
-					Domains:  domains,
-					Path:     "",
-					Expire:   0,
-					Refresh:  15 * time.Minute,
-					Secure:   true,
-					HTTPOnly: false,
-					SameSite: "",
+					Secret:          validSecret,
+					DomainTemplates: domainTemplates,
+					Path:            "",
+					Expire:          0,
+					Refresh:         15 * time.Minute,
+					Secure:          true,
+					HTTPOnly:        false,
+					SameSite:        "",
 				},
 				expiration:     0,
 				now:            now,

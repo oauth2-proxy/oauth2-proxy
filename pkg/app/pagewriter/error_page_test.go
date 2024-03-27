@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -27,9 +27,9 @@ var _ = Describe("Error Page Writer", func() {
 	})
 
 	Context("WriteErrorPage", func() {
-		It("Writes the template to the response writer", func() {
+		It("Writes the template to the response writer", func(ctx SpecContext) {
 			recorder := httptest.NewRecorder()
-			errorPage.WriteErrorPage(recorder, ErrorPageOpts{
+			errorPage.WriteErrorPage(ctx, recorder, ErrorPageOpts{
 				Status:      403,
 				RedirectURL: "/redirect",
 				RequestID:   testRequestID,
@@ -41,9 +41,9 @@ var _ = Describe("Error Page Writer", func() {
 			Expect(string(body)).To(Equal("Forbidden You do not have permission to access this resource. /prefix/ 403 /redirect 11111111-2222-4333-8444-555555555555 Custom Footer Text v0.0.0-test"))
 		})
 
-		It("With a different code, uses the stock message for the correct code", func() {
+		It("With a different code, uses the stock message for the correct code", func(ctx SpecContext) {
 			recorder := httptest.NewRecorder()
-			errorPage.WriteErrorPage(recorder, ErrorPageOpts{
+			errorPage.WriteErrorPage(ctx, recorder, ErrorPageOpts{
 				Status:      500,
 				RedirectURL: "/redirect",
 				RequestID:   testRequestID,
@@ -55,9 +55,9 @@ var _ = Describe("Error Page Writer", func() {
 			Expect(string(body)).To(Equal("Internal Server Error Oops! Something went wrong. For more information contact your server administrator. /prefix/ 500 /redirect 11111111-2222-4333-8444-555555555555 Custom Footer Text v0.0.0-test"))
 		})
 
-		It("With a message override, uses the message", func() {
+		It("With a message override, uses the message", func(ctx SpecContext) {
 			recorder := httptest.NewRecorder()
-			errorPage.WriteErrorPage(recorder, ErrorPageOpts{
+			errorPage.WriteErrorPage(ctx, recorder, ErrorPageOpts{
 				Status:      403,
 				RedirectURL: "/redirect",
 				RequestID:   testRequestID,
@@ -73,9 +73,9 @@ var _ = Describe("Error Page Writer", func() {
 			Expect(string(body)).To(Equal("Forbidden An extra message: with more context. /prefix/ 403 /redirect 11111111-2222-4333-8444-555555555555 Custom Footer Text v0.0.0-test"))
 		})
 
-		It("Sanitizes malicious user input", func() {
+		It("Sanitizes malicious user input", func(ctx SpecContext) {
 			recorder := httptest.NewRecorder()
-			errorPage.WriteErrorPage(recorder, ErrorPageOpts{
+			errorPage.WriteErrorPage(ctx, recorder, ErrorPageOpts{
 				Status:      403,
 				RedirectURL: "/redirect",
 				RequestID:   "<script>alert(1)</script>",
@@ -113,9 +113,9 @@ var _ = Describe("Error Page Writer", func() {
 		})
 
 		Context("WriteErrorPage", func() {
-			It("Writes the detailed error in place of the message", func() {
+			It("Writes the detailed error in place of the message", func(ctx SpecContext) {
 				recorder := httptest.NewRecorder()
-				errorPage.WriteErrorPage(recorder, ErrorPageOpts{
+				errorPage.WriteErrorPage(ctx, recorder, ErrorPageOpts{
 					Status:      403,
 					RedirectURL: "/redirect",
 					AppError:    "Debug error",

@@ -2,6 +2,7 @@ package options
 
 import (
 	"crypto"
+	"fmt"
 	"net/url"
 
 	ipapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/ip"
@@ -42,6 +43,10 @@ type Options struct {
 
 	// Not used in the legacy config, name not allowed to match an external key (upstreams)
 	// TODO(JoelSpeed): Rename when legacy config is removed
+
+	ProviderLoader  ProviderLoader  `cfg:",internal"`
+	ProviderMatcher ProviderMatcher `cfg:",internal"`
+
 	UpstreamServers UpstreamConfig `cfg:",internal"`
 
 	InjectRequestHeaders  []Header `cfg:",internal"`
@@ -98,7 +103,7 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.re
 func NewOptions() *Options {
 	return &Options{
 		ProxyPrefix:        "/oauth2",
-		Providers:          providerDefaults(),
+		Providers:          ProviderDefaults(),
 		PingPath:           "/ping",
 		ReadyPath:          "/ready",
 		RealClientIPHeader: "X-Real-IP",
@@ -109,6 +114,15 @@ func NewOptions() *Options {
 		SkipAuthPreflight:  false,
 		Logging:            loggingDefaults(),
 	}
+}
+
+func (o *Options) Init() error {
+	err := (&o.Cookie).Init()
+	if err != nil {
+		return fmt.Errorf("failed to initialize cookie config: %v", err)
+	}
+
+	return nil
 }
 
 // NewFlagSet creates a new FlagSet with all of the flags required by Options
