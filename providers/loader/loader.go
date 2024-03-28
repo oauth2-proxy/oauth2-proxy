@@ -22,7 +22,7 @@ func NewLoader(opts *options.Options) (Loader, error) {
 	switch conf.Type {
 	case "config":
 		return configloader.New(opts.Providers)
-	case "", "single": // empty value in case we're using legacy opts
+	case "", "single": // default set to single provider loaded from config
 		return single.New(opts.Providers[0])
 	case "postgres":
 		return postgres.New(*opts.ProviderLoader.PostgresLoader, opts.ProxyPrefix)

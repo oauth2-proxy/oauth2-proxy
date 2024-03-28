@@ -15,7 +15,7 @@ type RedisStore struct {
 	rdb          redis.Client
 }
 
-func NewRedisStore(opts options.Redis, configStore ConfigStore) (*RedisStore, error) {
+func NewRedisStore(opts options.Redis, configStore ConfigStore) (ConfigStore, error) {
 	rdb, err := redis.NewRedisClient(opts.RedisStoreOptions)
 	if err != nil {
 		return nil, err
