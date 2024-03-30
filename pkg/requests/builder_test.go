@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 
 	"github.com/bitly/go-simplejson"
 	. "github.com/onsi/ginkgo"
@@ -21,7 +21,7 @@ var _ = Describe("Builder suite", func() {
 
 	baseHeaders := http.Header{
 		"Accept-Encoding": []string{"gzip"},
-		"User-Agent":      []string{"oauth2-proxy/" + pkg.VERSION},
+		"User-Agent":      []string{"oauth2-proxy/" + version.VERSION},
 	}
 
 	BeforeEach(func() {

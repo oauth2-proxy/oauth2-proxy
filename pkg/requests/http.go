@@ -3,7 +3,7 @@ package requests
 import (
 	"net/http"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 )
 
 type userAgentTransport struct {
@@ -18,8 +18,8 @@ func (t *userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error
 }
 
 var DefaultHTTPClient = &http.Client{Transport: &userAgentTransport{
-	http.DefaultTransport,
-	"oauth2-proxy/" + pkg.VERSION,
+	next:      http.DefaultTransport,
+	userAgent: "oauth2-proxy/" + version.VERSION,
 }}
 
 func setDefaultUserAgent(header http.Header, userAgent string) {
