@@ -14,7 +14,7 @@ version: '3.0'
 services:
   oauth2-proxy:
     container_name: oauth2-proxy
-    image: gitea-oauth #quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
     command: --config /oauth2-proxy.cfg
     hostname: oauth2-proxy
     volumes:
@@ -42,7 +42,7 @@ services:
           - httpbin.localtest.me
 
   gitea:
-    image: gitea/gitea:latest
+    image: gitea/gitea:1.21.4
     container_name: gitea
     environment:
       - USER_UID=1000

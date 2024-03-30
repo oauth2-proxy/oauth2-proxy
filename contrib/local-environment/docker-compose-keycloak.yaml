@@ -43,7 +43,7 @@ services:
 
   keycloak:
     container_name: keycloak
-    image: jboss/keycloak:10.0.0
+    image: jboss/keycloak:10.0.2
     hostname: keycloak
     command:
       [

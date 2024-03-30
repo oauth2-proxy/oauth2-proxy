@@ -56,7 +56,7 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v4
       with:
-        node-version: latest
+        node-version-file: docs/package.json
       
     - name: Update documentation
       run: |
