@@ -17,6 +17,17 @@ const (
 	user2Password = "us3r2P455W0Rd!"
 )
 
+var (
+	fileNames []string
+)
+
+var _ = AfterSuite(func() {
+	for _, v := range fileNames {
+		err := os.Remove(v)
+		Expect(err).ToNot(HaveOccurred())
+	}
+})
+
 var _ = Describe("HTPasswd Suite", func() {
 	Context("with an HTPassword Validator", func() {
 		assertHtpasswdMapFromFile := func(filePath string) {
@@ -99,15 +110,6 @@ var _ = Describe("HTPasswd Suite", func() {
 				const filePathPrefix = "htpasswd-file-updated-"
 				const adminUserHtpasswdEntry = "admin:$2y$05$SXWrNM7ldtbRzBvUC3VXyOvUeiUcP45XPwM93P5eeGOEPIiAZmJjC"
 				const user1HtpasswdEntry = "user1:$2y$05$/sZYJOk8.3Etg4V6fV7puuXfCJLmV5Q7u3xvKpjBSJUka.t2YtmmG"
-				var fileNames []string
-
-				AfterSuite(func() {
-					for _, v := range fileNames {
-						err := os.Remove(v)
-						Expect(err).ToNot(HaveOccurred())
-					}
-
-				})
 
 				type htpasswdUpdate struct {
 					testText              string
