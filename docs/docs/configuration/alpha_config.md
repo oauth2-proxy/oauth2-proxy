@@ -443,6 +443,7 @@ Provider holds all configuration for a single provider
 | `name` | _string_ | Name is the providers display name<br/>if set, it will be shown to the users in the login page. |
 | `caFiles` | _[]string_ | CAFiles is a list of paths to CA certificates that should be used when connecting to the provider.<br/>If not specified, the default Go trust sources are used instead |
 | `useSystemTrustStore` | _bool_ | UseSystemTrustStore determines if your custom CA files and the system trust store are used<br/>If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. |
+| `introspectionURL` | _string_ | IntrospectionURL allows to check if the token is still valid |
 | `loginURL` | _string_ | LoginURL is the authentication endpoint |
 | `loginURLParameters` | _[[]LoginURLParameter](#loginurlparameter)_ | LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL |
 | `redeemURL` | _string_ | RedeemURL is the token redemption endpoint |
