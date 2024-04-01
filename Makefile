@@ -10,10 +10,11 @@ REPOSITORY ?= oauth2-proxy
 DATE := $(shell date +"%Y%m%d")
 .NOTPARALLEL:
 
+GO_MOD_VERSION = $(shell sed -En 's/^go ([[:digit:]]\.[[:digit:]]+)/\1/p' go.mod)
 GO_MAJOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
 GO_MINOR_VERSION = $(shell $(GO) version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f2)
-MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
-MINIMUM_SUPPORTED_GO_MINOR_VERSION = 20
+MINIMUM_SUPPORTED_GO_MAJOR_VERSION = $(shell echo ${GO_MOD_VERSION} | cut -d' ' -f1 | cut -d'.' -f1)
+MINIMUM_SUPPORTED_GO_MINOR_VERSION = $(shell echo ${GO_MOD_VERSION} | cut -d' ' -f1 | cut -d'.' -f2)
 GO_VERSION_VALIDATION_ERR_MSG = Golang version is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
 
 ifeq ($(COVER),true)
@@ -44,7 +45,7 @@ $(BINARY):
 
 DOCKER_BUILD_PLATFORM         ?= linux/amd64,linux/arm64,linux/ppc64le,linux/arm/v7
 DOCKER_BUILD_RUNTIME_IMAGE    ?= gcr.io/distroless/static:nonroot
-DOCKER_BUILDX_ARGS            ?= --build-arg RUNTIME_IMAGE=${DOCKER_BUILD_RUNTIME_IMAGE} --build-arg VERSION=${VERSION}
+DOCKER_BUILDX_ARGS            ?= --build-arg RUNTIME_IMAGE=${DOCKER_BUILD_RUNTIME_IMAGE} --build-arg VERSION=${VERSION} --build-arg GO_BUILD_VERSION=${GO_MOD_VERSION}
 DOCKER_BUILDX                 := docker buildx build ${DOCKER_BUILDX_ARGS} --pull
 DOCKER_BUILDX_X_PLATFORM      := $(DOCKER_BUILDX) --platform ${DOCKER_BUILD_PLATFORM}
 DOCKER_BUILDX_PUSH            := $(DOCKER_BUILDX) --push

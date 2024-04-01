@@ -26,6 +26,11 @@ jobs:
         # a pull request then we can checkout the head.
         fetch-depth: 2
 
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
     # If this run was triggered by a pull request event, then checkout
     # the head of the pull request instead of the merge commit.
     - run: git checkout HEAD^2

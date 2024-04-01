@@ -9,6 +9,7 @@
 ## Changes since v7.6.0
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
+- [#2584](https://github.com/oauth2-proxy/oauth2-proxy/pull/2584) bump to go lang 1.21 as minimum version (@tuunit)
 
 # V7.6.0
 

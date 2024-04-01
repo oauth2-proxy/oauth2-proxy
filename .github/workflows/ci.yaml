@@ -23,7 +23,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.21.6
+        go-version-file: go.mod
       id: go
 
     - name: Get dependencies
