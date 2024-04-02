@@ -20,11 +20,11 @@ import (
 )
 
 type introspectionResponse struct {
-	Active bool `json:"active"`
-	Scope string `json:"scope"`
+	Active   bool   `json:"active"`
+	Scope    string `json:"scope"`
 	ClientID string `json:"client_id"`
 	Username string `json:"username"`
-	Exp int `json:"exp"`
+	Exp      int    `json:"exp"`
 }
 
 type redeemTokenResponse struct {
@@ -100,23 +100,23 @@ func newTestOIDCSetup(body []byte, skipNonce bool) (*httptest.Server, *OIDCProvi
 func TestOIDCProviderIntrospectionActive(t *testing.T) {
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(introspectionResponse{
-		Active: true,
-		Scope: "openid email",
-                ClientID: oidcClientID,
+		Active:   true,
+		Scope:    "openid email",
+		ClientID: oidcClientID,
 		Username: "11223344",
-		Exp: int(time.Now().Add(10*time.Second).Unix()),
+		Exp:      int(time.Now().Add(10 * time.Second).Unix()),
 	})
 
 	server, provider := newTestOIDCSetup(body, true)
 	defer server.Close()
 
 	existingSession := &sessions.SessionState{
-		AccessToken:  accessToken,
-		IDToken:      idToken,
-		CreatedAt:    nil,
-		ExpiresOn:    nil,
-		Email:        "janedoe@example.com",
-		User:         "11223344",
+		AccessToken:     accessToken,
+		IDToken:         idToken,
+		CreatedAt:       nil,
+		ExpiresOn:       nil,
+		Email:           "janedoe@example.com",
+		User:            "11223344",
 		IntrospectToken: true,
 	}
 
@@ -127,23 +127,23 @@ func TestOIDCProviderIntrospectionActive(t *testing.T) {
 func TestOIDCProviderIntrospectionInactive(t *testing.T) {
 	idToken, _ := newSignedTestIDToken(defaultIDToken)
 	body, _ := json.Marshal(introspectionResponse{
-		Active: false,
-		Scope: "openid email",
-                ClientID: oidcClientID,
+		Active:   false,
+		Scope:    "openid email",
+		ClientID: oidcClientID,
 		Username: "11223344",
-		Exp: int(time.Now().Add(10*time.Second).Unix()),
+		Exp:      int(time.Now().Add(10 * time.Second).Unix()),
 	})
 
 	server, provider := newTestOIDCSetup(body, true)
 	defer server.Close()
 
 	existingSession := &sessions.SessionState{
-		AccessToken:  accessToken,
-		IDToken:      idToken,
-		CreatedAt:    nil,
-		ExpiresOn:    nil,
-		Email:        "janedoe@example.com",
-		User:         "11223344",
+		AccessToken:     accessToken,
+		IDToken:         idToken,
+		CreatedAt:       nil,
+		ExpiresOn:       nil,
+		Email:           "janedoe@example.com",
+		User:            "11223344",
 		IntrospectToken: true,
 	}
 
