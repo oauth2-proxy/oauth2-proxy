@@ -529,6 +529,8 @@ type LegacyProvider struct {
 	SkipClaimsFromProfileURL           bool     `flag:"skip-claims-from-profile-url" cfg:"skip_claims_from_profile_url"`
 	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
 	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
+	IntrospectionURL                   string   `flag:"introspection-url" cfg:"introspection_url"`
+	IntrospectToken                    bool     `flag:"introspect-token" cfg:"introspect-token"`
 	Scope                              string   `flag:"scope" cfg:"scope"`
 	Prompt                             string   `flag:"prompt" cfg:"prompt"`
 	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
@@ -550,6 +552,9 @@ type LegacyProvider struct {
 func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("provider", pflag.ExitOnError)
 
+	addCredentialsFlag(flagSet)
+	addEndpointsFlag(flagSet)
+
 	flagSet.StringSlice("keycloak-group", []string{}, "restrict logins to members of these groups (may be given multiple times)")
 	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
 	flagSet.String("azure-graph-group-field", "", "configures the group field to be used when building the groups list(`id` or `displayName`. Default is `id`) from Microsoft Graph(available only for v2.0 oidc url). Based on this value, the `allowed-group` config values should be adjusted accordingly. If using `id` as group field, `allowed-group` should contains groups IDs, if using `displayName` as group field, `allowed-group` should contains groups name")
@@ -564,9 +569,6 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project=accesslevel`). Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent")
-	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
-	flagSet.String("client-secret", "", "the OAuth Client Secret")
-	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
@@ -583,12 +585,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
 	flagSet.StringSlice("oidc-public-key-file", []string{}, "path to public key file in PEM format to use for verifying JWT tokens (may be given multiple times)")
-	flagSet.String("login-url", "", "Authentication endpoint")
-	flagSet.String("redeem-url", "", "Token redemption endpoint")
-	flagSet.String("profile-url", "", "Profile access endpoint")
 	flagSet.Bool("skip-claims-from-profile-url", false, "Skip loading missing claims from profile URL")
 	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
-	flagSet.String("validate-url", "", "Access token validation endpoint")
+	flagSet.Bool("introspect-token", false, "Validate token with token introspection endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("prompt", "", "OIDC prompt")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
@@ -606,6 +605,20 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.String("backend-logout-url", "", "url to perform a backend logout, {id_token} can be used as placeholder for the id_token")
 
 	return flagSet
+}
+
+func addCredentialsFlag(flagSet *pflag.FlagSet) {
+	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
+	flagSet.String("client-secret", "", "the OAuth Client Secret")
+	flagSet.String("client-secret-file", "", "the file with OAuth Client Secret")
+}
+
+func addEndpointsFlag(flagSet *pflag.FlagSet) {
+	flagSet.String("login-url", "", "Authentication endpoint")
+	flagSet.String("redeem-url", "", "Token redemption endpoint")
+	flagSet.String("profile-url", "", "Profile access endpoint")
+	flagSet.String("validate-url", "", "Access token validation endpoint")
+	flagSet.String("introspection-url", "", "Access token introspection endpoint")
 }
 
 func legacyGoogleFlagSet() *pflag.FlagSet {
@@ -680,6 +693,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		SkipClaimsFromProfileURL: l.SkipClaimsFromProfileURL,
 		ProtectedResource:        l.ProtectedResource,
 		ValidateURL:              l.ValidateURL,
+		IntrospectionURL:         l.IntrospectionURL,
 		Scope:                    l.Scope,
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,

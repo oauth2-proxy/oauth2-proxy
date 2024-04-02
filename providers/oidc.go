@@ -224,6 +224,54 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 	return ss, nil
 }
 
+// CreateSessionFromIntrospectedToken converts Bearer Tokens into sessions after valified using introspection endpoint
+func (p *OIDCProvider) CreateSessionFromIntrospectedToken(ctx context.Context, accessToken string) (*sessions.SessionState, error) {
+	payload, err := p.introspectToken(accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	extractor, err := util.NewAccessTokenClaimExtractor(context.TODO(), payload, p.ProfileURL, p.getAuthorizationHeader(accessToken))
+	if err != nil {
+		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
+	}
+
+	ss := &sessions.SessionState{AccessToken: accessToken}
+
+	for _, c := range []struct {
+		claim string
+		dst   interface{}
+	}{
+		{p.UserClaim, &ss.User},
+		{p.EmailClaim, &ss.Email},
+		{p.GroupsClaim, &ss.Groups},
+		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
+		{"preferred_username", &ss.PreferredUsername},
+	} {
+		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
+			return nil, err
+		}
+	}
+
+	// `email_verified` must be present and explicitly set to `false` to be
+	// considered unverified.
+	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
+
+	if verifyEmail {
+		var verified bool
+		exists, err := extractor.GetClaimInto("email_verified", &verified)
+		if err != nil {
+			return nil, err
+		}
+
+		if exists && !verified {
+			return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		}
+	}
+
+	return ss, nil
+}
+
 // createSession takes an oauth2.Token and creates a SessionState from it.
 // It alters behavior if called from Redeem vs Refresh
 func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {

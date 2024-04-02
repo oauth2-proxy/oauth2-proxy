@@ -63,6 +63,7 @@ type Options struct {
 	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
 	EncodeState           bool     `flag:"encode-state" cfg:"encode_state"`
 	AllowQuerySemicolons  bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
+	IntrospectToken       bool     `flag:"introspect-token" cfg:"introspect_token"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
@@ -127,11 +128,13 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS providers")
-	flagSet.Bool("skip-jwt-bearer-tokens", false, "will skip requests that have verified JWT bearer tokens (default false)")
+	flagSet.Bool("skip-jwt-bearer-tokens", false, "(Deprecated) will skip requests that have verified JWT bearer tokens (default false)")
+	flagSet.Bool("skip-bearer-tokens", false, "will skip requests that have verified bearer tokens. Either a jwt based id_token or an access_token (default false)")
 	flagSet.Bool("force-json-errors", false, "will force JSON errors instead of HTTP error pages or redirects")
 	flagSet.Bool("encode-state", false, "will encode oauth state with base64")
 	flagSet.Bool("allow-query-semicolons", false, "allow the use of semicolons in query args")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
+	flagSet.Bool("introspect-token", false, "if skip-jwt-bearer-tokens is set, validate token with token introspection endpoint (default false)")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
