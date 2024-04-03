@@ -65,8 +65,14 @@ type Provider struct {
 	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
 	UseSystemTrustStore bool `json:"useSystemTrustStore,omitempty"`
 
+	// IntrospectToken controls if all requests should be introspected
+	IntrospectToken bool `json:"introspectToken,omitempty"`
 	// IntrospectionURL allows to check if the token is still valid
 	IntrospectionURL string `json:"introspectionURL,omitempty"`
+	// IntrospectionHeader allows to check if the token is still valid by a request by request basis
+	IntrospectionHeader string `json:"introspectionHeader,omitempty"`
+	// ParseIntrospectionHeader controls if IntrospectionHeader should be parsed
+	ParseIntrospectionHeader bool `json:"parseIntrospectionHeader,omitempty"`
 	// LoginURL is the authentication endpoint
 	LoginURL string `json:"loginURL,omitempty"`
 	// LoginURLParameters defines the parameters that can be passed from the start URL to the IdP login URL

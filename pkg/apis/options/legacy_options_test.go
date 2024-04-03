@@ -125,6 +125,7 @@ var _ = Describe("Legacy Options", func() {
 			opts.Providers[0].LoginURLParameters = []LoginURLParameter{
 				{Name: "approval_prompt", Default: []string{"force"}},
 			}
+			opts.Providers[0].IntrospectionHeader = "X-Oauth2-Proxy-Introspect-Token"
 
 			converted, err := legacyOpts.ToOptions()
 			Expect(err).ToNot(HaveOccurred())
