@@ -1060,6 +1060,84 @@ func TestUserInfoEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
 }
 
+func NewCSRFTokenEndpointTest() (*ProcessCookieTest, error) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
+		opts.CSRFToken.CSRFToken = true
+	})
+	if err != nil {
+		return nil, err
+	}
+	pcTest.req, _ = http.NewRequest("GET", pcTest.opts.ProxyPrefix+"/csrftoken", nil)
+
+	return pcTest, nil
+}
+
+func TestCSRFTokenEndpointAccepted(t *testing.T) {
+	testCases := []struct {
+		name             string
+		session          *sessions.SessionState
+		expectedResponse string
+	}{
+		{
+			name: "Full session",
+			session: &sessions.SessionState{
+				User:        "john.doe",
+				Email:       "john.doe@example.com",
+				Groups:      []string{"example", "groups"},
+				AccessToken: "my_access_token",
+				CSRFToken:   "abcdef1234567890abcdef1234567890",
+			},
+			expectedResponse: "{\"csrfToken\":\"abcdef1234567890abcdef1234567890\"}\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			test, err := NewCSRFTokenEndpointTest()
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = test.SaveSession(tc.session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+			assert.Equal(t, http.StatusOK, test.rw.Code)
+			bodyBytes, _ := io.ReadAll(test.rw.Body)
+			assert.Equal(t, tc.expectedResponse, string(bodyBytes))
+		})
+	}
+}
+
+func TestCSRFTokenEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
+	test, err := NewCSRFTokenEndpointTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
+}
+
+func NewCSRFTokenEndpointDisabledTest() (*ProcessCookieTest, error) {
+	pcTest, err := NewProcessCookieTestWithDefaults()
+	if err != nil {
+		return nil, err
+	}
+	pcTest.req, _ = http.NewRequest("GET", pcTest.opts.ProxyPrefix+"/csrftoken", nil)
+
+	return pcTest, nil
+}
+
+func TestCSRFTokenEndpointNotFound(t *testing.T) {
+	test, err := NewCSRFTokenEndpointDisabledTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	test.proxy.ServeHTTP(test.rw, test.req)
+	assert.Equal(t, http.StatusNotFound, test.rw.Code)
+}
+
 func TestEncodedUrlsStayEncoded(t *testing.T) {
 	encodeTest, err := NewSignInPageTest(false)
 	if err != nil {

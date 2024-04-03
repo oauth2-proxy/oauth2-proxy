@@ -54,6 +54,7 @@ const (
 	authOnlyPath      = "/auth"
 	userInfoPath      = "/userinfo"
 	staticPathPrefix  = "/static/"
+	csrfTokenPath     = "/csrftoken"
 )
 
 var (
@@ -344,6 +345,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 	s.PathPrefix(staticPathPrefix).Handler(http.StripPrefix(p.ProxyPrefix, http.FileServer(http.FS(staticFiles))))
 
 	// The userinfo and logout endpoints needs to load sessions before handling the request
+	s.Path(csrfTokenPath).Handler(p.sessionChain.ThenFunc(p.CSRFToken))
 	s.Path(userInfoPath).Handler(p.sessionChain.ThenFunc(p.UserInfo))
 	s.Path(signOutPath).Handler(p.sessionChain.ThenFunc(p.SignOut))
 }
@@ -698,6 +700,38 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 			// TODO - should we pass on /oauth2/sign_in query params to /oauth2/start?
 			p.SignInPage(rw, req, statusCode)
 		}
+	}
+}
+
+func (p *OAuthProxy) CSRFToken(rw http.ResponseWriter, req *http.Request) {
+	if !p.CSRFTokenOptions.CSRFToken {
+		http.Error(rw, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+	}
+
+	session, err := p.getAuthenticatedSession(rw, req)
+	if err != nil {
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		return
+	}
+
+	if session == nil {
+		errMsg := "Error obtaining session: session is empty"
+		logger.Printf(errMsg)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, errMsg)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	csrfToken := struct {
+		CSRFToken string `json:"csrfToken"`
+	}{
+		CSRFToken: session.CSRFToken,
+	}
+	if err := json.NewEncoder(rw).Encode(csrfToken); err != nil {
+		logger.Printf("Error encoding csrf response: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 	}
 }
 
