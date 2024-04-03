@@ -24,6 +24,8 @@ type SessionState struct {
 
 	Nonce []byte `msgpack:"n,omitempty"`
 
+	CSRFToken string `msgpack:"ct,omitempty"`
+
 	Email             string   `msgpack:"e,omitempty"`
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
@@ -73,6 +75,10 @@ func (s *SessionState) SetExpiresOn(exp time.Time) {
 	s.ExpiresOn = &exp
 }
 
+func (s *SessionState) SetCSRFToken(t []byte) {
+	s.CSRFToken = encryption.HashNonce(t)
+}
+
 // ExpiresIn sets an expiration a certain duration from CreatedAt.
 // CreatedAt will be set to time.Now if it is unset.
 func (s *SessionState) ExpiresIn(d time.Duration) {
@@ -117,6 +123,9 @@ func (s *SessionState) String() string {
 	if s.RefreshToken != "" {
 		o += " refresh_token:true"
 	}
+	if s.CSRFToken != "" {
+		o += " csrf_token:true"
+	}
 	if len(s.Groups) > 0 {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
 	}
@@ -138,6 +147,8 @@ func (s *SessionState) GetClaim(claim string) []string {
 		return []string{s.ExpiresOn.String()}
 	case "refresh_token":
 		return []string{s.RefreshToken}
+	case "csrf_token":
+		return []string{s.CSRFToken}
 	case "email":
 		return []string{s.Email}
 	case "user":
@@ -249,4 +260,8 @@ func lz4Decompress(compressed []byte) ([]byte, error) {
 	}
 
 	return payload, nil
+}
+
+func GenerateCSRFToken() ([]byte, error) {
+	return encryption.Nonce(32)
 }

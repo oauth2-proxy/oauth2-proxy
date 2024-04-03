@@ -36,6 +36,7 @@ type Options struct {
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 
 	Cookie    Cookie         `cfg:",squash"`
+	CSRFToken CSRFToken      `cfg:",squash"`
 	Session   SessionOptions `cfg:",squash"`
 	Logging   Logging        `cfg:",squash"`
 	Templates Templates      `cfg:",squash"`
@@ -104,6 +105,7 @@ func NewOptions() *Options {
 		RealClientIPHeader: "X-Real-IP",
 		ForceHTTPS:         false,
 		Cookie:             cookieDefaults(),
+		CSRFToken:          CSRFTokenDefaults(),
 		Session:            sessionOptionsDefaults(),
 		Templates:          templatesDefaults(),
 		SkipAuthPreflight:  false,
@@ -160,6 +162,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
 	flagSet.AddFlagSet(cookieFlagSet())
+	flagSet.AddFlagSet(csrfTokenFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
 	flagSet.AddFlagSet(templatesFlagSet())
 

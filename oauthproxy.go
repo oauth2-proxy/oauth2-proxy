@@ -80,8 +80,9 @@ type apiRoute struct {
 
 // OAuthProxy is the main authentication proxy
 type OAuthProxy struct {
-	CookieOptions *options.Cookie
-	Validator     func(string) bool
+	CookieOptions    *options.Cookie
+	CSRFTokenOptions *options.CSRFToken
+	Validator        func(string) bool
 
 	SignInPath string
 
@@ -213,8 +214,9 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	})
 
 	p := &OAuthProxy{
-		CookieOptions: &opts.Cookie,
-		Validator:     validator,
+		CookieOptions:    &opts.Cookie,
+		CSRFTokenOptions: &opts.CSRFToken,
+		Validator:        validator,
 
 		SignInPath: fmt.Sprintf("%s/sign_in", opts.ProxyPrefix),
 
@@ -906,6 +908,13 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	err = p.createCSRFToken(session)
+	if err != nil {
+		logger.Errorf("Error creating CSRF token for session during OAuth2 callback: %v", err)
+		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	csrf.ClearCookie(rw, req)
 
 	if !csrf.CheckOAuthState(nonce) {
@@ -980,6 +989,18 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 	}
 
 	return p.provider.EnrichSession(ctx, s)
+}
+
+func (p *OAuthProxy) createCSRFToken(s *sessionsapi.SessionState) error {
+	// Set the CSRF token if necessary
+	if p.CSRFTokenOptions.CSRFToken {
+		csrfToken, err := sessionsapi.GenerateCSRFToken()
+		if err != nil {
+			return err
+		}
+		s.SetCSRFToken(csrfToken)
+	}
+	return nil
 }
 
 // AuthOnly checks whether the user is currently logged in (both authentication
