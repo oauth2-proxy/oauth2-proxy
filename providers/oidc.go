@@ -225,13 +225,6 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 	return ss, nil
 }
 
-// CreateSessionFromIntrospectedToken converts Bearer Tokens into sessions after valified using introspection endpoint
-func (p *OIDCProvider) CreateSessionFromIntrospectedToken(ctx context.Context, accessToken string) (*sessions.SessionState, error) {
-	ss := &sessions.SessionState{AccessToken: accessToken}
-
-	return ss, p.introspectToken(ctx, ss)
-}
-
 // createSession takes an oauth2.Token and creates a SessionState from it.
 // It alters behavior if called from Redeem vs Refresh
 func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, refresh bool) (*sessions.SessionState, error) {
