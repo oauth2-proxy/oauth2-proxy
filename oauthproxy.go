@@ -164,7 +164,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 			logger.Printf("Skipping JWT tokens from extra JWT issuer: %q", issuer)
 		}
 		if opts.IntrospectToken && provider.Data().IntrospectionURL.Path == "" {
-			return nil, fmt.Errorf("provider missing setting: introspect-url")
+			return nil, fmt.Errorf("provider missing setting: introspection-url")
 		}
 	}
 	redirectURL := opts.GetRedirectURL()
@@ -416,10 +416,12 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 	}
 
 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
-		SessionStore:    sessionStore,
-		RefreshPeriod:   opts.Cookie.Refresh,
-		RefreshSession:  provider.RefreshSession,
-		ValidateSession: provider.ValidateSession,
+		SessionStore:             sessionStore,
+		RefreshPeriod:            opts.Cookie.Refresh,
+		RefreshSession:           provider.RefreshSession,
+		ValidateSession:          provider.ValidateSession,
+		ParseIntrospectionHeader: opts.ParseIntrospectionHeader,
+		IntrospectionHeader:      opts.IntrospectionHeader,
 	}))
 
 	return chain

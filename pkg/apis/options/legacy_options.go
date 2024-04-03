@@ -58,6 +58,7 @@ func NewLegacyOptions() *LegacyOptions {
 			OIDCAudienceClaims:    []string{"aud"},
 			OIDCExtraAudiences:    []string{},
 			InsecureOIDCSkipNonce: true,
+			IntrospectionHeader:   "X-Oauth2-Proxy-Introspect-Token",
 		},
 
 		Options: *NewOptions(),
@@ -530,14 +531,17 @@ type LegacyProvider struct {
 	ProtectedResource                  string   `flag:"resource" cfg:"resource"`
 	ValidateURL                        string   `flag:"validate-url" cfg:"validate_url"`
 	IntrospectionURL                   string   `flag:"introspection-url" cfg:"introspection_url"`
-	IntrospectToken                    bool     `flag:"introspect-token" cfg:"introspect-token"`
-	Scope                              string   `flag:"scope" cfg:"scope"`
-	Prompt                             string   `flag:"prompt" cfg:"prompt"`
-	ApprovalPrompt                     string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
-	UserIDClaim                        string   `flag:"user-id-claim" cfg:"user_id_claim"`
-	AllowedGroups                      []string `flag:"allowed-group" cfg:"allowed_groups"`
-	AllowedRoles                       []string `flag:"allowed-role" cfg:"allowed_roles"`
-	BackendLogoutURL                   string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
+	IntrospectToken                    bool     `flag:"introspect-token" cfg:"introspect_token"`
+	ParseIntrospectionHeader           bool     `flag:"parse-introspection-header" cfg:"parse_introspection_header"`
+	IntrospectionHeader                string   `flag:"introspection-header" cfg:"introspection_header"`
+
+	Scope            string   `flag:"scope" cfg:"scope"`
+	Prompt           string   `flag:"prompt" cfg:"prompt"`
+	ApprovalPrompt   string   `flag:"approval-prompt" cfg:"approval_prompt"` // Deprecated by OIDC 1.0
+	UserIDClaim      string   `flag:"user-id-claim" cfg:"user_id_claim"`
+	AllowedGroups    []string `flag:"allowed-group" cfg:"allowed_groups"`
+	AllowedRoles     []string `flag:"allowed-role" cfg:"allowed_roles"`
+	BackendLogoutURL string   `flag:"backend-logout-url" cfg:"backend_logout_url"`
 
 	AcrValues  string `flag:"acr-values" cfg:"acr_values"`
 	JWTKey     string `flag:"jwt-key" cfg:"jwt_key"`
@@ -569,6 +573,9 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.StringSlice("github-user", []string{}, "allow users with these usernames to login even if they do not belong to the specified org and team or collaborators (may be given multiple times)")
 	flagSet.StringSlice("gitlab-group", []string{}, "restrict logins to members of this group (may be given multiple times)")
 	flagSet.StringSlice("gitlab-project", []string{}, "restrict logins to members of this project (may be given multiple times) (eg `group/project=accesslevel`). Access level should be a value matching Gitlab access levels (see https://docs.gitlab.com/ee/api/members.html#valid-access-levels), defaulted to 20 if absent")
+
+	flagSet.Bool("parse-introspection-header", false, "Reads headers to know if it should introspect the session token")
+	flagSet.String("introspection-header", "X-Oauth2-Proxy-Introspect-Token", "Header to read from to know if it should introspect the session token")
 
 	flagSet.String("provider", "google", "OAuth provider")
 	flagSet.String("provider-display-name", "", "Provider display name")
@@ -693,7 +700,10 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		SkipClaimsFromProfileURL: l.SkipClaimsFromProfileURL,
 		ProtectedResource:        l.ProtectedResource,
 		ValidateURL:              l.ValidateURL,
+		IntrospectToken:          l.IntrospectToken,
 		IntrospectionURL:         l.IntrospectionURL,
+		IntrospectionHeader:      l.IntrospectionHeader,
+		ParseIntrospectionHeader: l.ParseIntrospectionHeader,
 		Scope:                    l.Scope,
 		AllowedGroups:            l.AllowedGroups,
 		CodeChallengeMethod:      l.CodeChallengeMethod,

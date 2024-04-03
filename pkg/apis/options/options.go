@@ -52,19 +52,21 @@ type Options struct {
 
 	Providers Providers `cfg:",internal"`
 
-	APIRoutes             []string `flag:"api-route" cfg:"api_routes"`
-	SkipAuthRegex         []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
-	SkipAuthRoutes        []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
-	SkipJwtBearerTokens   bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
-	SkipBearerTokens      bool     `flag:"skip-bearer-tokens" cfg:"skip_bearer_tokens"`
-	ExtraJwtIssuers       []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
-	SkipProviderButton    bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
-	SSLInsecureSkipVerify bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
-	SkipAuthPreflight     bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
-	ForceJSONErrors       bool     `flag:"force-json-errors" cfg:"force_json_errors"`
-	EncodeState           bool     `flag:"encode-state" cfg:"encode_state"`
-	AllowQuerySemicolons  bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
-	IntrospectToken       bool     `flag:"introspect-token" cfg:"introspect_token"`
+	APIRoutes                []string `flag:"api-route" cfg:"api_routes"`
+	SkipAuthRegex            []string `flag:"skip-auth-regex" cfg:"skip_auth_regex"`
+	SkipAuthRoutes           []string `flag:"skip-auth-route" cfg:"skip_auth_routes"`
+	SkipJwtBearerTokens      bool     `flag:"skip-jwt-bearer-tokens" cfg:"skip_jwt_bearer_tokens"`
+	SkipBearerTokens         bool     `flag:"skip-bearer-tokens" cfg:"skip_bearer_tokens"`
+	ExtraJwtIssuers          []string `flag:"extra-jwt-issuers" cfg:"extra_jwt_issuers"`
+	SkipProviderButton       bool     `flag:"skip-provider-button" cfg:"skip_provider_button"`
+	SSLInsecureSkipVerify    bool     `flag:"ssl-insecure-skip-verify" cfg:"ssl_insecure_skip_verify"`
+	SkipAuthPreflight        bool     `flag:"skip-auth-preflight" cfg:"skip_auth_preflight"`
+	ForceJSONErrors          bool     `flag:"force-json-errors" cfg:"force_json_errors"`
+	EncodeState              bool     `flag:"encode-state" cfg:"encode_state"`
+	AllowQuerySemicolons     bool     `flag:"allow-query-semicolons" cfg:"allow_query_semicolons"`
+	IntrospectToken          bool     `flag:"introspect-token" cfg:"introspect_token"`
+	ParseIntrospectionHeader bool     `flag:"parse-introspection-header" cfg:"parse_introspection_header"`
+	IntrospectionHeader      string   `flag:"introspection-header" cfg:"introspection_header"`
 
 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
@@ -99,17 +101,18 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.re
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyPrefix:        "/oauth2",
-		Providers:          providerDefaults(),
-		PingPath:           "/ping",
-		ReadyPath:          "/ready",
-		RealClientIPHeader: "X-Real-IP",
-		ForceHTTPS:         false,
-		Cookie:             cookieDefaults(),
-		Session:            sessionOptionsDefaults(),
-		Templates:          templatesDefaults(),
-		SkipAuthPreflight:  false,
-		Logging:            loggingDefaults(),
+		ProxyPrefix:         "/oauth2",
+		Providers:           providerDefaults(),
+		PingPath:            "/ping",
+		ReadyPath:           "/ready",
+		RealClientIPHeader:  "X-Real-IP",
+		ForceHTTPS:          false,
+		Cookie:              cookieDefaults(),
+		Session:             sessionOptionsDefaults(),
+		Templates:           templatesDefaults(),
+		SkipAuthPreflight:   false,
+		Logging:             loggingDefaults(),
+		IntrospectionHeader: "X-Oauth2-Proxy-Introspect-Token",
 	}
 }
 
@@ -136,6 +139,8 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Bool("allow-query-semicolons", false, "allow the use of semicolons in query args")
 	flagSet.StringSlice("extra-jwt-issuers", []string{}, "if skip-jwt-bearer-tokens is set, a list of extra JWT issuer=audience pairs (where the issuer URL has a .well-known/openid-configuration or a .well-known/jwks.json)")
 	flagSet.Bool("introspect-token", false, "if skip-jwt-bearer-tokens is set, validate token with token introspection endpoint (default false)")
+	flagSet.Bool("parse-introspection-header", false, "reads headers to know if session token should be introspected, useful behind a proxy (default false)")
+	flagSet.String("introspection-header", "X-Oauth2-Proxy-Introspect-Token", "header to determine if a session token should be introspected")
 
 	flagSet.StringSlice("email-domain", []string{}, "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.StringSlice("whitelist-domain", []string{}, "allowed domains for redirection after authentication. Prefix domain with a . or a *. to allow subdomains (eg .example.com, *.example.com)")
