@@ -34,9 +34,9 @@ func AppendProviderIDToContext(ctx context.Context, providerID string) context.C
 }
 
 // injects provider-id in a url
-func InjectProviderID(tid string, uri string) string {
-	// if empty provider-id, no need to inject it since empty tenant-id is loaded when it's not found in the request
-	if tid == "" {
+func InjectProviderID(pid string, uri string) string {
+	// if empty provider-id, no need to inject it since empty provider-id is loaded when it's not found in the request
+	if pid == "" {
 		return uri
 	}
 	u, err := url.Parse(uri)
@@ -44,7 +44,7 @@ func InjectProviderID(tid string, uri string) string {
 		return uri
 	}
 	q := u.Query()
-	q.Set(DefaultProviderIDQueryParam, tid)
+	q.Set(DefaultProviderIDQueryParam, pid)
 	u.RawQuery = q.Encode()
 	return u.String()
 }

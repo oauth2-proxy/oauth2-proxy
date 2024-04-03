@@ -1,0 +1,92 @@
+# This docker-compose file can be used to bring up an example instance of oauth2-proxy
+# for manual testing and exploration of features.
+# Alongside OAuth2-Proxy, this file also starts Dex to act as the identity provider,
+# etcd for storage for Dex  and HTTPBin as an example upstream.
+# This file also uses alpha configuration when configuring OAuth2 Proxy.
+#
+# This file is an extension of the main compose file and must be used with it
+#    docker-compose -f docker-compose.yaml -f docker-compose-multi-tenancy.yaml <command>
+# Alternatively:
+#    make multi-tenancy-<command> (eg make nginx-up, make nginx-down)
+#
+# Access http://localhost:4180 to initiate a login cycle
+version: '3.0'
+services:
+  dex:
+    hostname: dex.localtest.me
+  oauth2-proxy:
+    image: sensysllc.jfrog.io/docker/oauth2-proxy:local
+    command: --config /oauth2-proxy.cfg --alpha-config /oauth2-proxy.yaml
+    volumes:
+      - "./oauth2-proxy-multi-tenancy.cfg:/oauth2-proxy.cfg"
+      - "./oauth2-proxy-multi-tenancy.yaml:/oauth2-proxy.yaml"
+    networks:
+      oauth2-proxy:
+        aliases:
+          - oauth2-proxy.localtest.me
+      postgres: {}
+      redis: {}
+      keycloak: {}
+      dex: {}
+    depends_on:
+      - redis
+      - postgres
+  redis:
+    image: 'bitnami/redis:7.0.7'
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+      REDIS_PASSWORD: "admin"
+    ports: 
+    - "6379:6379"
+    networks:
+      redis:
+        aliases:
+          - redis.localtest.me
+  postgres:
+    image: postgres:16.1
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_SCHEMA: public
+    ports:
+      - "5432:5432"
+    networks:
+      postgres:
+        aliases:
+          - postgres.localtest.me
+  keycloak: # password for all users is `password`
+    image: quay.io/keycloak/keycloak:20.0.3
+    hostname: keycloak.localtest.me
+    environment:
+      KC_DB: postgres
+      KC_DB_USERNAME: admin
+      KC_DB_PASSWORD: admin
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_PORT: 5432
+      KC_DB_SCHEMA: public
+      KC_DB_URL_DATABASE: keycloak
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_PORT: 8080
+      KC_HTTP_RELATIVE_PATH: /auth
+    entrypoint: /opt/keycloak/bin/kc.sh start --hostname-strict=false --hostname-strict-https=false --http-port=9080 --import-realm
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    ports:
+      - "9080:9080"
+    networks:
+      keycloak:
+        aliases:
+          - keycloak.localtest.me
+      postgres: {}
+    depends_on:
+      - postgres
+networks:
+  oauth2-proxy: {}
+  postgres: {}
+  redis: {}
+  keycloak: {}
