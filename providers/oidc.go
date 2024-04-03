@@ -118,7 +118,7 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 		return false
 	}
 	if s.IntrospectToken {
-		if _, err := p.introspectToken(s.AccessToken); err != nil {
+		if err := p.introspectToken(ctx, s); err != nil {
 			logger.Errorf("inspect token failed: %v", err)
 			return false
 		}
@@ -227,50 +227,9 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 
 // CreateSessionFromIntrospectedToken converts Bearer Tokens into sessions after valified using introspection endpoint
 func (p *OIDCProvider) CreateSessionFromIntrospectedToken(ctx context.Context, accessToken string) (*sessions.SessionState, error) {
-	payload, err := p.introspectToken(accessToken)
-	if err != nil {
-		return nil, err
-	}
-
-	extractor, err := util.NewAccessTokenClaimExtractor(ctx, payload, p.ProfileURL, p.getAuthorizationHeader(accessToken))
-	if err != nil {
-		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
-	}
-
 	ss := &sessions.SessionState{AccessToken: accessToken}
 
-	for _, c := range []struct {
-		claim string
-		dst   interface{}
-	}{
-		{p.UserClaim, &ss.User},
-		{p.EmailClaim, &ss.Email},
-		{p.GroupsClaim, &ss.Groups},
-		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
-		{"preferred_username", &ss.PreferredUsername},
-	} {
-		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
-			return nil, err
-		}
-	}
-
-	// `email_verified` must be present and explicitly set to `false` to be
-	// considered unverified.
-	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
-
-	if verifyEmail {
-		var verified bool
-		exists, err := extractor.GetClaimInto("email_verified", &verified)
-		if err != nil {
-			return nil, err
-		}
-
-		if exists && !verified {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
-		}
-	}
-
-	return ss, nil
+	return ss, p.introspectToken(ctx, ss)
 }
 
 // createSession takes an oauth2.Token and creates a SessionState from it.
@@ -305,12 +264,51 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	return ss, nil
 }
 
-func (p *OIDCProvider) introspectToken(token string) (*simplejson.Json, error) {
+func (p *OIDCProvider) verifyIntrospectedToken(ctx context.Context, payload *simplejson.Json, ss *sessions.SessionState) error {
+	extractor, err := util.NewAccessTokenClaimExtractor(ctx, payload, p.ProfileURL, p.getAuthorizationHeader(ss.AccessToken))
+	if err != nil {
+		return fmt.Errorf("could not initialise claim extractor: %v", err)
+	}
+
+	for _, c := range []struct {
+		claim string
+		dst   interface{}
+	}{
+		{p.UserClaim, &ss.User},
+		{p.EmailClaim, &ss.Email},
+		{p.GroupsClaim, &ss.Groups},
+		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
+		{"preferred_username", &ss.PreferredUsername},
+	} {
+		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
+			return err
+		}
+	}
+
+	// `email_verified` must be present and explicitly set to `false` to be
+	// considered unverified.
+	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
+
+	if verifyEmail {
+		var verified bool
+		exists, err := extractor.GetClaimInto("email_verified", &verified)
+		if err != nil {
+			return err
+		}
+
+		if exists && !verified {
+			return fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
+		}
+	}
+	return nil
+}
+
+func (p *OIDCProvider) introspectToken(ctx context.Context, ss *sessions.SessionState) error {
 	body := url.Values{}
-	body.Add("token", token)
+	body.Add("token", ss.AccessToken)
 
 	if p.IntrospectionURL == nil {
-		return nil, fmt.Errorf("IntrospectionURL was nil")
+		return fmt.Errorf("IntrospectionURL was nil")
 	}
 
 	js, err := requests.New(p.IntrospectionURL.String()).
@@ -322,17 +320,21 @@ func (p *OIDCProvider) introspectToken(token string) (*simplejson.Json, error) {
 		UnmarshalSimpleJSON()
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	active, err := js.Get("active").EncodePretty()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if string(active) != "true" {
 		err = fmt.Errorf("token status is inactive")
 	}
 
-	return js, err
+	if err == nil {
+		err = p.verifyIntrospectedToken(ctx, js, ss)
+	}
+
+	return err
 }
