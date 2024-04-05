@@ -27,6 +27,7 @@ type Options struct {
 	TrustedIPs         []string `flag:"trusted-ip" cfg:"trusted_ips"`
 	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https"`
 	RawRedirectURL     string   `flag:"redirect-url" cfg:"redirect_url"`
+	StatePostfix       string   `flag:"state-postfix" cfg:"state_postfix"`
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
@@ -151,6 +152,7 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+	flagSet.String("state-postfix", "", "state_postifx")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())

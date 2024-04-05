@@ -98,6 +98,7 @@ type OAuthProxy struct {
 	forceJSONErrors     bool
 	realClientIPParser  ipapi.RealClientIPParser
 	trustedIPs          *ip.NetSet
+	statePostfix        string
 
 	sessionChain      alice.Chain
 	headersChain      alice.Chain
@@ -235,6 +236,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
+		statePostfix:       opts.StatePostfix,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -787,7 +789,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	callbackRedirect := p.getOAuthRedirectURI(req)
 	loginURL := p.provider.GetLoginURL(
 		callbackRedirect,
-		encodeState(csrf.HashOAuthState(), appRedirect),
+		encodeState(csrf.HashOAuthState(), appRedirect, p.statePostfix),
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
@@ -845,7 +847,8 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 
 	csrf.ClearCookie(rw, req)
 
-	nonce, appRedirect, err := decodeState(req)
+	nonce, appRedirect, _, err := decodeState(req)
+
 	if err != nil {
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -1185,18 +1188,20 @@ func checkAllowedEmails(req *http.Request, s *sessionsapi.SessionState) bool {
 
 // encodedState builds the OAuth state param out of our nonce and
 // original application redirect
-func encodeState(nonce string, redirect string) string {
-	return fmt.Sprintf("%v:%v", nonce, redirect)
+func encodeState(nonce string, redirect string, additional string) string {
+	return fmt.Sprintf("%v:%v:%v", nonce, redirect, additional)
 }
 
 // decodeState splits the reflected OAuth state response back into
 // the nonce and original application redirect
-func decodeState(req *http.Request) (string, string, error) {
-	state := strings.SplitN(req.Form.Get("state"), ":", 2)
-	if len(state) != 2 {
-		return "", "", errors.New("invalid length")
+func decodeState(req *http.Request) (string, string, string, error) {
+	state := strings.SplitN(req.Form.Get("state"), ":", 3)
+
+	if len(state) != 3 {
+		return "", "", "", errors.New("invalid length")
 	}
-	return state[0], state[1], nil
+
+	return state[0], state[1], state[2], nil
 }
 
 // addHeadersForProxying adds the appropriate headers the request / response for proxying
