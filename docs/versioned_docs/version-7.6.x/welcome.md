@@ -1,6 +1,6 @@
 ---
-id: welcome
-title: Welcome
+id: hello uji
+title: Welcome uji
 hide_table_of_contents: true
 slug: /
 ---
