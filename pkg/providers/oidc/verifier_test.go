@@ -200,7 +200,7 @@ type testVerifier struct {
 }
 
 func (t *testVerifier) VerifySignature(_ context.Context, jwt string) ([]byte, error) {
-	jws, err := jose.ParseSigned(jwt)
+	jws, err := jose.ParseSigned(jwt, []jose.SignatureAlgorithm{jose.RS256})
 	if err != nil {
 		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)
 	}
