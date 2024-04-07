@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
