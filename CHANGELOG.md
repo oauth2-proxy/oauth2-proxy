@@ -9,6 +9,7 @@
 ## Changes since v7.6.0
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
+- [#2599](https://github.com/oauth2-proxy/oauth2-proxy/pull/2599) updated go dependencies (@kvanzuijlen)
 
 # V7.6.0
 
