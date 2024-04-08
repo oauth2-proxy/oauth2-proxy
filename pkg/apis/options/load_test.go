@@ -53,6 +53,7 @@ var _ = Describe("Load", func() {
 			RealClientIPHeader: "X-Real-IP",
 			ForceHTTPS:         false,
 			Cookie:             cookieDefaults(),
+			CSRFToken:          CSRFTokenDefaults(),
 			Session:            sessionOptionsDefaults(),
 			Templates:          templatesDefaults(),
 			SkipAuthPreflight:  false,

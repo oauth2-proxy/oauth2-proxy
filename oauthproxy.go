@@ -532,6 +532,10 @@ func buildAPIRoutes(opts *options.Options) ([]apiRoute, error) {
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
 // stored in the user's session
 func (p *OAuthProxy) ClearSessionCookie(rw http.ResponseWriter, req *http.Request) error {
+	if p.CSRFTokenOptions.CSRFToken && p.CSRFTokenOptions.CookieName != "" {
+		clearCookie := cookies.MakeCSRFTokenCookieFromOptions(req, p.CSRFTokenOptions.CookieName, "", nil, time.Hour*-1, time.Now())
+		http.SetCookie(rw, clearCookie)
+	}
 	return p.sessionStore.Clear(rw, req)
 }
 
@@ -981,6 +985,9 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
+		if p.CSRFTokenOptions.CSRFToken && p.CSRFTokenOptions.CookieName != "" {
+			p.setCSRFTokenCookie(rw, req, session)
+		}
 		http.Redirect(rw, req, appRedirect, http.StatusFound)
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")
@@ -1035,6 +1042,10 @@ func (p *OAuthProxy) createCSRFToken(s *sessionsapi.SessionState) error {
 		s.SetCSRFToken(csrfToken)
 	}
 	return nil
+}
+
+func (p *OAuthProxy) setCSRFTokenCookie(rw http.ResponseWriter, req *http.Request, s *sessionsapi.SessionState) {
+	cookies.CSRFTokenCookieForSession(rw, req, p.CSRFTokenOptions, s.CSRFToken)
 }
 
 // AuthOnly checks whether the user is currently logged in (both authentication

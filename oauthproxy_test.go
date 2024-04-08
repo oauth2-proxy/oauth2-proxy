@@ -437,6 +437,46 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 	return rw.Code, cookie
 }
 
+func (patTest *PassAccessTokenTest) getCallbackEndpointWithCSRFTokenCookie() (httpCode int, cookie http.Header) {
+	rw := httptest.NewRecorder()
+
+	csrf, err := cookies.NewCSRF(patTest.proxy.CookieOptions, "")
+	if err != nil {
+		panic(err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		fmt.Sprintf(
+			"/oauth2/callback?code=callback_code&state=%s",
+			encodeState(csrf.HashOAuthState(), "%2F", false),
+		),
+		strings.NewReader(""),
+	)
+	if err != nil {
+		return 0, nil
+	}
+
+	// rw is a dummy here, we just want the csrfCookie to add to our req
+	csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), req)
+	if err != nil {
+		panic(err)
+	}
+	req.AddCookie(csrfCookie)
+
+	csrfTokenOpts := options.CSRFTokenDefaults()
+	csrfToken := "abcdef1234567890abcdef1234567890"
+	cookies.CSRFTokenCookieForSession(rw, req, &csrfTokenOpts, csrfToken)
+
+	patTest.proxy.ServeHTTP(rw, req)
+
+	if len(rw.Header().Values("Set-Cookie")) >= 3 {
+		cookie = rw.Header().Clone()
+	}
+
+	return rw.Code, cookie
+}
+
 // getEndpointWithCookie makes a requests againt the oauthproxy with passed requestPath
 // and cookie and returns body and status code.
 func (patTest *PassAccessTokenTest) getEndpointWithCookie(cookie string, endpoint string) (httpCode int, accessToken string) {
@@ -567,6 +607,33 @@ func TestSessionValidationFailure(t *testing.T) {
 	code, cookie := patTest.getCallbackEndpoint()
 	assert.Equal(t, http.StatusForbidden, code)
 	assert.Equal(t, "", cookie)
+}
+
+func TestCSRFTokenCallbackSetCookie(t *testing.T) {
+	patTest, err := NewPassAccessTokenTest(PassAccessTokenTestOptions{
+		PassAccessToken: true,
+		ValidToken:      true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(patTest.Close)
+
+	code, cookie := patTest.getCallbackEndpointWithCSRFTokenCookie()
+	if code != 302 {
+		t.Fatalf("expected 302; got %d", code)
+	}
+
+	cookies := cookie["Set-Cookie"]
+	assert.Condition(t, func() bool {
+		for _, v := range cookies {
+			if strings.Contains(v, "_oauth2_proxy_csrftoken") {
+				return true
+			}
+		}
+		return false
+	},
+		true)
 }
 
 type SignInPageTest struct {
@@ -1806,7 +1873,7 @@ func TestClearSplitCookie(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p := OAuthProxy{CookieOptions: &opts.Cookie, sessionStore: store}
+	p := OAuthProxy{CookieOptions: &opts.Cookie, CSRFTokenOptions: &opts.CSRFToken, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -1839,7 +1906,7 @@ func TestClearSingleCookie(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p := OAuthProxy{CookieOptions: &opts.Cookie, sessionStore: store}
+	p := OAuthProxy{CookieOptions: &opts.Cookie, CSRFTokenOptions: &opts.CSRFToken, sessionStore: store}
 	var rw = httptest.NewRecorder()
 	req := httptest.NewRequest("get", "/", nil)
 
@@ -2112,6 +2179,7 @@ func baseTestOptions() *options.Options {
 	opts.Providers[0].ClientID = clientID
 	opts.Providers[0].ClientSecret = clientSecret
 	opts.EmailDomains = []string{"*"}
+	opts.CSRFToken.CSRFToken = false
 
 	// Default injected headers for legacy configuration
 	opts.InjectRequestHeaders = []options.Header{
