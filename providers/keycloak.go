@@ -1,14 +1,17 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"golang.org/x/oauth2"
 )
 
 type KeycloakProvider struct {
@@ -113,6 +116,87 @@ func (p *KeycloakProvider) EnrichSession(ctx context.Context, s *sessions.Sessio
 	}
 
 	return nil
+}
+
+func (p *KeycloakProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+	if code == "" {
+		return nil, ErrMissingCode
+	}
+
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	params := url.Values{}
+	params.Add("redirect_uri", redirectURL)
+	params.Add("client_id", p.ClientID)
+	params.Add("client_secret", clientSecret)
+	params.Add("code", code)
+	params.Add("grant_type", "authorization_code")
+	if codeVerifier != "" {
+		params.Add("code_verifier", codeVerifier)
+	}
+
+	var jsonResponse struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+	}
+
+	err = requests.New(p.RedeemURL.String()).
+		WithContext(ctx).
+		WithMethod("POST").
+		WithBody(bytes.NewBufferString(params.Encode())).
+		SetHeader("Content-Type", "application/x-www-form-urlencoded").
+		Do().
+		UnmarshalInto(&jsonResponse)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ss := &sessions.SessionState{
+		AccessToken:  jsonResponse.AccessToken,
+		RefreshToken: jsonResponse.RefreshToken,
+	}
+
+	ss.CreatedAtNow()
+	ss.ExpiresIn(time.Duration(jsonResponse.ExpiresIn) * time.Second)
+
+	return ss, nil
+}
+
+func (p *KeycloakProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	clientSecret, err := p.GetClientSecret()
+	if err != nil {
+		return false, err
+	}
+
+	c := oauth2.Config{
+		ClientID:     p.ClientID,
+		ClientSecret: clientSecret,
+		Endpoint: oauth2.Endpoint{
+			TokenURL: p.RedeemURL.String(),
+		},
+	}
+	t := &oauth2.Token{
+		RefreshToken: s.RefreshToken,
+		Expiry:       time.Now().Add(-time.Hour),
+	}
+
+	token, err := c.TokenSource(ctx, t).Token()
+	if err != nil {
+		return false, fmt.Errorf("failed to get token: %v", err)
+	}
+
+	s.AccessToken = token.AccessToken
+	s.RefreshToken = token.RefreshToken
+
+	s.CreatedAtNow()
+	s.SetExpiresOn(token.Expiry)
+
+	return true, nil
 }
 
 // ValidateSession validates the AccessToken
