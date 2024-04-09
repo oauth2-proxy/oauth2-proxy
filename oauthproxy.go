@@ -39,6 +39,8 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
+
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -77,6 +79,20 @@ type allowedRoute struct {
 
 type apiRoute struct {
 	pathRegex *regexp.Regexp
+}
+
+const (
+	MethodGet     = "GET"
+	MethodHead    = "HEAD"
+	MethodOptions = "OPTIONS"
+	MethodTrace   = "TRACE"
+)
+
+var SafeMethods = []string{
+	MethodGet,
+	MethodHead,
+	MethodOptions,
+	MethodTrace,
 }
 
 // OAuthProxy is the main authentication proxy
@@ -581,6 +597,10 @@ func (p *OAuthProxy) IsAllowedRequest(req *http.Request) bool {
 
 func isAllowedMethod(req *http.Request, route allowedRoute) bool {
 	return route.method == "" || req.Method == route.method
+}
+
+func isSafeMethod(req *http.Request) bool {
+	return slices.Contains(SafeMethods, req.Method)
 }
 
 func isAllowedPath(req *http.Request, route allowedRoute) bool {
@@ -1169,6 +1189,7 @@ func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 // Set-Cookie headers may be set on the response as a side-effect of calling this method.
 func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.Request) (*sessionsapi.SessionState, error) {
 	session := middlewareapi.GetRequestScope(req).Session
+	authMethod := middlewareapi.GetRequestScope(req).AuthMethod
 
 	// Check this after loading the session so that if a valid session exists, we can add headers from it
 	if p.IsAllowedRequest(req) {
@@ -1177,6 +1198,12 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 
 	if session == nil {
 		return nil, ErrNeedsLogin
+	}
+
+	if authMethod == "cookie" && p.CSRFTokenOptions.CSRFToken && !isSafeMethod(req) {
+		if !p.isValidCSRFToken(req, session) {
+			return nil, ErrAccessDenied
+		}
 	}
 
 	invalidEmail := session.Email != "" && !p.Validator(session.Email)
@@ -1341,6 +1368,11 @@ func (p *OAuthProxy) addHeadersForProxying(rw http.ResponseWriter, session *sess
 	} else {
 		rw.Header().Set("GAP-Auth", session.Email)
 	}
+}
+
+func (p *OAuthProxy) isValidCSRFToken(req *http.Request, s *sessionsapi.SessionState) bool {
+	csrfHeader := req.Header.Get(p.CSRFTokenOptions.RequestHeader)
+	return csrfHeader == s.CSRFToken
 }
 
 // isAjax checks if a request is an ajax request

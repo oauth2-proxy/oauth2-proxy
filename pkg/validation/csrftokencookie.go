@@ -10,7 +10,16 @@ import (
 func validateCSRFTokenOptions(o options.CSRFToken) []string {
 	var msgs []string
 	msgs = append(msgs, validateCSRFTokenCookie(o)...)
+	msgs = append(msgs, validateCSRFTokenHeader(o)...)
 
+	return msgs
+}
+
+func validateCSRFTokenHeader(o options.CSRFToken) []string {
+	var msgs []string
+	if o.RequestHeader == "" {
+		msgs = append(msgs, "csrftoken_header cannot be empty string")
+	}
 	return msgs
 }
 
