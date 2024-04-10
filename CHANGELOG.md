@@ -9,6 +9,7 @@
 ## Changes since v7.10.0
 
 - [#2615](https://github.com/oauth2-proxy/oauth2-proxy/pull/2615) feat(cookies): add option to set a limit on the number of per-request CSRF cookies oauth2-proxy sets (@bh-tt)
+- [#2605](https://github.com/oauth2-proxy/oauth2-proxy/pull/2605) fix: show login page on broken cookie (@Primexz)
 
 # V7.10.0
 
