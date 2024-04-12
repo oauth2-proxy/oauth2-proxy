@@ -12,9 +12,9 @@ type userAgentTransport struct {
 }
 
 func (t *userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	r2 := req.Clone(req.Context())
-	setDefaultUserAgent(r2.Header, t.userAgent)
-	return t.next.RoundTrip(r2)
+	r := req.Clone(req.Context())
+	setDefaultUserAgent(r.Header, t.userAgent)
+	return t.next.RoundTrip(r)
 }
 
 var DefaultHTTPClient = &http.Client{Transport: &userAgentTransport{

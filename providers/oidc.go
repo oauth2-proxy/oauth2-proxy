@@ -85,6 +85,7 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		},
 		RedirectURL: redirectURL,
 	}
+
 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	token, err := c.Exchange(ctx, code, opts...)
 	if err != nil {
