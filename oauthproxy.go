@@ -222,7 +222,6 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, fmt.Errorf("could not build headers chain: %v", err)
 	}
 
-	//DODO: implement multitenancy
 	redirectValidator := redirect.NewValidator(opts.WhitelistDomains)
 	appDirector := redirect.NewAppDirector(redirect.AppDirectorOpts{
 		ProxyPrefix: opts.ProxyPrefix,

@@ -5,9 +5,9 @@
 # This file also uses alpha configuration when configuring OAuth2 Proxy.
 #
 # This file is an extension of the main compose file and must be used with it
-#    docker-compose -f docker-compose.yaml -f docker-compose-multi-tenancy.yaml <command>
+#    docker-compose -f docker-compose.yaml -f docker-compose-multi-provider.yaml <command>
 # Alternatively:
-#    make multi-tenancy-<command> (eg make nginx-up, make nginx-down)
+#    make multi-provider-<command> (eg make nginx-up, make nginx-down)
 #
 # Access http://localhost:4180 to initiate a login cycle
 version: '3.0'
@@ -18,8 +18,8 @@ services:
     image: sensysllc.jfrog.io/docker/oauth2-proxy:local
     command: --config /oauth2-proxy.cfg --alpha-config /oauth2-proxy.yaml
     volumes:
-      - "./oauth2-proxy-multi-tenancy.cfg:/oauth2-proxy.cfg"
-      - "./oauth2-proxy-multi-tenancy.yaml:/oauth2-proxy.yaml"
+      - "./oauth2-proxy-multi-provider.cfg:/oauth2-proxy.cfg"
+      - "./oauth2-proxy-multi-provider.yaml:/oauth2-proxy.yaml"
     networks:
       oauth2-proxy:
         aliases:

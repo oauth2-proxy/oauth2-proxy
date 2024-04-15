@@ -182,7 +182,7 @@ They may change between releases without notice.
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
-| `providerLoader` | _[ProviderLoader](#providerloader)_ | ProviderLoader is used to allow multi-tenancy in oauth2-proxy.<br/>You can choose between single, config and postgres types. |
+| `providerLoader` | _[ProviderLoader](#providerloader)_ | ProviderLoader is used to allow multi-provider in oauth2-proxy.<br/>You can choose between single, config and postgres types. |
 | `providerMatcher` | _[ProviderMatcher](#providermatcher)_ | ProviderMatcher is used to configure the provider-id matching rules for extracting provider-id from request<br/>which will then in turn cause providerLoader to load provider identifying from its ID.<br/>The rules define where to look for provider-id in request header, host, query or path or their precedence. |
 
 ### AzureOptions
@@ -500,7 +500,7 @@ Provider holds all configuration for a single provider
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Type` | _string_ | Type defines the type of ProviderLoader which can be single, config and postgres.<br/>"single" referes to the single tenant providers.<br/>"config" refers to multi-tenancy.<br/>"postgres" refers to storing provider configuration in a podtgres store and load/delete multi-tenancy<br/>providers while the service is alive. |
+| `Type` | _string_ | Type defines the type of ProviderLoader which can be single, config and postgres.<br/>"single" referes to the single provider.<br/>"config" refers to multiple providers loaded from config file.<br/>"postgres" refers to storing provider configuration in a postgres store and load/delete providers while the service<br/> is alive. |
 | `PostgresLoader` | _[PostgresLoader](#postgresloader)_ | PostgresLoader contains configuration settings for PostgesLoader Type. |
 
 ### ProviderType
@@ -604,7 +604,7 @@ as well as an optional minimal TLS version that is acceptable.
 | `MinVersion` | _string_ | MinVersion is the minimal TLS version that is acceptable.<br/>E.g. Set to "TLS1.3" to select TLS version 1.3 |
 | `CipherSuites` | _[]string_ | CipherSuites is a list of TLS cipher suites that are allowed.<br/>E.g.:<br/>- TLS_RSA_WITH_RC4_128_SHA<br/>- TLS_RSA_WITH_AES_256_GCM_SHA384<br/>If not specified, the default Go safe cipher list is used.<br/>List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). |
 
-### TenantMatcher
+### ProviderMatcher
 
 (**Appears on:** [AlphaOptions](#alphaoptions))
 
@@ -612,27 +612,27 @@ as well as an optional minimal TLS version that is acceptable.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `rules` | _[[]TenantMatcherRule](#tenantmatcherrule)_ | Rules define the rules for finding tenant id in the incoming request |
+| `rules` | _[[]ProviderMatcherRule](#providermatcherrule)_ | Rules define the rules for finding provider id in the incoming request |
 
-### TenantMatcherRule
+### ProviderMatcherRule
 
-(**Appears on:** [TenantMatcher](#tenantmatcher))
+(**Appears on:** [ProviderMatcher](#providermatcher))
 
-TenantMatcherRule is the structure to define rule for finding tenant id in request
+ProviderMatcherRule is the structure to define rule for finding provider id in request
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `source` | _[TenantMatcherRuleSource](#tenantmatcherrulesource)_ | Source defines which part of the HTTP request contains the tenant id |
-| `expr` | _string_ | Expr defines the regex expression to match and extract tenant id from the source |
-| `captureGroup` | _int_ | CaptureGroup or sub-match referes to the index that is actually the tenant id |
-| `queryParam` | _string_ | QueryParam defines the query parameter containing tenant-id in case source is 'query' |
+| `source` | _[ProviderMatcherRuleSource](#providermatcherrulesource)_ | Source defines which part of the HTTP request contains the provider id |
+| `expr` | _string_ | Expr defines the regex expression to match and extract provider id from the source |
+| `captureGroup` | _int_ | CaptureGroup or sub-match referes to the index that is actually the provider id |
+| `queryParam` | _string_ | QueryParam defines the query parameter containing provider-id in case source is 'query' |
 | `header` | _string_ | Header defines the header key in case source is 'header' |
-| `jwtClaim` | _string_ | JWT Claim defines the json field containing tenant id in jwt token e.g tenant.id |
+| `jwtClaim` | _string_ | JWT Claim defines the json field containing provider id in jwt token e.g provider.id |
 
-### TenantMatcherRuleSource
+### ProviderMatcherRuleSource
 #### (`string` alias)
 
-(**Appears on:** [TenantMatcherRule](#tenantmatcherrule))
+(**Appears on:** [ProviderMatcherRule](#providermatcherrule))
 
 Source defines the source i-e "host", "path", "query" or "header"
 

@@ -14,13 +14,13 @@ alpha-config-up:
 alpha-config-%:
 	docker compose -f docker-compose.yaml -f docker-compose-alpha-config.yaml $*
 
-.PHONY: multi-tenancy-up
-multi-tenancy-up:
-	docker compose -f docker-compose.yaml -f docker-compose-multi-tenancy.yaml up -d
+.PHONY: multi-provider-up
+multi-provider-up:
+	docker compose -f docker-compose.yaml -f docker-compose-multi-provider.yaml up -d
 
-.PHONY: multi-tenancy-%
-multi-tenancy-%:
-	docker compose -f docker-compose.yaml -f docker-compose-multi-tenancy.yaml $*
+.PHONY: multi-provider-%
+multi-provider-%:
+	docker compose -f docker-compose.yaml -f docker-compose-multi-provider.yaml $*
 
 .PHONY: nginx-up
 nginx-up:

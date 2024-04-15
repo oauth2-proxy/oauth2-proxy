@@ -44,7 +44,7 @@ type AlphaOptions struct {
 	// Providers is used to configure multiple providers.
 	Providers Providers `json:"providers,omitempty"`
 
-	// ProviderLoader is used to allow multi-tenancy in oauth2-proxy.
+	// ProviderLoader is used to allow multiple providers in oauth2-proxy.
 	// You can choose between single, config and postgres types.
 	ProviderLoader ProviderLoader `json:"providerLoader,omitempty"`
 
