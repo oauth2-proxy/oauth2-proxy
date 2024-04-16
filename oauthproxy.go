@@ -647,8 +647,6 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 
 	if err := p.ClearSessionCookie(rw, req); err != nil {
 		logger.Printf("Error clearing session cookie: %v", err)
-		p.pageWriter.WriteSignInPage(rw, req, redirectURL, code)
-		return
 	}
 
 	rw.WriteHeader(code)
