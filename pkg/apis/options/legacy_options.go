@@ -55,6 +55,7 @@ func NewLegacyOptions() *LegacyOptions {
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
+			OIDCRolesClaim:        "roles",
 			OIDCAudienceClaims:    []string{"aud"},
 			OIDCExtraAudiences:    []string{},
 			InsecureOIDCSkipNonce: true,
@@ -518,6 +519,7 @@ type LegacyProvider struct {
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
+	OIDCRolesClaim                     string   `flag:"oidc-roles-claim" cfg:"oidc_roles_claim"`
 	OIDCAudienceClaims                 []string `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
 	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
 	LoginURL                           string   `flag:"login-url" cfg:"login_url"`
@@ -574,6 +576,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-roles-claim", OIDCRolesClaim, "which OIDC claim contains the user roles")
 	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
@@ -692,6 +695,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
+		RolesClaim:                     l.OIDCRolesClaim,
 		AudienceClaims:                 l.OIDCAudienceClaims,
 		ExtraAudiences:                 l.OIDCExtraAudiences,
 	}
