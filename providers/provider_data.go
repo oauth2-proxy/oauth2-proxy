@@ -47,12 +47,17 @@ type ProviderData struct {
 	UserClaim                string
 	EmailClaim               string
 	GroupsClaim              string
+	RolesClaim               string
 	Verifier                 internaloidc.IDTokenVerifier
 	SkipClaimsFromProfileURL bool
 
 	// Universal Group authorization data structure
 	// any provider can set to consume
 	AllowedGroups map[string]struct{}
+
+	// Universal Role authorization data structure
+	// any provider can set to consume
+	AllowedRoles map[string]struct{}
 
 	getAuthorizationHeaderFunc func(string) http.Header
 	loginURLParameterDefaults  url.Values
@@ -181,6 +186,15 @@ func (p *ProviderData) setAllowedGroups(groups []string) {
 	}
 }
 
+// setAllowedRoles organizes a role list into the AllowedRoles map
+// to be consumed by Authorize implementations
+func (p *ProviderData) setAllowedRoles(roles []string) {
+	p.AllowedRoles = make(map[string]struct{}, len(roles))
+	for _, role := range roles {
+		p.AllowedRoles[role] = struct{}{}
+	}
+}
+
 type providerDefaults struct {
 	name        string
 	loginURL    *url.URL
@@ -258,6 +272,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		{p.UserClaim, &ss.User},
 		{p.EmailClaim, &ss.Email},
 		{p.GroupsClaim, &ss.Groups},
+		{p.RolesClaim, &ss.Roles},
 		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
 		{"preferred_username", &ss.PreferredUsername},
 	} {

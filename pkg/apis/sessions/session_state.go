@@ -27,6 +27,7 @@ type SessionState struct {
 	Email             string   `msgpack:"e,omitempty"`
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
+	Roles             []string `msgpack:"r,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
 	// Internal helpers, not serialized
@@ -120,6 +121,9 @@ func (s *SessionState) String() string {
 	if len(s.Groups) > 0 {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
 	}
+	if len(s.Roles) > 0 {
+		o += fmt.Sprintf(" roles:%v", s.Roles)
+	}
 	return o + "}"
 }
 
@@ -146,6 +150,10 @@ func (s *SessionState) GetClaim(claim string) []string {
 		groups := make([]string, len(s.Groups))
 		copy(groups, s.Groups)
 		return groups
+	case "roles":
+		roles := make([]string, len(s.Roles))
+		copy(roles, s.Roles)
+		return roles
 	case "preferred_username":
 		return []string{s.PreferredUsername}
 	default:

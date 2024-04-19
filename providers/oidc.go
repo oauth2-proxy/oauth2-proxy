@@ -43,6 +43,10 @@ func NewOIDCProvider(p *ProviderData, opts options.OIDCOptions) *OIDCProvider {
 		oidcProviderDefaults.scope += " groups"
 	}
 
+	if len(p.AllowedRoles) > 0 {
+		oidcProviderDefaults.scope += " roles"
+	}
+
 	p.setProviderDefaults(oidcProviderDefaults)
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 

@@ -158,6 +158,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
+	p.setAllowedRoles(providerConfig.AllowedRoles)
 
 	p.BackendLogoutURL = providerConfig.BackendLogoutURL
 
