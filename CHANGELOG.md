@@ -9,6 +9,7 @@
 ## Changes since v7.6.0
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
+- [#2309](https://github.com/oauth2-proxy/oauth2-proxy/pull/2309) Add role based authorization when using Microsoft Entra ID App Registration roles (@jgmartinez)
 
 # V7.6.0
 
