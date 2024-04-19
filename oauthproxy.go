@@ -104,6 +104,7 @@ type OAuthProxy struct {
 	SignInPath string
 
 	allowedRoutes        []allowedRoute
+	allowedCSRFRoutes    []allowedRoute
 	apiRoutes            []apiRoute
 	redirectURL          *url.URL // the url to receive requests at
 	relativeRedirectURL  bool
@@ -214,6 +215,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		return nil, err
 	}
 
+	allowedCSRFRoutes, err := buildAllowedRoutes(opts.SkipCSRFRoutes)
+	if err != nil {
+		return nil, err
+	}
+
 	preAuthChain, err := buildPreAuthChain(opts, sessionStore)
 	if err != nil {
 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
@@ -244,6 +250,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		relativeRedirectURL:  opts.RelativeRedirectURL,
 		apiRoutes:            apiRoutes,
 		allowedRoutes:        allowedRoutes,
+		allowedCSRFRoutes:    allowedCSRFRoutes,
 		whitelistDomains:     opts.WhitelistDomains,
 		skipAuthPreflight:    opts.SkipAuthPreflight,
 		skipJwtBearerTokens:  opts.SkipJwtBearerTokens,
@@ -496,33 +503,11 @@ func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 		})
 	}
 
-	for _, methodPath := range opts.SkipAuthRoutes {
-		var (
-			method string
-			path   string
-			negate = strings.Contains(methodPath, "!=")
-		)
-
-		parts := regexp.MustCompile("!?=").Split(methodPath, 2)
-		if len(parts) == 1 {
-			method = ""
-			path = parts[0]
-		} else {
-			method = strings.ToUpper(parts[0])
-			path = parts[1]
-		}
-
-		compiledRegex, err := regexp.Compile(path)
-		if err != nil {
-			return nil, err
-		}
-		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
-		routes = append(routes, allowedRoute{
-			method:    method,
-			negate:    negate,
-			pathRegex: compiledRegex,
-		})
+	allowedSkipAuthRoutes, err := buildAllowedRoutes(opts.SkipAuthRoutes)
+	if err != nil {
+		return nil, err
 	}
+	routes = append(routes, allowedSkipAuthRoutes...)
 
 	return routes, nil
 }
@@ -543,6 +528,38 @@ func buildAPIRoutes(opts *options.Options) ([]apiRoute, error) {
 	}
 
 	return routes, nil
+}
+
+func buildAllowedRoutes(routes []string) ([]allowedRoute, error) {
+	allowedRoutes := make([]allowedRoute, 0, len(routes))
+	for _, methodPath := range routes {
+		var (
+			method string
+			path   string
+			negate = strings.Contains(methodPath, "!=")
+		)
+
+		parts := regexp.MustCompile("!?=").Split(methodPath, 2)
+		if len(parts) == 1 {
+			method = ""
+			path = parts[0]
+		} else {
+			method = strings.ToUpper(parts[0])
+			path = parts[1]
+		}
+
+		compiledRegex, err := regexp.Compile(path)
+		if err != nil {
+			return nil, err
+		}
+		logger.Printf("Skipping auth - Method: %s | Path: %s", method, path)
+		allowedRoutes = append(allowedRoutes, allowedRoute{
+			method:    method,
+			negate:    negate,
+			pathRegex: compiledRegex,
+		})
+	}
+	return allowedRoutes, nil
 }
 
 // ClearSessionCookie creates a cookie to unset the user's authentication cookie
@@ -616,6 +633,16 @@ func isAllowedPath(req *http.Request, route allowedRoute) bool {
 // IsAllowedRoute is used to check if the request method & path is allowed without auth
 func (p *OAuthProxy) isAllowedRoute(req *http.Request) bool {
 	for _, route := range p.allowedRoutes {
+		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsAllowedCSRFRoute is used to check if the request method & path is allowed without CSRF validation
+func (p *OAuthProxy) isAllowedCSRFRoute(req *http.Request) bool {
+	for _, route := range p.allowedCSRFRoutes {
 		if isAllowedMethod(req, route) && isAllowedPath(req, route) {
 			return true
 		}
@@ -1200,7 +1227,7 @@ func (p *OAuthProxy) getAuthenticatedSession(rw http.ResponseWriter, req *http.R
 		return nil, ErrNeedsLogin
 	}
 
-	if authMethod == "cookie" && p.CSRFTokenOptions.CSRFToken && !isSafeMethod(req) {
+	if authMethod == "cookie" && p.CSRFTokenOptions.CSRFToken && !isSafeMethod(req) && !p.isAllowedCSRFRoute(req) {
 		if !p.isValidCSRFToken(req, session) {
 			return nil, ErrAccessDenied
 		}

@@ -3254,6 +3254,136 @@ func TestAllowedRequestNegateWithMethod(t *testing.T) {
 	}
 }
 
+func TestSkipCSRFRequest(t *testing.T) {
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, err := w.Write([]byte("Allowed Request"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	t.Cleanup(upstreamServer.Close)
+
+	opts := baseTestOptions()
+	opts.UpstreamServers = options.UpstreamConfig{
+		Upstreams: []options.Upstream{
+			{
+				ID:   upstreamServer.URL,
+				Path: "/",
+				URI:  upstreamServer.URL,
+			},
+		},
+	}
+
+	opts.CSRFToken.CSRFToken = true
+	opts.InjectResponseHeaders = []options.Header{
+		{
+			Name: "X-CSRF-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+		},
+	}
+	opts.SkipCSRFRoutes = []string{
+		"POST=^/skip/csrf/routes",
+	}
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+	proxy, err := NewOAuthProxy(opts, func(_ string) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	upstreamURL, _ := url.Parse(upstreamServer.URL)
+	proxy.provider = NewTestProvider(upstreamURL, "")
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+	created := time.Now()
+	session := &sessions.SessionState{
+		User:        userName,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   &created,
+		CSRFToken:   "abcdef1234567890abcdef1234567890",
+	}
+
+	// Save the required session
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	// Extract the cookie value to inject into the test request
+	cookie := rw.Header().Values("Set-Cookie")[0]
+
+	// Make another request to get the CSRF token in response header
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	proxy.ServeHTTP(rw, req)
+	csrfToken := rw.Header().Get("X-CSRF-Token")
+
+	testCases := []struct {
+		name    string
+		method  string
+		token   bool
+		url     string
+		allowed bool
+	}{
+		{
+			name:    "Route POST allowed",
+			method:  "POST",
+			token:   false,
+			url:     "/skip/csrf/routes",
+			allowed: true,
+		},
+		{
+			name:    "Route PUT denied",
+			method:  "PUT",
+			token:   false,
+			url:     "/skip/csrf/routes",
+			allowed: false,
+		},
+		{
+			name:    "Route DELETE allowed with token",
+			method:  "DELETE",
+			token:   true,
+			url:     "/skip/csrf/routes",
+			allowed: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(tc.method, tc.url, nil)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.allowed, proxy.isAllowedCSRFRoute(req))
+
+			req.Header.Set("Cookie", cookie)
+			if tc.token {
+				req.Header.Set(proxy.CSRFTokenOptions.RequestHeader, csrfToken)
+			}
+
+			rw := httptest.NewRecorder()
+			proxy.ServeHTTP(rw, req)
+
+			if tc.allowed {
+				assert.Equal(t, 200, rw.Code)
+				assert.Equal(t, "Allowed Request", rw.Body.String())
+			} else if tc.token {
+				// If request is not allowed without CSRF token but token
+				// exists, it will succeed.
+				assert.Equal(t, 200, rw.Code)
+			} else {
+				assert.Equal(t, 403, rw.Code)
+			}
+		})
+	}
+}
+
 func TestProxyAllowedGroups(t *testing.T) {
 	tests := []struct {
 		name               string
