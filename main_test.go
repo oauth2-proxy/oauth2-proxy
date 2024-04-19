@@ -78,6 +78,7 @@ providers:
     tenant: common
   oidcConfig:
     groupsClaim: groups
+    rolesClaim: roles
     emailClaim: email
     userIDClaim: email
     insecureSkipNonce: true
@@ -158,6 +159,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 				},
 				OIDCConfig: options.OIDCOptions{
 					GroupsClaim:       "groups",
+					RolesClaim:        "roles",
 					EmailClaim:        "email",
 					UserIDClaim:       "email",
 					AudienceClaims:    []string{"aud"},

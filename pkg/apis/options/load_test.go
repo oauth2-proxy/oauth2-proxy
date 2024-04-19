@@ -43,6 +43,7 @@ var _ = Describe("Load", func() {
 			UserIDClaim:           "email",
 			OIDCEmailClaim:        "email",
 			OIDCGroupsClaim:       "groups",
+			OIDCRolesClaim:        "roles",
 			OIDCAudienceClaims:    []string{"aud"},
 			InsecureOIDCSkipNonce: true,
 		},
