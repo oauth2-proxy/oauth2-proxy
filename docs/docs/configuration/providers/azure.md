@@ -37,6 +37,13 @@ title: Azure
    --oidc-issuer-url=https://login.microsoftonline.com/{tenant-id}/v2.0
 ```
 
+
+***Roles***:
+
+Microsoft Entra ID (Former Azure AD) adds a `roles` claim when App Roles are defined in the App registrations and assigned to the logged in users. Microsoft Entra ID roles can be autorized usign the `--allowed-role=<role name>` option, allowing only users from the defined list of roles (non-exclusive).
+
+To create an App Role in Microsoft Entra ID, go to your **App registration** -> **App Roles** -> **Create App Role**. The value you assign in the `Value` field is the one that will be included in the claim. Then, to assign a role to a user, group or Service Principal, go to the **Enterprise Application** of your **App Registration** -> **Users and Groups** -> **Add User/Group**. From that screen, you can assign the role.
+
 ***Notes***:
 - When using v2.0 Azure Auth endpoint (`https://login.microsoftonline.com/{tenant-id}/v2.0`) as `--oidc_issuer_url`, in conjunction
   with `--resource` flag, be sure to append `/.default` at the end of the resource name. See
