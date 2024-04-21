@@ -15,9 +15,9 @@ type SignatureData struct {
 	Key  string
 }
 
-// AlphaOptions holds Configuration AlphaOptions that can be set by Command Line Flag,
+// Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
-type AlphaOptions struct {
+type Options struct {
 	// ProxyOptions is used to configure the proxy behaviour.
 	// This includes things like the prefix for protected paths, authentication
 	// and routing options.
@@ -90,26 +90,26 @@ type AlphaOptions struct {
 }
 
 // Options for Getting internal values
-func (o *AlphaOptions) GetRedirectURL() *url.URL                      { return o.redirectURL }
-func (o *AlphaOptions) GetSignatureData() *SignatureData              { return o.signatureData }
-func (o *AlphaOptions) GetOIDCVerifier() internaloidc.IDTokenVerifier { return o.oidcVerifier }
-func (o *AlphaOptions) GetJWTBearerVerifiers() []internaloidc.IDTokenVerifier {
+func (o *Options) GetRedirectURL() *url.URL                      { return o.redirectURL }
+func (o *Options) GetSignatureData() *SignatureData              { return o.signatureData }
+func (o *Options) GetOIDCVerifier() internaloidc.IDTokenVerifier { return o.oidcVerifier }
+func (o *Options) GetJWTBearerVerifiers() []internaloidc.IDTokenVerifier {
 	return o.jwtBearerVerifiers
 }
-func (o *AlphaOptions) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
+func (o *Options) GetRealClientIPParser() ipapi.RealClientIPParser { return o.realClientIPParser }
 
 // Options for Setting internal values
-func (o *AlphaOptions) SetRedirectURL(s *url.URL)                      { o.redirectURL = s }
-func (o *AlphaOptions) SetSignatureData(s *SignatureData)              { o.signatureData = s }
-func (o *AlphaOptions) SetOIDCVerifier(s internaloidc.IDTokenVerifier) { o.oidcVerifier = s }
-func (o *AlphaOptions) SetJWTBearerVerifiers(s []internaloidc.IDTokenVerifier) {
+func (o *Options) SetRedirectURL(s *url.URL)                      { o.redirectURL = s }
+func (o *Options) SetSignatureData(s *SignatureData)              { o.signatureData = s }
+func (o *Options) SetOIDCVerifier(s internaloidc.IDTokenVerifier) { o.oidcVerifier = s }
+func (o *Options) SetJWTBearerVerifiers(s []internaloidc.IDTokenVerifier) {
 	o.jwtBearerVerifiers = s
 }
-func (o *AlphaOptions) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClientIPParser = s }
+func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser) { o.realClientIPParser = s }
 
 // NewOptions constructs a new Options with defaulted values
-func NewOptions() *AlphaOptions {
-	return &AlphaOptions{
+func NewOptions() *Options {
+	return &Options{
 		ProxyOptions:  proxyOptionsDefaults(),
 		ProbeOptions:  probeOptionsDefaults(),
 		Cookie:        cookieDefaults(),

@@ -19,7 +19,7 @@ const (
 	providerID   = "providerID"
 )
 
-func testOptions() *options.AlphaOptions {
+func testOptions() *options.Options {
 	o := options.NewOptions()
 	o.UpstreamServers.Upstreams = append(o.UpstreamServers.Upstreams, options.Upstream{
 		ID:   "upstream",

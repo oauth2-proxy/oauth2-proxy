@@ -26,7 +26,7 @@ var _ = Describe("Allowlist", func() {
 
 	DescribeTable("validateRoutes",
 		func(r *validateRoutesTableInput) {
-			opts := &options.AlphaOptions{
+			opts := &options.Options{
 				ProxyOptions: options.ProxyOptions{
 					SkipAuthRoutes: r.routes,
 				},
@@ -60,7 +60,7 @@ var _ = Describe("Allowlist", func() {
 
 	DescribeTable("validateRegexes",
 		func(r *validateRegexesTableInput) {
-			opts := &options.AlphaOptions{
+			opts := &options.Options{
 				ProxyOptions: options.ProxyOptions{
 					SkipAuthRegex: r.regexes,
 				},
@@ -94,7 +94,7 @@ var _ = Describe("Allowlist", func() {
 
 	DescribeTable("validateTrustedIPs",
 		func(t *validateTrustedIPsTableInput) {
-			opts := &options.AlphaOptions{
+			opts := &options.Options{
 				ProxyOptions: options.ProxyOptions{
 					TrustedIPs: t.trustedIPs,
 				},

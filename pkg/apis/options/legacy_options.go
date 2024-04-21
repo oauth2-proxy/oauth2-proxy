@@ -155,7 +155,7 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-func (l *LegacyOptions) ToOptions() (*AlphaOptions, error) {
+func (l *LegacyOptions) ToOptions() (*Options, error) {
 	opts := NewOptions()
 
 	opts.ProxyOptions = l.LegacyProxyOptions.convert()

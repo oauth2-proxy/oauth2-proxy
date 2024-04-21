@@ -316,7 +316,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 type PassAccessTokenTest struct {
 	providerServer *httptest.Server
 	proxy          *OAuthProxy
-	opts           *options.AlphaOptions
+	opts           *options.Options
 }
 
 type PassAccessTokenTestOptions struct {
@@ -570,7 +570,7 @@ func TestSessionValidationFailure(t *testing.T) {
 }
 
 type SignInPageTest struct {
-	opts                 *options.AlphaOptions
+	opts                 *options.Options
 	proxy                *OAuthProxy
 	signInRegexp         *regexp.Regexp
 	signInProviderRegexp *regexp.Regexp
@@ -795,7 +795,7 @@ func TestSignInPageSkipProviderDirect(t *testing.T) {
 }
 
 type ProcessCookieTest struct {
-	opts         *options.AlphaOptions
+	opts         *options.Options
 	proxy        *OAuthProxy
 	rw           *httptest.ResponseRecorder
 	req          *http.Request
@@ -806,7 +806,7 @@ type ProcessCookieTestOpts struct {
 	providerValidateCookieResponse bool
 }
 
-type OptionsModifier func(*options.AlphaOptions)
+type OptionsModifier func(*options.Options)
 
 func NewProcessCookieTest(opts ProcessCookieTestOpts, modifiers ...OptionsModifier) (*ProcessCookieTest, error) {
 	var pcTest ProcessCookieTest
@@ -911,7 +911,7 @@ func TestProcessCookieNoCookieError(t *testing.T) {
 }
 
 func TestProcessCookieRefreshNotSet(t *testing.T) {
-	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.AlphaOptions) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(23) * time.Hour
 	})
 	if err != nil {
@@ -933,7 +933,7 @@ func TestProcessCookieRefreshNotSet(t *testing.T) {
 }
 
 func TestProcessCookieFailIfCookieExpired(t *testing.T) {
-	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.AlphaOptions) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	if err != nil {
@@ -953,7 +953,7 @@ func TestProcessCookieFailIfCookieExpired(t *testing.T) {
 }
 
 func TestProcessCookieFailIfRefreshSetAndCookieExpired(t *testing.T) {
-	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.AlphaOptions) {
+	pcTest, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	if err != nil {
@@ -1109,7 +1109,7 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
 }
 
 func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
-	test, err := NewAuthOnlyEndpointTest("", func(opts *options.AlphaOptions) {
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.Cookie.Expire = time.Duration(24) * time.Hour
 	})
 	if err != nil {
@@ -1468,7 +1468,7 @@ func (v *SignatureAuthenticator) Authenticate(w http.ResponseWriter, r *http.Req
 }
 
 type SignatureTest struct {
-	opts          *options.AlphaOptions
+	opts          *options.Options
 	upstream      *httptest.Server
 	upstreamHost  string
 	provider      *httptest.Server
@@ -1626,7 +1626,7 @@ func TestRequestSignature(t *testing.T) {
 }
 
 type ajaxRequestTest struct {
-	opts  *options.AlphaOptions
+	opts  *options.Options
 	proxy *OAuthProxy
 }
 
@@ -1817,7 +1817,7 @@ func TestGetJwtSession(t *testing.T) {
 	}
 	internalVerifier := internaloidc.NewVerifier(verifier, verificationOptions)
 
-	test, err := NewAuthOnlyEndpointTest("", func(opts *options.AlphaOptions) {
+	test, err := NewAuthOnlyEndpointTest("", func(opts *options.Options) {
 		opts.InjectRequestHeaders = []options.Header{
 			{
 				Name: "Authorization",
@@ -2024,7 +2024,7 @@ func Test_noCacheHeaders(t *testing.T) {
 	})
 }
 
-func baseTestOptions() *options.AlphaOptions {
+func baseTestOptions() *options.Options {
 	opts := options.NewOptions()
 	opts.Cookie.Secret = rawCookieSecret
 	opts.Providers[0].ID = "providerID"
@@ -2399,7 +2399,7 @@ func Test_buildRoutesAllowlist(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			opts := &options.AlphaOptions{
+			opts := &options.Options{
 				ProxyOptions: options.ProxyOptions{
 					SkipAuthRegex:  tc.skipAuthRegex,
 					SkipAuthRoutes: tc.skipAuthRoutes,
@@ -2962,7 +2962,7 @@ func TestProxyAllowedGroups(t *testing.T) {
 			}))
 			t.Cleanup(upstreamServer.Close)
 
-			test, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.AlphaOptions) {
+			test, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
 				opts.Providers[0].AllowedGroups = tt.allowedGroups
 				opts.UpstreamServers = options.UpstreamConfig{
 					Upstreams: []options.Upstream{
@@ -3093,7 +3093,7 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 				CreatedAt:   &created,
 			}
 
-			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.AlphaOptions) {
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {
 				opts.Providers[0].AllowedGroups = tc.allowedGroups
 			})
 			if err != nil {
@@ -3169,7 +3169,7 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			test, err := NewAuthOnlyEndpointTest("?allowed_groups=a,b", func(opts *options.AlphaOptions) {
+			test, err := NewAuthOnlyEndpointTest("?allowed_groups=a,b", func(opts *options.Options) {
 				opts.ProxyOptions.SkipAuthPreflight = true
 				opts.ProxyOptions.TrustedIPs = []string{"1.2.3.4"}
 			})
@@ -3275,7 +3275,7 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 				CreatedAt:   &created,
 			}
 
-			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.AlphaOptions) {})
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -3365,7 +3365,7 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
 				CreatedAt:   &created,
 			}
 
-			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.AlphaOptions) {})
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -3383,13 +3383,13 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
 func TestGetOAuthRedirectURI(t *testing.T) {
 	tests := []struct {
 		name      string
-		setupOpts func(*options.AlphaOptions) *options.AlphaOptions
+		setupOpts func(*options.Options) *options.Options
 		req       *http.Request
 		want      string
 	}{
 		{
 			name: "redirect with https schema",
-			setupOpts: func(baseOpts *options.AlphaOptions) *options.AlphaOptions {
+			setupOpts: func(baseOpts *options.Options) *options.Options {
 				return baseOpts
 			},
 			req: &http.Request{
@@ -3402,7 +3402,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		},
 		{
 			name: "redirect with http schema",
-			setupOpts: func(baseOpts *options.AlphaOptions) *options.AlphaOptions {
+			setupOpts: func(baseOpts *options.Options) *options.Options {
 				baseOpts.Cookie.Secure = false
 				return baseOpts
 			},
@@ -3416,7 +3416,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		},
 		{
 			name: "relative redirect url",
-			setupOpts: func(baseOpts *options.AlphaOptions) *options.AlphaOptions {
+			setupOpts: func(baseOpts *options.Options) *options.Options {
 				baseOpts.ProxyOptions.RelativeRedirectURL = true
 				return baseOpts
 			},
@@ -3425,7 +3425,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		},
 		{
 			name: "proxy prefix",
-			setupOpts: func(baseOpts *options.AlphaOptions) *options.AlphaOptions {
+			setupOpts: func(baseOpts *options.Options) *options.Options {
 				baseOpts.ProxyOptions.ProxyPrefix = "/prefix"
 				return baseOpts
 			},
@@ -3439,7 +3439,7 @@ func TestGetOAuthRedirectURI(t *testing.T) {
 		},
 		{
 			name: "proxy prefix with relative redirect",
-			setupOpts: func(baseOpts *options.AlphaOptions) *options.AlphaOptions {
+			setupOpts: func(baseOpts *options.Options) *options.Options {
 				baseOpts.ProxyOptions.ProxyPrefix = "/prefix"
 				baseOpts.ProxyOptions.RelativeRedirectURL = true
 				return baseOpts

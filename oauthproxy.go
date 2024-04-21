@@ -116,7 +116,7 @@ type OAuthProxy struct {
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
-func NewOAuthProxy(opts *options.AlphaOptions, validator func(string) bool) (*OAuthProxy, error) {
+func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthProxy, error) {
 	sessionStore, err := sessions.NewSessionStore(&opts.Session, &opts.Cookie)
 	if err != nil {
 		return nil, fmt.Errorf("error initialising session store: %v", err)
@@ -274,7 +274,7 @@ func (p *OAuthProxy) Start() error {
 	return p.server.Start(ctx)
 }
 
-func (p *OAuthProxy) setupServer(opts *options.AlphaOptions) error {
+func (p *OAuthProxy) setupServer(opts *options.Options) error {
 	serverOpts := proxyhttp.Opts{
 		Handler:           p,
 		BindAddress:       opts.Server.BindAddress,
@@ -349,7 +349,7 @@ func (p *OAuthProxy) buildProxySubrouter(s *mux.Router) {
 // buildPreAuthChain constructs a chain that should process every request before
 // the OAuth2 Proxy authentication logic kicks in.
 // For example forcing HTTPS or health checks.
-func buildPreAuthChain(opts *options.AlphaOptions, sessionStore sessionsapi.SessionStore) (alice.Chain, error) {
+func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionStore) (alice.Chain, error) {
 	chain := alice.New(middleware.NewScope(opts.ProxyOptions.ReverseProxy, opts.Logging.RequestIDHeader))
 
 	if opts.ProxyOptions.ForceHTTPS {
@@ -389,7 +389,7 @@ func buildPreAuthChain(opts *options.AlphaOptions, sessionStore sessionsapi.Sess
 	return chain, nil
 }
 
-func buildSessionChain(opts *options.AlphaOptions, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
+func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
 	chain := alice.New()
 
 	if opts.ProxyOptions.SkipJwtBearerTokens {
@@ -419,7 +419,7 @@ func buildSessionChain(opts *options.AlphaOptions, provider providers.Provider, 
 	return chain
 }
 
-func buildHeadersChain(opts *options.AlphaOptions) (alice.Chain, error) {
+func buildHeadersChain(opts *options.Options) (alice.Chain, error) {
 	requestInjector, err := middleware.NewRequestHeaderInjector(opts.InjectRequestHeaders)
 	if err != nil {
 		return alice.Chain{}, fmt.Errorf("error constructing request header injector: %v", err)
@@ -433,7 +433,7 @@ func buildHeadersChain(opts *options.AlphaOptions) (alice.Chain, error) {
 	return alice.New(requestInjector, responseInjector), nil
 }
 
-func buildSignInMessage(opts *options.AlphaOptions) string {
+func buildSignInMessage(opts *options.Options) string {
 	var msg string
 	if len(opts.PageTemplates.Banner) >= 1 {
 		if opts.PageTemplates.Banner == "-" {
@@ -461,7 +461,7 @@ func buildProviderName(p providers.Provider, override string) string {
 // buildRoutesAllowlist builds an []allowedRoute  list from either the legacy
 // SkipAuthRegex option (paths only support) or newer SkipAuthRoutes option
 // (method=path support)
-func buildRoutesAllowlist(opts *options.AlphaOptions) ([]allowedRoute, error) {
+func buildRoutesAllowlist(opts *options.Options) ([]allowedRoute, error) {
 	routes := make([]allowedRoute, 0, len(opts.ProxyOptions.SkipAuthRegex)+len(opts.ProxyOptions.SkipAuthRoutes))
 
 	for _, path := range opts.ProxyOptions.SkipAuthRegex {
@@ -508,7 +508,7 @@ func buildRoutesAllowlist(opts *options.AlphaOptions) ([]allowedRoute, error) {
 }
 
 // buildAPIRoutes builds an []apiRoute from ApiRoutes option
-func buildAPIRoutes(opts *options.AlphaOptions) ([]apiRoute, error) {
+func buildAPIRoutes(opts *options.Options) ([]apiRoute, error) {
 	routes := make([]apiRoute, 0, len(opts.ProxyOptions.APIRoutes))
 
 	for _, path := range opts.ProxyOptions.APIRoutes {

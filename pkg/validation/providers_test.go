@@ -9,7 +9,7 @@ import (
 
 var _ = Describe("Providers", func() {
 	type validateProvidersTableInput struct {
-		options    *options.AlphaOptions
+		options    *options.Options
 		errStrings []string
 	}
 
@@ -41,11 +41,11 @@ var _ = Describe("Providers", func() {
 			Expect(validateProviders(o.options)).To(ConsistOf(o.errStrings))
 		},
 		Entry("with no providers", &validateProvidersTableInput{
-			options:    &options.AlphaOptions{},
+			options:    &options.Options{},
 			errStrings: []string{missingProvider},
 		}),
 		Entry("with valid providers", &validateProvidersTableInput{
-			options: &options.AlphaOptions{
+			options: &options.Options{
 				Providers: options.Providers{
 					validProvider,
 					validLoginGovProvider,
@@ -54,7 +54,7 @@ var _ = Describe("Providers", func() {
 			errStrings: []string{},
 		}),
 		Entry("with an empty providerID", &validateProvidersTableInput{
-			options: &options.AlphaOptions{
+			options: &options.Options{
 				Providers: options.Providers{
 					missingIDProvider,
 				},
@@ -62,7 +62,7 @@ var _ = Describe("Providers", func() {
 			errStrings: []string{emptyIDMsg},
 		}),
 		Entry("with same providerID", &validateProvidersTableInput{
-			options: &options.AlphaOptions{
+			options: &options.Options{
 				Providers: options.Providers{
 					validProvider,
 					validProvider,
@@ -71,7 +71,7 @@ var _ = Describe("Providers", func() {
 			errStrings: []string{duplicateProviderIDMsg},
 		}),
 		Entry("with multiple providers and skip provider button", &validateProvidersTableInput{
-			options: &options.AlphaOptions{
+			options: &options.Options{
 				ProxyOptions: options.ProxyOptions{
 					SkipProviderButton: true,
 				},

@@ -10,7 +10,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
 )
 
-func validateAllowlists(o *options.AlphaOptions) []string {
+func validateAllowlists(o *options.Options) []string {
 	msgs := []string{}
 
 	msgs = append(msgs, validateAuthRoutes(o)...)
@@ -28,7 +28,7 @@ func validateAllowlists(o *options.AlphaOptions) []string {
 }
 
 // validateAuthRoutes validates method=path routes passed with options.SkipAuthRoutes
-func validateAuthRoutes(o *options.AlphaOptions) []string {
+func validateAuthRoutes(o *options.Options) []string {
 	msgs := []string{}
 	for _, route := range o.ProxyOptions.SkipAuthRoutes {
 		var regex string
@@ -47,12 +47,12 @@ func validateAuthRoutes(o *options.AlphaOptions) []string {
 }
 
 // validateRegex validates regex paths passed with options.SkipAuthRegex
-func validateAuthRegexes(o *options.AlphaOptions) []string {
+func validateAuthRegexes(o *options.Options) []string {
 	return validateRegexes(o.ProxyOptions.SkipAuthRegex)
 }
 
 // validateTrustedIPs validates IP/CIDRs for IP based allowlists
-func validateTrustedIPs(o *options.AlphaOptions) []string {
+func validateTrustedIPs(o *options.Options) []string {
 	msgs := []string{}
 	for i, ipStr := range o.ProxyOptions.TrustedIPs {
 		if nil == ip.ParseIPNet(ipStr) {
@@ -63,7 +63,7 @@ func validateTrustedIPs(o *options.AlphaOptions) []string {
 }
 
 // validateAPIRoutes validates regex paths passed with options.ApiRoutes
-func validateAPIRoutes(o *options.AlphaOptions) []string {
+func validateAPIRoutes(o *options.Options) []string {
 	return validateRegexes(o.ProxyOptions.APIRoutes)
 }
 

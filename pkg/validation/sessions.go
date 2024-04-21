@@ -11,7 +11,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
 )
 
-func validateSessionCookieMinimal(o *options.AlphaOptions) []string {
+func validateSessionCookieMinimal(o *options.Options) []string {
 	if !o.Session.Cookie.Minimal {
 		return []string{}
 	}
@@ -41,7 +41,7 @@ func validateSessionCookieMinimal(o *options.AlphaOptions) []string {
 
 // validateRedisSessionStore builds a Redis Client from the options and
 // attempts to connect, Set, Get and Del a random health check key
-func validateRedisSessionStore(o *options.AlphaOptions) []string {
+func validateRedisSessionStore(o *options.Options) []string {
 	if o.Session.Type != options.RedisSessionStoreType {
 		return []string{}
 	}

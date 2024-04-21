@@ -18,7 +18,7 @@ import (
 
 // Validate checks that required options are set and validates those that they
 // are of the correct format
-func Validate(o *options.AlphaOptions) error {
+func Validate(o *options.Options) error {
 	msgs := validateCookie(o.Cookie)
 	msgs = append(msgs, validateSessionCookieMinimal(o)...)
 	msgs = append(msgs, validateRedisSessionStore(o)...)
@@ -107,7 +107,7 @@ func Validate(o *options.AlphaOptions) error {
 	return nil
 }
 
-func parseSignatureKey(o *options.AlphaOptions, msgs []string) []string {
+func parseSignatureKey(o *options.Options, msgs []string) []string {
 	if o.ProxyOptions.LegacySignatureKey == "" {
 		return msgs
 	}

@@ -112,7 +112,7 @@ providers:
 		return &du
 	}
 
-	testExpectedOptions := func() *options.AlphaOptions {
+	testExpectedOptions := func() *options.Options {
 		opts, err := options.NewLegacyOptions().ToOptions()
 		Expect(err).ToNot(HaveOccurred())
 
@@ -183,7 +183,7 @@ providers:
 		yamlConfigContent   string
 		args                []string
 		extraFlags          func() *pflag.FlagSet
-		expectedOptions     func() *options.AlphaOptions
+		expectedOptions     func() *options.Options
 		expectedErr         error
 	}
 
@@ -250,12 +250,12 @@ providers:
 		}),
 		Entry("with bad legacy configuration", loadConfigurationTableInput{
 			legacyConfigContent: testCoreConfig + "unknown_field=\"something\"",
-			expectedOptions:     func() *options.AlphaOptions { return nil },
+			expectedOptions:     func() *options.Options { return nil },
 			expectedErr:         errors.New("failed to load config: error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_field"),
 		}),
 		Entry("with bad yaml configuration", loadConfigurationTableInput{
 			yamlConfigContent: testYamlConfig + ":",
-			expectedOptions:   func() *options.AlphaOptions { return nil },
+			expectedOptions:   func() *options.Options { return nil },
 			expectedErr:       fmt.Errorf("failed to load yaml options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testYamlConfig, "\n")),
 		}),
 		Entry("with yaml and legacy configuration", loadConfigurationTableInput{

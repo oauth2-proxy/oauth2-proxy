@@ -9,7 +9,7 @@ import (
 
 // validateProviders is the initial validation migration for multiple providrers
 // It currently includes only logic that can verify the providers one by one and does not break the valdation pipe
-func validateProviders(o *options.AlphaOptions) []string {
+func validateProviders(o *options.Options) []string {
 	msgs := []string{}
 
 	// validate general multiple provider configuration

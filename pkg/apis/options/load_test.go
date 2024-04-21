@@ -546,7 +546,7 @@ injectResponseHeaders:
 `)
 
 		By("Creating a config file")
-		configFile, err := os.CreateTemp("", "oauth2-proxy-test-alpha-config-file")
+		configFile, err := os.CreateTemp("", "oauth2-proxy-test-yaml-config-file")
 		Expect(err).ToNot(HaveOccurred())
 		defer configFile.Close()
 
@@ -557,12 +557,12 @@ injectResponseHeaders:
 		configFileName := configFile.Name()
 
 		By("Loading the example config")
-		into := &AlphaOptions{}
+		into := &Options{}
 		Expect(LoadYAML(configFileName, into)).To(Succeed())
 
 		flushInterval := Duration(500 * time.Millisecond)
 
-		Expect(into).To(Equal(&AlphaOptions{
+		Expect(into).To(Equal(&Options{
 			UpstreamServers: UpstreamConfig{
 				Upstreams: []Upstream{
 					{
