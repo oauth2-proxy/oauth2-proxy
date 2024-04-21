@@ -15,7 +15,7 @@ var _ = Describe("Upstreams", func() {
 		errStrings []string
 	}
 
-	flushInterval := options.Duration(5 * time.Second)
+	flushInterval := 5 * time.Second
 	staticCode200 := 200
 	truth := true
 

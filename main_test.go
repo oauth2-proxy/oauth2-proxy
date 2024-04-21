@@ -82,7 +82,7 @@ injectResponseHeaders:
     basicAuthPassword:
       value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
 server:
-  bindAddress: "127.0.0.1:4180"
+  httpAddress: "127.0.0.1:4180"
 providers:
 - provider: google
   ID: google=oauth2-proxy
@@ -107,9 +107,8 @@ providers:
 		return &b
 	}
 
-	durationPtr := func(d time.Duration) *options.Duration {
-		du := options.Duration(d)
-		return &du
+	durationPtr := func(d time.Duration) *time.Duration {
+		return &d
 	}
 
 	testExpectedOptions := func() *options.Options {

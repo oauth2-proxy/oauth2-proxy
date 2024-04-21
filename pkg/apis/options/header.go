@@ -19,14 +19,16 @@ type Header struct {
 
 // HeaderValue represents a single header value and the sources that can
 // make up the header value
+//
+// We use mapstructure to evaluate the json tags which supports squashing.
+// Therefore we ignore the warning that go's default json parser does not support squashing
 type HeaderValue struct {
-	// Allow users to load the value from a secret source
-	// TODO(tuunit): Investigate why mapstructure: ",squash" doesn't work with pointers
-	SecretSource `mapstructure:",squash"`
 
-	// Allow users to load the value from a session claim
-	// TODO(tuunit): Investigate why mapstructure: ",squash" doesn't work with pointers
-	ClaimSource `mapstructure:",squash"`
+	//nolint:all lint:ignore SA5008 because of mapstructure
+	SecretSource `json:",squash"`
+
+	//nolint:all lint:ignore SA5008 because of mapstructure
+	ClaimSource `json:",squash"`
 }
 
 // ClaimSource allows loading a header value from a claim within the session

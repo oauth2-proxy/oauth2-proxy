@@ -560,7 +560,7 @@ injectResponseHeaders:
 		into := &Options{}
 		Expect(LoadYAML(configFileName, into)).To(Succeed())
 
-		flushInterval := Duration(500 * time.Millisecond)
+		flushInterval := time.Duration(500 * time.Millisecond)
 
 		Expect(into).To(Equal(&Options{
 			UpstreamServers: UpstreamConfig{

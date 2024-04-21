@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/a8m/envsubst"
 	"github.com/ghodss/yaml"
@@ -146,6 +147,7 @@ func LoadYAML(configFileName string, opts interface{}) error {
 		return err
 	}
 
+	// Generic interface for loading arbitrary yaml structure
 	var intermediate map[string]interface{}
 
 	// UnmarshalStrict will return an error if the config includes options that are
@@ -154,7 +156,21 @@ func LoadYAML(configFileName string, opts interface{}) error {
 		return fmt.Errorf("error unmarshalling config: %w", err)
 	}
 
-	if err := mapstructure.Decode(intermediate, opts); err != nil {
+	// Using mapstructure to decode arbitrary yaml structure into options and
+	// merge with existing values instead of overwriting everything
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		Metadata: nil,
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			ToDurationHookFunc()),
+		Result:  opts,
+		TagName: "json",
+	})
+
+	if err != nil {
+		return fmt.Errorf("error creating decoder for options: %w", err)
+	}
+
+	if err := decoder.Decode(intermediate); err != nil {
 		return fmt.Errorf("error decoding into options: %w", err)
 	}
 
@@ -180,4 +196,26 @@ func loadAndParseYaml(configFileName string) ([]byte, error) {
 
 	return buffer, nil
 
+}
+
+func ToDurationHookFunc() mapstructure.DecodeHookFunc {
+	return func(
+		f reflect.Type,
+		t reflect.Type,
+		data interface{}) (interface{}, error) {
+		if t != reflect.TypeOf(time.Duration(0)) {
+			return data, nil
+		}
+
+		switch f.Kind() {
+		case reflect.String:
+			return time.ParseDuration(data.(string))
+		case reflect.Float64:
+			return time.Duration(data.(float64) * float64(time.Second)), nil
+		case reflect.Int64:
+			return time.Duration(data.(int64) * int64(time.Second)), nil
+		default:
+			return data, nil
+		}
+	}
 }

@@ -24,4 +24,5 @@ upstreamConfig:
   upstreams:
   - id: httpbin
     uri: http://httpbin.localtest.me:8080
+    path: /
 
