@@ -9,7 +9,7 @@ docs:
       - '**/*.md'
 
 changelog:
-  - cNhanged-files:
+  - changed-files:
     - any-glob-to-any-file:
       - 'CHAGELOG.md'
 

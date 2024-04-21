@@ -114,9 +114,8 @@ func (j *jwtSessionLoader) getBasicToken(token string) (string, error) {
 
 	// check user, user+password, or just password for a token
 	if j.jwtRegex.MatchString(user) {
-		// Support blank passwords or magic `x-oauth-basic` passwords - nothing else
-		/* #nosec G101 */
-		if password == "" || password == "x-oauth-basic" {
+		if password == "x-oauth-basic" || // #nosec G101 -- Support blank passwords or magic `x-oauth-basic` passwords, nothing else
+			password == "" {
 			return user, nil
 		}
 	} else if j.jwtRegex.MatchString(password) {

@@ -33,6 +33,7 @@ issues:
         - gocritic
         - gosec
         - goconst
+        - revive
     - path: _test\.go
       linters:
         - revive
