@@ -140,16 +140,22 @@ func isUnexported(name string) bool {
 }
 
 // LoadYAML will load a YAML based configuration file into the options interface provided.
-func LoadYAML(configFileName string, into interface{}) error {
+func LoadYAML(configFileName string, opts interface{}) error {
 	buffer, err := loadAndParseYaml(configFileName)
 	if err != nil {
 		return err
 	}
 
+	var intermediate map[string]interface{}
+
 	// UnmarshalStrict will return an error if the config includes options that are
 	// not mapped to fields of the into struct
-	if err := yaml.UnmarshalStrict(buffer, into, yaml.DisallowUnknownFields); err != nil {
+	if err := yaml.UnmarshalStrict(buffer, &intermediate); err != nil {
 		return fmt.Errorf("error unmarshalling config: %w", err)
+	}
+
+	if err := mapstructure.Decode(intermediate, opts); err != nil {
+		return fmt.Errorf("error decoding into options: %w", err)
 	}
 
 	return nil

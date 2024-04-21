@@ -8,7 +8,19 @@
             "mode": "auto",
             "program": "${workspaceFolder}",
             "args": [
-                "--config", "contrib/local-environment/oauth2-proxy.cfg"
+                "--config",
+                "contrib/local-environment/oauth2-proxy.cfg"
+            ]
+        },
+        {
+            "name": "OAuth2 Proxy for Dex using yaml",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "args": [
+                "--yaml-config",
+                "contrib/local-environment/oauth2-proxy.yaml"
             ]
         },
         {
@@ -18,7 +30,8 @@
             "mode": "auto",
             "program": "${workspaceFolder}",
             "args": [
-                "--config", "contrib/local-environment/oauth2-proxy-keycloak.cfg"
+                "--config",
+                "contrib/local-environment/oauth2-proxy-keycloak.cfg"
             ]
         },
         {
@@ -28,8 +41,10 @@
             "mode": "auto",
             "program": "${workspaceFolder}",
             "args": [
-                "--config", "contrib/local-environment/oauth2-proxy-alpha-config.cfg",
-                "--alpha-config", "contrib/local-environment/oauth2-proxy-alpha-config.yaml"
+                "--config",
+                "contrib/local-environment/oauth2-proxy-alpha-config.cfg",
+                "--alpha-config",
+                "contrib/local-environment/oauth2-proxy-alpha-config.yaml"
             ]
         }
     ]

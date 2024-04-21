@@ -42,3 +42,178 @@ type ClaimSource struct {
 	// basicAuthPassword will be used as the password value.
 	BasicAuthPassword *SecretSource `json:"basicAuthPassword,omitempty"`
 }
+
+func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header {
+	claim := "user"
+	if preferEmailToUser {
+		claim = "email"
+	}
+
+	return Header{
+		Name: "Authorization",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim:  claim,
+					Prefix: "Basic ",
+					BasicAuthPassword: &SecretSource{
+						Value: []byte(basicAuthPassword),
+					},
+				},
+			},
+		},
+	}
+}
+
+func getPassUserHeaders(preferEmailToUser bool) []Header {
+	headers := []Header{
+		{
+			Name: "X-Forwarded-Groups",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "groups",
+					},
+				},
+			},
+		},
+	}
+
+	if preferEmailToUser {
+		return append(headers,
+			Header{
+				Name: "X-Forwarded-User",
+				Values: []HeaderValue{
+					{
+						ClaimSource: &ClaimSource{
+							Claim: "email",
+						},
+					},
+				},
+			},
+		)
+	}
+
+	return append(headers,
+		Header{
+			Name: "X-Forwarded-User",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "user",
+					},
+				},
+			},
+		},
+		Header{
+			Name: "X-Forwarded-Email",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "email",
+					},
+				},
+			},
+		},
+	)
+}
+
+func getPassAccessTokenHeader() Header {
+	return Header{
+		Name: "X-Forwarded-Access-Token",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim: "access_token",
+				},
+			},
+		},
+	}
+}
+
+func getAuthorizationHeader() Header {
+	return Header{
+		Name: "Authorization",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim:  "id_token",
+					Prefix: "Bearer ",
+				},
+			},
+		},
+	}
+}
+
+func getPreferredUsernameHeader() Header {
+	return Header{
+		Name: "X-Forwarded-Preferred-Username",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim: "preferred_username",
+				},
+			},
+		},
+	}
+}
+
+func getXAuthRequestHeaders() []Header {
+	headers := []Header{
+		{
+			Name: "X-Auth-Request-User",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "user",
+					},
+				},
+			},
+		},
+		{
+			Name: "X-Auth-Request-Email",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "email",
+					},
+				},
+			},
+		},
+		{
+			Name: "X-Auth-Request-Preferred-Username",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "preferred_username",
+					},
+				},
+			},
+		},
+		{
+			Name: "X-Auth-Request-Groups",
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "groups",
+					},
+				},
+			},
+		},
+	}
+
+	return headers
+}
+
+func getXAuthRequestAccessTokenHeader() Header {
+	return Header{
+		Name: "X-Auth-Request-Access-Token",
+		Values: []HeaderValue{
+			{
+				ClaimSource: &ClaimSource{
+					Claim: "access_token",
+				},
+			},
+		},
+	}
+}

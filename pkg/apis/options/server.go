@@ -4,11 +4,11 @@ package options
 type Server struct {
 	// BindAddress is the address on which to serve traffic.
 	// Leave blank or set to "-" to disable.
-	BindAddress string `json:"bindAddress,omitempty"`
+	BindAddress string `json:"httpAddress,omitempty"`
 
 	// SecureBindAddress is the address on which to serve secure traffic.
 	// Leave blank or set to "-" to disable.
-	SecureBindAddress string `json:"secureBindAdress,omitempty"`
+	SecureBindAddress string `json:"httpsAddress,omitempty"`
 
 	// TLS contains the information for loading the certificate and key for the
 	// secure traffic and further configuration for the TLS server.
