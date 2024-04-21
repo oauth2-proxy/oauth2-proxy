@@ -48,10 +48,10 @@ var _ = BeforeSuite(func() {
 
 		certOut := new(bytes.Buffer)
 		Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
-		ipv4CertDataSource.Value = certOut.Bytes()
+		ipv4CertDataSource.Value = certOut.String()
 		keyOut := new(bytes.Buffer)
 		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
-		ipv4KeyDataSource.Value = keyOut.Bytes()
+		ipv4KeyDataSource.Value = keyOut.String()
 	})
 
 	By("Generating a ipv6 self-signed cert for TLS tests", func() {
@@ -61,16 +61,16 @@ var _ = BeforeSuite(func() {
 
 		certOut := new(bytes.Buffer)
 		Expect(pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})).To(Succeed())
-		ipv6CertDataSource.Value = certOut.Bytes()
+		ipv6CertDataSource.Value = certOut.String()
 		keyOut := new(bytes.Buffer)
 		Expect(pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})).To(Succeed())
-		ipv6KeyDataSource.Value = keyOut.Bytes()
+		ipv6KeyDataSource.Value = keyOut.String()
 	})
 
 	By("Setting up a http client", func() {
-		ipv4cert, err := tls.X509KeyPair(ipv4CertDataSource.Value, ipv4KeyDataSource.Value)
+		ipv4cert, err := tls.X509KeyPair([]byte(ipv4CertDataSource.Value), []byte(ipv4KeyDataSource.Value))
 		Expect(err).ToNot(HaveOccurred())
-		ipv6cert, err := tls.X509KeyPair(ipv6CertDataSource.Value, ipv6KeyDataSource.Value)
+		ipv6cert, err := tls.X509KeyPair([]byte(ipv6CertDataSource.Value), []byte(ipv6KeyDataSource.Value))
 		Expect(err).ToNot(HaveOccurred())
 
 		ipv4certificate, err := x509.ParseCertificate(ipv4cert.Certificate[0])

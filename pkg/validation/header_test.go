@@ -19,7 +19,7 @@ var _ = Describe("Headers", func() {
 		Name: "X-Email",
 		Values: []options.HeaderValue{
 			{
-				ClaimSource: &options.ClaimSource{
+				ClaimSource: options.ClaimSource{
 					Claim: "email",
 				},
 			},
@@ -30,8 +30,8 @@ var _ = Describe("Headers", func() {
 		Name: "X-Forwarded-Auth",
 		Values: []options.HeaderValue{
 			{
-				SecretSource: &options.SecretSource{
-					Value: []byte(base64.StdEncoding.EncodeToString([]byte("secret"))),
+				SecretSource: options.SecretSource{
+					Value: base64.StdEncoding.EncodeToString([]byte("secret")),
 				},
 			},
 		},
@@ -41,10 +41,10 @@ var _ = Describe("Headers", func() {
 		Name: "Authorization",
 		Values: []options.HeaderValue{
 			{
-				ClaimSource: &options.ClaimSource{
+				ClaimSource: options.ClaimSource{
 					Claim: "email",
 					BasicAuthPassword: &options.SecretSource{
-						Value: []byte(base64.StdEncoding.EncodeToString([]byte("secret"))),
+						Value: base64.StdEncoding.EncodeToString([]byte("secret")),
 					},
 				},
 			},
@@ -94,8 +94,8 @@ var _ = Describe("Headers", func() {
 					Name: "With-Claim-And-Secret",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource:  &options.ClaimSource{},
-							SecretSource: &options.SecretSource{},
+							ClaimSource:  options.ClaimSource{},
+							SecretSource: options.SecretSource{},
 						},
 					},
 				},
@@ -111,7 +111,7 @@ var _ = Describe("Headers", func() {
 					Name: "Without-Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: &options.ClaimSource{
+							ClaimSource: options.ClaimSource{
 								Prefix: "prefix",
 							},
 						},
@@ -129,7 +129,7 @@ var _ = Describe("Headers", func() {
 					Name: "With-Invalid-Secret",
 					Values: []options.HeaderValue{
 						{
-							SecretSource: &options.SecretSource{},
+							SecretSource: options.SecretSource{},
 						},
 					},
 				},
@@ -145,7 +145,7 @@ var _ = Describe("Headers", func() {
 					Name: "With-Invalid-Basic-Auth",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: &options.ClaimSource{
+							ClaimSource: options.ClaimSource{
 								Claim: "user",
 								BasicAuthPassword: &options.SecretSource{
 									FromEnv: "UNKNOWN_ENV",

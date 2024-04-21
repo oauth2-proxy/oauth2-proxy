@@ -32,7 +32,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 http_address="127.0.0.1:4180"
 upstreams="http://httpbin"
 set_basic_auth="true"
-basic_auth_password="super-secret-password"
+basic_auth_password="c3VwZXItc2VjcmV0LXBhc3N3b3Jk"
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 `
@@ -139,11 +139,11 @@ providers:
 			Name: "Authorization",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte("super-secret-password"),
+							Value: "c3VwZXItc2VjcmV0LXBhc3N3b3Jk",
 						},
 					},
 				},

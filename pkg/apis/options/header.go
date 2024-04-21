@@ -21,10 +21,12 @@ type Header struct {
 // make up the header value
 type HeaderValue struct {
 	// Allow users to load the value from a secret source
-	*SecretSource `json:",omitempty"`
+	// TODO(tuunit): Investigate why mapstructure: ",squash" doesn't work with pointers
+	SecretSource `mapstructure:",squash"`
 
 	// Allow users to load the value from a session claim
-	*ClaimSource `json:",omitempty"`
+	// TODO(tuunit): Investigate why mapstructure: ",squash" doesn't work with pointers
+	ClaimSource `mapstructure:",squash"`
 }
 
 // ClaimSource allows loading a header value from a claim within the session
@@ -43,6 +45,28 @@ type ClaimSource struct {
 	BasicAuthPassword *SecretSource `json:"basicAuthPassword,omitempty"`
 }
 
+type HeaderFlags struct {
+	Upstream UpstreamHeaders `json:"upstream,omitempty"`
+	Response ResponseHeaders `json:"response,omitempty"`
+}
+
+type UpstreamHeaders struct {
+	BasicAuth     bool `json:"basicAuth,omitempty"`
+	AccessToken   bool `json:"accessToken,omitempty"`
+	UserHeaders   bool `json:"userHeaders,omitempty"`
+	Authorization bool `json:"authorization,omitempty"`
+
+	PreferEmailToUser bool   `json:"preferEmailToUser,omitempty"`
+	BasicAuthPassword string `json:"basicAuthPassword,omitempty"`
+	StripAuthHeaders  bool   `json:"stripAuthHeaders,omitempty"`
+}
+
+type ResponseHeaders struct {
+	BasicAuth     bool `json:"basicAuth,omitempty"`
+	XAuthRequest  bool `json:"xAuthRequest,omitempty"`
+	Authorization bool `json:"authorization,omitempty"`
+}
+
 func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header {
 	claim := "user"
 	if preferEmailToUser {
@@ -53,11 +77,11 @@ func getBasicAuthHeader(preferEmailToUser bool, basicAuthPassword string) Header
 		Name: "Authorization",
 		Values: []HeaderValue{
 			{
-				ClaimSource: &ClaimSource{
+				ClaimSource: ClaimSource{
 					Claim:  claim,
 					Prefix: "Basic ",
 					BasicAuthPassword: &SecretSource{
-						Value: []byte(basicAuthPassword),
+						Value: basicAuthPassword,
 					},
 				},
 			},
@@ -71,7 +95,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 			Name: "X-Forwarded-Groups",
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -85,7 +109,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 				Name: "X-Forwarded-User",
 				Values: []HeaderValue{
 					{
-						ClaimSource: &ClaimSource{
+						ClaimSource: ClaimSource{
 							Claim: "email",
 						},
 					},
@@ -99,7 +123,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 			Name: "X-Forwarded-User",
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -109,7 +133,7 @@ func getPassUserHeaders(preferEmailToUser bool) []Header {
 			Name: "X-Forwarded-Email",
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -123,7 +147,7 @@ func getPassAccessTokenHeader() Header {
 		Name: "X-Forwarded-Access-Token",
 		Values: []HeaderValue{
 			{
-				ClaimSource: &ClaimSource{
+				ClaimSource: ClaimSource{
 					Claim: "access_token",
 				},
 			},
@@ -136,7 +160,7 @@ func getAuthorizationHeader() Header {
 		Name: "Authorization",
 		Values: []HeaderValue{
 			{
-				ClaimSource: &ClaimSource{
+				ClaimSource: ClaimSource{
 					Claim:  "id_token",
 					Prefix: "Bearer ",
 				},
@@ -150,7 +174,7 @@ func getPreferredUsernameHeader() Header {
 		Name: "X-Forwarded-Preferred-Username",
 		Values: []HeaderValue{
 			{
-				ClaimSource: &ClaimSource{
+				ClaimSource: ClaimSource{
 					Claim: "preferred_username",
 				},
 			},
@@ -164,7 +188,7 @@ func getXAuthRequestHeaders() []Header {
 			Name: "X-Auth-Request-User",
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -174,7 +198,7 @@ func getXAuthRequestHeaders() []Header {
 			Name: "X-Auth-Request-Email",
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -184,7 +208,7 @@ func getXAuthRequestHeaders() []Header {
 			Name: "X-Auth-Request-Preferred-Username",
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "preferred_username",
 					},
 				},
@@ -194,7 +218,7 @@ func getXAuthRequestHeaders() []Header {
 			Name: "X-Auth-Request-Groups",
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -210,7 +234,7 @@ func getXAuthRequestAccessTokenHeader() Header {
 		Name: "X-Auth-Request-Access-Token",
 		Values: []HeaderValue{
 			{
-				ClaimSource: &ClaimSource{
+				ClaimSource: ClaimSource{
 					Claim: "access_token",
 				},
 			},

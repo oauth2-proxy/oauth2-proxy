@@ -578,7 +578,7 @@ injectResponseHeaders:
 					Name: "X-Forwarded-User",
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "user",
 							},
 						},
@@ -590,8 +590,8 @@ injectResponseHeaders:
 					Name: "X-Secret",
 					Values: []HeaderValue{
 						{
-							SecretSource: &SecretSource{
-								Value: []byte("secret"),
+							SecretSource: SecretSource{
+								Value: "secret",
 							},
 						},
 					},

@@ -50,6 +50,9 @@ type Options struct {
 	// TODO(JoelSpeed): Rename when legacy config is removed
 	UpstreamServers UpstreamConfig `cfg:",internal" json:"upstreamConfig,omitempty"`
 
+	// TODO(tuunit) Discuss if we even want these flags?
+	HeaderFlags HeaderFlags `cfg:",internal" json:"headerFlags,omitempty"`
+
 	// InjectRequestHeaders is used to configure headers that should be added
 	// to requests to upstream servers.
 	// Headers may source values from either the authenticated user's session
