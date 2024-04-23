@@ -9,6 +9,7 @@
 ## Changes since v7.6.0
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
+- [#2615](https://github.com/oauth2-proxy/oauth2-proxy/pull/2615) pgk/cookies: add option to set a limit on the number of per-request CSRF cookies oauth2-proxy sets.
 
 # V7.6.0
 
