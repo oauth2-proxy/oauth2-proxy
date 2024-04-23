@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
@@ -144,6 +146,42 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 	http.SetCookie(rw, cookie)
 
 	return cookie, nil
+}
+
+func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *http.Request) {
+	if !opts.CSRFPerRequest {
+		return
+	}
+	cookies := req.Cookies()
+	//determine how many csrf cookies we have
+	existingCsrfCookies := []*http.Cookie{}
+	startsWith := fmt.Sprintf("%v_csrf_", opts.Name)
+	for _, cookie := range cookies {
+		if strings.HasPrefix(cookie.Name, startsWith) {
+			existingCsrfCookies = append(existingCsrfCookies, cookie)
+		}
+	}
+	limit := opts.CSRFPerRequestLimit
+	//short circuit return
+	if len(existingCsrfCookies) <= limit {
+		return
+	}
+	decodedCookies := []*csrf{}
+	for _, cookie := range existingCsrfCookies {
+		decodedCookie, err := decodeCSRFCookie(cookie, opts)
+		if err != nil {
+			continue
+		}
+		decodedCookies = append(decodedCookies, decodedCookie)
+	}
+	//delete the X oldest cookies
+	slices.SortStableFunc(decodedCookies, func(a, b *csrf) int {
+		return a.time.Now().Compare(b.time.Now())
+	})
+	numberToDelete := len(decodedCookies) - limit
+	for i := 0; i < numberToDelete; i++ {
+		decodedCookies[i].ClearCookie(rw, req)
+	}
 }
 
 // ClearCookie removes the CSRF cookie

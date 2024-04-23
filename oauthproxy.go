@@ -838,13 +838,12 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 		csrf.HashOIDCNonce(),
 		extraParams,
 	)
-
+	cookies.ClearExtraCsrfCookies(p.CookieOptions, rw, req)
 	if _, err := csrf.SetCookie(rw, req); err != nil {
 		logger.Errorf("Error setting CSRF cookie: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-
 	http.Redirect(rw, req, loginURL, http.StatusFound)
 }
 
