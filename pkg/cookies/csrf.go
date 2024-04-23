@@ -215,7 +215,7 @@ func (c *csrf) encodeCookie() (string, error) {
 // decodeCSRFCookie validates the signature then decrypts and decodes a CSRF
 // cookie into a CSRF struct
 func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) {
-	val, _, ok := encryption.Validate(cookie, opts.Secret, opts.Expire)
+	val, t, ok := encryption.Validate(cookie, opts.Secret, opts.Expire)
 	if !ok {
 		return nil, errors.New("CSRF cookie failed validation")
 	}
@@ -226,7 +226,9 @@ func decodeCSRFCookie(cookie *http.Cookie, opts *options.Cookie) (*csrf, error) 
 	}
 
 	// Valid cookie, Unmarshal the CSRF
-	csrf := &csrf{cookieOpts: opts}
+	clock := clock.Clock{}
+	clock.Set(t)
+	csrf := &csrf{cookieOpts: opts, time: clock}
 	err = msgpack.Unmarshal(decrypted, csrf)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling data to CSRF: %v", err)
