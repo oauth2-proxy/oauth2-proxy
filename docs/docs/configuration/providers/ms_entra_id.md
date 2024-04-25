@@ -2,10 +2,10 @@
 id: ms_entra_id
 title: Microsoft Entra ID
 ---
-OIDC-compliant provider for Microsoft Entra ID (Azure AD successor) application registrations. This providers support Azure oAuth V2 endpoint only, if you want to use V1 endpoint, try legacy `azure` provider. 
+OIDC-compliant provider for Microsoft Entra ID (Azure AD successor) application registrations. This providers support the Azure OAuth V2 endpoint only, if you want to use the V1 endpoint, try the legacy [azure](azure.md) provider.
 
 ## Configure application registration
-To start, create an App registration with minimal permissions, assign redirect URI and generate secret. All account types are supported (Single tenant, multi tenant, multi tenant with MS accounts, MS accounts only).
+To start, create an App registration with minimal permissions, assign a redirect URI, and generate a secret. All account types are supported (Single tenant, multi-tenant, multi-tenant with MS accounts, and MS accounts only).
 <details>
     <summary>See Azure Portal example</summary>
     <div class="videoBlock">
@@ -48,7 +48,7 @@ When created with Portal, App registration automatically creates a delegated API
 This configuration is sufficient for a simple authentication scenario with single-tenant app registration.
 
 ### Configure `groups` claim
-If you want to make use of groups (for example, use `--allowed-group` feature of oauth2-proxy or authorize based on groups inside your service), you need to configure `groups` claim to be present in the ID token:
+If you want to make use of groups (i.e., use `--allowed-group` or authorize based on groups inside your service), you need to configure `groups` claim to be present in the ID token:
 <details>
     <summary>See Azure Portal example</summary>
     <div class="videoBlock">
@@ -96,7 +96,7 @@ If you want to make use of groups (for example, use `--allowed-group` feature of
 
 
 ### Configure group overage support
-Azure has a limit of 200 groups in the JWT. If you can't avoid such a bug number and still want to access the groups, you need to grant `GroupMember.Read.All` delegated permission to the app registration so oauth2-proxy can read all the groups from Graph API. **NOTE**: This permission by default requires an admin consent!
+Azure has a limit of 200 groups in the JWT. If you can't avoid such a big number and still want to access the groups, you need to grant `GroupMember.Read.All` delegated permission to the app registration so oauth2-proxy can read all the groups from Graph API. **NOTE**: This permission by default requires an admin consent!
 <details>
     <summary>See Azure Portal example</summary>
     <div class="videoBlock">
@@ -167,7 +167,7 @@ It's recommended to configure the scopes explicitly, otherwise, you may experien
 
 ### Single-tenant
 Simple single-tenant configuration:
-```
+```shell
 - --provider=ms-entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/{tenantId}/v2.0
 - --client-id=<valid-client-id>
@@ -177,7 +177,7 @@ Simple single-tenant configuration:
 
 ### Multi-tenant
 Multi-tenant apps require you to disable OIDC issuer verification, as `issuer` field in the [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) is a template, not an exact value:
-```
+```shell
 - --provider=ms-entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/common/v2.0
 - --client-id=<valid-client-id>
@@ -187,7 +187,7 @@ Multi-tenant apps require you to disable OIDC issuer verification, as `issuer` f
 ```
 
 The configuration above insecurely allows all tenants. To allow specific tenants, use the configuration below as an example:
-```
+```shell
 - --provider=ms-entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/common/v2.0
 - --client-id=<valid-client-id>
