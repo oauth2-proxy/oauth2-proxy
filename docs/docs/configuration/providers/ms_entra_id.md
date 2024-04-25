@@ -19,7 +19,7 @@ When created with Portal, App registration automatically creates a delegated API
 
 <details>
     <summary>See Terraform example</summary>
-
+```
     resource "azuread_application" "auth" {
         display_name     = "oauth2-proxy"
         sign_in_audience = "AzureADMyOrg" # Others are also supported
@@ -42,10 +42,10 @@ When created with Portal, App registration automatically creates a delegated API
     resource "azuread_application_password" "apppass" {
         application_id = azuread_application.auth.id
     }
-
+```
 </details>
 
-This is sufficient for a simple authentication scenario.
+This configuration is sufficient for a simple authentication scenario with single-tenant app registration.
 
 ### Configure `groups` claim
 If you want to make use of groups (for example, use `--allowed-group` feature of oauth2-proxy or authorize based on groups inside your service), you need to configure `groups` claim to be present in the ID token:
@@ -59,7 +59,7 @@ If you want to make use of groups (for example, use `--allowed-group` feature of
 </details>
 <details>
     <summary>See Terraform example</summary>
-
+```
     resource "azuread_application" "auth" {
         display_name     = "oauth2-proxy"
         sign_in_audience = "AzureADMyOrg" # Other alre also supported
@@ -91,7 +91,7 @@ If you want to make use of groups (for example, use `--allowed-group` feature of
     resource "azuread_application_password" "apppass" {
         application_id = azuread_application.auth.id
     }
-
+```
 </details>
 
 
@@ -107,7 +107,7 @@ Azure has a limit of 200 groups in the JWT. If you can't avoid such a bug number
 </details>
 <details>
     <summary>See Terraform example</summary>
-
+```
     resource "azuread_application" "auth" {
         display_name     = "oauth2-proxy"
         sign_in_audience = "AzureADMyOrg" # Other alre also supported
@@ -145,25 +145,25 @@ Azure has a limit of 200 groups in the JWT. If you can't avoid such a bug number
     resource "azuread_application_password" "apppass" {
         application_id = azuread_application.auth.id
     }
-
+```
 Admin consent is required after creation by Terraform
 </details>
 
 ## Configure provider
-Provider is OIDC-compliant, so all the OIDC parameters are honoured. Additional provider-specific configuration parameters are:
-* `ms-entra-id-skip-groups-from-graph` - never read groups from Graph API, even when ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping `groups` claim in the app registration.
-* `ms-entra-id-multi-tenant-allowed-tenant` - speciy list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]` (all tenants).
+The provider is OIDC-compliant, so all the OIDC parameters are honored. Additional provider-specific configuration parameters are:
+* `ms-entra-id-skip-groups-from-graph` - never read groups from Graph API, even when the ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping the `groups` claim in the app registration.
+* `ms-entra-id-multi-tenant-allowed-tenant` - specify a list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]` (all tenants).
 
 ### Scope
-For Azure-only apps (multi-tenant and single-tenant), the only required oAuth scope is `openid`:
-```
+For Azure-only apps (multi-tenant and single-tenant), the only required OAuth scope is `openid`:
+```shell
 - --scope=openid
 ```
 For personal MS accounts, the scope has to be extended with `email` and `profile`:
-```
+```shell
 - --scope=openid profile email
 ```
-It's recommended to configure the scopes explicitly, otherwise you may experience issues with allowing groups (Azure doesn't support `groups` scope which is automatically included when you configure allowed groups).
+It's recommended to configure the scopes explicitly, otherwise, you may experience issues with allowing groups (Azure doesn't support the `groups` scope which is automatically included when you configure allowed groups).
 
 ### Single-tenant
 Simple single-tenant configuration:
@@ -176,7 +176,7 @@ Simple single-tenant configuration:
 ```
 
 ### Multi-tenant
-Multi-tenant apps require to disable OIDC issuer verification, as `issuer` field in the [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) is a template, not an exact value:
+Multi-tenant apps require you to disable OIDC issuer verification, as `issuer` field in the [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) is a template, not an exact value:
 ```
 - --provider=ms-entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/common/v2.0
@@ -186,7 +186,7 @@ Multi-tenant apps require to disable OIDC issuer verification, as `issuer` field
 - --scope=openid profile email
 ```
 
-Configuration above insecurely allows all tenants, to allow specific tenants:
+The configuration above insecurely allows all tenants. To allow specific tenants, use the configuration below as an example:
 ```
 - --provider=ms-entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/common/v2.0

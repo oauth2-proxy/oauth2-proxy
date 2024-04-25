@@ -489,7 +489,7 @@ type LegacyProvider struct {
 	AzureTenant                            string   `flag:"azure-tenant" cfg:"azure_tenant"`
 	AzureGraphGroupField                   string   `flag:"azure-graph-group-field" cfg:"azure_graph_group_field"`
 	MSEntraIDSkipGroupsFromGraph           bool     `flag:"ms-entra-id-skip-groups-from-graph" cfg:"ms_entra_id_skip_groups_from_graph"`
-	MSEntraIDMutliTenantAllowedTenants     []string `flag:"ms-entra-id-multi-tenant-allowed-tenant" cfg:"ms_entra_id_multi_tenant_allowed_tenants"`
+	MSEntraIDMultiTenantAllowedTenants     []string `flag:"ms-entra-id-multi-tenant-allowed-tenant" cfg:"ms_entra_id_multi_tenant_allowed_tenants"`
 	BitbucketTeam                          string   `flag:"bitbucket-team" cfg:"bitbucket_team"`
 	BitbucketRepository                    string   `flag:"bitbucket-repository" cfg:"bitbucket_repository"`
 	GitHubOrg                              string   `flag:"github-org" cfg:"github_org"`
@@ -713,7 +713,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 
 	provider.MicrosoftEntraIDConfig = MicrosoftEntraIDOptions{
 		DisableGroupsFromGraph:    l.MSEntraIDSkipGroupsFromGraph,
-		MultiTenantAllowedTenants: l.MSEntraIDMutliTenantAllowedTenants,
+		MultiTenantAllowedTenants: l.MSEntraIDMultiTenantAllowedTenants,
 	}
 
 	switch provider.Type {
