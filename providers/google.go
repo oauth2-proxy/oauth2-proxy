@@ -248,6 +248,7 @@ func getAdminService(opts options.GoogleOptions) *admin.Service {
 			logger.Fatal("couldn't open Google credentials file: ", err)
 			return nil
 		}
+		defer credentialsReader.Close()
 
 		data, err := io.ReadAll(credentialsReader)
 		if err != nil {
