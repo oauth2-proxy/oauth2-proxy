@@ -478,6 +478,18 @@ var _ = Describe("Legacy Options", func() {
 			},
 		}
 
+		csrfResponseHeader := Header{
+			Name:                 "X-CSRF-Token",
+			PreserveRequestValue: true,
+			Values: []HeaderValue{
+				{
+					ClaimSource: &ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+		}
+
 		DescribeTable("should convert to injectRequestHeaders",
 			func(in legacyHeadersTableInput) {
 				requestHeaders, responseHeaders := in.legacyHeaders.convert()
@@ -782,6 +794,29 @@ var _ = Describe("Legacy Options", func() {
 				},
 				expectedResponseHeaders: []Header{
 					authorizationHeader,
+				},
+			}),
+			Entry("with passAccessToken and CSRF response header", legacyHeadersTableInput{
+				legacyHeaders: &LegacyHeaders{
+					PassBasicAuth:     false,
+					PassAccessToken:   true,
+					PassUserHeaders:   false,
+					PassAuthorization: false,
+
+					SetBasicAuth:     false,
+					SetXAuthRequest:  false,
+					SetAuthorization: false,
+
+					PreferEmailToUser:       false,
+					BasicAuthPassword:       "",
+					SkipAuthStripHeaders:    true,
+					CSRFTokenResponseHeader: "X-CSRF-Token",
+				},
+				expectedRequestHeaders: []Header{
+					xForwardedAccessToken,
+				},
+				expectedResponseHeaders: []Header{
+					csrfResponseHeader,
 				},
 			}),
 		)

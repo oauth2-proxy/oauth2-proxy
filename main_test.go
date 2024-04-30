@@ -27,6 +27,7 @@ set_basic_auth="true"
 basic_auth_password="super-secret-password"
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
+csrftoken_response_header="X-CSRF-Token"
 `
 
 	const testAlphaConfig = `
@@ -92,6 +93,15 @@ providers:
 cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 email_domains="example.com"
 cookie_secure="false"
+
+redirect_url="http://localhost:4180/oauth2/callback"
+`
+
+	const testCoreConfigCSRF = `
+cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+email_domains="example.com"
+cookie_secure="false"
+csrftoken="true"
 
 redirect_url="http://localhost:4180/oauth2/callback"
 `
@@ -171,6 +181,26 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		return opts
 	}
 
+	testExpectedOptionsCSRF := func() *options.Options {
+		opts := testExpectedOptions()
+
+		opts.CSRFToken.CSRFToken = true
+		csrfResponseHeader := options.Header{
+			Name: "X-CSRF-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+			PreserveRequestValue: true,
+		}
+
+		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, csrfResponseHeader)
+		return opts
+	}
+
 	type loadConfigurationTableInput struct {
 		configContent      string
 		alphaConfigContent string
@@ -234,8 +264,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			Expect(opts).To(EqualOpts(in.expectedOptions()))
 		},
 		Entry("with legacy configuration", loadConfigurationTableInput{
-			configContent:   testCoreConfig + testLegacyConfig,
-			expectedOptions: testExpectedOptions,
+			configContent:   testCoreConfigCSRF + testLegacyConfig,
+			expectedOptions: testExpectedOptionsCSRF,
 		}),
 		Entry("with alpha configuration", loadConfigurationTableInput{
 			configContent:      testCoreConfig,

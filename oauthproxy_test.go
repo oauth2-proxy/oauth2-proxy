@@ -1205,6 +1205,83 @@ func TestCSRFTokenEndpointNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, test.rw.Code)
 }
 
+func TestReturnCSRFTokenHeader(t *testing.T) {
+	opts := baseTestOptions()
+	opts.CSRFToken.CSRFToken = true
+	opts.InjectRequestHeaders = []options.Header{
+		{
+			Name: "X-CSRF-Token",
+			Values: []options.HeaderValue{
+				{
+					ClaimSource: &options.ClaimSource{
+						Claim: "csrf_token",
+					},
+				},
+			},
+		},
+	}
+
+	err := validation.Validate(opts)
+	assert.NoError(t, err)
+
+	const emailAddress = "john.doe@example.com"
+	const userName = "9fcab5c9b889a557"
+	created := time.Now()
+	session := &sessions.SessionState{
+		User:        userName,
+		Email:       emailAddress,
+		AccessToken: "oauth_token",
+		CreatedAt:   &created,
+		CSRFToken:   "abcdef1234567890abcdef1234567890",
+	}
+
+	proxy, err := NewOAuthProxy(opts, func(email string) bool {
+		return email == emailAddress
+	})
+	assert.NoError(t, err)
+
+	// Save the required session
+	rw := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	// Extract the cookie value to inject into the test request
+	cookie := rw.Header().Values("Set-Cookie")[0]
+
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	rw = httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.Equal(t, "abcdef1234567890abcdef1234567890", req.Header.Get("X-CSRF-Token"))
+
+	// Now set the --csrftoken-response-header to empty string to disable it
+	// Default injected headers for legacy configuration
+	opts.InjectResponseHeaders = []options.Header{}
+
+	proxy, err = NewOAuthProxy(opts, func(email string) bool {
+		return email == emailAddress
+	})
+	assert.NoError(t, err)
+
+	// Save the required session
+	rw = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/", nil)
+	err = proxy.sessionStore.Save(rw, req, session)
+	assert.NoError(t, err)
+
+	// Extract the cookie value to inject into the test request
+	cookie = rw.Header().Values("Set-Cookie")[0]
+
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.Header.Set("Cookie", cookie)
+	rw = httptest.NewRecorder()
+	proxy.ServeHTTP(rw, req)
+
+	assert.NotContains(t, rw.Header(), rw.Header().Get("X-CSRF-Token"))
+}
+
 func TestEncodedUrlsStayEncoded(t *testing.T) {
 	encodeTest, err := NewSignInPageTest(false)
 	if err != nil {
