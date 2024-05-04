@@ -31,7 +31,7 @@ var _ = Describe("GetSecretValue", func() {
 
 	It("returns the correct value from the string value", func() {
 		value, err := GetSecretValue(&options.SecretSource{
-			Value: []byte("secret-value-1"),
+			Value: "secret-value-1",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(value)).To(Equal("secret-value-1"))

@@ -30,7 +30,7 @@ var _ = Describe("Headers", func() {
 		Values: []options.HeaderValue{
 			{
 				SecretSource: &options.SecretSource{
-					Value: []byte(base64.StdEncoding.EncodeToString([]byte("secret"))),
+					Value: base64.StdEncoding.EncodeToString([]byte("secret")),
 				},
 			},
 		},
@@ -43,7 +43,7 @@ var _ = Describe("Headers", func() {
 				ClaimSource: &options.ClaimSource{
 					Claim: "email",
 					BasicAuthPassword: &options.SecretSource{
-						Value: []byte(base64.StdEncoding.EncodeToString([]byte("secret"))),
+						Value: base64.StdEncoding.EncodeToString([]byte("secret")),
 					},
 				},
 			},

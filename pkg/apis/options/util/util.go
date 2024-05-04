@@ -11,7 +11,7 @@ import (
 func GetSecretValue(source *options.SecretSource) ([]byte, error) {
 	switch {
 	case len(source.Value) > 0 && source.FromEnv == "" && source.FromFile == "":
-		return source.Value, nil
+		return []byte(source.Value), nil
 	case len(source.Value) == 0 && source.FromEnv != "" && source.FromFile == "":
 		return []byte(os.Getenv(source.FromEnv)), nil
 	case len(source.Value) == 0 && source.FromEnv == "" && source.FromFile != "":

@@ -238,16 +238,16 @@ type OIDCOptions struct {
 	IssuerURL string `json:"issuerURL,omitempty"`
 	// InsecureAllowUnverifiedEmail prevents failures if an email address in an id_token is not verified
 	// default set to 'false'
-	InsecureAllowUnverifiedEmail bool `json:"insecureAllowUnverifiedEmail,omitempty"`
+	InsecureAllowUnverifiedEmail bool `json:"insecureAllowUnverifiedEmail"`
 	// InsecureSkipIssuerVerification skips verification of ID token issuers. When false, ID Token Issuers must match the OIDC discovery URL
 	// default set to 'false'
-	InsecureSkipIssuerVerification bool `json:"insecureSkipIssuerVerification,omitempty"`
+	InsecureSkipIssuerVerification bool `json:"insecureSkipIssuerVerification"`
 	// InsecureSkipNonce skips verifying the ID Token's nonce claim that must match
 	// the random nonce sent in the initial OAuth flow. Otherwise, the nonce is checked
 	// after the initial OAuth redeem & subsequent token refreshes.
 	// default set to 'true'
 	// Warning: In a future release, this will change to 'false' by default for enhanced security.
-	InsecureSkipNonce bool `json:"insecureSkipNonce,omitempty"`
+	InsecureSkipNonce bool `json:"insecureSkipNonce"`
 	// SkipDiscovery allows to skip OIDC discovery and use manually supplied Endpoints
 	// default set to 'false'
 	SkipDiscovery bool `json:"skipDiscovery,omitempty"`
