@@ -234,7 +234,7 @@ var _ = Describe("Server", func() {
 					SecureBindAddress: "127.0.0.1:0",
 					TLS: &options.TLS{
 						Key: &options.SecretSource{
-							Value: []byte("invalid"),
+							Value: "invalid",
 						},
 						Cert: &ipv4CertDataSource,
 					},
@@ -250,7 +250,7 @@ var _ = Describe("Server", func() {
 					TLS: &options.TLS{
 						Key: &ipv4KeyDataSource,
 						Cert: &options.SecretSource{
-							Value: []byte("invalid"),
+							Value: "invalid",
 						},
 					},
 				},
@@ -506,7 +506,7 @@ var _ = Describe("Server", func() {
 					SecureBindAddress: "[::1]:0",
 					TLS: &options.TLS{
 						Key: &options.SecretSource{
-							Value: []byte("invalid"),
+							Value: "invalid",
 						},
 						Cert: &ipv6CertDataSource,
 					},
@@ -523,7 +523,7 @@ var _ = Describe("Server", func() {
 					TLS: &options.TLS{
 						Key: &ipv6KeyDataSource,
 						Cert: &options.SecretSource{
-							Value: []byte("invalid"),
+							Value: "invalid",
 						},
 					},
 				},

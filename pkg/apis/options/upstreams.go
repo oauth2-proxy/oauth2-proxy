@@ -79,7 +79,7 @@ type Upstream struct {
 	// FlushInterval is the period between flushing the response buffer when
 	// streaming response from the upstream.
 	// Defaults to 1 second.
-	FlushInterval *Duration `json:"flushInterval,omitempty"`
+	FlushInterval *time.Duration `json:"flushInterval,omitempty"`
 
 	// PassHostHeader determines whether the request host header should be proxied
 	// to the upstream server.
@@ -92,7 +92,7 @@ type Upstream struct {
 
 	// Timeout is the maximum duration the server will wait for a response from the upstream server.
 	// Defaults to 30 seconds.
-	Timeout *Duration `json:"timeout,omitempty"`
+	Timeout *time.Duration `json:"timeout,omitempty"`
 
 	// DisableKeepAlives disables HTTP keep-alive connections to the upstream server.
 	// Defaults to false.

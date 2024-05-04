@@ -43,29 +43,35 @@ upstreamConfig:
 injectRequestHeaders:
 - name: Authorization
   values:
-  - claim: user
-    prefix: "Basic "
-    basicAuthPassword:
-      value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+  - claimSource:
+      claim: user
+      prefix: "Basic "
+      basicAuthPassword:
+        value: super-secret-password
 - name: X-Forwarded-Groups
   values:
-  - claim: groups
+  - claimSource:
+      claim: groups
 - name: X-Forwarded-User
   values:
-  - claim: user
+  - claimSource:
+      claim: user
 - name: X-Forwarded-Email
   values:
-  - claim: email
+  - claimSource:
+      claim: email
 - name: X-Forwarded-Preferred-Username
   values:
-  - claim: preferred_username
+  - claimSource:
+      claim: preferred_username
 injectResponseHeaders:
 - name: Authorization
   values:
-  - claim: user
-    prefix: "Basic "
-    basicAuthPassword:
-      value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+  - claimSource:
+      claim: user
+      prefix: "Basic "
+      basicAuthPassword:
+        value: super-secret-password
 server:
   bindAddress: "127.0.0.1:4180"
 providers:
@@ -100,9 +106,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		return &b
 	}
 
-	durationPtr := func(d time.Duration) *options.Duration {
-		du := options.Duration(d)
-		return &du
+	durationPtr := func(d time.Duration) *time.Duration {
+		return &d
 	}
 
 	testExpectedOptions := func() *options.Options {
@@ -136,7 +141,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte("super-secret-password"),
+							Value: "super-secret-password",
 						},
 					},
 				},
@@ -226,7 +231,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 			opts, err := loadConfiguration(configFileName, alphaConfigFileName, extraFlags, in.args)
 			if in.expectedErr != nil {
-				Expect(err).To(MatchError(in.expectedErr.Error()))
+				Expect(err).To(MatchError(ContainSubstring(in.expectedErr.Error())))
 			} else {
 				Expect(err).ToNot(HaveOccurred())
 			}
