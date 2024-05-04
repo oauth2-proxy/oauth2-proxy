@@ -137,12 +137,12 @@ func newReverseProxy(target *url.URL, upstream options.Upstream, errorHandler Pr
 
 	// Change default duration for waiting for an upstream response
 	if upstream.Timeout != nil {
-		transport.ResponseHeaderTimeout = upstream.Timeout.Duration()
+		transport.ResponseHeaderTimeout = *upstream.Timeout
 	}
 
 	// Configure options on the SingleHostReverseProxy
 	if upstream.FlushInterval != nil {
-		proxy.FlushInterval = upstream.FlushInterval.Duration()
+		proxy.FlushInterval = *upstream.FlushInterval
 	} else {
 		proxy.FlushInterval = options.DefaultUpstreamFlushInterval
 	}
