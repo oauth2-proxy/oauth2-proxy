@@ -212,10 +212,10 @@ func TestBasicAuthPassword(t *testing.T) {
 			Name: "Authorization",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "email",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte(basicAuthPassword),
+							Value: basicAuthPassword,
 						},
 					},
 				},
@@ -267,7 +267,7 @@ func TestPassGroupsHeadersWithGroups(t *testing.T) {
 			Name: "X-Forwarded-Groups",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -368,7 +368,7 @@ func NewPassAccessTokenTest(opts PassAccessTokenTestOptions) (*PassAccessTokenTe
 				Name: "X-Forwarded-Access-Token",
 				Values: []options.HeaderValue{
 					{
-						ClaimSource: &options.ClaimSource{
+						ClaimSource: options.ClaimSource{
 							Claim: "access_token",
 						},
 					},
@@ -1156,7 +1156,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-User",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -1166,7 +1166,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-Email",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -1176,7 +1176,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-Groups",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -1186,7 +1186,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
 			Name: "X-Forwarded-Preferred-Username",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "preferred_username",
 					},
 				},
@@ -1236,7 +1236,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-User",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -1246,7 +1246,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-Email",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -1256,7 +1256,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-Groups",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -1266,7 +1266,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 			Name: "X-Forwarded-Preferred-Username",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "preferred_username",
 					},
 				},
@@ -1276,10 +1276,10 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
 			Name: "Authorization",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "user",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte("This is a secure password"),
+							Value: "This is a secure password",
 						},
 					},
 				},
@@ -1330,7 +1330,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-User",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -1340,7 +1340,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-Email",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -1350,7 +1350,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 			Name: "X-Auth-Request-Groups",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -1360,7 +1360,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
 			Name: "X-Forwarded-Preferred-Username",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "preferred_username",
 					},
 				},
@@ -1823,7 +1823,7 @@ func TestGetJwtSession(t *testing.T) {
 				Name: "Authorization",
 				Values: []options.HeaderValue{
 					{
-						ClaimSource: &options.ClaimSource{
+						ClaimSource: options.ClaimSource{
 							Claim:  "id_token",
 							Prefix: "Bearer ",
 						},
@@ -1834,7 +1834,7 @@ func TestGetJwtSession(t *testing.T) {
 				Name: "X-Forwarded-User",
 				Values: []options.HeaderValue{
 					{
-						ClaimSource: &options.ClaimSource{
+						ClaimSource: options.ClaimSource{
 							Claim: "user",
 						},
 					},
@@ -1844,7 +1844,7 @@ func TestGetJwtSession(t *testing.T) {
 				Name: "X-Forwarded-Email",
 				Values: []options.HeaderValue{
 					{
-						ClaimSource: &options.ClaimSource{
+						ClaimSource: options.ClaimSource{
 							Claim: "email",
 						},
 					},
@@ -1857,7 +1857,7 @@ func TestGetJwtSession(t *testing.T) {
 				Name: "Authorization",
 				Values: []options.HeaderValue{
 					{
-						ClaimSource: &options.ClaimSource{
+						ClaimSource: options.ClaimSource{
 							Claim:  "id_token",
 							Prefix: "Bearer ",
 						},
@@ -1868,7 +1868,7 @@ func TestGetJwtSession(t *testing.T) {
 				Name: "X-Auth-Request-User",
 				Values: []options.HeaderValue{
 					{
-						ClaimSource: &options.ClaimSource{
+						ClaimSource: options.ClaimSource{
 							Claim: "user",
 						},
 					},
@@ -1878,7 +1878,7 @@ func TestGetJwtSession(t *testing.T) {
 				Name: "X-Auth-Request-Email",
 				Values: []options.HeaderValue{
 					{
-						ClaimSource: &options.ClaimSource{
+						ClaimSource: options.ClaimSource{
 							Claim: "email",
 						},
 					},
@@ -2038,10 +2038,10 @@ func baseTestOptions() *options.Options {
 			Name: "Authorization",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "user",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte(base64.StdEncoding.EncodeToString([]byte("This is a secure password"))),
+							Value: base64.StdEncoding.EncodeToString([]byte("This is a secure password")),
 						},
 					},
 				},
@@ -2051,7 +2051,7 @@ func baseTestOptions() *options.Options {
 			Name: "X-Forwarded-User",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -2061,7 +2061,7 @@ func baseTestOptions() *options.Options {
 			Name: "X-Forwarded-Email",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim: "email",
 					},
 				},

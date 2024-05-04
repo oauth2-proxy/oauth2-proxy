@@ -16,8 +16,8 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts := NewLegacyOptions()
 
 			// Set upstreams and related options to test their conversion
-			flushInterval := Duration(5 * time.Second)
-			timeout := Duration(5 * time.Second)
+			flushInterval := 5 * time.Second
+			timeout := 5 * time.Second
 			legacyOpts.LegacyUpstreams.FlushInterval = time.Duration(flushInterval)
 			legacyOpts.LegacyUpstreams.Timeout = time.Duration(timeout)
 			legacyOpts.LegacyUpstreams.PassHostHeader = true
@@ -71,7 +71,7 @@ var _ = Describe("Legacy Options", func() {
 					PreserveRequestValue: false,
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "groups",
 							},
 						},
@@ -82,7 +82,7 @@ var _ = Describe("Legacy Options", func() {
 					PreserveRequestValue: false,
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "user",
 							},
 						},
@@ -93,7 +93,7 @@ var _ = Describe("Legacy Options", func() {
 					PreserveRequestValue: false,
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "email",
 							},
 						},
@@ -104,7 +104,7 @@ var _ = Describe("Legacy Options", func() {
 					PreserveRequestValue: false,
 					Values: []HeaderValue{
 						{
-							ClaimSource: &ClaimSource{
+							ClaimSource: ClaimSource{
 								Claim: "preferred_username",
 							},
 						},
@@ -144,8 +144,8 @@ var _ = Describe("Legacy Options", func() {
 		skipVerify := true
 		passHostHeader := false
 		proxyWebSockets := true
-		flushInterval := Duration(5 * time.Second)
-		timeout := Duration(5 * time.Second)
+		flushInterval := 5 * time.Second
+		timeout := 5 * time.Second
 
 		// Test cases and expected outcomes
 		validHTTP := "http://foo.bar/baz"
@@ -307,7 +307,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -319,7 +319,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -331,7 +331,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -343,7 +343,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "preferred_username",
 					},
 				},
@@ -355,11 +355,11 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
-							Value: []byte(basicAuthSecret),
+							Value: basicAuthSecret,
 						},
 					},
 				},
@@ -371,7 +371,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -383,7 +383,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "access_token",
 					},
 				},
@@ -395,11 +395,11 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim:  "email",
 						Prefix: "Basic ",
 						BasicAuthPassword: &SecretSource{
-							Value: []byte(basicAuthSecret),
+							Value: basicAuthSecret,
 						},
 					},
 				},
@@ -411,7 +411,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "user",
 					},
 				},
@@ -423,7 +423,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "email",
 					},
 				},
@@ -435,7 +435,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "groups",
 					},
 				},
@@ -447,7 +447,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "preferred_username",
 					},
 				},
@@ -459,7 +459,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim: "access_token",
 					},
 				},
@@ -471,7 +471,7 @@ var _ = Describe("Legacy Options", func() {
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{
-					ClaimSource: &ClaimSource{
+					ClaimSource: ClaimSource{
 						Claim:  "id_token",
 						Prefix: "Bearer ",
 					},

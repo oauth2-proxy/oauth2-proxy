@@ -10,12 +10,12 @@ import (
 )
 
 var _ = Describe("Common", func() {
-	var validSecretSourceValue []byte
+	var validSecretSourceValue string
 	const validSecretSourceEnv = "OAUTH2_PROXY_TEST_SECRET_SOURCE_ENV"
 	var validSecretSourceFile string
 
 	BeforeEach(func() {
-		validSecretSourceValue = []byte("This is a secret source value")
+		validSecretSourceValue = "This is a secret source value"
 		Expect(os.Setenv(validSecretSourceEnv, "This is a secret source env")).To(Succeed())
 		tmp, err := os.CreateTemp("", "oauth2-proxy-secret-source-test")
 		Expect(err).ToNot(HaveOccurred())

@@ -47,7 +47,7 @@ injectRequestHeaders:
   - claim: user
     prefix: "Basic "
     basicAuthPassword:
-      value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+      value: super-secret-password
 - name: X-Forwarded-Groups
   values:
   - claim: groups
@@ -66,7 +66,7 @@ injectResponseHeaders:
   - claim: user
     prefix: "Basic "
     basicAuthPassword:
-      value: c3VwZXItc2VjcmV0LXBhc3N3b3Jk
+      value: super-secret-password
 server:
   bindAddress: "127.0.0.1:4180"
 providers:
@@ -101,9 +101,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		return &b
 	}
 
-	durationPtr := func(d time.Duration) *options.Duration {
-		du := options.Duration(d)
-		return &du
+	durationPtr := func(d time.Duration) *time.Duration {
+		return &d
 	}
 
 	testExpectedOptions := func() *options.Options {
@@ -133,11 +132,11 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			Name: "Authorization",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: &options.ClaimSource{
+					ClaimSource: options.ClaimSource{
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &options.SecretSource{
-							Value: []byte("super-secret-password"),
+							Value: "super-secret-password",
 						},
 					},
 				},
@@ -227,7 +226,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 
 			opts, err := loadConfiguration(configFileName, alphaConfigFileName, extraFlags, in.args)
 			if in.expectedErr != nil {
-				Expect(err).To(MatchError(in.expectedErr.Error()))
+				Expect(err).To(MatchError(ContainSubstring(in.expectedErr.Error())))
 			} else {
 				Expect(err).ToNot(HaveOccurred())
 			}
@@ -258,7 +257,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			configContent:      testCoreConfig + "unknown_field=\"something\"",
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("failed to load core options: failed to load config: error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_field"),
+			expectedErr:        errors.New("has invalid keys: unknown_field"),
 		}),
 	)
 })

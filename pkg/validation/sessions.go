@@ -19,7 +19,7 @@ func validateSessionCookieMinimal(o *options.Options) []string {
 	msgs := []string{}
 	for _, header := range append(o.InjectRequestHeaders, o.InjectResponseHeaders...) {
 		for _, value := range header.Values {
-			if value.ClaimSource != nil {
+			if value.ClaimSource.IsSet() {
 				if value.ClaimSource.Claim == "access_token" {
 					msgs = append(msgs,
 						fmt.Sprintf("access_token claim for header %q requires oauth tokens in sessions. session_cookie_minimal cannot be set", header.Name))

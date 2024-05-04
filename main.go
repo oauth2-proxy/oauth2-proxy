@@ -66,12 +66,17 @@ func main() {
 // loadConfiguration will load in the user's configuration.
 // It will either load the alpha configuration (if alphaConfig is given)
 // or the legacy configuration.
-func loadConfiguration(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
-	if alphaConfig != "" {
-		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
-		return loadAlphaOptions(config, alphaConfig, extraFlags, args)
+func loadConfiguration(config, yamlConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
+	opts, err := loadLegacyOptions(config, extraFlags, args)
+	if err != nil {
+		return nil, err
 	}
-	return loadLegacyOptions(config, extraFlags, args)
+
+	if yamlConfig != "" {
+		logger.Printf("WARNING: You are using alpha configuration. The structure in this configuration file may change without notice. You MUST remove conflicting options from your existing configuration.")
+		return loadYamlOptions(yamlConfig, config, extraFlags, args)
+	}
+	return opts, err
 }
 
 // loadLegacyOptions loads the old toml options using the legacy flagset
@@ -96,17 +101,17 @@ func loadLegacyOptions(config string, extraFlags *pflag.FlagSet, args []string) 
 	return opts, nil
 }
 
-// loadAlphaOptions loads the old style config excluding options converted to
+// loadYamlOptions loads the old style config excluding options converted to
 // the new alpha format, then merges the alpha options, loaded from YAML,
 // into the core configuration.
-func loadAlphaOptions(config, alphaConfig string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
+func loadYamlOptions(yamlConfig, config string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
 	opts, err := loadOptions(config, extraFlags, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load core options: %v", err)
 	}
 
-	alphaOpts := &options.AlphaOptions{}
-	if err := options.LoadYAML(alphaConfig, alphaOpts); err != nil {
+	alphaOpts := options.NewAlphaOptions(opts)
+	if err := options.LoadYAML(yamlConfig, alphaOpts); err != nil {
 		return nil, fmt.Errorf("failed to load alpha options: %v", err)
 	}
 
@@ -136,8 +141,7 @@ func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*opti
 // printConvertedConfig extracts alpha options from the loaded configuration
 // and renders these to stdout in YAML format.
 func printConvertedConfig(opts *options.Options) error {
-	alphaConfig := &options.AlphaOptions{}
-	alphaConfig.ExtractFrom(opts)
+	alphaConfig := options.NewAlphaOptions(opts)
 
 	data, err := yaml.Marshal(alphaConfig)
 	if err != nil {

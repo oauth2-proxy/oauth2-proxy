@@ -45,10 +45,10 @@ type valueInjector interface {
 
 func newValueinjector(name string, value options.HeaderValue) (valueInjector, error) {
 	switch {
-	case value.SecretSource != nil && value.ClaimSource == nil:
-		return newSecretInjector(name, value.SecretSource)
-	case value.SecretSource == nil && value.ClaimSource != nil:
-		return newClaimInjector(name, value.ClaimSource)
+	case value.SecretSource.IsSet() && !value.ClaimSource.IsSet():
+		return newSecretInjector(name, &value.SecretSource)
+	case !value.SecretSource.IsSet() && value.ClaimSource.IsSet():
+		return newClaimInjector(name, &value.ClaimSource)
 	default:
 		return nil, fmt.Errorf("header %q value has multiple entries: only one entry per value is allowed", name)
 	}

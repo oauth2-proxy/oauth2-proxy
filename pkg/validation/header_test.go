@@ -19,7 +19,7 @@ var _ = Describe("Headers", func() {
 		Name: "X-Email",
 		Values: []options.HeaderValue{
 			{
-				ClaimSource: &options.ClaimSource{
+				ClaimSource: options.ClaimSource{
 					Claim: "email",
 				},
 			},
@@ -30,8 +30,8 @@ var _ = Describe("Headers", func() {
 		Name: "X-Forwarded-Auth",
 		Values: []options.HeaderValue{
 			{
-				SecretSource: &options.SecretSource{
-					Value: []byte(base64.StdEncoding.EncodeToString([]byte("secret"))),
+				SecretSource: options.SecretSource{
+					Value: base64.StdEncoding.EncodeToString([]byte("secret")),
 				},
 			},
 		},
@@ -41,10 +41,10 @@ var _ = Describe("Headers", func() {
 		Name: "Authorization",
 		Values: []options.HeaderValue{
 			{
-				ClaimSource: &options.ClaimSource{
+				ClaimSource: options.ClaimSource{
 					Claim: "email",
 					BasicAuthPassword: &options.SecretSource{
-						Value: []byte(base64.StdEncoding.EncodeToString([]byte("secret"))),
+						Value: base64.StdEncoding.EncodeToString([]byte("secret")),
 					},
 				},
 			},
@@ -94,15 +94,15 @@ var _ = Describe("Headers", func() {
 					Name: "With-Claim-And-Secret",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource:  &options.ClaimSource{},
-							SecretSource: &options.SecretSource{},
+							ClaimSource:  options.ClaimSource{},
+							SecretSource: options.SecretSource{},
 						},
 					},
 				},
 				validHeader1,
 			},
 			expectedMsgs: []string{
-				"invalid header \"With-Claim-And-Secret\": invalid values: header value has multiple entries: only one entry per value is allowed",
+				"invalid header \"With-Claim-And-Secret\": invalid values: header value either has multiple entries or none: only one entry per value is allowed",
 			},
 		}),
 		Entry("with a header which has a claim without a claim", validateHeaderTableInput{
@@ -111,7 +111,7 @@ var _ = Describe("Headers", func() {
 					Name: "Without-Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: &options.ClaimSource{
+							ClaimSource: options.ClaimSource{
 								Prefix: "prefix",
 							},
 						},
@@ -129,14 +129,30 @@ var _ = Describe("Headers", func() {
 					Name: "With-Invalid-Secret",
 					Values: []options.HeaderValue{
 						{
-							SecretSource: &options.SecretSource{},
+							SecretSource: options.SecretSource{
+								FromEnv: "UNKNOWN_ENV",
+							},
 						},
 					},
 				},
 				validHeader1,
 			},
 			expectedMsgs: []string{
-				"invalid header \"With-Invalid-Secret\": invalid values: multiple values specified for secret source: specify either value, fromEnv of fromFile",
+				"invalid header \"With-Invalid-Secret\": invalid values: error loading secret from environent: no value for for key \"UNKNOWN_ENV\"",
+			},
+		}),
+		Entry("with a header with no source", validateHeaderTableInput{
+			headers: []options.Header{
+				{
+					Name: "With-No-Entries",
+					Values: []options.HeaderValue{
+						{},
+					},
+				},
+				validHeader1,
+			},
+			expectedMsgs: []string{
+				"invalid header \"With-No-Entries\": invalid values: header value either has multiple entries or none: only one entry per value is allowed",
 			},
 		}),
 		Entry("with a header with invalid basicAuthPassword source", validateHeaderTableInput{
@@ -145,7 +161,7 @@ var _ = Describe("Headers", func() {
 					Name: "With-Invalid-Basic-Auth",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: &options.ClaimSource{
+							ClaimSource: options.ClaimSource{
 								Claim: "user",
 								BasicAuthPassword: &options.SecretSource{
 									FromEnv: "UNKNOWN_ENV",
