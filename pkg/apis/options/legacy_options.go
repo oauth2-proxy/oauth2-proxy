@@ -8,6 +8,9 @@ import (
 )
 
 type LegacyOptions struct {
+	// Legacy options for the overall proxy behaviour
+	LegacyProxyOptions LegacyProxyOptions `cfg:",squash"`
+
 	// Legacy options related to upstream servers
 	LegacyUpstreams LegacyUpstreams `cfg:",squash"`
 
@@ -28,6 +31,13 @@ type LegacyOptions struct {
 
 func NewLegacyOptions() *LegacyOptions {
 	return &LegacyOptions{
+		LegacyProxyOptions: LegacyProxyOptions{
+			ProxyPrefix:        "/oauth2",
+			RealClientIPHeader: "X-Real-IP",
+			ForceHTTPS:         false,
+			SkipAuthPreflight:  false,
+		},
+
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
@@ -79,6 +89,7 @@ func NewLegacyOptions() *LegacyOptions {
 func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet := NewFlagSet()
 
+	flagSet.AddFlagSet(legacyProxyOptionsFlagSet())
 	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
 	flagSet.AddFlagSet(legacyHeadersFlagSet())
 	flagSet.AddFlagSet(legacyServerFlagset())
@@ -90,6 +101,8 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 }
 
 func (l *LegacyOptions) ToOptions() (*Options, error) {
+	l.Options.ProxyOptions = l.LegacyProxyOptions.convert()
+
 	upstreams, err := l.LegacyUpstreams.convert()
 	if err != nil {
 		return nil, fmt.Errorf("error converting upstreams: %v", err)

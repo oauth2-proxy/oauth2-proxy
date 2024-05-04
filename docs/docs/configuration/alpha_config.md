@@ -162,6 +162,7 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+| `ProxyOptions` | _[ProxyOptions](#proxyoptions)_ |  |
 | `upstreamConfig` | _[UpstreamConfig](#upstreamconfig)_ | UpstreamConfig is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list. |
 | `injectRequestHeaders` | _[[]Header](#header)_ | InjectRequestHeaders is used to configure headers that should be added<br/>to requests to upstream servers.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
@@ -471,6 +472,40 @@ and oidc.
 
 Providers is a collection of definitions for providers.
 
+
+### ProxyOptions
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `AllowQuerySemicolons` | _bool_ | security |
+| `ForceHTTPS` | _bool_ |  |
+| `SkipAuthRegex` | _[]string_ |  |
+| `SkipAuthRoutes` | _[]string_ |  |
+| `SkipAuthPreflight` | _bool_ |  |
+| `SSLInsecureSkipVerify` | _bool_ |  |
+| `TrustedIPs` | _[]string_ |  |
+| `AuthenticatedEmailsFile` | _string_ | authentication |
+| `EmailDomains` | _[]string_ |  |
+| `WhitelistDomains` | _[]string_ |  |
+| `HtpasswdFile` | _string_ |  |
+| `HtpasswdUserGroups` | _[]string_ |  |
+| `SkipJwtBearerTokens` | _bool_ |  |
+| `ExtraJwtIssuers` | _[]string_ |  |
+| `APIRoutes` | _[]string_ | routing |
+| `ReverseProxy` | _bool_ |  |
+| `ProxyPrefix` | _string_ |  |
+| `RedirectURL` | _string_ |  |
+| `RelativeRedirectURL` | _bool_ |  |
+| `RealClientIPHeader` | _string_ |  |
+| `SkipProviderButton` | _bool_ |  |
+| `EncodeState` | _bool_ |  |
+| `ForceJSONErrors` | _bool_ | Force oauth2-proxy error responses to be JSON |
+| `LegacyPreferEmailToUser` | _bool_ | This is used for backwards compatibility |
+| `LegacySignatureKey` | _string_ |  |
 
 ### SecretSource
 

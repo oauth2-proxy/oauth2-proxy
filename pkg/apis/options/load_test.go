@@ -18,6 +18,10 @@ var _ = Describe("Load", func() {
 	optionsWithNilProvider.Providers = nil
 
 	legacyOptionsWithNilProvider := &LegacyOptions{
+		LegacyProxyOptions: LegacyProxyOptions{
+			ProxyPrefix:        "/oauth2",
+			RealClientIPHeader: "X-Real-IP",
+		},
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
@@ -62,15 +66,11 @@ var _ = Describe("Load", func() {
 		},
 
 		Options: Options{
-			ProxyPrefix:        "/oauth2",
-			PingPath:           "/ping",
-			ReadyPath:          "/ready",
-			RealClientIPHeader: "X-Real-IP",
-			ForceHTTPS:         false,
-			Session:            sessionOptionsDefaults(),
-			Templates:          templatesDefaults(),
-			SkipAuthPreflight:  false,
-			Logging:            loggingDefaults(),
+			PingPath:  "/ping",
+			ReadyPath: "/ready",
+			Session:   sessionOptionsDefaults(),
+			Templates: templatesDefaults(),
+			Logging:   loggingDefaults(),
 		},
 	}
 
