@@ -69,7 +69,7 @@ func validateStaticUpstream(upstream options.Upstream) []string {
 	if upstream.InsecureSkipTLSVerify {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has insecureSkipTLSVerify, but is a static upstream, this will have no effect.", upstream.ID))
 	}
-	if upstream.FlushInterval != nil && upstream.FlushInterval.Duration() != options.DefaultUpstreamFlushInterval {
+	if upstream.FlushInterval != nil && *upstream.FlushInterval != options.DefaultUpstreamFlushInterval {
 		msgs = append(msgs, fmt.Sprintf("upstream %q has flushInterval, but is a static upstream, this will have no effect.", upstream.ID))
 	}
 	if upstream.PassHostHeader != nil {

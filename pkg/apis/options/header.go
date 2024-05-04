@@ -21,10 +21,10 @@ type Header struct {
 // make up the header value
 type HeaderValue struct {
 	// Allow users to load the value from a secret source
-	*SecretSource `json:",omitempty"`
+	*SecretSource `json:"secretSource,omitempty"`
 
 	// Allow users to load the value from a session claim
-	*ClaimSource `json:",omitempty"`
+	*ClaimSource `json:"claimSource,omitempty"`
 }
 
 // ClaimSource allows loading a header value from a claim within the session
