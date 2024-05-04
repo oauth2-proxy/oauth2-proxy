@@ -6,17 +6,17 @@ import (
 
 // Cookie contains configuration options relevant for the CSRF and authentication cookies
 type Cookie struct {
-	Name           string        `json:"name,omitempty"`
-	Secret         string        `json:"secret,omitempty"`
-	Domains        []string      `json:"domains,omitempty"`
-	Path           string        `json:"path,omitempty"`
-	Expire         time.Duration `json:"expire,omitempty"`
-	Refresh        time.Duration `json:"refresh,omitempty"`
-	Secure         bool          `json:"secure,omitempty"`
-	HTTPOnly       bool          `json:"httpOnly,omitempty"`
-	SameSite       string        `json:"sameSite,omitempty"`
-	CSRFPerRequest bool          `json:"csrfPerRequest,omitempty"`
-	CSRFExpire     time.Duration `json:"csrfExpire,omitempty"`
+	Name           string        `yaml:"name,omitempty"`
+	Secret         string        `yaml:"secret,omitempty"`
+	Domains        []string      `yaml:"domains,omitempty"`
+	Path           string        `yaml:"path,omitempty"`
+	Expire         time.Duration `yaml:"expire,omitempty"`
+	Refresh        time.Duration `yaml:"refresh,omitempty"`
+	Secure         bool          `yaml:"secure,omitempty"`
+	HTTPOnly       bool          `yaml:"httpOnly,omitempty"`
+	SameSite       string        `yaml:"sameSite,omitempty"`
+	CSRFPerRequest bool          `yaml:"csrfPerRequest,omitempty"`
+	CSRFExpire     time.Duration `yaml:"csrfExpire,omitempty"`
 }
 
 // cookieDefaults creates a Cookie populating each field with its default value
