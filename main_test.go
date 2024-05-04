@@ -18,7 +18,7 @@ import (
 
 var _ = Describe("Configuration Loading Suite", func() {
 	// For comparing the full configuration differences of our structs we need to increase the gomega limits
-	format.MaxLength = 50000
+	format.MaxLength = 0
 	format.MaxDepth = 10
 
 	const testLegacyConfig = `
@@ -28,6 +28,8 @@ set_basic_auth="true"
 basic_auth_password="super-secret-password"
 client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
+cookie_secure="false"
+cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 `
 
 	const testAlphaConfig = `
@@ -68,7 +70,10 @@ injectResponseHeaders:
     basicAuthPassword:
       value: super-secret-password
 server:
-  bindAddress: "127.0.0.1:4180"
+  httpAddress: "127.0.0.1:4180"
+cookie:
+  secure: false
+  secret: OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w=
 providers:
 - provider: google
   ID: google=oauth2-proxy
@@ -90,9 +95,7 @@ providers:
 `
 
 	const testCoreConfig = `
-cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 email_domains="example.com"
-cookie_secure="false"
 
 redirect_url="http://localhost:4180/oauth2/callback"
 `
