@@ -355,15 +355,15 @@ var _ = Describe("Load", func() {
 var _ = Describe("LoadYAML", func() {
 	Context("with a testOptions structure", func() {
 		type TestOptionSubStruct struct {
-			StringSliceOption []string `yaml:"stringSliceOption,omitempty"`
+			StringSliceOption []string `json:"stringSliceOption,omitempty"`
 		}
 
 		type TestOptions struct {
-			StringOption string              `yaml:"stringOption,omitempty"`
-			Sub          TestOptionSubStruct `yaml:"sub,omitempty"`
+			StringOption string              `json:"stringOption,omitempty"`
+			Sub          TestOptionSubStruct `json:"sub,omitempty"`
 
 			// Check that embedded fields can be unmarshalled
-			TestOptionSubStruct `yaml:",inline,squash"`
+			TestOptionSubStruct `json:",inline,squash"`
 		}
 
 		var testOptionsConfigBytesFull = []byte(`
@@ -416,7 +416,7 @@ sub:
 
 				err := LoadYAML(configFileName, input)
 				if in.expectedErr != nil {
-					Expect(err).To(MatchError(in.expectedErr.Error()))
+					Expect(err).To(MatchError(ContainSubstring(in.expectedErr.Error())))
 				} else {
 					Expect(err).ToNot(HaveOccurred())
 				}
@@ -459,19 +459,19 @@ sub:
 						StringSliceOption: []string{"a", "b", "c"},
 					},
 				},
-				expectedErr: errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: unknown field \"foo\""),
+				expectedErr: errors.New("has invalid keys: foo"),
 			}),
 			Entry("with an incorrect type for a string field", loadYAMLTableInput{
 				configFile:     []byte(`stringOption: ["a", "b"]`),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal array into Go struct field TestOptions.StringOption of type string"),
+				expectedErr:    errors.New("'stringOption' expected type 'string', got unconvertible type"),
 			}),
 			Entry("with an incorrect type for an array field", loadYAMLTableInput{
 				configFile:     []byte(`stringSliceOption: "a"`),
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
+				expectedErr:    errors.New("'stringSliceOption': source data must be an array or slice, got string"),
 			}),
 			Entry("with a config file containing environment variable references", loadYAMLTableInput{
 				configFile: []byte("stringOption: ${TESTUSER}"),
@@ -501,11 +501,13 @@ upstreamConfig:
 injectRequestHeaders:
 - name: X-Forwarded-User
   values:
-  - claim: user
+  - claimSource:
+      claim: user
 injectResponseHeaders:
 - name: X-Secret
   values:
-  - value: c2VjcmV0
+  - secretSource:
+      value: secret
 `)
 
 		By("Creating a config file")
@@ -523,7 +525,7 @@ injectResponseHeaders:
 		into := &AlphaOptions{}
 		Expect(LoadYAML(configFileName, into)).To(Succeed())
 
-		flushInterval := Duration(500 * time.Millisecond)
+		flushInterval := 500 * time.Millisecond
 
 		Expect(into).To(Equal(&AlphaOptions{
 			UpstreamConfig: UpstreamConfig{
@@ -554,7 +556,7 @@ injectResponseHeaders:
 					Values: []HeaderValue{
 						{
 							SecretSource: &SecretSource{
-								Value: []byte("secret"),
+								Value: "secret",
 							},
 						},
 					},
