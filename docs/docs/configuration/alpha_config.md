@@ -168,6 +168,7 @@ They may change between releases without notice.
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
+| `Cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the CSRF and authorization cookies |
 
 ### AzureOptions
 
@@ -202,6 +203,26 @@ ClaimSource allows loading a header value from a claim within the session
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. |
 | `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+
+### Cookie
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+Cookie contains configuration options relevant for the CSRF and authentication cookies
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Name` | _string_ |  |
+| `Secret` | _string_ |  |
+| `Domains` | _[]string_ |  |
+| `Path` | _string_ |  |
+| `Expire` | _duration_ |  |
+| `Refresh` | _duration_ |  |
+| `Secure` | _bool_ |  |
+| `HTTPOnly` | _bool_ |  |
+| `SameSite` | _string_ |  |
+| `CSRFPerRequest` | _bool_ |  |
+| `CSRFExpire` | _duration_ |  |
 
 ### GitHubOptions
 

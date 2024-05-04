@@ -35,7 +35,7 @@ type Options struct {
 	HtpasswdFile            string   `flag:"htpasswd-file" cfg:"htpasswd_file"`
 	HtpasswdUserGroups      []string `flag:"htpasswd-user-group" cfg:"htpasswd_user_groups"`
 
-	Cookie    Cookie         `cfg:",squash"`
+	Cookie    Cookie         `cfg:",internal"`
 	Session   SessionOptions `cfg:",squash"`
 	Logging   Logging        `cfg:",squash"`
 	Templates Templates      `cfg:",squash"`
@@ -159,7 +159,6 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
 
-	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
 	flagSet.AddFlagSet(templatesFlagSet())
 

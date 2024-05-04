@@ -1039,4 +1039,63 @@ var _ = Describe("Legacy Options", func() {
 			}),
 		)
 	})
+
+	Context("Legacy Cookie", func() {
+		type convertCookieTableInput struct {
+			legacyCookie   LegacyCookie
+			expectedCookie Cookie
+		}
+
+		// Test cases and expected outcomes
+		simpleCookie := Cookie{
+			Name: "my-cookie",
+		}
+		simpleLegacyCookie := LegacyCookie{
+			Name: "my-cookie",
+		}
+
+		fullCookie := Cookie{
+			Name:           "_oauth2_proxy",
+			Secret:         "",
+			Domains:        nil,
+			Path:           "/",
+			Expire:         time.Duration(168) * time.Hour,
+			Refresh:        time.Duration(0),
+			Secure:         true,
+			HTTPOnly:       true,
+			SameSite:       "",
+			CSRFPerRequest: false,
+			CSRFExpire:     time.Duration(15) * time.Minute,
+		}
+
+		fullLegacyCookie := LegacyCookie{
+			Name:           "_oauth2_proxy",
+			Secret:         "",
+			Domains:        nil,
+			Path:           "/",
+			Expire:         time.Duration(168) * time.Hour,
+			Refresh:        time.Duration(0),
+			Secure:         true,
+			HTTPOnly:       true,
+			SameSite:       "",
+			CSRFPerRequest: false,
+			CSRFExpire:     time.Duration(15) * time.Minute,
+		}
+
+		DescribeTable("convertLegacyCookie",
+			func(in *convertCookieTableInput) {
+				cookie := in.legacyCookie.convert()
+
+				Expect(cookie).To(Equal(in.expectedCookie))
+			},
+			Entry("with name", &convertCookieTableInput{
+				legacyCookie:   simpleLegacyCookie,
+				expectedCookie: simpleCookie,
+			}),
+			Entry("with all attributes", &convertCookieTableInput{
+				legacyCookie:   fullLegacyCookie,
+				expectedCookie: fullCookie,
+			}),
+		)
+	})
 })

@@ -43,6 +43,9 @@ type AlphaOptions struct {
 
 	// Providers is used to configure multiple providers.
 	Providers Providers `json:"providers,omitempty"`
+
+	// Cookie is used to configure the CSRF and authorization cookies
+	Cookie Cookie `yaml:"cookie,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options
@@ -61,6 +64,7 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.Server = opts.Server
 	a.MetricsServer = opts.MetricsServer
 	a.Providers = opts.Providers
+	a.Cookie = opts.Cookie
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -72,4 +76,5 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.Server = a.Server
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
+	opts.Cookie = a.Cookie
 }
