@@ -15,18 +15,18 @@ import (
 
 var _ = Describe("Load", func() {
 	optionsWithoutAlphaOpts := &Options{
-		ProxyPrefix:        "/oauth2",
-		PingPath:           "/ping",
-		ReadyPath:          "/ready",
-		RealClientIPHeader: "X-Real-IP",
-		ForceHTTPS:         false,
-		Session:            sessionOptionsDefaults(),
-		Templates:          templatesDefaults(),
-		SkipAuthPreflight:  false,
-		Logging:            loggingDefaults(),
+		PingPath:  "/ping",
+		ReadyPath: "/ready",
+		Session:   sessionOptionsDefaults(),
+		Templates: templatesDefaults(),
+		Logging:   loggingDefaults(),
 	}
 
 	legacyOptionsWithNilProvider := &LegacyOptions{
+		LegacyProxyOptions: LegacyProxyOptions{
+			ProxyPrefix:        "/oauth2",
+			RealClientIPHeader: "X-Real-IP",
+		},
 		LegacyUpstreams: LegacyUpstreams{
 			PassHostHeader:  true,
 			ProxyWebSockets: true,
@@ -71,15 +71,11 @@ var _ = Describe("Load", func() {
 		},
 
 		Options: Options{
-			ProxyPrefix:        "/oauth2",
-			PingPath:           "/ping",
-			ReadyPath:          "/ready",
-			RealClientIPHeader: "X-Real-IP",
-			SkipAuthPreflight:  false,
-			ForceHTTPS:         false,
-			Session:            sessionOptionsDefaults(),
-			Templates:          templatesDefaults(),
-			Logging:            loggingDefaults(),
+			PingPath:  "/ping",
+			ReadyPath: "/ready",
+			Session:   sessionOptionsDefaults(),
+			Templates: templatesDefaults(),
+			Logging:   loggingDefaults(),
 		},
 	}
 

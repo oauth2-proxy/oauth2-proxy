@@ -30,7 +30,7 @@ func testOptions() *options.Options {
 	o.Providers[0].ID = providerID
 	o.Providers[0].ClientID = clientID
 	o.Providers[0].ClientSecret = clientSecret
-	o.EmailDomains = []string{"*"}
+	o.ProxyOptions.EmailDomains = []string{"*"}
 	return o
 }
 
@@ -43,7 +43,7 @@ func errorMsg(msgs []string) string {
 
 func TestNewOptions(t *testing.T) {
 	o := options.NewOptions()
-	o.EmailDomains = []string{"*"}
+	o.ProxyOptions.EmailDomains = []string{"*"}
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 
@@ -90,7 +90,7 @@ func TestInitializedOptions(t *testing.T) {
 // seems to parse damn near anything.
 func TestRedirectURL(t *testing.T) {
 	o := testOptions()
-	o.RawRedirectURL = "https://myhost.com/oauth2/callback"
+	o.ProxyOptions.RedirectURL = "https://myhost.com/oauth2/callback"
 	assert.Equal(t, nil, Validate(o))
 	expected := &url.URL{
 		Scheme: "https", Host: "myhost.com", Path: "/oauth2/callback"}
@@ -136,7 +136,7 @@ func TestBase64CookieSecret(t *testing.T) {
 
 func TestValidateSignatureKey(t *testing.T) {
 	o := testOptions()
-	o.SignatureKey = "sha1:secret"
+	o.ProxyOptions.LegacySignatureKey = "sha1:secret"
 	assert.Equal(t, nil, Validate(o))
 	assert.Equal(t, o.GetSignatureData().Hash, crypto.SHA1)
 	assert.Equal(t, o.GetSignatureData().Key, "secret")
@@ -144,18 +144,18 @@ func TestValidateSignatureKey(t *testing.T) {
 
 func TestValidateSignatureKeyInvalidSpec(t *testing.T) {
 	o := testOptions()
-	o.SignatureKey = "invalid spec"
+	o.ProxyOptions.LegacySignatureKey = "invalid spec"
 	err := Validate(o)
 	assert.Equal(t, err.Error(), "invalid configuration:\n"+
-		"  invalid signature hash:key spec: "+o.SignatureKey)
+		"  invalid signature hash:key spec: "+o.ProxyOptions.LegacySignatureKey)
 }
 
 func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 	o := testOptions()
-	o.SignatureKey = "unsupported:default secret"
+	o.ProxyOptions.LegacySignatureKey = "unsupported:default secret"
 	err := Validate(o)
 	assert.Equal(t, err.Error(), "invalid configuration:\n"+
-		"  unsupported signature hash algorithm: "+o.SignatureKey)
+		"  unsupported signature hash algorithm: "+o.ProxyOptions.LegacySignatureKey)
 }
 
 func TestGCPHealthcheck(t *testing.T) {
@@ -167,21 +167,21 @@ func TestGCPHealthcheck(t *testing.T) {
 func TestRealClientIPHeader(t *testing.T) {
 	// Ensure nil if ReverseProxy not set.
 	o := testOptions()
-	o.RealClientIPHeader = "X-Real-IP"
+	o.ProxyOptions.RealClientIPHeader = "X-Real-IP"
 	assert.Equal(t, nil, Validate(o))
 	assert.Nil(t, o.GetRealClientIPParser())
 
 	// Ensure simple use case works.
 	o = testOptions()
-	o.ReverseProxy = true
-	o.RealClientIPHeader = "X-Forwarded-For"
+	o.ProxyOptions.ReverseProxy = true
+	o.ProxyOptions.RealClientIPHeader = "X-Forwarded-For"
 	assert.Equal(t, nil, Validate(o))
 	assert.NotNil(t, o.GetRealClientIPParser())
 
 	// Ensure unknown header format process an error.
 	o = testOptions()
-	o.ReverseProxy = true
-	o.RealClientIPHeader = "Forwarded"
+	o.ProxyOptions.ReverseProxy = true
+	o.ProxyOptions.RealClientIPHeader = "Forwarded"
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
 	expected := errorMsg([]string{
@@ -192,8 +192,8 @@ func TestRealClientIPHeader(t *testing.T) {
 
 	// Ensure invalid header format produces an error.
 	o = testOptions()
-	o.ReverseProxy = true
-	o.RealClientIPHeader = "!934invalidheader-23:"
+	o.ProxyOptions.ReverseProxy = true
+	o.ProxyOptions.RealClientIPHeader = "!934invalidheader-23:"
 	err = Validate(o)
 	assert.NotEqual(t, nil, err)
 	expected = errorMsg([]string{

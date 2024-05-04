@@ -30,9 +30,14 @@ client_id="oauth2-proxy"
 client_secret="b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK"
 cookie_secure="false"
 cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
+email_domains="example.com"
+redirect_url="http://localhost:4180/oauth2/callback"
 `
 
 	const testAlphaConfig = `
+proxyOptions:
+  emailDomains: ["example.com"]
+  redirectUrl: http://localhost:4180/oauth2/callback
 upstreamConfig:
   proxyrawpath: false
   upstreams:
@@ -100,11 +105,7 @@ providers:
     - force
 `
 
-	const testCoreConfig = `
-email_domains="example.com"
-
-redirect_url="http://localhost:4180/oauth2/callback"
-`
+	const testCoreConfig = ``
 
 	boolPtr := func(b bool) *bool {
 		return &b
@@ -119,9 +120,13 @@ redirect_url="http://localhost:4180/oauth2/callback"
 		Expect(err).ToNot(HaveOccurred())
 
 		opts.Cookie.Secret = "OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
-		opts.EmailDomains = []string{"example.com"}
 		opts.Cookie.Secure = false
-		opts.RawRedirectURL = "http://localhost:4180/oauth2/callback"
+		opts.ProxyOptions = options.ProxyOptions{
+			ProxyPrefix:        "/oauth2",
+			RealClientIPHeader: "X-Real-IP",
+			EmailDomains:       []string{"example.com"},
+			RedirectURL:        "http://localhost:4180/oauth2/callback",
+		}
 
 		opts.UpstreamServers = options.UpstreamConfig{
 			Upstreams: []options.Upstream{
