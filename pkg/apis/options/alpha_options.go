@@ -45,15 +45,11 @@ type AlphaOptions struct {
 	Providers Providers `json:"providers,omitempty"`
 }
 
-// MergeInto replaces alpha options in the Options struct with the values
-// from the AlphaOptions
-func (a *AlphaOptions) MergeInto(opts *Options) {
-	opts.UpstreamServers = a.UpstreamConfig
-	opts.InjectRequestHeaders = a.InjectRequestHeaders
-	opts.InjectResponseHeaders = a.InjectResponseHeaders
-	opts.Server = a.Server
-	opts.MetricsServer = a.MetricsServer
-	opts.Providers = a.Providers
+// Initialize alpha options with default values and settings of the core options
+func NewAlphaOptions(opts *Options) *AlphaOptions {
+	aOpts := &AlphaOptions{}
+	aOpts.ExtractFrom(opts)
+	return aOpts
 }
 
 // ExtractFrom populates the fields in the AlphaOptions with the values from
@@ -65,4 +61,15 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.Server = opts.Server
 	a.MetricsServer = opts.MetricsServer
 	a.Providers = opts.Providers
+}
+
+// MergeInto replaces alpha options in the Options struct with the values
+// from the AlphaOptions
+func (a *AlphaOptions) MergeInto(opts *Options) {
+	opts.UpstreamServers = a.UpstreamConfig
+	opts.InjectRequestHeaders = a.InjectRequestHeaders
+	opts.InjectResponseHeaders = a.InjectResponseHeaders
+	opts.Server = a.Server
+	opts.MetricsServer = a.MetricsServer
+	opts.Providers = a.Providers
 }
