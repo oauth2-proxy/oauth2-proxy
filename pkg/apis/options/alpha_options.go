@@ -49,6 +49,9 @@ type AlphaOptions struct {
 func NewAlphaOptions(opts *Options) *AlphaOptions {
 	aOpts := &AlphaOptions{}
 	aOpts.ExtractFrom(opts)
+	// Overwrite default values (google provider) with none. Otherwise it is always initialized
+	// as the first provider in the list and always used for authorization
+	aOpts.Providers = make(Providers, 0)
 	return aOpts
 }
 
