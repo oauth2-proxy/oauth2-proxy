@@ -1,10 +1,12 @@
 package options
 
-import "github.com/spf13/pflag"
+import (
+	"github.com/spf13/pflag"
+)
 
 // Templates includes options for configuring the sign in and error pages
 // appearance.
-type Templates struct {
+type LegacyPageTemplates struct {
 	// Path is the path to a folder containing a sign_in.html and an error.html
 	// template.
 	// These files will be used instead of the default templates if present.
@@ -37,7 +39,7 @@ type Templates struct {
 	Debug bool `flag:"show-debug-on-error" cfg:"show_debug_on_error"`
 }
 
-func templatesFlagSet() *pflag.FlagSet {
+func legacyPageTemplatesFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("templates", pflag.ExitOnError)
 
 	flagSet.String("custom-templates-dir", "", "path to custom html templates")
@@ -50,9 +52,13 @@ func templatesFlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-// templatesDefaults creates a Templates and populates it with any default values
-func templatesDefaults() Templates {
-	return Templates{
-		DisplayLoginForm: true,
+func (l *LegacyPageTemplates) convert() PageTemplates {
+	return PageTemplates{
+		Path:             l.Path,
+		CustomLogo:       l.CustomLogo,
+		Banner:           l.Banner,
+		Footer:           l.Footer,
+		DisplayLoginForm: l.DisplayLoginForm,
+		Debug:            l.Debug,
 	}
 }

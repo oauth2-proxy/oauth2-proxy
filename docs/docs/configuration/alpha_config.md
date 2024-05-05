@@ -162,14 +162,17 @@ They may change between releases without notice.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `proxyOptions` | _[ProxyOptions](#proxyoptions)_ |  |
+| `proxyOptions` | _[ProxyOptions](#proxyoptions)_ | ProxyOptions is used to configure the proxy behaviour.<br/>This includes things like the prefix for protected paths, authentication<br/>and routing options. |
+| `ProbeOptions` | _[ProbeOptions](#probeoptions)_ | ProbeOptions is used to configure the probe endpoint for health and readiness checks. |
 | `upstreamConfig` | _[UpstreamConfig](#upstreamconfig)_ | UpstreamConfig is used to configure upstream servers.<br/>Once a user is authenticated, requests to the server will be proxied to<br/>these upstream servers based on the path mappings defined in this list. |
 | `injectRequestHeaders` | _[[]Header](#header)_ | InjectRequestHeaders is used to configure headers that should be added<br/>to requests to upstream servers.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `injectResponseHeaders` | _[[]Header](#header)_ | InjectResponseHeaders is used to configure headers that should be added<br/>to responses from the proxy.<br/>This is typically used when using the proxy as an external authentication<br/>provider in conjunction with another proxy such as NGINX and its<br/>auth_request module.<br/>Headers may source values from either the authenticated user's session<br/>or from a static secret value. |
 | `server` | _[Server](#server)_ | Server is used to configure the HTTP(S) server for the proxy application.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
 | `metricsServer` | _[Server](#server)_ | MetricsServer is used to configure the HTTP(S) server for metrics.<br/>You may choose to run both HTTP and HTTPS servers simultaneously.<br/>This can be done by setting the BindAddress and the SecureBindAddress simultaneously.<br/>To use the secure server you must configure a TLS certificate and key. |
-| `providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers. |
-| `cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the CSRF and authorization cookies |
+| `Providers` | _[Providers](#providers)_ | Providers is used to configure multiple providers.<br/>As of yet multiple providers aren't supported only the first entry is actually used. |
+| `cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the cookie used to store the session state.<br/>This includes options such as the cookie name, its expiry and its domain. |
+| `Session` | _[SessionOptions](#sessionoptions)_ | Session is used to configure the session storage.<br/>To either use a cookie or a redis store. |
+| `PageTemplates` | _[PageTemplates](#pagetemplates)_ | PageTemplates is used to configure custom page templates.<br/>This includes the sign in and error pages. |
 
 ### AzureOptions
 
@@ -224,6 +227,16 @@ Cookie contains configuration options relevant for the CSRF and authentication c
 | `sameSite` | _string_ |  |
 | `csrfPerRequest` | _bool_ |  |
 | `csrfExpire` | _duration_ |  |
+
+### CookieStoreOptions
+
+(**Appears on:** [SessionOptions](#sessionoptions))
+
+CookieStoreOptions contains configuration options for the CookieSessionStore.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Minimal` | _bool_ |  |
 
 ### GitHubOptions
 
@@ -416,6 +429,35 @@ character.
 | `audienceClaims` | _[]string_ | AudienceClaim allows to define any claim that is verified against the client id<br/>By default `aud` claim is used for verification. |
 | `extraAudiences` | _[]string_ | ExtraAudiences is a list of additional audiences that are allowed<br/>to pass verification in addition to the client id. |
 
+### PageTemplates
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+Templates includes options for configuring the sign in and error pages
+appearance.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Path` | _string_ | Path is the path to a folder containing a sign_in.html and an error.html<br/>template.<br/>These files will be used instead of the default templates if present.<br/>If either file is missing, the default will be used instead. |
+| `CustomLogo` | _string_ | CustomLogo is the path or a URL to a logo that should replace the default logo<br/>on the sign_in page template.<br/>Supported formats are .svg, .png, .jpg and .jpeg.<br/>If URL is used the format support depends on the browser.<br/>To disable the default logo, set this value to "-". |
+| `Banner` | _string_ | Banner overides the default sign_in page banner text. If unspecified,<br/>the message will give users a list of allowed email domains. |
+| `Footer` | _string_ | Footer overrides the default sign_in page footer text. |
+| `DisplayLoginForm` | _bool_ | DisplayLoginForm determines whether the sign_in page should render a<br/>password form if a static passwords file (htpasswd file) has been<br/>configured. |
+| `Debug` | _bool_ | Debug renders detailed errors when an error page is shown.<br/>It is not advised to use this in production as errors may contain sensitive<br/>information.<br/>Use only for diagnosing backend errors. |
+
+### ProbeOptions
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `PingPath` | _string_ |  |
+| `PingUserAgent` | _string_ |  |
+| `ReadyPath` | _string_ |  |
+| `LegacyGCPHealthChecks` | _bool_ |  |
+
 ### Provider
 
 (**Appears on:** [Providers](#providers))
@@ -507,6 +549,27 @@ Providers is a collection of definitions for providers.
 | `legacyPreferEmailToUser` | _bool_ | This is used for backwards compatibility |
 | `legacySignatureKey` | _string_ |  |
 
+### RedisStoreOptions
+
+(**Appears on:** [SessionOptions](#sessionoptions))
+
+RedisStoreOptions contains configuration options for the RedisSessionStore.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `ConnectionURL` | _string_ |  |
+| `Password` | _string_ |  |
+| `Username` | _string_ |  |
+| `UseSentinel` | _bool_ |  |
+| `SentinelPassword` | _string_ |  |
+| `SentinelMasterName` | _string_ |  |
+| `SentinelConnectionURLs` | _[]string_ |  |
+| `UseCluster` | _bool_ |  |
+| `ClusterConnectionURLs` | _[]string_ |  |
+| `CAPath` | _string_ |  |
+| `InsecureSkipTLSVerify` | _bool_ |  |
+| `IdleTimeout` | _int_ |  |
+
 ### SecretSource
 
 (**Appears on:** [ClaimSource](#claimsource), [HeaderValue](#headervalue), [TLS](#tls))
@@ -531,6 +594,18 @@ Server represents the configuration for an HTTP(S) server
 | `httpAddress` | _string_ | BindAddress is the address on which to serve traffic.<br/>Leave blank or set to "-" to disable. |
 | `httpsAddress` | _string_ | SecureBindAddress is the address on which to serve secure traffic.<br/>Leave blank or set to "-" to disable. |
 | `tls` | _[TLS](#tls)_ | TLS contains the information for loading the certificate and key for the<br/>secure traffic and further configuration for the TLS server. |
+
+### SessionOptions
+
+(**Appears on:** [AlphaOptions](#alphaoptions))
+
+SessionOptions contains configuration options for the SessionStore providers.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `Type` | _string_ |  |
+| `Cookie` | _[CookieStoreOptions](#cookiestoreoptions)_ |  |
+| `Redis` | _[RedisStoreOptions](#redisstoreoptions)_ |  |
 
 ### TLS
 

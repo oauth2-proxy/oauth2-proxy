@@ -130,15 +130,15 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 	}
 
 	pageWriter, err := pagewriter.NewWriter(pagewriter.Opts{
-		TemplatesPath:    opts.Templates.Path,
-		CustomLogo:       opts.Templates.CustomLogo,
+		TemplatesPath:    opts.PageTemplates.Path,
+		CustomLogo:       opts.PageTemplates.CustomLogo,
 		ProxyPrefix:      opts.ProxyOptions.ProxyPrefix,
-		Footer:           opts.Templates.Footer,
+		Footer:           opts.PageTemplates.Footer,
 		Version:          VERSION,
-		Debug:            opts.Templates.Debug,
+		Debug:            opts.PageTemplates.Debug,
 		ProviderName:     buildProviderName(provider, opts.Providers[0].Name),
 		SignInMessage:    buildSignInMessage(opts),
-		DisplayLoginForm: basicAuthValidator != nil && opts.Templates.DisplayLoginForm,
+		DisplayLoginForm: basicAuthValidator != nil && opts.PageTemplates.DisplayLoginForm,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error initialising page writer: %v", err)
@@ -354,9 +354,9 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 		chain = chain.Append(middleware.NewRedirectToHTTPS(httpsPort))
 	}
 
-	healthCheckPaths := []string{opts.PingPath}
-	healthCheckUserAgents := []string{opts.PingUserAgent}
-	if opts.GCPHealthChecks {
+	healthCheckPaths := []string{opts.ProbeOptions.PingPath}
+	healthCheckUserAgents := []string{opts.ProbeOptions.PingUserAgent}
+	if opts.ProbeOptions.LegacyGCPHealthChecks {
 		logger.Printf("WARNING: GCP HealthChecks are now deprecated: Reconfigure apps to use the ping path for liveness and readiness checks, set the ping user agent to \"GoogleHC/1.0\" to preserve existing behaviour")
 		healthCheckPaths = append(healthCheckPaths, "/liveness_check", "/readiness_check")
 		healthCheckUserAgents = append(healthCheckUserAgents, "GoogleHC/1.0")
@@ -367,14 +367,14 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 	if opts.Logging.SilencePing {
 		chain = chain.Append(
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
-			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
+			middleware.NewReadynessCheck(opts.ProbeOptions.ReadyPath, sessionStore),
 			middleware.NewRequestLogger(),
 		)
 	} else {
 		chain = chain.Append(
 			middleware.NewRequestLogger(),
 			middleware.NewHealthCheck(healthCheckPaths, healthCheckUserAgents),
-			middleware.NewReadynessCheck(opts.ReadyPath, sessionStore),
+			middleware.NewReadynessCheck(opts.ProbeOptions.ReadyPath, sessionStore),
 		)
 	}
 
@@ -429,11 +429,11 @@ func buildHeadersChain(opts *options.Options) (alice.Chain, error) {
 
 func buildSignInMessage(opts *options.Options) string {
 	var msg string
-	if len(opts.Templates.Banner) >= 1 {
-		if opts.Templates.Banner == "-" {
+	if len(opts.PageTemplates.Banner) >= 1 {
+		if opts.PageTemplates.Banner == "-" {
 			msg = ""
 		} else {
-			msg = opts.Templates.Banner
+			msg = opts.PageTemplates.Banner
 		}
 	} else if len(opts.ProxyOptions.EmailDomains) != 0 && opts.ProxyOptions.AuthenticatedEmailsFile == "" {
 		if len(opts.ProxyOptions.EmailDomains) > 1 {

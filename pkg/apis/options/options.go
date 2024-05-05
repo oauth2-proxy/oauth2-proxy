@@ -18,18 +18,27 @@ type SignatureData struct {
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
+	// ProxyOptions is used to configure the proxy behaviour.
+	// This includes things like the prefix for protected paths, authentication
+	// and routing options.
 	ProxyOptions ProxyOptions `cfg:",internal"`
 
-	PingPath      string `flag:"ping-path" cfg:"ping_path"`
-	PingUserAgent string `flag:"ping-user-agent" cfg:"ping_user_agent"`
-	ReadyPath     string `flag:"ready-path" cfg:"ready_path"`
+	// ProbeOptions is used to configure the probe endpoint for health and readiness checks.
+	ProbeOptions ProbeOptions `cfg:",internal"`
 
-	Cookie    Cookie         `cfg:",internal"`
-	Session   SessionOptions `cfg:",squash"`
-	Logging   Logging        `cfg:",squash"`
-	Templates Templates      `cfg:",squash"`
+	// Cookie is used to configure the cookie used to store the session state.
+	// This includes options such as the cookie name, its expiry and its domain.
+	Cookie Cookie `cfg:",internal"`
 
-	GCPHealthChecks bool `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
+	// Session is used to configure the session storage.
+	// To either use a cookie or a redis store.
+	Session SessionOptions `cfg:",internal"`
+
+	Logging Logging `cfg:",squash"`
+
+	// PageTemplates is used to configure custom page templates.
+	// This includes the sign in and error pages.
+	PageTemplates PageTemplates `cfg:",internal"`
 
 	// Not used in the legacy config, name not allowed to match an external key (upstreams)
 	// TODO(JoelSpeed): Rename when legacy config is removed
@@ -73,14 +82,13 @@ func (o *Options) SetRealClientIPParser(s ipapi.RealClientIPParser)       { o.re
 // NewOptions constructs a new Options with defaulted values
 func NewOptions() *Options {
 	return &Options{
-		ProxyOptions: proxyOptionsDefaults(),
-		Providers:    providerDefaults(),
-		PingPath:     "/ping",
-		ReadyPath:    "/ready",
-		Cookie:       cookieDefaults(),
-		Session:      sessionOptionsDefaults(),
-		Templates:    templatesDefaults(),
-		Logging:      loggingDefaults(),
+		ProxyOptions:  proxyOptionsDefaults(),
+		ProbeOptions:  probeOptionsDefaults(),
+		Providers:     providerDefaults(),
+		Cookie:        cookieDefaults(),
+		Session:       sessionOptionsDefaults(),
+		PageTemplates: pageTemplatesDefaults(),
+		Logging:       loggingDefaults(),
 	}
 }
 
@@ -88,27 +96,7 @@ func NewOptions() *Options {
 func NewFlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ExitOnError)
 
-	flagSet.String("ping-path", "/ping", "the ping endpoint that can be used for basic health checks")
-	flagSet.String("ping-user-agent", "", "special User-Agent that will be used for basic health checks")
-	flagSet.String("ready-path", "/ready", "the ready endpoint that can be used for deep health checks")
-	flagSet.String("session-store-type", "cookie", "the session storage provider to use")
-	flagSet.Bool("session-cookie-minimal", false, "strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only)")
-	flagSet.String("redis-connection-url", "", "URL of redis server for redis session storage (eg: redis://[USER[:PASSWORD]@]HOST[:PORT])")
-	flagSet.String("redis-username", "", "Redis username. Applicable for Redis configurations where ACL has been configured. Will override any username set in `--redis-connection-url`")
-	flagSet.String("redis-password", "", "Redis password. Applicable for all Redis configurations. Will override any password set in `--redis-connection-url`")
-	flagSet.Bool("redis-use-sentinel", false, "Connect to redis via sentinels. Must set --redis-sentinel-master-name and --redis-sentinel-connection-urls to use this feature")
-	flagSet.String("redis-sentinel-password", "", "Redis sentinel password. Used only for sentinel connection; any redis node passwords need to use `--redis-password`")
-	flagSet.String("redis-sentinel-master-name", "", "Redis sentinel master name. Used in conjunction with --redis-use-sentinel")
-	flagSet.String("redis-ca-path", "", "Redis custom CA path")
-	flagSet.Bool("redis-insecure-skip-tls-verify", false, "Use insecure TLS connection to redis")
-	flagSet.StringSlice("redis-sentinel-connection-urls", []string{}, "List of Redis sentinel connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-sentinel")
-	flagSet.Bool("redis-use-cluster", false, "Connect to redis cluster. Must set --redis-cluster-connection-urls to use this feature")
-	flagSet.StringSlice("redis-cluster-connection-urls", []string{}, "List of Redis cluster connection URLs (eg redis://[USER[:PASSWORD]@]HOST[:PORT]). Used in conjunction with --redis-use-cluster")
-	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
-	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
-
 	flagSet.AddFlagSet(loggingFlagSet())
-	flagSet.AddFlagSet(templatesFlagSet())
 
 	return flagSet
 }

@@ -26,6 +26,15 @@ type LegacyOptions struct {
 	// Legacy options for cookies
 	LegacyCookie LegacyCookie `cfg:",squash"`
 
+	// Legacy options for probing oauth2-proxy
+	LegacyProbeOptions LegacyProbeOptions `cfg:",squash"`
+
+	// Legacy options for configuring the sign in and error pages
+	LegacyPageTemplates LegacyPageTemplates `cfg:",squash"`
+
+	// Legacy options for configuring the cookie session storage
+	LegacySessionOptions LegacySessionOptions `cfg:",squash"`
+
 	Options Options `cfg:",squash"`
 }
 
@@ -82,6 +91,23 @@ func NewLegacyOptions() *LegacyOptions {
 			CSRFExpire:     time.Duration(15) * time.Minute,
 		},
 
+		LegacyProbeOptions: LegacyProbeOptions{
+			PingPath:      "/ping",
+			PingUserAgent: "",
+			ReadyPath:     "/ready",
+		},
+
+		LegacyPageTemplates: LegacyPageTemplates{
+			DisplayLoginForm: true,
+		},
+
+		LegacySessionOptions: LegacySessionOptions{
+			Type: "cookie",
+			Cookie: LegacyCookieStoreOptions{
+				Minimal: false,
+			},
+		},
+
 		Options: *NewOptions(),
 	}
 }
@@ -96,6 +122,9 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(legacyProviderFlagSet())
 	flagSet.AddFlagSet(legacyGoogleFlagSet())
 	flagSet.AddFlagSet(legacyCookieFlagSet())
+	flagSet.AddFlagSet(legacyProbeOptionsFlagSet())
+	flagSet.AddFlagSet(legacyPageTemplatesFlagSet())
+	flagSet.AddFlagSet(legacySessionFlagSet())
 
 	return flagSet
 }
@@ -122,6 +151,12 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 	l.Options.Providers = providers
 
 	l.Options.Cookie = l.LegacyCookie.convert()
+
+	l.Options.ProbeOptions = l.LegacyProbeOptions.convert()
+
+	l.Options.PageTemplates = l.LegacyPageTemplates.convert()
+
+	l.Options.Session = l.LegacySessionOptions.convert()
 
 	return &l.Options, nil
 }

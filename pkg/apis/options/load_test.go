@@ -65,12 +65,26 @@ var _ = Describe("Load", func() {
 			CSRFExpire:     time.Duration(15) * time.Minute,
 		},
 
+		LegacyProbeOptions: LegacyProbeOptions{
+			PingPath:        "/ping",
+			PingUserAgent:   "",
+			ReadyPath:       "/ready",
+			GCPHealthChecks: false,
+		},
+
+		LegacyPageTemplates: LegacyPageTemplates{
+			DisplayLoginForm: true,
+		},
+
+		LegacySessionOptions: LegacySessionOptions{
+			Type: "cookie",
+			Cookie: LegacyCookieStoreOptions{
+				Minimal: false,
+			},
+		},
+
 		Options: Options{
-			PingPath:  "/ping",
-			ReadyPath: "/ready",
-			Session:   sessionOptionsDefaults(),
-			Templates: templatesDefaults(),
-			Logging:   loggingDefaults(),
+			Logging: loggingDefaults(),
 		},
 	}
 

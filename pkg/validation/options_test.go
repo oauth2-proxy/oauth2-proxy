@@ -160,7 +160,7 @@ func TestValidateSignatureKeyUnsupportedAlgorithm(t *testing.T) {
 
 func TestGCPHealthcheck(t *testing.T) {
 	o := testOptions()
-	o.GCPHealthChecks = true
+	o.ProbeOptions.LegacyGCPHealthChecks = true
 	assert.Equal(t, nil, Validate(o))
 }
 

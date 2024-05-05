@@ -9,7 +9,13 @@ package options
 // They may change between releases without notice.
 // :::
 type AlphaOptions struct {
+	// ProxyOptions is used to configure the proxy behaviour.
+	// This includes things like the prefix for protected paths, authentication
+	// and routing options.
 	ProxyOptions ProxyOptions `json:"proxyOptions,omitempty"`
+
+	// ProbeOptions is used to configure the probe endpoint for health and readiness checks.
+	ProbeOptions ProbeOptions `yaml:"probeOptions,omitempty"`
 
 	// UpstreamConfig is used to configure upstream servers.
 	// Once a user is authenticated, requests to the server will be proxied to
@@ -44,10 +50,20 @@ type AlphaOptions struct {
 	MetricsServer Server `json:"metricsServer,omitempty"`
 
 	// Providers is used to configure multiple providers.
-	Providers Providers `json:"providers,omitempty"`
+	// As of yet multiple providers aren't supported only the first entry is actually used.
+	Providers Providers `yaml:"providers,omitempty"`
 
-	// Cookie is used to configure the CSRF and authorization cookies
+	// Cookie is used to configure the cookie used to store the session state.
+	// This includes options such as the cookie name, its expiry and its domain.
 	Cookie Cookie `json:"cookie,omitempty"`
+
+	// Session is used to configure the session storage.
+	// To either use a cookie or a redis store.
+	Session SessionOptions `yaml:"session,omitempty"`
+
+	// PageTemplates is used to configure custom page templates.
+	// This includes the sign in and error pages.
+	PageTemplates PageTemplates `yaml:"pageTemplates,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options
@@ -61,6 +77,7 @@ func NewAlphaOptions(opts *Options) *AlphaOptions {
 // the Options
 func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.ProxyOptions = opts.ProxyOptions
+	a.ProbeOptions = opts.ProbeOptions
 	a.UpstreamConfig = opts.UpstreamServers
 	a.InjectRequestHeaders = opts.InjectRequestHeaders
 	a.InjectResponseHeaders = opts.InjectResponseHeaders
@@ -68,12 +85,15 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.MetricsServer = opts.MetricsServer
 	a.Providers = opts.Providers
 	a.Cookie = opts.Cookie
+	a.Session = opts.Session
+	a.PageTemplates = opts.PageTemplates
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
 // from the AlphaOptions
 func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.ProxyOptions = a.ProxyOptions
+	opts.ProbeOptions = a.ProbeOptions
 	opts.UpstreamServers = a.UpstreamConfig
 	opts.InjectRequestHeaders = a.InjectRequestHeaders
 	opts.InjectResponseHeaders = a.InjectResponseHeaders
@@ -81,4 +101,6 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.MetricsServer = a.MetricsServer
 	opts.Providers = a.Providers
 	opts.Cookie = a.Cookie
+	opts.Session = a.Session
+	opts.PageTemplates = a.PageTemplates
 }
