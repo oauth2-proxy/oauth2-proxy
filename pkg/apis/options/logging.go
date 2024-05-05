@@ -2,57 +2,31 @@ package options
 
 import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	"github.com/spf13/pflag"
 )
 
 // Logging contains all options required for configuring the logging
 type Logging struct {
-	AuthEnabled     bool           `flag:"auth-logging" cfg:"auth_logging"`
-	AuthFormat      string         `flag:"auth-logging-format" cfg:"auth_logging_format"`
-	RequestEnabled  bool           `flag:"request-logging" cfg:"request_logging"`
-	RequestFormat   string         `flag:"request-logging-format" cfg:"request_logging_format"`
-	StandardEnabled bool           `flag:"standard-logging" cfg:"standard_logging"`
-	StandardFormat  string         `flag:"standard-logging-format" cfg:"standard_logging_format"`
-	ErrToInfo       bool           `flag:"errors-to-info-log" cfg:"errors_to_info_log"`
-	ExcludePaths    []string       `flag:"exclude-logging-path" cfg:"exclude_logging_paths"`
-	LocalTime       bool           `flag:"logging-local-time" cfg:"logging_local_time"`
-	SilencePing     bool           `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
-	RequestIDHeader string         `flag:"request-id-header" cfg:"request_id_header"`
-	File            LogFileOptions `cfg:",squash"`
+	AuthEnabled     bool           `yaml:"authEnabled"`
+	AuthFormat      string         `yaml:"authFormat,omitempty"`
+	RequestEnabled  bool           `yaml:"requestEnabled"`
+	RequestFormat   string         `yaml:"requestFormat,omitempty"`
+	StandardEnabled bool           `yaml:"standardEnabled"`
+	StandardFormat  string         `yaml:"standardFormat,omitempty"`
+	ErrToInfo       bool           `yaml:"errToInfo,omitempty"`
+	ExcludePaths    []string       `yaml:"excludePaths,omitempty"`
+	LocalTime       bool           `yaml:"localTime"`
+	SilencePing     bool           `yaml:"silencePing,omitempty"`
+	RequestIDHeader string         `yaml:"requestIdHeader,omitempty"`
+	File            LogFileOptions `yaml:"fileOptions,omitempty"`
 }
 
 // LogFileOptions contains options for configuring logging to a file
 type LogFileOptions struct {
-	Filename   string `flag:"logging-filename" cfg:"logging_filename"`
-	MaxSize    int    `flag:"logging-max-size" cfg:"logging_max_size"`
-	MaxAge     int    `flag:"logging-max-age" cfg:"logging_max_age"`
-	MaxBackups int    `flag:"logging-max-backups" cfg:"logging_max_backups"`
-	Compress   bool   `flag:"logging-compress" cfg:"logging_compress"`
-}
-
-func loggingFlagSet() *pflag.FlagSet {
-	flagSet := pflag.NewFlagSet("logging", pflag.ExitOnError)
-
-	flagSet.Bool("auth-logging", true, "Log authentication attempts")
-	flagSet.String("auth-logging-format", logger.DefaultAuthLoggingFormat, "Template for authentication log lines")
-	flagSet.Bool("standard-logging", true, "Log standard runtime information")
-	flagSet.String("standard-logging-format", logger.DefaultStandardLoggingFormat, "Template for standard log lines")
-	flagSet.Bool("request-logging", true, "Log HTTP requests")
-	flagSet.String("request-logging-format", logger.DefaultRequestLoggingFormat, "Template for HTTP request log lines")
-	flagSet.Bool("errors-to-info-log", false, "Log errors to the standard logging channel instead of stderr")
-
-	flagSet.StringSlice("exclude-logging-path", []string{}, "Exclude logging requests to paths (eg: '/path1,/path2,/path3')")
-	flagSet.Bool("logging-local-time", true, "If the time in log files and backup filenames are local or UTC time")
-	flagSet.Bool("silence-ping-logging", false, "Disable logging of requests to ping & ready endpoints")
-	flagSet.String("request-id-header", "X-Request-Id", "Request header to use as the request ID")
-
-	flagSet.String("logging-filename", "", "File to log requests to, empty for stdout")
-	flagSet.Int("logging-max-size", 100, "Maximum size in megabytes of the log file before rotation")
-	flagSet.Int("logging-max-age", 7, "Maximum number of days to retain old log files")
-	flagSet.Int("logging-max-backups", 0, "Maximum number of old log files to retain; 0 to disable")
-	flagSet.Bool("logging-compress", false, "Should rotated log files be compressed using gzip")
-
-	return flagSet
+	Filename   string `yaml:"filename,omitempty"`
+	MaxSize    int    `yaml:"maxSize,omitempty"`
+	MaxAge     int    `yaml:"maxAge,omitempty"`
+	MaxBackups int    `yaml:"maxBackups,omitempty"`
+	Compress   bool   `yaml:"compress,omitempty"`
 }
 
 // loggingDefaults creates a Logging structure, populating each field with its default value

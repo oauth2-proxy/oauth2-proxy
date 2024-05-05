@@ -64,6 +64,10 @@ type AlphaOptions struct {
 	// PageTemplates is used to configure custom page templates.
 	// This includes the sign in and error pages.
 	PageTemplates PageTemplates `json:"pageTemplates,omitempty"`
+
+	// Logging is used to configure the logging output.
+	// Which formats are enabled and where to write the logs.
+	Logging Logging `yaml:"logging,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options
@@ -87,6 +91,7 @@ func (a *AlphaOptions) ExtractFrom(opts *Options) {
 	a.Cookie = opts.Cookie
 	a.Session = opts.Session
 	a.PageTemplates = opts.PageTemplates
+	a.Logging = opts.Logging
 }
 
 // MergeInto replaces alpha options in the Options struct with the values
@@ -103,4 +108,5 @@ func (a *AlphaOptions) MergeInto(opts *Options) {
 	opts.Cookie = a.Cookie
 	opts.Session = a.Session
 	opts.PageTemplates = a.PageTemplates
+	opts.Logging = a.Logging
 }

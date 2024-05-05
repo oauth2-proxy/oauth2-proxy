@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/spf13/pflag"
 )
 
@@ -35,7 +36,8 @@ type LegacyOptions struct {
 	// Legacy options for configuring the cookie session storage
 	LegacySessionOptions LegacySessionOptions `cfg:",squash"`
 
-	Options Options `cfg:",squash"`
+	// Legacy options for logging
+	LegacyLogging LegacyLogging `cfg:",squash"`
 }
 
 func NewLegacyOptions() *LegacyOptions {
@@ -108,12 +110,31 @@ func NewLegacyOptions() *LegacyOptions {
 			},
 		},
 
-		Options: *NewOptions(),
+		LegacyLogging: LegacyLogging{
+			ExcludePaths:    nil,
+			LocalTime:       true,
+			SilencePing:     false,
+			RequestIDHeader: "X-Request-Id",
+			AuthEnabled:     true,
+			AuthFormat:      logger.DefaultAuthLoggingFormat,
+			RequestEnabled:  true,
+			RequestFormat:   logger.DefaultRequestLoggingFormat,
+			StandardEnabled: true,
+			StandardFormat:  logger.DefaultStandardLoggingFormat,
+			ErrToInfo:       false,
+			File: LegacyLogFileOptions{
+				Filename:   "",
+				MaxSize:    100,
+				MaxAge:     7,
+				MaxBackups: 0,
+				Compress:   false,
+			},
+		},
 	}
 }
 
 func NewLegacyFlagSet() *pflag.FlagSet {
-	flagSet := NewFlagSet()
+	flagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ExitOnError)
 
 	flagSet.AddFlagSet(legacyProxyOptionsFlagSet())
 	flagSet.AddFlagSet(legacyUpstreamsFlagSet())
@@ -125,38 +146,36 @@ func NewLegacyFlagSet() *pflag.FlagSet {
 	flagSet.AddFlagSet(legacyProbeOptionsFlagSet())
 	flagSet.AddFlagSet(legacyPageTemplatesFlagSet())
 	flagSet.AddFlagSet(legacySessionFlagSet())
+	flagSet.AddFlagSet(legacyLoggingFlagSet())
 
 	return flagSet
 }
 
 func (l *LegacyOptions) ToOptions() (*Options, error) {
-	l.Options.ProxyOptions = l.LegacyProxyOptions.convert()
+	opts := NewOptions()
+	opts.ProxyOptions = l.LegacyProxyOptions.convert()
 
 	upstreams, err := l.LegacyUpstreams.convert()
 	if err != nil {
 		return nil, fmt.Errorf("error converting upstreams: %v", err)
 	}
-	l.Options.UpstreamServers = upstreams
 
-	l.Options.InjectRequestHeaders, l.Options.InjectResponseHeaders = l.LegacyHeaders.convert()
-
-	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
-
-	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
+	opts.UpstreamServers = upstreams
+	opts.InjectRequestHeaders, opts.InjectResponseHeaders = l.LegacyHeaders.convert()
+	opts.Server, opts.MetricsServer = l.LegacyServer.convert()
+	opts.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
 
 	providers, err := l.LegacyProvider.convert()
 	if err != nil {
 		return nil, fmt.Errorf("error converting provider: %v", err)
 	}
-	l.Options.Providers = providers
 
-	l.Options.Cookie = l.LegacyCookie.convert()
+	opts.Providers = providers
+	opts.Cookie = l.LegacyCookie.convert()
+	opts.ProbeOptions = l.LegacyProbeOptions.convert()
+	opts.PageTemplates = l.LegacyPageTemplates.convert()
+	opts.Session = l.LegacySessionOptions.convert()
+	opts.Logging = l.LegacyLogging.convert()
 
-	l.Options.ProbeOptions = l.LegacyProbeOptions.convert()
-
-	l.Options.PageTemplates = l.LegacyPageTemplates.convert()
-
-	l.Options.Session = l.LegacySessionOptions.convert()
-
-	return &l.Options, nil
+	return opts, nil
 }

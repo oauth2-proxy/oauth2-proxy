@@ -34,7 +34,9 @@ type Options struct {
 	// To either use a cookie or a redis store.
 	Session SessionOptions `cfg:",internal"`
 
-	Logging Logging `cfg:",squash"`
+	// Logging is used to configure the logging output.
+	// Which formats are enabled and where to write the logs.
+	Logging Logging `cfg:",internal"`
 
 	// PageTemplates is used to configure custom page templates.
 	// This includes the sign in and error pages.
@@ -93,10 +95,7 @@ func NewOptions() *Options {
 }
 
 // NewFlagSet creates a new FlagSet with all of the flags required by Options
+// Deprecated: NewFlagSet is deprecated. Flags will be removed in v8.
 func NewFlagSet() *pflag.FlagSet {
-	flagSet := pflag.NewFlagSet("oauth2-proxy", pflag.ExitOnError)
-
-	flagSet.AddFlagSet(loggingFlagSet())
-
-	return flagSet
+	return pflag.NewFlagSet("oauth2-proxy", pflag.ExitOnError)
 }
