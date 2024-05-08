@@ -149,7 +149,7 @@ func (c *csrf) SetCookie(rw http.ResponseWriter, req *http.Request) (*http.Cooki
 }
 
 func ClearExtraCsrfCookies(opts *options.Cookie, rw http.ResponseWriter, req *http.Request) {
-	if !opts.CSRFPerRequest {
+	if !opts.CSRFPerRequest || opts.CSRFPerRequestLimit <= 0 {
 		return
 	}
 	cookies := req.Cookies()
