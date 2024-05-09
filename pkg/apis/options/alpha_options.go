@@ -15,7 +15,7 @@ type AlphaOptions struct {
 	ProxyOptions ProxyOptions `json:"proxyOptions,omitempty"`
 
 	// ProbeOptions is used to configure the probe endpoint for health and readiness checks.
-	ProbeOptions ProbeOptions `yaml:"probeOptions,omitempty"`
+	ProbeOptions ProbeOptions `json:"probeOptions,omitempty"`
 
 	// UpstreamConfig is used to configure upstream servers.
 	// Once a user is authenticated, requests to the server will be proxied to
@@ -51,7 +51,7 @@ type AlphaOptions struct {
 
 	// Providers is used to configure multiple providers.
 	// As of yet multiple providers aren't supported only the first entry is actually used.
-	Providers Providers `yaml:"providers,omitempty"`
+	Providers Providers `json:"providers,omitempty"`
 
 	// Cookie is used to configure the cookie used to store the session state.
 	// This includes options such as the cookie name, its expiry and its domain.
@@ -59,11 +59,11 @@ type AlphaOptions struct {
 
 	// Session is used to configure the session storage.
 	// To either use a cookie or a redis store.
-	Session SessionOptions `yaml:"session,omitempty"`
+	Session SessionOptions `json:"session,omitempty"`
 
 	// PageTemplates is used to configure custom page templates.
 	// This includes the sign in and error pages.
-	PageTemplates PageTemplates `yaml:"pageTemplates,omitempty"`
+	PageTemplates PageTemplates `json:"pageTemplates,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options

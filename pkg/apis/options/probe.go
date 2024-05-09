@@ -1,10 +1,10 @@
 package options
 
 type ProbeOptions struct {
-	PingPath              string `yaml:"pingPath,omitempty"`
-	PingUserAgent         string `yaml:"pingUserAgent,omitempty"`
-	ReadyPath             string `yaml:"readyPath,omitempty"`
-	LegacyGCPHealthChecks bool   `yaml:"legacyGCPHealthChecks,omitempty"`
+	PingPath              string `json:"pingPath,omitempty"`
+	PingUserAgent         string `json:"pingUserAgent,omitempty"`
+	ReadyPath             string `json:"readyPath,omitempty"`
+	LegacyGCPHealthChecks bool   `json:"legacyGCPHealthChecks,omitempty"`
 }
 
 func probeOptionsDefaults() ProbeOptions {
