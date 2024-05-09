@@ -143,7 +143,14 @@ func loadOptions(config string, extraFlags *pflag.FlagSet, args []string) (*opti
 func printConvertedConfig(opts *options.Options) error {
 	alphaConfig := options.NewAlphaOptions(opts)
 
-	data, err := yaml.Marshal(alphaConfig)
+	// Generic interface for loading arbitrary yaml structure
+	var buffer map[string]interface{}
+
+	if err := options.Decode(alphaConfig, &buffer); err != nil {
+		return fmt.Errorf("unable to decode alpha config into interface: %w", err)
+	}
+
+	data, err := yaml.Marshal(buffer)
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}

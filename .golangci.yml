@@ -25,6 +25,9 @@ linters:
   disable-all: true
 issues:
   exclude-rules:
+    - linters: 
+        - staticcheck
+      text: "SA5008: unknown JSON option \"squash\""
     - path: _test\.go
       linters:
         - scopelint

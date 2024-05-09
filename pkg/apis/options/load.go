@@ -6,7 +6,6 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/a8m/envsubst"
 	"github.com/ghodss/yaml"
@@ -69,6 +68,10 @@ func LoadYAML(configFileName string, opts interface{}) error {
 		return fmt.Errorf("error unmarshalling config: %w", err)
 	}
 
+	return Decode(intermediate, opts)
+}
+
+func Decode(input interface{}, result interface{}) error {
 	// Using mapstructure to decode arbitrary yaml structure into options and
 	// merge with existing values instead of overwriting everything. This is especially
 	// important as we have a lot of default values for boolean which are supposed to be
@@ -78,8 +81,8 @@ func LoadYAML(configFileName string, opts interface{}) error {
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		DecodeHook:           mapstructure.ComposeDecodeHookFunc(toDurationHookFunc()),
 		Metadata:             nil,    // Don't track any metadata
-		Result:               opts,   // Decode the result into the prefilled options
-		TagName:              "yaml", // Parse all fields that use the yaml tag
+		Result:               result, // Decode the result into the prefilled options
+		TagName:              "json", // Parse all fields that use the yaml tag
 		ZeroFields:           false,  // Don't clean the default values from the result map (options)
 		ErrorUnused:          true,   // Throw an error if keys have been used that aren't mapped to any struct fields
 		IgnoreUntaggedFields: true,   // Ignore fields in structures that aren't tagged with yaml
@@ -89,7 +92,7 @@ func LoadYAML(configFileName string, opts interface{}) error {
 		return fmt.Errorf("error creating decoder for config: %w", err)
 	}
 
-	if err := decoder.Decode(intermediate); err != nil {
+	if err := decoder.Decode(input); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
 	}
 
@@ -115,31 +118,6 @@ func loadAndSubstituteEnvs(configFileName string) ([]byte, error) {
 
 	return buffer, nil
 
-}
-
-// Conversion from string or floating point to golang duration type
-// This way floating points will be converted to seconds and strings
-// of type 3s or 5m will be parsed with time.ParseDuration
-func toDurationHookFunc() mapstructure.DecodeHookFunc {
-	return func(
-		f reflect.Type,
-		t reflect.Type,
-		data interface{}) (interface{}, error) {
-		if t != reflect.TypeOf(time.Duration(0)) {
-			return data, nil
-		}
-
-		switch f.Kind() {
-		case reflect.String:
-			return time.ParseDuration(data.(string))
-		case reflect.Float64:
-			return time.Duration(data.(float64) * float64(time.Second)), nil
-		case reflect.Int64:
-			return time.Duration(data.(int64) * int64(time.Second)), nil
-		default:
-			return data, nil
-		}
-	}
 }
 
 // registerFlags uses `cfg` and `flag` tags to associate flags in the flagSet

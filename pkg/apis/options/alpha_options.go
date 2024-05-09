@@ -12,13 +12,13 @@ type AlphaOptions struct {
 	// UpstreamConfig is used to configure upstream servers.
 	// Once a user is authenticated, requests to the server will be proxied to
 	// these upstream servers based on the path mappings defined in this list.
-	UpstreamConfig UpstreamConfig `yaml:"upstreamConfig,omitempty"`
+	UpstreamConfig UpstreamConfig `json:"upstreamConfig,omitempty"`
 
 	// InjectRequestHeaders is used to configure headers that should be added
 	// to requests to upstream servers.
 	// Headers may source values from either the authenticated user's session
 	// or from a static secret value.
-	InjectRequestHeaders []Header `yaml:"injectRequestHeaders,omitempty"`
+	InjectRequestHeaders []Header `json:"injectRequestHeaders,omitempty"`
 
 	// InjectResponseHeaders is used to configure headers that should be added
 	// to responses from the proxy.
@@ -27,31 +27,28 @@ type AlphaOptions struct {
 	// auth_request module.
 	// Headers may source values from either the authenticated user's session
 	// or from a static secret value.
-	InjectResponseHeaders []Header `yaml:"injectResponseHeaders,omitempty"`
+	InjectResponseHeaders []Header `json:"injectResponseHeaders,omitempty"`
 
 	// Server is used to configure the HTTP(S) server for the proxy application.
 	// You may choose to run both HTTP and HTTPS servers simultaneously.
 	// This can be done by setting the BindAddress and the SecureBindAddress simultaneously.
 	// To use the secure server you must configure a TLS certificate and key.
-	Server Server `yaml:"server,omitempty"`
+	Server Server `json:"server,omitempty"`
 
 	// MetricsServer is used to configure the HTTP(S) server for metrics.
 	// You may choose to run both HTTP and HTTPS servers simultaneously.
 	// This can be done by setting the BindAddress and the SecureBindAddress simultaneously.
 	// To use the secure server you must configure a TLS certificate and key.
-	MetricsServer Server `yaml:"metricsServer,omitempty"`
+	MetricsServer Server `json:"metricsServer,omitempty"`
 
 	// Providers is used to configure multiple providers.
-	Providers Providers `yaml:"providers,omitempty"`
+	Providers Providers `json:"providers,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options
 func NewAlphaOptions(opts *Options) *AlphaOptions {
 	aOpts := &AlphaOptions{}
 	aOpts.ExtractFrom(opts)
-	// Overwrite default values (google provider) with none. Otherwise it is always initialized
-	// as the first provider in the list and always used for authorization
-	aOpts.Providers = make(Providers, 0)
 	return aOpts
 }
 
