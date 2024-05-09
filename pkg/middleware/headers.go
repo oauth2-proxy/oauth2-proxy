@@ -76,7 +76,7 @@ func injectRequestHeaders(injector header.Injector, next http.Handler) http.Hand
 
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
-		injector.Inject(req.Header, scope.Session)
+		injector.Inject(req.Header, scope)
 		flattenHeaders(req.Header)
 		next.ServeHTTP(rw, req)
 	})
@@ -108,7 +108,7 @@ func injectResponseHeaders(injector header.Injector, next http.Handler) http.Han
 
 		// If scope is nil, this will panic.
 		// A scope should always be injected before this handler is called.
-		injector.Inject(rw.Header(), scope.Session)
+		injector.Inject(rw.Header(), scope)
 		flattenHeaders(rw.Header())
 		next.ServeHTTP(rw, req)
 	})
