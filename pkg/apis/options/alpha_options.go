@@ -67,7 +67,7 @@ type AlphaOptions struct {
 
 	// Logging is used to configure the logging output.
 	// Which formats are enabled and where to write the logs.
-	Logging Logging `yaml:"logging,omitempty"`
+	Logging Logging `json:"logging,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options

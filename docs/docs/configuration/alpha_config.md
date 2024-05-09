@@ -173,7 +173,7 @@ They may change between releases without notice.
 | `cookie` | _[Cookie](#cookie)_ | Cookie is used to configure the cookie used to store the session state.<br/>This includes options such as the cookie name, its expiry and its domain. |
 | `session` | _[SessionOptions](#sessionoptions)_ | Session is used to configure the session storage.<br/>To either use a cookie or a redis store. |
 | `pageTemplates` | _[PageTemplates](#pagetemplates)_ | PageTemplates is used to configure custom page templates.<br/>This includes the sign in and error pages. |
-| `Logging` | _[Logging](#logging)_ | Logging is used to configure the logging output.<br/>Which formats are enabled and where to write the logs. |
+| `logging` | _[Logging](#logging)_ | Logging is used to configure the logging output.<br/>Which formats are enabled and where to write the logs. |
 
 ### AzureOptions
 
@@ -326,11 +326,11 @@ LogFileOptions contains options for configuring logging to a file
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `Filename` | _string_ |  |
-| `MaxSize` | _int_ |  |
-| `MaxAge` | _int_ |  |
-| `MaxBackups` | _int_ |  |
-| `Compress` | _bool_ |  |
+| `filename` | _string_ |  |
+| `maxSize` | _int_ |  |
+| `maxAge` | _int_ |  |
+| `maxBackups` | _int_ |  |
+| `compress` | _bool_ |  |
 
 ### Logging
 
@@ -340,18 +340,18 @@ Logging contains all options required for configuring the logging
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `AuthEnabled` | _bool_ |  |
-| `AuthFormat` | _string_ |  |
-| `RequestEnabled` | _bool_ |  |
-| `RequestFormat` | _string_ |  |
-| `StandardEnabled` | _bool_ |  |
-| `StandardFormat` | _string_ |  |
-| `ErrToInfo` | _bool_ |  |
-| `ExcludePaths` | _[]string_ |  |
-| `LocalTime` | _bool_ |  |
-| `SilencePing` | _bool_ |  |
-| `RequestIDHeader` | _string_ |  |
-| `File` | _[LogFileOptions](#logfileoptions)_ |  |
+| `authEnabled` | _bool_ |  |
+| `authFormat` | _string_ |  |
+| `requestEnabled` | _bool_ |  |
+| `requestFormat` | _string_ |  |
+| `standardEnabled` | _bool_ |  |
+| `standardFormat` | _string_ |  |
+| `errToInfo` | _bool_ |  |
+| `excludePaths` | _[]string_ |  |
+| `localTime` | _bool_ |  |
+| `silencePing` | _bool_ |  |
+| `requestIdHeader` | _string_ |  |
+| `fileOptions` | _[LogFileOptions](#logfileoptions)_ |  |
 
 ### LoginGovOptions
 

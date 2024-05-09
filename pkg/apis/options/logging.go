@@ -6,27 +6,27 @@ import (
 
 // Logging contains all options required for configuring the logging
 type Logging struct {
-	AuthEnabled     bool           `yaml:"authEnabled"`
-	AuthFormat      string         `yaml:"authFormat,omitempty"`
-	RequestEnabled  bool           `yaml:"requestEnabled"`
-	RequestFormat   string         `yaml:"requestFormat,omitempty"`
-	StandardEnabled bool           `yaml:"standardEnabled"`
-	StandardFormat  string         `yaml:"standardFormat,omitempty"`
-	ErrToInfo       bool           `yaml:"errToInfo,omitempty"`
-	ExcludePaths    []string       `yaml:"excludePaths,omitempty"`
-	LocalTime       bool           `yaml:"localTime"`
-	SilencePing     bool           `yaml:"silencePing,omitempty"`
-	RequestIDHeader string         `yaml:"requestIdHeader,omitempty"`
-	File            LogFileOptions `yaml:"fileOptions,omitempty"`
+	AuthEnabled     bool           `json:"authEnabled"`
+	AuthFormat      string         `json:"authFormat,omitempty"`
+	RequestEnabled  bool           `json:"requestEnabled"`
+	RequestFormat   string         `json:"requestFormat,omitempty"`
+	StandardEnabled bool           `json:"standardEnabled"`
+	StandardFormat  string         `json:"standardFormat,omitempty"`
+	ErrToInfo       bool           `json:"errToInfo"`
+	ExcludePaths    []string       `json:"excludePaths,omitempty"`
+	LocalTime       bool           `json:"localTime"`
+	SilencePing     bool           `json:"silencePing"`
+	RequestIDHeader string         `json:"requestIdHeader,omitempty"`
+	File            LogFileOptions `json:"fileOptions,omitempty"`
 }
 
 // LogFileOptions contains options for configuring logging to a file
 type LogFileOptions struct {
-	Filename   string `yaml:"filename,omitempty"`
-	MaxSize    int    `yaml:"maxSize,omitempty"`
-	MaxAge     int    `yaml:"maxAge,omitempty"`
-	MaxBackups int    `yaml:"maxBackups,omitempty"`
-	Compress   bool   `yaml:"compress,omitempty"`
+	Filename   string `json:"filename,omitempty"`
+	MaxSize    int    `json:"maxSize,omitempty"`
+	MaxAge     int    `json:"maxAge,omitempty"`
+	MaxBackups int    `json:"maxBackups,omitempty"`
+	Compress   bool   `json:"compress,omitempty"`
 }
 
 // loggingDefaults creates a Logging structure, populating each field with its default value
