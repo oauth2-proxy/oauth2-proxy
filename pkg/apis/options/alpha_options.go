@@ -45,7 +45,7 @@ type AlphaOptions struct {
 	Providers Providers `json:"providers,omitempty"`
 
 	// Cookie is used to configure the CSRF and authorization cookies
-	Cookie Cookie `yaml:"cookie,omitempty"`
+	Cookie Cookie `json:"cookie,omitempty"`
 }
 
 // Initialize alpha options with default values and settings of the core options
