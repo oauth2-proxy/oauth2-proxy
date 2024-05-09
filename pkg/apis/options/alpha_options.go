@@ -9,7 +9,7 @@ package options
 // They may change between releases without notice.
 // :::
 type AlphaOptions struct {
-	ProxyOptions ProxyOptions `yaml:"proxyOptions,omitempty"`
+	ProxyOptions ProxyOptions `json:"proxyOptions,omitempty"`
 
 	// UpstreamConfig is used to configure upstream servers.
 	// Once a user is authenticated, requests to the server will be proxied to
