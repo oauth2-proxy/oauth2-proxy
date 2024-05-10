@@ -32,6 +32,9 @@ cookie_secure="false"
 cookie_secret="OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w="
 email_domains="example.com"
 redirect_url="http://localhost:4180/oauth2/callback"
+session_cookie_minimal="true"
+ping_path="/ping-pong"
+ready_path="/readysteady"
 `
 
 	const testAlphaConfig = `
@@ -79,6 +82,13 @@ server:
 cookie:
   secure: false
   secret: OQINaROshtE9TcZkNAm-5Zs2Pv3xaWytBmc5W7sPX7w=
+session:
+  type: cookie
+  cookie:
+    minimal: true
+probeOptions:
+  pingPath: /ping-pong
+  readyPath: /readysteady
 providers:
 - provider: google
   ID: google=oauth2-proxy
@@ -100,11 +110,6 @@ providers:
 `
 
 	const testCoreConfig = `
-		ping_path="/ping-pong"
-		ready_path="/readysteady"
-
-		session_cookie_minimal="true"
-
 		errors_to_info_log="true"
 		silence_ping_logging="true"
 	`
@@ -192,8 +197,10 @@ providers:
 			},
 		}
 
-		opts.PingPath = "/ping-pong"
-		opts.ReadyPath = "/readysteady"
+		opts.ProbeOptions = options.ProbeOptions{
+			PingPath:  "/ping-pong",
+			ReadyPath: "/readysteady",
+		}
 
 		opts.Logging.ErrToInfo = true
 		opts.Logging.SilencePing = true
