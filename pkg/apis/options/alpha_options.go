@@ -70,7 +70,7 @@ type AlphaOptions struct {
 	Logging Logging `json:"logging,omitempty"`
 }
 
-// Initialize alpha options with default values and settings of the core options
+// Initialize alpha options with default values
 func NewAlphaOptions(opts *Options) *AlphaOptions {
 	aOpts := &AlphaOptions{}
 	aOpts.ExtractFrom(opts)

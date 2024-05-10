@@ -107,7 +107,7 @@ func loadLegacyOptions(config string, extraFlags *pflag.FlagSet, args []string) 
 func loadYamlOptions(yamlConfig, config string, extraFlags *pflag.FlagSet, args []string) (*options.Options, error) {
 	opts, err := loadOptions(config, extraFlags, args)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load core options: %v", err)
+		return nil, fmt.Errorf("please convert all legacy options: %v", err)
 	}
 
 	alphaOpts := options.NewAlphaOptions(opts)

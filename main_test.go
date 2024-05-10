@@ -35,6 +35,8 @@ redirect_url="http://localhost:4180/oauth2/callback"
 session_cookie_minimal="true"
 ping_path="/ping-pong"
 ready_path="/readysteady"
+errors_to_info_log="true"
+silence_ping_logging="true"
 `
 
 	const testAlphaConfig = `
@@ -89,6 +91,9 @@ session:
 probeOptions:
   pingPath: /ping-pong
   readyPath: /readysteady
+logging:
+  errToInfo: true
+  silencePing: true
 providers:
 - provider: google
   ID: google=oauth2-proxy
@@ -108,11 +113,6 @@ providers:
     default:
     - force
 `
-
-	const testCoreConfig = `
-		errors_to_info_log="true"
-		silence_ping_logging="true"
-	`
 
 	boolPtr := func(b bool) *bool {
 		return &b
@@ -271,30 +271,30 @@ providers:
 			Expect(opts).To(EqualOpts(in.expectedOptions()))
 		},
 		Entry("with legacy configuration", loadConfigurationTableInput{
-			configContent:   testCoreConfig + testLegacyConfig,
+			configContent:   testLegacyConfig,
 			expectedOptions: testExpectedOptions,
 		}),
 		Entry("with alpha configuration", loadConfigurationTableInput{
-			configContent:      testCoreConfig,
+			configContent:      "",
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    testExpectedOptions,
 		}),
 		Entry("with bad legacy configuration", loadConfigurationTableInput{
-			configContent:   testCoreConfig + "unknown_field=\"something\"",
+			configContent:   testLegacyConfig + "unknown_field=\"something\"",
 			expectedOptions: func() *options.Options { return nil },
 			expectedErr:     errors.New("failed to load config: error unmarshalling config: 1 error(s) decoding:\n\n* '' has invalid keys: unknown_field"),
 		}),
 		Entry("with bad alpha configuration", loadConfigurationTableInput{
-			configContent:      testCoreConfig,
+			configContent:      "",
 			alphaConfigContent: testAlphaConfig + ":",
 			expectedOptions:    func() *options.Options { return nil },
 			expectedErr:        fmt.Errorf("failed to load alpha options: error unmarshalling config: error converting YAML to JSON: yaml: line %d: did not find expected key", strings.Count(testAlphaConfig, "\n")),
 		}),
-		Entry("with alpha configuration and bad core configuration", loadConfigurationTableInput{
-			configContent:      testCoreConfig + "unknown_field=\"something\"",
+		Entry("with alpha configuration and legacy configuration", loadConfigurationTableInput{
+			configContent:      testLegacyConfig,
 			alphaConfigContent: testAlphaConfig,
 			expectedOptions:    func() *options.Options { return nil },
-			expectedErr:        errors.New("has invalid keys: unknown_field"),
+			expectedErr:        errors.New("please convert all legacy options"),
 		}),
 	)
 })
