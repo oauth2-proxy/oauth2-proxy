@@ -99,7 +99,15 @@ providers:
     - force
 `
 
-	const testCoreConfig = ``
+	const testCoreConfig = `
+		ping_path="/ping-pong"
+		ready_path="/readysteady"
+
+		session_cookie_minimal="true"
+
+		errors_to_info_log="true"
+		silence_ping_logging="true"
+	`
 
 	boolPtr := func(b bool) *bool {
 		return &b
@@ -176,6 +184,20 @@ providers:
 				},
 			},
 		}
+
+		opts.Session = options.SessionOptions{
+			Type: "cookie",
+			Cookie: options.CookieStoreOptions{
+				Minimal: true,
+			},
+		}
+
+		opts.PingPath = "/ping-pong"
+		opts.ReadyPath = "/readysteady"
+
+		opts.Logging.ErrToInfo = true
+		opts.Logging.SilencePing = true
+
 		return opts
 	}
 
