@@ -34,9 +34,9 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	github.com/vmihailenco/msgpack/v5 v5.4.1
-	golang.org/x/crypto v0.19.0
+	golang.org/x/crypto v0.21.0
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	golang.org/x/net v0.21.0
+	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.17.0
 	golang.org/x/sync v0.6.0
 	google.golang.org/api v0.164.0
@@ -83,7 +83,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.23.0 // indirect
 	go.opentelemetry.io/otel/trace v1.23.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240205150955-31a09d347014 // indirect
