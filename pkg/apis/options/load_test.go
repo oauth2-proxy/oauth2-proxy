@@ -14,8 +14,17 @@ import (
 )
 
 var _ = Describe("Load", func() {
-	optionsWithNilProvider := NewOptions()
-	optionsWithNilProvider.Providers = nil
+	optionsWithoutAlphaOpts := &Options{
+		ProxyPrefix:        "/oauth2",
+		PingPath:           "/ping",
+		ReadyPath:          "/ready",
+		RealClientIPHeader: "X-Real-IP",
+		ForceHTTPS:         false,
+		Session:            sessionOptionsDefaults(),
+		Templates:          templatesDefaults(),
+		SkipAuthPreflight:  false,
+		Logging:            loggingDefaults(),
+	}
 
 	legacyOptionsWithNilProvider := &LegacyOptions{
 		LegacyUpstreams: LegacyUpstreams{
@@ -66,10 +75,10 @@ var _ = Describe("Load", func() {
 			PingPath:           "/ping",
 			ReadyPath:          "/ready",
 			RealClientIPHeader: "X-Real-IP",
+			SkipAuthPreflight:  false,
 			ForceHTTPS:         false,
 			Session:            sessionOptionsDefaults(),
 			Templates:          templatesDefaults(),
-			SkipAuthPreflight:  false,
 			Logging:            loggingDefaults(),
 		},
 	}
@@ -351,12 +360,12 @@ var _ = Describe("Load", func() {
 					},
 				},
 			}),
-			Entry("with an empty Options struct, should return default values", &testOptionsTableInput{
+			Entry("with an empty Options struct, should return default legacy values", &testOptionsTableInput{
 				flagSet:        NewFlagSet,
 				input:          &Options{},
-				expectedOutput: optionsWithNilProvider,
+				expectedOutput: optionsWithoutAlphaOpts,
 			}),
-			Entry("with an empty LegacyOptions struct, should return default values", &testOptionsTableInput{
+			Entry("with an empty LegacyOptions struct, should return default legacy values", &testOptionsTableInput{
 				flagSet:        NewLegacyFlagSet,
 				input:          &LegacyOptions{},
 				expectedOutput: legacyOptionsWithNilProvider,
