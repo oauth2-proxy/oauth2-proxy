@@ -40,22 +40,20 @@ func validateHeader(header options.Header, names map[string]struct{}) []string {
 
 func validateHeaderValue(_ string, value options.HeaderValue) []string {
 	switch {
-	case value.SecretSource.IsSet() && !value.ClaimSource.IsSet():
-		return []string{validateSecretSource(value.SecretSource)}
-	case !value.SecretSource.IsSet() && value.ClaimSource.IsSet():
-		return validateHeaderValueClaimSource(value.ClaimSource)
+	case value.SecretSource != nil && value.ClaimSource == nil:
+		return []string{validateSecretSource(*value.SecretSource)}
+	case value.SecretSource == nil && value.ClaimSource != nil:
+		return validateHeaderValueClaimSource(*value.ClaimSource)
 	default:
-		return []string{"header value either has multiple entries or none: only one entry per value is allowed"}
+		return []string{"header value has multiple entries: only one entry per value is allowed"}
 	}
 }
 
 func validateHeaderValueClaimSource(claim options.ClaimSource) []string {
 	msgs := []string{}
-
 	if claim.Claim == "" {
 		msgs = append(msgs, "claim should not be empty")
 	}
-
 	if claim.BasicAuthPassword != nil {
 		msgs = append(msgs, prefixValues("invalid basicAuthPassword: ", validateSecretSource(*claim.BasicAuthPassword))...)
 	}

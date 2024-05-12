@@ -69,7 +69,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -94,7 +94,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -119,7 +119,7 @@ var _ = Describe("Headers Suite", func() {
 					PreserveRequestValue: true,
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -143,7 +143,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -164,7 +164,7 @@ var _ = Describe("Headers Suite", func() {
 					PreserveRequestValue: true,
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -186,7 +186,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "X-Auth-Request-Authorization",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "user",
 								BasicAuthPassword: &options.SecretSource{
 									Value:   base64.StdEncoding.EncodeToString([]byte("basic-password")),
@@ -260,7 +260,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "Set-Cookie",
 					Values: []options.HeaderValue{
 						{
-							SecretSource: options.SecretSource{
+							SecretSource: &options.SecretSource{
 								Value: "_oauth2_proxy=ey123123123",
 							},
 						},
@@ -270,7 +270,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "X-Auth-User",
 					Values: []options.HeaderValue{
 						{
-							SecretSource: options.SecretSource{
+							SecretSource: &options.SecretSource{
 								Value: "oauth_user",
 							},
 						},
@@ -295,7 +295,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -320,7 +320,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -345,7 +345,7 @@ var _ = Describe("Headers Suite", func() {
 					PreserveRequestValue: true,
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -369,7 +369,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "Claim",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -392,7 +392,7 @@ var _ = Describe("Headers Suite", func() {
 					PreserveRequestValue: true,
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "id_token",
 							},
 						},
@@ -414,7 +414,7 @@ var _ = Describe("Headers Suite", func() {
 					Name: "X-Auth-Request-Authorization",
 					Values: []options.HeaderValue{
 						{
-							ClaimSource: options.ClaimSource{
+							ClaimSource: &options.ClaimSource{
 								Claim: "user",
 								BasicAuthPassword: &options.SecretSource{
 									Value:   base64.StdEncoding.EncodeToString([]byte("basic-password")),

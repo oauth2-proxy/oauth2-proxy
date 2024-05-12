@@ -44,29 +44,35 @@ upstreamConfig:
 injectRequestHeaders:
 - name: Authorization
   values:
-  - claim: user
-    prefix: "Basic "
-    basicAuthPassword:
-      value: super-secret-password
+  - claimSource:
+      claim: user
+      prefix: "Basic "
+      basicAuthPassword:
+        value: super-secret-password
 - name: X-Forwarded-Groups
   values:
-  - claim: groups
+  - claimSource:
+      claim: groups
 - name: X-Forwarded-User
   values:
-  - claim: user
+  - claimSource:
+      claim: user
 - name: X-Forwarded-Email
   values:
-  - claim: email
+  - claimSource:
+      claim: email
 - name: X-Forwarded-Preferred-Username
   values:
-  - claim: preferred_username
+  - claimSource:
+      claim: preferred_username
 injectResponseHeaders:
 - name: Authorization
   values:
-  - claim: user
-    prefix: "Basic "
-    basicAuthPassword:
-      value: super-secret-password
+  - claimSource:
+      claim: user
+      prefix: "Basic "
+      basicAuthPassword:
+        value: super-secret-password
 server:
   bindAddress: "127.0.0.1:4180"
 providers:
@@ -132,7 +138,7 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			Name: "Authorization",
 			Values: []options.HeaderValue{
 				{
-					ClaimSource: options.ClaimSource{
+					ClaimSource: &options.ClaimSource{
 						Claim:  "user",
 						Prefix: "Basic ",
 						BasicAuthPassword: &options.SecretSource{

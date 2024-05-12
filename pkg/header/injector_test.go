@@ -55,7 +55,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "Secret",
 						Values: []options.HeaderValue{
 							{
-								SecretSource: options.SecretSource{
+								SecretSource: &options.SecretSource{
 									Value: "super-secret",
 								},
 							},
@@ -78,7 +78,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "Secret",
 						Values: []options.HeaderValue{
 							{
-								SecretSource: options.SecretSource{
+								SecretSource: &options.SecretSource{
 									FromEnv: "SECRET_ENV",
 								},
 							},
@@ -101,7 +101,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "Claim",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "id_token",
 								},
 							},
@@ -126,7 +126,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "Claim",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "id_token",
 								},
 							},
@@ -148,7 +148,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "Claim",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim:  "id_token",
 									Prefix: "Bearer ",
 								},
@@ -174,7 +174,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "Claim",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim:  "idToken",
 									Prefix: "Bearer ",
 								},
@@ -197,7 +197,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "X-Auth-Request-Authorization",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
 										Value: "basic-password",
@@ -225,7 +225,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "X-Auth-Request-Authorization",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
 										Value: base64.StdEncoding.EncodeToString([]byte("basic-password")),
@@ -250,7 +250,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "X-Auth-Request-User",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 								},
 							},
@@ -274,10 +274,10 @@ var _ = Describe("Injector Suite", func() {
 						Name: "Claim",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "id_token",
 								},
-								SecretSource: options.SecretSource{
+								SecretSource: &options.SecretSource{
 									FromEnv: "SECRET_ENV",
 								},
 							},
@@ -299,7 +299,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "Secret",
 						Values: []options.HeaderValue{
 							{
-								SecretSource: options.SecretSource{
+								SecretSource: &options.SecretSource{
 									FromEnv:  "SECRET_ENV",
 									FromFile: "secret-file",
 								},
@@ -320,7 +320,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "X-Auth-Request-Authorization",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
 										Value:   base64.StdEncoding.EncodeToString([]byte("basic-password")),
@@ -346,7 +346,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "X-Auth-Request-Authorization",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 									BasicAuthPassword: &options.SecretSource{
 										Value: "basic-password",
@@ -359,7 +359,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "X-Auth-Request-User",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "user",
 								},
 							},
@@ -369,7 +369,7 @@ var _ = Describe("Injector Suite", func() {
 						Name: "X-Auth-Request-Email",
 						Values: []options.HeaderValue{
 							{
-								ClaimSource: options.ClaimSource{
+								ClaimSource: &options.ClaimSource{
 									Claim: "email",
 								},
 							},
@@ -379,17 +379,17 @@ var _ = Describe("Injector Suite", func() {
 						Name: "X-Auth-Request-Version-Info",
 						Values: []options.HeaderValue{
 							{
-								SecretSource: options.SecretSource{
+								SecretSource: &options.SecretSource{
 									Value: "major=1",
 								},
 							},
 							{
-								SecretSource: options.SecretSource{
+								SecretSource: &options.SecretSource{
 									Value: "minor=2",
 								},
 							},
 							{
-								SecretSource: options.SecretSource{
+								SecretSource: &options.SecretSource{
 									Value: "patch=3",
 								},
 							},

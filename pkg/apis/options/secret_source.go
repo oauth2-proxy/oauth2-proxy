@@ -12,7 +12,3 @@ type SecretSource struct {
 	// FromFile expects a path to a file containing the secret value.
 	FromFile string `json:"fromFile,omitempty"`
 }
-
-func (s *SecretSource) IsSet() bool {
-	return s.Value != "" || s.FromEnv != "" || s.FromFile != ""
-}

@@ -501,11 +501,13 @@ upstreamConfig:
 injectRequestHeaders:
 - name: X-Forwarded-User
   values:
-  - claim: user
+  - claimSource:
+      claim: user
 injectResponseHeaders:
 - name: X-Secret
   values:
-  - value: secret
+  - secretSource:
+      value: secret
 `)
 
 		By("Creating a config file")
@@ -541,7 +543,7 @@ injectResponseHeaders:
 					Name: "X-Forwarded-User",
 					Values: []HeaderValue{
 						{
-							ClaimSource: ClaimSource{
+							ClaimSource: &ClaimSource{
 								Claim: "user",
 							},
 						},
@@ -553,7 +555,7 @@ injectResponseHeaders:
 					Name: "X-Secret",
 					Values: []HeaderValue{
 						{
-							SecretSource: SecretSource{
+							SecretSource: &SecretSource{
 								Value: "secret",
 							},
 						},
