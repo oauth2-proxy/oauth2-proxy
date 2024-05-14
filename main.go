@@ -9,6 +9,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
 	"github.com/spf13/pflag"
 )
 
@@ -28,7 +29,7 @@ func main() {
 	configFlagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("oauth2-proxy %s (built with %s)\n", version.VERSION, runtime.Version())
 		return
 	}
 
