@@ -85,6 +85,10 @@ func (l *LegacyOptions) ToOptions() (*Options, error) {
 
 	l.Options.InjectRequestHeaders, l.Options.InjectResponseHeaders = l.LegacyHeaders.convert()
 
+	if l.LegacyHeaders.SkipAuthStripHeaders {
+		l.Options.InjectRequestHeaders = append(l.Options.InjectRequestHeaders, stripCSRFHeader(l.Options.CSRFToken.RequestHeader))
+	}
+
 	l.Options.Server, l.Options.MetricsServer = l.LegacyServer.convert()
 
 	l.Options.LegacyPreferEmailToUser = l.LegacyHeaders.PreferEmailToUser
@@ -492,6 +496,14 @@ func getAuthMethodHeader(name string) Header {
 				},
 			},
 		},
+	}
+}
+
+func stripCSRFHeader(name string) Header {
+	return Header{
+		Name:                 name,
+		PreserveRequestValue: false,
+		Values:               []HeaderValue{},
 	}
 }
 

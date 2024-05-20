@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"github.com/spf13/pflag"
+	"golang.org/x/exp/slices"
 )
 
 var _ = Describe("Configuration Loading Suite", func() {
@@ -61,6 +62,7 @@ injectRequestHeaders:
 - name: X-Forwarded-Preferred-Username
   values:
   - claim: preferred_username
+- name: X-CSRF-Token
 injectResponseHeaders:
 - name: Authorization
   values:
@@ -209,7 +211,12 @@ redirect_url="http://localhost:4180/oauth2/callback"
 			},
 		}
 
-		opts.InjectRequestHeaders = append(opts.InjectRequestHeaders, authMethodHeader)
+		// Normally, the InjectRequestHeaders slice is created and afterwards the X-CSRF-Token
+		// header is appended if SkipAuthStripHeaders==true. Here, InjectRequestHeaders is
+		// converted from options without specifying AuthMethod, so it is not included in the
+		// slice, so the last header is X-CSRF-Token. Append the AuthMethod header as second
+		// to last element in the slice, to imitate the expected outcome of ToOptions() function.
+		opts.InjectRequestHeaders = slices.Insert(opts.InjectRequestHeaders, len(opts.InjectRequestHeaders)-1, authMethodHeader)
 		opts.InjectResponseHeaders = append(opts.InjectResponseHeaders, csrfResponseHeader, authMethodHeader)
 		return opts
 	}
