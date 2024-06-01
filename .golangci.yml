@@ -32,6 +32,12 @@ issues:
         - unconvert
         - gocritic
         - gosec
+        - goconst
+        - revive
+    - path: _test\.go
+      linters:
+        - revive
+      text: "dot-imports:"
     # If we have tests in shared test folders, these can be less strictly linted
     - path: tests/.*_tests\.go
       linters:

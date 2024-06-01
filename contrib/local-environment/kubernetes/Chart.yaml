@@ -1,19 +1,18 @@
 apiVersion: v2
 description: K8S example based on https://kind.sigs.k8s.io
 name: kubernetes
-version: 5.1.1
-appVersion: 5.1.1
 dependencies:
   - name: dex
-    version: 2.11.0
-    repository: https://charts.helm.sh/stable
+    version: 0.16.0
+    repository: https://charts.dexidp.io
   - name: oauth2-proxy
-    version: 3.1.0
-    repository: https://charts.helm.sh/stable
+    version: &chartVersion 6.23.1
+    repository: https://oauth2-proxy.github.io/manifests
   # https://github.com/postmanlabs/httpbin/issues/549 is still in progress, for now using a non-official chart
   - name: httpbin
-    version: 1.0.1
+    version: 1.1.0
     repository: https://conservis.github.io/helm-charts
   - name: hello-world
-    version: 1.0.1
+    version: 1.1.0
     repository: https://conservis.github.io/helm-charts
+version: *chartVersion

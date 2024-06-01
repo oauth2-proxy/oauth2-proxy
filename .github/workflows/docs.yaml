@@ -7,6 +7,7 @@ on:
   push:
     branches: [master]
     paths: ['docs/**']
+  workflow_dispatch:
 
 jobs:
   pull-request-check:
@@ -14,10 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v4
       
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          # renovate: datasource=node-version depName=node
+          node-version: 20
+          cache: npm
+          cache-dependency-path: "./docs/package-lock.json"
 
       - name: Test Build
         working-directory: ./docs
@@ -25,48 +33,38 @@ jobs:
           npm ci
           npm run build
 
-  gh-pages-release:
-    if: github.event_name == 'push'
+  build-docs:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: master
-      
-      - uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          # renovate: datasource=node-version depName=node
+          node-version: 20
 
       - name: Build docusaurus
-        working-directory: master/docs
-        id: build
+        working-directory: ./docs
         run: |
-          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           npm ci
           npm run build
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs/build
 
-      - name: Release to github pages
-        env:
-          GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        working-directory: gh-pages
-        run: |
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Remove all files except .git
-          git rm -r *
-
-          # Copy the build files from master/docs/build to gh-pages
-          cp -r ../master/docs/build/* .
-
-          # Commit and push
-          git add .
-          git commit -m "Update documentation based on ${{ steps.build.outputs.sha }}"
-          git push origin gh-pages
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

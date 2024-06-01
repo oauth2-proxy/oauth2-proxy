@@ -23,13 +23,14 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
 1.  Choose how to deploy:
 
-    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.5.1`)
+    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.6.0`)
 
     b. Using Go to install the latest release
     ```bash
     $ go install github.com/oauth2-proxy/oauth2-proxy/v7@latest
-    # which will put the binary in `$GOROOT/bin`
     ```
+    This will install the binary into `$GOPATH/bin`. Make sure you include `$GOPATH` in your `$PATH`. Otherwise your system won't find binaries installed via `go install`
+
     c. Using a [Prebuilt Docker Image](https://quay.io/oauth2-proxy/oauth2-proxy) (AMD64, PPC64LE, ARMv6, ARMv7, and ARM64 available)
 
     d. Using a [Pre-Release Nightly Docker Image](https://quay.io/oauth2-proxy/oauth2-proxy-nightly) (AMD64, PPC64LE, ARMv6, ARMv7, and ARM64 available)
@@ -43,9 +44,9 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
     oauth2-proxy-x.y.z.linux-amd64: OK
     ```
 
-2.  [Select a Provider and Register an OAuth Application with a Provider](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/oauth_provider)
-3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview)
-4.  [Configure SSL or Deploy behind a SSL endpoint](https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/tls) (example provided for Nginx)
+2.  [Select a Provider and Register an OAuth Application with a Provider](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/)
+3.  [Configure OAuth2 Proxy using config file, command line options, or environment variables](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview)
+4.  [Configure SSL or Deploy behind a SSL endpoint](https://oauth2-proxy.github.io/oauth2-proxy/configuration/tls) (example provided for Nginx)
 
 
 ## Security
@@ -55,9 +56,18 @@ See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/s
 
 ## Docs
 
-Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/docs/).
+Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/).
 
 ![OAuth2 Proxy Architecture](docs/static/img/architecture.svg)
+
+## Images
+
+From `v7.6.0` and up the base image has been changed from Alpine to [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless).
+This image comes with even fewer installed dependencies and thus should improve security. The image therefore is also slightly smaller than Alpine.
+For debugging purposes (and those who really need it (i.e. `armv6`)) we still provide images based on Alpine. The tags of these images are suffixed with `-alpine`.
+
+Since 2023-11-18 we provide nightly images. These images are build and pushed nightly to `quay.io/oauth2-proxy/oauth2-proxy-nightly` from `master`.
+These images should be considered alpha and therefore *should not* be used for production purposes unless you know what you're doing.
 
 ## Getting Involved
 

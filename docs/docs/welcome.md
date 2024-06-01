@@ -1,6 +1,8 @@
 ---
-title: Welcome to OAuth2 Proxy
+id: welcome
+title: Welcome
 hide_table_of_contents: true
+slug: /
 ---
 
 ![OAuth2 Proxy](/img/logos/OAuth2_Proxy_horizontal.svg)

@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v3"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
@@ -174,7 +174,7 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 		Birthdate     string `json:"birthdate"`
 		AtHash        string `json:"at_hash"`
 		CHash         string `json:"c_hash"`
-		jwt.StandardClaims
+		jwt.RegisteredClaims
 	}
 	claims := MyCustomClaims{
 		"http://idmanagement.gov/ns/assurance/loa/1",
@@ -186,13 +186,12 @@ func TestLoginGovProviderSessionData(t *testing.T) {
 		"",
 		"",
 		"",
-		jwt.StandardClaims{
-			Audience:  "Audience",
-			ExpiresAt: time.Now().Unix() + expiresIn,
-			Id:        "foo",
-			IssuedAt:  time.Now().Unix(),
+		jwt.RegisteredClaims{
+			Audience:  jwt.ClaimStrings{"Audience"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expiresIn) * time.Second)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "https://idp.int.login.gov",
-			NotBefore: time.Now().Unix() - 1,
+			NotBefore: jwt.NewNumericDate(time.Now().Add(-1 * time.Second)),
 			Subject:   "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
 		},
 	}
@@ -268,7 +267,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 		Birthdate     string `json:"birthdate"`
 		AtHash        string `json:"at_hash"`
 		CHash         string `json:"c_hash"`
-		jwt.StandardClaims
+		jwt.RegisteredClaims
 	}
 	claims := MyCustomClaims{
 		"http://idmanagement.gov/ns/assurance/loa/1",
@@ -280,13 +279,12 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
 		"",
 		"",
 		"",
-		jwt.StandardClaims{
-			Audience:  "Audience",
-			ExpiresAt: time.Now().Unix() + expiresIn,
-			Id:        "foo",
-			IssuedAt:  time.Now().Unix(),
+		jwt.RegisteredClaims{
+			Audience:  jwt.ClaimStrings{"Audience"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expiresIn) * time.Second)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "https://idp.int.login.gov",
-			NotBefore: time.Now().Unix() - 1,
+			NotBefore: jwt.NewNumericDate(time.Now().Add(-1 * time.Second)),
 			Subject:   "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
 		},
 	}

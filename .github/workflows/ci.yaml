@@ -14,22 +14,28 @@ jobs:
   build:
     env:
       COVER: true
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
 
     - name: Check out code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Set up Go 1.19
-      uses: actions/setup-go@v2
+    - name: Set up Go
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.19.x
+        # renovate: datasource=golang-version depName=golang
+        go-version: 1.21.6
       id: go
 
     - name: Get dependencies
+      env:
+        # renovate: datasource=github-tags depName=golangci/golangci-lint
+        GOLANGCI_LINT_VERSION: v1.55.2
+        # renovate: datasource=github-tags depName=codeclimate/test-reporter
+        CODECLIMATE_VERSION: v0.11.1
       run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.0
-        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
+        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-${CODECLIMATE_VERSION}-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
 
     - name: Verify Code Generation
@@ -51,18 +57,18 @@ jobs:
         ./.github/workflows/test.sh
 
   docker:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
 
     - name: Check out code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
     
     - name: Set up Docker Buildx
       id: buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
 
     - name: Docker Build
       run: |
