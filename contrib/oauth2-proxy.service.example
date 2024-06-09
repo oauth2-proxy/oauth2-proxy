@@ -5,7 +5,7 @@
 
 [Unit]
 Description=oauth2-proxy daemon service
-After=syslog.target network.target
+After=network.target
 
 [Service]
 # www-data group and user need to be created before using these lines

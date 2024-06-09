@@ -62,6 +62,17 @@ const config = {
       /** @type {import("@easyops-cn/docusaurus-search-local").PluginOptions} */
       ({
         hashed: true,
+        docsDir: "docs",             // only index the latest docs
+        language: ["en"],
+        indexDocs: true,
+        indexBlog: false,
+        indexPages: false,
+        docsRouteBasePath: "/",      // fix the default /docs path
+        searchResultLimits: 10,
+        searchBarShortcut: true,
+        removeDefaultStemmer: true,  // allow for partial word matching
+        searchBarShortcutHint: true,
+        highlightSearchTermsOnTargetPage: true,
       }),
     ]
   ],
