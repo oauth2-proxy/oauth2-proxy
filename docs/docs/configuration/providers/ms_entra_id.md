@@ -149,8 +149,8 @@ Admin consent is required after creation by Terraform
 
 ## Configure provider
 The provider is OIDC-compliant, so all the OIDC parameters are honored. Additional provider-specific configuration parameters are:
-* `ms-entra-id-skip-groups-from-graph` - never read groups from Graph API, even when the ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping the `groups` claim in the app registration.
-* `ms-entra-id-multi-tenant-allowed-tenant` - specify a list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]` (all tenants).
+* `entra-id-skip-groups-from-graph` - never read groups from Graph API, even when the ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping the `groups` claim in the app registration.
+* `entra-id-allowed-tenant` - specify a list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]` (all tenants). Doesn't have effect when using single-tenant app.
 
 ### Scope
 For Azure-only apps (multi-tenant and single-tenant), the only required OAuth scope is `openid`:
@@ -166,7 +166,7 @@ It's recommended to configure the scopes explicitly, otherwise, you may experien
 ### Single-tenant
 Simple single-tenant configuration:
 ```shell
-- --provider=ms-entra-id
+- --provider=entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/{tenantId}/v2.0
 - --client-id=<valid-client-id>
 - --client-secret=<valid-client-secret>
@@ -176,7 +176,7 @@ Simple single-tenant configuration:
 ### Multi-tenant
 Multi-tenant apps require you to disable OIDC issuer verification, as `issuer` field in the [discovery document](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) is a template, not an exact value:
 ```shell
-- --provider=ms-entra-id
+- --provider=entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/common/v2.0
 - --client-id=<valid-client-id>
 - --client-secret=<valid-client-secret>
@@ -186,12 +186,12 @@ Multi-tenant apps require you to disable OIDC issuer verification, as `issuer` f
 
 The configuration above insecurely allows all tenants. To allow specific tenants, use the configuration below as an example:
 ```shell
-- --provider=ms-entra-id
+- --provider=entra-id
 - --oidc-issuer-url=https://login.microsoftonline.com/common/v2.0
 - --client-id=<valid-client-id>
 - --client-secret=<valid-client-secret>
-- --ms-entra-id-multi-tenant-allowed-tenant=66209a4a-80f3-4602-8126-2193115722f8
-- --ms-entra-id-multi-tenant-allowed-tenant=a47d1522-8e8c-4546-a2c8-d6590ea9d6f3
+- --entra-id-allowed-tenant=66209a4a-80f3-4602-8126-2193115722f8
+- --entra-id-allowed-tenant=a47d1522-8e8c-4546-a2c8-d6590ea9d6f3
 - --insecure-oidc-skip-issuer-verification
 - --scope=openid profile email
 ```

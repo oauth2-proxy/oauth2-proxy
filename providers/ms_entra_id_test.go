@@ -137,7 +137,7 @@ func TestAzureEntraOIDCProviderValidateSessionAllowedTenants(t *testing.T) {
 				InsecureSkipNonce:              true,
 			},
 			MicrosoftEntraIDConfig: options.MicrosoftEntraIDOptions{
-				MultiTenantAllowedTenants: []string{"85d7d600-7804-4d92-8d43-9c33c21c130c"},
+				AllowedMultiTenants: []string{"85d7d600-7804-4d92-8d43-9c33c21c130c"},
 			},
 		},
 	)

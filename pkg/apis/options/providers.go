@@ -30,7 +30,7 @@ type Provider struct {
 	KeycloakConfig KeycloakOptions `json:"keycloakConfig,omitempty"`
 	// AzureConfig holds all configurations for Azure provider.
 	AzureConfig AzureOptions `json:"azureConfig,omitempty"`
-	// AzureConfig holds all configurations for Azure provider.
+	// MicrosoftEntraIDConfig holds all configurations for Entra ID provider.
 	MicrosoftEntraIDConfig MicrosoftEntraIDOptions `json:"microsoftEntraIDConfig,omitempty"`
 	// ADFSConfig holds all configurations for ADFS provider.
 	ADFSConfig ADFSOptions `json:"ADFSConfig,omitempty"`
@@ -103,8 +103,8 @@ const (
 	// AzureProvider is the provider type for Azure
 	AzureProvider ProviderType = "azure"
 
-	// AzureProvider is the provider type for Azure Entra OIDC
-	MicrosoftEntraIDProvider ProviderType = "ms-entra-id"
+	// MicrosoftEntraIDProvider is the provider type for Entra OIDC
+	MicrosoftEntraIDProvider ProviderType = "entra-id"
 
 	// BitbucketProvider is the provider type for Bitbucket
 	BitbucketProvider ProviderType = "bitbucket"
@@ -161,8 +161,8 @@ type AzureOptions struct {
 }
 
 type MicrosoftEntraIDOptions struct {
-	DisableGroupsFromGraph    bool     `json:"disableGroupsFromGraph,omitempty"`
-	MultiTenantAllowedTenants []string `json:"multiTenantAllowedTenants,omitempty"`
+	DisableGroupsFromGraph bool     `json:"disableGroupsFromGraph,omitempty"`
+	AllowedMultiTenants    []string `json:"allowedMultiTenants,omitempty"`
 }
 
 type ADFSOptions struct {

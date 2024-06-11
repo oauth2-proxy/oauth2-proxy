@@ -46,7 +46,7 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 		OIDCProvider: NewOIDCProvider(p, opts.OIDCConfig),
 
 		skipGraphGroups:           opts.MicrosoftEntraIDConfig.DisableGroupsFromGraph,
-		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.MultiTenantAllowedTenants,
+		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedMultiTenants,
 		isMultiTenant:             strings.Contains(opts.OIDCConfig.IssuerURL, "common"),
 		microsoftGraphURL:         microsoftGraphURL,
 	}
