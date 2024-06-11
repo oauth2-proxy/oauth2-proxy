@@ -9,9 +9,7 @@ To start, create an App registration with minimal permissions, assign a redirect
 <details>
     <summary>See Azure Portal example</summary>
     <div class="videoBlock">
-        <video controls>
-            <source src="/oauth2-proxy/azure-videos/create-app-reg.mkv"/>
-        </video>
+        <iframe src="https://www.youtube.com/embed/IUNfxhOzr4E"></iframe>
     </div>
 
 When created with Portal, App registration automatically creates a delegated API permission for `User.Read`. 
@@ -52,9 +50,9 @@ If you want to make use of groups (i.e., use `--allowed-group` or authorize base
 <details>
     <summary>See Azure Portal example</summary>
     <div class="videoBlock">
-        <video controls>
-            <source src="/oauth2-proxy/azure-videos/create-groups-claim.mkv"/>
-        </video>
+        <div class="videoBlock">
+            <iframe src="https://www.youtube.com/embed/IUNfxhOzr4E"></iframe>
+        </div>
     </div>
 </details>
 <details>
@@ -100,9 +98,9 @@ Azure has a limit of 200 groups in the JWT. If you can't avoid such a big number
 <details>
     <summary>See Azure Portal example</summary>
     <div class="videoBlock">
-        <video controls>
-            <source src="/oauth2-proxy/azure-videos/group-overage.mkv"/>
-        </video>
+        <div class="videoBlock">
+            <iframe src="https://www.youtube.com/embed/6pNsU7TY1AU"></iframe>
+        </div>
     </div>
 </details>
 <details>

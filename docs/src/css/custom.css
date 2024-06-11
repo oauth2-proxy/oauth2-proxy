@@ -24,11 +24,15 @@
   padding: 0 var(--ifm-pre-padding);
 }
 
-video {
-  display: block;
-  max-width: 100%;
-}
-
 .videoBlock {
   position: relative;
+  padding-bottom: 75%;
+  height: 0;
+}
+.videoBlock iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
