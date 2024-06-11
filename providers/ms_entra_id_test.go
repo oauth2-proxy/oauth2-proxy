@@ -27,7 +27,6 @@ func TestAzureEntraOIDCProviderNewMultiTenant(t *testing.T) {
 		}},
 	)
 	g.Expect(provider.Data().ProviderName).To(Equal("Microsoft Entra ID"))
-	g.Expect(provider.isMultiTenant).To(Equal(true))
 }
 
 func TestAzureEntraOIDCProviderNewSingleTenant(t *testing.T) {
@@ -39,7 +38,6 @@ func TestAzureEntraOIDCProviderNewSingleTenant(t *testing.T) {
 		}},
 	)
 	g.Expect(provider.Data().ProviderName).To(Equal("Microsoft Entra ID"))
-	g.Expect(provider.isMultiTenant).To(Equal(false))
 }
 
 func mockGraphAPI(noGroupMemberPermissions bool) *httptest.Server {

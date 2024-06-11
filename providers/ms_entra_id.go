@@ -96,18 +96,11 @@ func (p *MicrosoftEntraIDProvider) checkGroupOverage(session *sessions.SessionSt
 	}
 
 	claimNames, _, _ := extractor.GetClaim("_claim_names")
-	hasGroups, _, _ := extractor.GetClaim("hasgroups")
-
-	if claimNames == nil && hasGroups == nil {
-		return false, nil
-	}
 
 	var claimNamesMap map[string]string
 
 	if claimNames != nil {
 		claimNamesMap = cast.ToStringMapString(claimNames)
-	} else {
-		claimNamesMap = cast.ToStringMapString(hasGroups)
 	}
 
 	if _, groupsKeyPresent := claimNamesMap["groups"]; groupsKeyPresent {
