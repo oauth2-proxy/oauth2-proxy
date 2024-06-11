@@ -40,6 +40,17 @@ When created with Portal, App registration automatically creates a delegated API
     resource "azuread_application_password" "apppass" {
         application_id = azuread_application.auth.id
     }
+
+    # For single-tenant app, consider using service principal password instead of app password
+    resource "azuread_service_principal" "sp" {
+        client_id                    = azuread_application.auth.client_id
+        app_role_assignment_required = false
+    }
+
+    resource "azuread_service_principal_password" "pass" {
+        service_principal_id = azuread_service_principal.sp.id
+    }
+
 ```
 </details>
 
@@ -89,6 +100,7 @@ If you want to make use of groups (i.e., use `--allowed-group` or authorize base
     resource "azuread_application_password" "apppass" {
         application_id = azuread_application.auth.id
     }
+
 ```
 </details>
 
@@ -150,7 +162,7 @@ Admin consent is required after creation by Terraform
 ## Configure provider
 The provider is OIDC-compliant, so all the OIDC parameters are honored. Additional provider-specific configuration parameters are:
 * `entra-id-skip-groups-from-graph` - never read groups from Graph API, even when the ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping the `groups` claim in the app registration.
-* `entra-id-allowed-tenant` - specify a list of allowed tenants to be authenticated through multi-tenant app. When not set, all tenants are allowed. Defaults to `[]` (all tenants). Doesn't have effect when using single-tenant app.
+* `entra-id-allowed-tenant` - specify an allowed tenant to be authenticated when using multi-tenant app, can be specified multiple times. By default all tenants are allowed. Doesn't have effect when using single-tenant app.
 
 ### Scope
 For Azure-only apps (multi-tenant and single-tenant), the only required OAuth scope is `openid`:
