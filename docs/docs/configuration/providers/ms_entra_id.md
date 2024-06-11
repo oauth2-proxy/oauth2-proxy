@@ -162,7 +162,7 @@ Admin consent is required after creation by Terraform
 ## Configure provider
 The provider is OIDC-compliant, so all the OIDC parameters are honored. Additional provider-specific configuration parameters are:
 * `entra-id-skip-groups-from-graph` - never read groups from Graph API, even when the ID token indicates that there's a group overage. Set if you expect group overage in some cases, but still don't want to assign wide `GroupMember.Read.All`. Defaults to `false`. If you don't need groups, consider skipping the `groups` claim in the app registration.
-* `entra-id-allowed-tenant` - specify an allowed tenant to be authenticated when using multi-tenant app, can be specified multiple times. By default all tenants are allowed. Doesn't have effect when using single-tenant app.
+* `entra-id-allowed-tenant` - specify an allowed tenant. Use with multi-tenant apps, when incoming tokens are issued by different issuers. When not specified, all tenants are allowed. Redundant for single-tenant apps.
 
 ### Scope
 For Azure-only apps (multi-tenant and single-tenant), the only required OAuth scope is `openid`:

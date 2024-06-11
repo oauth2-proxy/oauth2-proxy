@@ -21,7 +21,6 @@ type MicrosoftEntraIDProvider struct {
 	multiTenantAllowedTenants []string
 
 	microsoftGraphURL *url.URL
-	isMultiTenant     bool
 }
 
 const (
@@ -36,7 +35,7 @@ var (
 	}
 )
 
-// NewAzureProvider initiates a new MicrosoftEntraIDProvider
+// NewMicrosoftEntraIDProvider initiates a new MicrosoftEntraIDProvider
 func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *MicrosoftEntraIDProvider {
 	p.setProviderDefaults(providerDefaults{
 		name: microsoftEntraIDProviderName,
@@ -47,7 +46,6 @@ func NewMicrosoftEntraIDProvider(p *ProviderData, opts options.Provider) *Micros
 
 		skipGraphGroups:           opts.MicrosoftEntraIDConfig.DisableGroupsFromGraph,
 		multiTenantAllowedTenants: opts.MicrosoftEntraIDConfig.AllowedMultiTenants,
-		isMultiTenant:             strings.Contains(opts.OIDCConfig.IssuerURL, "common"),
 		microsoftGraphURL:         microsoftGraphURL,
 	}
 }
@@ -71,28 +69,26 @@ func (p *MicrosoftEntraIDProvider) EnrichSession(ctx context.Context, session *s
 	return err
 }
 
-// ValidateSession checks for allowed tenants for multi-tenant apps and passes through to generic ValidateSession
+// ValidateSession checks for allowed tenants (e.g. for multi-tenant apps) and passes through to generic ValidateSession
 func (p *MicrosoftEntraIDProvider) ValidateSession(ctx context.Context, session *sessions.SessionState) bool {
 
-	if p.isMultiTenant {
+	if len(p.multiTenantAllowedTenants) > 0 {
 		issuer, exists, error := p.getIssuer(session)
 		if issuer == "" || !exists || error != nil {
 			return false
 		}
 
-		if p.multiTenantAllowedTenants != nil {
-			logger.Printf("List of allowed tenant is specified, we check if %s is allowed issuer", issuer)
-			tenantAllowed := p.checkIssuerMatchesTenantList(issuer, p.multiTenantAllowedTenants)
-			if !tenantAllowed {
-				return false
-			}
+		logger.Printf("List of allowed tenants is specified, we check if %s is allowed issuer", issuer)
+		tenantAllowed := p.checkIssuerMatchesTenantList(issuer, p.multiTenantAllowedTenants)
+		if !tenantAllowed {
+			return false
 		}
 	}
 
 	return p.OIDCProvider.ValidateSession(ctx, session)
 }
 
-// checkGroupOverage checks is claims present in ID Token indicate group overage
+// checkGroupOverage checks ID token's group membership claims for the group overage
 func (p *MicrosoftEntraIDProvider) checkGroupOverage(session *sessions.SessionState) (bool, error) {
 	extractor, err := p.getClaimExtractor(session.IDToken, session.AccessToken)
 	if err != nil {
@@ -128,7 +124,12 @@ func (p *MicrosoftEntraIDProvider) addGraphGroupsToSesion(ctx context.Context, s
 
 	groupsURL := fmt.Sprintf("%s/transitiveMemberOf?$select=id", p.microsoftGraphURL)
 
-	jsonRequest, err := requests.New(groupsURL).WithContext(ctx).WithHeaders(groupsHeaders).Do().UnmarshalSimpleJSON()
+	jsonRequest, err := requests.New(groupsURL).
+		WithContext(ctx).
+		WithHeaders(groupsHeaders).
+		Do().
+		UnmarshalSimpleJSON()
+
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal Microsoft Graph response: %v", err)
 	}
