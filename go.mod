@@ -29,9 +29,9 @@ require (
 	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.8.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5
-	golang.org/x/crypto v0.19.0
+	golang.org/x/crypto v0.21.0
 	golang.org/x/exp v0.0.0-20221019170559-20944726eadf
-	golang.org/x/net v0.17.0
+	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.10.0
 	golang.org/x/sync v0.3.0
 	google.golang.org/api v0.126.0
@@ -72,7 +72,7 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
