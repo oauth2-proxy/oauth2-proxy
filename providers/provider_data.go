@@ -47,6 +47,7 @@ type ProviderData struct {
 	UserClaim                string
 	EmailClaim               string
 	GroupsClaim              string
+	PreferredUsername        string
 	Verifier                 internaloidc.IDTokenVerifier
 	SkipClaimsFromProfileURL bool
 
@@ -258,8 +259,7 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		{p.UserClaim, &ss.User},
 		{p.EmailClaim, &ss.Email},
 		{p.GroupsClaim, &ss.Groups},
-		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
-		{"preferred_username", &ss.PreferredUsername},
+		{p.PreferredUsername, &ss.PreferredUsername},
 	} {
 		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
 			return nil, err

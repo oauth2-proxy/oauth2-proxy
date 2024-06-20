@@ -49,15 +49,16 @@ func NewLegacyOptions() *LegacyOptions {
 		},
 
 		LegacyProvider: LegacyProvider{
-			ProviderType:          "google",
-			AzureTenant:           "common",
-			ApprovalPrompt:        "force",
-			UserIDClaim:           "email",
-			OIDCEmailClaim:        "email",
-			OIDCGroupsClaim:       "groups",
-			OIDCAudienceClaims:    []string{"aud"},
-			OIDCExtraAudiences:    []string{},
-			InsecureOIDCSkipNonce: true,
+			ProviderType:               "google",
+			AzureTenant:                "common",
+			ApprovalPrompt:             "force",
+			UserIDClaim:                "email",
+			OIDCEmailClaim:             "email",
+			OIDCGroupsClaim:            "groups",
+			OIDCPreferredUsernameClaim: "preferredusername",
+			OIDCAudienceClaims:         []string{"aud"},
+			OIDCExtraAudiences:         []string{},
+			InsecureOIDCSkipNonce:      true,
 		},
 
 		Options: *NewOptions(),
@@ -517,6 +518,7 @@ type LegacyProvider struct {
 	SkipOIDCDiscovery                  bool     `flag:"skip-oidc-discovery" cfg:"skip_oidc_discovery"`
 	OIDCJwksURL                        string   `flag:"oidc-jwks-url" cfg:"oidc_jwks_url"`
 	OIDCEmailClaim                     string   `flag:"oidc-email-claim" cfg:"oidc_email_claim"`
+	OIDCPreferredUsernameClaim         string   `flag:"oidc-preferredusername-claim" cfg:"oidc_preferredusername_claim"`
 	OIDCGroupsClaim                    string   `flag:"oidc-groups-claim" cfg:"oidc_groups_claim"`
 	OIDCAudienceClaims                 []string `flag:"oidc-audience-claim" cfg:"oidc_audience_claims"`
 	OIDCExtraAudiences                 []string `flag:"oidc-extra-audience" cfg:"oidc_extra_audiences"`
@@ -574,6 +576,7 @@ func legacyProviderFlagSet() *pflag.FlagSet {
 	flagSet.Bool("skip-oidc-discovery", false, "Skip OIDC discovery and use manually supplied Endpoints")
 	flagSet.String("oidc-jwks-url", "", "OpenID Connect JWKS URL (ie: https://www.googleapis.com/oauth2/v3/certs)")
 	flagSet.String("oidc-groups-claim", OIDCGroupsClaim, "which OIDC claim contains the user groups")
+	flagSet.String("oidc-preferredusername-claim", "preferredusername", "which OIDC claim contains the user preferred username")
 	flagSet.String("oidc-email-claim", OIDCEmailClaim, "which OIDC claim contains the user's email")
 	flagSet.StringSlice("oidc-audience-claim", OIDCAudienceClaims, "which OIDC claims are used as audience to verify against client id")
 	flagSet.StringSlice("oidc-extra-audience", []string{}, "additional audiences allowed to pass audience verification")
@@ -691,6 +694,7 @@ func (l *LegacyProvider) convert() (Providers, error) {
 		UserIDClaim:                    l.UserIDClaim,
 		EmailClaim:                     l.OIDCEmailClaim,
 		GroupsClaim:                    l.OIDCGroupsClaim,
+		PreferredUsernameClaim:         l.OIDCPreferredUsernameClaim,
 		AudienceClaims:                 l.OIDCAudienceClaims,
 		ExtraAudiences:                 l.OIDCExtraAudiences,
 	}
