@@ -23,6 +23,9 @@ type AuthStatus string
 // Level indicates the log level for log messages
 type Level int
 
+// StructuredFormat defines the format of the log output
+type StructuredFormat int
+
 const (
 	// DefaultStandardLoggingFormat defines the default standard log format
 	DefaultStandardLoggingFormat = "[{{.Timestamp}}] [{{.File}}] {{.Message}}"
@@ -51,6 +54,11 @@ const (
 	DEFAULT Level = iota
 	// ERROR is for error-level logging
 	ERROR
+
+	// Plain format for logging
+	Plain StructuredFormat = iota
+	// JSON format for logging
+	JSON
 )
 
 // These are the containers for all values that are available as variables in the logging formats.
@@ -99,36 +107,36 @@ type GetClientFunc = func(r *http.Request) string
 // can be used simultaneously from multiple goroutines; it guarantees to
 // serialize access to the Writer.
 type Logger struct {
-	mu                      sync.Mutex
-	flag                    int
-	outputFormatJsonEnabled bool
-	writer                  io.Writer
-	errWriter               io.Writer
-	stdEnabled              bool
-	authEnabled             bool
-	reqEnabled              bool
-	getClientFunc           GetClientFunc
-	excludePaths            map[string]struct{}
-	stdLogTemplate          *template.Template
-	authTemplate            *template.Template
-	reqTemplate             *template.Template
+	mu             sync.Mutex
+	flag           int
+	format         StructuredFormat
+	writer         io.Writer
+	errWriter      io.Writer
+	stdEnabled     bool
+	authEnabled    bool
+	reqEnabled     bool
+	getClientFunc  GetClientFunc
+	excludePaths   map[string]struct{}
+	stdLogTemplate *template.Template
+	authTemplate   *template.Template
+	reqTemplate    *template.Template
 }
 
 // New creates a new Standarderr Logger.
 func New(flag int) *Logger {
 	return &Logger{
-		writer:                  os.Stdout,
-		errWriter:               os.Stderr,
-		flag:                    flag,
-		outputFormatJsonEnabled: false,
-		stdEnabled:              true,
-		authEnabled:             true,
-		reqEnabled:              true,
-		getClientFunc:           func(r *http.Request) string { return r.RemoteAddr },
-		excludePaths:            nil,
-		stdLogTemplate:          template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
-		authTemplate:            template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
-		reqTemplate:             template.Must(template.New("req-log").Parse(DefaultRequestLoggingFormat)),
+		writer:         os.Stdout,
+		errWriter:      os.Stderr,
+		flag:           flag,
+		format:         Plain,
+		stdEnabled:     true,
+		authEnabled:    true,
+		reqEnabled:     true,
+		getClientFunc:  func(r *http.Request) string { return r.RemoteAddr },
+		excludePaths:   nil,
+		stdLogTemplate: template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
+		authTemplate:   template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
+		reqTemplate:    template.Must(template.New("req-log").Parse(DefaultRequestLoggingFormat)),
 	}
 }
 
@@ -150,7 +158,7 @@ func (l *Logger) formatLogMessage(calldepth int, message string) []byte {
 		Message:   message,
 	}
 
-	if l.outputFormatJsonEnabled {
+	if l.format == JSON {
 		err := json.NewEncoder(logBuff).Encode(data)
 		if err != nil {
 			panic(err)
@@ -226,7 +234,7 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 	}
 
 	var err error
-	if l.outputFormatJsonEnabled {
+	if l.format == JSON {
 		err = json.NewEncoder(l.writer).Encode(data)
 	} else {
 		err = l.authTemplate.Execute(l.writer, data)
@@ -279,7 +287,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	defer l.mu.Unlock()
 
 	scope := middlewareapi.GetRequestScope(req)
-	
+
 	data := reqLogMessageData{
 		Client:          client,
 		Host:            requestutil.GetRequestHost(req),
@@ -297,7 +305,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	}
 
 	var err error
-	if l.outputFormatJsonEnabled {
+	if l.format == JSON {
 		err = json.NewEncoder(l.writer).Encode(data)
 	} else {
 		err = l.reqTemplate.Execute(l.writer, data)
@@ -305,7 +313,7 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 			_, err = l.writer.Write([]byte("\n"))
 		}
 	}
-	
+
 	if err != nil {
 		panic(err)
 	}
@@ -362,10 +370,11 @@ func (l *Logger) SetFlags(flag int) {
 	l.flag = flag
 }
 
-func (l *Logger) SetOutputFormatJsonEnabled(e bool) {
+// SetStructuredFormat sets the output format for the logger.
+func (l *Logger) SetStructuredFormat(format StructuredFormat) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.outputFormatJsonEnabled = e
+	l.format = format
 }
 
 // SetStandardEnabled enables or disables standard logging.
@@ -455,8 +464,9 @@ func SetFlags(flag int) {
 	std.SetFlags(flag)
 }
 
-func SetOutputFormatJsonEnabled(e bool) {
-	std.SetOutputFormatJsonEnabled(e)
+// SetStructuredFormat sets the output format for the standard logger.
+func SetStructuredFormat(format StructuredFormat) {
+	std.SetStructuredFormat(format)
 }
 
 // SetOutput sets the output destination for the standard logger's default channel.

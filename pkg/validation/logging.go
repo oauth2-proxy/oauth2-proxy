@@ -52,6 +52,15 @@ func configureLogger(o options.Logging, msgs []string) []string {
 	logger.SetAuthTemplate(o.AuthFormat)
 	logger.SetReqTemplate(o.RequestFormat)
 
+	switch o.StructuredFormat {
+	case "plain":
+		logger.SetStructuredFormat(logger.Plain)
+	case "json":
+		logger.SetStructuredFormat(logger.JSON)
+	default:
+		return append(msgs, "invalid structured logging format: "+o.StructuredFormat)
+	}
+
 	logger.SetExcludePaths(o.ExcludePaths)
 
 	if !o.LocalTime {

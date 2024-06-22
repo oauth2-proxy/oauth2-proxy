@@ -7,18 +7,19 @@ import (
 
 // Logging contains all options required for configuring the logging
 type Logging struct {
-	AuthEnabled     bool           `flag:"auth-logging" cfg:"auth_logging"`
-	AuthFormat      string         `flag:"auth-logging-format" cfg:"auth_logging_format"`
-	RequestEnabled  bool           `flag:"request-logging" cfg:"request_logging"`
-	RequestFormat   string         `flag:"request-logging-format" cfg:"request_logging_format"`
-	StandardEnabled bool           `flag:"standard-logging" cfg:"standard_logging"`
-	StandardFormat  string         `flag:"standard-logging-format" cfg:"standard_logging_format"`
-	ErrToInfo       bool           `flag:"errors-to-info-log" cfg:"errors_to_info_log"`
-	ExcludePaths    []string       `flag:"exclude-logging-path" cfg:"exclude_logging_paths"`
-	LocalTime       bool           `flag:"logging-local-time" cfg:"logging_local_time"`
-	SilencePing     bool           `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
-	RequestIDHeader string         `flag:"request-id-header" cfg:"request_id_header"`
-	File            LogFileOptions `cfg:",squash"`
+	AuthEnabled      bool           `flag:"auth-logging" cfg:"auth_logging"`
+	AuthFormat       string         `flag:"auth-logging-format" cfg:"auth_logging_format"`
+	RequestEnabled   bool           `flag:"request-logging" cfg:"request_logging"`
+	RequestFormat    string         `flag:"request-logging-format" cfg:"request_logging_format"`
+	StandardEnabled  bool           `flag:"standard-logging" cfg:"standard_logging"`
+	StandardFormat   string         `flag:"standard-logging-format" cfg:"standard_logging_format"`
+	ErrToInfo        bool           `flag:"errors-to-info-log" cfg:"errors_to_info_log"`
+	ExcludePaths     []string       `flag:"exclude-logging-path" cfg:"exclude_logging_paths"`
+	LocalTime        bool           `flag:"logging-local-time" cfg:"logging_local_time"`
+	SilencePing      bool           `flag:"silence-ping-logging" cfg:"silence_ping_logging"`
+	RequestIDHeader  string         `flag:"request-id-header" cfg:"request_id_header"`
+	File             LogFileOptions `cfg:",squash"`
+	StructuredFormat string         `flag:"structured-logging-format" cfg:"structured_logging_format"`
 }
 
 // LogFileOptions contains options for configuring logging to a file
@@ -51,6 +52,7 @@ func loggingFlagSet() *pflag.FlagSet {
 	flagSet.Int("logging-max-age", 7, "Maximum number of days to retain old log files")
 	flagSet.Int("logging-max-backups", 0, "Maximum number of old log files to retain; 0 to disable")
 	flagSet.Bool("logging-compress", false, "Should rotated log files be compressed using gzip")
+	flagSet.String("structured-logging-format", "plain", "Structured logging format: plain or json")
 
 	return flagSet
 }
@@ -76,5 +78,6 @@ func loggingDefaults() Logging {
 			MaxBackups: 0,
 			Compress:   false,
 		},
+		StructuredFormat: "plain",
 	}
 }
