@@ -125,7 +125,7 @@ var _ = Describe("Request logger suite", func() {
 })
 
 var _ = Describe("Request logger suite when used with structured format setting", func() {
-	type requestLoggerTableInputJson struct {
+	type requestLoggerTableInputJSON struct {
 		StructuredFormat   logger.StructuredFormat
 		ExpectedLogMessage map[string]interface{}
 	}
@@ -136,7 +136,7 @@ var _ = Describe("Request logger suite when used with structured format setting"
 	}
 
 	DescribeTable("when service a request with json format setting",
-		func(in *requestLoggerTableInputJson) {
+		func(in *requestLoggerTableInputJSON) {
 			buf := bytes.NewBuffer(nil)
 			logger.SetOutput(buf)
 			logger.SetExcludePaths([]string{})
@@ -169,7 +169,7 @@ var _ = Describe("Request logger suite when used with structured format setting"
 
 			Expect(logData).To(Equal(expectedMessage))
 		},
-		Entry("standard request", &requestLoggerTableInputJson{
+		Entry("standard request", &requestLoggerTableInputJSON{
 			StructuredFormat: logger.JSON,
 			ExpectedLogMessage: map[string]interface{}{
 				"client":           "127.0.0.1",
