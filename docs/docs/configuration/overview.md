@@ -197,6 +197,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--ssl-upstream-insecure-skip-verify` | bool | skip validation of certificates presented when using HTTPS upstreams | false |
 | `--standard-logging` | bool | Log standard runtime information | true |
 | `--standard-logging-format` | string | Template for standard log lines | see [Logging Configuration](#logging-configuration) |
+| `--structured-logging-format` | string | log format structure, either `"plain"` or `"json"`. This overrides `--auth-logging-format`, `--standard-logging-format` and  `--request-logging-format`. | `"plain"` |
 | `--tls-cert-file` | string | path to certificate file | |
 | `--tls-cipher-suite` | string \| list | Restricts TLS cipher suites used by server to those listed (e.g. TLS_RSA_WITH_RC4_128_SHA) (may be given multiple times). If not specified, the default Go safe cipher list is used. List of valid cipher suites can be found in the [crypto/tls documentation](https://pkg.go.dev/crypto/tls#pkg-constants). | |
 | `--tls-key-file` | string | path to private key file | |
