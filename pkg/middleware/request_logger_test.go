@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 
@@ -119,6 +120,105 @@ var _ = Describe("Request logger suite", func() {
 			ExpectedLogMessage: "",
 			Path:               "/ping",
 			ExcludePaths:       []string{"/ping"},
+		}),
+	)
+})
+
+var _ = Describe("Request logger suite when used with structured format setting", func() {
+	type requestLoggerTableInputJson struct {
+		StructuredFormat   logger.StructuredFormat
+		ExpectedLogMessage map[string]interface{}
+	}
+	type requestLoggerTableInputPlain struct {
+		StructuredFormat   logger.StructuredFormat
+		Format             string
+		ExpectedLogMessage string
+	}
+
+	DescribeTable("when service a request with json format setting",
+		func(in *requestLoggerTableInputJson) {
+			buf := bytes.NewBuffer(nil)
+			logger.SetOutput(buf)
+			logger.SetExcludePaths([]string{})
+			logger.SetStructuredFormat(in.StructuredFormat)
+			req, err := http.NewRequest("GET", "/foo/bar", nil)
+			Expect(err).ToNot(HaveOccurred())
+			req.RemoteAddr = "127.0.0.1"
+			req.Host = "test-server"
+
+			scope := &middlewareapi.RequestScope{
+				RequestID: "11111111-2222-4333-8444-555555555555",
+				Session:   &sessions.SessionState{User: "standard.user"},
+			}
+			req = middlewareapi.AddRequestScope(req, scope)
+
+			handler := NewRequestLogger()(testUpstreamHandler("standard"))
+			handler.ServeHTTP(httptest.NewRecorder(), req)
+
+			logMessage := buf.String()
+			expectedMessage := in.ExpectedLogMessage
+
+			var logData map[string]interface{}
+
+			// Unmarshal the log message into maps
+			err = json.Unmarshal([]byte(logMessage), &logData)
+			Expect(err).ToNot(HaveOccurred())
+			// Remove timestamp from the logData and expectedData
+			delete(logData, "timestamp")
+			delete(expectedMessage, "timestamp")
+
+			Expect(logData).To(Equal(expectedMessage))
+		},
+		Entry("standard request", &requestLoggerTableInputJson{
+			StructuredFormat: logger.JSON,
+			ExpectedLogMessage: map[string]interface{}{
+				"client":           "127.0.0.1",
+				"host":             "test-server",
+				"protocol":         "HTTP/1.1",
+				"request_id":       "11111111-2222-4333-8444-555555555555",
+				"request_duration": "0.000",
+				"request_method":   "GET",
+				"request_uri":      "\"/foo/bar\"",
+				"response_size":    "4",
+				"status_code":      "200",
+				"upstream":         "standard",
+				"user_agent":       "\"\"",
+				"username":         "standard.user",
+				"timestamp":        "2024/06/22 17:30:00",
+			},
+		}),
+	)
+
+	DescribeTable("when service a request with plain format setting",
+		func(in *requestLoggerTableInputPlain) {
+			buf := bytes.NewBuffer(nil)
+			logger.SetOutput(buf)
+			logger.SetExcludePaths([]string{})
+			logger.SetStructuredFormat(in.StructuredFormat)
+			logger.SetReqTemplate(in.Format)
+			req, err := http.NewRequest("GET", "/foo/bar", nil)
+			Expect(err).ToNot(HaveOccurred())
+			req.RemoteAddr = "127.0.0.1"
+			req.Host = "test-server"
+
+			scope := &middlewareapi.RequestScope{
+				RequestID: "11111111-2222-4333-8444-555555555555",
+				Session:   &sessions.SessionState{User: "standard.user"},
+			}
+			req = middlewareapi.AddRequestScope(req, scope)
+
+			handler := NewRequestLogger()(testUpstreamHandler("standard"))
+			handler.ServeHTTP(httptest.NewRecorder(), req)
+
+			logMessage := buf.String()
+			expectedMessage := in.ExpectedLogMessage
+
+			Expect(logMessage).To(Equal(expectedMessage))
+		},
+		Entry("standard request", &requestLoggerTableInputPlain{
+			StructuredFormat:   logger.Plain,
+			Format:             RequestLoggingFormatWithoutTime,
+			ExpectedLogMessage: "127.0.0.1 - 11111111-2222-4333-8444-555555555555 - standard.user [TIMELESS] test-server GET standard \"/foo/bar\" HTTP/1.1 \"\" 200 4 0.000\n",
 		}),
 	)
 })
