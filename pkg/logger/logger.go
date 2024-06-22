@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -55,38 +56,38 @@ const (
 // These are the containers for all values that are available as variables in the logging formats.
 // All values are pre-formatted strings so it is easy to use them in the format string.
 type stdLogMessageData struct {
-	Timestamp,
-	File,
-	Message string
+	Timestamp string `json:"timestamp"`
+	File      string `json:"file"`
+	Message   string `json:"message"`
 }
 
 type authLogMessageData struct {
-	Client,
-	Host,
-	Protocol,
-	RequestID,
-	RequestMethod,
-	Timestamp,
-	UserAgent,
-	Username,
-	Status,
-	Message string
+	Client        string `json:"client"`
+	Host          string `json:"host"`
+	Protocol      string `json:"protocol"`
+	RequestID     string `json:"request_id"`
+	RequestMethod string `json:"request_method"`
+	Timestamp     string `json:"timestamp"`
+	UserAgent     string `json:"user_agent"`
+	Username      string `json:"username"`
+	Status        string `json:"status"`
+	Message       string `json:"message"`
 }
 
 type reqLogMessageData struct {
-	Client,
-	Host,
-	Protocol,
-	RequestID,
-	RequestDuration,
-	RequestMethod,
-	RequestURI,
-	ResponseSize,
-	StatusCode,
-	Timestamp,
-	Upstream,
-	UserAgent,
-	Username string
+	Client          string `json:"client"`
+	Host            string `json:"host"`
+	Protocol        string `json:"protocol"`
+	RequestID       string `json:"request_id"`
+	RequestDuration string `json:"request_duration"`
+	RequestMethod   string `json:"request_method"`
+	RequestURI      string `json:"request_uri"`
+	ResponseSize    string `json:"response_size"`
+	StatusCode      string `json:"status_code"`
+	Timestamp       string `json:"timestamp"`
+	Upstream        string `json:"upstream"`
+	UserAgent       string `json:"user_agent"`
+	Username        string `json:"username"`
 }
 
 // Returns the apparent "real client IP" as a string.
@@ -98,34 +99,36 @@ type GetClientFunc = func(r *http.Request) string
 // can be used simultaneously from multiple goroutines; it guarantees to
 // serialize access to the Writer.
 type Logger struct {
-	mu             sync.Mutex
-	flag           int
-	writer         io.Writer
-	errWriter      io.Writer
-	stdEnabled     bool
-	authEnabled    bool
-	reqEnabled     bool
-	getClientFunc  GetClientFunc
-	excludePaths   map[string]struct{}
-	stdLogTemplate *template.Template
-	authTemplate   *template.Template
-	reqTemplate    *template.Template
+	mu                      sync.Mutex
+	flag                    int
+	outputFormatJsonEnabled bool
+	writer                  io.Writer
+	errWriter               io.Writer
+	stdEnabled              bool
+	authEnabled             bool
+	reqEnabled              bool
+	getClientFunc           GetClientFunc
+	excludePaths            map[string]struct{}
+	stdLogTemplate          *template.Template
+	authTemplate            *template.Template
+	reqTemplate             *template.Template
 }
 
 // New creates a new Standarderr Logger.
 func New(flag int) *Logger {
 	return &Logger{
-		writer:         os.Stdout,
-		errWriter:      os.Stderr,
-		flag:           flag,
-		stdEnabled:     true,
-		authEnabled:    true,
-		reqEnabled:     true,
-		getClientFunc:  func(r *http.Request) string { return r.RemoteAddr },
-		excludePaths:   nil,
-		stdLogTemplate: template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
-		authTemplate:   template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
-		reqTemplate:    template.Must(template.New("req-log").Parse(DefaultRequestLoggingFormat)),
+		writer:                  os.Stdout,
+		errWriter:               os.Stderr,
+		flag:                    flag,
+		outputFormatJsonEnabled: false,
+		stdEnabled:              true,
+		authEnabled:             true,
+		reqEnabled:              true,
+		getClientFunc:           func(r *http.Request) string { return r.RemoteAddr },
+		excludePaths:            nil,
+		stdLogTemplate:          template.Must(template.New("std-log").Parse(DefaultStandardLoggingFormat)),
+		authTemplate:            template.Must(template.New("auth-log").Parse(DefaultAuthLoggingFormat)),
+		reqTemplate:             template.Must(template.New("req-log").Parse(DefaultRequestLoggingFormat)),
 	}
 }
 
@@ -140,18 +143,27 @@ func (l *Logger) formatLogMessage(calldepth int, message string) []byte {
 	}
 
 	var logBuff = new(bytes.Buffer)
-	err := l.stdLogTemplate.Execute(logBuff, stdLogMessageData{
+
+	data := stdLogMessageData{
 		Timestamp: FormatTimestamp(now),
 		File:      file,
 		Message:   message,
-	})
-	if err != nil {
-		panic(err)
 	}
 
-	_, err = logBuff.Write([]byte("\n"))
-	if err != nil {
-		panic(err)
+	if l.outputFormatJsonEnabled {
+		err := json.NewEncoder(logBuff).Encode(data)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		err := l.stdLogTemplate.Execute(logBuff, data)
+		if err != nil {
+			panic(err)
+		}
+		_, err = logBuff.Write([]byte("\n"))
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return logBuff.Bytes()
@@ -199,7 +211,8 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 	defer l.mu.Unlock()
 
 	scope := middlewareapi.GetRequestScope(req)
-	err := l.authTemplate.Execute(l.writer, authLogMessageData{
+
+	data := authLogMessageData{
 		Client:        client,
 		Host:          requestutil.GetRequestHost(req),
 		Protocol:      req.Proto,
@@ -210,7 +223,18 @@ func (l *Logger) PrintAuthf(username string, req *http.Request, status AuthStatu
 		Username:      username,
 		Status:        string(status),
 		Message:       fmt.Sprintf(format, a...),
-	})
+	}
+
+	var err error
+	if l.outputFormatJsonEnabled {
+		err = json.NewEncoder(l.writer).Encode(data)
+	} else {
+		err = l.authTemplate.Execute(l.writer, data)
+		if err == nil {
+			_, err = l.writer.Write([]byte("\n"))
+		}
+	}
+
 	if err != nil {
 		panic(err)
 	}
@@ -255,7 +279,8 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 	defer l.mu.Unlock()
 
 	scope := middlewareapi.GetRequestScope(req)
-	err := l.reqTemplate.Execute(l.writer, reqLogMessageData{
+	
+	data := reqLogMessageData{
 		Client:          client,
 		Host:            requestutil.GetRequestHost(req),
 		Protocol:        req.Proto,
@@ -269,12 +294,18 @@ func (l *Logger) PrintReq(username, upstream string, req *http.Request, url url.
 		Upstream:        upstream,
 		UserAgent:       fmt.Sprintf("%q", req.UserAgent()),
 		Username:        username,
-	})
-	if err != nil {
-		panic(err)
 	}
 
-	_, err = l.writer.Write([]byte("\n"))
+	var err error
+	if l.outputFormatJsonEnabled {
+		err = json.NewEncoder(l.writer).Encode(data)
+	} else {
+		err = l.reqTemplate.Execute(l.writer, data)
+		if err == nil {
+			_, err = l.writer.Write([]byte("\n"))
+		}
+	}
+	
 	if err != nil {
 		panic(err)
 	}
@@ -329,6 +360,12 @@ func (l *Logger) SetFlags(flag int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.flag = flag
+}
+
+func (l *Logger) SetOutputFormatJsonEnabled(e bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.outputFormatJsonEnabled = e
 }
 
 // SetStandardEnabled enables or disables standard logging.
@@ -416,6 +453,10 @@ func Flags() int {
 // SetFlags sets the output flags for the standard logger.
 func SetFlags(flag int) {
 	std.SetFlags(flag)
+}
+
+func SetOutputFormatJsonEnabled(e bool) {
+	std.SetOutputFormatJsonEnabled(e)
 }
 
 // SetOutput sets the output destination for the standard logger's default channel.

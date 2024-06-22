@@ -25,7 +25,12 @@ func main() {
 	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
 	convertConfig := configFlagSet.Bool("convert-config-to-alpha", false, "if true, the proxy will load configuration as normal and convert existing configuration to the alpha config structure, and print it to stdout")
 	showVersion := configFlagSet.Bool("version", false, "print version string")
+	setLogJsonEnable := configFlagSet.Bool("logjson", true, "enable JSON logging")
 	configFlagSet.Parse(os.Args[1:])
+
+	if *setLogJsonEnable {
+		logger.SetOutputFormatJsonEnabled(true)
+	}
 
 	if *showVersion {
 		fmt.Printf("oauth2-proxy %s (built with %s)\n", VERSION, runtime.Version())
