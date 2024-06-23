@@ -10,6 +10,7 @@
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
 - [#1838](https://github.com/oauth2-proxy/oauth2-proxy/pull/1838) Add configuration for provider client mTLS
+- [#4917](https://github.com/oauth2-proxy/oauth2-proxy/pull/4917) Upgraded all modules to the latest version (@pierluigilenoci)
 
 # V7.6.0
 
