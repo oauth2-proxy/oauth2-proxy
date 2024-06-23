@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gleak"
 )
 
 const hello = "Hello World!"
@@ -559,6 +560,8 @@ var _ = Describe("Server", func() {
 
 		AfterEach(func() {
 			cancel()
+			Eventually(Goroutines).ShouldNot(HaveLeaked())
+
 		})
 
 		Context("with an ipv4 http server", func() {
@@ -584,7 +587,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(listenAddr)
+				resp, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -599,13 +602,13 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(listenAddr)
+				_, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(listenAddr)
+					_, err := httpGet(ctx, listenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -638,7 +641,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -653,13 +656,13 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(secureListenAddr)
+				_, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(secureListenAddr)
+					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -670,7 +673,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -709,7 +712,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(listenAddr)
+				resp, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -724,7 +727,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -739,19 +742,19 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(listenAddr)
+				_, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
-				_, err = client.Get(secureListenAddr)
+				_, err = httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(listenAddr)
+					_, err := httpGet(ctx, listenAddr)
 					return err
 				}).Should(HaveOccurred())
 				Eventually(func() error {
-					_, err := client.Get(secureListenAddr)
+					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -781,7 +784,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(listenAddr)
+				resp, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -796,13 +799,13 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(listenAddr)
+				_, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(listenAddr)
+					_, err := httpGet(ctx, listenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -836,7 +839,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -851,13 +854,13 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(secureListenAddr)
+				_, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(secureListenAddr)
+					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
@@ -868,7 +871,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -908,7 +911,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(listenAddr)
+				resp, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -923,7 +926,7 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				resp, err := client.Get(secureListenAddr)
+				resp, err := httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -938,19 +941,19 @@ var _ = Describe("Server", func() {
 					Expect(srv.Start(ctx)).To(Succeed())
 				}()
 
-				_, err := client.Get(listenAddr)
+				_, err := httpGet(ctx, listenAddr)
 				Expect(err).ToNot(HaveOccurred())
-				_, err = client.Get(secureListenAddr)
+				_, err = httpGet(ctx, secureListenAddr)
 				Expect(err).ToNot(HaveOccurred())
 
 				cancel()
 
 				Eventually(func() error {
-					_, err := client.Get(listenAddr)
+					_, err := httpGet(ctx, listenAddr)
 					return err
 				}).Should(HaveOccurred())
 				Eventually(func() error {
-					_, err := client.Get(secureListenAddr)
+					_, err := httpGet(ctx, secureListenAddr)
 					return err
 				}).Should(HaveOccurred())
 			})
