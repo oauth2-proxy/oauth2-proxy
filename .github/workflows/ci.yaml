@@ -30,7 +30,7 @@ jobs:
     - name: Get dependencies
       env:
         # renovate: datasource=github-tags depName=golangci/golangci-lint
-        GOLANGCI_LINT_VERSION: v1.55.2
+        GOLANGCI_LINT_VERSION: v1.59.1
         # renovate: datasource=github-tags depName=codeclimate/test-reporter
         CODECLIMATE_VERSION: v0.11.1
       run: |
