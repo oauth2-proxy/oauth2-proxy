@@ -64,6 +64,14 @@ type Upstream struct {
 	// Defaults to false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 
+	// CAFiles is a list of paths to CA certificates that should be used when connecting to the upstream.
+	// If not specified, the default Go trust sources are used instead
+	CAFiles []string `json:"caFiles,omitempty"`
+
+	// UseSystemTrustStore determines if your custom CA files and the system trust store are used
+	// If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files.
+	UseSystemTrustStore bool `json:"useSystemTrustStore,omitempty"`
+
 	// Static will make all requests to this upstream have a static response.
 	// The response will have a body of "Authenticated" and a response code
 	// matching StaticCode.
