@@ -90,7 +90,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--cookie-httponly` | bool | set HttpOnly cookie flag | true |
 | `--cookie-name` | string | the name of the cookie that the oauth_proxy creates. Should be changed to use a [cookie prefix](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#cookie_prefixes) (`__Host-` or `__Secure-`) if `--cookie-secure` is set. | `"_oauth2_proxy"` |
 | `--cookie-path` | string | an optional cookie path to force cookies to (e.g. `/poc/`) | `"/"` |
-| `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;\[[1](#footnote1)\] | |
+| `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;[^1] | |
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
@@ -189,12 +189,12 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--allowed-group` | string \| list | restrict logins to members of this group (may be given multiple times) | |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
-| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (e.g. `.example.com`)&nbsp;\[[2](#footnote2)\] | |
+| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` to allow subdomains (e.g. `.example.com`)&nbsp;[^2] | |
 | `--trusted-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in an HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
 
-\[<a name="footnote1">1</a>\]: Only these providers support `--cookie-refresh`: GitLab, Google and OIDC
+[^1]: Only these providers support `--cookie-refresh`: GitLab, Google and OIDC
 
-\[<a name="footnote2">2</a>\]: When using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
+[^2]: When using the `whitelist-domain` option, any domain prefixed with a `.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
 See below for provider specific options
 
