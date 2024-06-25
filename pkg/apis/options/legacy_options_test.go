@@ -356,12 +356,12 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim:  "user",
-						Prefix: "Basic ",
+						Claim: "user",
 						BasicAuthPassword: &SecretSource{
 							Value: []byte(basicAuthSecret),
 						},
 					},
+					Prefix: "Basic ",
 				},
 			},
 		}
@@ -396,12 +396,12 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim:  "email",
-						Prefix: "Basic ",
+						Claim: "email",
 						BasicAuthPassword: &SecretSource{
 							Value: []byte(basicAuthSecret),
 						},
 					},
+					Prefix: "Basic ",
 				},
 			},
 		}
@@ -472,9 +472,9 @@ var _ = Describe("Legacy Options", func() {
 			Values: []HeaderValue{
 				{
 					ClaimSource: &ClaimSource{
-						Claim:  "id_token",
-						Prefix: "Bearer ",
+						Claim: "id_token",
 					},
+					Prefix: "Bearer ",
 				},
 			},
 		}

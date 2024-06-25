@@ -201,7 +201,6 @@ ClaimSource allows loading a header value from a claim within the session
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. |
-| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
 
 ### Duration
@@ -279,8 +278,8 @@ make up the header value
 | `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
 | `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. |
-| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
 | `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value if it is non-empty. |
 
 ### KeycloakOptions
 
