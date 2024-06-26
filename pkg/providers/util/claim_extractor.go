@@ -11,7 +11,6 @@ import (
 
 	"github.com/bitly/go-simplejson"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
-	"github.com/ohler55/ojg/jp"
 	"github.com/spf13/cast"
 )
 
@@ -140,12 +139,11 @@ func parseJWT(p string) ([]byte, error) {
 }
 
 // getClaimFrom gets a claim from a Json object.
-// It can accept either a single claim name or a json path if the path is a valid json path.
+// It can accept either a single claim name or a json path. The claim is always evaluated first as a single claim name.
 // Paths with indexes are not supported.
 func getClaimFrom(claim string, src *simplejson.Json) interface{} {
-	_, err := jp.ParseString(claim)
-	if err != nil {
-		return src.Get(claim).Interface()
+	if value, ok := src.CheckGet(claim); ok {
+		return value.Interface()
 	}
 	claimParts := strings.Split(claim, ".")
 	return src.GetPath(claimParts...).Interface()
