@@ -15,10 +15,11 @@ import (
 
 const jwtRegexFormat = `^ey[IJ][a-zA-Z0-9_-]*\.ey[IJ][a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]+$`
 
-func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alice.Constructor {
+func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc, extraJwtHeaders []string) alice.Constructor {
 	js := &jwtSessionLoader{
-		jwtRegex:       regexp.MustCompile(jwtRegexFormat),
-		sessionLoaders: sessionLoaders,
+		jwtRegex:        regexp.MustCompile(jwtRegexFormat),
+		sessionLoaders:  sessionLoaders,
+		extraJwtHeaders: extraJwtHeaders,
 	}
 	return js.loadSession
 }
@@ -26,8 +27,9 @@ func NewJwtSessionLoader(sessionLoaders []middlewareapi.TokenToSessionFunc) alic
 // jwtSessionLoader is responsible for loading sessions from JWTs in
 // Authorization headers.
 type jwtSessionLoader struct {
-	jwtRegex       *regexp.Regexp
-	sessionLoaders []middlewareapi.TokenToSessionFunc
+	jwtRegex        *regexp.Regexp
+	sessionLoaders  []middlewareapi.TokenToSessionFunc
+	extraJwtHeaders []string
 }
 
 // loadSession attempts to load a session from a JWT stored in an Authorization
@@ -60,7 +62,13 @@ func (j *jwtSessionLoader) loadSession(next http.Handler) http.Handler {
 // getJwtSession loads a session based on a JWT token in the authorization header.
 // (see the config options skip-jwt-bearer-tokens and extra-jwt-issuers)
 func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.SessionState, error) {
-	auth := req.Header.Get("Authorization")
+	auth := ""
+	for _, headerName := range append(j.extraJwtHeaders, "Authorization") {
+		auth = req.Header.Get(headerName)
+		if auth != "" {
+			break
+		}
+	}
 	if auth == "" {
 		// No auth header provided, so don't attempt to load a session
 		return nil, nil
@@ -89,7 +97,9 @@ func (j *jwtSessionLoader) getJwtSession(req *http.Request) (*sessionsapi.Sessio
 func (j *jwtSessionLoader) findTokenFromHeader(header string) (string, error) {
 	tokenType, token, err := splitAuthHeader(header)
 	if err != nil {
-		return "", err
+		// Assume a JWT as a bearer token without tokenType
+		tokenType = "Bearer"
+		token = header
 	}
 
 	if tokenType == "Bearer" && j.jwtRegex.MatchString(token) {
