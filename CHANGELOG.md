@@ -8,6 +8,7 @@
 
 ## Changes since v7.6.0
 
+- [#2019](https://github.com/oauth2-proxy/oauth2-proxy/issues/2019) Refresh Token on Demand
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
 - [#4917](https://github.com/oauth2-proxy/oauth2-proxy/pull/4917) Upgraded all modules to the latest version (@pierluigilenoci)
 
