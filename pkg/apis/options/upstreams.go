@@ -39,11 +39,13 @@ type Upstream struct {
 	Path string `json:"path,omitempty"`
 
 	// RewriteTarget allows users to rewrite the request path before it is sent to
-	// the upstream server.
+	// the upstream server (for an HTTP/HTTPS upstream) or mapped to the filesystem
+	// (for a `file:` upstream).
 	// Use the Path to capture segments for reuse within the rewrite target.
 	// Eg: With a Path of `^/baz/(.*)`, a RewriteTarget of `/foo/$1` would rewrite
 	// the request `/baz/abc/123` to `/foo/abc/123` before proxying to the
-	// upstream server.
+	// upstream server.  Or if the upstream were `file:///app`, a request for
+	// `/baz/info.html` would return the contents of the file `/app/foo/info.html`.
 	RewriteTarget string `json:"rewriteTarget,omitempty"`
 
 	// The URI of the upstream server. This may be an HTTP(S) server of a File
