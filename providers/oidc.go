@@ -101,10 +101,18 @@ func (p *OIDCProvider) EnrichSession(_ context.Context, s *sessions.SessionState
 	return nil
 }
 
-// ValidateSession checks that the session's IDToken is still valid
+// ValidateSession checks that the session's id_token or access_token (when a ValidateURL is configured) is still valid
 func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	_, err := p.Verifier.Verify(ctx, s.IDToken)
-	if err != nil {
+	if s.IDToken == "" {
+		logger.Println("no new id token has been redeemed after refresh")
+		if !validateToken(ctx, p, s.AccessToken, makeOIDCHeader(s.AccessToken)) {
+			logger.Errorf("access token is invalid")
+			return false
+		}
+		return true
+	}
+
+	if _, err := p.Verifier.Verify(ctx, s.IDToken); err != nil {
 		logger.Errorf("id_token verification failed: %v", err)
 		return false
 	}
@@ -112,8 +120,8 @@ func (p *OIDCProvider) ValidateSession(ctx context.Context, s *sessions.SessionS
 	if p.SkipNonce {
 		return true
 	}
-	err = p.checkNonce(s)
-	if err != nil {
+
+	if err := p.checkNonce(s); err != nil {
 		logger.Errorf("nonce verification failed: %v", err)
 		return false
 	}

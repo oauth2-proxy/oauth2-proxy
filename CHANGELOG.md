@@ -47,6 +47,7 @@
 - [#2357](https://github.com/oauth2-proxy/oauth2-proxy/pull/2357) Update ojg to latest release (@bitfehler)
 - [#1922](https://github.com/oauth2-proxy/oauth2-proxy/pull/1922) Added support for env variables in the alpha struct (@hevans-dglcom)
 - [#2235](https://github.com/oauth2-proxy/oauth2-proxy/pull/2235) Bump golang to 1.21 and min allowed version to 1.20 (@tuunit)
+- [#2047](https://github.com/oauth2-proxy/oauth2-proxy/pull/1933) Validate a session using the access token in the OIDC provider (@gysel)
 
 # V7.5.1
 
