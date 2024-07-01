@@ -116,7 +116,7 @@ type verifierBuilder func(*oidc.Config) *oidc.IDTokenVerifier
 
 func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (verifierBuilder, DiscoveryProvider, error) {
 	if opts.SkipDiscovery {
-		// Instead of discovering the JWKs URK, it needs to be specified in the opts already
+		// Instead of discovering the JWKs URL, it needs to be specified in the opts already
 		return newVerifierBuilder(ctx, opts.IssuerURL, opts.JWKsURL, opts.SupportedSigningAlgs), nil, nil
 	}
 
