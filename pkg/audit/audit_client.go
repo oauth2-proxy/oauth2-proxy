@@ -52,19 +52,19 @@ func NewAuditClient(opts *ClientOpts) (*Client, error) {
 	return &Client{enabled: opts.Enabled, apiSignature: apiSignature, client: client, opts: opts}, nil
 }
 
-func (a *Client) CreateSuccessfulLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantId string) {
-	a.createAuditEntry(ss, appURL, tenantId, "0", "Success")
+func (c *Client) CreateSuccessfulLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
+	c.createAuditEntry(ss, appURL, tenantID, "0", "Success")
 }
 
-func (a *Client) CreateFailedLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantId string, errorDesc string) {
-	a.createAuditEntry(ss, appURL, tenantId, "1", errorDesc)
+func (c *Client) CreateFailedLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, errorDesc string) {
+	c.createAuditEntry(ss, appURL, tenantID, "1", errorDesc)
 }
 
-func (a *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tenantId string, outcomeCode string, outcomeDesc string) {
-	if !a.enabled {
+func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, outcomeCode string, outcomeDesc string) {
+	if !c.enabled {
 		return
 	}
-	auditObject := AuditEvent{
+	auditObject := RootEvent{
 		ResourceType: "AuditEvent",
 		Event: &Event{
 			Type: &Coding{
@@ -92,7 +92,7 @@ func (a *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 					Extension: []*ExtensionContent{
 						{
 							URL:         "applicationName",
-							ValueString: a.opts.ProductName,
+							ValueString: c.opts.ProductName,
 						},
 						{
 							URL:         "applicationVersion",
@@ -108,11 +108,11 @@ func (a *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 						},
 						{
 							URL:         "productKey",
-							ValueString: a.opts.ProductKey,
+							ValueString: c.opts.ProductKey,
 						},
 						{
 							URL:         "tenant",
-							ValueString: tenantId,
+							ValueString: tenantID,
 						},
 					},
 				},
@@ -125,9 +125,9 @@ func (a *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 		logger.Errorf("%s: could not marshal the audit object: %v", ErrPersitAuditEvent.Error(), err)
 		return
 	}
-	err = a.send(string(auditMessage))
+	err = c.send(string(auditMessage))
 	if err != nil {
-		logger.Errorf("%s: could not send the audit message to the url '%s': %v", ErrPersitAuditEvent.Error(), a.opts.URL, err)
+		logger.Errorf("%s: could not send the audit message to the url '%s': %v", ErrPersitAuditEvent.Error(), c.opts.URL, err)
 		return
 	}
 }
@@ -152,8 +152,8 @@ func (c *Client) send(msg string) error {
 	return nil
 }
 
-func (a *ClientOpts) Validate() error {
-	if strings.TrimSpace(a.ProductName) == "" || strings.TrimSpace(a.ProductKey) == "" || strings.TrimSpace(a.SecretKey) == "" || strings.TrimSpace(a.SharedKey) == "" {
+func (c *ClientOpts) Validate() error {
+	if strings.TrimSpace(c.ProductName) == "" || strings.TrimSpace(c.ProductKey) == "" || strings.TrimSpace(c.SecretKey) == "" || strings.TrimSpace(c.SharedKey) == "" {
 		return errors.New("the audit is enabled and therefore the audit product name, audit key, audit secret key or audit shared key are required (however found empty)")
 	}
 	return nil

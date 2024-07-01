@@ -107,7 +107,7 @@ type Event struct {
 	PurposeOfEvent []*PurposeOfEvent `json:"purposeOfEvent,omitempty"`
 }
 
-type AuditEvent struct {
+type RootEvent struct {
 	ResourceType string         `json:"resourceType,omitempty"`
 	Event        *Event         `json:"event,omitempty"`
 	Participant  []*Participant `json:"participant,omitempty"`
