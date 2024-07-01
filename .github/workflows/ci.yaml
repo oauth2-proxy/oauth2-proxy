@@ -45,7 +45,7 @@ jobs:
         chmod +x ./cc-test-reporter
 
     - name: Verify Code Generation
-      run: 
+      run: |
         make verify-generate
 
     - name: Lint
