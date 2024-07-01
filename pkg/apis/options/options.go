@@ -72,6 +72,14 @@ type Options struct {
 	oidcVerifier       internaloidc.IDTokenVerifier
 	jwtBearerVerifiers []internaloidc.IDTokenVerifier
 	realClientIPParser ipapi.RealClientIPParser
+
+	// Philips opts
+	EnableAudit      bool   `flag:"enable-audit" cfg:"enable_audit"`
+	AuditURL         string `flag:"audit-url" cfg:"audit_url"`
+	AuditProductName string `flag:"audit-product-name" cfg:"audit_product_name"`
+	AuditProductKey  string `flag:"audit-product-key" cfg:"audit_product_key"`
+	AuditSharedKey   string `flag:"audit-shared-key" cfg:"audit_shared_key"`
+	AuditSecretKey   string `flag:"audit-secret-key" cfg:"audit_secret_key"`
 }
 
 // Options for Getting internal values
@@ -148,6 +156,14 @@ func NewFlagSet() *pflag.FlagSet {
 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+
+	// Philips opts
+	flagSet.Bool("enable-audit", false, "Persist audit entries in the audit server upon user authentication and relevant errors")
+	flagSet.String("audit-url", "", "The url where the audit entries will be posted")
+	flagSet.String("audit-product-name", "", "The name of the product to be used in the audit")
+	flagSet.String("audit-product-key", "", "The key of the audit")
+	flagSet.String("audit-shared-key", "", "The shared key of the audit")
+	flagSet.String("audit-secret-key", "", "The secret key of the audit")
 
 	flagSet.AddFlagSet(cookieFlagSet())
 	flagSet.AddFlagSet(loggingFlagSet())
