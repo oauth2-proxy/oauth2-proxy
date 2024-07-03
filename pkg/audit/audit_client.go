@@ -79,7 +79,7 @@ func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 		Source: Source{
 			Identifier: Identifier{
 				Type: &Coding{
-					System:  "http://hl7.org/fhir/ValueSet/identifier-type",
+					System:  "http://hl7.org/fhir/ValueSet/audit-source-type",
 					Code:    "4",
 					Display: "Application Server",
 				},
@@ -153,8 +153,29 @@ func (c *Client) send(msg string) error {
 }
 
 func (c *ClientOpts) Validate() error {
-	if strings.TrimSpace(c.ProductName) == "" || strings.TrimSpace(c.ProductKey) == "" || strings.TrimSpace(c.SecretKey) == "" || strings.TrimSpace(c.SharedKey) == "" {
-		return errors.New("the audit is enabled and therefore the audit product name, audit key, audit secret key or audit shared key are required (however found empty)")
+	err := errors.New("")
+	if strings.TrimSpace(c.URL) == "" {
+		err = errors.New("the OAUTH2_PROXY_AUDIT_URL must be set")
+	}
+
+	if strings.TrimSpace(c.ProductName) == "" {
+		err = fmt.Errorf("%w: the OAUTH2_PROXY_AUDIT_PRODUCT_NAME must be set", err)
+	}
+
+	if strings.TrimSpace(c.ProductKey) == "" {
+		err = fmt.Errorf("%w: the OAUTH2_PROXY_AUDIT_PRODUCT_KEY must be set", err)
+	}
+
+	if strings.TrimSpace(c.SharedKey) == "" {
+		err = fmt.Errorf("%w: the OAUTH2_PROXY_AUDIT_SHARED_KEY must be set", err)
+	}
+
+	if strings.TrimSpace(c.SecretKey) == "" {
+		err = fmt.Errorf("%w: the OAUTH2_PROXY_AUDIT_SECRET_KEY must be set", err)
+	}
+
+	if err != nil && err.Error() != "" {
+		return fmt.Errorf("the OAUTH2_PROXY_ENABLE_AUDIT is set to true however these are missing: %w", err)
 	}
 	return nil
 }
