@@ -24,6 +24,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/redirect"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/audit"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
@@ -104,6 +105,8 @@ type OAuthProxy struct {
 	serveMux          *mux.Router
 	redirectValidator redirect.Validator
 	appDirector       redirect.AppDirector
+
+	AuditClient *audit.Client
 }
 
 // NewOAuthProxy creates a new instance of OAuthProxy from the options provided
@@ -202,6 +205,17 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		Validator:   redirectValidator,
 	})
 
+	auditClient, err := audit.NewAuditClient(&audit.ClientOpts{
+		URL:         opts.AuditURL,
+		Enabled:     opts.EnableAudit,
+		ProductName: opts.AuditProductName,
+		ProductKey:  opts.AuditProductKey,
+		SharedKey:   opts.AuditSharedKey,
+		SecretKey:   opts.AuditSecretKey})
+	if err != nil {
+		return nil, fmt.Errorf("error setting up server (audit client): %v", err)
+	}
+
 	p := &OAuthProxy{
 		CookieOptions: &opts.Cookie,
 		Validator:     validator,
@@ -231,6 +245,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		upstreamProxy:      upstreamProxy,
 		redirectValidator:  redirectValidator,
 		appDirector:        appDirector,
+		AuditClient:        auditClient,
 	}
 	p.buildServeMux(opts.ProxyPrefix)
 
@@ -851,7 +866,9 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if !csrf.CheckOAuthState(nonce) {
-		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: CSRF token mismatch, potential attack")
+		errorMsg := "Invalid authentication via OAuth2: CSRF token mismatch, potential attack"
+		logger.PrintAuthf(session.Email, req, logger.AuthFailure, errorMsg)
+		p.AuditClient.CreateFailedLoginAuditEntry(session, appRedirect, req.Header.Get("edisp-org-id"), errorMsg)
 		p.ErrorPage(rw, req, http.StatusForbidden, "CSRF token mismatch, potential attack", "Login Failed: Unable to find a valid CSRF token. Please try again.")
 		return
 	}
@@ -880,6 +897,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
+		p.AuditClient.CreateSuccessfulLoginAuditEntry(session, appRedirect, req.Header.Get("edisp-org-id"))
 		http.Redirect(rw, req, appRedirect, http.StatusFound)
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")

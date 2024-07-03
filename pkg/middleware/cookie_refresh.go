@@ -41,6 +41,7 @@ func (cr *cookieRefresh) refreshCookie(next http.Handler) http.Handler {
 		cookie, err := req.Cookie(cr.CookieRefreshName)
 		if err != nil {
 			logger.Errorf("SSO Cookie Refresher - Could find '%s' cookie in the request: %v", cr.CookieRefreshName, err)
+			next.ServeHTTP(rw, req)
 			return
 		}
 		resp := requests.New(cr.CookieRefreshURL).
@@ -53,6 +54,7 @@ func (cr *cookieRefresh) refreshCookie(next http.Handler) http.Handler {
 		if resp.StatusCode() != http.StatusNoContent {
 			bodyString := string(resp.Body())
 			logger.Errorf("SSO Cookie Refresher - Could not refresh the '%s' cookie in the url '%s' due to status and content: %v - %v", cr.CookieRefreshName, cr.CookieRefreshURL, resp.StatusCode(), bodyString)
+			next.ServeHTTP(rw, req)
 			return
 		}
 
