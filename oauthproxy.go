@@ -761,16 +761,18 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	extraParams := p.provider.Data().LoginURLParams(overrides)
 	prepareNoCache(rw)
 
-	var codeChallenge, codeVerifier, codeChallengeMethod string
+	var (
+		err                                              error
+		codeChallenge, codeVerifier, codeChallengeMethod string
+	)
 	if p.provider.Data().CodeChallengeMethod != "" {
 		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
-		preEncodedCodeVerifier, err := encryption.Nonce(96)
+        codeVerifier, err = encryption.GenerateRandomASCIIString(96)
 		if err != nil {
-			logger.Errorf("Unable to build random string: %v", err)
+            logger.Errorf("Unable to build random ASCII string for code verifier: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
-		codeVerifier = base64.RawURLEncoding.EncodeToString(preEncodedCodeVerifier)
 
 		codeChallenge, err = encryption.GenerateCodeChallenge(p.provider.Data().CodeChallengeMethod, codeVerifier)
 		if err != nil {
