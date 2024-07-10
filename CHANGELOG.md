@@ -8,6 +8,8 @@
 
 ## Changes since v7.4.0
 
+- [#1882](https://github.com/oauth2-proxy/oauth2-proxy/pull/1882) Make `htpasswd.GetUsers` racecondition safe
+
 # V7.4.0
 
 ## Release Highlights
