@@ -9,7 +9,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
-// providerJSON resresents the information we need from an OIDC discovery
+// providerJSON represents the information we need from an OIDC discovery
 type providerJSON struct {
 	Issuer               string   `json:"issuer"`
 	AuthURL              string   `json:"authorization_endpoint"`
