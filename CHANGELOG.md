@@ -16,6 +16,7 @@
 - [#1927](https://github.com/oauth2-proxy/oauth2-proxy/pull/1927) Fix default scope settings for none oidc providers
 - [#1951](https://github.com/oauth2-proxy/oauth2-proxy/pull/1951) Fix validate URL, check if query string marker (?) or separator (&) needs to be appended (@miguelborges99)
 - [#1920](https://github.com/oauth2-proxy/oauth2-proxy/pull/1920) Make sure emailClaim is not overriden if userIDClaim is not set
+- [#2013](https://github.com/oauth2-proxy/oauth2-proxy/pull/2013) Upgrade alpine to version 3.17.2 and library dependencies (@miguelborges99)
 
 # V7.4.0
 
