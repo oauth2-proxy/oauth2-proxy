@@ -2,20 +2,15 @@ package redis
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"encoding/pem"
-	"log"
 	"os"
-	"testing"
 	"time"
 
 	"github.com/Bose/minisentinel"
 	"github.com/alicebob/miniredis/v2"
-	"github.com/go-redis/redis/v9"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
@@ -24,28 +19,6 @@ import (
 )
 
 const redisPassword = "0123456789abcdefghijklmnopqrstuv"
-
-// wrappedRedisLogger wraps a logger so that we can coerce the logger to
-// fit the expected signature for go-redis logging
-type wrappedRedisLogger struct {
-	*log.Logger
-}
-
-func (l *wrappedRedisLogger) Printf(_ context.Context, format string, v ...interface{}) {
-	l.Logger.Printf(format, v...)
-}
-
-func TestSessionStore(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
-
-	redisLogger := &wrappedRedisLogger{Logger: log.New(os.Stderr, "redis: ", log.LstdFlags|log.Lshortfile)}
-	redisLogger.SetOutput(GinkgoWriter)
-	redis.SetLogger(redisLogger)
-
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Redis SessionStore")
-}
 
 var (
 	cert   tls.Certificate

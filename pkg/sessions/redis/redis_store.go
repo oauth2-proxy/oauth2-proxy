@@ -70,6 +70,12 @@ func (store *SessionStore) Lock(key string) sessions.Lock {
 	return store.Client.Lock(key)
 }
 
+// VerifyConnection verifies the redis connection is valid and the
+// server is responsive
+func (store *SessionStore) VerifyConnection(ctx context.Context) error {
+	return store.Client.Ping(ctx)
+}
+
 // NewRedisClient makes a redis.Client (either standalone, sentinel aware, or
 // redis cluster)
 func NewRedisClient(opts options.RedisStoreOptions) (Client, error) {
@@ -205,3 +211,5 @@ func parseRedisURLs(urls []string) ([]string, *redis.Options, error) {
 	}
 	return addrs, redisOptions, nil
 }
+
+var _ persistence.Store = (*SessionStore)(nil)

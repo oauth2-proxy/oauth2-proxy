@@ -69,7 +69,7 @@ stringData:
       level: debug
     web:
       http: 0.0.0.0:5556
-    oauth2: 
+    oauth2:
       alwaysShowLoginScreen: false
       skipApprovalScreen: true
     staticClients:
@@ -449,11 +449,11 @@ spec:
           timeoutSeconds: 1
         readinessProbe:
           httpGet:
-            path: /ping
+            path: /ready
             port: http
             scheme: HTTP
           initialDelaySeconds: 0
-          timeoutSeconds: 1
+          timeoutSeconds: 5
           successThreshold: 1
           periodSeconds: 10
         resources:
