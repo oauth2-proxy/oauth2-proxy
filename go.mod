@@ -21,7 +21,7 @@ require (
 	github.com/oauth2-proxy/mockoidc v0.0.0-20220221072942-e3afe97dec43
 	github.com/oauth2-proxy/tools/reference-gen v0.0.0-20210118095127-56ffd7384404
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.27.2
+	github.com/onsi/gomega v1.27.6
 	github.com/pierrec/lz4/v4 v4.1.17
 	github.com/prometheus/client_golang v1.14.0
 	github.com/redis/go-redis/v9 v9.0.2
@@ -31,7 +31,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	golang.org/x/crypto v0.23.0
-	golang.org/x/exp v0.0.0-20230307190834-24139beb5833
+	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	golang.org/x/net v0.25.0
 	golang.org/x/oauth2 v0.13.0
 	golang.org/x/sync v0.4.0

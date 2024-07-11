@@ -2,12 +2,12 @@ package encryption
 
 import (
 	"crypto/hmac"
-    "crypto/rand"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"hash"
-    "math/big"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,7 +17,7 @@ import (
 const (
 	CodeChallengeMethodPlain = "plain"
 	CodeChallengeMethodS256  = "S256"
-    asciiCharset             = "-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
+	asciiCharset             = "-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
 )
 
 // SecretBytes attempts to base64 decode the secret, if that fails it treats the secret as binary

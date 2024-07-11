@@ -8,6 +8,7 @@
 
 ## Changes since v7.4.0
 
+- [#1713](https://github.com/oauth2-proxy/oauth2-proxy/pull/1713) Add session cookie support (@t-katsumura @tanuki884)
 - [#1839](https://github.com/oauth2-proxy/oauth2-proxy/pull/1839) Add readiness checks for deeper health checks (@kobim)
 - [#1873](https://github.com/oauth2-proxy/oauth2-proxy/pull/1873) Fix empty users with some OIDC providers (@babs)
 - [#1882](https://github.com/oauth2-proxy/oauth2-proxy/pull/1882) Make `htpasswd.GetUsers` racecondition safe

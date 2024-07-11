@@ -7,12 +7,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-    "strings"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
-    "unicode"
 	"time"
+	"unicode"
 
 	"github.com/stretchr/testify/assert"
 )
