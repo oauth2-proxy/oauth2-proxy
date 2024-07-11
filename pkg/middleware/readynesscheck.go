@@ -37,3 +37,4 @@ func readynessCheck(path string, verifiable Verifiable, next http.Handler) http.
 
 		next.ServeHTTP(rw, req)
 	})
+}
