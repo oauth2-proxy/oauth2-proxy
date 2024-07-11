@@ -43,8 +43,8 @@ func Load(configFileName string, flagSet *pflag.FlagSet, into interface{}) error
 		return fmt.Errorf("unable to register flags: %w", err)
 	}
 
-	// UnmarhsalExact will return an error if the config includes options that are
-	// not mapped to felds of the into struct
+	// UnmarshalExact will return an error if the config includes options that are
+	// not mapped to fields of the into struct
 	err = v.UnmarshalExact(into, decodeFromCfgTag)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling config: %w", err)
