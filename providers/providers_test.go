@@ -125,7 +125,7 @@ func TestScope(t *testing.T) {
 
 	testCases := []struct {
 		name            string
-        configuredType  options.ProviderType
+		configuredType  options.ProviderType
 		configuredScope string
 		expectedScope   string
 		allowedGroups   []string
@@ -133,23 +133,23 @@ func TestScope(t *testing.T) {
 		{
 			name:            "oidc: with no scope provided",
 			configuredScope: "",
-            configuredType:  "oidc",
+			configuredType:  "oidc",
 			expectedScope:   "openid email profile",
 		},
 		{
 			name:            "oidc: with no scope provided and groups",
-            configuredType:  "oidc",
+			configuredType:  "oidc",
 			configuredScope: "",
 			expectedScope:   "openid email profile groups",
 			allowedGroups:   []string{"foo"},
 		},
 		{
 			name:            "oidc: with a configured scope provided",
-            configuredType:  "oidc",
+			configuredType:  "oidc",
 			configuredScope: "openid",
 			expectedScope:   "openid",
 		},
-        {
+		{
 			name:            "github: with no scope provided",
 			configuredType:  "github",
 			configuredScope: "",
@@ -269,3 +269,4 @@ func TestEmailClaimCorrectlySet(t *testing.T) {
 			g.Expect(pd.EmailClaim).To(Equal(tc.expectedEmailClaim))
 		})
 	}
+}

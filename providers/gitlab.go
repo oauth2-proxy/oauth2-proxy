@@ -32,7 +32,7 @@ var _ Provider = (*GitLabProvider)(nil)
 
 // NewGitLabProvider initiates a new GitLabProvider
 func NewGitLabProvider(p *ProviderData, opts options.GitLabOptions) (*GitLabProvider, error) {
-    p.setProviderDefaults(providerDefaults{
+	p.setProviderDefaults(providerDefaults{
 		name: gitlabProviderName,
 	})
 	if p.Scope == "" {

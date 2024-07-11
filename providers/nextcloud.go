@@ -21,7 +21,7 @@ const nextCloudProviderName = "Nextcloud"
 
 // NewNextcloudProvider initiates a new NextcloudProvider
 func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
-    p.setProviderDefaults(providerDefaults{
+	p.setProviderDefaults(providerDefaults{
 		name: nextCloudProviderName,
 	})
 	p.getAuthorizationHeaderFunc = makeOIDCHeader

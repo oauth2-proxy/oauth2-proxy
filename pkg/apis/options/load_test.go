@@ -50,7 +50,7 @@ var _ = Describe("Load", func() {
 		Options: Options{
 			ProxyPrefix:        "/oauth2",
 			PingPath:           "/ping",
-            ReadyPath:          "/ready",
+			ReadyPath:          "/ready",
 			RealClientIPHeader: "X-Real-IP",
 			ForceHTTPS:         false,
 			Cookie:             cookieDefaults(),

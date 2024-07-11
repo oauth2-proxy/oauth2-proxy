@@ -486,7 +486,7 @@ func SessionStoreInterfaceTests(in *testInput) {
 		})
 	})
 
-    Context("when VerifyConnection is called", func() {
+	Context("when VerifyConnection is called", func() {
 		It("should return without an error", func() {
 			Expect(in.ss().VerifyConnection(in.request.Context())).ToNot(HaveOccurred())
 		})

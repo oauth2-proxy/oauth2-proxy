@@ -14,7 +14,7 @@ type Client interface {
 	Lock(key string) sessions.Lock
 	Set(ctx context.Context, key string, value []byte, expiration time.Duration) error
 	Del(ctx context.Context, key string) error
-    Ping(ctx context.Context) error
+	Ping(ctx context.Context) error
 }
 
 var _ Client = (*client)(nil)
