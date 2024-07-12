@@ -37,7 +37,7 @@ func Validate(o *options.Options) error {
 		}
 		http.DefaultClient = &http.Client{Transport: insecureTransport}
 	} else if len(o.Providers[0].CAFiles) > 0 {
-		pool, err := util.GetCertPool(o.Providers[0].CAFiles)
+		pool, err := util.GetCertPool(o.Providers[0].CAFiles, o.Providers[0].UseSystemTrustStore)
 		if err == nil {
 			transport := http.DefaultTransport.(*http.Transport).Clone()
 			transport.TLSClientConfig = &tls.Config{
