@@ -387,8 +387,13 @@ sub:
 
 		DescribeTable("LoadYAML",
 			func(in loadYAMLTableInput) {
-				var configFileName string
+				// Set the required environment variables before running the test
+				os.Setenv("TESTUSER", "Alice")
 
+				// Unset the environment variables after running the test
+				defer os.Unsetenv("TESTUSER")
+
+				var configFileName string
 				if in.configFile != nil {
 					By("Creating a config file")
 					configFile, err := os.CreateTemp("", "oauth2-proxy-test-config-file")
@@ -466,6 +471,20 @@ sub:
 				input:          &TestOptions{},
 				expectedOutput: &TestOptions{},
 				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
+			}),
+			Entry("with a config file containing environment variable references", loadYAMLTableInput{
+				configFile: []byte("stringOption: ${TESTUSER}"),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "Alice",
+				},
+			}),
+			Entry("with a config file containing env variable references, with a fallback value", loadYAMLTableInput{
+				configFile: []byte("stringOption: ${TESTUSER2=Bob}"),
+				input:      &TestOptions{},
+				expectedOutput: &TestOptions{
+					StringOption: "Bob",
+				},
 			}),
 		)
 	})
