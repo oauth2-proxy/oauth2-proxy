@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/compute/metadata"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -22,6 +23,7 @@ import (
 	"golang.org/x/oauth2/google"
 	admin "google.golang.org/api/admin/directory/v1"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/impersonate"
 	"google.golang.org/api/option"
 )
 
@@ -231,14 +233,15 @@ func getAdminService(opts options.GoogleOptions) *admin.Service {
 	ctx := context.Background()
 	var client *http.Client
 	if opts.UseApplicationDefaultCredentials {
-		ts, err := google.FindDefaultCredentialsWithParams(ctx, google.CredentialsParams{
-			Subject: opts.AdminEmail,
-			Scopes:  []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
+		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
+			TargetPrincipal: getTargetPrincipal(ctx, opts),
+			Scopes:          []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
+			Subject:         opts.AdminEmail,
 		})
 		if err != nil {
 			logger.Fatal("failed to fetch application default credentials: ", err)
 		}
-		client = oauth2.NewClient(ctx, ts.TokenSource)
+		client = oauth2.NewClient(ctx, ts)
 	} else {
 		credentialsReader, err := os.Open(opts.ServiceAccountJSON)
 		if err != nil {
@@ -263,6 +266,36 @@ func getAdminService(opts options.GoogleOptions) *admin.Service {
 		logger.Fatal(err)
 	}
 	return adminService
+}
+
+func getTargetPrincipal(ctx context.Context, opts options.GoogleOptions) (targetPrincipal string) {
+	targetPrincipal = opts.TargetPrincipal
+
+	if targetPrincipal != "" {
+		return targetPrincipal
+	}
+	logger.Print("INFO: no target principal set, trying to automatically determine one instead.")
+	credential, err := google.FindDefaultCredentials(ctx)
+	if err != nil {
+		logger.Fatal("failed to fetch application default credentials: ", err)
+	}
+	content := map[string]interface{}{}
+
+	err = json.Unmarshal(credential.JSON, &content)
+	switch {
+	case err != nil && !metadata.OnGCE():
+		logger.Fatal("unable to unmarshal Application Default Credentials JSON", err)
+	case content["client_email"] != nil:
+		targetPrincipal = fmt.Sprintf("%v", content["client_email"])
+	case metadata.OnGCE():
+		targetPrincipal, err = metadata.Email("")
+		if err != nil {
+			logger.Fatal("error while calling the GCE metadata server", err)
+		}
+	default:
+		logger.Fatal("unable to determine Application Default Credentials TargetPrincipal, try overriding with --target-principal instead.")
+	}
+	return targetPrincipal
 }
 
 func userInGroup(service *admin.Service, group string, email string) bool {
