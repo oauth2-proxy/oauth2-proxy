@@ -153,13 +153,13 @@ func TestScope(t *testing.T) {
 			name:            "github: with no scope provided",
 			configuredType:  "github",
 			configuredScope: "",
-			expectedScope:   "user:email",
+			expectedScope:   "user:email read:org",
 		},
 		{
 			name:            "github: with a configured scope provided",
 			configuredType:  "github",
-			configuredScope: "user:email org:read",
-			expectedScope:   "user:email org:read",
+			configuredScope: "read:user read:org",
+			expectedScope:   "read:user read:org",
 		},
 	}
 
