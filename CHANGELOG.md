@@ -11,6 +11,7 @@
 # V7.5.1
 
 - [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
+- [#2274](https://github.com/oauth2-proxy/oauth2-proxy/pull/2274) Upgrade golang.org/x/net to v0.17.0 (@pierluigilenoci)
 
 ## Release Highlights
 - 🐛 Several bugs have been squashed
