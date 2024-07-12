@@ -413,7 +413,7 @@ func (patTest *PassAccessTokenTest) getCallbackEndpoint() (httpCode int, cookie 
 		http.MethodGet,
 		fmt.Sprintf(
 			"/oauth2/callback?code=callback_code&state=%s",
-			encodeState(csrf.HashOAuthState(), "%2F"),
+			encodeState(csrf.HashOAuthState(), "%2F", false),
 		),
 		strings.NewReader(""),
 	)
@@ -3286,6 +3286,29 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
 			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
 		})
 	}
+}
+
+func TestStateEncodesCorrectly(t *testing.T) {
+	state := "some_state_to_test"
+	nonce := "some_nonce_to_test"
+
+	encodedResult := encodeState(nonce, state, true)
+	assert.Equal(t, "c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", encodedResult)
+
+	notEncodedResult := encodeState(nonce, state, false)
+	assert.Equal(t, "some_nonce_to_test:some_state_to_test", notEncodedResult)
+}
+
+func TestStateDecodesCorrectly(t *testing.T) {
+	nonce, redirect, _ := decodeState("c29tZV9ub25jZV90b190ZXN0OnNvbWVfc3RhdGVfdG9fdGVzdA", true)
+
+	assert.Equal(t, "some_nonce_to_test", nonce)
+	assert.Equal(t, "some_state_to_test", redirect)
+
+	nonce2, redirect2, _ := decodeState("some_nonce_to_test:some_state_to_test", false)
+
+	assert.Equal(t, "some_nonce_to_test", nonce2)
+	assert.Equal(t, "some_state_to_test", redirect2)
 }
 
 func TestAuthOnlyAllowedEmails(t *testing.T) {
