@@ -176,6 +176,8 @@ func (l *LegacyUpstreams) convert() (UpstreamConfig, error) {
 			upstream.ProxyWebSockets = nil
 			upstream.FlushInterval = nil
 			upstream.Timeout = nil
+		case "unix":
+			upstream.Path = "/"
 		}
 
 		upstreams.Upstreams = append(upstreams.Upstreams, upstream)

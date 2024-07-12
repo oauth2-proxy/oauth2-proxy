@@ -98,6 +98,11 @@ var _ = Describe("Proxy Suite", func() {
 							RewriteTarget: "/double-match/rewrite/$1",
 							URI:           serverAddr,
 						},
+						{
+							ID:   "unix-upstream",
+							Path: "/unix/",
+							URI:  unixServerAddr,
+						},
 					}
 				}
 
@@ -336,6 +341,27 @@ var _ = Describe("Proxy Suite", func() {
 					raw: "404 page not found\n",
 				},
 				upstream: "",
+			}),
+			Entry("with a request to the UNIX socket backend", &proxyTableInput{
+				target: "http://example.localhost/unix/file",
+				response: testHTTPResponse{
+					code: 200,
+					header: map[string][]string{
+						contentType: {applicationJSON},
+					},
+					request: testHTTPRequest{
+						Method: "GET",
+						URL:    "http://example.localhost/unix/file",
+						Header: map[string][]string{
+							"Gap-Auth":      {""},
+							"Gap-Signature": {"sha256 4ux8esLj2fw9sTWZwgFhb00bGbw0Fnhed5Fm9jz5Blw="},
+						},
+						Body:       []byte{},
+						Host:       "example.localhost",
+						RequestURI: "http://example.localhost/unix/file",
+					},
+				},
+				upstream: "unix-upstream",
 			}),
 		)
 	})
