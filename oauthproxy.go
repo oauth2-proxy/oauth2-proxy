@@ -87,6 +87,7 @@ type OAuthProxy struct {
 	allowedRoutes       []allowedRoute
 	apiRoutes           []apiRoute
 	redirectURL         *url.URL // the url to receive requests at
+	relativeRedirectURL bool
 	whitelistDomains    []string
 	provider            providers.Provider
 	sessionStore        sessionsapi.SessionStore
@@ -230,6 +231,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		provider:            provider,
 		sessionStore:        sessionStore,
 		redirectURL:         redirectURL,
+		relativeRedirectURL: opts.RelativeRedirectURL,
 		apiRoutes:           apiRoutes,
 		allowedRoutes:       allowedRoutes,
 		whitelistDomains:    opts.WhitelistDomains,
@@ -1045,7 +1047,7 @@ func prepareNoCacheMiddleware(next http.Handler) http.Handler {
 // This is usually the OAuthProxy callback URL.
 func (p *OAuthProxy) getOAuthRedirectURI(req *http.Request) string {
 	// if `p.redirectURL` already has a host, return it
-	if p.redirectURL.Host != "" {
+	if p.relativeRedirectURL || p.redirectURL.Host != "" {
 		return p.redirectURL.String()
 	}
 

@@ -18,15 +18,16 @@ type SignatureData struct {
 // Options holds Configuration Options that can be set by Command Line Flag,
 // or Config File
 type Options struct {
-	ProxyPrefix        string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
-	PingPath           string   `flag:"ping-path" cfg:"ping_path"`
-	PingUserAgent      string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
-	ReadyPath          string   `flag:"ready-path" cfg:"ready_path"`
-	ReverseProxy       bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
-	RealClientIPHeader string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
-	TrustedIPs         []string `flag:"trusted-ip" cfg:"trusted_ips"`
-	ForceHTTPS         bool     `flag:"force-https" cfg:"force_https"`
-	RawRedirectURL     string   `flag:"redirect-url" cfg:"redirect_url"`
+	ProxyPrefix         string   `flag:"proxy-prefix" cfg:"proxy_prefix"`
+	PingPath            string   `flag:"ping-path" cfg:"ping_path"`
+	PingUserAgent       string   `flag:"ping-user-agent" cfg:"ping_user_agent"`
+	ReadyPath           string   `flag:"ready-path" cfg:"ready_path"`
+	ReverseProxy        bool     `flag:"reverse-proxy" cfg:"reverse_proxy"`
+	RealClientIPHeader  string   `flag:"real-client-ip-header" cfg:"real_client_ip_header"`
+	TrustedIPs          []string `flag:"trusted-ip" cfg:"trusted_ips"`
+	ForceHTTPS          bool     `flag:"force-https" cfg:"force_https"`
+	RawRedirectURL      string   `flag:"redirect-url" cfg:"redirect_url"`
+	RelativeRedirectURL bool     `flag:"relative-redirect-url" cfg:"relative_redirect_url"`
 
 	AuthenticatedEmailsFile string   `flag:"authenticated-emails-file" cfg:"authenticated_emails_file"`
 	EmailDomains            []string `flag:"email-domain" cfg:"email_domains"`
