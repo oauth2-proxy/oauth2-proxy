@@ -1,5 +1,7 @@
 # Vx.x.x (Pre-release)
+
 ## Release Highlights
+
 ## Important Notes
 
 ## Breaking Changes
@@ -7,6 +9,8 @@
 ## Changes since v7.5.1
 
 # V7.5.1
+
+- [#2128](https://github.com/oauth2-proxy/oauth2-proxy/pull/2128) Update dependencies (@vllvll)
 
 ## Release Highlights
 - 🐛 Several bugs have been squashed
