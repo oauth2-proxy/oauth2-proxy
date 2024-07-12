@@ -58,6 +58,15 @@ Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/doc
 
 ![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
 
+## Images
+
+From `v7.6.0` and up the base image has been changed from Alpine to [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless).
+This image comes with even fewer installed dependencies and thus should improve security. The image therefore is also slightly smaller than Alpine.
+For debugging purposes (and those who really need it (i.e. `armv6`)) we still provide images based on Alpine. The tags of these images are suffixed with `-alpine`.
+
+Since 2023-11-18 we provide nightly images. These images are build and pushed nightly to `quay.io/oauth2-proxy/oauth2-proxy-nightly` from `master`.
+These images should be considered alpha and therefore *should not* be used for production purposes unless you know what you're doing.
+
 ### Configure OAuth Proxy Cookie as Session Cookie
 
 OAuth Proxy Cookie can be configured as session cookie by setting cookie expire time (**--cookie-expire**) as 0.
