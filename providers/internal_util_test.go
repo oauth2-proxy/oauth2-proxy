@@ -26,13 +26,13 @@ type ValidateSessionTestProvider struct {
 
 var _ Provider = (*ValidateSessionTestProvider)(nil)
 
-func (tp *ValidateSessionTestProvider) GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error) {
+func (tp *ValidateSessionTestProvider) GetEmailAddress(_ context.Context, _ *sessions.SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
 // Note that we're testing the internal validateToken() used to implement
 // several Provider's ValidateSession() implementations
-func (tp *ValidateSessionTestProvider) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
+func (tp *ValidateSessionTestProvider) ValidateSession(_ context.Context, _ *sessions.SessionState) bool {
 	return false
 }
 
