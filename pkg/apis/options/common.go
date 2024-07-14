@@ -17,6 +17,9 @@ type SecretSource struct {
 
 	// FromFile expects a path to a file containing the secret value.
 	FromFile string `json:"fromFile,omitempty"`
+
+	// Prefix is an optional prefix that will be prepended to the value if it is non-empty.
+	Prefix string `json:"prefix,omitempty"`
 }
 
 // Duration is an alias for time.Duration so that we can ensure the marshalling

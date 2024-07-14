@@ -10,6 +10,7 @@
 
 - [#2539](https://github.com/oauth2-proxy/oauth2-proxy/pull/2539) pkg/http: Fix leaky test (@isodude)
 - [#4917](https://github.com/oauth2-proxy/oauth2-proxy/pull/4917) Upgraded all modules to the latest version (@pierluigilenoci)
+- [#2451](https://github.com/oauth2-proxy/oauth2-proxy/pull/2451) Add support for prefix in SecretSource (@aslafy-z)
 
 # V7.6.0
 

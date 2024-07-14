@@ -33,12 +33,12 @@ type ClaimSource struct {
 	// loaded from.
 	Claim string `json:"claim,omitempty"`
 
-	// Prefix is an optional prefix that will be prepended to the value of the
-	// claim if it is non-empty.
+	// Prefix is an optional prefix that will be prepended to the value if it is non-empty.
 	Prefix string `json:"prefix,omitempty"`
 
 	// BasicAuthPassword converts this claim into a basic auth header.
 	// Note the value of claim will become the basic auth username and the
 	// basicAuthPassword will be used as the password value.
+	// The Prefix field is disregarded when this option is enabled.
 	BasicAuthPassword *SecretSource `json:"basicAuthPassword,omitempty"`
 }

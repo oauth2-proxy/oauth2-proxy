@@ -201,8 +201,8 @@ ClaimSource allows loading a header value from a claim within the session
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. |
-| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
-| `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value if it is non-empty. |
+| `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value.<br/>The Prefix field is disregarded when this option is enabled. |
 
 ### Duration
 #### (`string` alias)
@@ -278,9 +278,10 @@ make up the header value
 | `value` | _[]byte_ | Value expects a base64 encoded string value. |
 | `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
 | `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
+| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value if it is non-empty. |
 | `claim` | _string_ | Claim is the name of the claim in the session that the value should be<br/>loaded from. |
-| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value of the<br/>claim if it is non-empty. |
-| `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value. |
+| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value if it is non-empty. |
+| `basicAuthPassword` | _[SecretSource](#secretsource)_ | BasicAuthPassword converts this claim into a basic auth header.<br/>Note the value of claim will become the basic auth username and the<br/>basicAuthPassword will be used as the password value.<br/>The Prefix field is disregarded when this option is enabled. |
 
 ### KeycloakOptions
 
@@ -472,6 +473,7 @@ Only one source within the struct should be defined at any time.
 | `value` | _[]byte_ | Value expects a base64 encoded string value. |
 | `fromEnv` | _string_ | FromEnv expects the name of an environment variable. |
 | `fromFile` | _string_ | FromFile expects a path to a file containing the secret value. |
+| `prefix` | _string_ | Prefix is an optional prefix that will be prepended to the value if it is non-empty. |
 
 ### Server
 
