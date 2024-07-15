@@ -100,6 +100,13 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
 	}
 
+	if opts.Password != "" {
+		opt.Password = opts.Password
+	}
+	if opts.Username != "" {
+		opt.Username = opts.Username
+	}
+
 	if err := setupTLSConfig(opts, opt); err != nil {
 		return nil, err
 	}
@@ -108,6 +115,7 @@ func buildSentinelClient(opts options.RedisStoreOptions) (Client, error) {
 		MasterName:       opts.SentinelMasterName,
 		SentinelAddrs:    addrs,
 		SentinelPassword: opts.SentinelPassword,
+		Username:         opts.Username,
 		Password:         opts.Password,
 		TLSConfig:        opt.TLSConfig,
 		ConnMaxIdleTime:  time.Duration(opts.IdleTimeout) * time.Second,
@@ -122,12 +130,20 @@ func buildClusterClient(opts options.RedisStoreOptions) (Client, error) {
 		return nil, fmt.Errorf("could not parse redis urls: %v", err)
 	}
 
+	if opts.Password != "" {
+		opt.Password = opts.Password
+	}
+	if opts.Username != "" {
+		opt.Username = opts.Username
+	}
+
 	if err := setupTLSConfig(opts, opt); err != nil {
 		return nil, err
 	}
 
 	client := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:           addrs,
+		Username:        opts.Username,
 		Password:        opts.Password,
 		TLSConfig:       opt.TLSConfig,
 		ConnMaxIdleTime: time.Duration(opts.IdleTimeout) * time.Second,
@@ -145,6 +161,9 @@ func buildStandaloneClient(opts options.RedisStoreOptions) (Client, error) {
 
 	if opts.Password != "" {
 		opt.Password = opts.Password
+	}
+	if opts.Username != "" {
+		opt.Username = opts.Username
 	}
 
 	if err := setupTLSConfig(opts, opt); err != nil {
