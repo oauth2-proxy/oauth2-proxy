@@ -182,7 +182,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 	// query the user info endpoint for user attributes
 	err := requests.New(userInfoEndpoint).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+accessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+accessToken).
 		Do().
 		UnmarshalInto(&emailData)
 	if err != nil {

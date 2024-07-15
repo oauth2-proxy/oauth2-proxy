@@ -52,10 +52,10 @@ jobs:
         uses: vazco/github-actions-branch-name@v1
         id: branch
 
-      - name: Set up Go 1.19
+      - name: Set up Go 1.21
         uses: actions/setup-go@v4
         with:
-          go-version: 1.19.x
+          go-version: 1.21.x
         id: go
 
       - name: Downloads golang mods

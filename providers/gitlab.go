@@ -166,7 +166,7 @@ func (p *GitLabProvider) getUserinfo(ctx context.Context, s *sessions.SessionSta
 	var userinfo gitlabUserinfo
 	err := requests.New(userinfoURL.String()).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalInto(&userinfo)
 	if err != nil {
@@ -245,7 +245,7 @@ func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.Session
 
 	err := requests.New(fmt.Sprintf("%s%s", endpointURL.String(), url.QueryEscape(project))).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalInto(&projectInfo)
 	if err != nil {
