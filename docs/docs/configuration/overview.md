@@ -161,7 +161,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--real-client-ip-header` | string | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP) | X-Real-IP |
 | `--redeem-url` | string | Token redemption endpoint | |
 | `--redirect-url` | string | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"` | |
-| `--relative-redirect-url` | bool | allow relative OAuth Redirect URL.` | |
+| `--relative-redirect-url` | bool | allow relative OAuth Redirect URL.` | false |
 | `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster` | |
 | `--redis-connection-url` | string | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`) | |
 | `--redis-insecure-skip-tls-verify` | bool | skip TLS verification when connecting to Redis | false |
