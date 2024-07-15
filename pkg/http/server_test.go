@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	. "github.com/onsi/ginkgo"
@@ -26,9 +27,13 @@ var _ = Describe("Server", func() {
 			expectedErr        error
 			expectHTTPListener bool
 			expectTLSListener  bool
+			ipv6               bool
 		}
 
 		DescribeTable("When creating the new server from the options", func(in *newServerTableInput) {
+			if in.ipv6 {
+				skipDevContainer()
+			}
 			srv, err := NewServer(in.opts)
 			if in.expectedErr != nil {
 				Expect(err).To(MatchError(ContainSubstring(in.expectedErr.Error())))
@@ -303,6 +308,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        nil,
 				expectHTTPListener: true,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 valid https bind address, with no TLS config", &newServerTableInput{
 				opts: Opts{
@@ -312,6 +318,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up TLS listener: no TLS config provided"),
 				expectHTTPListener: false,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 valid https bind address, and valid TLS config", &newServerTableInput{
 				opts: Opts{
@@ -325,6 +332,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        nil,
 				expectHTTPListener: false,
 				expectTLSListener:  true,
+				ipv6:               true,
 			}),
 			Entry("with a both a ipv6 valid http and ipv6 valid https bind address, and valid TLS config", &newServerTableInput{
 				opts: Opts{
@@ -339,6 +347,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        nil,
 				expectHTTPListener: true,
 				expectTLSListener:  true,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 invalid bind address scheme", &newServerTableInput{
 				opts: Opts{
@@ -348,6 +357,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up listener: listen (invalid, [::1]:0) failed: listen invalid: unknown network invalid"),
 				expectHTTPListener: false,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 invalid secure bind address scheme", &newServerTableInput{
 				opts: Opts{
@@ -361,6 +371,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        nil,
 				expectHTTPListener: false,
 				expectTLSListener:  true,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 invalid bind address port", &newServerTableInput{
 				opts: Opts{
@@ -370,6 +381,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up listener: listen (tcp, [::1]:a) failed: listen tcp: "),
 				expectHTTPListener: false,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 invalid secure bind address port", &newServerTableInput{
 				opts: Opts{
@@ -383,6 +395,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up TLS listener: listen ([::1]:a) failed: listen tcp: "),
 				expectHTTPListener: false,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 invalid TLS key", &newServerTableInput{
 				opts: Opts{
@@ -398,6 +411,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up TLS listener: could not load certificate: could not parse certificate data: tls: failed to find any PEM data in key input"),
 				expectHTTPListener: false,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 invalid TLS cert", &newServerTableInput{
 				opts: Opts{
@@ -413,6 +427,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up TLS listener: could not load certificate: could not parse certificate data: tls: failed to find any PEM data in certificate input"),
 				expectHTTPListener: false,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 address, with no TLS key", &newServerTableInput{
 				opts: Opts{
@@ -425,6 +440,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up TLS listener: could not load certificate: could not load key data: no configuration provided"),
 				expectHTTPListener: false,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 address, with no TLS cert", &newServerTableInput{
 				opts: Opts{
@@ -437,6 +453,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up TLS listener: could not load certificate: could not load cert data: no configuration provided"),
 				expectHTTPListener: false,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("when the ipv6 bind address is prefixed with the http scheme", &newServerTableInput{
 				opts: Opts{
@@ -446,6 +463,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        nil,
 				expectHTTPListener: true,
 				expectTLSListener:  false,
+				ipv6:               true,
 			}),
 			Entry("when the ipv6 secure bind address is prefixed with the https scheme", &newServerTableInput{
 				opts: Opts{
@@ -459,6 +477,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        nil,
 				expectHTTPListener: false,
 				expectTLSListener:  true,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 valid https bind address, and valid TLS config with MinVersion", &newServerTableInput{
 				opts: Opts{
@@ -473,6 +492,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        nil,
 				expectHTTPListener: false,
 				expectTLSListener:  true,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 valid https bind address, and invalid TLS config with unknown MinVersion", &newServerTableInput{
 				opts: Opts{
@@ -487,6 +507,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up TLS listener: unknown TLS MinVersion config provided"),
 				expectHTTPListener: false,
 				expectTLSListener:  true,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 valid https bind address, and valid TLS config with CipherSuites", &newServerTableInput{
 				opts: Opts{
@@ -504,6 +525,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        nil,
 				expectHTTPListener: false,
 				expectTLSListener:  true,
+				ipv6:               true,
 			}),
 			Entry("with an ipv6 valid https bind address, and invalid TLS config with unknown CipherSuites", &newServerTableInput{
 				opts: Opts{
@@ -521,6 +543,7 @@ var _ = Describe("Server", func() {
 				expectedErr:        errors.New("error setting up TLS listener: could not parse cipher suites: unknown TLS cipher suite name specified \"TLS_RSA_WITH_RC4_64_SHA\""),
 				expectHTTPListener: false,
 				expectTLSListener:  true,
+				ipv6:               true,
 			}),
 		)
 	})
@@ -738,6 +761,7 @@ var _ = Describe("Server", func() {
 			var listenAddr string
 
 			BeforeEach(func() {
+				skipDevContainer()
 				var err error
 				srv, err = NewServer(Opts{
 					Handler:     handler,
@@ -788,6 +812,7 @@ var _ = Describe("Server", func() {
 			var secureListenAddr string
 
 			BeforeEach(func() {
+				skipDevContainer()
 				var err error
 				srv, err = NewServer(Opts{
 					Handler:           handler,
@@ -857,6 +882,7 @@ var _ = Describe("Server", func() {
 			var listenAddr, secureListenAddr string
 
 			BeforeEach(func() {
+				skipDevContainer()
 				var err error
 				srv, err = NewServer(Opts{
 					Handler:           handler,
@@ -965,3 +991,9 @@ var _ = Describe("Server", func() {
 		)
 	})
 })
+
+func skipDevContainer() {
+	if os.Getenv("DEVCONTAINER") != "" {
+		Skip("Skipping testing in DevContainer environment")
+	}
+}
