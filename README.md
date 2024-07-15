@@ -8,6 +8,7 @@
 [![Test Coverage](https://api.codeclimate.com/v1/badges/a58ff79407212e2beacb/test_coverage)](https://codeclimate.com/github/oauth2-proxy/oauth2-proxy/test_coverage)
 
 A reverse proxy and static file server that provides authentication using Providers (Google, Keycloak, GitHub and others)
+to validate accounts by email, domain or group.
 
 **Note:** This repository was forked from [bitly/OAuth2_Proxy](https://github.com/bitly/oauth2_proxy) on 27/11/2018.
 Versions v3.0.0 and up are from this fork and will have diverged from any changes in the original fork.
@@ -22,7 +23,7 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 
 1.  Choose how to deploy:
 
-    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.5.1`)
+    a. Using a [Prebuilt Binary](https://github.com/oauth2-proxy/oauth2-proxy/releases) (current release is `v7.6.0`)
 
     b. Using Go to install the latest release
     ```bash
@@ -50,13 +51,13 @@ Going forward, all images shall be available at `quay.io/oauth2-proxy/oauth2-pro
 ## Security
 
 If you are running a version older than v6.0.0 we **strongly recommend you please update** to a current version.
-![OAuth2 Proxy Architecture](docs/static/img/architecture.svg)
+See [open redirect vulnerability](https://github.com/oauth2-proxy/oauth2-proxy/security/advisories/GHSA-5m6c-jp6f-2vcv) for details.
 
 ## Docs
 
 Read the docs on our [Docs site](https://oauth2-proxy.github.io/oauth2-proxy/docs/).
 
-![OAuth2 Proxy Architecture](https://cloud.githubusercontent.com/assets/45028/8027702/bd040b7a-0d6a-11e5-85b9-f8d953d04f39.png)
+![OAuth2 Proxy Architecture](docs/static/img/architecture.svg)
 
 ## Images
 
@@ -66,13 +67,6 @@ For debugging purposes (and those who really need it (i.e. `armv6`)) we still pr
 
 Since 2023-11-18 we provide nightly images. These images are build and pushed nightly to `quay.io/oauth2-proxy/oauth2-proxy-nightly` from `master`.
 These images should be considered alpha and therefore *should not* be used for production purposes unless you know what you're doing.
-
-### Configure OAuth Proxy Cookie as Session Cookie
-
-OAuth Proxy Cookie can be configured as session cookie by setting cookie expire time (**--cookie-expire**) as 0.
-
-This can also be set via environment variable: 
- - OAUTH2_PROXY_COOKIE_EXPIRE = 0
 
 ## Getting Involved
 

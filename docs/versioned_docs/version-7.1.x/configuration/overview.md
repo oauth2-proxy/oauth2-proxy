@@ -114,7 +114,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `--resource` | string | The resource that is protected (Azure AD only) | |
-| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-{Proto,Host,Uri} headers to be used on redirect selection | false |
+| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-\{Proto,Host,Uri\} headers to be used on redirect selection | false |
 | `--scope` | string | OAuth scope specification | |
 | `--session-cookie-minimal` | bool | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only) | false |
 | `--session-store-type` | string | [Session data storage backend](sessions.md); redis or cookie | cookie |

@@ -6,9 +6,17 @@
 
 ## Breaking Changes
 
-## Changes since v7.5.1
+## Changes since v7.6.0
 
-# V7.5.1
+# V7.6.0
+
+## Release Highlights
+
+## Important Notes
+
+## Breaking Changes
+
+## Changes since v7.5.1
 
 - [#2381](https://github.com/oauth2-proxy/oauth2-proxy/pull/2381) Allow username authentication to Redis cluster (@rossigee)
 - [#2345](https://github.com/oauth2-proxy/oauth2-proxy/pull/2345) Log error details when failed loading CSRF cookie (@charvadzo)
@@ -28,13 +36,16 @@
 - [#2329](https://github.com/oauth2-proxy/oauth2-proxy/pull/2329) Add an option to skip request to profile URL for resolving missing claims in id_token (@nilsgstrabo)
 - [#2299](https://github.com/oauth2-proxy/oauth2-proxy/pull/2299) bugfix: OIDCConfig based providers are not respecting flags and configs (@tuunit)
 - [#2343](https://github.com/oauth2-proxy/oauth2-proxy/pull/2343) chore: Added checksums for .tar.gz (@kvanzuijlen)
-- [#2371](https://github.com/oauth2-proxy/oauth2-proxy/pull/2371) Remove nsswitch DNS resolution workaround (@tuunit)
+- [#2248](https://github.com/oauth2-proxy/oauth2-proxy/pull/2248) Added support for semicolons in query strings. (@timwsuqld)
 - [#2196](https://github.com/oauth2-proxy/oauth2-proxy/pull/2196) Add GitHub groups (orgs/teams) support. Including `X-Forwarded-Groups` header (@tuunit)
+- [#2371](https://github.com/oauth2-proxy/oauth2-proxy/pull/2371) Remove nsswitch DNS resolution workaround (@tuunit)
 - [#2295](https://github.com/oauth2-proxy/oauth2-proxy/pull/2295) Change base-image to [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless) (@kvanzuijlen)
 - [#2356](https://github.com/oauth2-proxy/oauth2-proxy/pull/2356) Update go-jose dependency (@dasvh)
 - [#2357](https://github.com/oauth2-proxy/oauth2-proxy/pull/2357) Update ojg to latest release (@bitfehler)
 - [#1922](https://github.com/oauth2-proxy/oauth2-proxy/pull/1922) Added support for env variables in the alpha struct (@hevans-dglcom)
 - [#2235](https://github.com/oauth2-proxy/oauth2-proxy/pull/2235) Bump golang to 1.21 and min allowed version to 1.20 (@tuunit)
+
+# V7.5.1
 
 ## Release Highlights
 - 🐛 Several bugs have been squashed
@@ -44,14 +55,14 @@
 ## Important Notes
 
 - This release includes fixes for a number of CVEs, we recommend to upgrade as soon as possible.
-- The environment variable OAUTH2_PROXY_GOOGLE_GROUP has been deprecated in favor of OAUTH2_PROXY_GOOGLE_GROUPS. Next major release will remove this option. This change makes sure that the configuration options follow the documentation.
+- The environment variable OAUTH2_PROXY_GOOGLE_GROUP has been deprecated in favor of OAUTH2_PROXY_GOOGLE_GROUPS. Next major release
+will remove this option. This change makes sure that the configuration options follow the documentation.
 
 ## Breaking Changes
 
 N/A
 
 ## Changes since v7.5.0
-
 - [#2220](https://github.com/oauth2-proxy/oauth2-proxy/pull/2220) Added binary and docker release platforms (@kvanzuijlen)
 - [#2221](https://github.com/oauth2-proxy/oauth2-proxy/pull/2221) Backwards compatible fix for wrong environment variable name (OAUTH2_PROXY_GOOGLE_GROUPS) (@kvanzuijlen)
 - [#1989](https://github.com/oauth2-proxy/oauth2-proxy/pull/1989) Fix default scope for keycloak-oidc provider (@tuunit)
@@ -76,14 +87,11 @@ N/A
 - This release introduced a bug with the Keycloak OIDC provider causing no scopes to be send along with the request. Use v7.5.1 instead.
 
 ## Breaking Changes
-
 The following PR introduces a change to how auth routes are evaluated using the flags `skip-auth-route`/`skip-auth-regex`. The new behaviour uses the regex you specify to evaluate the full path including query parameters. For more details please read the detailed description [#2271](https://github.com/oauth2-proxy/oauth2-proxy/issues/2271)
 - [#2192](https://github.com/oauth2-proxy/oauth2-proxy/pull/2192) Use X-Forwarded-Uri if it exists for pathRegex match (@mzndr / @jawys)
 
 ## Changes since v7.4.0
-
 - [#2028](https://github.com/oauth2-proxy/oauth2-proxy/pull/2028) Update golang.org/x/net to v0.7.0 ato address GHSA-vvpx-j8f3-3w6h (@amrmahdi)
-- [#2133](https://github.com/oauth2-proxy/oauth2-proxy/pull/2133) Use X-Forwarded-Uri if it exists for pathRegex match (@mzndr)
 - [#1873](https://github.com/oauth2-proxy/oauth2-proxy/pull/1873) Fix empty users with some OIDC providers (@babs)
 - [#1882](https://github.com/oauth2-proxy/oauth2-proxy/pull/1882) Make `htpasswd.GetUsers` racecondition safe (@babs)
 - [#1883](https://github.com/oauth2-proxy/oauth2-proxy/pull/1883) Ensure v8 manifest variant is set on docker images (@braunsonm)
@@ -119,7 +127,7 @@ The following PR introduces a change to how auth routes are evaluated using the 
   - group membership check is now validated while using the the azure provider.
   - Azure OAuth v2.0 (https://login.microsoftonline.com/{tenant_id}/v2.0) is now available along with Azure OAuth v1.0. See https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/docs/configuration/auth.md#azure-auth-provider for more details
   - When using v2.0 Azure Auth endpoint (`https://login.microsoftonline.com/{tenant-id}/v2.0`) as `--oidc_issuer_url`, in conjunction with `--resource` flag, be sure to append `/.default` at the end of the resource name. See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#the-default-scope for more details.
-- This release includes fixes for a number of CVEs, we recomend to upgrade as soon as possible.
+- This release includes fixes for a number of CVEs, we recommend to upgrade as soon as possible.
 
 ## Breaking Changes
 

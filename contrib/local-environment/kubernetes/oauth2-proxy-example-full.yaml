@@ -69,7 +69,7 @@ stringData:
       level: debug
     web:
       http: 0.0.0.0:5556
-    oauth2:
+    oauth2: 
       alwaysShowLoginScreen: false
       skipApprovalScreen: true
     staticClients:
