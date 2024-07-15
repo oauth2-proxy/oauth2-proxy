@@ -31,7 +31,7 @@ jobs:
     name: Lint - golangci-lint
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: "1.21"
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Extract branch name
         uses: vazco/github-actions-branch-name@v1
@@ -83,7 +83,7 @@ jobs:
       oauth2proxyCITag: ${{ steps.setVariables.outputs.betaTag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build Docker image
         uses: docker/build-push-action@v4
