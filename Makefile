@@ -6,6 +6,7 @@ VERSION ?= $(shell git describe --always --dirty --tags 2>/dev/null || echo "und
 # Allow to override image registry.
 REGISTRY ?= docker.na1.hsdp.io/edi
 REPOSITORY ?= oauth2-proxy
+
 DATE := $(shell date +"%Y%m%d")
 .NOTPARALLEL:
 
@@ -48,6 +49,12 @@ DOCKER_BUILDX                 := docker buildx build ${DOCKER_BUILDX_ARGS} --pul
 DOCKER_BUILDX_X_PLATFORM      := $(DOCKER_BUILDX) --platform ${DOCKER_BUILD_PLATFORM}
 DOCKER_BUILDX_PUSH            := $(DOCKER_BUILDX) --push
 DOCKER_BUILDX_PUSH_X_PLATFORM := $(DOCKER_BUILDX_PUSH) --platform ${DOCKER_BUILD_PLATFORM}
+
+DOCKER_BUILD_PLATFORM_ALPINE         ?= linux/amd64,linux/arm64,linux/ppc64le,linux/arm/v6,linux/arm/v7
+DOCKER_BUILD_RUNTIME_IMAGE_ALPINE    ?= alpine:3.19.0
+DOCKER_BUILDX_ARGS_ALPINE            ?= --build-arg RUNTIME_IMAGE=${DOCKER_BUILD_RUNTIME_IMAGE_ALPINE} --build-arg VERSION=${VERSION}
+DOCKER_BUILDX_X_PLATFORM_ALPINE      := docker buildx build ${DOCKER_BUILDX_ARGS_ALPINE} --platform ${DOCKER_BUILD_PLATFORM_ALPINE}
+DOCKER_BUILDX_PUSH_X_PLATFORM_ALPINE := $(DOCKER_BUILDX_X_PLATFORM_ALPINE) --push
 
 .PHONY: docker
 docker:
