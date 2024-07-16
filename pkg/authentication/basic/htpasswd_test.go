@@ -149,7 +149,7 @@ var _ = Describe("HTPasswd Suite", func() {
 					fileNames = append(fileNames, file.Name())
 
 					It("has the correct number of users", func() {
-						Expect(len(htpasswd.users)).To(Equal(hu.expectedLen))
+						Expect(len(htpasswd.GetUsers())).To(Equal(hu.expectedLen))
 					})
 
 					It(hu.testText, func() {

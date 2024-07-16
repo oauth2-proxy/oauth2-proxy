@@ -63,7 +63,7 @@ func TestGoogleGroupOptions(t *testing.T) {
 
 	expected := errorMsg([]string{
 		"missing setting: google-admin-email",
-		"missing setting: google-service-account-json"})
+		"missing setting: google-service-account-json or google-use-application-default-credentials"})
 	assert.Equal(t, expected, err.Error())
 }
 
@@ -76,7 +76,7 @@ func TestGoogleGroupInvalidFile(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 
 	expected := errorMsg([]string{
-		"invalid Google credentials file: file_doesnt_exist.json",
+		"Google credentials file not found: file_doesnt_exist.json",
 	})
 	assert.Equal(t, expected, err.Error())
 }

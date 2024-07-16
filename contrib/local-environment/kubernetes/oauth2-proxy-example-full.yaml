@@ -449,11 +449,11 @@ spec:
           timeoutSeconds: 1
         readinessProbe:
           httpGet:
-            path: /ping
+            path: /ready
             port: http
             scheme: HTTP
           initialDelaySeconds: 0
-          timeoutSeconds: 1
+          timeoutSeconds: 5
           successThreshold: 1
           periodSeconds: 10
         resources:

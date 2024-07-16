@@ -31,6 +31,7 @@ services:
   nginx:
     container_name: nginx
     image: nginx:1.18
+    restart: unless-stopped
     ports:
       - 80:80/tcp
     hostname: nginx

@@ -31,8 +31,8 @@ jobs:
     name: Lint - golangci-lint
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.21"
           cache: false
@@ -46,16 +46,16 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Extract branch name
         uses: vazco/github-actions-branch-name@v1
         id: branch
 
-      - name: Set up Go 1.19
-        uses: actions/setup-go@v4
+      - name: Set up Go 1.21
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.19.x
+          go-version: 1.21.x
         id: go
 
       - name: Downloads golang mods
@@ -83,7 +83,7 @@ jobs:
       oauth2proxyCITag: ${{ steps.setVariables.outputs.betaTag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build Docker image
         uses: docker/build-push-action@v4

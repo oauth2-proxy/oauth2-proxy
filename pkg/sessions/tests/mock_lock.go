@@ -12,19 +12,19 @@ type MockLock struct {
 	elapsed    time.Duration
 }
 
-func (l *MockLock) Obtain(ctx context.Context, expiration time.Duration) error {
+func (l *MockLock) Obtain(_ context.Context, expiration time.Duration) error {
 	l.expiration = expiration
 	return nil
 }
 
-func (l *MockLock) Peek(ctx context.Context) (bool, error) {
+func (l *MockLock) Peek(_ context.Context) (bool, error) {
 	if l.elapsed < l.expiration {
 		return true, nil
 	}
 	return false, nil
 }
 
-func (l *MockLock) Refresh(ctx context.Context, expiration time.Duration) error {
+func (l *MockLock) Refresh(_ context.Context, expiration time.Duration) error {
 	if l.expiration <= l.elapsed {
 		return sessions.ErrNotLocked
 	}
@@ -33,7 +33,7 @@ func (l *MockLock) Refresh(ctx context.Context, expiration time.Duration) error 
 	return nil
 }
 
-func (l *MockLock) Release(ctx context.Context) error {
+func (l *MockLock) Release(_ context.Context) error {
 	if l.expiration <= l.elapsed {
 		return sessions.ErrNotLocked
 	}

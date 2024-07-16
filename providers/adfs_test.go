@@ -63,7 +63,7 @@ func testADFSProvider(hostname string) *ADFSProvider {
 		Scope:        "",
 		Verifier:     o,
 		EmailClaim:   options.OIDCEmailClaim,
-	}, options.ADFSOptions{})
+	}, options.Provider{})
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
@@ -134,9 +134,15 @@ var _ = Describe("ADFS Provider Tests", func() {
 
 	Context("New Provider Init", func() {
 		It("uses defaults", func() {
-			providerData := NewADFSProvider(&ProviderData{}, options.ADFSOptions{}).Data()
+			providerData := NewADFSProvider(&ProviderData{}, options.Provider{}).Data()
 			Expect(providerData.ProviderName).To(Equal("ADFS"))
-			Expect(providerData.Scope).To(Equal("openid email profile"))
+			Expect(providerData.Scope).To(Equal(oidcDefaultScope))
+		})
+		It("uses custom scope", func() {
+			providerData := NewADFSProvider(&ProviderData{Scope: "openid email"}, options.Provider{}).Data()
+			Expect(providerData.ProviderName).To(Equal("ADFS"))
+			Expect(providerData.Scope).To(Equal("openid email"))
+			Expect(providerData.Scope).NotTo(Equal(oidcDefaultScope))
 		})
 	})
 
@@ -166,7 +172,9 @@ var _ = Describe("ADFS Provider Tests", func() {
 			p := NewADFSProvider(&ProviderData{
 				ProtectedResource: resource,
 				Scope:             "",
-			}, options.ADFSOptions{SkipScope: true})
+			}, options.Provider{
+				ADFSConfig: options.ADFSOptions{SkipScope: true},
+			})
 
 			result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "", url.Values{})
 			Expect(result).NotTo(ContainSubstring("scope="))
@@ -186,7 +194,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 				p := NewADFSProvider(&ProviderData{
 					ProtectedResource: resource,
 					Scope:             in.scope,
-				}, options.ADFSOptions{})
+				}, options.Provider{})
 
 				Expect(p.Data().Scope).To(Equal(in.expectedScope))
 				result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "", url.Values{})

@@ -21,7 +21,9 @@ const nextCloudProviderName = "Nextcloud"
 
 // NewNextcloudProvider initiates a new NextcloudProvider
 func NewNextcloudProvider(p *ProviderData) *NextcloudProvider {
-	p.ProviderName = nextCloudProviderName
+	p.setProviderDefaults(providerDefaults{
+		name: nextCloudProviderName,
+	})
 	p.getAuthorizationHeaderFunc = makeOIDCHeader
 	if p.EmailClaim == options.OIDCEmailClaim {
 		// This implies the email claim has not been overridden, we should set a default
@@ -42,7 +44,7 @@ func (p *NextcloudProvider) EnrichSession(ctx context.Context, s *sessions.Sessi
 
 	json, err := requests.New(profileURL).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalSimpleJSON()
 	if err != nil {

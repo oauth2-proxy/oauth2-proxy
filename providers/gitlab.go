@@ -31,24 +31,23 @@ type GitLabProvider struct {
 var _ Provider = (*GitLabProvider)(nil)
 
 // NewGitLabProvider initiates a new GitLabProvider
-func NewGitLabProvider(p *ProviderData, opts options.GitLabOptions) (*GitLabProvider, error) {
-	p.ProviderName = gitlabProviderName
+func NewGitLabProvider(p *ProviderData, opts options.Provider) (*GitLabProvider, error) {
+	p.setProviderDefaults(providerDefaults{
+		name: gitlabProviderName,
+	})
 	if p.Scope == "" {
 		p.Scope = gitlabDefaultScope
 	}
 
-	oidcProvider := &OIDCProvider{
-		ProviderData: p,
-		SkipNonce:    false,
-	}
+	oidcProvider := NewOIDCProvider(p, opts.OIDCConfig)
 
 	provider := &GitLabProvider{
 		OIDCProvider:    oidcProvider,
 		oidcRefreshFunc: oidcProvider.RefreshSession,
 	}
-	provider.setAllowedGroups(opts.Group)
+	provider.setAllowedGroups(opts.GitLabConfig.Group)
 
-	if err := provider.setAllowedProjects(opts.Projects); err != nil {
+	if err := provider.setAllowedProjects(opts.GitLabConfig.Projects); err != nil {
 		return nil, fmt.Errorf("could not configure allowed projects: %v", err)
 	}
 
@@ -167,7 +166,7 @@ func (p *GitLabProvider) getUserinfo(ctx context.Context, s *sessions.SessionSta
 	var userinfo gitlabUserinfo
 	err := requests.New(userinfoURL.String()).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalInto(&userinfo)
 	if err != nil {
@@ -246,7 +245,7 @@ func (p *GitLabProvider) getProjectInfo(ctx context.Context, s *sessions.Session
 
 	err := requests.New(fmt.Sprintf("%s%s", endpointURL.String(), url.QueryEscape(project))).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+s.AccessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+s.AccessToken).
 		Do().
 		UnmarshalInto(&projectInfo)
 	if err != nil {

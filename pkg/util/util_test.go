@@ -87,7 +87,7 @@ mmu20Q5sWqggb0WNk1GoHIlpiObgY38KfnNSZ5Ra/QuXLF3QM2NdK5bT1iNFfPG3
 fQklEouz/2lqZkRhsKSeXFKQ+h8GtNevKwFg6y3wWvH62WF5mTe9eyUE9VWl64y6
 js5ESoVXA+e+QfsMsJrI5XfLV1O8ZxXKAVrYxBnC+WQbrNOjI7VBkjcn/QDmDjBw
 sC1lo4YZwxEQ/bE0kEWI7PT/Skml4bTLw0jsgXNV9Nd8
------END CERTIFICATE-----		
+-----END CERTIFICATE-----
 `
 	cert1CertSubj = "CN=oauth2-proxy test cert1 ca"
 	cert1Cert     = `-----BEGIN CERTIFICATE-----
@@ -190,7 +190,7 @@ func makeTestCertFile(t *testing.T, pem, dir string) *os.File {
 }
 
 func TestGetCertPool_NoRoots(t *testing.T) {
-	_, err := GetCertPool([]string(nil))
+	_, err := GetCertPool([]string(nil), false)
 	assert.Error(t, err, "invalid empty list of Root CAs file paths")
 }
 
@@ -204,36 +204,51 @@ func TestGetCertPool(t *testing.T) {
 		}
 	}(tempDir)
 
-	certFile1 := makeTestCertFile(t, root1Cert, tempDir)
-	certFile2 := makeTestCertFile(t, root2Cert, tempDir)
+	rootPool, _ := x509.SystemCertPool()
+	cleanPool := x509.NewCertPool()
 
-	certPool, err := GetCertPool([]string{certFile1.Name(), certFile2.Name()})
-	certFile1.Close()
-	certFile2.Close()
-	assert.NoError(t, err)
-
-	cert1Block, _ := pem.Decode([]byte(cert1Cert))
-	cert1, _ := x509.ParseCertificate(cert1Block.Bytes)
-	assert.Equal(t, cert1.Subject.String(), cert1CertSubj)
-
-	cert2Block, _ := pem.Decode([]byte(cert2Cert))
-	cert2, _ := x509.ParseCertificate(cert2Block.Bytes)
-	assert.Equal(t, cert2.Subject.String(), cert2CertSubj)
-
-	cert3Block, _ := pem.Decode([]byte(cert3Cert))
-	cert3, _ := x509.ParseCertificate(cert3Block.Bytes)
-	assert.Equal(t, cert3.Subject.String(), cert3CertSubj)
-
-	opts := x509.VerifyOptions{
-		Roots: certPool,
+	tests := []struct {
+		appendCerts bool
+		pool        *x509.CertPool
+	}{
+		{false, cleanPool},
+		{true, rootPool},
 	}
 
-	// "cert1" and "cert2" should be valid because "root1" and "root2" are in the certPool
-	// "cert3" should not be valid because "root3" is not in the certPool
-	_, err1 := cert1.Verify(opts)
-	assert.NoError(t, err1)
-	_, err2 := cert2.Verify(opts)
-	assert.NoError(t, err2)
-	_, err3 := cert3.Verify(opts)
-	assert.Error(t, err3)
+	certFile1 := makeTestCertFile(t, root1Cert, tempDir)
+	certFile2 := makeTestCertFile(t, root2Cert, tempDir)
+	for _, tc := range tests {
+		// Append certs to "known" pool so we can compare them
+		assert.True(t, tc.pool.AppendCertsFromPEM([]byte(root1Cert)))
+		assert.True(t, tc.pool.AppendCertsFromPEM([]byte(root2Cert)))
+
+		certPool, err := GetCertPool([]string{certFile1.Name(), certFile2.Name()}, tc.appendCerts)
+		assert.NoError(t, err)
+		assert.True(t, tc.pool.Equal(certPool))
+
+		cert1Block, _ := pem.Decode([]byte(cert1Cert))
+		cert1, _ := x509.ParseCertificate(cert1Block.Bytes)
+		assert.Equal(t, cert1.Subject.String(), cert1CertSubj)
+
+		cert2Block, _ := pem.Decode([]byte(cert2Cert))
+		cert2, _ := x509.ParseCertificate(cert2Block.Bytes)
+		assert.Equal(t, cert2.Subject.String(), cert2CertSubj)
+
+		cert3Block, _ := pem.Decode([]byte(cert3Cert))
+		cert3, _ := x509.ParseCertificate(cert3Block.Bytes)
+		assert.Equal(t, cert3.Subject.String(), cert3CertSubj)
+
+		opts := x509.VerifyOptions{
+			Roots: certPool,
+		}
+
+		// "cert1" and "cert2" should be valid because "root1" and "root2" are in the certPool
+		// "cert3" should not be valid because "root3" is not in the certPool
+		_, err1 := cert1.Verify(opts)
+		assert.NoError(t, err1)
+		_, err2 := cert2.Verify(opts)
+		assert.NoError(t, err2)
+		_, err3 := cert3.Verify(opts)
+		assert.Error(t, err3)
+	}
 }

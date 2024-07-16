@@ -91,7 +91,7 @@ func newClaimInjector(name string, source *options.ClaimSource) (valueInjector, 
 					continue
 				}
 				auth := claim + ":" + string(password)
-				header.Add(name, "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
+				header.Add(name, fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth))))
 			}
 		}), nil
 	case source.Prefix != "":

@@ -20,4 +20,4 @@ providers:
   clientSecret: b2F1dGgyLXByb3h5LWNsaWVudC1zZWNyZXQK
   clientID: oauth2-proxy
   oidcConfig:
-    oidcIssuerURL: http://dex.localhost:4190/dex
+    issuerURL: http://dex.localhost:4190/dex

@@ -2,20 +2,15 @@ package redis
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"encoding/pem"
-	"log"
 	"os"
-	"testing"
 	"time"
 
 	"github.com/Bose/minisentinel"
 	"github.com/alicebob/miniredis/v2"
-	"github.com/go-redis/redis/v9"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/tests"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
@@ -23,29 +18,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const redisUsername = "testuser"
 const redisPassword = "0123456789abcdefghijklmnopqrstuv"
-
-// wrappedRedisLogger wraps a logger so that we can coerce the logger to
-// fit the expected signature for go-redis logging
-type wrappedRedisLogger struct {
-	*log.Logger
-}
-
-func (l *wrappedRedisLogger) Printf(_ context.Context, format string, v ...interface{}) {
-	l.Logger.Printf(format, v...)
-}
-
-func TestSessionStore(t *testing.T) {
-	logger.SetOutput(GinkgoWriter)
-	logger.SetErrOutput(GinkgoWriter)
-
-	redisLogger := &wrappedRedisLogger{Logger: log.New(os.Stderr, "redis: ", log.LstdFlags|log.Lshortfile)}
-	redisLogger.SetOutput(GinkgoWriter)
-	redis.SetLogger(redisLogger)
-
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Redis SessionStore")
-}
 
 var (
 	cert   tls.Certificate
@@ -243,6 +217,56 @@ var _ = Describe("Redis SessionStore Tests", func() {
 					opts.Type = options.RedisSessionStoreType
 					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
 					opts.Redis.UseCluster = true
+					opts.Redis.Password = redisPassword
+
+					// Capture the session store so that we can close the client
+					var err error
+					ss, err = NewRedisSessionStore(opts, cookieOpts)
+					return ss, err
+				},
+				func(d time.Duration) error {
+					mr.FastForward(d)
+					return nil
+				},
+			)
+		})
+	})
+
+	Context("with a redis username and password", func() {
+		BeforeEach(func() {
+			mr.RequireUserAuth(redisUsername, redisPassword)
+		})
+
+		AfterEach(func() {
+			mr.RequireUserAuth("", "")
+		})
+
+		tests.RunSessionStoreTests(
+			func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+				// Set the connection URL
+				opts.Type = options.RedisSessionStoreType
+				opts.Redis.ConnectionURL = "redis://" + redisUsername + "@" + mr.Addr()
+				opts.Redis.Password = redisPassword
+
+				// Capture the session store so that we can close the client
+				var err error
+				ss, err = NewRedisSessionStore(opts, cookieOpts)
+				return ss, err
+			},
+			func(d time.Duration) error {
+				mr.FastForward(d)
+				return nil
+			},
+		)
+
+		Context("with cluster", func() {
+			tests.RunSessionStoreTests(
+				func(opts *options.SessionOptions, cookieOpts *options.Cookie) (sessionsapi.SessionStore, error) {
+					clusterAddr := "redis://" + redisUsername + "@" + mr.Addr()
+					opts.Type = options.RedisSessionStoreType
+					opts.Redis.ClusterConnectionURLs = []string{clusterAddr}
+					opts.Redis.UseCluster = true
+					opts.Redis.Username = redisUsername
 					opts.Redis.Password = redisPassword
 
 					// Capture the session store so that we can close the client
