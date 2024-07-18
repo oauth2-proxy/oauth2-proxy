@@ -17,7 +17,7 @@ if [ -z $CC_TEST_REPORTER_ID ]; then
   echo "3. CC_TEST_REPORTER_ID is unset, skipping"
 else
   echo "3. Running after-build"
-  ./cc-test-reporter after-build --exit-code $TEST_STATUS -t gocov --prefix $(go list -m)
+  ./cc-test-reporter after-build --exit-code $TEST_STATUS --prefix $(go list -m)
 fi
 
 if [ "$TEST_STATUS" -ne 0 ]; then
