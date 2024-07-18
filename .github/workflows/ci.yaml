@@ -9,6 +9,7 @@ on:
       - '.vscode/**'
       - 'contrib/**'
       - 'docs/**'
+      - '*.md'
   pull_request:
     branches:
       - '**'
@@ -17,6 +18,7 @@ on:
       - '.vscode/**'
       - 'contrib/**'
       - 'docs/**'
+      - '*.md'
 jobs:
   build:
     runs-on: ubuntu-latest
