@@ -15,8 +15,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/websocket"
 )
@@ -311,6 +310,29 @@ var _ = Describe("HTTP Upstream Suite", func() {
 				},
 			},
 			expectedUpstream: "passExistingHostHeader",
+		}),
+		Entry("request using UNIX socket upstream", &httpUpstreamTableInput{
+			id:           "unix-upstream",
+			serverAddr:   &unixServerAddr,
+			target:       "http://example.localhost/file",
+			method:       "GET",
+			body:         []byte{},
+			errorHandler: nil,
+			expectedResponse: testHTTPResponse{
+				code: 200,
+				header: map[string][]string{
+					contentType: {applicationJSON},
+				},
+				request: testHTTPRequest{
+					Method:     "GET",
+					URL:        "http://example.localhost/file",
+					Header:     map[string][]string{},
+					Body:       []byte{},
+					Host:       "example.localhost",
+					RequestURI: "http://example.localhost/file",
+				},
+			},
+			expectedUpstream: "unix-upstream",
 		}),
 	)
 

@@ -32,7 +32,7 @@ users to re-authenticate
 
 ### Redis Storage
 
-The Redis Storage backend stores sessions, encrypted, in redis. Instead sending all the information
+The Redis Storage backend stores encrypted sessions in redis. Instead of sending all the information
 back the client for storage, as in the [Cookie storage](#cookie-storage), a ticket is sent back
 to the user as the cookie value instead.
 
@@ -43,14 +43,42 @@ A ticket is composed as the following:
 Where:
 
 - The `CookieName` is the OAuth2 cookie name (_oauth2_proxy by default)
-- The `ticketID` is a 128 bit random number, hex-encoded
-- The `secret` is a 128 bit random number, base64url encoded (no padding). The secret is unique for every session.
+- The `ticketID` is a 128-bit random number, hex-encoded
+- The `secret` is a 128-bit random number, base64url encoded (no padding). The secret is unique for every session.
 - The pair of `{CookieName}-{ticketID}` comprises a ticket handle, and thus, the redis key
 to which the session is stored. The encoded session is encrypted with the secret and stored
 in redis via the `SETEX` command.
 
 Encrypting every session uniquely protects the refresh/access/id tokens stored in the session from
-disclosure.
+disclosure. Additionally, the browser only has to send a short Cookie with every request and not the whole JWT, 
+which can get quite big.
+
+Two settings are used to configure the OAuth2 Proxy cookie lifetime:
+
+    --cookie-refresh duration   refresh the cookie after this duration; 0 to disable
+    --cookie-expire duration    expire timeframe for cookie     168h0m0s
+
+The "cookie-expire" value should be equal to the lifetime of the Refresh-Token that is issued by the OAuth2 authorization server.
+If it expires earlier and is deleted by the browser, OAuth2 Proxy cannot find the stored Refresh-Tokens in Redis and thus cannot start
+the refresh flow to get a new Access-Token. If it is longer, it might be that the old Refresh-Token will be found in Redis but has already
+expired.
+
+The "cookie-refresh" value controls when OAuth2 Proxy tries to refresh an Access-Token. If it is set to "0", the
+Access-Token will never be refreshed, even if it is already expired and a valid Refresh-Token is available. If set, OAuth2-Proxy will
+refresh the Access-Token after this many seconds whether it is still valid or not. According to the official OAuth2.0 specification 
+Access-Tokens are not required to follow a specific format. Therefore OAuth2-Proxy cannot check for any expiry date without an 
+introspection endpoint. If an Access-Token expires and you have not set a corresponding "cookie-refresh" value, you will likely 
+encounter expiry issues.
+
+Caveat: It can happen that the Access-Token is valid for e.g. "1m" and a request happens after exactly "59s".
+It would pass OAuth2 Proxy and be forwarded to the backend but is just expired when the backend tries to validate
+it. This is especially relevant if the backend uses the JWT to make requests to other backends.
+For this reason, it's advised to set the cookie-refresh a couple of seconds less than the Access-Token lifespan.
+
+Recommended settings:
+
+* cookie_refresh := Access-Token lifespan - 1m
+* cookie_expire := Refresh-Token lifespan (i.e. Keycloak client_session_idle)
 
 #### Usage
 

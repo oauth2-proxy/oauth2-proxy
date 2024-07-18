@@ -1,0 +1,117 @@
+name: Create Release
+run-name: Create release ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for new release'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        ref: master
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Validate version
+      id: validate
+      run: |
+        function ver { printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' '); }
+
+        NEW_VERSION=${{ inputs.version }}
+        NEW_VERSION=${NEW_VERSION#v} # Remove v prefix
+
+        LATEST_VERSION=$(git describe --abbrev=0 --tags)
+        LATEST_VERSION=${LATEST_VERSION#v} # Remove v prefix
+
+        # check that new version can be parsed
+        if [ ! $(ver $NEW_VERSION ) -gt $(ver 0) ]; then
+          echo "::error::Entered version '${{ inputs.version }}' cannot be parsed"
+          exit 1
+        fi
+
+        # check version continuity
+        if [ ! $(ver $LATEST_VERSION) -lt $(ver $NEW_VERSION) ]; then
+          echo "::error::Entered version '${{ inputs.version }}' is smaller then latest version $LATEST_VERSION"
+          exit 1
+        fi
+
+        echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+    - name: Prepare Github Actions Bot
+      run: |
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+    
+    - name: Setup node
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: docs/package.json
+      
+    - name: Update documentation
+      run: |
+        cd docs
+
+        FULL_VERSION=${{ steps.validate.outputs.version }}
+        VERSION=${FULL_VERSION%.*}.x
+
+        if [ ! -d "versioned_docs/version-${VERSION}" ]; then
+          npm ci
+          npm run docusaurus docs:version ${VERSION}
+
+          git add .
+          git commit -m "add new docs version ${VERSION}"
+        fi
+
+        sed -i "s/(current release is .*)/(current release is \`v${FULL_VERSION}\`)/g" docs/installation.md
+        sed -i "s/(current release is .*)/(current release is \`v${FULL_VERSION}\`)/g" versioned_docs/version-${VERSION}/installation.md
+    
+    - name: Update Changelog
+      run: |
+        VERSION=${{ steps.validate.outputs.version }}
+
+        sed -i "s/#.*(Pre-release)/# V${VERSION}/g" CHANGELOG.md
+
+        cat << EOF > /tmp/CHANGELOG.prepend
+        # Vx.x.x (Pre-release)
+
+        ## Release Highlights
+
+        ## Important Notes
+
+        ## Breaking Changes
+        EOF
+
+        echo -e "$(cat /tmp/CHANGELOG.prepend)\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
+    
+    - name: Update development files
+      run: |
+        VERSION=${{ steps.validate.outputs.version }}
+        cd contrib
+        grep -rl "quay.io/oauth2-proxy/oauth2-proxy:" | \
+          xargs sed -i "s#quay.io/oauth2-proxy/oauth2-proxy:v[0-9]\+\.[0-9]\+\.[0-9]\+#quay.io/oauth2-proxy/oauth2-proxy:v${VERSION}#g"
+
+    - name: Commit and push
+      run: |
+        VERSION=${{ steps.validate.outputs.version }}
+
+        git checkout -b release/v${VERSION}
+        git commit -am "update to release version v${VERSION}"
+        git push -u origin release/v${VERSION}
+    
+    - name: Create PR
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        VERSION=v${{ steps.validate.outputs.version }}
+        gh pr create -B master -H release/${VERSION} --title "release ${VERSION}" --body "Release branch and changes created by GitHub Actions. This PR should include changes to the docs, CHANGELOG and local environment files."

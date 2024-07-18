@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -116,7 +117,7 @@ type verifierBuilder func(*oidc.Config) *oidc.IDTokenVerifier
 
 func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (verifierBuilder, DiscoveryProvider, error) {
 	if opts.SkipDiscovery {
-		// Instead of discovering the JWKs URK, it needs to be specified in the opts already
+		// Instead of discovering the JWKs URL, it needs to be specified in the opts already
 		return newVerifierBuilder(ctx, opts.IssuerURL, opts.JWKsURL, opts.SupportedSigningAlgs), nil, nil
 	}
 
@@ -130,6 +131,7 @@ func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (veri
 
 // newVerifierBuilder returns a function to create a IDToken verifier from an OIDC config.
 func newVerifierBuilder(ctx context.Context, issuerURL, jwksURL string, supportedSigningAlgs []string) verifierBuilder {
+	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	keySet := oidc.NewRemoteKeySet(ctx, jwksURL)
 	return func(oidcConfig *oidc.Config) *oidc.IDTokenVerifier {
 		if len(supportedSigningAlgs) > 0 {

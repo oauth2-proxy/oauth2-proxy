@@ -10,8 +10,7 @@ import (
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/pagewriter"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -97,6 +96,11 @@ var _ = Describe("Proxy Suite", func() {
 							Path:          "^/double-match/(.*)",
 							RewriteTarget: "/double-match/rewrite/$1",
 							URI:           serverAddr,
+						},
+						{
+							ID:   "unix-upstream",
+							Path: "/unix/",
+							URI:  unixServerAddr,
 						},
 					}
 				}
@@ -336,6 +340,27 @@ var _ = Describe("Proxy Suite", func() {
 					raw: "404 page not found\n",
 				},
 				upstream: "",
+			}),
+			Entry("with a request to the UNIX socket backend", &proxyTableInput{
+				target: "http://example.localhost/unix/file",
+				response: testHTTPResponse{
+					code: 200,
+					header: map[string][]string{
+						contentType: {applicationJSON},
+					},
+					request: testHTTPRequest{
+						Method: "GET",
+						URL:    "http://example.localhost/unix/file",
+						Header: map[string][]string{
+							"Gap-Auth":      {""},
+							"Gap-Signature": {"sha256 4ux8esLj2fw9sTWZwgFhb00bGbw0Fnhed5Fm9jz5Blw="},
+						},
+						Body:       []byte{},
+						Host:       "example.localhost",
+						RequestURI: "http://example.localhost/unix/file",
+					},
+				},
+				upstream: "unix-upstream",
 			}),
 		)
 	})

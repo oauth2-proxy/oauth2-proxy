@@ -3,19 +3,15 @@ run:
 linters:
   enable:
     - govet
-    - golint
     - ineffassign
     - goconst
-    - deadcode
     - gofmt
     - goimports
     - gosec
     - gosimple
     - staticcheck
-    - structcheck
     - typecheck
     - unused
-    - varcheck
     - bodyclose
     - dogsled
     - goprintffuncname
@@ -25,6 +21,7 @@ linters:
     - stylecheck
     - unconvert
     - gocritic
+    - revive
   disable-all: true
 issues:
   exclude-rules:
@@ -35,9 +32,15 @@ issues:
         - unconvert
         - gocritic
         - gosec
+        - goconst
+        - revive
+    - path: _test\.go
+      linters:
+        - revive
+      text: "dot-imports:"
     # If we have tests in shared test folders, these can be less strictly linted
     - path: tests/.*_tests\.go
       linters:
-        - golint
+        - revive
         - bodyclose
         - stylecheck

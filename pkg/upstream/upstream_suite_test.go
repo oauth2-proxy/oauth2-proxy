@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,16 +13,18 @@ import (
 	"testing"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/net/websocket"
 )
 
 var (
-	filesDir      string
-	server        *httptest.Server
-	serverAddr    string
-	invalidServer = "http://::1"
+	filesDir       string
+	server         *httptest.Server
+	serverAddr     string
+	unixServer     *httptest.Server
+	unixServerAddr string
+	invalidServer  = "http://::1"
 )
 
 func TestUpstreamSuite(t *testing.T) {
@@ -46,10 +49,17 @@ var _ = BeforeSuite(func() {
 	// Set up a webserver that reflects requests
 	server = httptest.NewServer(&testHTTPUpstream{})
 	serverAddr = fmt.Sprintf("http://%s", server.Listener.Addr().String())
+
+	unixServer = httptest.NewUnstartedServer(&testHTTPUpstream{})
+	unixListener, _ := net.Listen("unix", path.Join(filesDir, "test.sock"))
+	unixServer.Listener = unixListener
+	unixServer.Start()
+	unixServerAddr = fmt.Sprintf("unix://%s", path.Join(filesDir, "test.sock"))
 })
 
 var _ = AfterSuite(func() {
 	server.Close()
+	unixServer.Close()
 	Expect(os.RemoveAll(filesDir)).To(Succeed())
 })
 

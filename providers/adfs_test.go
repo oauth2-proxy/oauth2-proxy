@@ -12,12 +12,11 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -63,7 +62,7 @@ func testADFSProvider(hostname string) *ADFSProvider {
 		Scope:        "",
 		Verifier:     o,
 		EmailClaim:   options.OIDCEmailClaim,
-	}, options.ADFSOptions{})
+	}, options.Provider{})
 
 	if hostname != "" {
 		updateURL(p.Data().LoginURL, hostname)
@@ -134,9 +133,15 @@ var _ = Describe("ADFS Provider Tests", func() {
 
 	Context("New Provider Init", func() {
 		It("uses defaults", func() {
-			providerData := NewADFSProvider(&ProviderData{}, options.ADFSOptions{}).Data()
+			providerData := NewADFSProvider(&ProviderData{}, options.Provider{}).Data()
 			Expect(providerData.ProviderName).To(Equal("ADFS"))
-			Expect(providerData.Scope).To(Equal("openid email profile"))
+			Expect(providerData.Scope).To(Equal(oidcDefaultScope))
+		})
+		It("uses custom scope", func() {
+			providerData := NewADFSProvider(&ProviderData{Scope: "openid email"}, options.Provider{}).Data()
+			Expect(providerData.ProviderName).To(Equal("ADFS"))
+			Expect(providerData.Scope).To(Equal("openid email"))
+			Expect(providerData.Scope).NotTo(Equal(oidcDefaultScope))
 		})
 	})
 
@@ -166,7 +171,9 @@ var _ = Describe("ADFS Provider Tests", func() {
 			p := NewADFSProvider(&ProviderData{
 				ProtectedResource: resource,
 				Scope:             "",
-			}, options.ADFSOptions{SkipScope: true})
+			}, options.Provider{
+				ADFSConfig: options.ADFSOptions{SkipScope: true},
+			})
 
 			result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "", url.Values{})
 			Expect(result).NotTo(ContainSubstring("scope="))
@@ -186,7 +193,7 @@ var _ = Describe("ADFS Provider Tests", func() {
 				p := NewADFSProvider(&ProviderData{
 					ProtectedResource: resource,
 					Scope:             in.scope,
-				}, options.ADFSOptions{})
+				}, options.Provider{})
 
 				Expect(p.Data().Scope).To(Equal(in.expectedScope))
 				result := p.GetLoginURL("https://example.com/adfs/oauth2/", "", "", url.Values{})

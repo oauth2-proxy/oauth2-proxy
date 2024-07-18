@@ -3,8 +3,7 @@ package options
 import (
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -991,6 +990,14 @@ var _ = Describe("Legacy Options", func() {
 			GoogleServiceAccountJSON: "test.json",
 			GoogleGroups:             []string{"1", "2"},
 		}
+
+		legacyConfigLegacyProvider := LegacyProvider{
+			ClientID:                 clientID,
+			ProviderType:             "google",
+			GoogleAdminEmail:         "email@email.com",
+			GoogleServiceAccountJSON: "test.json",
+			GoogleGroupsLegacy:       []string{"1", "2"},
+		}
 		DescribeTable("convertLegacyProviders",
 			func(in *convertProvidersTableInput) {
 				providers, err := in.legacyProvider.convert()
@@ -1021,6 +1028,11 @@ var _ = Describe("Legacy Options", func() {
 			}),
 			Entry("with internal provider config", &convertProvidersTableInput{
 				legacyProvider:    internalConfigLegacyProvider,
+				expectedProviders: Providers{internalConfigProvider},
+				errMsg:            "",
+			}),
+			Entry("with legacy provider config", &convertProvidersTableInput{
+				legacyProvider:    legacyConfigLegacyProvider,
 				expectedProviders: Providers{internalConfigProvider},
 				errMsg:            "",
 			}),

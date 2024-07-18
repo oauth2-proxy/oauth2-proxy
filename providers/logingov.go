@@ -12,11 +12,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/go-jose/go-jose/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
-	"gopkg.in/square/go-jose.v2"
 )
 
 // LoginGovProvider represents an OIDC based Identity Provider
@@ -146,12 +146,12 @@ type loginGovCustomClaims struct {
 	Birthdate     string `json:"birthdate"`
 	AtHash        string `json:"at_hash"`
 	CHash         string `json:"c_hash"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 // checkNonce checks the nonce in the id_token
 func checkNonce(idToken string, p *LoginGovProvider) (err error) {
-	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(idToken, &loginGovCustomClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		var pubkeys jose.JSONWebKeySet
 		rerr := requests.New(p.PubJWKURL.String()).Do().UnmarshalInto(&pubkeys)
 		if rerr != nil {
@@ -182,7 +182,7 @@ func emailFromUserInfo(ctx context.Context, accessToken string, userInfoEndpoint
 	// query the user info endpoint for user attributes
 	err := requests.New(userInfoEndpoint).
 		WithContext(ctx).
-		SetHeader("Authorization", "Bearer "+accessToken).
+		SetHeader("Authorization", tokenTypeBearer+" "+accessToken).
 		Do().
 		UnmarshalInto(&emailData)
 	if err != nil {
@@ -207,12 +207,11 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code, codeVerifier str
 		return nil, ErrMissingCode
 	}
 
-	claims := &jwt.StandardClaims{
+	claims := &jwt.RegisteredClaims{
 		Issuer:    p.ClientID,
 		Subject:   p.ClientID,
-		Audience:  p.RedeemURL.String(),
-		ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
-		Id:        randSeq(32),
+		Audience:  jwt.ClaimStrings{p.RedeemURL.String()},
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
 	ss, err := token.SignedString(p.JWTKey)

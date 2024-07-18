@@ -7,65 +7,64 @@ on:
   push:
     branches: [master]
     paths: ['docs/**']
+  workflow_dispatch:
 
 jobs:
-  checks:
-    if: github.event_name != 'push'
+  pull-request-check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      
+      - uses: actions/setup-node@v4
         with:
-          node-version: '17.x'
+          # renovate: datasource=node-version depName=node
+          node-version: 20
+          cache: npm
+          cache-dependency-path: "./docs/package-lock.json"
+
       - name: Test Build
         working-directory: ./docs
-        env:
-          NODE_OPTIONS: --openssl-legacy-provider
         run: |
-          if [ -e yarn.lock ]; then
-          yarn install --frozen-lockfile
-          elif [ -e package-lock.json ]; then
           npm ci
-          else
-          npm i
-          fi
           npm run build
-  gh-release:
-    if: github.event_name != 'pull_request'
+
+  build-docs:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: '17.x'
-      - name: Add key to allow access to repository
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-          NODE_OPTIONS: --openssl-legacy-provider
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          echo "${{ secrets.GH_PAGES_DEPLOY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          cat <<EOT >> ~/.ssh/config
-          Host github.com
-          HostName github.com
-          IdentityFile ~/.ssh/id_rsa
-          EOT
-      - name: Release to GitHub Pages
+          # renovate: datasource=node-version depName=node
+          node-version: 20
+
+      - name: Build docusaurus
         working-directory: ./docs
-        env:
-          USE_SSH: true
-          GIT_USER: git
-          NODE_OPTIONS: --openssl-legacy-provider
         run: |
-          git config --global user.email "actions@gihub.com"
-          git config --global user.name "gh-actions"
-          if [ -e yarn.lock ]; then
-          yarn install --frozen-lockfile
-          elif [ -e package-lock.json ]; then
           npm ci
-          else
-          npm i
-          fi
-          npx docusaurus deploy
+          npm run build
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs/build
+
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

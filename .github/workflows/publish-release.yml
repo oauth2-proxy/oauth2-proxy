@@ -1,0 +1,128 @@
+name: Publish Release
+run-name: ${{ github.event.pull_request.head.ref }}
+
+on:
+  pull_request_target:
+    branches:
+      - master
+    types:
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  publish:
+    if: github.event.pull_request.merged && startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.version }}
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.merge_commit_sha }}
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Tag release
+      run: |
+        # Set up github-actions[bot] user
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        # Get the version from the branch name
+        branch="${{ github.event.pull_request.head.ref }}"
+        version="${branch#release/}"
+        echo ${version}
+
+        # Tag and create release
+        git tag -a "${version}" -m "Release ${version}"
+        echo "version=${version}" >> $GITHUB_OUTPUT
+      id: tag
+    
+    - name: Set up go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - name: Get dependencies
+      env:
+        GOLANGCI_LINT_VERSION: v1.55.2
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VERSION}
+        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+        chmod +x ./cc-test-reporter
+
+        # Install go dependencies
+        go mod download
+
+    - name: Build Artifacts
+      run: make release
+    
+    # Upload artifacts in case of workflow failure
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: oauth2-proxy-artifacts
+        path: |
+          release/*.tar.gz
+          release/*.txt
+
+    - name: Create release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # Get version from tag
+        version=$(git describe --tags --abbrev=0)
+
+        # Extract CHANGELOG
+        numericVersion="${version#v}"
+        notes=$(sed -E "/^# (v|V)$numericVersion$/,/^# (v|V)/!d;//d" CHANGELOG.md)
+
+        # Publish release tag
+        git push origin "${version}"
+
+        # Create github release
+        gh release create "${version}" \
+          --title "${version}" \
+          --notes "${notes}" \
+          --prerelease
+        
+        # Upload artifacts
+        gh release upload "${version}" release/*.tar.gz
+        gh release upload "${version}" release/*.txt
+  
+  docker:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ needs.publish.outputs.tag }}
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to quay.io
+      uses: docker/login-action@v3
+      with:
+        registry: quay.io/oauth2-proxy
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    - name: Build images
+      run: |
+        make docker-all
+    
+    - name: Push images
+      run: |
+        make docker-push-all

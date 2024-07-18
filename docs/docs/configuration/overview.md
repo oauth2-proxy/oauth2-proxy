@@ -12,48 +12,40 @@ To generate a strong cookie secret use one of the below commands:
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-<Tabs
-  defaultValue="python"
-  values={[
-    {label: 'Python', value: 'python'},
-    {label: 'Bash', value: 'bash'},
-    {label: 'OpenSSL', value: 'openssl'},
-    {label: 'PowerShell', value: 'powershell'},
-    {label: 'Terraform', value: 'terraform'},
-  ]}>
-  <TabItem value="python">
+<Tabs defaultValue="python">
+  <TabItem value="python" label="Python">
 
   ```shell
   python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'
   ```
-
+  
   </TabItem>
-  <TabItem value="bash">
+  <TabItem value="bash" label="Bash">
 
   ```shell
-  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_'; echo
+  dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
   ```
-
+  
   </TabItem>
-  <TabItem value="openssl">
+  <TabItem value="openssl" label="OpenSSL">
 
   ```shell
   openssl rand -base64 32 | tr -- '+/' '-_'
   ```
 
   </TabItem>
-  <TabItem value="powershell">
+  <TabItem value="powershell" label="PowerShell">
 
-  ```shell
+  ```powershell
   # Add System.Web assembly to session, just in case
   Add-Type -AssemblyName System.Web
   [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([System.Web.Security.Membership]::GeneratePassword(32,4))).Replace("+","-").Replace("/","_")
   ```
 
   </TabItem>
-  <TabItem value="terraform">
+  <TabItem value="terraform" label="Terraform">
 
-  ```shell
+  ```hcl
   # Valid 32 Byte Base64 URL encoding set that will decode to 24 []byte AES-192 secret
   resource "random_password" "cookie_secret" {
     length           = 32
@@ -75,12 +67,14 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | Option | Type | Description | Default |
 | ------ | ---- | ----------- | ------- |
 | `--acr-values` | string | optional, see [docs](https://openid.net/specs/openid-connect-eap-acr-values-1_0.html#acrValues) | `""` |
+| `--allow-query-semicolons` | bool | allow the use of semicolons in query args ([required for some legacy applications](https://github.com/golang/go/issues/25192)) | `false` |
 | `--api-route` | string \| list | return HTTP 401 instead of redirecting to authentication server if token is not valid. Format: path_regex | |
 | `--approval-prompt` | string | OAuth approval_prompt | `"force"` |
 | `--auth-logging` | bool | Log authentication attempts | true |
 | `--auth-logging-format` | string | Template for authentication log lines | see [Logging Configuration](#logging-configuration) |
 | `--authenticated-emails-file` | string | authenticate against emails via file (one per line) | |
 | `--azure-tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
+| `--backend-logout-url` | string | URL to perform backend logout, if you use `{id_token}` in the url it will be replaced by the actual `id_token` of the user session | |
 | `--basic-auth-password` | string | the password to set when passing the HTTP Basic Auth header | |
 | `--client-id` | string | the OAuth Client ID, e.g. `"123456.apps.googleusercontent.com"` | |
 | `--client-secret` | string | the OAuth Client Secret | |
@@ -88,11 +82,11 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--code-challenge-method` | string | use PKCE code challenges with the specified method. Either 'plain' or 'S256' (recommended) | |
 | `--config` | string | path to config file | |
 | `--cookie-domain` | string \| list | Optional cookie domains to force cookies to (e.g. `.yourcompany.com`). The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match). | |
-| `--cookie-expire` | duration | expire timeframe for cookie | 168h0m0s |
+| `--cookie-expire` | duration | expire timeframe for cookie. If set to 0, cookie becomes a session-cookie which will expire when the browser is closed. | 168h0m0s |
 | `--cookie-httponly` | bool | set HttpOnly cookie flag | true |
 | `--cookie-name` | string | the name of the cookie that the oauth_proxy creates. Should be changed to use a [cookie prefix](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#cookie_prefixes) (`__Host-` or `__Secure-`) if `--cookie-secure` is set. | `"_oauth2_proxy"` |
 | `--cookie-path` | string | an optional cookie path to force cookies to (e.g. `/poc/`) | `"/"` |
-| `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;\[[1](#footnote1)\] | |
+| `--cookie-refresh` | duration | refresh the cookie after this duration; `0` to disable; not supported by all providers&nbsp;[^1] | |
 | `--cookie-secret` | string | the seed string for secure cookies (optionally base64 encoded) | |
 | `--cookie-secure` | bool | set [secure (HTTPS only) cookie flag](https://owasp.org/www-community/controls/SecureFlag) | true |
 | `--cookie-samesite` | string | set SameSite cookie attribute (`"lax"`, `"strict"`, `"none"`, or `""`). | `""` |
@@ -101,8 +95,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--custom-templates-dir` | string | path to custom html templates | |
 | `--custom-sign-in-logo` | string | path or a URL to an custom image for the sign_in page logo. Use `"-"` to disable default logo. |
 | `--display-htpasswd-form` | bool | display username / password login form if an htpasswd file is provided | true |
-| `--email-domain` | string \| list  | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
-| `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | |
+| `--email-domain` | string \| list | authenticate emails with the specified domain (may be given multiple times). Use `*` to authenticate any email | |
+| `--errors-to-info-log` | bool | redirects error-level logging to default log channel instead of stderr | false |
 | `--extra-jwt-issuers` | string | if `--skip-jwt-bearer-tokens` is set, a list of extra JWT `issuer=audience` (see a token's `iss`, `aud` fields) pairs (where the issuer URL has a `.well-known/openid-configuration` or a `.well-known/jwks.json`) | |
 | `--exclude-logging-path` | string | comma separated list of paths to exclude from logging, e.g. `"/ping,/path2"` |`""` (no paths excluded) |
 | `--flush-interval` | duration | period between flushing response buffers when streaming responses | `"1s"` |
@@ -120,6 +114,8 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--google-admin-email` | string | the google admin to impersonate for api calls | |
 | `--google-group` | string | restrict logins to members of this google group (may be given multiple times). | |
 | `--google-service-account-json` | string | the path to the service account json credentials | |
+| `--google-use-application-default-credentials` | bool | use application default credentials instead of service account json (i.e. GKE Workload Identity) | |
+| `--google-target-principal` | bool | the target principal to impersonate when using ADC | defaults to the service account configured for ADC |
 | `--htpasswd-file` | string | additionally authenticate against a htpasswd file. Entries must be created with `htpasswd -B` for bcrypt encryption | |
 | `--htpasswd-user-group` | string \| list | the groups to be set on sessions for htpasswd users | |
 | `--http-address` | string | `[http://]<addr>:<port>` or `unix://<path>` to listen on for HTTP clients. Square brackets are required for ipv6 address, e.g. `http://[::1]:4180` | `"127.0.0.1:4180"` |
@@ -128,7 +124,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--logging-filename` | string | File to log requests to, empty for `stdout` | `""` (stdout) |
 | `--logging-local-time` | bool | Use local time in log files and backup filenames instead of UTC | true (local time) |
 | `--logging-max-age` | int | Maximum number of days to retain old log files | 7 |
-| `--logging-max-backups` | int | Maximum number of old log files to retain; 0 to disable | 0  |
+| `--logging-max-backups` | int | Maximum number of old log files to retain; 0 to disable | 0 |
 | `--logging-max-size` | int | Maximum size in megabytes of the log file before rotation | 100 |
 | `--jwt-key` | string | private key in PEM format used to sign JWT, so that you can say something like `--jwt-key="${OAUTH2_PROXY_JWT_KEY}"`: required by login.gov | |
 | `--jwt-key-file` | string | path to the private key file in PEM format used to sign the JWT so that you can say something like `--jwt-key-file=/etc/ssl/private/jwt_signing_key.pem`: required by login.gov | |
@@ -149,9 +145,11 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--pass-host-header` | bool | pass the request Host Header to upstream | true |
 | `--pass-user-headers` | bool | pass X-Forwarded-User, X-Forwarded-Groups, X-Forwarded-Email and X-Forwarded-Preferred-Username information to upstream | true |
 | `--profile-url` | string | Profile access endpoint | |
+| `--skip-claims-from-profile-url` | bool | skip request to Profile URL for resolving claims not present in id_token | false |
 | `--prompt` | string | [OIDC prompt](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest); if present, `approval-prompt` is ignored | `""` |
 | `--provider` | string | OAuth provider | google |
-| `--provider-ca-file` |  string \| list |  Paths to CA certificates that should be used when connecting to the provider.  If not specified, the default Go trust sources are used instead. |
+| `--provider-ca-file` | string \| list | Paths to CA certificates that should be used when connecting to the provider. If not specified, the default Go trust sources are used instead. |
+| `--use-system-trust-store` | bool | Determines if `provider-ca-file` files and the system trust store are used. If set to true, your custom CA files and the system trust store are used otherwise only your custom CA files. | false |
 | `--provider-display-name` | string | Override the provider's name with the given string; used for the sign-in page | (depends on provider) |
 | `--ping-path` | string | the ping endpoint that can be used for basic health checks | `"/ping"` |
 | `--ping-user-agent` | string | a User-Agent that can be used for basic health checks | `""` (don't check user agent) |
@@ -163,6 +161,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--real-client-ip-header` | string | Header used to determine the real IP of the client, requires `--reverse-proxy` to be set (one of: X-Forwarded-For, X-Real-IP, or X-ProxyUser-IP) | X-Real-IP |
 | `--redeem-url` | string | Token redemption endpoint | |
 | `--redirect-url` | string | the OAuth Redirect URL, e.g. `"https://internalapp.yourcompany.com/oauth2/callback"` | |
+| `--relative-redirect-url` | bool | allow relative OAuth Redirect URL.` | false |
 | `--redis-cluster-connection-urls` | string \| list | List of Redis cluster connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-cluster` | |
 | `--redis-connection-url` | string | URL of redis server for redis session storage (e.g. `redis://HOST[:PORT]`) | |
 | `--redis-insecure-skip-tls-verify` | bool | skip TLS verification when connecting to Redis | false |
@@ -172,16 +171,16 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--redis-sentinel-connection-urls` | string \| list | List of Redis sentinel connection URLs (e.g. `redis://HOST[:PORT]`). Used in conjunction with `--redis-use-sentinel` | |
 | `--redis-use-cluster` | bool | Connect to redis cluster. Must set `--redis-cluster-connection-urls` to use this feature | false |
 | `--redis-use-sentinel` | bool | Connect to redis via sentinels. Must set `--redis-sentinel-master-name` and `--redis-sentinel-connection-urls` to use this feature | false |
-| `--redis-connection-idle-timeout` | int | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Exmpale: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0 |
+| `--redis-connection-idle-timeout` | int | Redis connection idle timeout seconds. If Redis [timeout](https://redis.io/docs/reference/clients/#client-timeouts) option is set to non-zero, the `--redis-connection-idle-timeout` must be less than Redis timeout option. Example: if either redis.conf includes `timeout 15` or using `CONFIG SET timeout 15` the `--redis-connection-idle-timeout` must be at least `--redis-connection-idle-timeout=14` | 0 |
 | `--request-id-header` | string | Request header to use as the request ID in logging | X-Request-Id |
 | `--request-logging` | bool | Log requests | true |
 | `--request-logging-format` | string | Template for request log lines | see [Logging Configuration](#logging-configuration) |
 | `--resource` | string | The resource that is protected (Azure AD only) | |
-| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-{Proto,Host,Uri} headers to be used on redirect selection | false |
+| `--reverse-proxy` | bool | are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and allows X-Forwarded-\{Proto,Host,Uri\} headers to be used on redirect selection | false |
 | `--scope` | string | OAuth scope specification | |
 | `--session-cookie-minimal` | bool | strip OAuth tokens from cookie session stores if they aren't needed (cookie session store only) | false |
 | `--session-store-type` | string | [Session data storage backend](sessions.md); redis or cookie | cookie |
-| `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode). When used with `--pass-access-token`, X-Auth-Request-Access-Token is added to response headers.  | false |
+| `--set-xauthrequest` | bool | set X-Auth-Request-User, X-Auth-Request-Groups, X-Auth-Request-Email and X-Auth-Request-Preferred-Username response headers (useful in Nginx auth_request mode). When used with `--pass-access-token`, X-Auth-Request-Access-Token is added to response headers. | false |
 | `--set-authorization-header` | bool | set Authorization Bearer response header (useful in Nginx auth_request mode) | false |
 | `--set-basic-auth` | bool | set HTTP Basic Auth information in response (useful in Nginx auth_request mode) | false |
 | `--show-debug-on-error` | bool | show detailed error information on error pages (WARNING: this may contain sensitive information - do not use in production) | false |
@@ -189,7 +188,7 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--silence-ping-logging` | bool | disable logging of requests to ping & ready endpoints | false |
 | `--skip-auth-preflight` | bool | will skip authentication for OPTIONS requests | false |
 | `--skip-auth-regex` | string \| list | (DEPRECATED for `--skip-auth-route`) bypass authentication for requests paths that match (may be given multiple times) | |
-| `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex  | |
+| `--skip-auth-route` | string \| list | bypass authentication for requests that match the method & path. Format: method=path_regex OR method!=path_regex. For all methods: path_regex OR !=path_regex | |
 | `--skip-auth-strip-headers` | bool | strips `X-Forwarded-*` style authentication headers & `Authorization` header if they would be set by oauth2-proxy | true |
 | `--skip-jwt-bearer-tokens` | bool | will skip requests that have verified JWT bearer tokens (the token must have [`aud`](https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields) that matches this client id or one of the extras from `extra-jwt-issuers`) | false |
 | `--skip-oidc-discovery` | bool | bypass OIDC endpoint discovery. `--login-url`, `--redeem-url` and `--oidc-jwks-url` must be configured in this case | false |
@@ -208,18 +207,22 @@ An example [oauth2-proxy.cfg](https://github.com/oauth2-proxy/oauth2-proxy/blob/
 | `--allowed-role` | string \| list | restrict logins to users with this role (may be given multiple times). Only works with the keycloak-oidc provider. | |
 | `--validate-url` | string | Access token validation endpoint | |
 | `--version` | n/a | print version string | |
-| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` or a `*.` to allow subdomains (e.g. `.example.com`, `*.example.com`)&nbsp;\[[2](#footnote2)\] | |
+| `--whitelist-domain` | string \| list | allowed domains for redirection after authentication. Prefix domain with a `.` or a `*.` to allow subdomains (e.g. `.example.com`, `*.example.com`)&nbsp;[^2] | |
 | `--trusted-ip` | string \| list | list of IPs or CIDR ranges to allow to bypass authentication (may be given multiple times). When combined with `--reverse-proxy` and optionally `--real-client-ip-header` this will evaluate the trust of the IP stored in an HTTP header by a reverse proxy rather than the layer-3/4 remote address. WARNING: trusting IPs has inherent security flaws, especially when obtaining the IP address from an HTTP header (reverse-proxy mode). Use this option only if you understand the risks and how to manage them. | |
+| `--encode-state` | bool | encode the state parameter as UrlEncodedBase64 | false |
 
-\[<a name="footnote1">1</a>\]: The following providers support `--cookie-refresh`: ADFS, Azure, GitLab, Google, Keycloak and all other Identity Providers who support the full OIDC specification
-
-\[<a name="footnote2">2</a>\]: When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
+[^1]: The following providers support `--cookie-refresh`: ADFS, Azure, GitLab, Google, Keycloak and all other Identity Providers who support the full OIDC specification
+[^2]: When using the `whitelist-domain` option, any domain prefixed with a `.` or a `*.` will allow any subdomain of the specified domain as a valid redirect URL. By default, only empty ports are allowed. This translates to allowing the default port of the URL's protocol (80 for HTTP, 443 for HTTPS, etc.) since browsers omit them. To allow only a specific port, add it to the whitelisted domain: `example.com:8080`. To allow any port, use `*`: `example.com:*`.
 
 See below for provider specific options
 
 ### Upstreams Configuration
 
-`oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers or serve static files from the file system. HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+`oauth2-proxy` supports having multiple upstreams, and has the option to pass requests on to HTTP(S) servers, unix socket or serve static files from the file system.
+
+HTTP and HTTPS upstreams are configured by providing a URL such as `http://127.0.0.1:8080/` for the upstream parameter. . This will forward all authenticated requests to the upstream server. If you instead provide `http://127.0.0.1:8080/some/path/` then it will only be requests that start with `/some/path/` which are forwarded to the upstream.
+
+Unix socket upstreams are configured as `unix:///path/to/unix.sock`.
 
 Static file paths are configured as a file:// URL. `file:///var/www/static/` will serve the files from that directory at `http://[oauth2-proxy url]/var/www/static/`, which may not be what you want. You can provide the path to where the files should be available by adding a fragment to the configured URL. The value of the fragment will then be used to specify which path the files are available at, e.g. `file:///var/www/static/#/static/` will make `/var/www/static/` available at `http://[oauth2-proxy url]/static/`.
 
@@ -232,7 +235,7 @@ prefixing it with `OAUTH2_PROXY_`, capitalising it, and replacing hyphens (`-`)
 with underscores (`_`). If the argument can be specified multiple times, the
 environment variable should be plural (trailing `S`).
 
-This is particularly useful for storing secrets outside of a configuration file
+This is particularly useful for storing secrets outside a configuration file
 or the command line.
 
 For example, the `--cookie-secret` flag becomes `OAUTH2_PROXY_COOKIE_SECRET`,
@@ -246,7 +249,7 @@ If logging to a file you can also configure the maximum file size (`--logging-ma
 
 There are three different types of logging: standard, authentication, and HTTP requests. These can each be enabled or disabled with `--standard-logging`, `--auth-logging`, and `--request-logging`.
 
-Each type of logging has its own configurable format and variables. By default these formats are similar to the Apache Combined Log.
+Each type of logging has its own configurable format and variables. By default, these formats are similar to the Apache Combined Log.
 
 Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and the `/ready` endpoint can be disabled with `--silence-ping-logging` reducing log volume.
 
@@ -254,7 +257,7 @@ Logging of requests to the `/ping` endpoint (or using `--ping-user-agent`) and t
 Authentication logs are logs which are guaranteed to contain a username or email address of a user attempting to authenticate. These logs are output by default in the below format:
 
 ```
-<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] [<STATUS>] <MESSAGE>
+<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] [<STATUS>] <MESSAGE>
 ```
 
 The status block will contain one of the below strings:
@@ -280,7 +283,7 @@ Available variables for auth logging:
 | Protocol | HTTP/1.0 | The request protocol. |
 | RequestID | 00010203-0405-4607-8809-0a0b0c0d0e0f | The request ID pulled from the `--request-id-header`. Random UUID if empty |
 | RequestMethod | GET | The request method. |
-| Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
+| Timestamp | 2015/03/19 17:20:19 | The date and time of the logging event. |
 | UserAgent | - | The full user agent as reported by the requesting client. |
 | Username | username@email.com | The email or username of the auth request. |
 | Status | AuthSuccess | The status of the auth request. See above for details. |
@@ -289,7 +292,7 @@ Available variables for auth logging:
 HTTP request logs will output by default in the below format:
 
 ```
-<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [19/Mar/2015:17:20:19 -0400] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
+<REMOTE_ADDRESS> - <REQUEST ID> - <user@domain.com> [2015/03/19 17:20:19] <HOST_HEADER> GET <UPSTREAM_HOST> "/path/" HTTP/1.1 "<USER_AGENT>" <RESPONSE_CODE> <RESPONSE_BYTES> <REQUEST_DURATION>
 ```
 
 If you require a different format than that, you can configure it with the `--request-logging-format` flag.
@@ -312,7 +315,7 @@ Available variables for request logging:
 | RequestURI | "/oauth2/auth" | The URI path of the request. |
 | ResponseSize | 12 | The size in bytes of the response. |
 | StatusCode | 200 | The HTTP status code of the response. |
-| Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
+| Timestamp | 2015/03/19 17:20:19 | The date and time of the logging event. |
 | Upstream | - | The upstream data of the HTTP request. |
 | UserAgent | - | The full user agent as reported by the requesting client. |
 | Username | username@email.com | The email or username of the auth request. |
@@ -321,7 +324,7 @@ Available variables for request logging:
 All other logging that is not covered by the above two types of logging will be output in this standard logging format. This includes configuration information at startup and errors that occur outside of a session. The default format is below:
 
 ```
-[19/Mar/2015:17:20:19 -0400] [main.go:40] <MESSAGE>
+[2015/03/19 17:20:19] [main.go:40] <MESSAGE>
 ```
 
 If you require a different format than that, you can configure it with the `--standard-logging-format` flag. The default format is configured as follows:
@@ -334,11 +337,13 @@ Available variables for standard logging:
 
 | Variable | Example | Description |
 | --- | --- | --- |
-| Timestamp | 19/Mar/2015:17:20:19 -0400 | The date and time of the logging event. |
+| Timestamp | 2015/03/19 17:20:19 | The date and time of the logging event. |
 | File | main.go:40 | The file and line number of the logging statement. |
 | Message | HTTP: listening on 127.0.0.1:4180 | The details of the log statement. |
 
 ## Configuring for use with the Nginx `auth_request` directive
+
+**This option requires `--reverse-proxy` option to be set.**
 
 The [Nginx `auth_request` directive](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) allows Nginx to authenticate requests via the oauth2-proxy's `/auth` endpoint, which only returns a 202 Accepted response or a 401 Unauthorized response without proxying the request through. For example:
 
@@ -352,7 +357,6 @@ server {
     proxy_pass       http://127.0.0.1:4180;
     proxy_set_header Host                    $host;
     proxy_set_header X-Real-IP               $remote_addr;
-    proxy_set_header X-Scheme                $scheme;
     proxy_set_header X-Auth-Request-Redirect $request_uri;
     # or, if you are handling multiple domains:
     # proxy_set_header X-Auth-Request-Redirect $scheme://$host$request_uri;
@@ -361,7 +365,7 @@ server {
     proxy_pass       http://127.0.0.1:4180;
     proxy_set_header Host             $host;
     proxy_set_header X-Real-IP        $remote_addr;
-    proxy_set_header X-Scheme         $scheme;
+    proxy_set_header X-Forwarded-Uri  $request_uri;
     # nginx auth_request includes headers but not body
     proxy_set_header Content-Length   "";
     proxy_pass_request_body           off;
@@ -369,7 +373,7 @@ server {
 
   location / {
     auth_request /oauth2/auth;
-    error_page 401 = /oauth2/sign_in;
+    error_page 401 =403 /oauth2/sign_in;
 
     # pass information via X-User and X-Email headers to backend,
     # requires running with --set-xauthrequest flag
@@ -498,7 +502,7 @@ http:
         status:
           - "401-403"
         service: oauth-backend
-        query: "/oauth2/sign_in"
+        query: "/oauth2/sign_in?rd={url}"
 ```
 
 ### ForwardAuth with static upstreams configuration

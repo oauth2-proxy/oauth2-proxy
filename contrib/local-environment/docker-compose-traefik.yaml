@@ -33,7 +33,7 @@ services:
   # Reverse proxy
   gateway:
     container_name: traefik
-    image: traefik:2.4.2
+    image: traefik:v2.11.6
     volumes:
       - "./traefik:/etc/traefik"
     ports:
