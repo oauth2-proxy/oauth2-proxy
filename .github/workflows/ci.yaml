@@ -4,21 +4,9 @@ on:
   push:
     branches:
       - '**'
-    paths-ignore:
-      - '.devcontainer/**'
-      - '.vscode/**'
-      - 'contrib/**'
-      - 'docs/**'
-      - '*.md'
   pull_request:
     branches:
       - '**'
-    paths-ignore:
-      - '.devcontainer/**'
-      - '.vscode/**'
-      - 'contrib/**'
-      - 'docs/**'
-      - '*.md'
 jobs:
   build:
     runs-on: ubuntu-latest
