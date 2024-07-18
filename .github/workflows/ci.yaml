@@ -4,19 +4,25 @@ on:
   push:
     branches:
       - '**'
-      # - $default-branch
+    paths-ignore:
+      - '.devcontainer/**'
+      - '.vscode/**'
+      - 'contrib/**'
+      - 'docs/**'
   pull_request:
     branches:
       - '**'
-      # - $default-branch
-
+    paths-ignore:
+      - '.devcontainer/**'
+      - '.vscode/**'
+      - 'contrib/**'
+      - 'docs/**'
 jobs:
   build:
+    runs-on: ubuntu-latest
     env:
       COVER: true
-    runs-on: ubuntu-latest
     steps:
-
     - name: Check out code
       uses: actions/checkout@v4
 
@@ -59,7 +65,6 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-
     - name: Check out code
       uses: actions/checkout@v4
 
