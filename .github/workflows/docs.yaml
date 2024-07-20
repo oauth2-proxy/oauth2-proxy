@@ -15,23 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Pages
-        id: pages
-        uses: actions/configure-pages@v5
-      
-      - uses: actions/setup-node@v4
         with:
-          # renovate: datasource=node-version depName=node
-          node-version: 20
-          cache: npm
-          cache-dependency-path: "./docs/package-lock.json"
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Run setup mkdocs dependencies
+        run: pip install -r docs/requirements.txt
 
       - name: Test Build
-        working-directory: ./docs
-        run: |
-          npm ci
-          npm run build
+        run: mkdocs build
 
   build-docs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
