@@ -2,10 +2,22 @@ name: "Code scanning - action"
 
 on:
   push:
-    branches: [master, ]
+    branches:
+      - master
+    paths-ignore:
+      - '.devcontainer/**'
+      - '.vscode/**'
+      - 'contrib/**'
+      - 'docs/**'
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [master]
+    branches:
+      - master
+    paths-ignore:
+      - '.devcontainer/**'
+      - '.vscode/**'
+      - 'contrib/**'
+      - 'docs/**'
   schedule:
     - cron: '0 15 * * 2'
       
