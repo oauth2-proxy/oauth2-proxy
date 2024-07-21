@@ -14,6 +14,7 @@ nav:
     - Overview: configuration/overview.md
     - Alpha Configuration: configuration/alpha_config.md
     - OAuth Provider:
+      - configuration/overview.md
       - ADFS: configuration/providers/adfs.md
       - Azure: configuration/providers/azure.md
       - Azure AD: configuration/providers/azure_ad.md
@@ -60,8 +61,8 @@ theme:
         name: Switch to light mode
   features:
     - navigation.sections
-    - navigation.expand
     - navigation.path
+    - navigation.expand
     - navigation.indexes
     - navigation.footer
     - content.code.copy
