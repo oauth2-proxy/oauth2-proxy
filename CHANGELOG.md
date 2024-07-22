@@ -14,6 +14,7 @@
 - [#2674](https://github.com/oauth2-proxy/oauth2-proxy/pull/2674) docs: additional notes about available claims for HeaderValue (@vegetablest)
 - [#2459](https://github.com/oauth2-proxy/oauth2-proxy/pull/2459) chore(deps): Updated to ginkgo v2 (@kvanzuijlen, @tuunit)
 - [#2112](https://github.com/oauth2-proxy/oauth2-proxy/pull/2112) docs: update list of providers which support refresh tokens (@mikefab-msf)
+- [#2712](https://github.com/oauth2-proxy/oauth2-proxy/pull/2712) docs: migration from docusaurus to mkdocs
 
 # V7.6.0
 
