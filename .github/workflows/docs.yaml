@@ -17,7 +17,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          fetch-tags: true
 
       - uses: actions/setup-python@v5
         with:
@@ -33,22 +32,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
         with:
-          # renovate: datasource=node-version depName=node
-          node-version: 20
+          fetch-depth: 0
 
-      - name: Build docusaurus
-        working-directory: ./docs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Test Build
         run: |
-          npm ci
-          npm run build
+          cd docs
+          bash build.sh
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/build
+          path: ./docs/site
 
   deploy-docs:
     needs: build-docs
