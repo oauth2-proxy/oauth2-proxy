@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: 3.x
 
-      - name: Test Build
+      - name: Build docs
         run: |
           cd docs
           bash build.sh
