@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="Layer_1"
+   data-name="Layer 1"
+   viewBox="0 0 367.71862 367.71759"
+   version="1.1"
+   sodipodi:docname="OAuth2_Proxy_filled_icon.svg"
+   width="367.71863"
+   height="367.71759"
+   inkscape:version="1.3 (1:1.3+202307231459+0e150ed6c4)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview15"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.8919409"
+     inkscape:cx="140.33208"
+     inkscape:cy="156.45309"
+     inkscape:window-width="3440"
+     inkscape:window-height="1364"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" />
+  <defs
+     id="defs1">
+    <style
+       id="style1">.cls-1{fill:#333;}.cls-2{fill:#7c7c82;}.cls-3{fill:#06ed94;}.cls-4{fill:#059b61;}.cls-5{fill:#1957ba;}.cls-6{fill:#6ca8ff;}</style>
+  </defs>
+  <title
+     id="title1">OAuth2_Proxy_logo_v3</title>
+  <path
+     class="cls-3"
+     d="M 183.85932,367.7176 C 82.47905,367.7176 0,285.23908 0,183.8588 0,82.47852 82.47903,0 183.85932,0 c 101.38029,0 183.8593,82.47853 183.8593,183.8588 0,101.38027 -82.47905,183.8588 -183.8593,183.8588 z"
+     id="path15"
+     sodipodi:nodetypes="sssss"
+     style="fill:#ffffff;fill-opacity:1" />
+  <path
+     class="cls-3"
+     d="M 183.85932,367.7176 C 82.47905,367.7176 0,285.23908 0,183.8588 0,82.47852 82.47903,0 183.85932,0 c 101.38029,0 183.8593,82.47853 183.8593,183.8588 0,101.38027 -82.47905,183.8588 -183.8593,183.8588 z m 0,-354.70389 c -94.2045,0 -170.84457,76.64111 -170.84457,170.84509 0,94.20398 76.64005,170.84509 170.84457,170.84509 94.20452,0 170.84457,-76.6411 170.84457,-170.84509 0,-94.20399 -76.64009,-170.84509 -170.84457,-170.84509 z"
+     id="path12" />
+  <polygon
+     class="cls-4"
+     points="281.959,166.856 322.055,161.912 244.602,112.007 239.295,131.843 "
+     id="polygon12"
+     transform="translate(-28.07168,-24.91776)" />
+  <polygon
+     class="cls-3"
+     points="290.209,109.179 244.602,112.007 300.209,156.67 76.642,156.67 76.642,198.05 348.449,195.562 348.449,158.734 "
+     id="polygon13"
+     transform="translate(-28.07168,-24.91776)" />
+  <polygon
+     class="cls-5"
+     points="141.87,240.558 103.037,247.271 180.489,297.175 185.796,277.34 "
+     id="polygon14"
+     transform="translate(-28.07168,-24.91776)" />
+  <polygon
+     class="cls-6"
+     points="134.882,300.004 180.489,297.175 124.882,252.512 348.449,252.512 348.449,211.132 76.642,213.62 76.642,250.448 "
+     id="polygon15"
+     transform="translate(-28.07168,-24.91776)" />
+  <metadata
+     id="metadata15">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>OAuth2_Proxy_logo_v3</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>

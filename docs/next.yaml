@@ -1,0 +1,34 @@
+docs_dir: next
+
+nav:
+  - Welcome: index.md
+  - Installation: installation.md
+  - Behaviour: behaviour.md
+  - Configuration:
+    - Overview: configuration/overview.md
+    - Alpha Configuration: configuration/alpha_config.md
+    - OAuth Provider:
+      - configuration/overview.md
+      - ADFS: configuration/providers/adfs.md
+      - Azure: configuration/providers/azure.md
+      - Azure AD: configuration/providers/azure_ad.md
+      - Bitbucket: configuration/providers/bitbucket.md
+      - DigitalOcean: configuration/providers/digitalocean.md
+      - Facebook: configuration/providers/facebook.md
+      - Gitea: configuration/providers/gitea.md
+      - GitHub: configuration/providers/github.md
+      - GitLab: configuration/providers/gitlab.md
+      - Google: configuration/providers/google.md
+      - Keycloak: configuration/providers/keycloak.md
+      - Keycloak OIDC: configuration/providers/keycloak_oidc.md
+      - LinkedIn: configuration/providers/linkedin.md
+      - Login.gov: configuration/providers/login_gov.md
+      - Nextcloud: configuration/providers/nextcloud.md
+      - OpenID Connect: configuration/providers/openid_connect.md
+    - Session Storage: configuration/sessions.md
+    - TLS Configuration: configuration/tls.md
+  - Features:
+    - Endpoints: features/endpoints.md
+  - Community:
+    - Contribution Guide: community/contribution.md
+    - Security: community/security.md

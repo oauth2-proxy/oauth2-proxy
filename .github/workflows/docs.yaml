@@ -23,11 +23,10 @@ jobs:
         with:
           python-version: 3.x
 
-      - name: Run setup mkdocs dependencies
-        run: pip install -r docs/requirements.txt
-
       - name: Test Build
-        run: mkdocs build
+        run: |
+          cd docs
+          bash build.sh
 
   build-docs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'

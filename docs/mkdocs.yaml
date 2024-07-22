@@ -1,0 +1,69 @@
+site_name: OAuth2 Proxy Documentation
+repo_name: oauth2-proxy/oauth2-proxy
+repo_url: https://github.com/oauth2-proxy/oauth2-proxy
+site_author: OAuth2 Proxy Authors
+copyright: Copyright &copy; 2012 - 2024 OAuth2 Proxy Authors
+
+theme:
+  name: material
+  custom_dir: overrides
+  logo: assets/logos/OAuth2_Proxy_filled_icon.svg
+  favicon: assets/logos/OAuth2_Proxy_icon.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: grey
+      accent: green
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: green
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.path
+    - navigation.expand
+    - navigation.indexes
+    - navigation.footer
+    - content.code.copy
+    - search.suggest
+    - search.share
+
+exclude_docs: |
+  *.tmpl
+
+plugins:
+  - search:
+      separator: '[\s\-|]+'
+      pipeline:
+        - stopWordFilter
+  - autolinks
+  - drawio
+  - git-revision-date-localized
+
+markdown_extensions:
+  - abbr
+  - tables
+  - footnotes
+  - admonition
+  - pymdownx.details
+  - pymdownx.snippets
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/oauth2-proxy
+  version:
+    provider: mike
+

@@ -1,0 +1,18 @@
+docs_dir: versioned_docs/7.5
+
+nav:
+  - Welcome: index.md
+  - Installation: installation.md
+  - Behaviour: behaviour.md
+  - Configuration:
+    - Overview: configuration/overview.md
+    - OAuth Provider Configuration: configuration/auth.md
+    - Session Storage: configuration/sessions.md
+    - TLS Configuration: configuration/tls.md
+    - Alpha Configuration: configuration/alpha_config.md
+  - Features:
+    - Endpoints: features/endpoints.md
+  - Community:
+    - Contribution Guide: community/contribution.md
+    - Security: community/security.md
+
