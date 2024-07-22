@@ -8,7 +8,7 @@ nav:
     - Overview: configuration/overview.md
     - Alpha Configuration: configuration/alpha_config.md
     - OAuth Provider:
-      - configuration/overview.md
+      - configuration/providers/index.md
       - ADFS: configuration/providers/adfs.md
       - Azure: configuration/providers/azure.md
       - Azure AD: configuration/providers/azure_ad.md
