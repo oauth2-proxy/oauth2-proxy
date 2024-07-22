@@ -52,29 +52,23 @@ jobs:
       run: |
         git config --local user.name "github-actions[bot]"
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-    
-    - name: Setup node
-      uses: actions/setup-node@v4
-      with:
-        node-version-file: docs/package.json
       
     - name: Update documentation
       run: |
         cd docs
 
         FULL_VERSION=${{ steps.validate.outputs.version }}
-        VERSION=${FULL_VERSION%.*}.x
+        VERSION=${FULL_VERSION%.*}
 
-        if [ ! -d "versioned_docs/version-${VERSION}" ]; then
-          npm ci
-          npm run docusaurus docs:version ${VERSION}
+        if [ ! -d "versioned_docs/${VERSION}" ]; then
+          cp -r next "versioned_docs/${VERSION}"
 
           git add .
           git commit -m "add new docs version ${VERSION}"
         fi
 
-        sed -i "s/(current release is .*)/(current release is \`v${FULL_VERSION}\`)/g" docs/installation.md
-        sed -i "s/(current release is .*)/(current release is \`v${FULL_VERSION}\`)/g" versioned_docs/version-${VERSION}/installation.md
+        sed -i "s/(current release is .*)/(current release is \`v${FULL_VERSION}\`)/g" next/installation.md
+        sed -i "s/(current release is .*)/(current release is \`v${FULL_VERSION}\`)/g" versioned_docs/${VERSION}/installation.md
     
     - name: Update Changelog
       run: |
