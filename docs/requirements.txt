@@ -1,5 +1,4 @@
 mkdocs 
-mike 
 mkdocs-drawio
 mkdocs-material 
 mkdocs-autolinks-plugin 
