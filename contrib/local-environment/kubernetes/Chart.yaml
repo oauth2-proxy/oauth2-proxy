@@ -6,7 +6,7 @@ dependencies:
     version: 0.18.0
     repository: https://charts.dexidp.io
   - name: oauth2-proxy
-    version: &chartVersion 7.7.8
+    version: &chartVersion 7.7.9
     repository: https://oauth2-proxy.github.io/manifests
   # https://github.com/postmanlabs/httpbin/issues/549 is still in progress, for now using a non-official chart
   - name: httpbin
