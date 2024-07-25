@@ -7,6 +7,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/healthcheck"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
@@ -25,6 +26,8 @@ func main() {
 	config := configFlagSet.String("config", "", "path to config file")
 	alphaConfig := configFlagSet.String("alpha-config", "", "path to alpha config file (use at your own risk - the structure in this config file may change between minor releases)")
 	convertConfig := configFlagSet.Bool("convert-config-to-alpha", false, "if true, the proxy will load configuration as normal and convert existing configuration to the alpha config structure, and print it to stdout")
+	checkPing := configFlagSet.Bool("healthcheck", false, "check whether an instance of oauth2-proxy as configured is alive")
+
 	showVersion := configFlagSet.Bool("version", false, "print version string")
 	configFlagSet.Parse(os.Args[1:])
 
@@ -37,6 +40,10 @@ func main() {
 		logger.Fatal("cannot use alpha-config and convert-config-to-alpha together")
 	}
 
+	if *checkPing && *convertConfig {
+		logger.Fatal("cannot use healthcheck and convert-config-to-alpha together")
+	}
+
 	opts, err := loadConfiguration(*config, *alphaConfig, configFlagSet, os.Args[1:])
 	if err != nil {
 		logger.Fatalf("ERROR: %v", err)
@@ -45,6 +52,15 @@ func main() {
 	if *convertConfig {
 		if err := printConvertedConfig(opts); err != nil {
 			logger.Fatalf("ERROR: could not convert config: %v", err)
+		}
+		return
+	}
+
+	if *checkPing {
+		if err = healthcheck.PerformHealthcheck(opts); err != nil {
+			logger.Fatalf("ERROR: healthcheck failed: %v", err)
+		} else {
+			logger.Printf("INFO: healthcheck ok")
 		}
 		return
 	}
