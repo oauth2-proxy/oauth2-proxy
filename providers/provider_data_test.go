@@ -237,6 +237,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 		ExpectedError            error
 		ExpectedSession          *sessions.SessionState
 		ExpectProfileURLCalled   bool
+		AllowAdditionalClaims    []string
 	}{
 		"Standard": {
 			IDToken:         defaultIDToken,
@@ -417,6 +418,17 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			SkipClaimsFromProfileURL: true,
 			ExpectedSession:          &sessions.SessionState{},
 		},
+		"Allow additional claims": {
+			IDToken:               defaultIDToken,
+			AllowAdditionalClaims: []string{"phone_number", "picture"},
+			ExpectedSession: &sessions.SessionState{
+				PreferredUsername: "Jane Dobbs",
+				AdditionalClaims: map[string]string{
+					"phone_number": "+4798765432",
+					"picture":      "http://mugbook.com/janed/me.jpg",
+				},
+			},
+		},
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
@@ -453,6 +465,7 @@ func TestProviderData_buildSessionFromClaims(t *testing.T) {
 			provider.EmailClaim = tc.EmailClaim
 			provider.GroupsClaim = tc.GroupsClaim
 			provider.SkipClaimsFromProfileURL = tc.SkipClaimsFromProfileURL
+			provider.AllowAdditionalClaims = tc.AllowAdditionalClaims
 
 			rawIDToken, err := newSignedTestIDToken(tc.IDToken)
 			g.Expect(err).ToNot(HaveOccurred())

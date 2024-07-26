@@ -29,6 +29,9 @@ type SessionState struct {
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
+	// Additional claims
+	AdditionalClaims map[string]string `msgpack:"ac,omitempty"`
+
 	// Internal helpers, not serialized
 	Clock clock.Clock `msgpack:"-"`
 	Lock  Lock        `msgpack:"-"`
@@ -149,6 +152,10 @@ func (s *SessionState) GetClaim(claim string) []string {
 	case "preferred_username":
 		return []string{s.PreferredUsername}
 	default:
+		// Check in AdditionalClaims
+		if value, ok := s.AdditionalClaims[claim]; ok {
+			return []string{value}
+		}
 		return []string{}
 	}
 }

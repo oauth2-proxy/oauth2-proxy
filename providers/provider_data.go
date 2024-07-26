@@ -48,6 +48,7 @@ type ProviderData struct {
 	EmailClaim               string
 	GroupsClaim              string
 	Verifier                 internaloidc.IDTokenVerifier
+	AllowAdditionalClaims    []string `json:"allowAdditionalClaims,omitempty"`
 	SkipClaimsFromProfileURL bool
 
 	// Universal Group authorization data structure
@@ -264,6 +265,19 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
 			return nil, err
 		}
+	}
+
+	// Extract additional claims
+	for _, claim := range p.AllowAdditionalClaims {
+		var value string
+		if _, err := extractor.GetClaimInto(claim, &value); err != nil {
+			return nil, err
+		}
+
+		if ss.AdditionalClaims == nil {
+			ss.AdditionalClaims = make(map[string]string)
+		}
+		ss.AdditionalClaims[claim] = value
 	}
 
 	// `email_verified` must be present and explicitly set to `false` to be
