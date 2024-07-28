@@ -48,4 +48,6 @@ FROM ${RUNTIME_IMAGE}
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/oauth2-proxy /bin/oauth2-proxy
 COPY --from=builder /go/src/github.com/oauth2-proxy/oauth2-proxy/jwt_signing_key.pem /etc/ssl/private/jwt_signing_key.pem
 
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD ["/bin/oauth2-proxy", "--healthcheck"]
+
 ENTRYPOINT ["/bin/oauth2-proxy"]
