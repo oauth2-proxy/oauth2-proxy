@@ -1139,6 +1139,7 @@ func authOnlyAuthorize(req *http.Request, s *sessionsapi.SessionState) bool {
 
 	constraints := []func(*http.Request, *sessionsapi.SessionState) bool{
 		checkAllowedGroups,
+		checkAllowedRoles,
 		checkAllowedEmailDomains,
 		checkAllowedEmails,
 	}
@@ -1200,6 +1201,28 @@ func checkAllowedGroups(req *http.Request, s *sessionsapi.SessionState) bool {
 	allowedGroups := extractAllowedEntities(req, "allowed_groups")
 	if len(allowedGroups) == 0 {
 		return true
+	}
+
+	for _, group := range s.Groups {
+		if _, ok := allowedGroups[group]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+// checkAllowedRoles allow secondary role restrictions based on the `allowed_roles`
+// querystring parameter. This currently only works for Keycloak OIDC.
+func checkAllowedRoles(req *http.Request, s *sessionsapi.SessionState) bool {
+	allowedRoles := extractAllowedEntities(req, "allowed_roles")
+	if len(allowedRoles) == 0 {
+		return true
+	}
+
+	allowedGroups := map[string]struct{}{}
+	for role := range allowedRoles {
+		allowedGroups["role:"+role] = struct{}{}
 	}
 
 	for _, group := range s.Groups {

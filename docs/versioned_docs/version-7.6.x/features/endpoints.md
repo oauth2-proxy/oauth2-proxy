@@ -42,6 +42,8 @@ BEWARE that the domain you want to redirect to (`my-oidc-provider.example.com` i
 This endpoint returns 202 Accepted response or a 401 Unauthorized response.
 
 It can be configured using the following query parameters:
+
 - `allowed_groups`: comma separated list of allowed groups
+- `allowed_roles`: comma separated list of allowed roles; only works with the keycloak-oidc provider
 - `allowed_email_domains`: comma separated list of allowed email domains
 - `allowed_emails`: comma separated list of allowed emails
