@@ -22,9 +22,10 @@ type idTokenVerifier struct {
 
 // IDTokenVerificationOptions options for the oidc.idTokenVerifier that are required to verify an ID Token
 type IDTokenVerificationOptions struct {
-	AudienceClaims []string
-	ClientID       string
-	ExtraAudiences []string
+	AudienceClaims       []string
+	ClientID             string
+	ExtraAudiences       []string
+	AllowUnverifiedEmail bool
 }
 
 // NewVerifier constructs a new idTokenVerifier
@@ -53,11 +54,23 @@ func (v *idTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*oidc.
 		return nil, fmt.Errorf("failed to parse default id_token claims: %v", err)
 	}
 
-	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
+	if hasVerifiedClaims, err := v.verifyClaims(token, claims); !hasVerifiedClaims {
 		return nil, err
 	}
 
 	return token, err
+}
+
+func (v *idTokenVerifier) verifyClaims(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
+	if isValidAudience, err := v.verifyAudience(token, claims); !isValidAudience {
+		return false, fmt.Errorf("verifyAudience: %w", err)
+	}
+
+	if isVerifiedEmail, err := v.verifyEmail(token); !isVerifiedEmail {
+		return false, fmt.Errorf("verifyEmail: %w", err)
+	}
+
+	return true, nil
 }
 
 func (v *idTokenVerifier) verifyAudience(token *oidc.IDToken, claims map[string]interface{}) (bool, error) {
@@ -106,4 +119,27 @@ func (v *idTokenVerifier) interfaceSliceToString(slice interface{}) []string {
 		strings = append(strings, s.Index(i).Interface().(string))
 	}
 	return strings
+}
+
+func (v *idTokenVerifier) verifyEmail(token *oidc.IDToken) (bool, error) {
+
+	var claims struct {
+		Subject  string `json:"sub"`
+		Email    string `json:"email"`
+		Verified *bool  `json:"email_verified"`
+	}
+
+	if err := token.Claims(&claims); err != nil {
+		return false, fmt.Errorf("failed to parse bearer token claims: %w", err)
+	}
+
+	if claims.Email == "" {
+		claims.Email = claims.Subject
+	}
+
+	if claims.Verified != nil && !*claims.Verified && !v.verificationOptions.AllowUnverifiedEmail {
+		return false, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	}
+
+	return true, nil
 }

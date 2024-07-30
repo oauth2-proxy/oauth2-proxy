@@ -87,9 +87,21 @@ var _ = Describe("ProviderVerifier", func() {
 		}),
 	)
 
+	type idTokenClaims struct {
+		Name     string      `json:"preferred_username,omitempty"`
+		Email    string      `json:"email,omitempty"`
+		Phone    string      `json:"phone_number,omitempty"`
+		Picture  string      `json:"picture,omitempty"`
+		Groups   interface{} `json:"groups,omitempty"`
+		Roles    interface{} `json:"roles,omitempty"`
+		Verified *bool       `json:"email_verified,omitempty"`
+		Nonce    string      `json:"nonce,omitempty"`
+		jwt.RegisteredClaims
+	}
+
 	type verifierTableInput struct {
 		modifyOpts    func(*ProviderVerifierOptions)
-		modifyClaims  func(claims *jwt.RegisteredClaims)
+		modifyClaims  func(*idTokenClaims)
 		expectedError string
 	}
 
@@ -115,11 +127,15 @@ var _ = Describe("ProviderVerifier", func() {
 			IssuedAt:  jwt.NewNumericDate(now),
 			Subject:   "user",
 		}
+
+		extendedClaims := idTokenClaims{
+			RegisteredClaims: claims,
+		}
 		if in.modifyClaims != nil {
-			in.modifyClaims(&claims)
+			in.modifyClaims(&extendedClaims)
 		}
 
-		rawIDToken, err := m.Keypair.SignJWT(claims)
+		rawIDToken, err := m.Keypair.SignJWT(extendedClaims)
 		Expect(err).ToNot(HaveOccurred())
 
 		idToken, err := pv.Verifier().Verify(context.Background(), rawIDToken)
@@ -129,27 +145,27 @@ var _ = Describe("ProviderVerifier", func() {
 		}
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(idToken.Issuer).To(Equal(claims.Issuer))
-		Expect(idToken.Audience).To(ConsistOf(claims.Audience))
-		Expect(idToken.Subject).To(Equal(claims.Subject))
+		Expect(idToken.Issuer).To(Equal(extendedClaims.Issuer))
+		Expect(idToken.Audience).To(ConsistOf(extendedClaims.Audience))
+		Expect(idToken.Subject).To(Equal(extendedClaims.Subject))
 	},
 		Entry("with the default opts and claims", &verifierTableInput{}),
 		Entry("when the audience is mismatched", &verifierTableInput{
-			modifyClaims: func(j *jwt.RegisteredClaims) {
+			modifyClaims: func(j *idTokenClaims) {
 				j.Audience = jwt.ClaimStrings{"OtherClient"}
 			},
-			expectedError: "audience from claim aud with value [OtherClient] does not match with any of allowed audiences",
+			expectedError: "verifyAudience: audience from claim aud with value [OtherClient] does not match with any of allowed audiences",
 		}),
 		Entry("when the audience is an extra audience", &verifierTableInput{
 			modifyOpts: func(p *ProviderVerifierOptions) {
 				p.ExtraAudiences = []string{"ExtraIssuer"}
 			},
-			modifyClaims: func(j *jwt.RegisteredClaims) {
+			modifyClaims: func(j *idTokenClaims) {
 				j.Audience = jwt.ClaimStrings{"ExtraIssuer"}
 			},
 		}),
 		Entry("when the issuer is mismatched", &verifierTableInput{
-			modifyClaims: func(j *jwt.RegisteredClaims) {
+			modifyClaims: func(j *idTokenClaims) {
 				j.Issuer = "OtherIssuer"
 			},
 			expectedError: "failed to verify token: oidc: id token issued by a different provider",
@@ -158,15 +174,52 @@ var _ = Describe("ProviderVerifier", func() {
 			modifyOpts: func(p *ProviderVerifierOptions) {
 				p.SkipIssuerVerification = true
 			},
-			modifyClaims: func(j *jwt.RegisteredClaims) {
+			modifyClaims: func(j *idTokenClaims) {
 				j.Issuer = "OtherIssuer"
 			},
 		}),
 		Entry("when the token has expired", &verifierTableInput{
-			modifyClaims: func(j *jwt.RegisteredClaims) {
+			modifyClaims: func(j *idTokenClaims) {
 				j.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-1 * time.Hour))
 			},
 			expectedError: "failed to verify token: oidc: token is expired",
+		}),
+		Entry("when email is not verified with unverified email allowed", &verifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.AllowUnverifiedEmail = true
+			},
+			modifyClaims: func(j *idTokenClaims) {
+				verified := false
+				j.Verified = &verified
+			},
+		}),
+		Entry("when email is not verified with unverified email not allowed", &verifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.AllowUnverifiedEmail = false
+			},
+			modifyClaims: func(j *idTokenClaims) {
+				verified := false
+				j.Verified = &verified
+			},
+			expectedError: "verifyEmail: email in id_token (user) isn't verified",
+		}),
+		Entry("when email is verified with unverified email allowed", &verifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.AllowUnverifiedEmail = true
+			},
+			modifyClaims: func(j *idTokenClaims) {
+				verified := true
+				j.Verified = &verified
+			},
+		}),
+		Entry("when email is verified with unverified email not allowed", &verifierTableInput{
+			modifyOpts: func(p *ProviderVerifierOptions) {
+				p.AllowUnverifiedEmail = false
+			},
+			modifyClaims: func(j *idTokenClaims) {
+				verified := true
+				j.Verified = &verified
+			},
 		}),
 	)
 })
