@@ -22,6 +22,8 @@ var _ = Describe("Legacy Options", func() {
 			legacyOpts.LegacyUpstreams.PassHostHeader = true
 			legacyOpts.LegacyUpstreams.ProxyWebSockets = true
 			legacyOpts.LegacyUpstreams.SSLUpstreamInsecureSkipVerify = true
+			legacyOpts.LegacyUpstreams.CAFiles = []string{"/foo/bar"}
+			legacyOpts.LegacyUpstreams.UseSystemTrustStore = true
 			legacyOpts.LegacyUpstreams.Upstreams = []string{"http://foo.bar/baz", "file:///var/lib/website#/bar", "static://204"}
 			legacyOpts.LegacyProvider.ClientID = "oauth-proxy"
 
@@ -35,6 +37,8 @@ var _ = Describe("Legacy Options", func() {
 						URI:                   "http://foo.bar/baz",
 						FlushInterval:         &flushInterval,
 						InsecureSkipTLSVerify: true,
+						CAFiles:               []string{"/foo/bar"},
+						UseSystemTrustStore:   true,
 						PassHostHeader:        &truth,
 						ProxyWebSockets:       &truth,
 						Timeout:               &timeout,
@@ -45,6 +49,8 @@ var _ = Describe("Legacy Options", func() {
 						URI:                   "file:///var/lib/website",
 						FlushInterval:         &flushInterval,
 						InsecureSkipTLSVerify: true,
+						CAFiles:               []string{"/foo/bar"},
+						UseSystemTrustStore:   true,
 						PassHostHeader:        &truth,
 						ProxyWebSockets:       &truth,
 						Timeout:               &timeout,
@@ -57,6 +63,8 @@ var _ = Describe("Legacy Options", func() {
 						StaticCode:            &staticCode,
 						FlushInterval:         nil,
 						InsecureSkipTLSVerify: false,
+						CAFiles:               []string{"/foo/bar"},
+						UseSystemTrustStore:   true,
 						PassHostHeader:        nil,
 						ProxyWebSockets:       nil,
 						Timeout:               nil,
@@ -153,6 +161,8 @@ var _ = Describe("Legacy Options", func() {
 			Path:                  "/baz",
 			URI:                   validHTTP,
 			InsecureSkipTLSVerify: skipVerify,
+			CAFiles:               []string{},
+			UseSystemTrustStore:   false,
 			PassHostHeader:        &passHostHeader,
 			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
@@ -166,6 +176,8 @@ var _ = Describe("Legacy Options", func() {
 			Path:                  "/",
 			URI:                   emptyPathHTTP,
 			InsecureSkipTLSVerify: skipVerify,
+			CAFiles:               []string{},
+			UseSystemTrustStore:   false,
 			PassHostHeader:        &passHostHeader,
 			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
@@ -178,6 +190,8 @@ var _ = Describe("Legacy Options", func() {
 			Path:                  "/bar",
 			URI:                   "file:///var/lib/website",
 			InsecureSkipTLSVerify: skipVerify,
+			CAFiles:               []string{},
+			UseSystemTrustStore:   false,
 			PassHostHeader:        &passHostHeader,
 			ProxyWebSockets:       &proxyWebSockets,
 			FlushInterval:         &flushInterval,
@@ -193,6 +207,8 @@ var _ = Describe("Legacy Options", func() {
 			Static:                true,
 			StaticCode:            &validStaticCode,
 			InsecureSkipTLSVerify: false,
+			CAFiles:               []string{},
+			UseSystemTrustStore:   false,
 			PassHostHeader:        nil,
 			ProxyWebSockets:       nil,
 			FlushInterval:         nil,
@@ -208,6 +224,8 @@ var _ = Describe("Legacy Options", func() {
 			Static:                true,
 			StaticCode:            &invalidStaticCode,
 			InsecureSkipTLSVerify: false,
+			CAFiles:               []string{},
+			UseSystemTrustStore:   false,
 			PassHostHeader:        nil,
 			ProxyWebSockets:       nil,
 			FlushInterval:         nil,
@@ -222,6 +240,8 @@ var _ = Describe("Legacy Options", func() {
 				legacyUpstreams := LegacyUpstreams{
 					Upstreams:                     in.upstreamStrings,
 					SSLUpstreamInsecureSkipVerify: skipVerify,
+					CAFiles:                       []string{},
+					UseSystemTrustStore:           false,
 					PassHostHeader:                passHostHeader,
 					ProxyWebSockets:               proxyWebSockets,
 					FlushInterval:                 time.Duration(flushInterval),

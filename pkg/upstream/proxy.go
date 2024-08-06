@@ -87,7 +87,12 @@ func (m *multiUpstreamProxy) registerFileServer(upstream options.Upstream, u *ur
 // registerHTTPUpstreamProxy registers a new httpUpstreamProxy based on the configuration given.
 func (m *multiUpstreamProxy) registerHTTPUpstreamProxy(upstream options.Upstream, u *url.URL, sigData *options.SignatureData, writer pagewriter.Writer) error {
 	logger.Printf("mapping path %q => upstream %q", upstream.Path, upstream.URI)
-	return m.registerHandler(upstream, newHTTPUpstreamProxy(upstream, u, sigData, writer.ProxyErrorHandler), writer)
+	upstreamProxy, err := newHTTPUpstreamProxy(upstream, u, sigData, writer.ProxyErrorHandler)
+	if err != nil {
+		return err
+	}
+
+	return m.registerHandler(upstream, upstreamProxy, writer)
 }
 
 // registerHandler ensures the given handler is regiestered with the serveMux.
