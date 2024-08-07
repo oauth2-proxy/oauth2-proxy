@@ -14,6 +14,7 @@
 - [#2674](https://github.com/oauth2-proxy/oauth2-proxy/pull/2674) docs: additional notes about available claims for HeaderValue (@vegetablest)
 - [#2459](https://github.com/oauth2-proxy/oauth2-proxy/pull/2459) chore(deps): Updated to ginkgo v2 (@kvanzuijlen, @tuunit)
 - [#2112](https://github.com/oauth2-proxy/oauth2-proxy/pull/2112) docs: update list of providers which support refresh tokens (@mikefab-msf)
+- [#2724](https://github.com/oauth2-proxy/oauth2-proxy/pull/2724) `/oauth2/auth` Introduced `allowed_roles` querystring parameter for use with Keycloak OIDC; it behaves the same as the existing `allowed_groups` parameter.
 
 # V7.6.0
 

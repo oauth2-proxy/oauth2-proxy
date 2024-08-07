@@ -3111,6 +3111,132 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
 	}
 }
 
+func TestAuthOnlyAllowedRoles(t *testing.T) {
+	testCases := []struct {
+		name               string
+		allowedRoles       []string
+		roles              []string
+		querystring        string
+		expectedStatusCode int
+	}{
+		{
+			name:               "NoAllowedRoles",
+			allowedRoles:       []string{},
+			roles:              []string{},
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "NoAllowedRolesUserHasRoles",
+			allowedRoles:       []string{},
+			roles:              []string{"a", "b"},
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInAllowedRole",
+			allowedRoles:       []string{"a"},
+			roles:              []string{"a", "b"},
+			querystring:        "",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserNotInAllowedRole",
+			allowedRoles:       []string{"a"},
+			roles:              []string{"c"},
+			querystring:        "",
+			expectedStatusCode: http.StatusUnauthorized,
+		},
+		{
+			name:               "UserInQuerystringRole",
+			allowedRoles:       []string{"a", "b"},
+			roles:              []string{"a", "c"},
+			querystring:        "?allowed_roles=a",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInMultiParamQuerystringRole",
+			allowedRoles:       []string{"a", "b"},
+			roles:              []string{"b"},
+			querystring:        "?allowed_roles=a&allowed_roles=b,d",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInOnlyQuerystringRole",
+			allowedRoles:       []string{},
+			roles:              []string{"a", "c"},
+			querystring:        "?allowed_roles=a,b",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserInDelimitedQuerystringRole",
+			allowedRoles:       []string{"a", "b", "c"},
+			roles:              []string{"c"},
+			querystring:        "?allowed_roles=a,c",
+			expectedStatusCode: http.StatusAccepted,
+		},
+		{
+			name:               "UserNotInQuerystringRole",
+			allowedRoles:       []string{},
+			roles:              []string{"c"},
+			querystring:        "?allowed_roles=a,b",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserInConfigRoleNotInQuerystringRole",
+			allowedRoles:       []string{"a", "b", "c"},
+			roles:              []string{"c"},
+			querystring:        "?allowed_roles=a,b",
+			expectedStatusCode: http.StatusForbidden,
+		},
+		{
+			name:               "UserInQuerystringRoleNotInConfigRole",
+			allowedRoles:       []string{"a", "b"},
+			roles:              []string{"c"},
+			querystring:        "?allowed_roles=b,c",
+			expectedStatusCode: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			emailAddress := "test"
+			created := time.Now()
+
+			groups := tc.roles
+			for i := range groups {
+				groups[i] = "role:" + groups[i]
+			}
+
+			allowedGroups := tc.allowedRoles
+			for i := range allowedGroups {
+				allowedGroups[i] = "role:" + allowedGroups[i]
+			}
+
+			session := &sessions.SessionState{
+				Groups:      groups,
+				Email:       emailAddress,
+				AccessToken: "oauth_token",
+				CreatedAt:   &created,
+			}
+
+			test, err := NewAuthOnlyEndpointTest(tc.querystring, func(opts *options.Options) {
+				opts.Providers[0].AllowedGroups = allowedGroups
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = test.SaveSession(session)
+			assert.NoError(t, err)
+
+			test.proxy.ServeHTTP(test.rw, test.req)
+
+			assert.Equal(t, tc.expectedStatusCode, test.rw.Code)
+		})
+	}
+}
+
 func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
 	testCases := []struct {
 		name               string
