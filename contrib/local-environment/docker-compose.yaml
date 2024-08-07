@@ -29,7 +29,7 @@ services:
       - httpbin
   dex:
     container_name: dex
-    image: ghcr.io/dexidp/dex:v2.40.0
+    image: ghcr.io/dexidp/dex:v2.41.1
     command: dex serve /dex.yaml
     hostname: dex
     volumes:
