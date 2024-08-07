@@ -16,6 +16,7 @@ ARCHS=(
   linux-armv6
   linux-armv7
   linux-ppc64le
+  linux-s390x
   freebsd-amd64
   windows-amd64
 )
