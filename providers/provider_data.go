@@ -6,17 +6,16 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 
-	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
-	"golang.org/x/oauth2"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/options"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
+	"github.com/Jing-ze/oauth2-proxy/pkg/middleware"
+	oidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/go_oidc"
+	internaloidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/oidc"
+	"github.com/Jing-ze/oauth2-proxy/pkg/providers/util"
+	pkgutil "github.com/Jing-ze/oauth2-proxy/pkg/util"
 )
 
 const (
@@ -27,23 +26,20 @@ const (
 // ProviderData contains information required to configure all implementations
 // of OAuth2 providers
 type ProviderData struct {
-	ProviderName      string
-	LoginURL          *url.URL
-	RedeemURL         *url.URL
-	ProfileURL        *url.URL
-	ProtectedResource *url.URL
-	ValidateURL       *url.URL
-	ClientID          string
-	ClientSecret      string
-	ClientSecretFile  string
-	Scope             string
+	ProviderName string
+	LoginURL     *url.URL
+	RedeemURL    *url.URL
+	ProfileURL   *url.URL
+	ValidateURL  *url.URL
+	ClientID     string
+	ClientSecret string
+	Scope        string
 	// The picked CodeChallenge Method or empty if none.
 	CodeChallengeMethod string
 	// Code challenge methods supported by the Provider
 	SupportedCodeChallengeMethods []string `json:"code_challenge_methods_supported,omitempty"`
 
 	// Common OIDC options for any OIDC-based providers to consume
-	AllowUnverifiedEmail     bool
 	UserClaim                string
 	EmailClaim               string
 	GroupsClaim              string
@@ -58,24 +54,19 @@ type ProviderData struct {
 	loginURLParameterDefaults  url.Values
 	loginURLParameterOverrides map[string]*regexp.Regexp
 
-	BackendLogoutURL string
+	RedeemTimeout   uint32
+	VerifierTimeout uint32
+	StoredSession   *middleware.StoredSessionLoader
 }
 
 // Data returns the ProviderData
 func (p *ProviderData) Data() *ProviderData { return p }
 
 func (p *ProviderData) GetClientSecret() (clientSecret string, err error) {
-	if p.ClientSecret != "" || p.ClientSecretFile == "" {
+	if p.ClientSecret != "" {
 		return p.ClientSecret, nil
 	}
-
-	// Getting ClientSecret can fail in runtime so we need to report it without returning the file name to the user
-	fileClientSecret, err := os.ReadFile(p.ClientSecretFile)
-	if err != nil {
-		logger.Errorf("error reading client secret file %s: %s", p.ClientSecretFile, err)
-		return "", errors.New("could not read client secret file")
-	}
-	return string(fileClientSecret), nil
+	return "", errors.New("provider client secret is empty")
 }
 
 // LoginURLParams returns the parameter values that should be passed to the IdP
@@ -225,7 +216,7 @@ func defaultURL(u *url.URL, d *url.URL) *url.URL {
 // OIDC compliant
 // ****************************************************************************
 
-func (p *ProviderData) verifyIDToken(ctx context.Context, token *oauth2.Token) (*oidc.IDToken, error) {
+func (p *ProviderData) verifyIDToken(ctx context.Context, token *pkgutil.Token) (*oidc.IDToken, error) {
 	rawIDToken := getIDToken(token)
 	if strings.TrimSpace(rawIDToken) == "" {
 		return nil, ErrMissingIDToken
@@ -245,43 +236,6 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		return ss, nil
 	}
 
-	extractor, err := p.getClaimExtractor(rawIDToken, accessToken)
-	if err != nil {
-		return nil, err
-	}
-
-	// Use a slice of a struct (vs map) here in case the same claim is used twice
-	for _, c := range []struct {
-		claim string
-		dst   interface{}
-	}{
-		{p.UserClaim, &ss.User},
-		{p.EmailClaim, &ss.Email},
-		{p.GroupsClaim, &ss.Groups},
-		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
-		{"preferred_username", &ss.PreferredUsername},
-	} {
-		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
-			return nil, err
-		}
-	}
-
-	// `email_verified` must be present and explicitly set to `false` to be
-	// considered unverified.
-	verifyEmail := (p.EmailClaim == options.OIDCEmailClaim) && !p.AllowUnverifiedEmail
-
-	if verifyEmail {
-		var verified bool
-		exists, err := extractor.GetClaimInto("email_verified", &verified)
-		if err != nil {
-			return nil, err
-		}
-
-		if exists && !verified {
-			return nil, fmt.Errorf("email in id_token (%s) isn't verified", ss.Email)
-		}
-	}
-
 	return ss, nil
 }
 
@@ -291,7 +245,7 @@ func (p *ProviderData) getClaimExtractor(rawIDToken, accessToken string) (util.C
 		profileURL = &url.URL{}
 	}
 
-	extractor, err := util.NewClaimExtractor(context.TODO(), rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
+	extractor, err := util.NewClaimExtractor(rawIDToken, profileURL, p.getAuthorizationHeader(accessToken))
 	if err != nil {
 		return nil, fmt.Errorf("could not initialise claim extractor: %v", err)
 	}

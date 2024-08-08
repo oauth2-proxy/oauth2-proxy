@@ -1,3 +1,0 @@
-# HELP oauth2_proxy_requests_total Total number of requests by HTTP status code.
-# TYPE oauth2_proxy_requests_total counter
-oauth2_proxy_requests_total{code="200"} 1

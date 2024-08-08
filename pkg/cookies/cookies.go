@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/options"
+	"github.com/Jing-ze/oauth2-proxy/pkg/util"
+
+	requestutil "github.com/Jing-ze/oauth2-proxy/pkg/requests/util"
 )
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
@@ -18,7 +19,7 @@ func MakeCookieFromOptions(req *http.Request, name string, value string, opts *o
 	domain := GetCookieDomain(req, opts.Domains)
 	// If nothing matches, create the cookie with the shortest domain
 	if domain == "" && len(opts.Domains) > 0 {
-		logger.Errorf("Warning: request host %q did not match any of the specific cookie domains of %q",
+		util.Logger.Errorf("Warning: request host %q did not match any of the specific cookie domains of %q",
 			requestutil.GetRequestHost(req),
 			strings.Join(opts.Domains, ","),
 		)
@@ -84,6 +85,6 @@ func warnInvalidDomain(c *http.Cookie, req *http.Request) {
 		host = h
 	}
 	if !strings.HasSuffix(host, c.Domain) {
-		logger.Errorf("Warning: request host is %q but using configured cookie domain of %q", host, c.Domain)
+		util.Logger.Errorf("Warning: request host is %q but using configured cookie domain of %q", host, c.Domain)
 	}
 }

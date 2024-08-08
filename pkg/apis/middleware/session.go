@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/coreos/go-oidc/v3/oidc"
-	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	sessionsapi "github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
+
+	oidc "github.com/Jing-ze/oauth2-proxy/pkg/providers/go_oidc"
 )
 
 // TokenToSessionFunc takes a raw ID Token and converts it into a SessionState.

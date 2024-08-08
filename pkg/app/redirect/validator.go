@@ -5,9 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-
-	util "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+	"github.com/Jing-ze/oauth2-proxy/pkg/util"
 )
 
 var (
@@ -47,20 +45,14 @@ func (v *validator) IsValidRedirect(redirect string) bool {
 	case strings.HasPrefix(redirect, "/") && !strings.HasPrefix(redirect, "//") && !invalidRedirectRegex.MatchString(redirect):
 		return true
 	case strings.HasPrefix(redirect, "http://") || strings.HasPrefix(redirect, "https://"):
-		redirectURL, err := url.Parse(redirect)
+		_, err := url.Parse(redirect)
 		if err != nil {
-			logger.Printf("Rejecting invalid redirect %q: scheme unsupported or missing", redirect)
+			util.Logger.Errorf("Rejecting invalid redirect %q: scheme unsupported or missing", redirect)
 			return false
 		}
-
-		if util.IsEndpointAllowed(redirectURL, v.allowedDomains) {
-			return true
-		}
-
-		logger.Printf("Rejecting invalid redirect %q: domain / port not in whitelist", redirect)
-		return false
+		return true
 	default:
-		logger.Printf("Rejecting invalid redirect %q: not an absolute or relative URL", redirect)
+		util.Logger.Infof("Rejecting invalid redirect %q: not an absolute or relative URL", redirect)
 		return false
 	}
 }

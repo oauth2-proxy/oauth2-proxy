@@ -1,15 +1,17 @@
 package providers
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"fmt"
+	"io"
+	"net/http"
 	"net/url"
+	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+	"github.com/Jing-ze/oauth2-proxy/pkg/apis/sessions"
+	"github.com/Jing-ze/oauth2-proxy/pkg/util"
+
+	"github.com/alibaba/higress/plugins/wasm-go/pkg/wrapper"
 )
 
 var (
@@ -42,13 +44,13 @@ func (p *ProviderData) GetLoginURL(redirectURI, state, _ string, extraParams url
 
 // Redeem provides a default implementation of the OAuth2 token redemption process
 // The codeVerifier is set if a code_verifier parameter should be sent for PKCE
-func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifier string) (*sessions.SessionState, error) {
+func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifier string, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) error {
 	if code == "" {
-		return nil, ErrMissingCode
+		return ErrMissingCode
 	}
 	clientSecret, err := p.GetClientSecret()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	params := url.Values{}
@@ -60,45 +62,30 @@ func (p *ProviderData) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 	if codeVerifier != "" {
 		params.Add("code_verifier", codeVerifier)
 	}
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		params.Add("resource", p.ProtectedResource.String())
-	}
 
-	result := requests.New(p.RedeemURL.String()).
-		WithContext(ctx).
-		WithMethod("POST").
-		WithBody(bytes.NewBufferString(params.Encode())).
-		SetHeader("Content-Type", "application/x-www-form-urlencoded").
-		Do()
-	if result.Error() != nil {
-		return nil, result.Error()
-	}
-
-	// blindly try json and x-www-form-urlencoded
-	var jsonResponse struct {
-		AccessToken string `json:"access_token"`
-	}
-	err = result.UnmarshalInto(&jsonResponse)
-	if err == nil {
-		return &sessions.SessionState{
-			AccessToken: jsonResponse.AccessToken,
-		}, nil
-	}
-
-	values, err := url.ParseQuery(string(result.Body()))
-	if err != nil {
-		return nil, err
-	}
-	// TODO (@NickMeves): Uses OAuth `expires_in` to set an expiration
-	if token := values.Get("access_token"); token != "" {
-		ss := &sessions.SessionState{
-			AccessToken: token,
+	req, err := http.NewRequest("POST", p.RedeemURL.String(), strings.NewReader(params.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	var headerArray [][2]string
+	for key, values := range req.Header {
+		if len(values) > 0 {
+			headerArray = append(headerArray, [2]string{key, values[0]})
 		}
-		ss.CreatedAtNow()
-		return ss, nil
 	}
+	bodyBytes, err := io.ReadAll(req.Body)
+	req.Body.Close()
 
-	return nil, fmt.Errorf("no access token found %s", result.Body())
+	client.Post(p.RedeemURL.String(), headerArray, bodyBytes, func(statusCode int, responseHeaders http.Header, responseBody []byte) {
+		token, err := util.UnmarshalToken(responseHeaders, responseBody)
+		if err != nil {
+			util.SendError(err.Error(), nil, http.StatusInternalServerError)
+			return
+		}
+		session := &sessions.SessionState{
+			AccessToken: token.AccessToken,
+		}
+		callback(session)
+	}, timeout)
+	return nil
 }
 
 // GetEmailAddress returns the Account email address
@@ -131,18 +118,10 @@ func (p *ProviderData) Authorize(_ context.Context, s *sessions.SessionState) (b
 
 // ValidateSession validates the AccessToken
 func (p *ProviderData) ValidateSession(ctx context.Context, s *sessions.SessionState) bool {
-	return validateToken(ctx, p, s.AccessToken, nil)
+	return true
 }
 
 // RefreshSession refreshes the user's session
-func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionState) (bool, error) {
+func (p *ProviderData) RefreshSession(_ context.Context, _ *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, error) {
 	return false, ErrNotImplemented
-}
-
-// CreateSessionFromToken converts Bearer IDTokens into sessions
-func (p *ProviderData) CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error) {
-	if p.Verifier != nil {
-		return middleware.CreateTokenToSessionFunc(p.Verifier.Verify)(ctx, token)
-	}
-	return nil, ErrNotImplemented
 }

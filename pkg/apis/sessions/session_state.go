@@ -1,37 +1,35 @@
 package sessions
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	"github.com/pierrec/lz4/v4"
-	"github.com/vmihailenco/msgpack/v5"
+	"encoding/json"
+
+	"github.com/Jing-ze/oauth2-proxy/pkg/clock"
+	"github.com/Jing-ze/oauth2-proxy/pkg/encryption"
 )
 
-// SessionState is used to store information about the currently authenticated user session
+// // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	CreatedAt *time.Time `msgpack:"ca,omitempty"`
-	ExpiresOn *time.Time `msgpack:"eo,omitempty"`
+	CreatedAt *time.Time `json:"ca,omitempty"`
+	ExpiresOn *time.Time `json:"eo,omitempty"`
 
-	AccessToken  string `msgpack:"at,omitempty"`
-	IDToken      string `msgpack:"it,omitempty"`
-	RefreshToken string `msgpack:"rt,omitempty"`
+	AccessToken  string `json:"at,omitempty"`
+	IDToken      string `json:"it,omitempty"`
+	RefreshToken string `json:"rt,omitempty"`
 
-	Nonce []byte `msgpack:"n,omitempty"`
+	Nonce []byte `json:"n,omitempty"`
 
-	Email             string   `msgpack:"e,omitempty"`
-	User              string   `msgpack:"u,omitempty"`
-	Groups            []string `msgpack:"g,omitempty"`
-	PreferredUsername string   `msgpack:"pu,omitempty"`
+	Email             string   `json:"e,omitempty"`
+	User              string   `json:"u,omitempty"`
+	Groups            []string `json:"g,omitempty"`
+	PreferredUsername string   `json:"pu,omitempty"`
 
 	// Internal helpers, not serialized
-	Clock clock.Clock `msgpack:"-"`
-	Lock  Lock        `msgpack:"-"`
+	Clock clock.Clock `json:"-"`
+	Lock  Lock        `json:"-"`
 }
 
 func (s *SessionState) ObtainLock(ctx context.Context, expiration time.Duration) error {
@@ -160,20 +158,12 @@ func (s *SessionState) CheckNonce(hashed string) bool {
 
 // EncodeSessionState returns an encrypted, lz4 compressed, MessagePack encoded session
 func (s *SessionState) EncodeSessionState(c encryption.Cipher, compress bool) ([]byte, error) {
-	packed, err := msgpack.Marshal(s)
+	packed, err := json.Marshal(s)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling session state to msgpack: %w", err)
 	}
 
-	if !compress {
-		return c.Encrypt(packed)
-	}
-
-	compressed, err := lz4Compress(packed)
-	if err != nil {
-		return nil, err
-	}
-	return c.Encrypt(compressed)
+	return c.Encrypt(packed)
 }
 
 // DecodeSessionState decodes a LZ4 compressed MessagePack into a Session State
@@ -184,69 +174,12 @@ func DecodeSessionState(data []byte, c encryption.Cipher, compressed bool) (*Ses
 	}
 
 	packed := decrypted
-	if compressed {
-		packed, err = lz4Decompress(decrypted)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	var ss SessionState
-	err = msgpack.Unmarshal(packed, &ss)
+	err = json.Unmarshal(packed, &ss)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling data to session state: %w", err)
 	}
 
 	return &ss, nil
-}
-
-// lz4Compress compresses with LZ4
-//
-// The Compress:Decompress ratio is 1:Many. LZ4 gives fastest decompress speeds
-// at the expense of greater compression compared to other compression
-// algorithms.
-func lz4Compress(payload []byte) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	zw := lz4.NewWriter(nil)
-	zw.Apply(
-		lz4.BlockSizeOption(lz4.BlockSize(65536)),
-		lz4.CompressionLevelOption(lz4.Fast),
-	)
-	zw.Reset(buf)
-
-	reader := bytes.NewReader(payload)
-	_, err := io.Copy(zw, reader)
-	if err != nil {
-		return nil, fmt.Errorf("error copying lz4 stream to buffer: %w", err)
-	}
-	err = zw.Close()
-	if err != nil {
-		return nil, fmt.Errorf("error closing lz4 writer: %w", err)
-	}
-
-	compressed, err := io.ReadAll(buf)
-	if err != nil {
-		return nil, fmt.Errorf("error reading lz4 buffer: %w", err)
-	}
-
-	return compressed, nil
-}
-
-// lz4Decompress decompresses with LZ4
-func lz4Decompress(compressed []byte) ([]byte, error) {
-	reader := bytes.NewReader(compressed)
-	buf := new(bytes.Buffer)
-	zr := lz4.NewReader(nil)
-	zr.Reset(reader)
-	_, err := io.Copy(buf, zr)
-	if err != nil {
-		return nil, fmt.Errorf("error copying lz4 stream to buffer: %w", err)
-	}
-
-	payload, err := io.ReadAll(buf)
-	if err != nil {
-		return nil, fmt.Errorf("error reading lz4 buffer: %w", err)
-	}
-
-	return payload, nil
 }
