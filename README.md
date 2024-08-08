@@ -1,3 +1,5 @@
+**Note:** This repository is modified from oauth2-proxy for applications that support proxy wasm. For more details, refer to [Higress OIDC Wasm Plugin](https://github.com/alibaba/higress/tree/main/plugins/wasm-go/extensions/oidc).
+
 ![OAuth2 Proxy](docs/static/img/logos/OAuth2_Proxy_horizontal.svg)
 
 [![Continuous Integration](https://github.com/oauth2-proxy/oauth2-proxy/actions/workflows/ci.yaml/badge.svg)](https://github.com/oauth2-proxy/oauth2-proxy/actions/workflows/ci.yaml)
