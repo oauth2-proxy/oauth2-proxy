@@ -800,7 +800,7 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
 	)
 	if p.provider.Data().CodeChallengeMethod != "" {
 		codeChallengeMethod = p.provider.Data().CodeChallengeMethod
-		codeVerifier, err = encryption.GenerateRandomASCIIString(96)
+		codeVerifier, err = encryption.GenerateCodeVerifierString(32)
 		if err != nil {
 			logger.Errorf("Unable to build random ASCII string for code verifier: %v", err)
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
