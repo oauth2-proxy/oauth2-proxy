@@ -85,6 +85,8 @@ func (p *DiscordProvider) EnrichSession(ctx context.Context, s *sessions.Session
 		return err
 	}
 
+	// Only allow guild IDs as guild names don't have to be unique and can be changed after
+	// guild creation.
 	for _, guild := range guilds {
 		s.Groups = append(s.Groups, guild.ID)
 	}
@@ -99,8 +101,6 @@ type discordUserInfo struct {
 	Email         string `json:"email"`
 	Verified      bool   `json:"verified"`
 	Discriminator string `json:"discriminator"`
-	// Avatar   string `json:"avatar"`
-	// Flags    int    `json:"flags"`
 }
 
 // Retrive user Info
@@ -113,7 +113,7 @@ func (p *DiscordProvider) getUserInfo(ctx context.Context, s *sessions.SessionSt
 		Do().
 		UnmarshalInto(&userinfo)
 	if err != nil {
-		return nil, fmt.Errorf("error getting user's guilds info: %v", err)
+		return nil, fmt.Errorf("error getting user's guilds info: %w", err)
 	}
 
 	return &userinfo, nil
@@ -135,7 +135,7 @@ func (p *DiscordProvider) getUserGuilds(ctx context.Context, s *sessions.Session
 		Do().
 		UnmarshalInto(&guilds)
 	if err != nil {
-		return nil, fmt.Errorf("error getting user's guilds info: %v", err)
+		return nil, fmt.Errorf("error getting user's guilds info: %w", err)
 	}
 
 	return guilds, nil
