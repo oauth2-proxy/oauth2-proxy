@@ -103,7 +103,7 @@ type discordUserInfo struct {
 	Discriminator string `json:"discriminator"`
 }
 
-// Retrive user Info
+// Retrieve user Info
 // https://discord.com/developers/docs/resources/user#get-user
 func (p *DiscordProvider) getUserInfo(ctx context.Context, s *sessions.SessionState) (*discordUserInfo, error) {
 	var userinfo discordUserInfo
