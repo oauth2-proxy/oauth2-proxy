@@ -23,6 +23,7 @@ Valid providers are :
 - [Nextcloud](nextcloud.md)
 - [DigitalOcean](digitalocean.md)
 - [Bitbucket](bitbucket.md)
+- [Discord](discord.md)
 
 The provider can be selected using the `provider` configuration value.
 
