@@ -232,34 +232,68 @@ func (p *GoogleProvider) setGroupRestriction(opts options.GoogleOptions) {
 func getAdminService(opts options.GoogleOptions) *admin.Service {
 	ctx := context.Background()
 	var client *http.Client
-	if opts.UseApplicationDefaultCredentials {
-		ts, err := impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
-			TargetPrincipal: getTargetPrincipal(ctx, opts),
-			Scopes:          []string{admin.AdminDirectoryGroupReadonlyScope, admin.AdminDirectoryUserReadonlyScope},
-			Subject:         opts.AdminEmail,
-		})
-		if err != nil {
-			logger.Fatal("failed to fetch application default credentials: ", err)
+
+	// https://developers.google.com/admin-sdk/directory/reference/rest/v1/members/hasMember#authorization-scopes
+	possibleScopesList := []string{
+		admin.AdminDirectoryGroupMemberReadonlyScope,
+		admin.AdminDirectoryGroupReadonlyScope,
+		admin.AdminDirectoryGroupMemberScope,
+		admin.AdminDirectoryGroupScope,
+	}
+
+	for _, scope := range possibleScopesList {
+
+		var ts oauth2.TokenSource
+		var err error
+		if opts.UseApplicationDefaultCredentials {
+			ts, err = impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
+				TargetPrincipal: getTargetPrincipal(ctx, opts),
+				Scopes:          []string{scope},
+				Subject:         opts.AdminEmail,
+			})
+			if err != nil {
+				logger.Fatal("failed to fetch application default credentials: ", err)
+			}
+		} else {
+			credentialsReader, err := os.Open(opts.ServiceAccountJSON)
+			if err != nil {
+				logger.Fatal("couldn't open Google credentials file: ", err)
+				return nil
+			}
+
+			data, err := io.ReadAll(credentialsReader)
+			if err != nil {
+				logger.Fatal("can't read Google credentials file:", err)
+			}
+
+			conf, err := google.JWTConfigFromJSON(data, scope)
+			if err != nil {
+				logger.Fatal("can't load Google credentials file:", err)
+			}
+			conf.Subject = opts.AdminEmail
+			ts = conf.TokenSource(ctx)
 		}
-		client = oauth2.NewClient(ctx, ts)
-	} else {
-		credentialsReader, err := os.Open(opts.ServiceAccountJSON)
-		if err != nil {
-			logger.Fatal("couldn't open Google credentials file: ", err)
-			return nil
+		_, err = ts.Token()
+
+		if err == nil {
+			client = oauth2.NewClient(ctx, ts)
+			break
 		}
 
-		data, err := io.ReadAll(credentialsReader)
-		if err != nil {
-			logger.Fatal("can't read Google credentials file:", err)
+		if retrieveErr, ok := err.(*oauth2.RetrieveError); ok {
+			retrieveErrBody := map[string]interface{}{}
+			if err := json.Unmarshal(retrieveErr.Body, &retrieveErrBody); err != nil {
+				logger.Fatal("error unmarshalling retrieveErr body:", err)
+			}
+			if retrieveErrBody["error"] == "unauthorized_client" && retrieveErrBody["error_description"] == "Client is unauthorized to retrieve access tokens using this method, or client not authorized for any of the scopes requested." {
+				continue
+			}
+			logger.Fatal("error retrieving token:", err)
 		}
+	}
 
-		conf, err := google.JWTConfigFromJSON(data, admin.AdminDirectoryUserReadonlyScope, admin.AdminDirectoryGroupReadonlyScope)
-		if err != nil {
-			logger.Fatal("can't load Google credentials file:", err)
-		}
-		conf.Subject = opts.AdminEmail
-		client = conf.Client(ctx)
+	if client == nil {
+		logger.Fatal("error: google credentials are not have enough permissions scope to access admin API")
 	}
 	adminService, err := admin.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
