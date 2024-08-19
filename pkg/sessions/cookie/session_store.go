@@ -108,6 +108,23 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 	if err != nil {
 		return err
 	}
+
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.Cookie.Name))
+	cookiesSet := make(map[string]bool)
+	for _, c := range cookies {
+		cookiesSet[c.Name] = true
+	}
+	for _, c := range req.Cookies() {
+		if cookieNameRegex.MatchString(c.Name) {
+			_, exist := cookiesSet[c.Name]
+			if exist {
+				continue
+			}
+			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
+			http.SetCookie(rw, clearCookie)
+		}
+	}
+
 	for _, c := range cookies {
 		http.SetCookie(rw, c)
 	}
