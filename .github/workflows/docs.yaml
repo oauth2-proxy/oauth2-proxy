@@ -24,13 +24,11 @@ jobs:
         with:
           # renovate: datasource=node-version depName=node
           node-version: 20
-          cache: npm
-          cache-dependency-path: "./docs/package-lock.json"
 
       - name: Test Build
         working-directory: ./docs
         run: |
-          npm ci
+          npm install
           npm run build
 
   build-docs:
@@ -47,7 +45,7 @@ jobs:
       - name: Build docusaurus
         working-directory: ./docs
         run: |
-          npm ci
+          npm install
           npm run build
       
       - name: Upload artifact
