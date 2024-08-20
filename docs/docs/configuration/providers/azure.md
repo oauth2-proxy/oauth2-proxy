@@ -3,6 +3,15 @@ id: azure
 title: Azure
 ---
 
+## Config Options
+
+| Flag             | Toml Field     | Type   | Description                                                      | Default    |
+| ---------------- | -------------- | ------ | ---------------------------------------------------------------- | ---------- |
+| `--azure-tenant` | `azure_tenant` | string | go to a tenant-specific or common (tenant-independent) endpoint. | `"common"` |
+| `--resource`     | `resource`     | string | The resource that is protected (Azure AD only)                   |            |
+
+## Usage
+
 1. Add an application: go to [https://portal.azure.com](https://portal.azure.com), choose **Azure Active Directory**, select
    **App registrations** and then click on **New registration**.
 2. Pick a name, check the supported account type(single-tenant, multi-tenant, etc). In the **Redirect URI** section create a new
