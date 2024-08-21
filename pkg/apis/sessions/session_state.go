@@ -24,9 +24,12 @@ type SessionState struct {
 
 	Nonce []byte `msgpack:"n,omitempty"`
 
+	// UserInfo
+	Name 			  string   `msgpack:"un,omitempty"`
 	Email             string   `msgpack:"e,omitempty"`
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
+	Role 			  string   `msgpack:"r,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 
 	// Internal helpers, not serialized
@@ -142,6 +145,10 @@ func (s *SessionState) GetClaim(claim string) []string {
 		return []string{s.Email}
 	case "user":
 		return []string{s.User}
+	case "name":
+		return []string{s.Name}
+	case "role":
+		return []string{s.Role}
 	case "groups":
 		groups := make([]string, len(s.Groups))
 		copy(groups, s.Groups)
