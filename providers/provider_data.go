@@ -260,6 +260,8 @@ func (p *ProviderData) buildSessionFromClaims(rawIDToken, accessToken string) (*
 		{p.GroupsClaim, &ss.Groups},
 		// TODO (@NickMeves) Deprecate for dynamic claim to session mapping
 		{"preferred_username", &ss.PreferredUsername},
+		{"name", &ss.Name},
+		{"role", &ss.Role},
 	} {
 		if _, err := extractor.GetClaimInto(c.claim, c.dst); err != nil {
 			return nil, err
