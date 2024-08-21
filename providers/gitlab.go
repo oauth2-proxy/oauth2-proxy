@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -124,6 +125,7 @@ func (p *GitLabProvider) setProjectScope() {
 func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionState) error {
 	// Retrieve user info
 	userinfo, err := p.getUserinfo(ctx, s)
+
 	if err != nil {
 		return fmt.Errorf("failed to retrieve user info: %v", err)
 	}
@@ -142,6 +144,12 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 	if len(userinfo.Groups) > 0 {
 		s.Groups = userinfo.Groups
 	}
+	if userinfo.Name != "" {
+		s.User = userinfo.Name
+	}
+
+	// Set the user role based on the groups
+	s.Role = p.getUserRole(s.Groups)
 
 	// Add projects as `project:blah` to s.Groups
 	p.addProjectsToSession(ctx, s)
@@ -154,6 +162,26 @@ type gitlabUserinfo struct {
 	Email         string   `json:"email"`
 	EmailVerified bool     `json:"email_verified"`
 	Groups        []string `json:"groups"`
+	Name		  string   `json:"name"`
+}
+
+// function to check if the certain groups contains in the list of groups
+// and map the role with the group
+func (p *GitLabProvider) getUserRole(groups []string) string {
+	if len(groups) > 0 {
+		// by the priority first check if the user has rundeck-admins group
+		if slices.Contains(groups, "boozt/users/rundeck-admins") {
+			return "admin"
+		}
+
+		// if the user has rundeck-users group then return user role
+		if slices.Contains(groups, "boozt/users/rundeck-users") {
+			return "user"
+		}
+	}
+
+	// user has no any of the above groups then return viewer role
+	return "viewer"
 }
 
 func (p *GitLabProvider) getUserinfo(ctx context.Context, s *sessions.SessionState) (*gitlabUserinfo, error) {
@@ -264,14 +292,17 @@ func formatProject(project *gitlabProject) string {
 // but preserves the custom GitLab projects added in the `EnrichSession` stage.
 func (p *GitLabProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
 	nickname := s.User
+	name := s.Name
 	projects := getSessionProjects(s)
 	// This will overwrite s.Groups with the new IDToken's `groups` claims
 	// and s.User with the `sub` claim.
 	refreshed, err := p.oidcRefreshFunc(ctx, s)
 	if refreshed && err == nil {
 		s.User = nickname
+		s.Name = name
 		s.Groups = append(s.Groups, projects...)
 		s.Groups = deduplicateGroups(s.Groups)
+		s.Role = p.getUserRole(s.Groups)
 	}
 	return refreshed, err
 }
