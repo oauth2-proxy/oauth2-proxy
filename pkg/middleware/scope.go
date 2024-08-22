@@ -3,9 +3,10 @@ package middleware
 import (
 	"net/http"
 
+	middlewareapi "github.com/higress-group/oauth2-proxy/pkg/apis/middleware"
+
 	"github.com/google/uuid"
 	"github.com/justinas/alice"
-	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 )
 
 func NewScope(reverseProxy bool, idHeader string) alice.Constructor {

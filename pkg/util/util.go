@@ -1,102 +1,9 @@
 package util
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"fmt"
-	"math/big"
-	"net"
 	"net/url"
-	"os"
 	"strings"
-	"time"
 )
-
-func GetCertPool(paths []string, useSystemPool bool) (*x509.CertPool, error) {
-	if len(paths) == 0 {
-		return nil, fmt.Errorf("invalid empty list of Root CAs file paths")
-	}
-
-	var pool *x509.CertPool
-	if useSystemPool {
-		rootPool, err := getSystemCertPool()
-		if err != nil {
-			return nil, fmt.Errorf("unable to get SystemCertPool when append is true - #{err}")
-		}
-		pool = rootPool
-	} else {
-		pool = x509.NewCertPool()
-	}
-
-	return loadCertsFromPaths(paths, pool)
-
-}
-
-func getSystemCertPool() (*x509.CertPool, error) {
-	rootPool, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, err
-	}
-
-	if rootPool == nil {
-		return nil, fmt.Errorf("SystemCertPool is empty")
-	}
-
-	return rootPool, nil
-}
-
-func loadCertsFromPaths(paths []string, pool *x509.CertPool) (*x509.CertPool, error) {
-	for _, path := range paths {
-		// Cert paths are a configurable option
-		data, err := os.ReadFile(path) // #nosec G304
-		if err != nil {
-			return nil, fmt.Errorf("certificate authority file (%s) could not be read - %s", path, err)
-		}
-		if !pool.AppendCertsFromPEM(data) {
-			return nil, fmt.Errorf("loading certificate authority (%s) failed", path)
-		}
-	}
-	return pool, nil
-}
-
-// https://golang.org/src/crypto/tls/generate_cert.go as a function
-func GenerateCert(ipaddr string) ([]byte, []byte, error) {
-	var err error
-
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	keyBytes, err := x509.MarshalPKCS8PrivateKey(priv)
-	if err != nil {
-		return nil, keyBytes, err
-	}
-
-	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-	if err != nil {
-		return nil, keyBytes, err
-	}
-
-	notBefore := time.Now()
-	template := x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject: pkix.Name{
-			Organization: []string{"OAuth2 Proxy Test Suite"},
-		},
-		NotBefore: notBefore,
-		NotAfter:  notBefore.Add(time.Hour),
-		KeyUsage:  x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-
-		IPAddresses: []net.IP{net.ParseIP(ipaddr)},
-	}
-	certBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	return certBytes, keyBytes, err
-}
 
 // SplitHostPort separates host and port. If the port is not valid, it returns
 // the entire input as host, and it doesn't check the validity of the host.
@@ -177,17 +84,4 @@ func isHostnameAllowed(hostname, allowedHost string) bool {
 	}
 
 	return false
-}
-
-// RemoveDuplicateStr removes duplicates from a slice of strings.
-func RemoveDuplicateStr(strSlice []string) []string {
-	allKeys := make(map[string]struct{})
-	var list []string
-	for _, item := range strSlice {
-		if _, ok := allKeys[item]; !ok {
-			allKeys[item] = struct{}{}
-			list = append(list, item)
-		}
-	}
-	return list
 }

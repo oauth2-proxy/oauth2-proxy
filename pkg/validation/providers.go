@@ -2,9 +2,8 @@ package validation
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/higress-group/oauth2-proxy/pkg/apis/options"
 )
 
 // validateProviders is the initial validation migration for multiple providrers
@@ -15,9 +14,6 @@ func validateProviders(o *options.Options) []string {
 	// validate general multiple provider configuration
 	if len(o.Providers) == 0 {
 		msgs = append(msgs, "at least one provider has to be defined")
-	}
-	if o.SkipProviderButton && len(o.Providers) > 1 {
-		msgs = append(msgs, "SkipProviderButton and multiple providers are mutually exclusive")
 	}
 
 	providerIDs := make(map[string]struct{})
@@ -48,50 +44,9 @@ func validateProvider(provider options.Provider, providerIDs map[string]struct{}
 
 	// login.gov uses a signed JWT to authenticate, not a client-secret
 	if provider.Type != "login.gov" {
-		if provider.ClientSecret == "" && provider.ClientSecretFile == "" {
+		if provider.ClientSecret == "" {
 			msgs = append(msgs, "missing setting: client-secret or client-secret-file")
 		}
-		if provider.ClientSecret == "" && provider.ClientSecretFile != "" {
-			_, err := os.ReadFile(provider.ClientSecretFile)
-			if err != nil {
-				msgs = append(msgs, "could not read client secret file: "+provider.ClientSecretFile)
-			}
-		}
-	}
-
-	msgs = append(msgs, validateGoogleConfig(provider)...)
-
-	return msgs
-}
-
-func validateGoogleConfig(provider options.Provider) []string {
-	msgs := []string{}
-
-	hasGoogleGroups := len(provider.GoogleConfig.Groups) >= 1
-	hasAdminEmail := provider.GoogleConfig.AdminEmail != ""
-	hasSAJSON := provider.GoogleConfig.ServiceAccountJSON != ""
-	useADC := provider.GoogleConfig.UseApplicationDefaultCredentials
-
-	if !hasGoogleGroups && !hasAdminEmail && !hasSAJSON && !useADC {
-		return msgs
-	}
-
-	if !hasGoogleGroups {
-		msgs = append(msgs, "missing setting: google-group")
-	}
-	if !hasAdminEmail {
-		msgs = append(msgs, "missing setting: google-admin-email")
-	}
-
-	_, err := os.Stat(provider.GoogleConfig.ServiceAccountJSON)
-	if !useADC {
-		if !hasSAJSON {
-			msgs = append(msgs, "missing setting: google-service-account-json or google-use-application-default-credentials")
-		} else if err != nil {
-			msgs = append(msgs, fmt.Sprintf("Google credentials file not found: %s", provider.GoogleConfig.ServiceAccountJSON))
-		}
-	} else if hasSAJSON {
-		msgs = append(msgs, "invalid setting: can't use both google-service-account-json and google-use-application-default-credentials")
 	}
 
 	return msgs

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/coreos/go-oidc/v3/oidc"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
+	oidc "github.com/higress-group/oauth2-proxy/pkg/providers/go_oidc"
+	"github.com/higress-group/oauth2-proxy/pkg/providers/util"
 )
 
 // ProviderVerifier represents the OIDC discovery and verification process
@@ -63,7 +63,7 @@ func (p ProviderVerifierOptions) validate() error {
 	}
 
 	if len(errs) > 0 {
-		return k8serrors.NewAggregate(errs)
+		return util.NewAggregate(errs)
 	}
 	return nil
 }
@@ -88,12 +88,12 @@ func (p ProviderVerifierOptions) toOIDCConfig() *oidc.Config {
 }
 
 // NewProviderVerifier constructs a ProviderVerifier from the options given.
-func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (ProviderVerifier, error) {
+func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions, providerJson ProviderJSON) (ProviderVerifier, error) {
 	if err := opts.validate(); err != nil {
 		return nil, fmt.Errorf("invalid provider verifier options: %v", err)
 	}
 
-	verifierBuilder, provider, err := getVerifierBuilder(ctx, opts)
+	verifierBuilder, provider, err := getVerifierBuilder(ctx, opts, providerJson)
 	if err != nil {
 		return nil, fmt.Errorf("could not get verifier builder: %v", err)
 	}
@@ -114,13 +114,13 @@ func NewProviderVerifier(ctx context.Context, opts ProviderVerifierOptions) (Pro
 
 type verifierBuilder func(*oidc.Config) *oidc.IDTokenVerifier
 
-func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions) (verifierBuilder, DiscoveryProvider, error) {
+func getVerifierBuilder(ctx context.Context, opts ProviderVerifierOptions, providerJson ProviderJSON) (verifierBuilder, DiscoveryProvider, error) {
 	if opts.SkipDiscovery {
 		// Instead of discovering the JWKs URK, it needs to be specified in the opts already
 		return newVerifierBuilder(ctx, opts.IssuerURL, opts.JWKsURL, opts.SupportedSigningAlgs), nil, nil
 	}
 
-	provider, err := NewProvider(ctx, opts.IssuerURL, opts.SkipIssuerVerification)
+	provider, err := NewProvider(ctx, opts.IssuerURL, opts.SkipIssuerVerification, providerJson)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error while discovery OIDC configuration: %v", err)
 	}

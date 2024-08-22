@@ -1,17 +1,15 @@
 package providers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 
-	"golang.org/x/oauth2"
+	pkgutil "github.com/higress-group/oauth2-proxy/pkg/util"
 )
 
 const (
-	tokenTypeBearer = "Bearer"
-	tokenTypeToken  = "token"
+	TokenTypeBearer = "Bearer"
 
 	acceptHeader          = "Accept"
 	acceptApplicationJSON = "application/json"
@@ -31,7 +29,7 @@ func makeOIDCHeader(accessToken string) http.Header {
 	extraHeaders := map[string]string{
 		acceptHeader: acceptApplicationJSON,
 	}
-	return makeAuthorizationHeader(tokenTypeBearer, accessToken, extraHeaders)
+	return makeAuthorizationHeader(TokenTypeBearer, accessToken, extraHeaders)
 }
 
 func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Values) url.URL {
@@ -53,24 +51,10 @@ func makeLoginURL(p *ProviderData, redirectURI, state string, extraParams url.Va
 
 // getIDToken extracts an IDToken stored in the `Extra` fields of an
 // oauth2.Token
-func getIDToken(token *oauth2.Token) string {
+func getIDToken(token *pkgutil.Token) string {
 	idToken, ok := token.Extra("id_token").(string)
 	if !ok {
 		return ""
 	}
 	return idToken
-}
-
-// formatGroup coerces an OIDC groups claim into a string
-// If it is non-string, marshal it into JSON.
-func formatGroup(rawGroup interface{}) (string, error) {
-	if group, ok := rawGroup.(string); ok {
-		return group, nil
-	}
-
-	jsonGroup, err := json.Marshal(rawGroup)
-	if err != nil {
-		return "", err
-	}
-	return string(jsonGroup), nil
 }

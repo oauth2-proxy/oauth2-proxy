@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/higress-group/oauth2-proxy/pkg/util"
 )
 
 // AppDirector is responsible for determining where OAuth2 Proxy should redirect
@@ -82,7 +82,7 @@ func (a *appDirector) validateRedirect(redirect string, errorFormat string) stri
 		return redirect
 	}
 	if redirect != "" {
-		logger.Errorf(errorFormat, redirect)
+		util.Logger.Errorf(errorFormat, redirect)
 	}
 	return ""
 }

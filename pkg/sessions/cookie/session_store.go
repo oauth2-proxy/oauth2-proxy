@@ -8,11 +8,10 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	pkgcookies "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+	"github.com/higress-group/oauth2-proxy/pkg/apis/options"
+	"github.com/higress-group/oauth2-proxy/pkg/apis/sessions"
+	pkgcookies "github.com/higress-group/oauth2-proxy/pkg/cookies"
+	"github.com/higress-group/oauth2-proxy/pkg/encryption"
 )
 
 const (
@@ -109,6 +108,23 @@ func (s *SessionStore) setSessionCookie(rw http.ResponseWriter, req *http.Reques
 	if err != nil {
 		return err
 	}
+
+	var cookieNameRegex = regexp.MustCompile(fmt.Sprintf("^%s(_\\d+)?$", s.Cookie.Name))
+	cookiesSet := make(map[string]bool)
+	for _, c := range cookies {
+		cookiesSet[c.Name] = true
+	}
+	for _, c := range req.Cookies() {
+		if cookieNameRegex.MatchString(c.Name) {
+			_, exist := cookiesSet[c.Name]
+			if exist {
+				continue
+			}
+			clearCookie := s.makeCookie(req, c.Name, "", time.Hour*-1, time.Now())
+			http.SetCookie(rw, clearCookie)
+		}
+	}
+
 	for _, c := range cookies {
 		http.SetCookie(rw, c)
 	}
@@ -167,8 +183,7 @@ func splitCookie(c *http.Cookie) []*http.Cookie {
 		return []*http.Cookie{c}
 	}
 
-	logger.Errorf("WARNING: Multiple cookies are required for this session as it exceeds the 4kb cookie limit. Please use server side session storage (eg. Redis) instead.")
-
+	// logger.Errorf("WARNING: Multiple cookies are required for this session as it exceeds the 4kb cookie limit. Please use server side session storage (eg. Redis) instead.")
 	cookies := []*http.Cookie{}
 	valueBytes := []byte(c.Value)
 	count := 0

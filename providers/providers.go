@@ -2,14 +2,19 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
+	"strings"
 
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
-	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
-	k8serrors "k8s.io/apimachinery/pkg/util/errors"
+	"github.com/higress-group/oauth2-proxy/pkg/apis/options"
+	"github.com/higress-group/oauth2-proxy/pkg/apis/sessions"
+	internaloidc "github.com/higress-group/oauth2-proxy/pkg/providers/oidc"
+	"github.com/higress-group/oauth2-proxy/pkg/providers/util"
+	pkgutil "github.com/higress-group/oauth2-proxy/pkg/util"
+
+	"github.com/alibaba/higress/plugins/wasm-go/pkg/wrapper"
 )
 
 const (
@@ -21,14 +26,13 @@ const (
 type Provider interface {
 	Data() *ProviderData
 	GetLoginURL(redirectURI, finalRedirect, nonce string, extraParams url.Values) string
-	Redeem(ctx context.Context, redirectURI, code, codeVerifier string) (*sessions.SessionState, error)
+	Redeem(ctx context.Context, redirectURI, code, codeVerifier string, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) error
 	// Deprecated: Migrate to EnrichSession
 	GetEmailAddress(ctx context.Context, s *sessions.SessionState) (string, error)
 	EnrichSession(ctx context.Context, s *sessions.SessionState) error
 	Authorize(ctx context.Context, s *sessions.SessionState) (bool, error)
 	ValidateSession(ctx context.Context, s *sessions.SessionState) bool
-	RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error)
-	CreateSessionFromToken(ctx context.Context, token string) (*sessions.SessionState, error)
+	RefreshSession(ctx context.Context, s *sessions.SessionState, client wrapper.HttpClient, callback func(args ...interface{}), timeout uint32) (bool, error)
 }
 
 func NewProvider(providerConfig options.Provider) (Provider, error) {
@@ -37,54 +41,18 @@ func NewProvider(providerConfig options.Provider) (Provider, error) {
 		return nil, fmt.Errorf("could not create provider data: %v", err)
 	}
 	switch providerConfig.Type {
-	case options.ADFSProvider:
-		return NewADFSProvider(providerData, providerConfig), nil
-	case options.AzureProvider:
-		return NewAzureProvider(providerData, providerConfig.AzureConfig), nil
-	case options.BitbucketProvider:
-		return NewBitbucketProvider(providerData, providerConfig.BitbucketConfig), nil
-	case options.DigitalOceanProvider:
-		return NewDigitalOceanProvider(providerData), nil
-	case options.FacebookProvider:
-		return NewFacebookProvider(providerData), nil
-	case options.GitHubProvider:
-		return NewGitHubProvider(providerData, providerConfig.GitHubConfig), nil
-	case options.GitLabProvider:
-		return NewGitLabProvider(providerData, providerConfig)
-	case options.GoogleProvider:
-		return NewGoogleProvider(providerData, providerConfig.GoogleConfig)
-	case options.KeycloakProvider:
-		return NewKeycloakProvider(providerData, providerConfig.KeycloakConfig), nil
-	case options.KeycloakOIDCProvider:
-		return NewKeycloakOIDCProvider(providerData, providerConfig), nil
-	case options.LinkedInProvider:
-		return NewLinkedInProvider(providerData), nil
-	case options.LoginGovProvider:
-		return NewLoginGovProvider(providerData, providerConfig.LoginGovConfig)
-	case options.NextCloudProvider:
-		return NewNextcloudProvider(providerData), nil
 	case options.OIDCProvider:
 		return NewOIDCProvider(providerData, providerConfig.OIDCConfig), nil
+	case options.AliyunProvider:
+		return NewAliyunProvider(providerData), nil
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", providerConfig.Type)
 	}
 }
 
-func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
-	p := &ProviderData{
-		Scope:            providerConfig.Scope,
-		ClientID:         providerConfig.ClientID,
-		ClientSecret:     providerConfig.ClientSecret,
-		ClientSecretFile: providerConfig.ClientSecretFile,
-	}
-
-	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
-	if err != nil {
-		return nil, err
-	}
-
-	if needsVerifier {
-		pv, err := internaloidc.NewProviderVerifier(context.TODO(), internaloidc.ProviderVerifierOptions{
+func NewVerifierFromConfig(providerConfig options.Provider, p *ProviderData, client wrapper.HttpClient) error {
+	if p.NeedsVerifier {
+		verifierOptions := internaloidc.ProviderVerifierOptions{
 			AudienceClaims:         providerConfig.OIDCConfig.AudienceClaims,
 			ClientID:               providerConfig.ClientID,
 			ExtraAudiences:         providerConfig.OIDCConfig.ExtraAudiences,
@@ -92,50 +60,62 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 			JWKsURL:                providerConfig.OIDCConfig.JwksURL,
 			SkipDiscovery:          providerConfig.OIDCConfig.SkipDiscovery,
 			SkipIssuerVerification: providerConfig.OIDCConfig.InsecureSkipIssuerVerification,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error building OIDC ProviderVerifier: %v", err)
 		}
 
-		p.Verifier = pv.Verifier()
-		if pv.DiscoveryEnabled() {
-			// Use the discovered values rather than any specified values
-			endpoints := pv.Provider().Endpoints()
-			pkce := pv.Provider().PKCE()
-			providerConfig.LoginURL = endpoints.AuthURL
-			providerConfig.RedeemURL = endpoints.TokenURL
-			providerConfig.ProfileURL = endpoints.UserInfoURL
-			providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
-			p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
-		}
+		var providerJson internaloidc.ProviderJSON
+		requestURL := strings.TrimSuffix(verifierOptions.IssuerURL, "/") + "/.well-known/openid-configuration"
+		client.Get(requestURL, nil, func(statusCode int, responseHeaders http.Header, responseBody []byte) {
+			if statusCode != http.StatusOK {
+				pkgutil.Logger.Errorf("openid-configuration http call failed, status: %d", statusCode)
+				return
+			}
+			json.Unmarshal(responseBody, &providerJson)
+			pv, _ := internaloidc.NewProviderVerifier(context.TODO(), verifierOptions, providerJson)
+			p.Verifier = pv.Verifier()
+			if pv.DiscoveryEnabled() {
+				// Use the discovered values rather than any specified values
+				endpoints := pv.Provider().Endpoints()
+				pkce := pv.Provider().PKCE()
+				providerConfig.LoginURL = endpoints.AuthURL
+				providerConfig.RedeemURL = endpoints.TokenURL
+				providerConfig.ProfileURL = endpoints.UserInfoURL
+				providerConfig.OIDCConfig.JwksURL = endpoints.JWKsURL
+				p.SupportedCodeChallengeMethods = pkce.CodeChallengeAlgs
+			}
+			providerConfigInfoCheck(providerConfig, p)
+			(*p.Verifier.GetKeySet()).UpdateKeys(client, providerConfig.OIDCConfig.VerifierRequestTimeout, func(args ...interface{}) {})
+			p.StoredSession.RemoteKeySet = p.Verifier.GetKeySet()
+		}, providerConfig.OIDCConfig.VerifierRequestTimeout)
+		return nil
+	}
+	errs := providerConfigInfoCheck(providerConfig, p)
+	return util.NewAggregate(errs)
+}
+
+func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, error) {
+	p := &ProviderData{
+		Scope:           providerConfig.Scope,
+		ClientID:        providerConfig.ClientID,
+		ClientSecret:    providerConfig.ClientSecret,
+		RedeemTimeout:   providerConfig.RedeemTimeout,
+		VerifierTimeout: providerConfig.OIDCConfig.VerifierRequestTimeout,
 	}
 
-	errs := []error{}
-	for name, u := range map[string]struct {
-		dst **url.URL
-		raw string
-	}{
-		"login":    {dst: &p.LoginURL, raw: providerConfig.LoginURL},
-		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
-		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
-		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
-		"resource": {dst: &p.ProtectedResource, raw: providerConfig.ProtectedResource},
-	} {
-		var err error
-		*u.dst, err = url.Parse(u.raw)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("could not parse %s URL: %v", name, err))
-		}
+	needsVerifier, err := providerRequiresOIDCProviderVerifier(providerConfig.Type)
+	if err != nil {
+		return nil, err
 	}
+	p.NeedsVerifier = needsVerifier
+
+	errs := providerConfigInfoCheck(providerConfig, p)
 	// handle LoginURLParameters
 	errs = append(errs, p.compileLoginParams(providerConfig.LoginURLParameters)...)
 
 	if len(errs) > 0 {
-		return nil, k8serrors.NewAggregate(errs)
+		return nil, util.NewAggregate(errs)
 	}
 
 	// Make the OIDC options available to all providers that support it
-	p.AllowUnverifiedEmail = providerConfig.OIDCConfig.InsecureAllowUnverifiedEmail
 	p.EmailClaim = providerConfig.OIDCConfig.EmailClaim
 	p.GroupsClaim = providerConfig.OIDCConfig.GroupsClaim
 	p.SkipClaimsFromProfileURL = providerConfig.SkipClaimsFromProfileURL
@@ -143,7 +123,7 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	// Set PKCE enabled or disabled based on discovery and force options
 	p.CodeChallengeMethod = parseCodeChallengeMethod(providerConfig)
 	if len(p.SupportedCodeChallengeMethods) != 0 && p.CodeChallengeMethod == "" {
-		logger.Printf("Warning: Your provider supports PKCE methods %+q, but you have not enabled one with --code-challenge-method", p.SupportedCodeChallengeMethods)
+		pkgutil.Logger.Infof("Warning: Your provider supports PKCE methods %+q, but you have not enabled one with --code-challenge-method", p.SupportedCodeChallengeMethods)
 	}
 
 	if providerConfig.OIDCConfig.UserIDClaim == "" {
@@ -158,8 +138,6 @@ func newProviderDataFromConfig(providerConfig options.Provider) (*ProviderData, 
 	}
 
 	p.setAllowedGroups(providerConfig.AllowedGroups)
-
-	p.BackendLogoutURL = providerConfig.BackendLogoutURL
 
 	return p, nil
 }
@@ -178,12 +156,31 @@ func parseCodeChallengeMethod(providerConfig options.Provider) string {
 
 func providerRequiresOIDCProviderVerifier(providerType options.ProviderType) (bool, error) {
 	switch providerType {
-	case options.BitbucketProvider, options.DigitalOceanProvider, options.FacebookProvider, options.GitHubProvider,
-		options.GoogleProvider, options.KeycloakProvider, options.LinkedInProvider, options.LoginGovProvider, options.NextCloudProvider:
-		return false, nil
-	case options.ADFSProvider, options.AzureProvider, options.GitLabProvider, options.KeycloakOIDCProvider, options.OIDCProvider:
+	case options.OIDCProvider:
 		return true, nil
+	case options.AliyunProvider:
+		return false, nil
 	default:
 		return false, fmt.Errorf("unknown provider type: %s", providerType)
 	}
+}
+
+func providerConfigInfoCheck(providerConfig options.Provider, p *ProviderData) []error {
+	errs := []error{}
+	for name, u := range map[string]struct {
+		dst **url.URL
+		raw string
+	}{
+		"login":    {dst: &p.LoginURL, raw: providerConfig.LoginURL},
+		"redeem":   {dst: &p.RedeemURL, raw: providerConfig.RedeemURL},
+		"profile":  {dst: &p.ProfileURL, raw: providerConfig.ProfileURL},
+		"validate": {dst: &p.ValidateURL, raw: providerConfig.ValidateURL},
+	} {
+		var err error
+		*u.dst, err = url.Parse(u.raw)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("could not parse %s URL: %v", name, err))
+		}
+	}
+	return errs
 }
